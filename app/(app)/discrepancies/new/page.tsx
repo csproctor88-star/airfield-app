@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { DISCREPANCY_TYPES, INSTALLATION } from '@/lib/constants'
 import { toast } from 'sonner'
 
 export default function NewDiscrepancyPage() {
   const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [photos, setPhotos] = useState<{ url: string; name: string }[]>([])
   const [formData, setFormData] = useState({
     title: '',
     location_text: '',
@@ -17,6 +19,17 @@ export default function NewDiscrepancyPage() {
     latitude: null as number | null,
     longitude: null as number | null,
   })
+
+  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files?.length) return
+    Array.from(files).forEach((file) => {
+      const url = URL.createObjectURL(file)
+      setPhotos((prev) => [...prev, { url, name: file.name }])
+    })
+    toast.success(`${files.length} photo(s) added`)
+    e.target.value = ''
+  }
 
   const handleTypeChange = (value: string) => {
     const typeConfig = DISCREPANCY_TYPES.find((t) => t.value === value)
@@ -96,9 +109,21 @@ export default function NewDiscrepancyPage() {
           <textarea className="input-dark" rows={3} style={{ resize: 'vertical' }} placeholder="Detailed description..." value={formData.description} onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))} />
         </div>
 
+        {photos.length > 0 && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+            {photos.map((p, i) => (
+              <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid #38BDF833' }}>
+                <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <button type="button" onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.7)', border: 'none', color: '#EF4444', fontSize: 12, width: 20, height: 20, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
-          <button type="button" onClick={() => toast.success('Camera opened')} style={{ background: '#38BDF814', border: '1px solid #38BDF833', borderRadius: 8, padding: 10, color: '#38BDF8', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', minHeight: 44 }}>
-            📸 Add Photo
+          <button type="button" onClick={() => fileInputRef.current?.click()} style={{ background: '#38BDF814', border: '1px solid #38BDF833', borderRadius: 8, padding: 10, color: '#38BDF8', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', minHeight: 44 }}>
+            📸 Add Photo{photos.length > 0 ? ` (${photos.length})` : ''}
           </button>
           <button type="button" onClick={captureGPS} style={{ background: '#34D39914', border: '1px solid #34D39933', borderRadius: 8, padding: 10, color: '#34D399', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', minHeight: 44 }}>
             📍 {formData.latitude ? `${formData.latitude.toFixed(4)}, ${formData.longitude?.toFixed(4)}` : 'Capture GPS'}

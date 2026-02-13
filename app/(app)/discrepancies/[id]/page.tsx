@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { SeverityBadge, StatusBadge, Badge } from '@/components/ui/badge'
 import { ActionButton } from '@/components/ui/button'
@@ -15,7 +16,20 @@ const SEVERITY_COLORS: Record<string, string> = {
 export default function DiscrepancyDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [photos, setPhotos] = useState<{ url: string; name: string }[]>([])
   const d = DEMO_DISCREPANCIES.find((x) => x.id === params.id)
+
+  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files?.length) return
+    Array.from(files).forEach((file) => {
+      const url = URL.createObjectURL(file)
+      setPhotos((prev) => [...prev, { url, name: file.name }])
+    })
+    toast.success(`${files.length} photo(s) added`)
+    e.target.value = ''
+  }
 
   if (!d) {
     return (
@@ -77,9 +91,21 @@ export default function DiscrepancyDetailPage() {
         </div>
       </div>
 
+      {photos.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+          {photos.map((p, i) => (
+            <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid #38BDF833' }}>
+              <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <button type="button" onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.7)', border: 'none', color: '#EF4444', fontSize: 12, width: 20, height: 20, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
         <ActionButton color="#38BDF8" onClick={() => toast.success('Edit opened')}>✏️ Edit</ActionButton>
-        <ActionButton color="#38BDF8" onClick={() => toast.success('Camera opened')}>📸 Photo</ActionButton>
+        <ActionButton color="#38BDF8" onClick={() => fileInputRef.current?.click()}>📸 Photo{photos.length > 0 ? ` (${photos.length})` : ''}</ActionButton>
         <ActionButton color="#FBBF24" onClick={() => toast.success('Status update opened')}>🔄 Status</ActionButton>
         <ActionButton color="#34D399" onClick={() => toast.success('Work order opened')}>📋 Work Order</ActionButton>
       </div>
