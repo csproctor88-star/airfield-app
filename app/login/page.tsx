@@ -19,6 +19,14 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient()
+
+      // Demo mode: no Supabase configured, go straight to app
+      if (!supabase) {
+        router.push('/')
+        router.refresh()
+        return
+      }
+
       const { error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
