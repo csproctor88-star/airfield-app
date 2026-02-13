@@ -3,9 +3,235 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Airfield App</title>
+    <title>Airfield App - Flight & Runway Management</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <button>Hello Chris</button>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+                    <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+                </svg>
+                <h1>Airfield Control</h1>
+            </div>
+            <div class="header-right">
+                <span class="clock" id="clock"></span>
+                <button class="btn btn-primary" id="addFlightBtn">+ Add Flight</button>
+            </div>
+        </div>
+    </header>
+
+    <nav class="tabs">
+        <button class="tab active" data-tab="dashboard">Dashboard</button>
+        <button class="tab" data-tab="flights">Flight Board</button>
+        <button class="tab" data-tab="runways">Runways</button>
+        <button class="tab" data-tab="weather">Weather</button>
+    </nav>
+
+    <main id="app">
+        <!-- Dashboard Tab -->
+        <section class="tab-content active" id="tab-dashboard">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Active Flights</div>
+                    <div class="stat-value" id="stat-active">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Arrivals Today</div>
+                    <div class="stat-value" id="stat-arrivals">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Departures Today</div>
+                    <div class="stat-value" id="stat-departures">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Open Runways</div>
+                    <div class="stat-value" id="stat-runways">0</div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card">
+                    <h2>Upcoming Flights</h2>
+                    <div id="upcoming-flights" class="flight-list"></div>
+                </div>
+                <div class="card">
+                    <h2>Recent Activity</h2>
+                    <div id="activity-log" class="activity-list"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Flights Tab -->
+        <section class="tab-content" id="tab-flights">
+            <div class="flight-board">
+                <div class="board-controls">
+                    <div class="filter-group">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="arrival">Arrivals</button>
+                        <button class="filter-btn" data-filter="departure">Departures</button>
+                    </div>
+                    <div class="search-box">
+                        <input type="text" id="flightSearch" placeholder="Search flights...">
+                    </div>
+                </div>
+                <table class="flight-table">
+                    <thead>
+                        <tr>
+                            <th>Flight</th>
+                            <th>Type</th>
+                            <th>Origin / Dest</th>
+                            <th>Scheduled</th>
+                            <th>Runway</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="flight-table-body"></tbody>
+                </table>
+                <div class="empty-state" id="no-flights" style="display:none;">
+                    <p>No flights found. Add your first flight to get started.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Runways Tab -->
+        <section class="tab-content" id="tab-runways">
+            <div class="runway-grid" id="runway-grid"></div>
+        </section>
+
+        <!-- Weather Tab -->
+        <section class="tab-content" id="tab-weather">
+            <div class="weather-panel">
+                <div class="card weather-main">
+                    <h2>Current Conditions</h2>
+                    <div class="weather-display">
+                        <div class="weather-icon" id="weather-icon">--</div>
+                        <div class="weather-details">
+                            <div class="weather-temp" id="weather-temp">--</div>
+                            <div class="weather-desc" id="weather-desc">Loading...</div>
+                        </div>
+                    </div>
+                    <div class="weather-grid">
+                        <div class="weather-stat">
+                            <span class="weather-stat-label">Wind Speed</span>
+                            <span class="weather-stat-value" id="weather-wind">--</span>
+                        </div>
+                        <div class="weather-stat">
+                            <span class="weather-stat-label">Wind Direction</span>
+                            <span class="weather-stat-value" id="weather-wind-dir">--</span>
+                        </div>
+                        <div class="weather-stat">
+                            <span class="weather-stat-label">Visibility</span>
+                            <span class="weather-stat-value" id="weather-visibility">--</span>
+                        </div>
+                        <div class="weather-stat">
+                            <span class="weather-stat-label">Pressure</span>
+                            <span class="weather-stat-value" id="weather-pressure">--</span>
+                        </div>
+                        <div class="weather-stat">
+                            <span class="weather-stat-label">Humidity</span>
+                            <span class="weather-stat-value" id="weather-humidity">--</span>
+                        </div>
+                        <div class="weather-stat">
+                            <span class="weather-stat-label">Ceiling</span>
+                            <span class="weather-stat-value" id="weather-ceiling">--</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>Flight Conditions</h2>
+                    <div class="conditions-indicator" id="flight-conditions">
+                        <div class="condition-badge">Checking...</div>
+                    </div>
+                    <p class="conditions-note" id="conditions-note"></p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Add/Edit Flight Modal -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modal-title">Add Flight</h2>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <form id="flight-form">
+                <input type="hidden" id="flight-id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="flight-number">Flight Number</label>
+                        <input type="text" id="flight-number" placeholder="e.g. AF-201" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="flight-type">Type</label>
+                        <select id="flight-type" required>
+                            <option value="arrival">Arrival</option>
+                            <option value="departure">Departure</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="flight-location">Origin / Destination</label>
+                        <input type="text" id="flight-location" placeholder="e.g. JFK" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="flight-aircraft">Aircraft</label>
+                        <input type="text" id="flight-aircraft" placeholder="e.g. Boeing 737">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="flight-time">Scheduled Time</label>
+                        <input type="datetime-local" id="flight-time" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="flight-runway">Runway</label>
+                        <select id="flight-runway" required>
+                            <option value="">Select runway...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="flight-status">Status</label>
+                        <select id="flight-status">
+                            <option value="scheduled">Scheduled</option>
+                            <option value="boarding">Boarding</option>
+                            <option value="taxiing">Taxiing</option>
+                            <option value="in-air">In Air</option>
+                            <option value="landed">Landed</option>
+                            <option value="arrived">Arrived</option>
+                            <option value="delayed">Delayed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="modal-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Flight</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirm Dialog -->
+    <div class="modal-overlay" id="confirm-overlay">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <h2>Confirm</h2>
+            </div>
+            <p id="confirm-message">Are you sure?</p>
+            <div class="form-actions">
+                <button class="btn btn-secondary" id="confirm-cancel">Cancel</button>
+                <button class="btn btn-danger" id="confirm-ok">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
 </body>
 </html>
