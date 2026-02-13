@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-slate-100 antialiased;
+  }
+}
+
+@layer utilities {
+  /* Minimum 44x44px touch targets per SRS Section 7.1 */
+  .touch-target {
+    @apply min-w-[44px] min-h-[44px];
+  }
+}
