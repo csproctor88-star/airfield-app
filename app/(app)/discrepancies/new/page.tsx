@@ -10,10 +10,10 @@ export default function NewDiscrepancyPage() {
   const [formData, setFormData] = useState({
     title: '',
     location_text: '',
-    type: DISCREPANCY_TYPES[0].value,
-    severity: DISCREPANCY_TYPES[0].defaultSeverity,
+    type: DISCREPANCY_TYPES[0].value as string,
+    severity: DISCREPANCY_TYPES[0].defaultSeverity as string,
     description: '',
-    assigned_shop: DISCREPANCY_TYPES[0].defaultShop || '',
+    assigned_shop: (DISCREPANCY_TYPES[0].defaultShop || '') as string,
     latitude: null as number | null,
     longitude: null as number | null,
   })
