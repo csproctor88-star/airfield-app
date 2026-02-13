@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,12 +7,82 @@
 @layer base {
   body {
     @apply bg-background text-slate-100 antialiased;
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Scrollbar styling for dark theme */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(56, 189, 248, 0.1);
+    border-radius: 2px;
+  }
+}
+
+@layer components {
+  /* Card component matching prototype */
+  .card {
+    background: rgba(10, 16, 28, 0.92);
+    border: 1px solid rgba(56, 189, 248, 0.06);
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  /* Section label — 9px uppercase tracking */
+  .section-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: #64748B;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  /* Dark input matching prototype */
+  .input-dark {
+    background: rgba(4, 8, 14, 0.9);
+    border: 1px solid rgba(56, 189, 248, 0.06);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: #F1F5F9;
+    font-size: 12px;
+    width: 100%;
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+  .input-dark:focus {
+    outline: none;
+    border-color: rgba(56, 189, 248, 0.2);
+  }
+
+  /* Primary CTA button gradient */
+  .btn-primary {
+    background: linear-gradient(135deg, #0369A1, #0EA5E9);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    font-family: inherit;
+  }
+  .btn-primary:active {
+    opacity: 0.9;
   }
 }
 
 @layer utilities {
   /* Minimum 44x44px touch targets per SRS Section 7.1 */
   .touch-target {
-    @apply min-w-[44px] min-h-[44px];
+    min-width: 44px;
+    min-height: 44px;
   }
 }

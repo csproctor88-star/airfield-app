@@ -9,19 +9,39 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Dark theme from SRS Section 7.1
-        background: '#0F172A',   // slate-900
-        card: '#1E293B',         // slate-800
-        'card-hover': '#334155', // slate-700
-        border: '#334155',       // slate-700
-        accent: '#38BDF8',       // sky-400
-        'accent-bg': '#0EA5E9',  // sky-500
+        // Matched to Airfield_OPS_Unified_Prototype.jsx color system
+        background: '#04070C',
+        card: 'rgba(10,16,28,0.92)',
+        'card-hover': 'rgba(10,16,28,1)',
+        border: 'rgba(56,189,248,0.06)',
+        'border-active': 'rgba(56,189,248,0.2)',
+        accent: '#38BDF8',       // sky-400 — primary accent
+        'accent-bg': '#0EA5E9',  // sky-500 — button gradient end
+        'accent-dark': '#0369A1', // sky-800 — button gradient start
+        muted: {
+          DEFAULT: '#94A3B8',    // t2 — secondary text
+          dark: '#64748B',       // t3 — tertiary text
+          darker: '#334155',     // t4 — borders, inactive
+        },
+        success: '#34D399',      // emerald-400
+        danger: '#EF4444',       // red-500
+        warning: '#FBBF24',      // amber-400
+        orange: '#F97316',       // orange-500
+        purple: '#A78BFA',       // violet-400
+        cyan: '#22D3EE',         // cyan-400
       },
       fontFamily: {
         sans: [
-          'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI',
-          'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif',
+          'Outfit', 'system-ui', '-apple-system', 'BlinkMacSystemFont',
+          'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif',
         ],
+      },
+      borderRadius: {
+        card: '10px',
+      },
+      fontSize: {
+        '2xs': ['0.5625rem', { lineHeight: '1' }],   // 9px — labels
+        '3xs': ['0.4375rem', { lineHeight: '1' }],    // 7px — tiny
       },
     },
   },
