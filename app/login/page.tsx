@@ -39,8 +39,8 @@ export default function LoginPage() {
 
       router.push('/')
       router.refresh()
-    } catch {
-      setError('An unexpected error occurred')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
       setLoading(false)
     }
