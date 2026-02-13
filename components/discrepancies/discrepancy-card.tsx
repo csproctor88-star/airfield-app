@@ -1,0 +1,80 @@
+'use client'
+
+import Link from 'next/link'
+import { SeverityBadge, StatusBadge } from '@/components/ui/badge'
+import { Camera } from 'lucide-react'
+
+// Discrepancy card matching prototype: left border accent, ID in cyan, badges, location line
+
+interface DiscrepancyCardProps {
+  id: string
+  displayId: string
+  title: string
+  severity: string
+  status: string
+  locationText: string
+  assignedShop: string | null
+  daysOpen: number
+  photoCount: number
+}
+
+const SEVERITY_COLORS: Record<string, string> = {
+  critical: '#EF4444',
+  high: '#F97316',
+  medium: '#FBBF24',
+  low: '#38BDF8',
+}
+
+export function DiscrepancyCard({
+  id,
+  displayId,
+  title,
+  severity,
+  status,
+  locationText,
+  assignedShop,
+  daysOpen,
+  photoCount,
+}: DiscrepancyCardProps) {
+  const borderColor = SEVERITY_COLORS[severity.toLowerCase()] || '#94A3B8'
+
+  return (
+    <Link
+      href={`/discrepancies/${id}`}
+      className="card"
+      style={{
+        cursor: 'pointer',
+        borderLeft: `3px solid ${borderColor}`,
+        display: 'block',
+        marginBottom: 8,
+        textDecoration: 'none',
+        color: 'inherit',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+        <span style={{ fontSize: 11, fontWeight: 800, color: '#22D3EE', fontFamily: 'monospace' }}>
+          {displayId}
+        </span>
+        <div style={{ display: 'flex', gap: 4 }}>
+          <SeverityBadge severity={severity} />
+          <StatusBadge status={status} />
+        </div>
+      </div>
+      <div style={{ fontSize: 12, fontWeight: 700 }}>{title}</div>
+      <div style={{ fontSize: 10, color: '#64748B', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <span>{locationText}</span>
+        <span>&bull;</span>
+        <span>{assignedShop || 'Unassigned'}</span>
+        <span>&bull;</span>
+        <span>{daysOpen > 0 ? `${daysOpen}d open` : 'Closed'}</span>
+        {photoCount > 0 && (
+          <>
+            <span>&bull;</span>
+            <Camera size={10} />
+            <span>{photoCount}</span>
+          </>
+        )}
+      </div>
+    </Link>
+  )
+}
