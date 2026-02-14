@@ -34,6 +34,7 @@ export default function ObstructionDetailPage() {
   const [evaluation, setEvaluation] = useState<ObstructionRow | null>(null)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -45,8 +46,8 @@ export default function ObstructionDetailPage() {
   }, [id])
 
   const handleDelete = async () => {
-    if (!confirm('Delete this evaluation? This cannot be undone.')) return
     setDeleting(true)
+    setShowDeleteConfirm(false)
     const { error } = await deleteObstructionEvaluation(id)
     if (error) {
       alert(error)
@@ -326,7 +327,7 @@ export default function ObstructionDetailPage() {
       {/* Delete */}
       <div style={{ marginTop: 16, textAlign: 'center' }}>
         <button
-          onClick={handleDelete}
+          onClick={() => setShowDeleteConfirm(true)}
           disabled={deleting}
           style={{
             background: 'none',
@@ -343,6 +344,78 @@ export default function ObstructionDetailPage() {
           {deleting ? 'Deleting...' : 'Delete Evaluation'}
         </button>
       </div>
+
+      {/* Delete confirmation dialog */}
+      {showDeleteConfirm && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 200,
+            padding: 32,
+          }}
+          onClick={() => setShowDeleteConfirm(false)}
+        >
+          <div
+            style={{
+              background: '#0F172A',
+              border: '1px solid rgba(56,189,248,0.15)',
+              borderRadius: 12,
+              padding: 24,
+              maxWidth: 320,
+              width: '100%',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#F1F5F9', marginBottom: 8 }}>
+              Delete this Evaluation?
+            </div>
+            <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 20 }}>
+              This cannot be undone.
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  border: '1px solid rgba(56,189,248,0.15)',
+                  background: 'transparent',
+                  color: '#94A3B8',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: '#EF4444',
+                  color: '#fff',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

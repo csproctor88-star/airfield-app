@@ -10,6 +10,7 @@ export default function ObstructionHistoryPage() {
   const [evaluations, setEvaluations] = useState<ObstructionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -22,15 +23,20 @@ export default function ObstructionHistoryPage() {
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
-    if (!confirm('Delete this evaluation? This cannot be undone.')) return
-    setDeletingId(id)
-    const { error } = await deleteObstructionEvaluation(id)
+    setConfirmDeleteId(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!confirmDeleteId) return
+    setDeletingId(confirmDeleteId)
+    setConfirmDeleteId(null)
+    const { error } = await deleteObstructionEvaluation(confirmDeleteId)
     if (error) {
       alert(error)
       setDeletingId(null)
       return
     }
-    setEvaluations((prev) => prev.filter((ev) => ev.id !== id))
+    setEvaluations((prev) => prev.filter((ev) => ev.id !== confirmDeleteId))
     setDeletingId(null)
   }
 
@@ -230,6 +236,78 @@ export default function ObstructionHistoryPage() {
             </button>
           )
         })
+      )}
+
+      {/* Delete confirmation dialog */}
+      {confirmDeleteId && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 200,
+            padding: 32,
+          }}
+          onClick={() => setConfirmDeleteId(null)}
+        >
+          <div
+            style={{
+              background: '#0F172A',
+              border: '1px solid rgba(56,189,248,0.15)',
+              borderRadius: 12,
+              padding: 24,
+              maxWidth: 320,
+              width: '100%',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#F1F5F9', marginBottom: 8 }}>
+              Delete this Evaluation?
+            </div>
+            <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 20 }}>
+              This cannot be undone.
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  border: '1px solid rgba(56,189,248,0.15)',
+                  background: 'transparent',
+                  color: '#94A3B8',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: '#EF4444',
+                  color: '#fff',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
