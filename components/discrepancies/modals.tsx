@@ -43,7 +43,7 @@ function FieldLabel({ children }: { children: ReactNode }) {
 function SaveButton({ saving, onClick, label = 'Save' }: { saving: boolean; onClick: () => void; label?: string }) {
   return (
     <button type="button" className="btn-primary" onClick={onClick} disabled={saving}
-      style={{ opacity: saving ? 0.7 : 1, marginTop: 8 }}>
+      style={{ opacity: saving ? 0.7 : 1, marginTop: 8, flex: 1 }}>
       {saving ? 'Saving...' : label}
     </button>
   )
@@ -256,7 +256,16 @@ export function StatusUpdateModal({
           value={notes} onChange={(e) => setNotes(e.target.value)} />
       </div>
 
-      <SaveButton saving={saving} onClick={handleSave} label="Update Status" />
+      <div style={{ display: 'flex', gap: 8 }}>
+        <SaveButton saving={saving} onClick={handleSave} label="Update Status" />
+        <button type="button" onClick={onClose} disabled={saving} style={{
+          flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 600,
+          fontFamily: 'inherit', cursor: 'pointer',
+          background: 'transparent', border: '1px solid #334155', color: '#94A3B8',
+        }}>
+          Cancel
+        </button>
+      </div>
     </ModalOverlay>
   )
 }
