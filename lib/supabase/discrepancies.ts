@@ -397,28 +397,29 @@ export async function addStatusNote(discrepancyId: string, notes: string): Promi
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  let updated_by = 'unknown'
   try {
     const { data: { user } } = await supabase.auth.getUser()
-    if (user) updated_by = user.id
-  } catch { /* no user */ }
+    if (!user) return { error: 'No authenticated user' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
-    .from('status_updates')
-    .insert({
-      discrepancy_id: discrepancyId,
-      old_status: null,
-      new_status: '',
-      notes,
-      updated_by,
-    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from('status_updates')
+      .insert({
+        discrepancy_id: discrepancyId,
+        old_status: null,
+        new_status: null,
+        notes,
+        updated_by: user.id,
+      })
 
-  if (error) {
-    console.error('Failed to add note:', error.message)
-    return { error: error.message }
+    if (error) {
+      console.error('Failed to add note:', error.message)
+      return { error: error.message }
+    }
+    return { error: null }
+  } catch {
+    return { error: 'Failed to add note' }
   }
-  return { error: null }
 }
 
 export async function fetchDiscrepancyKPIs(): Promise<{
