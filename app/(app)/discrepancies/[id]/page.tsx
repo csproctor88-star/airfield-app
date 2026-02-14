@@ -81,12 +81,10 @@ export default function DiscrepancyDetailPage() {
     e.target.value = ''
   }
 
-  const handleSaved = async (updated: DiscrepancyRow) => {
-    setLiveData(updated)
+  const handleSaved = async (_updated: DiscrepancyRow) => {
     toast.success('Discrepancy updated')
-    // Refresh notes history
-    const updates = await fetchStatusUpdates(updated.id)
-    setStatusUpdates(updates)
+    // Full refresh — reload discrepancy, photos, and notes history
+    await loadData()
   }
 
   if (loading) {
@@ -177,6 +175,32 @@ export default function DiscrepancyDetailPage() {
             <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.5 }}>{d.resolution_notes as string}</div>
           </div>
         )}
+
+        {/* ── Notes History ── */}
+        {statusUpdates.length > 0 && (
+          <div style={{ marginTop: 12, borderTop: '1px solid #1E293B', paddingTop: 12 }}>
+            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Notes History</div>
+            {statusUpdates.map((update) => (
+              <div key={update.id} style={{ borderLeft: '2px solid #334155', paddingLeft: 10, marginBottom: 10 }}>
+                <div style={{ fontSize: 10, color: '#64748B', marginBottom: 2 }}>
+                  <span style={{ fontWeight: 600, color: '#38BDF8' }}>{update.user_name || 'Unknown'}</span>
+                  {' — '}
+                  {new Date(update.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {' '}
+                  {new Date(update.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                </div>
+                {update.old_status && (
+                  <div style={{ fontSize: 10, color: '#94A3B8', marginBottom: 2 }}>
+                    Status: {update.old_status} → {update.new_status}
+                  </div>
+                )}
+                {update.notes && (
+                  <div style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.4 }}>{update.notes}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Photo thumbnails — tap to view full screen */}
@@ -203,32 +227,6 @@ export default function DiscrepancyDetailPage() {
         <ActionButton color="#FBBF24" onClick={() => setActiveModal('status')}>🔄 Status</ActionButton>
         <ActionButton color="#34D399" onClick={() => setActiveModal('workorder')}>📋 Work Order</ActionButton>
       </div>
-
-      {/* ── Notes History ── */}
-      {statusUpdates.length > 0 && (
-        <div className="card" style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Notes History</div>
-          {statusUpdates.map((update) => (
-            <div key={update.id} style={{ borderLeft: '2px solid #334155', paddingLeft: 10, marginBottom: 10 }}>
-              <div style={{ fontSize: 10, color: '#64748B', marginBottom: 2 }}>
-                <span style={{ fontWeight: 600, color: '#38BDF8' }}>{update.user_name || 'Unknown'}</span>
-                {' — '}
-                {new Date(update.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                {' '}
-                {new Date(update.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-              </div>
-              {update.old_status && (
-                <div style={{ fontSize: 10, color: '#94A3B8', marginBottom: 2 }}>
-                  Status: {update.old_status} → {update.new_status}
-                </div>
-              )}
-              {update.notes && (
-                <div style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.4 }}>{update.notes}</div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
 
       {linkedNotam && (
         <Link
