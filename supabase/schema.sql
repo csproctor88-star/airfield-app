@@ -293,6 +293,9 @@ ALTER TABLE obstruction_evaluations ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "AM roles full access" ON obstruction_evaluations FOR ALL USING (
   user_has_role(ARRAY['airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'])
 );
+CREATE POLICY "Authenticated users create evaluations" ON obstruction_evaluations FOR INSERT WITH CHECK (
+  auth.uid() IS NOT NULL
+);
 CREATE POLICY "Everyone reads evaluations" ON obstruction_evaluations FOR SELECT USING (true);
 
 ALTER TABLE activity_log ENABLE ROW LEVEL SECURITY;
