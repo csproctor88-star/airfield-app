@@ -113,12 +113,11 @@ export function EditDiscrepancyModal({
       </div>
 
       <div style={{ marginBottom: 12 }}>
-        <FieldLabel>Severity</FieldLabel>
+        <FieldLabel>Work Order Submitted to CES?</FieldLabel>
         <select className="input-dark" value={form.severity}
           onChange={(e) => setForm(p => ({ ...p, severity: e.target.value }))}>
-          {['critical', 'high', 'medium', 'low'].map(s =>
-            <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-          )}
+          <option value="no">No</option>
+          <option value="yes">Yes</option>
         </select>
       </div>
 

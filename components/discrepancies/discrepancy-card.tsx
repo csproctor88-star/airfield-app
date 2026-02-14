@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { SeverityBadge, StatusBadge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/ui/badge'
 import { Camera } from 'lucide-react'
 
 // Discrepancy card matching prototype: left border accent, ID in cyan, badges, location line
@@ -10,7 +10,7 @@ interface DiscrepancyCardProps {
   id: string
   displayId: string
   title: string
-  severity: string
+  severity?: string
   status: string
   locationText: string
   assignedShop: string | null
@@ -18,25 +18,16 @@ interface DiscrepancyCardProps {
   photoCount: number
 }
 
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#EF4444',
-  high: '#F97316',
-  medium: '#FBBF24',
-  low: '#38BDF8',
-}
-
 export function DiscrepancyCard({
   id,
   displayId,
   title,
-  severity,
   status,
   locationText,
   assignedShop,
   daysOpen,
   photoCount,
 }: DiscrepancyCardProps) {
-  const borderColor = SEVERITY_COLORS[severity.toLowerCase()] || '#94A3B8'
 
   return (
     <Link
@@ -44,7 +35,6 @@ export function DiscrepancyCard({
       className="card"
       style={{
         cursor: 'pointer',
-        borderLeft: `3px solid ${borderColor}`,
         display: 'block',
         marginBottom: 8,
         textDecoration: 'none',
@@ -56,7 +46,6 @@ export function DiscrepancyCard({
           {displayId}
         </span>
         <div style={{ display: 'flex', gap: 4 }}>
-          <SeverityBadge severity={severity} />
           <StatusBadge status={status} />
         </div>
       </div>

@@ -65,7 +65,7 @@ CREATE TABLE discrepancies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   display_id TEXT NOT NULL UNIQUE,
   type TEXT NOT NULL,
-  severity TEXT NOT NULL CHECK (severity IN ('critical', 'high', 'medium', 'low')),
+  severity TEXT NOT NULL DEFAULT 'no' CHECK (severity IN ('yes', 'no', 'critical', 'high', 'medium', 'low')),
   status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'assigned', 'in_progress', 'resolved', 'closed', 'completed', 'cancelled')),
   title TEXT NOT NULL,
   description TEXT NOT NULL,

@@ -15,7 +15,7 @@ export default function NewDiscrepancyPage() {
     title: '',
     location_text: '',
     type: DISCREPANCY_TYPES[0].value as string,
-    severity: DISCREPANCY_TYPES[0].defaultSeverity as string,
+    severity: 'no',
     description: '',
     assigned_shop: (DISCREPANCY_TYPES[0].defaultShop || '') as string,
     latitude: null as number | null,
@@ -38,7 +38,6 @@ export default function NewDiscrepancyPage() {
     setFormData((prev) => ({
       ...prev,
       type: value,
-      severity: typeConfig?.defaultSeverity || prev.severity,
       assigned_shop: typeConfig?.defaultShop || prev.assigned_shop,
     }))
   }
@@ -123,9 +122,10 @@ export default function NewDiscrepancyPage() {
         </div>
 
         <div style={{ marginBottom: 12 }}>
-          <span className="section-label">Severity</span>
+          <span className="section-label">Work Order Submitted to CES?</span>
           <select className="input-dark" value={formData.severity} onChange={(e) => setFormData((p) => ({ ...p, severity: e.target.value }))}>
-            {['critical', 'high', 'medium', 'low'].map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
           </select>
         </div>
 

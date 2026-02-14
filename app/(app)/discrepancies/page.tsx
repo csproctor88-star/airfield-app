@@ -7,7 +7,7 @@ import { fetchDiscrepancies, type DiscrepancyRow } from '@/lib/supabase/discrepa
 import { DEMO_DISCREPANCIES } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 
-const FILTERS = ['all', 'open', 'assigned', 'in_progress', 'completed'] as const
+const FILTERS = ['open', 'assigned', 'in_progress', 'completed', 'all'] as const
 
 export default function DiscrepanciesPage() {
   const [filter, setFilter] = useState<string>('all')
