@@ -11,13 +11,14 @@ export default function NewDiscrepancyPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [photos, setPhotos] = useState<{ file: File; url: string; name: string }[]>([])
   const [saving, setSaving] = useState(false)
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([])
+  const [typeDropdownOpen, setTypeDropdownOpen] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
     location_text: '',
-    type: DISCREPANCY_TYPES[0].value as string,
     severity: 'no',
     description: '',
-    assigned_shop: (DISCREPANCY_TYPES[0].defaultShop || '') as string,
+    assigned_shop: '' as string,
     latitude: null as number | null,
     longitude: null as number | null,
   })
@@ -33,13 +34,18 @@ export default function NewDiscrepancyPage() {
     e.target.value = ''
   }
 
-  const handleTypeChange = (value: string) => {
-    const typeConfig = DISCREPANCY_TYPES.find((t) => t.value === value)
-    setFormData((prev) => ({
-      ...prev,
-      type: value,
-      assigned_shop: typeConfig?.defaultShop || prev.assigned_shop,
-    }))
+  const toggleType = (value: string) => {
+    setSelectedTypes((prev) => {
+      const next = prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+      // Update assigned_shop from most recently added type
+      if (next.length > 0 && !prev.includes(value)) {
+        const typeConfig = DISCREPANCY_TYPES.find((t) => t.value === value)
+        if (typeConfig?.defaultShop) {
+          setFormData((p) => ({ ...p, assigned_shop: typeConfig.defaultShop || p.assigned_shop }))
+        }
+      }
+      return next
+    })
   }
 
   const captureGPS = () => {
@@ -57,7 +63,7 @@ export default function NewDiscrepancyPage() {
   }
 
   const handleSubmit = async () => {
-    if (!formData.title || !formData.description || !formData.location_text) {
+    if (!formData.title || !formData.description || !formData.location_text || selectedTypes.length === 0) {
       toast.error('Please fill in all required fields')
       return
     }
@@ -67,7 +73,7 @@ export default function NewDiscrepancyPage() {
       title: formData.title,
       description: formData.description,
       location_text: formData.location_text,
-      type: formData.type,
+      type: selectedTypes.join(', '),
       severity: formData.severity,
       assigned_shop: formData.assigned_shop || undefined,
       latitude: formData.latitude,
@@ -114,11 +120,48 @@ export default function NewDiscrepancyPage() {
           </div>
         ))}
 
-        <div style={{ marginBottom: 12 }}>
+        <div style={{ marginBottom: 12, position: 'relative' }}>
           <span className="section-label">Type</span>
-          <select className="input-dark" value={formData.type} onChange={(e) => handleTypeChange(e.target.value)}>
-            {DISCREPANCY_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
+          <button
+            type="button"
+            className="input-dark"
+            onClick={() => setTypeDropdownOpen((v) => !v)}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left', width: '100%' }}
+          >
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+              {selectedTypes.length === 0
+                ? 'Select type(s)...'
+                : selectedTypes.map((v) => {
+                    const t = DISCREPANCY_TYPES.find((d) => d.value === v)
+                    return t ? `${t.emoji} ${t.label}` : v
+                  }).join(', ')}
+            </span>
+            <span style={{ marginLeft: 8, fontSize: 10, color: '#64748B' }}>{typeDropdownOpen ? '▲' : '▼'}</span>
+          </button>
+          {typeDropdownOpen && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#1E293B', border: '1px solid #334155', borderRadius: 8, marginTop: 4, maxHeight: 240, overflowY: 'auto' }}>
+              {DISCREPANCY_TYPES.map((t) => {
+                const selected = selectedTypes.includes(t.value)
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => toggleType(t.value)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px',
+                      background: selected ? '#334155' : 'transparent', border: 'none', color: '#F1F5F9',
+                      fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                    }}
+                  >
+                    <span style={{ width: 20, height: 20, borderRadius: 4, border: `2px solid ${selected ? '#22D3EE' : '#475569'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0, background: selected ? '#22D3EE22' : 'transparent', color: '#22D3EE' }}>
+                      {selected ? '✓' : ''}
+                    </span>
+                    <span>{t.emoji} {t.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: 12 }}>
