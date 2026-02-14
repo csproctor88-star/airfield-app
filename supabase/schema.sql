@@ -277,8 +277,8 @@ ALTER TABLE status_updates ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "AM roles manage status" ON status_updates FOR ALL USING (
   user_has_role(ARRAY['airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'])
 );
-CREATE POLICY "CE updates own" ON status_updates FOR INSERT WITH CHECK (
-  user_has_role(ARRAY['ce_shop'])
+CREATE POLICY "Authenticated users add notes" ON status_updates FOR INSERT WITH CHECK (
+  auth.uid() IS NOT NULL
 );
 CREATE POLICY "Everyone reads status" ON status_updates FOR SELECT USING (true);
 
