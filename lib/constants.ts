@@ -18,6 +18,7 @@ export const INSTALLATION = {
       width_ft: 150,
       surface: 'Asphalt',
       runway_class: 'B' as const,
+      true_heading: 2, // FAA true heading (end1 → end2)
       end1: {
         designator: '01',
         latitude: 42.601550,

@@ -84,10 +84,12 @@ export function getRunwayGeometry(runway: {
   length_ft: number
   width_ft: number
   runway_class: 'A' | 'B'
+  true_heading?: number
 }): RunwayGeometry {
   const end1: LatLon = { lat: runway.end1.latitude, lon: runway.end1.longitude }
   const end2: LatLon = { lat: runway.end2.latitude, lon: runway.end2.longitude }
-  const brg = bearing(end1, end2)
+  // Use published FAA true heading when available; fall back to computed bearing
+  const brg = runway.true_heading ?? bearing(end1, end2)
 
   return {
     end1,
