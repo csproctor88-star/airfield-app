@@ -206,7 +206,13 @@ export function StatusUpdateModal({
     // No status change — just save notes/shop and refresh
     if (notes) {
       const { addStatusNote } = await import('@/lib/supabase/discrepancies')
-      await addStatusNote(discrepancy.id, notes)
+      const { error: noteError } = await addStatusNote(discrepancy.id, notes)
+      if (noteError) {
+        const { toast } = await import('sonner')
+        toast.error(`Failed to save note: ${noteError}`)
+        setSaving(false)
+        return
+      }
     }
     // Refresh discrepancy to pick up assigned_shop change
     const { fetchDiscrepancy } = await import('@/lib/supabase/discrepancies')

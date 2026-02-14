@@ -190,20 +190,23 @@ export async function updateDiscrepancyStatus(
     return { data: null, error: error.message }
   }
 
-  // Attempt to insert audit trail — don't block on FK issues
+  // Insert audit trail for status change
   try {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      await (supabase as any).from('status_updates').insert({
+      const { error: auditError } = await (supabase as any).from('status_updates').insert({
         discrepancy_id: id,
         old_status: oldStatus,
         new_status: newStatus,
         notes: notes || null,
         updated_by: user.id,
       })
+      if (auditError) {
+        console.error('Failed to save status update note:', auditError.message)
+      }
     }
-  } catch {
-    // Audit trail is best-effort
+  } catch (e) {
+    console.error('Audit trail insert failed:', e)
   }
 
   return { data: data as DiscrepancyRow, error: null }
@@ -363,7 +366,7 @@ export type StatusUpdateRow = {
   id: string
   discrepancy_id: string
   old_status: string | null
-  new_status: string
+  new_status: string | null
   notes: string | null
   updated_by: string
   created_at: string
@@ -374,6 +377,7 @@ export async function fetchStatusUpdates(discrepancyId: string): Promise<StatusU
   const supabase = createClient()
   if (!supabase) return []
 
+  // Try with profile join first for user names
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
     .from('status_updates')
@@ -381,15 +385,30 @@ export async function fetchStatusUpdates(discrepancyId: string): Promise<StatusU
     .eq('discrepancy_id', discrepancyId)
     .order('created_at', { ascending: false })
 
-  if (error) {
-    console.error('Failed to fetch status updates:', error.message)
+  if (!error && data) {
+    return (data ?? []).map((row: Record<string, unknown>) => ({
+      ...row,
+      user_name: (row.profiles as { name?: string } | null)?.name || 'Unknown',
+    })) as StatusUpdateRow[]
+  }
+
+  // Fallback: fetch without profile join (FK may not exist or profiles table missing)
+  console.warn('Status updates profile join failed, falling back:', error?.message)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: fallbackData, error: fallbackError } = await (supabase as any)
+    .from('status_updates')
+    .select('*')
+    .eq('discrepancy_id', discrepancyId)
+    .order('created_at', { ascending: false })
+
+  if (fallbackError) {
+    console.error('Failed to fetch status updates:', fallbackError.message)
     return []
   }
 
-  // Flatten the joined profile name
-  return (data ?? []).map((row: Record<string, unknown>) => ({
+  return (fallbackData ?? []).map((row: Record<string, unknown>) => ({
     ...row,
-    user_name: (row.profiles as { name?: string } | null)?.name || 'Unknown',
+    user_name: 'Unknown',
   })) as StatusUpdateRow[]
 }
 

@@ -74,7 +74,7 @@ export type Database = {
           id: string
           discrepancy_id: string
           old_status: string | null
-          new_status: string
+          new_status: string | null
           notes: string | null
           updated_by: string
           created_at: string
