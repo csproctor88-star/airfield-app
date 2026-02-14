@@ -15,7 +15,7 @@ import {
 
 const tabs = [
   { href: '/', label: 'HOME', icon: Home },
-  { href: '/discrepancies', label: 'DISCREP', icon: ClipboardList },
+  { href: '/discrepancies', label: 'DISCREPANCIES', icon: ClipboardList },
   { href: '/checks', label: 'CHECKS', icon: ShieldCheck },
   { href: '/notams', label: 'NOTAMS', icon: Megaphone },
   { href: '/more', label: 'MORE', icon: Menu },

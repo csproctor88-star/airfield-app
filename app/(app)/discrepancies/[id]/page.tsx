@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { SeverityBadge, StatusBadge, Badge } from '@/components/ui/badge'
+import { StatusBadge, Badge } from '@/components/ui/badge'
 import { ActionButton } from '@/components/ui/button'
 import { fetchDiscrepancy, fetchDiscrepancyPhotos, uploadDiscrepancyPhoto, type DiscrepancyRow, type PhotoRow } from '@/lib/supabase/discrepancies'
 import { createClient } from '@/lib/supabase/client'
@@ -11,10 +11,6 @@ import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
 import { EditDiscrepancyModal, StatusUpdateModal, WorkOrderModal, PhotoViewerModal } from '@/components/discrepancies/modals'
 import { toast } from 'sonner'
 import Link from 'next/link'
-
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#EF4444', high: '#F97316', medium: '#FBBF24', low: '#38BDF8',
-}
 
 type ModalType = 'edit' | 'status' | 'workorder' | null
 
@@ -141,11 +137,10 @@ export default function DiscrepancyDetailPage() {
         ← Back
       </button>
 
-      <div className="card" style={{ border: `1px solid ${SEVERITY_COLORS[d.severity]}33`, marginBottom: 8 }}>
+      <div className="card" style={{ marginBottom: 8 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
           <span style={{ fontSize: 16, fontWeight: 800, color: '#22D3EE', fontFamily: 'monospace' }}>{d.display_id}</span>
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-            <SeverityBadge severity={d.severity} />
             <StatusBadge status={d.status} />
           </div>
         </div>

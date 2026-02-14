@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 const FILTERS = ['open', 'assigned', 'in_progress', 'completed', 'all'] as const
 
 export default function DiscrepanciesPage() {
-  const [filter, setFilter] = useState<string>('all')
+  const [filter, setFilter] = useState<string>('open')
   const [search, setSearch] = useState('')
   const [discrepancies, setDiscrepancies] = useState<DiscrepancyRow[]>([])
   const [loading, setLoading] = useState(true)
