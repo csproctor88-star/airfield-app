@@ -17,6 +17,7 @@ const FILTER_LABELS: Record<string, string> = {
 
 export default function DiscrepanciesPage() {
   const [filter, setFilter] = useState<string>('open')
+  const [over30Only, setOver30Only] = useState(false)
   const [search, setSearch] = useState('')
   const [discrepancies, setDiscrepancies] = useState<DiscrepancyRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -63,10 +64,12 @@ export default function DiscrepanciesPage() {
 
   const demoFiltered = DEMO_DISCREPANCIES
     .filter(d => filter === 'all' || d.status === filter)
+    .filter(d => !over30Only || (d.status === 'open' && daysOpen(d.created_at) > 30))
     .filter(matchesSearch)
 
   const liveFiltered = discrepancies
     .filter(d => filter === 'all' || d.status === filter)
+    .filter(d => !over30Only || (d.status === 'open' && daysOpen(d.created_at) > 30))
     .filter(matchesSearch)
 
   return (
@@ -93,17 +96,21 @@ export default function DiscrepanciesPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
         {[
-          { label: 'OPEN', value: openCount, color: '#FBBF24' },
-          { label: '> 30 DAYS', value: over30Count, color: over30Count > 0 ? '#EF4444' : '#34D399' },
+          { label: 'OPEN', value: openCount, color: '#FBBF24', active: filter === 'open' && !over30Only,
+            onClick: () => { setFilter('open'); setOver30Only(false) } },
+          { label: '> 30 DAYS', value: over30Count, color: over30Count > 0 ? '#EF4444' : '#34D399', active: over30Only,
+            onClick: () => { setFilter('open'); setOver30Only(!over30Only) } },
         ].map((k) => (
           <div
             key={k.label}
+            onClick={k.onClick}
             style={{
               background: 'rgba(10,16,28,0.92)',
-              border: '1px solid rgba(56,189,248,0.06)',
+              border: `1px solid ${k.active ? k.color + '44' : 'rgba(56,189,248,0.06)'}`,
               borderRadius: 10,
               padding: '10px 6px',
               textAlign: 'center',
+              cursor: 'pointer',
             }}
           >
             <div style={{ fontSize: 9, color: '#64748B', letterSpacing: '0.08em', fontWeight: 600 }}>
@@ -118,7 +125,7 @@ export default function DiscrepanciesPage() {
         {FILTERS.map((v) => (
           <button
             key={v}
-            onClick={() => setFilter(v)}
+            onClick={() => { setFilter(v); setOver30Only(false) }}
             style={{
               background: filter === v ? 'rgba(34,211,238,0.12)' : 'transparent',
               border: `1px solid ${filter === v ? 'rgba(34,211,238,0.3)' : 'rgba(56,189,248,0.06)'}`,
