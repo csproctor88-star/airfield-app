@@ -410,17 +410,14 @@ export function evaluateObstruction(
       '1. Submit Work Order to CES (Civil Engineering Squadron) for evaluation and corrective action.',
     )
     waiverGuidance.push(
-      '2. Per DAFI 13-213, Para 3.5 — The Airfield Manager must document all known airfield obstructions and coordinate waivers through the installation commander.',
+      '2. Per DAFMAN 13-204, Para 1.14 — Coordinate with ATC/RAPCON regarding any obstruction that may affect flying operations, approach/departure procedures, or instrument procedures.',
     )
     waiverGuidance.push(
-      '3. Per DAFMAN 13-204, Para 1.14 — Coordinate with ATC/RAPCON regarding any obstruction that may affect flying operations, approach/departure procedures, or instrument procedures.',
-    )
-    waiverGuidance.push(
-      '4. If the obstruction cannot be removed, prepare a waiver request per DAFI 32-1042, Chapter 6 — including AF Form 332 (Base Civil Engineer Work Request) with the obstruction evaluation attached.',
+      '3. If the obstruction cannot be removed, prepare a waiver request per DAFI 32-1042, Chapter 6 — including AF Form 332 (Base Civil Engineer Work Request) with the obstruction evaluation attached.',
     )
     for (const vs of violatedSurfaces) {
       waiverGuidance.push(
-        `5. ${vs.surfaceName} violation (${vs.penetrationFt.toFixed(1)} ft penetration) — Reference: ${vs.ufcReference}`,
+        `4. ${vs.surfaceName} violation (${vs.penetrationFt.toFixed(1)} ft penetration) — Reference: ${vs.ufcReference}`,
       )
     }
   }

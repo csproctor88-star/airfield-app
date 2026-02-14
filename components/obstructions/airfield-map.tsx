@@ -20,6 +20,7 @@ type Props = {
   onPointSelected: (point: LatLon) => void
   selectedPoint: LatLon | null
   surfaceAtPoint: string | null
+  runwayClass: 'A' | 'B'
 }
 
 const SURFACE_LAYERS = [
@@ -34,8 +35,8 @@ const SURFACE_LAYERS = [
   { id: 'runway', label: 'Runway', color: '#FFFFFF', opacity: 0.5 },
 ]
 
-function getRwy(): RunwayGeometry {
-  return getRunwayGeometry(INSTALLATION.runways[0])
+function getRwy(cls: 'A' | 'B'): RunwayGeometry {
+  return getRunwayGeometry({ ...INSTALLATION.runways[0], runway_class: cls })
 }
 
 function buildSurfaceGeoJSON(rwy: RunwayGeometry) {
@@ -114,7 +115,7 @@ function buildSurfaceGeoJSON(rwy: RunwayGeometry) {
   }
 }
 
-export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtPoint }: Props) {
+export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtPoint, runwayClass }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const marker = useRef<mapboxgl.Marker | null>(null)
@@ -137,7 +138,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
 
     mapboxgl.accessToken = token
 
-    const rwy = getRwy()
+    const rwy = getRwy(runwayClass)
 
     const m = new mapboxgl.Map({
       container: mapContainer.current,
@@ -259,6 +260,25 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
       m.off('click', handleClick)
     }
   }, [handleClick, mapLoaded])
+
+  // Update surface polygons when runway class changes
+  useEffect(() => {
+    const m = map.current
+    if (!m || !mapLoaded) return
+
+    const rwy = getRwy(runwayClass)
+    const geojson = buildSurfaceGeoJSON(rwy)
+
+    for (const layer of SURFACE_LAYERS) {
+      const sourceId = `source-${layer.id}`
+      const source = m.getSource(sourceId) as mapboxgl.GeoJSONSource | undefined
+      if (!source) continue
+      const feature = geojson.features.find((f) => f.properties?.id === layer.id)
+      if (feature) {
+        source.setData({ type: 'FeatureCollection', features: [feature] })
+      }
+    }
+  }, [runwayClass, mapLoaded])
 
   // Update marker when selectedPoint changes
   useEffect(() => {

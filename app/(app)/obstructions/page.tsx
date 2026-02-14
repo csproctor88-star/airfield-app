@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
 import { INSTALLATION } from '@/lib/constants'
-import type { LatLon } from '@/lib/calculations/geometry'
+import type { LatLon, RunwayGeometry } from '@/lib/calculations/geometry'
+import { getRunwayGeometry } from '@/lib/calculations/geometry'
 import {
   evaluateObstruction,
   identifySurface,
@@ -35,6 +36,15 @@ export default function ObstructionsPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Runway class state (B is default)
+  const [runwayClass, setRunwayClass] = useState<'A' | 'B'>('B')
+
+  // Build runway geometry with the selected class
+  const getRunway = useCallback((): RunwayGeometry => {
+    const rwy = INSTALLATION.runways[0]
+    return getRunwayGeometry({ ...rwy, runway_class: runwayClass })
+  }, [runwayClass])
+
   // Map / point state
   const [pointInfo, setPointInfo] = useState<PointInfo | null>(null)
 
@@ -49,7 +59,8 @@ export default function ObstructionsPage() {
 
   // Handle map click
   const handlePointSelected = useCallback(async (point: LatLon) => {
-    const surfaceName = identifySurface(point)
+    const rwy = getRunway()
+    const surfaceName = identifySurface(point, rwy)
     setPointInfo({
       point,
       groundElevMSL: null,
@@ -60,7 +71,7 @@ export default function ObstructionsPage() {
     setAnalysis(null)
 
     // Quick pre-evaluation at 0 height to get centerline distance
-    const preEval = evaluateObstruction(point, 0, null)
+    const preEval = evaluateObstruction(point, 0, null, rwy)
     setPointInfo((prev) =>
       prev
         ? { ...prev, distFromCenterline: preEval.distanceFromCenterline }
@@ -82,9 +93,9 @@ export default function ObstructionsPage() {
     if (elev) {
       toast.success(`Elevation: ${elev.toFixed(0)} ft MSL`)
     } else {
-      toast('Using airfield elevation (583 ft MSL)', { description: 'Open-Elevation API unavailable' })
+      toast(`Using airfield elevation (${INSTALLATION.elevation_msl} ft MSL)`, { description: 'Open-Elevation API unavailable' })
     }
-  }, [])
+  }, [getRunway])
 
   // Run the evaluation
   const runEvaluation = () => {
@@ -102,6 +113,7 @@ export default function ObstructionsPage() {
       pointInfo.point,
       h,
       pointInfo.groundElevMSL,
+      getRunway(),
     )
     setAnalysis(result)
 
@@ -127,7 +139,7 @@ export default function ObstructionsPage() {
     setSaving(true)
 
     const { data, error } = await createObstructionEvaluation({
-      runway_class: INSTALLATION.runways[0].runway_class,
+      runway_class: runwayClass,
       object_height_agl: analysis.obstructionHeightAGL,
       object_distance_ft: analysis.distanceFromCenterline,
       distance_from_centerline_ft: analysis.distanceFromCenterline,
@@ -199,8 +211,42 @@ export default function ObstructionsPage() {
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>
         Obstruction Evaluation
       </div>
-      <div style={{ fontSize: 10, color: '#64748B', marginBottom: 14 }}>
-        UFC 3-260-01 Imaginary Surface Analysis — RWY 01/19, {INSTALLATION.name}
+      <div style={{ fontSize: 10, color: '#64748B', marginBottom: 10 }}>
+        UFC 3-260-01, Chapter 3 — Imaginary Surface Analysis
+      </div>
+
+      {/* Runway Class Selector */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+        {(['B', 'A'] as const).map((cls) => (
+          <button
+            key={cls}
+            type="button"
+            onClick={() => {
+              setRunwayClass(cls)
+              setAnalysis(null)
+              if (pointInfo) {
+                const rwy = getRunwayGeometry({ ...INSTALLATION.runways[0], runway_class: cls })
+                const surfaceName = identifySurface(pointInfo.point, rwy)
+                setPointInfo((prev) => prev ? { ...prev, surfaceName } : prev)
+              }
+            }}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              borderRadius: 8,
+              border: `1px solid ${runwayClass === cls ? '#38BDF8' : 'rgba(56,189,248,0.15)'}`,
+              background: runwayClass === cls ? 'rgba(56,189,248,0.12)' : 'rgba(4,7,12,0.6)',
+              color: runwayClass === cls ? '#38BDF8' : '#94A3B8',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              minHeight: 40,
+            }}
+          >
+            Class {cls} Runway
+          </button>
+        ))}
       </div>
 
       {/* Map */}
@@ -208,6 +254,7 @@ export default function ObstructionsPage() {
         onPointSelected={handlePointSelected}
         selectedPoint={pointInfo?.point ?? null}
         surfaceAtPoint={surfaceAtPoint}
+        runwayClass={runwayClass}
       />
 
       {/* Point Info Card */}
