@@ -41,22 +41,22 @@ export const INSTALLATION = {
     'CE Structures',
     'CE HVAC',
     'CES Engineering',
-    'Airfield Mgmt',
+    'Airfield Management',
   ],
 } as const
 
 // === Discrepancy Types (SRS Section 6.1) ===
 
 export const DISCREPANCY_TYPES = [
-  { value: 'fod_hazard', label: 'FOD Hazard', emoji: '🚨', defaultSeverity: 'critical', defaultShop: 'Airfield Mgmt' },
+  { value: 'fod_hazard', label: 'FOD Hazard', emoji: '🚨', defaultSeverity: 'critical', defaultShop: 'Airfield Management' },
   { value: 'pavement', label: 'Pavement Deficiency', emoji: '🛣️', defaultSeverity: 'high', defaultShop: 'CE Pavements' },
   { value: 'lighting', label: 'Lighting Outage/Deficiency', emoji: '💡', defaultSeverity: 'high', defaultShop: 'CE Electrical' },
   { value: 'marking', label: 'Marking Deficiency', emoji: '🎨', defaultSeverity: 'medium', defaultShop: 'CE Pavements' },
   { value: 'signage', label: 'Signage Deficiency', emoji: '🪧', defaultSeverity: 'medium', defaultShop: 'CE Electrical' },
   { value: 'drainage', label: 'Drainage Issue', emoji: '🌊', defaultSeverity: 'medium', defaultShop: 'CE Structures' },
   { value: 'vegetation', label: 'Vegetation Encroachment', emoji: '🌿', defaultSeverity: 'low', defaultShop: 'CE Grounds' },
-  { value: 'wildlife', label: 'Wildlife Hazard', emoji: '🦅', defaultSeverity: 'high', defaultShop: 'Airfield Mgmt' },
-  { value: 'obstruction', label: 'Airfield Obstruction', emoji: '⛔', defaultSeverity: 'critical', defaultShop: 'CE / Airfield Mgmt' },
+  { value: 'wildlife', label: 'Wildlife Hazard', emoji: '🦅', defaultSeverity: 'high', defaultShop: 'Airfield Management' },
+  { value: 'obstruction', label: 'Airfield Obstruction', emoji: '⛔', defaultSeverity: 'critical', defaultShop: 'CE / Airfield Management' },
   { value: 'navaid', label: 'NAVAID Deficiency', emoji: '📡', defaultSeverity: 'critical', defaultShop: 'CE Electrical / FAA' },
   { value: 'other', label: 'Other', emoji: '📋', defaultSeverity: 'medium', defaultShop: null },
 ] as const
