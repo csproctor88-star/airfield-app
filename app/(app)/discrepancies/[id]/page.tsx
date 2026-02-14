@@ -1,13 +1,14 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { SeverityBadge, StatusBadge, Badge } from '@/components/ui/badge'
 import { ActionButton } from '@/components/ui/button'
-import { fetchDiscrepancy, type DiscrepancyRow } from '@/lib/supabase/discrepancies'
+import { fetchDiscrepancy, fetchDiscrepancyPhotos, type DiscrepancyRow, type PhotoRow } from '@/lib/supabase/discrepancies'
 import { createClient } from '@/lib/supabase/client'
 import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
 import { isOverdue, slaTimeRemaining } from '@/lib/calculations/sla'
+import { EditDiscrepancyModal, StatusUpdateModal, WorkOrderModal, PhotoViewerModal } from '@/components/discrepancies/modals'
 import { toast } from 'sonner'
 import Link from 'next/link'
 
@@ -15,40 +16,57 @@ const SEVERITY_COLORS: Record<string, string> = {
   critical: '#EF4444', high: '#F97316', medium: '#FBBF24', low: '#38BDF8',
 }
 
+type ModalType = 'edit' | 'status' | 'workorder' | null
+
 export default function DiscrepancyDetailPage() {
   const params = useParams()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [photos, setPhotos] = useState<{ url: string; name: string }[]>([])
+  const [localPhotos, setLocalPhotos] = useState<{ url: string; name: string }[]>([])
+  const [dbPhotos, setDbPhotos] = useState<PhotoRow[]>([])
   const [liveData, setLiveData] = useState<DiscrepancyRow | null>(null)
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
+  const [activeModal, setActiveModal] = useState<ModalType>(null)
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null)
+
+  const loadData = useCallback(async () => {
+    const supabase = createClient()
+    if (!supabase) {
+      setUsingDemo(true)
+      setLoading(false)
+      return
+    }
+
+    const data = await fetchDiscrepancy(params.id as string)
+    setLiveData(data)
+
+    if (data) {
+      const photos = await fetchDiscrepancyPhotos(data.id)
+      setDbPhotos(photos)
+    }
+
+    setLoading(false)
+  }, [params.id])
 
   useEffect(() => {
-    async function load() {
-      const supabase = createClient()
-      if (!supabase) {
-        setUsingDemo(true)
-        setLoading(false)
-        return
-      }
-
-      const data = await fetchDiscrepancy(params.id as string)
-      setLiveData(data)
-      setLoading(false)
-    }
-    load()
-  }, [params.id])
+    loadData()
+  }, [loadData])
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files?.length) return
     Array.from(files).forEach((file) => {
       const url = URL.createObjectURL(file)
-      setPhotos((prev) => [...prev, { url, name: file.name }])
+      setLocalPhotos((prev) => [...prev, { url, name: file.name }])
     })
     toast.success(`${files.length} photo(s) added`)
     e.target.value = ''
+  }
+
+  const handleSaved = (updated: DiscrepancyRow) => {
+    setLiveData(updated)
+    toast.success('Discrepancy updated')
   }
 
   if (loading) {
@@ -92,6 +110,21 @@ export default function DiscrepancyDetailPage() {
       ? 0
       : Math.max(0, Math.floor((Date.now() - new Date(d.created_at).getTime()) / 86400000)))
 
+  // Combine DB-stored photos and locally-added photos for the gallery
+  const supabase = createClient()
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
+  const allPhotos: { url: string; name: string }[] = [
+    ...dbPhotos.map((p) => ({
+      url: supabase && supabaseUrl
+        ? `${supabaseUrl}/storage/v1/object/public/${p.storage_path}`
+        : p.storage_path,
+      name: p.file_name,
+    })),
+    ...localPhotos,
+  ]
+
+  const totalPhotos = d.photo_count + localPhotos.length
+
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
       <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#22D3EE', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
@@ -124,7 +157,7 @@ export default function DiscrepancyDetailPage() {
             ['Type', d.type.charAt(0).toUpperCase() + d.type.slice(1)],
             ['Shop', d.assigned_shop || 'Unassigned'],
             ['Days Open', daysOpen > 0 ? `${daysOpen}` : 'Resolved'],
-            ['Photos', `${d.photo_count}`],
+            ['Photos', `${totalPhotos}`],
             ['Work Order', d.work_order_number || 'None'],
           ] as const).map(([label, value], i) => (
             <div key={i}>
@@ -133,14 +166,42 @@ export default function DiscrepancyDetailPage() {
             </div>
           ))}
         </div>
+
+        {'resolution_notes' in d && d.resolution_notes && (
+          <div style={{ marginTop: 12, padding: '8px 10px', background: '#22C55E11', border: '1px solid #22C55E33', borderRadius: 8 }}>
+            <div style={{ fontSize: 9, color: '#22C55E', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Resolution Notes</div>
+            <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.5 }}>{d.resolution_notes as string}</div>
+          </div>
+        )}
       </div>
 
-      {photos.length > 0 && (
+      {/* Photo thumbnails — tap to view full screen */}
+      {allPhotos.length > 0 && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-          {photos.map((p, i) => (
-            <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid #38BDF833' }}>
+          {allPhotos.map((p, i) => (
+            <div
+              key={i}
+              style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid #38BDF833', cursor: 'pointer' }}
+              onClick={() => setViewerIndex(i)}
+            >
               <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <button type="button" onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.7)', border: 'none', color: '#EF4444', fontSize: 12, width: 20, height: 20, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
+              {/* Show remove button only for locally-added photos */}
+              {i >= dbPhotos.length && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const localIdx = i - dbPhotos.length
+                    setLocalPhotos((prev) => prev.filter((_, j) => j !== localIdx))
+                  }}
+                  style={{
+                    position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.7)',
+                    border: 'none', color: '#EF4444', fontSize: 12, width: 20, height: 20,
+                    borderRadius: '50%', cursor: 'pointer', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+                  }}
+                >×</button>
+              )}
             </div>
           ))}
         </div>
@@ -148,10 +209,10 @@ export default function DiscrepancyDetailPage() {
 
       <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
-        <ActionButton color="#38BDF8" onClick={() => toast.success('Edit opened')}>✏️ Edit</ActionButton>
-        <ActionButton color="#38BDF8" onClick={() => fileInputRef.current?.click()}>📸 Photo{photos.length > 0 ? ` (${photos.length})` : ''}</ActionButton>
-        <ActionButton color="#FBBF24" onClick={() => toast.success('Status update opened')}>🔄 Status</ActionButton>
-        <ActionButton color="#34D399" onClick={() => toast.success('Work order opened')}>📋 Work Order</ActionButton>
+        <ActionButton color="#38BDF8" onClick={() => setActiveModal('edit')}>✏️ Edit</ActionButton>
+        <ActionButton color="#38BDF8" onClick={() => fileInputRef.current?.click()}>📸 Photo{allPhotos.length > 0 ? ` (${allPhotos.length})` : ''}</ActionButton>
+        <ActionButton color="#FBBF24" onClick={() => setActiveModal('status')}>🔄 Status</ActionButton>
+        <ActionButton color="#34D399" onClick={() => setActiveModal('workorder')}>📋 Work Order</ActionButton>
       </div>
 
       {linkedNotam && (
@@ -168,6 +229,20 @@ export default function DiscrepancyDetailPage() {
             <Badge label="VIEW →" color="#22D3EE" />
           </div>
         </Link>
+      )}
+
+      {/* ── Modals ── */}
+      {activeModal === 'edit' && liveData && (
+        <EditDiscrepancyModal discrepancy={liveData} onClose={() => setActiveModal(null)} onSaved={handleSaved} />
+      )}
+      {activeModal === 'status' && liveData && (
+        <StatusUpdateModal discrepancy={liveData} onClose={() => setActiveModal(null)} onSaved={handleSaved} />
+      )}
+      {activeModal === 'workorder' && liveData && (
+        <WorkOrderModal discrepancy={liveData} onClose={() => setActiveModal(null)} onSaved={handleSaved} />
+      )}
+      {viewerIndex !== null && allPhotos.length > 0 && (
+        <PhotoViewerModal photos={allPhotos} initialIndex={viewerIndex} onClose={() => setViewerIndex(null)} />
       )}
     </div>
   )

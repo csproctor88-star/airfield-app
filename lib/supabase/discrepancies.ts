@@ -126,6 +126,119 @@ export async function createDiscrepancy(input: {
   return { data: data as DiscrepancyRow, error: null }
 }
 
+export async function updateDiscrepancy(
+  id: string,
+  fields: {
+    title?: string
+    description?: string
+    location_text?: string
+    type?: string
+    severity?: string
+    assigned_shop?: string | null
+    work_order_number?: string | null
+    resolution_notes?: string | null
+  }
+): Promise<{ data: DiscrepancyRow | null; error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { data: null, error: 'Supabase not configured' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('discrepancies')
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Failed to update discrepancy:', error.message)
+    return { data: null, error: error.message }
+  }
+
+  return { data: data as DiscrepancyRow, error: null }
+}
+
+export async function updateDiscrepancyStatus(
+  id: string,
+  oldStatus: string,
+  newStatus: string,
+  notes?: string,
+  extraFields?: { assigned_shop?: string; resolution_notes?: string }
+): Promise<{ data: DiscrepancyRow | null; error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { data: null, error: 'Supabase not configured' }
+
+  const updateFields: Record<string, unknown> = {
+    status: newStatus,
+    updated_at: new Date().toISOString(),
+  }
+  if (extraFields?.assigned_shop) updateFields.assigned_shop = extraFields.assigned_shop
+  if (extraFields?.resolution_notes) updateFields.resolution_notes = extraFields.resolution_notes
+  if (newStatus === 'resolved') updateFields.resolution_date = new Date().toISOString()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('discrepancies')
+    .update(updateFields)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Failed to update status:', error.message)
+    return { data: null, error: error.message }
+  }
+
+  // Attempt to insert audit trail — don't block on FK issues
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await (supabase as any).from('status_updates').insert({
+        discrepancy_id: id,
+        old_status: oldStatus,
+        new_status: newStatus,
+        notes: notes || null,
+        updated_by: user.id,
+      })
+    }
+  } catch {
+    // Audit trail is best-effort
+  }
+
+  return { data: data as DiscrepancyRow, error: null }
+}
+
+export type PhotoRow = {
+  id: string
+  discrepancy_id: string | null
+  storage_path: string
+  thumbnail_path: string | null
+  file_name: string
+  file_size: number | null
+  mime_type: string
+  captured_at: string
+  created_at: string
+}
+
+export async function fetchDiscrepancyPhotos(discrepancyId: string): Promise<PhotoRow[]> {
+  const supabase = createClient()
+  if (!supabase) return []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('photos')
+    .select('*')
+    .eq('discrepancy_id', discrepancyId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Failed to fetch photos:', error.message)
+    return []
+  }
+
+  return data as PhotoRow[]
+}
+
 export async function fetchDiscrepancyKPIs(): Promise<{
   open: number
   critical: number
