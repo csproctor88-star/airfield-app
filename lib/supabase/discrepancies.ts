@@ -89,7 +89,7 @@ export async function createDiscrepancy(input: {
   const ts = now.getTime().toString(36).slice(-4).toUpperCase()
   const display_id = `D-${year}-${ts}`
 
-  const status: DiscrepancyStatus = input.assigned_shop ? 'assigned' : 'open'
+  const status: DiscrepancyStatus = 'submitted'
 
   const row: Record<string, unknown> = {
     display_id,

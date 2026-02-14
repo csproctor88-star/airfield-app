@@ -71,6 +71,7 @@ export const SEVERITY_CONFIG = {
 
 export const STATUS_CONFIG = {
   open:        { color: '#EF4444', bg: '#FEE2E2', label: 'Open' },
+  submitted:   { color: '#F97316', bg: '#FED7AA', label: 'Submitted' },
   assigned:    { color: '#F97316', bg: '#FED7AA', label: 'Assigned' },
   in_progress: { color: '#EAB308', bg: '#FEF3C7', label: 'In Progress' },
   resolved:    { color: '#22C55E', bg: '#DCFCE7', label: 'Resolved' },
@@ -82,7 +83,8 @@ export const STATUS_CONFIG = {
 // === Status Transitions (SRS Section 6.4) ===
 
 export const ALLOWED_TRANSITIONS: Record<string, string[]> = {
-  open:        ['assigned', 'in_progress', 'resolved', 'closed', 'completed', 'cancelled'],
+  open:        ['submitted', 'assigned', 'in_progress', 'resolved', 'closed', 'completed', 'cancelled'],
+  submitted:   ['assigned', 'in_progress', 'open', 'completed', 'cancelled'],
   assigned:    ['in_progress', 'open', 'completed', 'cancelled'],
   in_progress: ['resolved', 'open', 'completed', 'cancelled'],
   resolved:    ['closed', 'open', 'completed'],
