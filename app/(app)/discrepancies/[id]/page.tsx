@@ -183,7 +183,7 @@ export default function DiscrepancyDetailPage() {
             {statusUpdates.map((update) => (
               <div key={update.id} style={{ borderLeft: '2px solid #334155', paddingLeft: 10, marginBottom: 10 }}>
                 <div style={{ fontSize: 10, color: '#64748B', marginBottom: 2 }}>
-                  <span style={{ fontWeight: 600, color: '#38BDF8' }}>{update.user_name || 'Unknown'}</span>
+                  <span style={{ fontWeight: 600, color: '#38BDF8' }}>{update.user_rank ? `${update.user_rank} ` : ''}{update.user_name || 'Unknown'}</span>
                   {' — '}
                   {new Date(update.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   {' '}

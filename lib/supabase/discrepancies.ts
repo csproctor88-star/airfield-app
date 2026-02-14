@@ -371,6 +371,7 @@ export type StatusUpdateRow = {
   updated_by: string
   created_at: string
   user_name?: string
+  user_rank?: string
 }
 
 export async function fetchStatusUpdates(discrepancyId: string): Promise<StatusUpdateRow[]> {
@@ -381,7 +382,7 @@ export async function fetchStatusUpdates(discrepancyId: string): Promise<StatusU
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
     .from('status_updates')
-    .select('*, profiles:updated_by(name)')
+    .select('*, profiles:updated_by(name, rank)')
     .eq('discrepancy_id', discrepancyId)
     .order('created_at', { ascending: false })
 
@@ -389,6 +390,7 @@ export async function fetchStatusUpdates(discrepancyId: string): Promise<StatusU
     return (data ?? []).map((row: Record<string, unknown>) => ({
       ...row,
       user_name: (row.profiles as { name?: string } | null)?.name || 'Unknown',
+      user_rank: (row.profiles as { rank?: string } | null)?.rank || undefined,
     })) as StatusUpdateRow[]
   }
 
