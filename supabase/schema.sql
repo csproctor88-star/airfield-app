@@ -163,7 +163,7 @@ CREATE TABLE obstruction_evaluations (
   latitude DOUBLE PRECISION,
   longitude DOUBLE PRECISION,
   description TEXT,
-  photo_storage_paths TEXT[] DEFAULT '{}',
+  photo_storage_path TEXT,
   results JSONB NOT NULL DEFAULT '[]',
   controlling_surface TEXT,
   violated_surfaces TEXT[] DEFAULT '{}',

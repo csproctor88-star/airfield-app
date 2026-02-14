@@ -3,6 +3,17 @@ import type { ObstructionEvaluation } from './types'
 
 export type ObstructionRow = ObstructionEvaluation
 
+/** Parse photo_storage_path into an array of URLs.
+ *  Handles: JSON array string, plain URL string, null/empty. */
+export function parsePhotoPaths(raw: string | null | undefined): string[] {
+  if (!raw) return []
+  const trimmed = raw.trim()
+  if (trimmed.startsWith('[')) {
+    try { return JSON.parse(trimmed) as string[] } catch { /* fall through */ }
+  }
+  return [trimmed]
+}
+
 export async function fetchObstructionEvaluations(): Promise<ObstructionRow[]> {
   const supabase = createClient()
   if (!supabase) return []
@@ -74,9 +85,11 @@ export async function createObstructionEvaluation(input: {
   const ts = now.getTime().toString(36).slice(-4).toUpperCase()
   const display_id = `OBS-${year}-${ts}`
 
+  const { photo_storage_paths, ...rest } = input
   const row: Record<string, unknown> = {
     display_id,
-    ...input,
+    ...rest,
+    photo_storage_path: photo_storage_paths.length > 0 ? JSON.stringify(photo_storage_paths) : null,
   }
   if (evaluated_by) row.evaluated_by = evaluated_by
 
@@ -167,10 +180,16 @@ export async function updateObstructionEvaluation(
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
 
+  const { photo_storage_paths, ...rest } = input
+  const updatePayload = {
+    ...rest,
+    photo_storage_path: photo_storage_paths.length > 0 ? JSON.stringify(photo_storage_paths) : null,
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: updateError } = await (supabase as any)
     .from('obstruction_evaluations')
-    .update(input)
+    .update(updatePayload)
     .eq('id', id)
 
   if (updateError) {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { INSTALLATION } from '@/lib/constants'
-import { fetchObstructionEvaluation, deleteObstructionEvaluation, type ObstructionRow } from '@/lib/supabase/obstructions'
+import { fetchObstructionEvaluation, deleteObstructionEvaluation, parsePhotoPaths, type ObstructionRow } from '@/lib/supabase/obstructions'
 
 type SurfaceResult = {
   surfaceKey: string
@@ -83,6 +83,7 @@ export default function ObstructionDetailPage() {
   const applicableResults = results.filter((r) => r.isWithinBounds)
   const violatedResults = results.filter((r) => r.violated)
   const createdAt = new Date(evaluation.created_at)
+  const photoPaths = parsePhotoPaths(evaluation.photo_storage_path)
 
   return (
     <div style={{ padding: 16, paddingBottom: 120 }}>
@@ -156,19 +157,19 @@ export default function ObstructionDetailPage() {
       </div>
 
       {/* Photos */}
-      {evaluation.photo_storage_paths?.length > 0 && (
+      {photoPaths.length > 0 && (
         <div style={{ marginBottom: 10 }}>
-          {evaluation.photo_storage_paths.length === 1 ? (
+          {photoPaths.length === 1 ? (
             <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.1)' }}>
               <img
-                src={evaluation.photo_storage_paths[0]}
+                src={photoPaths[0]}
                 alt="Obstruction"
                 style={{ width: '100%', maxHeight: 200, objectFit: 'cover' }}
               />
             </div>
           ) : (
             <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
-              {evaluation.photo_storage_paths.map((url: string, i: number) => (
+              {photoPaths.map((url, i) => (
                 <div
                   key={i}
                   style={{

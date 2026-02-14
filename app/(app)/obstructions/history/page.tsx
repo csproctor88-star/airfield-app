@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { fetchObstructionEvaluations, deleteObstructionEvaluation, type ObstructionRow } from '@/lib/supabase/obstructions'
+import { fetchObstructionEvaluations, deleteObstructionEvaluation, parsePhotoPaths, type ObstructionRow } from '@/lib/supabase/obstructions'
 import { formatDistanceToNow } from 'date-fns'
 
 export default function ObstructionHistoryPage() {
@@ -206,9 +206,9 @@ export default function ObstructionHistoryPage() {
               )}
 
               {/* Photo indicator */}
-              {ev.photo_storage_paths?.length > 0 && (
+              {parsePhotoPaths(ev.photo_storage_path).length > 0 && (
                 <div style={{ marginTop: 4, fontSize: 10, color: '#38BDF8' }}>
-                  {ev.photo_storage_paths.length === 1 ? '1 photo' : `${ev.photo_storage_paths.length} photos`}
+                  {parsePhotoPaths(ev.photo_storage_path).length === 1 ? '1 photo' : `${parsePhotoPaths(ev.photo_storage_path).length} photos`}
                 </div>
               )}
 

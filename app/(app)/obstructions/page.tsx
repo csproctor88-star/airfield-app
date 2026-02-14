@@ -18,6 +18,7 @@ import {
   updateObstructionEvaluation,
   fetchObstructionEvaluation,
   uploadObstructionPhoto,
+  parsePhotoPaths,
 } from '@/lib/supabase/obstructions'
 
 // Dynamic import for Mapbox (client-only, no SSR)
@@ -78,8 +79,9 @@ function ObstructionsContent() {
       }
       setHeight(String(existing.object_height_agl))
       setDescription(existing.notes || existing.description || '')
-      if (existing.photo_storage_paths?.length) {
-        setPhotos(existing.photo_storage_paths.map((url: string) => ({ url })))
+      const existingPhotos = parsePhotoPaths(existing.photo_storage_path)
+      if (existingPhotos.length) {
+        setPhotos(existingPhotos.map((url) => ({ url })))
       }
       if (existing.latitude && existing.longitude) {
         const point: LatLon = { lat: existing.latitude, lon: existing.longitude }
