@@ -16,7 +16,6 @@ import { fetchElevation } from '@/lib/calculations/geometry'
 import {
   createObstructionEvaluation,
   updateObstructionEvaluation,
-  uploadObstructionPhoto,
   fetchObstructionEvaluation,
 } from '@/lib/supabase/obstructions'
 
@@ -161,13 +160,23 @@ function ObstructionsContent() {
     }
   }
 
-  // Handle photo
-  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle photo — convert to data URL immediately so it can be saved with the record
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setPhoto({ file, url: URL.createObjectURL(file) })
-    toast.success('Photo attached')
     e.target.value = ''
+    try {
+      const reader = new FileReader()
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+      setPhoto({ file, url: dataUrl })
+      toast.success('Photo attached')
+    } catch {
+      toast.error('Failed to read photo')
+    }
   }
 
   // Save to database
@@ -184,6 +193,7 @@ function ObstructionsContent() {
       latitude: analysis.point.lat,
       longitude: analysis.point.lon,
       description: description || null,
+      photo_storage_path: photo?.url ?? null,
       results: analysis.surfaces.map((s) => ({
         surfaceKey: s.surfaceKey,
         surfaceName: s.surfaceName,
@@ -216,12 +226,6 @@ function ObstructionsContent() {
       toast.error(error || 'Failed to save evaluation')
       setSaving(false)
       return
-    }
-
-    // Upload photo if present
-    if (photo) {
-      const { error: photoErr } = await uploadObstructionPhoto(data.id, photo.file)
-      if (photoErr) toast.error('Photo upload failed')
     }
 
     toast.success(editId ? 'Evaluation updated!' : 'Evaluation saved!')

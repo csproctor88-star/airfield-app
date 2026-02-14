@@ -50,6 +50,7 @@ export async function createObstructionEvaluation(input: {
   latitude: number | null
   longitude: number | null
   description: string | null
+  photo_storage_path: string | null
   results: Record<string, unknown>[]
   controlling_surface: string | null
   violated_surfaces: string[]
@@ -170,6 +171,7 @@ export async function updateObstructionEvaluation(
     latitude: number | null
     longitude: number | null
     description: string | null
+    photo_storage_path: string | null
     results: Record<string, unknown>[]
     controlling_surface: string | null
     violated_surfaces: string[]
