@@ -154,6 +154,9 @@ export function StatusUpdateModal({
   const allowed = ALLOWED_TRANSITIONS[discrepancy.status] || []
   const [saving, setSaving] = useState(false)
   const [newStatus, setNewStatus] = useState('')
+  const [currentStatus, setCurrentStatus] = useState(
+    ((discrepancy as DiscrepancyRow & { current_status?: string }).current_status || 'submitted_to_afm') as string
+  )
   const [notes, setNotes] = useState('')
   const [assignedShop, setAssignedShop] = useState(discrepancy.assigned_shop || '')
 
@@ -177,10 +180,16 @@ export function StatusUpdateModal({
       return
     }
 
-    // Update assigned_shop if changed
-    if (assignedShop !== (discrepancy.assigned_shop || '')) {
+    // Update assigned_shop and/or current_status if changed
+    const origCurrentStatus = (discrepancy as DiscrepancyRow & { current_status?: string }).current_status || 'submitted_to_afm'
+    const shopChanged = assignedShop !== (discrepancy.assigned_shop || '')
+    const currentStatusChanged = currentStatus !== origCurrentStatus
+    if (shopChanged || currentStatusChanged) {
       const { updateDiscrepancy } = await import('@/lib/supabase/discrepancies')
-      await updateDiscrepancy(discrepancy.id, { assigned_shop: assignedShop || null })
+      const fields: Record<string, unknown> = {}
+      if (shopChanged) fields.assigned_shop = assignedShop || null
+      if (currentStatusChanged) fields.current_status = currentStatus
+      await updateDiscrepancy(discrepancy.id, fields)
     }
 
     // Only update status if one was selected
@@ -222,43 +231,48 @@ export function StatusUpdateModal({
     onClose()
   }
 
-  if (allowed.length === 0) {
-    return (
-      <ModalOverlay title="Update Status" onClose={onClose}>
-        <div style={{ color: '#94A3B8', fontSize: 12, textAlign: 'center', padding: 16 }}>
-          No status transitions available from &ldquo;{STATUS_CONFIG[discrepancy.status as keyof typeof STATUS_CONFIG]?.label}&rdquo;.
-        </div>
-      </ModalOverlay>
-    )
-  }
+  /* Note: even if no primary status transitions are available, we still
+     render the full modal so the user can change current_status, shop, etc. */
 
   return (
     <ModalOverlay title="Update Status" onClose={onClose}>
-      <div style={{ marginBottom: 12 }}>
-        <FieldLabel>Current Status</FieldLabel>
-        <div style={{ fontSize: 12, fontWeight: 600, color: STATUS_CONFIG[discrepancy.status as keyof typeof STATUS_CONFIG]?.color || '#94A3B8' }}>
-          {STATUS_CONFIG[discrepancy.status as keyof typeof STATUS_CONFIG]?.label || discrepancy.status}
-        </div>
-      </div>
+      {allowed.length > 0 && (
+        <>
+          <div style={{ marginBottom: 12 }}>
+            <FieldLabel>Open / Closed</FieldLabel>
+            <div style={{ fontSize: 12, fontWeight: 600, color: STATUS_CONFIG[discrepancy.status as keyof typeof STATUS_CONFIG]?.color || '#94A3B8' }}>
+              {STATUS_CONFIG[discrepancy.status as keyof typeof STATUS_CONFIG]?.label || discrepancy.status}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <FieldLabel>Change To</FieldLabel>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {allowed.map(s => {
+                const cfg = STATUS_CONFIG[s as keyof typeof STATUS_CONFIG]
+                const active = s === newStatus
+                return (
+                  <button key={s} type="button" onClick={() => setNewStatus(s)} style={{
+                    background: active ? `${cfg?.color || '#64748B'}22` : 'transparent',
+                    border: `1px solid ${active ? cfg?.color || '#64748B' : '#334155'}`,
+                    borderRadius: 6, padding: '6px 12px', fontSize: 11, fontWeight: 600,
+                    color: cfg?.color || '#94A3B8', cursor: 'pointer', fontFamily: 'inherit',
+                  }}>
+                    {cfg?.label || s}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </>
+      )}
 
       <div style={{ marginBottom: 12 }}>
-        <FieldLabel>New Status</FieldLabel>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {allowed.map(s => {
-            const cfg = STATUS_CONFIG[s as keyof typeof STATUS_CONFIG]
-            const active = s === newStatus
-            return (
-              <button key={s} type="button" onClick={() => setNewStatus(s)} style={{
-                background: active ? `${cfg?.color || '#64748B'}22` : 'transparent',
-                border: `1px solid ${active ? cfg?.color || '#64748B' : '#334155'}`,
-                borderRadius: 6, padding: '6px 12px', fontSize: 11, fontWeight: 600,
-                color: cfg?.color || '#94A3B8', cursor: 'pointer', fontFamily: 'inherit',
-              }}>
-                {cfg?.label || s}
-              </button>
-            )
-          })}
-        </div>
+        <FieldLabel>Current Status</FieldLabel>
+        <select className="input-dark" value={currentStatus}
+          onChange={(e) => setCurrentStatus(e.target.value)}>
+          {CURRENT_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
       </div>
 
       <div style={{ marginBottom: 12 }}>
