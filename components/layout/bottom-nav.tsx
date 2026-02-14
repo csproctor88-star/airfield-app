@@ -5,18 +5,18 @@ import Link from 'next/link'
 import {
   Home,
   ClipboardList,
-  ShieldCheck,
+  TriangleAlert,
   Megaphone,
   Menu,
 } from 'lucide-react'
 
 // Bottom nav matching prototype: 5 tabs, fixed, blur backdrop
-// Home | Discrepancies | Checks | NOTAMs | More
+// Home | Discrepancies | Obstructions | NOTAMs | More
 
 const tabs = [
   { href: '/', label: 'HOME', icon: Home },
   { href: '/discrepancies', label: 'DISCREPANCIES', icon: ClipboardList },
-  { href: '/checks', label: 'CHECKS', icon: ShieldCheck },
+  { href: '/obstructions', label: 'OBSTRUCTIONS', icon: TriangleAlert },
   { href: '/notams', label: 'NOTAMS', icon: Megaphone },
   { href: '/more', label: 'MORE', icon: Menu },
 ] as const
