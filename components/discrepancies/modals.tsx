@@ -162,21 +162,22 @@ export function StatusUpdateModal({
   const needsShop = newStatus === 'assigned'
   const needsResolution = newStatus === 'resolved'
 
-  const handleSave = async () => {
-    if (!newStatus) return
-    if (needsShop && !assignedShop) return
-    if (needsResolution && !resolutionNotes) return
+  const handleSave = async (statusOverride?: string) => {
+    const targetStatus = statusOverride || newStatus
+    if (!targetStatus) return
+    if (!statusOverride && needsShop && !assignedShop) return
+    if (!statusOverride && needsResolution && !resolutionNotes) return
 
     setSaving(true)
     const { updateDiscrepancyStatus } = await import('@/lib/supabase/discrepancies')
     const { data, error } = await updateDiscrepancyStatus(
       discrepancy.id,
       discrepancy.status,
-      newStatus,
+      targetStatus,
       notes || undefined,
       {
-        ...(needsShop ? { assigned_shop: assignedShop } : {}),
-        ...(needsResolution ? { resolution_notes: resolutionNotes } : {}),
+        ...(needsShop && !statusOverride ? { assigned_shop: assignedShop } : {}),
+        ...(needsResolution && !statusOverride ? { resolution_notes: resolutionNotes } : {}),
       },
     )
     setSaving(false)
@@ -256,16 +257,19 @@ export function StatusUpdateModal({
           value={notes} onChange={(e) => setNotes(e.target.value)} />
       </div>
 
-      <div style={{ display: 'flex', gap: 8 }}>
-        <SaveButton saving={saving} onClick={handleSave} label="Update Status" />
-        <button type="button" onClick={onClose} disabled={saving} style={{
-          flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 600,
-          fontFamily: 'inherit', cursor: 'pointer',
-          background: 'transparent', border: '1px solid #334155', color: '#94A3B8',
-        }}>
-          Cancel
+      <SaveButton saving={saving} onClick={() => handleSave()} label="Update Status" />
+
+      {allowed.includes('cancelled') && (
+        <button type="button" disabled={saving} onClick={() => handleSave('cancelled')}
+          style={{
+            width: '100%', padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 600,
+            fontFamily: 'inherit', cursor: 'pointer', marginTop: 6,
+            background: 'transparent', border: '1px solid #334155', color: '#9CA3AF',
+            opacity: saving ? 0.7 : 1,
+          }}>
+          Cancel Discrepancy
         </button>
-      </div>
+      )}
     </ModalOverlay>
   )
 }
