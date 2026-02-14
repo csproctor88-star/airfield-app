@@ -201,59 +201,84 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Helper: check user role without triggering RLS recursion on profiles
+CREATE OR REPLACE FUNCTION public.user_has_role(required_roles text[])
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM profiles
+    WHERE id = auth.uid()
+    AND role = ANY(required_roles)
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.user_shop()
+RETURNS text
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT shop FROM profiles WHERE id = auth.uid();
+$$;
+
 -- 5.12 Row Level Security
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Anyone can view active profiles" ON profiles FOR SELECT USING (is_active = true);
 CREATE POLICY "Admins manage profiles" ON profiles FOR ALL USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role IN ('sys_admin', 'airfield_manager'))
+  user_has_role(ARRAY['sys_admin', 'airfield_manager'])
 );
 
 ALTER TABLE discrepancies ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "AM roles full access" ON discrepancies FOR ALL USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role IN ('airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'))
+  user_has_role(ARRAY['airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'])
 );
 CREATE POLICY "CE sees assigned" ON discrepancies FOR SELECT USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role = 'ce_shop')
-  AND assigned_shop = (SELECT shop FROM profiles WHERE id = auth.uid())
+  user_has_role(ARRAY['ce_shop'])
+  AND assigned_shop = user_shop()
 );
 CREATE POLICY "CE updates assigned" ON discrepancies FOR UPDATE USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role = 'ce_shop')
-  AND assigned_shop = (SELECT shop FROM profiles WHERE id = auth.uid())
+  user_has_role(ARRAY['ce_shop'])
+  AND assigned_shop = user_shop()
 );
 CREATE POLICY "Observers read all" ON discrepancies FOR SELECT USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role IN ('wing_safety', 'atc', 'observer'))
+  user_has_role(ARRAY['wing_safety', 'atc', 'observer'])
 );
 
 ALTER TABLE airfield_checks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "AM roles full access" ON airfield_checks FOR ALL USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role IN ('airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'))
+  user_has_role(ARRAY['airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'])
 );
 CREATE POLICY "Others read checks" ON airfield_checks FOR SELECT USING (true);
 
 ALTER TABLE inspections ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "AM roles full access" ON inspections FOR ALL USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role IN ('airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'))
+  user_has_role(ARRAY['airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'])
 );
 CREATE POLICY "Others read inspections" ON inspections FOR SELECT USING (true);
 
 ALTER TABLE notams ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "AM roles manage notams" ON notams FOR ALL USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role IN ('airfield_manager', 'am_ncoic', 'sys_admin'))
+  user_has_role(ARRAY['airfield_manager', 'am_ncoic', 'sys_admin'])
 );
 CREATE POLICY "Everyone reads notams" ON notams FOR SELECT USING (true);
 
 ALTER TABLE photos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "AM roles manage photos" ON photos FOR ALL USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role IN ('airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'))
+  user_has_role(ARRAY['airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'])
 );
 CREATE POLICY "Everyone reads photos" ON photos FOR SELECT USING (true);
 
 ALTER TABLE status_updates ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "AM roles manage status" ON status_updates FOR ALL USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role IN ('airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'))
+  user_has_role(ARRAY['airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'])
 );
 CREATE POLICY "CE updates own" ON status_updates FOR INSERT WITH CHECK (
-  auth.uid() IN (SELECT id FROM profiles WHERE role = 'ce_shop')
+  user_has_role(ARRAY['ce_shop'])
 );
 CREATE POLICY "Everyone reads status" ON status_updates FOR SELECT USING (true);
 
