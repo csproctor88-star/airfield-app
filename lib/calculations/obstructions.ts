@@ -277,20 +277,57 @@ export function evaluateObstruction(
   }
 
   // --- 3. Transitional Surface ---
+  // Per UFC 3-260-01 Para 3-1.6, the transitional surface extends from the edges
+  // of both the primary surface AND the approach-departure clearance surface,
+  // outward and upward at 7:1 to the inner horizontal surface height (150 ft).
   {
     const c = IMAGINARY_SURFACES.transitional.criteria[cls]
-    // Transitional applies along the sides of the primary surface (and approach)
-    // where the perpendicular distance from the primary edge is > 0 but within
-    // the transitional extent (150 * 7 = 1050 ft).
+    const ac = IMAGINARY_SURFACES.approach_departure.criteria[cls]
     const primaryHalfWidth = c.primaryHalfWidth
-    const distFromPrimaryEdge = Math.max(0, relation.distanceFromCenterline - primaryHalfWidth)
     const maxTransitionalExtent = 150 * c.slope // 1050 ft
-    const isWithin =
+
+    // Case A: Along the primary surface (point is abeam the primary surface rectangle)
+    const distFromPrimaryEdge = Math.max(0, relation.distanceFromCenterline - primaryHalfWidth)
+    const withinPrimaryTransitional =
       distFromPrimaryEdge > 0 &&
       distFromPrimaryEdge <= maxTransitionalExtent &&
-      relation.distanceFromCenterline > primaryHalfWidth
+      relation.withinPrimary === false &&
+      Math.abs(relation.alongTrackFromMidpoint) <= (runway.lengthFt / 2 + 200)
 
-    const maxHeightAboveField = distFromPrimaryEdge / c.slope
+    // Case B: Along the approach-departure surface edges
+    // The approach trapezoid expands linearly from innerHalfWidth to outerHalfWidth.
+    // The transitional applies to the sides of this trapezoid up to 150 ft height,
+    // which corresponds to 7,500 ft along the approach (150 * 50 = 7,500).
+    const approachCutoff = 150 * ac.slope // 7,500 ft — beyond here height >= 150 ft
+    const distAlongApproach = relation.distanceFromNearestPrimaryEnd
+    const beyondPrimary = !relation.withinPrimary && distAlongApproach > 0
+    const withinApproachCutoff = distAlongApproach <= approachCutoff
+
+    // Width of approach trapezoid at this point's along-track distance
+    const approachEdgeHalfWidth = beyondPrimary
+      ? ac.innerHalfWidth +
+        (distAlongApproach / ac.length) * (ac.outerHalfWidth - ac.innerHalfWidth)
+      : primaryHalfWidth
+
+    const distFromApproachEdge = beyondPrimary
+      ? Math.max(0, relation.distanceFromCenterline - approachEdgeHalfWidth)
+      : Infinity
+
+    const withinApproachTransitional =
+      beyondPrimary &&
+      withinApproachCutoff &&
+      distFromApproachEdge > 0 &&
+      distFromApproachEdge <= maxTransitionalExtent
+
+    const isWithin = withinPrimaryTransitional || withinApproachTransitional
+
+    // Use the smaller distance from edge (more restrictive = lower allowable height)
+    const distFromEdge = Math.min(
+      withinPrimaryTransitional ? distFromPrimaryEdge : Infinity,
+      withinApproachTransitional ? distFromApproachEdge : Infinity,
+    )
+
+    const maxHeightAboveField = isWithin ? distFromEdge / c.slope : 0
     const maxMSL = airfieldElev + maxHeightAboveField
     const maxAGL = maxMSL - groundElev
     const violated = isWithin && obstructionTopMSL > maxMSL

@@ -17,7 +17,7 @@ export const INSTALLATION = {
       length_ft: 9000,
       width_ft: 150,
       surface: 'Asphalt',
-      runway_class: 'A' as const,
+      runway_class: 'B' as const,
       end1: {
         designator: '01',
         latitude: 42.6017,

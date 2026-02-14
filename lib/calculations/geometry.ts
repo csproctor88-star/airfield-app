@@ -316,45 +316,81 @@ export function generateStadiumPolygon(
   return coords
 }
 
-/** Generate the transitional surface polygon (along sides of primary + approach surfaces). */
+/** Generate the transitional surface polygon (along sides of primary + approach surfaces).
+ *  Per UFC 3-260-01 Para 3-1.6, the transitional surface extends from:
+ *  - The edges of the primary surface, AND
+ *  - The edges of the approach-departure clearance surface
+ *  outward and upward at 7:1 to the inner horizontal surface height (150 ft). */
 export function generateTransitionalPolygons(rwy: RunwayGeometry): {
   left: [number, number][]
   right: [number, number][]
 } {
   const primaryHalfWidth = rwy.runwayClass === 'A' ? 1000 : 750
+  const outerApproachHalfWidth = rwy.runwayClass === 'A' ? 8000 : 6625
+  const approachLength = 50000
   const transitionalExtent = 150 * 7 // 1,050 ft (7:1 slope to 150 ft height)
-  const outerHalfWidth = primaryHalfWidth + transitionalExtent
   const extension = 200
   const perpL = normalizeBearing(rwy.bearingDeg - 90)
   const perpR = normalizeBearing(rwy.bearingDeg + 90)
   const revBearing = normalizeBearing(rwy.bearingDeg + 180)
 
+  // Primary surface ends
   const ext1 = offsetPoint(rwy.end1, revBearing, extension)
   const ext2 = offsetPoint(rwy.end2, rwy.bearingDeg, extension)
 
-  // Left side (looking end1 → end2)
-  const lInner1 = offsetPoint(ext1, perpL, primaryHalfWidth)
-  const lInner2 = offsetPoint(ext2, perpL, primaryHalfWidth)
-  const lOuter1 = offsetPoint(ext1, perpL, outerHalfWidth)
-  const lOuter2 = offsetPoint(ext2, perpL, outerHalfWidth)
+  // Far ends of approach-departure trapezoids
+  const far1 = offsetPoint(rwy.end1, revBearing, extension + approachLength)
+  const far2 = offsetPoint(rwy.end2, rwy.bearingDeg, extension + approachLength)
 
-  // Right side
-  const rInner1 = offsetPoint(ext1, perpR, primaryHalfWidth)
-  const rInner2 = offsetPoint(ext2, perpR, primaryHalfWidth)
-  const rOuter1 = offsetPoint(ext1, perpR, outerHalfWidth)
-  const rOuter2 = offsetPoint(ext2, perpR, outerHalfWidth)
+  // The transitional surface height is capped at 150 ft. Along the approach
+  // trapezoid the edge widens, so at some distance the approach edge itself
+  // is already at 150 ft (distance / 50 = 150 → 7,500 ft along approach).
+  // Beyond that the inner horizontal takes over, so we only need the
+  // transitional along the approach out to that cutoff point.
+  const approachCutoff = 150 * 50 // 7,500 ft along approach where height = 150 ft
+
+  // Width of approach trapezoid at the cutoff point
+  const widthAtCutoff =
+    primaryHalfWidth +
+    (approachCutoff / approachLength) * (outerApproachHalfWidth - primaryHalfWidth)
+
+  // Approach cutoff points
+  const cutoff1 = offsetPoint(rwy.end1, revBearing, extension + approachCutoff)
+  const cutoff2 = offsetPoint(rwy.end2, rwy.bearingDeg, extension + approachCutoff)
+
+  function buildSide(perpBearing: number): [number, number][] {
+    // Inner edge: primary surface edge → approach edge expanding outward
+    const pInner1 = offsetPoint(ext1, perpBearing, primaryHalfWidth) // primary end near end1
+    const pInner2 = offsetPoint(ext2, perpBearing, primaryHalfWidth) // primary end near end2
+
+    // Approach inner edge at cutoff
+    const aInner1 = offsetPoint(cutoff1, perpBearing, widthAtCutoff)
+    const aInner2 = offsetPoint(cutoff2, perpBearing, widthAtCutoff)
+
+    // Outer edge: offset by transitional extent perpendicular to each edge segment
+    const pOuter1 = offsetPoint(ext1, perpBearing, primaryHalfWidth + transitionalExtent)
+    const pOuter2 = offsetPoint(ext2, perpBearing, primaryHalfWidth + transitionalExtent)
+    const aOuter1 = offsetPoint(cutoff1, perpBearing, widthAtCutoff + transitionalExtent)
+    const aOuter2 = offsetPoint(cutoff2, perpBearing, widthAtCutoff + transitionalExtent)
+
+    // Trace: inner edge (end1 approach → primary end1 → primary end2 → end2 approach)
+    // then outer edge in reverse
+    return [
+      [aInner1.lon, aInner1.lat],  // approach cutoff near end1
+      [pInner1.lon, pInner1.lat],  // primary edge near end1
+      [pInner2.lon, pInner2.lat],  // primary edge near end2
+      [aInner2.lon, aInner2.lat],  // approach cutoff near end2
+      [aOuter2.lon, aOuter2.lat],  // outer approach near end2
+      [pOuter2.lon, pOuter2.lat],  // outer primary near end2
+      [pOuter1.lon, pOuter1.lat],  // outer primary near end1
+      [aOuter1.lon, aOuter1.lat],  // outer approach near end1
+      [aInner1.lon, aInner1.lat],  // close ring
+    ]
+  }
 
   return {
-    left: [
-      [lInner1.lon, lInner1.lat], [lInner2.lon, lInner2.lat],
-      [lOuter2.lon, lOuter2.lat], [lOuter1.lon, lOuter1.lat],
-      [lInner1.lon, lInner1.lat],
-    ],
-    right: [
-      [rInner1.lon, rInner1.lat], [rInner2.lon, rInner2.lat],
-      [rOuter2.lon, rOuter2.lat], [rOuter1.lon, rOuter1.lat],
-      [rInner1.lon, rInner1.lat],
-    ],
+    left: buildSide(perpL),
+    right: buildSide(perpR),
   }
 }
 
