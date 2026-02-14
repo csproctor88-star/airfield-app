@@ -123,9 +123,7 @@ export default function DiscrepancyDetailPage() {
 
   const daysOpen = usingDemo && 'days_open' in d
     ? (d as typeof DEMO_DISCREPANCIES[0]).days_open
-    : (['resolved', 'closed'].includes(d.status)
-      ? 0
-      : Math.max(0, Math.floor((Date.now() - new Date(d.created_at).getTime()) / 86400000)))
+    : Math.max(0, Math.floor((Date.now() - new Date(d.created_at).getTime()) / 86400000))
 
   // Build photo gallery from DB-stored photos
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
@@ -163,7 +161,7 @@ export default function DiscrepancyDetailPage() {
             ['Current Status', (() => { const cs = (d as typeof d & { current_status?: string }).current_status; return CURRENT_STATUS_OPTIONS.find(o => o.value === cs)?.label || cs || 'N/A' })()],
             ['Work Order Currently Assigned to', d.assigned_shop || 'Unassigned'],
             ['NOTAM', (d as typeof d & { notam_reference?: string }).notam_reference || 'None'],
-            ['Days Open', daysOpen > 0 ? `${daysOpen}` : 'Resolved'],
+            ['Days Open', `${daysOpen}`],
             ['Photos', `${d.photo_count}`],
             ['Work Order', d.work_order_number || 'None'],
           ] as const).map(([label, value], i) => (

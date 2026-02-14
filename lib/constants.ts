@@ -40,6 +40,7 @@ export const INSTALLATION = {
     'CE Grounds',
     'CE Structures',
     'CE HVAC',
+    'CES Engineering',
     'Airfield Mgmt',
   ],
 } as const

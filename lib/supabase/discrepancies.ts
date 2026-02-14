@@ -104,6 +104,7 @@ export async function createDiscrepancy(input: {
     title: input.title,
     description: input.description,
     location_text: input.location_text,
+    work_order_number: 'Pending',
     latitude: input.latitude ?? null,
     longitude: input.longitude ?? null,
   }

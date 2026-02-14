@@ -44,8 +44,7 @@ export default function DiscrepanciesPage() {
   }, [])
 
   // Compute days_open for live data
-  const daysOpen = (createdAt: string, status: string) => {
-    if (['resolved', 'closed'].includes(status)) return 0
+  const daysOpen = (createdAt: string) => {
     return Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 86400000))
   }
 
@@ -53,6 +52,14 @@ export default function DiscrepanciesPage() {
   const q = search.toLowerCase()
   const matchesSearch = (d: { title: string; description: string }) =>
     !q || d.title.toLowerCase().includes(q) || d.description.toLowerCase().includes(q)
+
+  // Counters: open work orders and >30 days open
+  const allItems = usingDemo ? DEMO_DISCREPANCIES : discrepancies
+  const openCount = allItems.filter(d => d.status === 'open').length
+  const over30Count = allItems.filter(d => {
+    const days = Math.max(0, Math.floor((Date.now() - new Date(d.created_at).getTime()) / 86400000))
+    return d.status === 'open' && days > 30
+  }).length
 
   const demoFiltered = DEMO_DISCREPANCIES
     .filter(d => filter === 'all' || d.status === filter)
@@ -82,6 +89,29 @@ export default function DiscrepanciesPage() {
         >
           + New
         </Link>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
+        {[
+          { label: 'OPEN', value: openCount, color: '#FBBF24' },
+          { label: '> 30 DAYS', value: over30Count, color: over30Count > 0 ? '#EF4444' : '#34D399' },
+        ].map((k) => (
+          <div
+            key={k.label}
+            style={{
+              background: 'rgba(10,16,28,0.92)',
+              border: '1px solid rgba(56,189,248,0.06)',
+              borderRadius: 10,
+              padding: '10px 6px',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ fontSize: 9, color: '#64748B', letterSpacing: '0.08em', fontWeight: 600 }}>
+              {k.label}
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: k.color }}>{k.value}</div>
+          </div>
+        ))}
       </div>
 
       <div style={{ display: 'flex', gap: 3, marginBottom: 12, overflowX: 'auto', paddingBottom: 4 }}>
@@ -145,6 +175,7 @@ export default function DiscrepanciesPage() {
               assignedShop={d.assigned_shop}
               daysOpen={d.days_open}
               photoCount={d.photo_count}
+              workOrderNumber={d.work_order_number}
             />
           ))}
         </>
@@ -160,8 +191,9 @@ export default function DiscrepanciesPage() {
               status={d.status}
               locationText={d.location_text}
               assignedShop={d.assigned_shop}
-              daysOpen={daysOpen(d.created_at, d.status)}
+              daysOpen={daysOpen(d.created_at)}
               photoCount={d.photo_count}
+              workOrderNumber={d.work_order_number}
             />
           ))}
         </>

@@ -16,6 +16,7 @@ interface DiscrepancyCardProps {
   assignedShop: string | null
   daysOpen: number
   photoCount: number
+  workOrderNumber?: string | null
 }
 
 export function DiscrepancyCard({
@@ -27,6 +28,7 @@ export function DiscrepancyCard({
   assignedShop,
   daysOpen,
   photoCount,
+  workOrderNumber,
 }: DiscrepancyCardProps) {
 
   return (
@@ -43,7 +45,7 @@ export function DiscrepancyCard({
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
         <span style={{ fontSize: 11, fontWeight: 800, color: '#22D3EE', fontFamily: 'monospace' }}>
-          {displayId}
+          {workOrderNumber || 'Pending'}
         </span>
         <div style={{ display: 'flex', gap: 4 }}>
           <StatusBadge status={status} />
@@ -55,7 +57,7 @@ export function DiscrepancyCard({
         <span>&bull;</span>
         <span>{assignedShop || 'Unassigned'}</span>
         <span>&bull;</span>
-        <span>{daysOpen > 0 ? `${daysOpen}d open` : 'Closed'}</span>
+        <span>{`${daysOpen}d open`}</span>
         {photoCount > 0 && (
           <>
             <span>&bull;</span>
