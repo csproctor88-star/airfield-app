@@ -146,13 +146,20 @@ export type Database = {
       obstruction_evaluations: {
         Row: {
           id: string
+          display_id: string
           runway_class: 'A' | 'B'
           object_height_agl: number
           object_distance_ft: number | null
+          distance_from_centerline_ft: number | null
           object_elevation_msl: number | null
+          obstruction_top_msl: number | null
           latitude: number | null
           longitude: number | null
+          description: string | null
+          photo_storage_path: string | null
           results: Record<string, unknown>[]
+          controlling_surface: string | null
+          violated_surfaces: string[]
           has_violation: boolean
           evaluated_by: string
           linked_discrepancy_id: string | null
