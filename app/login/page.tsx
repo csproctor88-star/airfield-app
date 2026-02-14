@@ -8,13 +8,17 @@ import { Plane } from 'lucide-react'
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const router = useRouter()
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setSuccess(null)
     setLoading(true)
 
     try {
@@ -24,6 +28,26 @@ export default function LoginPage() {
       if (!supabase) {
         router.push('/')
         router.refresh()
+        return
+      }
+
+      if (mode === 'signup') {
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { name: name || undefined },
+          },
+        })
+
+        if (signUpError) {
+          setError(signUpError.message)
+          return
+        }
+
+        setSuccess('Account created! Check your email to confirm, then sign in.')
+        setMode('signin')
+        setPassword('')
         return
       }
 
@@ -44,6 +68,12 @@ export default function LoginPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const switchMode = () => {
+    setMode(mode === 'signin' ? 'signup' : 'signin')
+    setError(null)
+    setSuccess(null)
   }
 
   return (
@@ -103,10 +133,23 @@ export default function LoginPage() {
               color: '#F1F5F9',
             }}
           >
-            Sign In
+            {mode === 'signin' ? 'Sign In' : 'Create Account'}
           </div>
 
-          <form onSubmit={handleLogin}>
+          <form onSubmit={handleSubmit}>
+            {mode === 'signup' && (
+              <div style={{ marginBottom: 12 }}>
+                <span className="section-label">Name</span>
+                <input
+                  type="text"
+                  className="input-dark"
+                  placeholder="Full name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="name"
+                />
+              </div>
+            )}
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">Email</span>
               <input
@@ -128,7 +171,8 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                autoComplete="current-password"
+                minLength={6}
+                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
               />
             </div>
 
@@ -148,15 +192,52 @@ export default function LoginPage() {
               </div>
             )}
 
+            {success && (
+              <div
+                style={{
+                  background: 'rgba(34,197,94,0.1)',
+                  border: '1px solid rgba(34,197,94,0.2)',
+                  borderRadius: 6,
+                  padding: '8px 12px',
+                  marginBottom: 12,
+                  fontSize: 11,
+                  color: '#22C55E',
+                }}
+              >
+                {success}
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
               className="btn-primary"
               style={{ opacity: loading ? 0.7 : 1 }}
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading
+                ? (mode === 'signin' ? 'Signing in...' : 'Creating account...')
+                : (mode === 'signin' ? 'Sign In' : 'Create Account')}
             </button>
           </form>
+
+          <div style={{ textAlign: 'center', marginTop: 14 }}>
+            <button
+              type="button"
+              onClick={switchMode}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#38BDF8',
+                fontSize: 11,
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              {mode === 'signin'
+                ? "Don't have an account? Create one"
+                : 'Already have an account? Sign in'}
+            </button>
+          </div>
         </div>
 
         {/* Footer */}
