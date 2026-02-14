@@ -7,10 +7,11 @@ import { fetchDiscrepancies, type DiscrepancyRow } from '@/lib/supabase/discrepa
 import { DEMO_DISCREPANCIES } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 
-const FILTERS = ['all', 'open', 'assigned', 'in_progress', 'critical'] as const
+const FILTERS = ['all', 'open', 'assigned', 'in_progress', 'completed'] as const
 
 export default function DiscrepanciesPage() {
   const [filter, setFilter] = useState<string>('all')
+  const [search, setSearch] = useState('')
   const [discrepancies, setDiscrepancies] = useState<DiscrepancyRow[]>([])
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
@@ -43,13 +44,17 @@ export default function DiscrepanciesPage() {
   }
 
   // Use demo data as fallback when Supabase isn't configured
-  const demoFiltered = filter === 'all'
-    ? DEMO_DISCREPANCIES
-    : DEMO_DISCREPANCIES.filter(d => d.status === filter || d.severity === filter)
+  const q = search.toLowerCase()
+  const matchesSearch = (d: { title: string; description: string }) =>
+    !q || d.title.toLowerCase().includes(q) || d.description.toLowerCase().includes(q)
 
-  const liveFiltered = filter === 'all'
-    ? discrepancies
-    : discrepancies.filter(d => d.status === filter || d.severity === filter)
+  const demoFiltered = DEMO_DISCREPANCIES
+    .filter(d => filter === 'all' || d.status === filter)
+    .filter(matchesSearch)
+
+  const liveFiltered = discrepancies
+    .filter(d => filter === 'all' || d.status === filter)
+    .filter(matchesSearch)
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
@@ -95,6 +100,26 @@ export default function DiscrepanciesPage() {
           </button>
         ))}
       </div>
+
+      <input
+        type="text"
+        placeholder="Search title or description..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        style={{
+          width: '100%',
+          padding: '8px 12px',
+          marginBottom: 12,
+          background: 'rgba(15,23,42,0.6)',
+          border: '1px solid #1E293B',
+          borderRadius: 8,
+          color: '#E2E8F0',
+          fontSize: 12,
+          fontFamily: 'inherit',
+          outline: 'none',
+          boxSizing: 'border-box',
+        }}
+      />
 
       {loading ? (
         <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B', fontSize: 12 }}>
