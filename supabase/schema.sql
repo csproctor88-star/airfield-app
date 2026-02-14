@@ -296,6 +296,12 @@ CREATE POLICY "AM roles full access" ON obstruction_evaluations FOR ALL USING (
 CREATE POLICY "Authenticated users create evaluations" ON obstruction_evaluations FOR INSERT WITH CHECK (
   auth.uid() IS NOT NULL
 );
+CREATE POLICY "Users update own evaluations" ON obstruction_evaluations FOR UPDATE USING (
+  evaluated_by = auth.uid()
+);
+CREATE POLICY "Users delete own evaluations" ON obstruction_evaluations FOR DELETE USING (
+  evaluated_by = auth.uid()
+);
 CREATE POLICY "Everyone reads evaluations" ON obstruction_evaluations FOR SELECT USING (true);
 
 ALTER TABLE activity_log ENABLE ROW LEVEL SECURITY;
