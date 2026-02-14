@@ -60,7 +60,7 @@ function ObstructionsContent() {
   // Form state
   const [height, setHeight] = useState('')
   const [description, setDescription] = useState('')
-  const [photo, setPhoto] = useState<{ file: File; url: string } | null>(null)
+  const [photo, setPhoto] = useState<{ file?: File; url: string } | null>(null)
 
   // Evaluation result
   const [analysis, setAnalysis] = useState<ObstructionAnalysis | null>(null)
@@ -77,6 +77,9 @@ function ObstructionsContent() {
       }
       setHeight(String(existing.object_height_agl))
       setDescription(existing.notes || existing.description || '')
+      if (existing.photo_storage_path) {
+        setPhoto({ url: existing.photo_storage_path })
+      }
       if (existing.latitude && existing.longitude) {
         const point: LatLon = { lat: existing.latitude, lon: existing.longitude }
         const rwy = getRunwayGeometry(INSTALLATION.runways[0])
@@ -370,7 +373,6 @@ function ObstructionsContent() {
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          capture="environment"
           onChange={handlePhoto}
           style={{ display: 'none' }}
         />

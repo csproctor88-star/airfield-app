@@ -218,7 +218,7 @@ export default function DiscrepancyDetailPage() {
         </div>
       )}
 
-      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
+      <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
         <ActionButton color="#38BDF8" onClick={() => setActiveModal('edit')}>✏️ Edit</ActionButton>
         <ActionButton color="#38BDF8" onClick={() => fileInputRef.current?.click()} disabled={uploading}>

@@ -183,16 +183,27 @@ export async function updateObstructionEvaluation(
   if (!supabase) return { data: null, error: 'Supabase not configured' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { error: updateError } = await (supabase as any)
     .from('obstruction_evaluations')
     .update(input)
     .eq('id', id)
-    .select()
+
+  if (updateError) {
+    console.error('Failed to update obstruction evaluation:', updateError.message)
+    return { data: null, error: updateError.message }
+  }
+
+  // Fetch the updated record separately to avoid .single() coercion issues
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error: fetchError } = await (supabase as any)
+    .from('obstruction_evaluations')
+    .select('*')
+    .eq('id', id)
     .single()
 
-  if (error) {
-    console.error('Failed to update obstruction evaluation:', error.message)
-    return { data: null, error: error.message }
+  if (fetchError) {
+    // Update succeeded but fetch failed — return a minimal object with the id
+    return { data: { id } as ObstructionRow, error: null }
   }
 
   return { data: data as ObstructionRow, error: null }

@@ -98,7 +98,7 @@ export default function FodCheckPage() {
           </div>
         )}
 
-        <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
+        <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
