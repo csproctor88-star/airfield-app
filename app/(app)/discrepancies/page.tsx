@@ -51,8 +51,8 @@ export default function DiscrepanciesPage() {
 
   // Use demo data as fallback when Supabase isn't configured
   const q = search.toLowerCase()
-  const matchesSearch = (d: { title: string; description: string }) =>
-    !q || d.title.toLowerCase().includes(q) || d.description.toLowerCase().includes(q)
+  const matchesSearch = (d: { title: string; description: string; work_order_number?: string | null }) =>
+    !q || d.title.toLowerCase().includes(q) || d.description.toLowerCase().includes(q) || (d.work_order_number?.toLowerCase().includes(q) ?? false)
 
   // Counters: open work orders and >30 days open
   const allItems = usingDemo ? DEMO_DISCREPANCIES : discrepancies
@@ -146,7 +146,7 @@ export default function DiscrepanciesPage() {
 
       <input
         type="text"
-        placeholder="Search title or description..."
+        placeholder="Search title, description, or work order..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         style={{
