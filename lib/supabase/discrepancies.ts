@@ -75,21 +75,23 @@ export async function createDiscrepancy(input: {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
 
-  // Get the current user for reported_by
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { data: null, error: 'Not authenticated' }
+  // Get the current user for reported_by; fallback for unauthenticated sessions
+  let reported_by = 'anonymous'
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) reported_by = user.id
+  } catch {
+    // Continue with fallback
+  }
 
-  // Generate a display ID
-  const year = new Date().getFullYear()
-  const { count } = await supabase
-    .from('discrepancies')
-    .select('*', { count: 'exact', head: true })
-
-  const seq = (count ?? 0) + 1
-  const display_id = `D-${year}-${String(seq).padStart(4, '0')}`
+  // Generate a display ID based on timestamp to avoid count query issues with RLS
+  const now = new Date()
+  const year = now.getFullYear()
+  const ts = now.getTime().toString(36).slice(-4).toUpperCase()
+  const display_id = `D-${year}-${ts}`
 
   // Calculate SLA deadline
-  const sla_deadline = calculateSLADeadline(input.severity, new Date()).toISOString()
+  const sla_deadline = calculateSLADeadline(input.severity, now).toISOString()
 
   const status: DiscrepancyStatus = input.assigned_shop ? 'assigned' : 'open'
 
@@ -107,14 +109,8 @@ export async function createDiscrepancy(input: {
       latitude: input.latitude ?? null,
       longitude: input.longitude ?? null,
       assigned_shop: input.assigned_shop || null,
-      assigned_to: null,
-      reported_by: user.id,
-      work_order_number: null,
+      reported_by,
       sla_deadline,
-      linked_notam_id: null,
-      inspection_id: null,
-      resolution_notes: null,
-      resolution_date: null,
     })
     .select()
     .single()
