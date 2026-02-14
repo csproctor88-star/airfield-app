@@ -74,7 +74,6 @@ export type RunwayGeometry = {
   bearingDeg: number // true bearing from end1 → end2
   lengthFt: number
   widthFt: number
-  runwayClass: 'A' | 'B'
 }
 
 /** Derive runway geometry from the INSTALLATION constants. */
@@ -83,7 +82,6 @@ export function getRunwayGeometry(runway: {
   end2: { latitude: number; longitude: number }
   length_ft: number
   width_ft: number
-  runway_class: 'A' | 'B'
   true_heading?: number
 }): RunwayGeometry {
   const end1: LatLon = { lat: runway.end1.latitude, lon: runway.end1.longitude }
@@ -101,7 +99,6 @@ export function getRunwayGeometry(runway: {
     bearingDeg: brg,
     lengthFt: runway.length_ft,
     widthFt: runway.width_ft,
-    runwayClass: runway.runway_class,
   }
 }
 
@@ -154,7 +151,7 @@ export function pointToRunwayRelation(point: LatLon, rwy: RunwayGeometry): Runwa
   const pLocal = toLocal(point)
   const halfLength = rwy.lengthFt / 2
   const primaryExtension = 200 // ft past each threshold per UFC 3-260-01
-  const primaryHalfWidth = rwy.runwayClass === 'A' ? 1000 : 1000
+  const primaryHalfWidth = 1000
 
   const distFromCL = Math.abs(pLocal.y)
   const side: 'left' | 'right' = pLocal.y < 0 ? 'left' : 'right'
@@ -220,7 +217,7 @@ export function generateRunwayPolygon(rwy: RunwayGeometry): [number, number][] {
 
 /** Generate the primary surface rectangle (wider than runway, extended 200ft past each end). */
 export function generatePrimarySurfacePolygon(rwy: RunwayGeometry): [number, number][] {
-  const halfWidth = rwy.runwayClass === 'A' ? 1000 : 1000
+  const halfWidth = 1000
   const extension = 200
   const perpL = normalizeBearing(rwy.bearingDeg - 90)
   const perpR = normalizeBearing(rwy.bearingDeg + 90)
@@ -248,9 +245,9 @@ function generateApproachTrapezoid(
   end: LatLon,
   outwardBearing: number,
 ): [number, number][] {
-  const innerHalfWidth = rwy.runwayClass === 'A' ? 1000 : 1000
-  const outerHalfWidth = rwy.runwayClass === 'A' ? 8000 : 2550
-  const length = rwy.runwayClass === 'A' ? 50000 : 25000
+  const innerHalfWidth = 1000
+  const outerHalfWidth = 2550
+  const length = 25000
   const extension = 200
   const perpL = normalizeBearing(outwardBearing - 90)
   const perpR = normalizeBearing(outwardBearing + 90)
@@ -327,9 +324,9 @@ export function generateTransitionalPolygons(rwy: RunwayGeometry): {
   left: [number, number][]
   right: [number, number][]
 } {
-  const primaryHalfWidth = rwy.runwayClass === 'A' ? 1000 : 1000
-  const outerApproachHalfWidth = rwy.runwayClass === 'A' ? 8000 : 2550
-  const approachLength = rwy.runwayClass === 'A' ? 50000 : 25000
+  const primaryHalfWidth = 1000
+  const outerApproachHalfWidth = 2550
+  const approachLength = 25000
   const transitionalExtent = 150 * 7 // 1,050 ft (7:1 slope to 150 ft height)
   const extension = 200
   const perpL = normalizeBearing(rwy.bearingDeg - 90)

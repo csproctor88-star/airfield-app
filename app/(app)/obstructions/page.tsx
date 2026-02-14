@@ -36,14 +36,10 @@ export default function ObstructionsPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Runway class state (B is default)
-  const [runwayClass, setRunwayClass] = useState<'A' | 'B'>('B')
-
-  // Build runway geometry with the selected class
+  // Build runway geometry
   const getRunway = useCallback((): RunwayGeometry => {
-    const rwy = INSTALLATION.runways[0]
-    return getRunwayGeometry({ ...rwy, runway_class: runwayClass })
-  }, [runwayClass])
+    return getRunwayGeometry(INSTALLATION.runways[0])
+  }, [])
 
   // Map / point state
   const [pointInfo, setPointInfo] = useState<PointInfo | null>(null)
@@ -139,7 +135,7 @@ export default function ObstructionsPage() {
     setSaving(true)
 
     const { data, error } = await createObstructionEvaluation({
-      runway_class: runwayClass,
+      runway_class: 'B',
       object_height_agl: analysis.obstructionHeightAGL,
       object_distance_ft: analysis.distanceFromCenterline,
       distance_from_centerline_ft: analysis.distanceFromCenterline,
@@ -215,46 +211,11 @@ export default function ObstructionsPage() {
         UFC 3-260-01, Chapter 3 — Imaginary Surface Analysis
       </div>
 
-      {/* Runway Class Selector */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-        {(['B', 'A'] as const).map((cls) => (
-          <button
-            key={cls}
-            type="button"
-            onClick={() => {
-              setRunwayClass(cls)
-              setAnalysis(null)
-              if (pointInfo) {
-                const rwy = getRunwayGeometry({ ...INSTALLATION.runways[0], runway_class: cls })
-                const surfaceName = identifySurface(pointInfo.point, rwy)
-                setPointInfo((prev) => prev ? { ...prev, surfaceName } : prev)
-              }
-            }}
-            style={{
-              flex: 1,
-              padding: '8px 12px',
-              borderRadius: 8,
-              border: `1px solid ${runwayClass === cls ? '#38BDF8' : 'rgba(56,189,248,0.15)'}`,
-              background: runwayClass === cls ? 'rgba(56,189,248,0.12)' : 'rgba(4,7,12,0.6)',
-              color: runwayClass === cls ? '#38BDF8' : '#94A3B8',
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              minHeight: 40,
-            }}
-          >
-            Class {cls} Runway
-          </button>
-        ))}
-      </div>
-
       {/* Map */}
       <AirfieldMap
         onPointSelected={handlePointSelected}
         selectedPoint={pointInfo?.point ?? null}
         surfaceAtPoint={surfaceAtPoint}
-        runwayClass={runwayClass}
       />
 
       {/* Point Info Card */}

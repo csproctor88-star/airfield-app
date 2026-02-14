@@ -170,9 +170,9 @@ export default function ObstructionDetailPage() {
             </div>
           </div>
           <div>
-            <span style={{ color: '#64748B', fontSize: 10 }}>Runway Class</span>
+            <span style={{ color: '#64748B', fontSize: 10 }}>Runway</span>
             <div style={{ color: '#F1F5F9', fontWeight: 700 }}>
-              Class {evaluation.runway_class}
+              01/19 (Class B)
             </div>
           </div>
         </div>

@@ -14,16 +14,13 @@ import {
 } from './geometry'
 
 // ---------------------------------------------------------------------------
-// Surface criteria — UFC 3-260-01, Table 3-1
+// Surface criteria — UFC 3-260-01, Sec 3-15 & Table 3-7 (Class B)
 // ---------------------------------------------------------------------------
 
 export const IMAGINARY_SURFACES = {
   primary: {
     name: 'Primary Surface',
-    criteria: {
-      A: { halfWidth: 1000, extension: 200, maxHeight: 0 },
-      B: { halfWidth: 1000, extension: 200, maxHeight: 0 },
-    },
+    criteria: { halfWidth: 1000, extension: 200, maxHeight: 0 },
     ufcRef: 'UFC 3-260-01, Sec 3-15 & Table 3-7',
     ufcCriteria: 'No object may protrude above the primary surface elevation (runway elevation) within {halfWidth} ft of centerline and {extension} ft beyond each runway end.',
     description: 'No objects permitted above runway elevation within the primary surface boundaries.',
@@ -31,10 +28,7 @@ export const IMAGINARY_SURFACES = {
   },
   approach_departure: {
     name: 'Approach-Departure Clearance Surface',
-    criteria: {
-      A: { slope: 50, innerHalfWidth: 1000, outerHalfWidth: 8000, length: 50000 },
-      B: { slope: 50, innerHalfWidth: 1000, outerHalfWidth: 2550, length: 25000 },
-    },
+    criteria: { slope: 50, innerHalfWidth: 1000, outerHalfWidth: 2550, length: 25000 },
     ufcRef: 'UFC 3-260-01, Sec 3-15 & Table 3-7',
     ufcCriteria: 'No object may penetrate the 50:1 approach-departure clearance surface extending {length} ft from the primary surface end.',
     description: '50:1 slope extending from each end of the primary surface.',
@@ -42,10 +36,7 @@ export const IMAGINARY_SURFACES = {
   },
   inner_horizontal: {
     name: 'Inner Horizontal Surface',
-    criteria: {
-      A: { height: 150, radius: 7500 },
-      B: { height: 150, radius: 13120 },
-    },
+    criteria: { height: 150, radius: 13120 },
     ufcRef: 'UFC 3-260-01, Sec 3-15 & Table 3-7',
     ufcCriteria: 'No object may protrude above 150 ft above the established airfield elevation within a {radius} ft radius of the runway ends.',
     description: '150 ft above established airfield elevation within {radius} ft.',
@@ -53,10 +44,7 @@ export const IMAGINARY_SURFACES = {
   },
   conical: {
     name: 'Conical Surface',
-    criteria: {
-      A: { slope: 20, horizontalExtent: 7000, baseHeight: 150 },
-      B: { slope: 20, horizontalExtent: 7000, baseHeight: 150 },
-    },
+    criteria: { slope: 20, horizontalExtent: 7000, baseHeight: 150 },
     ufcRef: 'UFC 3-260-01, Sec 3-15 & Table 3-7',
     ufcCriteria: 'No object may penetrate the 20:1 conical surface extending 7,000 ft outward from the inner horizontal surface boundary.',
     description: '20:1 slope outward from inner horizontal to 500 ft AGL.',
@@ -64,10 +52,7 @@ export const IMAGINARY_SURFACES = {
   },
   outer_horizontal: {
     name: 'Outer Horizontal Surface',
-    criteria: {
-      A: { height: 500, radius: 30000 },
-      B: { height: 500, radius: 42250 },
-    },
+    criteria: { height: 500, radius: 42250 },
     ufcRef: 'UFC 3-260-01, Sec 3-15 & Table 3-7',
     ufcCriteria: 'No object may protrude above 500 ft above the established airfield elevation within a {radius} ft radius of the runway ends.',
     description: '500 ft above established airfield elevation within {radius} ft.',
@@ -75,10 +60,7 @@ export const IMAGINARY_SURFACES = {
   },
   transitional: {
     name: 'Transitional Surface',
-    criteria: {
-      A: { slope: 7, primaryHalfWidth: 1000 },
-      B: { slope: 7, primaryHalfWidth: 1000 },
-    },
+    criteria: { slope: 7, primaryHalfWidth: 1000 },
     ufcRef: 'UFC 3-260-01, Sec 3-15 & Table 3-7',
     ufcCriteria: 'No object may penetrate the 7:1 transitional surface extending from the primary surface and approach-departure surface edges to the inner horizontal surface height (150 ft).',
     description: '7:1 slope from primary/approach edges to inner horizontal height.',
@@ -209,13 +191,12 @@ export function evaluateObstruction(
 
   const relation = pointToRunwayRelation(point, runway)
   const stadiumDist = distanceFromStadiumCenter(point, runway)
-  const cls = runway.runwayClass
 
   const surfaces: SurfaceEvaluation[] = []
 
   // --- 1. Primary Surface ---
   {
-    const c = IMAGINARY_SURFACES.primary.criteria[cls]
+    const c = IMAGINARY_SURFACES.primary.criteria
     const isWithin = relation.withinPrimary
     const maxAGL = c.maxHeight // 0 ft
     const maxMSL = airfieldElev + maxAGL
@@ -239,7 +220,7 @@ export function evaluateObstruction(
 
   // --- 2. Approach-Departure Clearance Surface ---
   {
-    const c = IMAGINARY_SURFACES.approach_departure.criteria[cls]
+    const c = IMAGINARY_SURFACES.approach_departure.criteria
     // Distance from nearest primary surface end along extended centerline
     const primaryEndInfo = distanceFromNearestPrimaryEndCenter(point, runway)
     const distAlongApproach = relation.distanceFromNearestPrimaryEnd
@@ -281,8 +262,8 @@ export function evaluateObstruction(
   // of both the primary surface AND the approach-departure clearance surface,
   // outward and upward at 7:1 to the inner horizontal surface height (150 ft).
   {
-    const c = IMAGINARY_SURFACES.transitional.criteria[cls]
-    const ac = IMAGINARY_SURFACES.approach_departure.criteria[cls]
+    const c = IMAGINARY_SURFACES.transitional.criteria
+    const ac = IMAGINARY_SURFACES.approach_departure.criteria
     const primaryHalfWidth = c.primaryHalfWidth
     const maxTransitionalExtent = 150 * c.slope // 1050 ft
 
@@ -350,7 +331,7 @@ export function evaluateObstruction(
   // --- 4. Inner Horizontal Surface ---
   // Excludes areas already governed by primary, approach-departure, or transitional.
   {
-    const c = IMAGINARY_SURFACES.inner_horizontal.criteria[cls]
+    const c = IMAGINARY_SURFACES.inner_horizontal.criteria
     const inMoreSpecificSurface = surfaces.some(
       (s) => s.isWithinBounds && (s.surfaceKey === 'primary' || s.surfaceKey === 'approach_departure' || s.surfaceKey === 'transitional'),
     )
@@ -377,8 +358,8 @@ export function evaluateObstruction(
 
   // --- 5. Conical Surface ---
   {
-    const c = IMAGINARY_SURFACES.conical.criteria[cls]
-    const innerR = IMAGINARY_SURFACES.inner_horizontal.criteria[cls].radius
+    const c = IMAGINARY_SURFACES.conical.criteria
+    const innerR = IMAGINARY_SURFACES.inner_horizontal.criteria.radius
     const distFromInnerH = Math.max(0, stadiumDist - innerR)
     const isWithin = stadiumDist > innerR && distFromInnerH <= c.horizontalExtent
     const maxHeightAboveField = c.baseHeight + distFromInnerH / c.slope
@@ -403,9 +384,9 @@ export function evaluateObstruction(
 
   // --- 6. Outer Horizontal Surface ---
   {
-    const c = IMAGINARY_SURFACES.outer_horizontal.criteria[cls]
-    const innerR = IMAGINARY_SURFACES.inner_horizontal.criteria[cls].radius
-    const conicalExtent = IMAGINARY_SURFACES.conical.criteria[cls].horizontalExtent
+    const c = IMAGINARY_SURFACES.outer_horizontal.criteria
+    const innerR = IMAGINARY_SURFACES.inner_horizontal.criteria.radius
+    const conicalExtent = IMAGINARY_SURFACES.conical.criteria.horizontalExtent
     const conicalOuterR = innerR + conicalExtent
     const isWithin = stadiumDist > conicalOuterR && stadiumDist <= c.radius
     const maxMSL = airfieldElev + c.height

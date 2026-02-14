@@ -17,7 +17,6 @@ export const INSTALLATION = {
       length_ft: 9000,
       width_ft: 150,
       surface: 'Asphalt',
-      runway_class: 'B' as const,
       true_heading: 2, // FAA true heading (end1 → end2)
       end1: {
         designator: '01',
