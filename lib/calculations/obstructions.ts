@@ -348,9 +348,13 @@ export function evaluateObstruction(
   }
 
   // --- 4. Inner Horizontal Surface ---
+  // Excludes areas already governed by primary, approach-departure, or transitional.
   {
     const c = IMAGINARY_SURFACES.inner_horizontal.criteria[cls]
-    const isWithin = stadiumDist <= c.radius
+    const inMoreSpecificSurface = surfaces.some(
+      (s) => s.isWithinBounds && (s.surfaceKey === 'primary' || s.surfaceKey === 'approach_departure' || s.surfaceKey === 'transitional'),
+    )
+    const isWithin = stadiumDist <= c.radius && !inMoreSpecificSurface
     const maxMSL = airfieldElev + c.height
     const maxAGL = maxMSL - groundElev
     const violated = isWithin && obstructionTopMSL > maxMSL
