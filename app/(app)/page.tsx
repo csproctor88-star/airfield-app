@@ -13,10 +13,12 @@ import {
   ClipboardCheck,
   Megaphone,
 } from 'lucide-react'
+import { fetchDiscrepancyKPIs } from '@/lib/supabase/discrepancies'
+import { createClient } from '@/lib/supabase/client'
 
 // Home screen matching prototype: clock, weather, KPI tiles, quick actions, today's status, activity
 
-// Placeholder data for initial render — will connect to Supabase in Step 9
+// Placeholder data used as fallback when Supabase is not configured
 const PLACEHOLDER_KPIS = { open: 4, critical: 2, overdue: 1, notams: 3 }
 
 const QUICK_ACTIONS = [
@@ -39,6 +41,7 @@ const PLACEHOLDER_ACTIVITY = [
 
 export default function HomePage() {
   const [time, setTime] = useState('')
+  const [kpis, setKpis] = useState(PLACEHOLDER_KPIS)
 
   useEffect(() => {
     const update = () => setTime(new Date().toTimeString().slice(0, 5))
@@ -47,7 +50,16 @@ export default function HomePage() {
     return () => clearInterval(t)
   }, [])
 
-  const kpis = PLACEHOLDER_KPIS
+  useEffect(() => {
+    async function loadKpis() {
+      const supabase = createClient()
+      if (!supabase) return // keep placeholders
+
+      const data = await fetchDiscrepancyKPIs()
+      setKpis({ ...data, notams: PLACEHOLDER_KPIS.notams })
+    }
+    loadKpis()
+  }, [])
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>

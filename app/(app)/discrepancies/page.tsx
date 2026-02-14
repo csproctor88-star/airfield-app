@@ -1,18 +1,55 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { DiscrepancyCard } from '@/components/discrepancies/discrepancy-card'
+import { fetchDiscrepancies, type DiscrepancyRow } from '@/lib/supabase/discrepancies'
 import { DEMO_DISCREPANCIES } from '@/lib/demo-data'
+import { createClient } from '@/lib/supabase/client'
 
 const FILTERS = ['all', 'open', 'assigned', 'in_progress', 'critical'] as const
 
 export default function DiscrepanciesPage() {
   const [filter, setFilter] = useState<string>('all')
+  const [discrepancies, setDiscrepancies] = useState<DiscrepancyRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [usingDemo, setUsingDemo] = useState(false)
 
-  const filtered = filter === 'all'
+  useEffect(() => {
+    async function load() {
+      const supabase = createClient()
+      if (!supabase) {
+        setUsingDemo(true)
+        setLoading(false)
+        return
+      }
+
+      const data = await fetchDiscrepancies()
+      if (data.length === 0) {
+        // Could be empty table or fetch error — check if Supabase is reachable
+        setDiscrepancies([])
+      } else {
+        setDiscrepancies(data)
+      }
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  // Compute days_open for live data
+  const daysOpen = (createdAt: string, status: string) => {
+    if (['resolved', 'closed'].includes(status)) return 0
+    return Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 86400000))
+  }
+
+  // Use demo data as fallback when Supabase isn't configured
+  const demoFiltered = filter === 'all'
     ? DEMO_DISCREPANCIES
     : DEMO_DISCREPANCIES.filter(d => d.status === filter || d.severity === filter)
+
+  const liveFiltered = filter === 'all'
+    ? discrepancies
+    : discrepancies.filter(d => d.status === filter || d.severity === filter)
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
@@ -59,22 +96,47 @@ export default function DiscrepanciesPage() {
         ))}
       </div>
 
-      {filtered.map((d) => (
-        <DiscrepancyCard
-          key={d.id}
-          id={d.id}
-          displayId={d.display_id}
-          title={d.title}
-          severity={d.severity}
-          status={d.status}
-          locationText={d.location_text}
-          assignedShop={d.assigned_shop}
-          daysOpen={d.days_open}
-          photoCount={d.photo_count}
-        />
-      ))}
+      {loading ? (
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B', fontSize: 12 }}>
+          Loading...
+        </div>
+      ) : usingDemo ? (
+        <>
+          {demoFiltered.map((d) => (
+            <DiscrepancyCard
+              key={d.id}
+              id={d.id}
+              displayId={d.display_id}
+              title={d.title}
+              severity={d.severity}
+              status={d.status}
+              locationText={d.location_text}
+              assignedShop={d.assigned_shop}
+              daysOpen={d.days_open}
+              photoCount={d.photo_count}
+            />
+          ))}
+        </>
+      ) : (
+        <>
+          {(liveFiltered as DiscrepancyRow[]).map((d) => (
+            <DiscrepancyCard
+              key={d.id}
+              id={d.id}
+              displayId={d.display_id}
+              title={d.title}
+              severity={d.severity}
+              status={d.status}
+              locationText={d.location_text}
+              assignedShop={d.assigned_shop}
+              daysOpen={daysOpen(d.created_at, d.status)}
+              photoCount={d.photo_count}
+            />
+          ))}
+        </>
+      )}
 
-      {filtered.length === 0 && (
+      {!loading && (usingDemo ? demoFiltered : liveFiltered).length === 0 && (
         <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B', fontSize: 12 }}>
           No discrepancies match this filter
         </div>

@@ -3,12 +3,14 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { DISCREPANCY_TYPES, INSTALLATION } from '@/lib/constants'
+import { createDiscrepancy } from '@/lib/supabase/discrepancies'
 import { toast } from 'sonner'
 
 export default function NewDiscrepancyPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [photos, setPhotos] = useState<{ url: string; name: string }[]>([])
+  const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
     location_text: '',
@@ -55,11 +57,30 @@ export default function NewDiscrepancyPage() {
     )
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.title || !formData.description || !formData.location_text) {
       toast.error('Please fill in all required fields')
       return
     }
+
+    setSaving(true)
+    const { error } = await createDiscrepancy({
+      title: formData.title,
+      description: formData.description,
+      location_text: formData.location_text,
+      type: formData.type,
+      severity: formData.severity,
+      assigned_shop: formData.assigned_shop || undefined,
+      latitude: formData.latitude,
+      longitude: formData.longitude,
+    })
+
+    if (error) {
+      toast.error(error)
+      setSaving(false)
+      return
+    }
+
     toast.success('Discrepancy saved!')
     router.push('/discrepancies')
   }
@@ -130,7 +151,9 @@ export default function NewDiscrepancyPage() {
           </button>
         </div>
 
-        <button type="button" className="btn-primary" onClick={handleSubmit}>Save Discrepancy</button>
+        <button type="button" className="btn-primary" onClick={handleSubmit} disabled={saving} style={{ opacity: saving ? 0.7 : 1 }}>
+          {saving ? 'Saving...' : 'Save Discrepancy'}
+        </button>
       </div>
     </div>
   )

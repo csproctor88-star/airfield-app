@@ -1,9 +1,11 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { SeverityBadge, StatusBadge, Badge } from '@/components/ui/badge'
 import { ActionButton } from '@/components/ui/button'
+import { fetchDiscrepancy, type DiscrepancyRow } from '@/lib/supabase/discrepancies'
+import { createClient } from '@/lib/supabase/client'
 import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
 import { isOverdue, slaTimeRemaining } from '@/lib/calculations/sla'
 import { toast } from 'sonner'
@@ -18,7 +20,25 @@ export default function DiscrepancyDetailPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [photos, setPhotos] = useState<{ url: string; name: string }[]>([])
-  const d = DEMO_DISCREPANCIES.find((x) => x.id === params.id)
+  const [liveData, setLiveData] = useState<DiscrepancyRow | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [usingDemo, setUsingDemo] = useState(false)
+
+  useEffect(() => {
+    async function load() {
+      const supabase = createClient()
+      if (!supabase) {
+        setUsingDemo(true)
+        setLoading(false)
+        return
+      }
+
+      const data = await fetchDiscrepancy(params.id as string)
+      setLiveData(data)
+      setLoading(false)
+    }
+    load()
+  }, [params.id])
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -30,6 +50,20 @@ export default function DiscrepancyDetailPage() {
     toast.success(`${files.length} photo(s) added`)
     e.target.value = ''
   }
+
+  if (loading) {
+    return (
+      <div style={{ padding: 16, paddingBottom: 100 }}>
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>
+          Loading...
+        </div>
+      </div>
+    )
+  }
+
+  // Resolve data source
+  const demoData = DEMO_DISCREPANCIES.find((x) => x.id === params.id)
+  const d = usingDemo ? demoData : liveData
 
   if (!d) {
     return (
@@ -46,7 +80,17 @@ export default function DiscrepancyDetailPage() {
 
   const overdue = isOverdue(d.sla_deadline, d.status)
   const slaText = slaTimeRemaining(d.sla_deadline, d.status)
-  const linkedNotam = d.linked_notam_id ? DEMO_NOTAMS.find((n) => n.id === d.linked_notam_id) : null
+
+  // For demo data, resolve linked NOTAM from demo set
+  const linkedNotam = usingDemo && 'linked_notam_id' in d && d.linked_notam_id
+    ? DEMO_NOTAMS.find((n) => n.id === d.linked_notam_id)
+    : null
+
+  const daysOpen = usingDemo && 'days_open' in d
+    ? (d as typeof DEMO_DISCREPANCIES[0]).days_open
+    : (['resolved', 'closed'].includes(d.status)
+      ? 0
+      : Math.max(0, Math.floor((Date.now() - new Date(d.created_at).getTime()) / 86400000)))
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
@@ -79,7 +123,7 @@ export default function DiscrepancyDetailPage() {
             ['Location', d.location_text],
             ['Type', d.type.charAt(0).toUpperCase() + d.type.slice(1)],
             ['Shop', d.assigned_shop || 'Unassigned'],
-            ['Days Open', d.days_open > 0 ? `${d.days_open}` : 'Resolved'],
+            ['Days Open', daysOpen > 0 ? `${daysOpen}` : 'Resolved'],
             ['Photos', `${d.photo_count}`],
             ['Work Order', d.work_order_number || 'None'],
           ] as const).map(([label, value], i) => (
