@@ -206,9 +206,9 @@ export default function ObstructionHistoryPage() {
               )}
 
               {/* Photo indicator */}
-              {ev.photo_storage_path && (
+              {ev.photo_storage_paths?.length > 0 && (
                 <div style={{ marginTop: 4, fontSize: 10, color: '#38BDF8' }}>
-                  📸 Photo attached
+                  {ev.photo_storage_paths.length === 1 ? '1 photo' : `${ev.photo_storage_paths.length} photos`}
                 </div>
               )}
 

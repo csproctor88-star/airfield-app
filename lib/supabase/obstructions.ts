@@ -50,7 +50,7 @@ export async function createObstructionEvaluation(input: {
   latitude: number | null
   longitude: number | null
   description: string | null
-  photo_storage_path: string | null
+  photo_storage_paths: string[]
   results: Record<string, unknown>[]
   controlling_surface: string | null
   violated_surfaces: string[]
@@ -96,17 +96,15 @@ export async function createObstructionEvaluation(input: {
 }
 
 export async function uploadObstructionPhoto(
-  evaluationId: string,
   file: File,
-): Promise<{ path: string | null; error: string | null }> {
+): Promise<{ url: string | null; error: string | null }> {
   const supabase = createClient()
-  if (!supabase) return { path: null, error: 'Supabase not configured' }
+  if (!supabase) return { url: null, error: 'Supabase not configured' }
 
   const ext = file.name.split('.').pop() || 'jpg'
-  const storagePath = `obstruction-photos/${evaluationId}/${Date.now()}.${ext}`
+  const storagePath = `obstruction-photos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
 
-  let storageUrl = storagePath
-  let usedStorage = false
+  let storageUrl: string | null = null
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: uploadError } = await (supabase as any).storage
@@ -114,7 +112,6 @@ export async function uploadObstructionPhoto(
       .upload(storagePath, file, { contentType: file.type || 'image/jpeg' })
 
     if (!uploadError) {
-      usedStorage = true
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: urlData } = (supabase as any).storage
         .from('photos')
@@ -129,7 +126,7 @@ export async function uploadObstructionPhoto(
     console.warn('Storage not available, storing as data URL')
   }
 
-  if (!usedStorage) {
+  if (!storageUrl) {
     try {
       const buffer = await file.arrayBuffer()
       const bytes = new Uint8Array(buffer)
@@ -141,23 +138,11 @@ export async function uploadObstructionPhoto(
       storageUrl = `data:${file.type || 'image/jpeg'};base64,${base64}`
     } catch (e) {
       console.error('Failed to convert file to data URL:', e)
-      return { path: null, error: 'Failed to process photo' }
+      return { url: null, error: 'Failed to process photo' }
     }
   }
 
-  // Update the evaluation record with the photo path
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
-    .from('obstruction_evaluations')
-    .update({ photo_storage_path: storageUrl })
-    .eq('id', evaluationId)
-
-  if (error) {
-    console.error('Failed to update photo path:', error.message)
-    return { path: null, error: error.message }
-  }
-
-  return { path: storageUrl, error: null }
+  return { url: storageUrl, error: null }
 }
 
 export async function updateObstructionEvaluation(
@@ -171,7 +156,7 @@ export async function updateObstructionEvaluation(
     latitude: number | null
     longitude: number | null
     description: string | null
-    photo_storage_path: string | null
+    photo_storage_paths: string[]
     results: Record<string, unknown>[]
     controlling_surface: string | null
     violated_surfaces: string[]

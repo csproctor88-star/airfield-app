@@ -17,6 +17,7 @@ import {
   createObstructionEvaluation,
   updateObstructionEvaluation,
   fetchObstructionEvaluation,
+  uploadObstructionPhoto,
 } from '@/lib/supabase/obstructions'
 
 // Dynamic import for Mapbox (client-only, no SSR)
@@ -60,7 +61,7 @@ function ObstructionsContent() {
   // Form state
   const [height, setHeight] = useState('')
   const [description, setDescription] = useState('')
-  const [photo, setPhoto] = useState<{ file?: File; url: string } | null>(null)
+  const [photos, setPhotos] = useState<{ file?: File; url: string }[]>([])
 
   // Evaluation result
   const [analysis, setAnalysis] = useState<ObstructionAnalysis | null>(null)
@@ -77,8 +78,8 @@ function ObstructionsContent() {
       }
       setHeight(String(existing.object_height_agl))
       setDescription(existing.notes || existing.description || '')
-      if (existing.photo_storage_path) {
-        setPhoto({ url: existing.photo_storage_path })
+      if (existing.photo_storage_paths?.length) {
+        setPhotos(existing.photo_storage_paths.map((url: string) => ({ url })))
       }
       if (existing.latitude && existing.longitude) {
         const point: LatLon = { lat: existing.latitude, lon: existing.longitude }
@@ -163,29 +164,52 @@ function ObstructionsContent() {
     }
   }
 
-  // Handle photo — convert to data URL immediately so it can be saved with the record
+  // Handle photo — convert to data URL immediately so it can be previewed
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = e.target.files
+    if (!files?.length) return
     e.target.value = ''
-    try {
-      const reader = new FileReader()
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      })
-      setPhoto({ file, url: dataUrl })
-      toast.success('Photo attached')
-    } catch {
-      toast.error('Failed to read photo')
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      try {
+        const reader = new FileReader()
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string)
+          reader.onerror = reject
+          reader.readAsDataURL(file)
+        })
+        setPhotos((prev) => [...prev, { file, url: dataUrl }])
+      } catch {
+        toast.error('Failed to read photo')
+      }
     }
+    toast.success(files.length > 1 ? `${files.length} photos attached` : 'Photo attached')
+  }
+
+  const removePhoto = (index: number) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== index))
   }
 
   // Save to database
   const handleSave = async () => {
     if (!analysis || !pointInfo) return
     setSaving(true)
+
+    // Upload any new photos (ones with a File object) and keep existing URLs
+    const photoUrls: string[] = []
+    for (const p of photos) {
+      if (p.file) {
+        const { url, error: uploadErr } = await uploadObstructionPhoto(p.file)
+        if (uploadErr || !url) {
+          toast.error(uploadErr || 'Failed to upload photo')
+          setSaving(false)
+          return
+        }
+        photoUrls.push(url)
+      } else {
+        photoUrls.push(p.url)
+      }
+    }
 
     const evaluationPayload = {
       object_height_agl: analysis.obstructionHeightAGL,
@@ -196,7 +220,7 @@ function ObstructionsContent() {
       latitude: analysis.point.lat,
       longitude: analysis.point.lon,
       description: description || null,
-      photo_storage_path: photo?.url ?? null,
+      photo_storage_paths: photoUrls,
       results: analysis.surfaces.map((s) => ({
         surfaceKey: s.surfaceKey,
         surfaceName: s.surfaceName,
@@ -368,20 +392,21 @@ function ObstructionsContent() {
           />
         </div>
 
-        {/* Photo */}
+        {/* Photos */}
         <input
           ref={fileInputRef}
           type="file"
           accept="image/*"
+          multiple
           onChange={handlePhoto}
           style={{ display: 'none' }}
         />
-        <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+        <div style={{ marginBottom: 10 }}>
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             style={{
-              flex: 1,
+              width: '100%',
               background: '#38BDF814',
               border: '1px solid #38BDF833',
               borderRadius: 8,
@@ -394,11 +419,48 @@ function ObstructionsContent() {
               minHeight: 44,
             }}
           >
-            {photo ? '✓ Photo Attached' : '📸 Add Photo'}
+            {photos.length > 0 ? `+ Add More Photos (${photos.length})` : 'Add Photos'}
           </button>
-          {photo && (
-            <div style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', border: '1px solid #38BDF833', flexShrink: 0 }}>
-              <img src={photo.url} alt="Obstruction" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          {photos.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+              {photos.map((p, i) => (
+                <div
+                  key={i}
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                    border: '1px solid #38BDF833',
+                    flexShrink: 0,
+                    position: 'relative',
+                  }}
+                >
+                  <img src={p.url} alt={`Photo ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(i)}
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      right: 2,
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      background: 'rgba(0,0,0,0.7)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      color: '#fff',
+                      fontSize: 10,
+                      lineHeight: '16px',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      padding: 0,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>

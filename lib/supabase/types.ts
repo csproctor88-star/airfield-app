@@ -156,7 +156,7 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           description: string | null
-          photo_storage_path: string | null
+          photo_storage_paths: string[]
           results: Record<string, unknown>[]
           controlling_surface: string | null
           violated_surfaces: string[]

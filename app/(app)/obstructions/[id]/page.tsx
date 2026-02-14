@@ -155,14 +155,40 @@ export default function ObstructionDetailPage() {
         })}
       </div>
 
-      {/* Photo */}
-      {evaluation.photo_storage_path && (
-        <div style={{ marginBottom: 10, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.1)' }}>
-          <img
-            src={evaluation.photo_storage_path}
-            alt="Obstruction"
-            style={{ width: '100%', maxHeight: 200, objectFit: 'cover' }}
-          />
+      {/* Photos */}
+      {evaluation.photo_storage_paths?.length > 0 && (
+        <div style={{ marginBottom: 10 }}>
+          {evaluation.photo_storage_paths.length === 1 ? (
+            <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.1)' }}>
+              <img
+                src={evaluation.photo_storage_paths[0]}
+                alt="Obstruction"
+                style={{ width: '100%', maxHeight: 200, objectFit: 'cover' }}
+              />
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
+              {evaluation.photo_storage_paths.map((url: string, i: number) => (
+                <div
+                  key={i}
+                  style={{
+                    width: 120,
+                    height: 90,
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                    border: '1px solid rgba(56,189,248,0.1)',
+                    flexShrink: 0,
+                  }}
+                >
+                  <img
+                    src={url}
+                    alt={`Obstruction ${i + 1}`}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
