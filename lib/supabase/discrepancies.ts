@@ -208,6 +208,32 @@ export async function updateDiscrepancyStatus(
   return { data: data as DiscrepancyRow, error: null }
 }
 
+export async function deleteDiscrepancy(
+  id: string,
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+
+  // Delete related photos first
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase as any).from('photos').delete().eq('discrepancy_id', id)
+
+  // Delete related status_updates
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase as any).from('status_updates').delete().eq('discrepancy_id', id)
+
+  // Delete the discrepancy
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any).from('discrepancies').delete().eq('id', id)
+
+  if (error) {
+    console.error('Delete discrepancy failed:', error.message)
+    return { error: error.message }
+  }
+
+  return { error: null }
+}
+
 export type PhotoRow = {
   id: string
   discrepancy_id: string | null

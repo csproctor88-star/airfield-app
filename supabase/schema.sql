@@ -66,7 +66,7 @@ CREATE TABLE discrepancies (
   display_id TEXT NOT NULL UNIQUE,
   type TEXT NOT NULL,
   severity TEXT NOT NULL CHECK (severity IN ('critical', 'high', 'medium', 'low')),
-  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'assigned', 'in_progress', 'resolved', 'closed')),
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'assigned', 'in_progress', 'resolved', 'closed', 'completed', 'cancelled')),
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   location_text TEXT NOT NULL,

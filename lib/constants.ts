@@ -75,17 +75,19 @@ export const STATUS_CONFIG = {
   in_progress: { color: '#EAB308', bg: '#FEF3C7', label: 'In Progress' },
   resolved:    { color: '#22C55E', bg: '#DCFCE7', label: 'Resolved' },
   closed:      { color: '#6B7280', bg: '#F3F4F6', label: 'Closed' },
+  completed:   { color: '#10B981', bg: '#D1FAE5', label: 'Completed' },
   cancelled:   { color: '#9CA3AF', bg: '#E5E7EB', label: 'Cancelled' },
 } as const
 
 // === Status Transitions (SRS Section 6.4) ===
 
 export const ALLOWED_TRANSITIONS: Record<string, string[]> = {
-  open:        ['assigned', 'in_progress', 'resolved', 'closed', 'cancelled'],
-  assigned:    ['in_progress', 'open', 'cancelled'],
-  in_progress: ['resolved', 'open', 'cancelled'],
-  resolved:    ['closed', 'open'],
+  open:        ['assigned', 'in_progress', 'resolved', 'closed', 'completed', 'cancelled'],
+  assigned:    ['in_progress', 'open', 'completed', 'cancelled'],
+  in_progress: ['resolved', 'open', 'completed', 'cancelled'],
+  resolved:    ['closed', 'open', 'completed'],
   closed:      ['open'],
+  completed:   [],
   cancelled:   ['open'],
 }
 

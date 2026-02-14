@@ -146,11 +146,12 @@ export function EditDiscrepancyModal({
 // ─── Status Update Modal ────────────────────────────────────────────
 
 export function StatusUpdateModal({
-  discrepancy, onClose, onSaved,
+  discrepancy, onClose, onSaved, onDeleted,
 }: {
   discrepancy: DiscrepancyRow
   onClose: () => void
   onSaved: (updated: DiscrepancyRow) => void
+  onDeleted?: () => void
 }) {
   const allowed = ALLOWED_TRANSITIONS[discrepancy.status] || []
   const [saving, setSaving] = useState(false)
@@ -162,22 +163,39 @@ export function StatusUpdateModal({
   const needsShop = newStatus === 'assigned'
   const needsResolution = newStatus === 'resolved'
 
-  const handleSave = async (statusOverride?: string) => {
-    const targetStatus = statusOverride || newStatus
-    if (!targetStatus) return
-    if (!statusOverride && needsShop && !assignedShop) return
-    if (!statusOverride && needsResolution && !resolutionNotes) return
+  const handleSave = async () => {
+    if (!newStatus) return
+    if (needsShop && !assignedShop) return
+    if (needsResolution && !resolutionNotes) return
 
     setSaving(true)
+
+    // Cancelled = delete from DB entirely
+    if (newStatus === 'cancelled') {
+      const { deleteDiscrepancy } = await import('@/lib/supabase/discrepancies')
+      const { error } = await deleteDiscrepancy(discrepancy.id)
+      setSaving(false)
+      if (error) {
+        const { toast } = await import('sonner')
+        toast.error(error)
+        return
+      }
+      const { toast } = await import('sonner')
+      toast.success('Discrepancy cancelled and removed')
+      onClose()
+      if (onDeleted) onDeleted()
+      return
+    }
+
     const { updateDiscrepancyStatus } = await import('@/lib/supabase/discrepancies')
     const { data, error } = await updateDiscrepancyStatus(
       discrepancy.id,
       discrepancy.status,
-      targetStatus,
+      newStatus,
       notes || undefined,
       {
-        ...(needsShop && !statusOverride ? { assigned_shop: assignedShop } : {}),
-        ...(needsResolution && !statusOverride ? { resolution_notes: resolutionNotes } : {}),
+        ...(needsShop ? { assigned_shop: assignedShop } : {}),
+        ...(needsResolution ? { resolution_notes: resolutionNotes } : {}),
       },
     )
     setSaving(false)
@@ -257,19 +275,7 @@ export function StatusUpdateModal({
           value={notes} onChange={(e) => setNotes(e.target.value)} />
       </div>
 
-      <SaveButton saving={saving} onClick={() => handleSave()} label="Update Status" />
-
-      {allowed.includes('cancelled') && (
-        <button type="button" disabled={saving} onClick={() => handleSave('cancelled')}
-          style={{
-            width: '100%', padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 600,
-            fontFamily: 'inherit', cursor: 'pointer', marginTop: 6,
-            background: 'transparent', border: '1px solid #334155', color: '#9CA3AF',
-            opacity: saving ? 0.7 : 1,
-          }}>
-          Cancel Discrepancy
-        </button>
-      )}
+      <SaveButton saving={saving} onClick={handleSave} label={newStatus === 'cancelled' ? 'Cancel Discrepancy' : 'Update Status'} />
     </ModalOverlay>
   )
 }
