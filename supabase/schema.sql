@@ -142,7 +142,7 @@ CREATE TABLE status_updates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   discrepancy_id UUID NOT NULL REFERENCES discrepancies(id) ON DELETE CASCADE,
   old_status TEXT,
-  new_status TEXT NOT NULL,
+  new_status TEXT,
   notes TEXT,
   updated_by UUID NOT NULL REFERENCES profiles(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
