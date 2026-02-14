@@ -114,6 +114,13 @@ export async function uploadObstructionPhoto(
 
     if (!uploadError) {
       usedStorage = true
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: urlData } = (supabase as any).storage
+        .from('photos')
+        .getPublicUrl(storagePath)
+      if (urlData?.publicUrl) {
+        storageUrl = urlData.publicUrl
+      }
     } else {
       console.warn('Storage upload failed, storing as data URL:', uploadError.message)
     }
@@ -150,6 +157,43 @@ export async function uploadObstructionPhoto(
   }
 
   return { path: storageUrl, error: null }
+}
+
+export async function updateObstructionEvaluation(
+  id: string,
+  input: {
+    object_height_agl: number
+    object_distance_ft: number | null
+    distance_from_centerline_ft: number | null
+    object_elevation_msl: number | null
+    obstruction_top_msl: number | null
+    latitude: number | null
+    longitude: number | null
+    description: string | null
+    results: Record<string, unknown>[]
+    controlling_surface: string | null
+    violated_surfaces: string[]
+    has_violation: boolean
+    notes: string | null
+  },
+): Promise<{ data: ObstructionRow | null; error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { data: null, error: 'Supabase not configured' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('obstruction_evaluations')
+    .update(input)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Failed to update obstruction evaluation:', error.message)
+    return { data: null, error: error.message }
+  }
+
+  return { data: data as ObstructionRow, error: null }
 }
 
 export async function deleteObstructionEvaluation(

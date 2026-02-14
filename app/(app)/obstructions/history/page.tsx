@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { fetchObstructionEvaluations, type ObstructionRow } from '@/lib/supabase/obstructions'
+import { fetchObstructionEvaluations, deleteObstructionEvaluation, type ObstructionRow } from '@/lib/supabase/obstructions'
 import { formatDistanceToNow } from 'date-fns'
 
 export default function ObstructionHistoryPage() {
   const router = useRouter()
   const [evaluations, setEvaluations] = useState<ObstructionRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -18,6 +19,20 @@ export default function ObstructionHistoryPage() {
     }
     load()
   }, [])
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    if (!confirm('Delete this evaluation? This cannot be undone.')) return
+    setDeletingId(id)
+    const { error } = await deleteObstructionEvaluation(id)
+    if (error) {
+      alert(error)
+      setDeletingId(null)
+      return
+    }
+    setEvaluations((prev) => prev.filter((ev) => ev.id !== id))
+    setDeletingId(null)
+  }
 
   return (
     <div style={{ padding: 16, paddingBottom: 120 }}>
@@ -190,6 +205,28 @@ export default function ObstructionHistoryPage() {
                   📸 Photo attached
                 </div>
               )}
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(56,189,248,0.06)' }}>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); router.push(`/obstructions?edit=${ev.id}`) }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); router.push(`/obstructions?edit=${ev.id}`) } }}
+                  style={{ fontSize: 10, fontWeight: 600, color: '#38BDF8', cursor: 'pointer' }}
+                >
+                  Edit
+                </span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => handleDelete(e, ev.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleDelete(e as unknown as React.MouseEvent, ev.id) }}
+                  style={{ fontSize: 10, fontWeight: 600, color: '#EF4444', cursor: 'pointer', opacity: deletingId === ev.id ? 0.5 : 1 }}
+                >
+                  {deletingId === ev.id ? 'Deleting...' : 'Delete'}
+                </span>
+              </div>
             </button>
           )
         })

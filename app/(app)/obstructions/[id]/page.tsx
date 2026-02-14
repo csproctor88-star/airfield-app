@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { INSTALLATION } from '@/lib/constants'
-import { fetchObstructionEvaluation, type ObstructionRow } from '@/lib/supabase/obstructions'
+import { fetchObstructionEvaluation, deleteObstructionEvaluation, type ObstructionRow } from '@/lib/supabase/obstructions'
 
 type SurfaceResult = {
   surfaceKey: string
@@ -33,6 +33,7 @@ export default function ObstructionDetailPage() {
   const id = params.id as string
   const [evaluation, setEvaluation] = useState<ObstructionRow | null>(null)
   const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -42,6 +43,18 @@ export default function ObstructionDetailPage() {
     }
     load()
   }, [id])
+
+  const handleDelete = async () => {
+    if (!confirm('Delete this evaluation? This cannot be undone.')) return
+    setDeleting(true)
+    const { error } = await deleteObstructionEvaluation(id)
+    if (error) {
+      alert(error)
+      setDeleting(false)
+      return
+    }
+    router.push('/obstructions/history')
+  }
 
   if (loading) {
     return (
@@ -106,6 +119,23 @@ export default function ObstructionDetailPage() {
         >
           {evaluation.has_violation ? 'VIOLATION' : 'CLEAR'}
         </span>
+        <span style={{ flex: 1 }} />
+        <button
+          onClick={() => router.push(`/obstructions?edit=${evaluation.id}`)}
+          style={{
+            background: 'rgba(56,189,248,0.1)',
+            border: '1px solid rgba(56,189,248,0.2)',
+            borderRadius: 6,
+            padding: '4px 12px',
+            color: '#38BDF8',
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          Edit
+        </button>
       </div>
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>
         Obstruction Evaluation
@@ -283,7 +313,7 @@ export default function ObstructionDetailPage() {
             3. Per DAFMAN 13-204, Para 1.14 — Coordinate with ATC/RAPCON regarding obstruction impact on flying operations.
           </div>
           <div style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.6, paddingLeft: 8 }}>
-            4. If not removable, prepare waiver per DAFI 32-1042, Ch. 6 — AF Form 332 with this evaluation attached.
+            4. Submit a work order to CES and coordinate with the BCE to request a Permanent or Temporary Airspace Criteria Waiver.
           </div>
           {violatedResults.map((v, i) => (
             <div key={i} style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.6, paddingLeft: 8, marginTop: 2 }}>
@@ -292,6 +322,27 @@ export default function ObstructionDetailPage() {
           ))}
         </div>
       )}
+
+      {/* Delete */}
+      <div style={{ marginTop: 16, textAlign: 'center' }}>
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#EF4444',
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            opacity: deleting ? 0.5 : 0.7,
+            padding: '8px 16px',
+          }}
+        >
+          {deleting ? 'Deleting...' : 'Delete Evaluation'}
+        </button>
+      </div>
     </div>
   )
 }

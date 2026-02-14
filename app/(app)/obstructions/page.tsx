@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState, useRef, useCallback, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
 import { INSTALLATION } from '@/lib/constants'
@@ -15,7 +15,9 @@ import {
 import { fetchElevation } from '@/lib/calculations/geometry'
 import {
   createObstructionEvaluation,
+  updateObstructionEvaluation,
   uploadObstructionPhoto,
+  fetchObstructionEvaluation,
 } from '@/lib/supabase/obstructions'
 
 // Dynamic import for Mapbox (client-only, no SSR)
@@ -33,8 +35,20 @@ type PointInfo = {
 }
 
 export default function ObstructionsPage() {
+  return (
+    <Suspense>
+      <ObstructionsContent />
+    </Suspense>
+  )
+}
+
+function ObstructionsContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Edit mode
+  const editId = searchParams.get('edit')
 
   // Build runway geometry
   const getRunway = useCallback((): RunwayGeometry => {
@@ -52,6 +66,33 @@ export default function ObstructionsPage() {
   // Evaluation result
   const [analysis, setAnalysis] = useState<ObstructionAnalysis | null>(null)
   const [saving, setSaving] = useState(false)
+
+  // Load existing evaluation in edit mode
+  useEffect(() => {
+    if (!editId) return
+    async function loadExisting() {
+      const existing = await fetchObstructionEvaluation(editId!)
+      if (!existing) {
+        toast.error('Evaluation not found')
+        return
+      }
+      setHeight(String(existing.object_height_agl))
+      setDescription(existing.notes || existing.description || '')
+      if (existing.latitude && existing.longitude) {
+        const point: LatLon = { lat: existing.latitude, lon: existing.longitude }
+        const rwy = getRunwayGeometry(INSTALLATION.runways[0])
+        const surfaceName = identifySurface(point, rwy)
+        setPointInfo({
+          point,
+          groundElevMSL: existing.object_elevation_msl,
+          distFromCenterline: existing.distance_from_centerline_ft ?? 0,
+          surfaceName,
+          loadingElev: false,
+        })
+      }
+    }
+    loadExisting()
+  }, [editId])
 
   // Handle map click
   const handlePointSelected = useCallback(async (point: LatLon) => {
@@ -134,8 +175,7 @@ export default function ObstructionsPage() {
     if (!analysis || !pointInfo) return
     setSaving(true)
 
-    const { data, error } = await createObstructionEvaluation({
-      runway_class: 'B',
+    const evaluationPayload = {
       object_height_agl: analysis.obstructionHeightAGL,
       object_distance_ft: analysis.distanceFromCenterline,
       distance_from_centerline_ft: analysis.distanceFromCenterline,
@@ -160,7 +200,17 @@ export default function ObstructionsPage() {
       violated_surfaces: analysis.violatedSurfaces.map((s) => s.surfaceName),
       has_violation: analysis.hasViolation,
       notes: description || null,
-    })
+    }
+
+    let data, error
+    if (editId) {
+      ({ data, error } = await updateObstructionEvaluation(editId, evaluationPayload))
+    } else {
+      ({ data, error } = await createObstructionEvaluation({
+        runway_class: 'B',
+        ...evaluationPayload,
+      }))
+    }
 
     if (error || !data) {
       toast.error(error || 'Failed to save evaluation')
@@ -174,7 +224,7 @@ export default function ObstructionsPage() {
       if (photoErr) toast.error('Photo upload failed')
     }
 
-    toast.success('Evaluation saved!')
+    toast.success(editId ? 'Evaluation updated!' : 'Evaluation saved!')
     setSaving(false)
     router.push(`/obstructions/${data.id}`)
   }
@@ -204,8 +254,26 @@ export default function ObstructionsPage() {
       >
         ← Back
       </button>
-      <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>
-        Obstruction Evaluation
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
+        <div style={{ fontSize: 16, fontWeight: 800, flex: 1 }}>
+          {editId ? 'Edit Evaluation' : 'Obstruction Evaluation'}
+        </div>
+        <button
+          onClick={() => router.push('/obstructions/history')}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#38BDF8',
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            padding: 0,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          History →
+        </button>
       </div>
       <div style={{ fontSize: 10, color: '#64748B', marginBottom: 10 }}>
         UFC 3-260-01, Chapter 3 — Imaginary Surface Analysis
@@ -583,29 +651,12 @@ export default function ObstructionsPage() {
               disabled={saving}
               style={{ opacity: saving ? 0.7 : 1 }}
             >
-              {saving ? 'Saving...' : 'Save Evaluation'}
+              {saving ? 'Saving...' : editId ? 'Update Evaluation' : 'Save Evaluation'}
             </button>
           </div>
         </>
       )}
 
-      {/* History link */}
-      <div style={{ marginTop: 16, textAlign: 'center' }}>
-        <button
-          onClick={() => router.push('/obstructions/history')}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#38BDF8',
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-          }}
-        >
-          View Evaluation History →
-        </button>
-      </div>
     </div>
   )
 }

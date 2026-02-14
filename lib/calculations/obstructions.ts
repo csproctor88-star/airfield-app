@@ -435,7 +435,7 @@ export function evaluateObstruction(
       '2. Per DAFMAN 13-204, Para 1.14 — Coordinate with ATC/RAPCON regarding any obstruction that may affect flying operations, approach/departure procedures, or instrument procedures.',
     )
     waiverGuidance.push(
-      '3. If the obstruction cannot be removed, prepare a waiver request per DAFI 32-1042, Chapter 6 — including AF Form 332 (Base Civil Engineer Work Request) with the obstruction evaluation attached.',
+      '3. Submit a work order to CES and coordinate with the BCE to request a Permanent or Temporary Airspace Criteria Waiver.',
     )
     for (const vs of violatedSurfaces) {
       waiverGuidance.push(
