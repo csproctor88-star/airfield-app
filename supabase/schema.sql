@@ -289,6 +289,12 @@ CREATE POLICY "Authenticated users add notes" ON status_updates FOR INSERT WITH 
 );
 CREATE POLICY "Everyone reads status" ON status_updates FOR SELECT USING (true);
 
+ALTER TABLE obstruction_evaluations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "AM roles full access" ON obstruction_evaluations FOR ALL USING (
+  user_has_role(ARRAY['airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'])
+);
+CREATE POLICY "Everyone reads evaluations" ON obstruction_evaluations FOR SELECT USING (true);
+
 ALTER TABLE activity_log ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Everyone reads activity" ON activity_log FOR SELECT USING (true);
 CREATE POLICY "System inserts activity" ON activity_log FOR INSERT WITH CHECK (true);
