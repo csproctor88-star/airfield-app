@@ -41,26 +41,31 @@ function getRwy(cls: 'A' | 'B'): RunwayGeometry {
 
 function buildSurfaceGeoJSON(rwy: RunwayGeometry) {
   const features: GeoJSON.Feature[] = []
+  const cls = rwy.runwayClass
 
-  // Outer horizontal (30,000 ft stadium)
-  const outerH = generateStadiumPolygon(rwy, 30000, 64)
+  // Derive radii from UFC constants
+  const innerHRadius = IMAGINARY_SURFACES.inner_horizontal.criteria[cls].radius
+  const conicalExtent = IMAGINARY_SURFACES.conical.criteria[cls].horizontalExtent
+  const outerHRadius = IMAGINARY_SURFACES.outer_horizontal.criteria[cls].radius
+
+  // Outer horizontal stadium
+  const outerH = generateStadiumPolygon(rwy, outerHRadius, 64)
   features.push({
     type: 'Feature',
     properties: { id: 'outer-horizontal' },
     geometry: { type: 'Polygon', coordinates: [outerH] },
   })
 
-  // Conical ring = 14,500 ft stadium minus 7,500 ft stadium
-  // We'll draw the full 14,500 stadium; the inner horizontal will visually overlap
-  const conical = generateStadiumPolygon(rwy, 14500, 64)
+  // Conical ring — draw full stadium; inner horizontal visually overlaps
+  const conical = generateStadiumPolygon(rwy, innerHRadius + conicalExtent, 64)
   features.push({
     type: 'Feature',
     properties: { id: 'conical' },
     geometry: { type: 'Polygon', coordinates: [conical] },
   })
 
-  // Inner horizontal (7,500 ft stadium)
-  const innerH = generateStadiumPolygon(rwy, 7500, 64)
+  // Inner horizontal stadium
+  const innerH = generateStadiumPolygon(rwy, innerHRadius, 64)
   features.push({
     type: 'Feature',
     properties: { id: 'inner-horizontal' },
