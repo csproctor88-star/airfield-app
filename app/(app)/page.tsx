@@ -19,7 +19,7 @@ import { createClient } from '@/lib/supabase/client'
 // Home screen matching prototype: clock, weather, KPI tiles, quick actions, today's status, activity
 
 // Placeholder data used as fallback when Supabase is not configured
-const PLACEHOLDER_KPIS = { open: 4, critical: 2, overdue: 1, notams: 3 }
+const PLACEHOLDER_KPIS = { open: 4, critical: 2, notams: 3 }
 
 const QUICK_ACTIONS = [
   { label: 'New Discrep', icon: Plus, color: '#EF4444', href: '/discrepancies/new' },
@@ -92,12 +92,11 @@ export default function HomePage() {
         <Badge label="ADVISORY" color="#FBBF24" />
       </div>
 
-      {/* KPI Tiles — 4 across */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
+      {/* KPI Tiles — 3 across */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
         {[
           { label: 'OPEN', value: kpis.open, color: '#FBBF24', href: '/discrepancies' },
           { label: 'CRITICAL', value: kpis.critical, color: kpis.critical > 0 ? '#EF4444' : '#34D399', href: '/discrepancies' },
-          { label: 'OVERDUE', value: kpis.overdue, color: kpis.overdue > 0 ? '#EF4444' : '#34D399', href: '/discrepancies' },
           { label: 'NOTAMS', value: kpis.notams, color: '#A78BFA', href: '/notams' },
         ].map((k) => (
           <Link

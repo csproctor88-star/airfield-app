@@ -7,7 +7,7 @@ import { ActionButton } from '@/components/ui/button'
 import { fetchDiscrepancy, fetchDiscrepancyPhotos, uploadDiscrepancyPhoto, type DiscrepancyRow, type PhotoRow } from '@/lib/supabase/discrepancies'
 import { createClient } from '@/lib/supabase/client'
 import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
-import { isOverdue, slaTimeRemaining } from '@/lib/calculations/sla'
+
 import { EditDiscrepancyModal, StatusUpdateModal, WorkOrderModal, PhotoViewerModal } from '@/components/discrepancies/modals'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -113,9 +113,6 @@ export default function DiscrepancyDetailPage() {
     )
   }
 
-  const overdue = isOverdue(d.sla_deadline, d.status)
-  const slaText = slaTimeRemaining(d.sla_deadline, d.status)
-
   // For demo data, resolve linked NOTAM from demo set
   const linkedNotam = usingDemo && 'linked_notam_id' in d && d.linked_notam_id
     ? DEMO_NOTAMS.find((n) => n.id === d.linked_notam_id)
@@ -150,17 +147,10 @@ export default function DiscrepancyDetailPage() {
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
             <SeverityBadge severity={d.severity} />
             <StatusBadge status={d.status} />
-            {overdue && <Badge label="OVERDUE" color="#EF4444" />}
           </div>
         </div>
 
         <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>{d.title}</div>
-
-        {slaText && (
-          <div style={{ fontSize: 10, color: overdue ? '#EF4444' : '#FBBF24', marginBottom: 8, fontWeight: 600 }}>
-            SLA: {slaText}
-          </div>
-        )}
 
         <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.6, marginBottom: 12 }}>{d.description}</div>
 

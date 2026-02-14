@@ -1,6 +1,5 @@
 import { createClient } from './client'
 import type { Severity, DiscrepancyStatus } from './types'
-import { calculateSLADeadline } from '@/lib/calculations/sla'
 
 export type DiscrepancyRow = {
   id: string
@@ -17,7 +16,6 @@ export type DiscrepancyRow = {
   assigned_to: string | null
   reported_by: string
   work_order_number: string | null
-  sla_deadline: string | null
   linked_notam_id: string | null
   inspection_id: string | null
   resolution_notes: string | null
@@ -91,9 +89,6 @@ export async function createDiscrepancy(input: {
   const ts = now.getTime().toString(36).slice(-4).toUpperCase()
   const display_id = `D-${year}-${ts}`
 
-  // Calculate SLA deadline
-  const sla_deadline = calculateSLADeadline(input.severity, now).toISOString()
-
   const status: DiscrepancyStatus = input.assigned_shop ? 'assigned' : 'open'
 
   const row: Record<string, unknown> = {
@@ -107,7 +102,6 @@ export async function createDiscrepancy(input: {
     latitude: input.latitude ?? null,
     longitude: input.longitude ?? null,
     assigned_shop: input.assigned_shop || null,
-    sla_deadline,
   }
   if (reported_by) row.reported_by = reported_by
 
@@ -361,31 +355,25 @@ export async function fetchDiscrepancyPhotos(discrepancyId: string): Promise<Pho
 export async function fetchDiscrepancyKPIs(): Promise<{
   open: number
   critical: number
-  overdue: number
 }> {
   const supabase = createClient()
-  if (!supabase) return { open: 0, critical: 0, overdue: 0 }
+  if (!supabase) return { open: 0, critical: 0 }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
     .from('discrepancies')
-    .select('severity, status, sla_deadline')
+    .select('severity, status')
     .not('status', 'in', '("closed")')
 
   if (error) {
     console.error('Failed to fetch KPIs:', error.message)
-    return { open: 0, critical: 0, overdue: 0 }
+    return { open: 0, critical: 0 }
   }
 
-  const rows = (data ?? []) as { severity: string; status: string; sla_deadline: string | null }[]
-  const now = new Date()
+  const rows = (data ?? []) as { severity: string; status: string }[]
 
   const open = rows.filter(r => !['resolved', 'closed'].includes(r.status)).length
   const critical = rows.filter(r => r.severity === 'critical' && !['resolved', 'closed'].includes(r.status)).length
-  const overdue = rows.filter(r => {
-    if (!r.sla_deadline || ['resolved', 'closed'].includes(r.status)) return false
-    return now > new Date(r.sla_deadline)
-  }).length
 
-  return { open, critical, overdue }
+  return { open, critical }
 }

@@ -76,7 +76,6 @@ CREATE TABLE discrepancies (
   assigned_to UUID REFERENCES profiles(id),
   reported_by UUID NOT NULL REFERENCES profiles(id),
   work_order_number TEXT,
-  sla_deadline TIMESTAMPTZ,
   linked_notam_id UUID REFERENCES notams(id),
   inspection_id UUID REFERENCES inspections(id),
   resolution_notes TEXT,
