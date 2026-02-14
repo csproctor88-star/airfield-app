@@ -1,5 +1,5 @@
 import { createClient } from './client'
-import type { Severity, DiscrepancyStatus } from './types'
+import type { Severity, DiscrepancyStatus, CurrentStatus } from './types'
 
 export type DiscrepancyRow = {
   id: string
@@ -7,6 +7,7 @@ export type DiscrepancyRow = {
   type: string
   severity: Severity
   status: DiscrepancyStatus
+  current_status: CurrentStatus
   title: string
   description: string
   location_text: string
@@ -66,7 +67,7 @@ export async function createDiscrepancy(input: {
   location_text: string
   type: string
   severity: string
-  assigned_shop?: string
+  current_status?: string
   latitude?: number | null
   longitude?: number | null
 }): Promise<{ data: DiscrepancyRow | null; error: string | null }> {
@@ -89,19 +90,19 @@ export async function createDiscrepancy(input: {
   const ts = now.getTime().toString(36).slice(-4).toUpperCase()
   const display_id = `D-${year}-${ts}`
 
-  const status: DiscrepancyStatus = 'submitted_to_afm'
+  const status: DiscrepancyStatus = 'open'
 
   const row: Record<string, unknown> = {
     display_id,
     type: input.type,
     severity: input.severity,
     status,
+    current_status: input.current_status || 'submitted_to_afm',
     title: input.title,
     description: input.description,
     location_text: input.location_text,
     latitude: input.latitude ?? null,
     longitude: input.longitude ?? null,
-    assigned_shop: input.assigned_shop || null,
   }
   if (reported_by) row.reported_by = reported_by
 
@@ -128,6 +129,7 @@ export async function updateDiscrepancy(
     location_text?: string
     type?: string
     severity?: string
+    current_status?: string
     assigned_shop?: string | null
     work_order_number?: string | null
     resolution_notes?: string | null

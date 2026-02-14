@@ -28,6 +28,7 @@ export type Database = {
           type: string
           severity: Severity
           status: DiscrepancyStatus
+          current_status: CurrentStatus
           title: string
           description: string
           location_text: string
@@ -194,7 +195,8 @@ export type UserRole =
   | 'sys_admin'
 
 export type Severity = 'critical' | 'high' | 'medium' | 'low'
-export type DiscrepancyStatus = 'open' | 'submitted_to_afm' | 'submitted_to_ces' | 'in_progress' | 'resolved' | 'closed' | 'completed' | 'cancelled'
+export type DiscrepancyStatus = 'open' | 'completed' | 'cancelled'
+export type CurrentStatus = 'submitted_to_afm' | 'submitted_to_ces' | 'awaiting_action_by_ces' | 'work_completed_awaiting_verification'
 export type CheckType = 'fod' | 'bash' | 'rcr' | 'rsc' | 'emergency'
 export type InspectionType = 'daily' | 'semi_annual' | 'annual'
 export type NotamStatus = 'draft' | 'active' | 'cancelled' | 'expired'

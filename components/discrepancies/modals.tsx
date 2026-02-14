@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react'
 import type { DiscrepancyRow } from '@/lib/supabase/discrepancies'
-import { DISCREPANCY_TYPES, INSTALLATION, ALLOWED_TRANSITIONS, STATUS_CONFIG } from '@/lib/constants'
+import { DISCREPANCY_TYPES, INSTALLATION, ALLOWED_TRANSITIONS, STATUS_CONFIG, CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS } from '@/lib/constants'
 
 // ─── Generic overlay ────────────────────────────────────────────────
 
@@ -65,7 +65,7 @@ export function EditDiscrepancyModal({
     location_text: discrepancy.location_text,
     type: discrepancy.type,
     severity: discrepancy.severity as string,
-    assigned_shop: discrepancy.assigned_shop || '',
+    current_status: ((discrepancy as DiscrepancyRow & { current_status?: string }).current_status || 'submitted_to_afm') as string,
   })
 
   const handleSave = async () => {
@@ -78,7 +78,7 @@ export function EditDiscrepancyModal({
       location_text: form.location_text,
       type: form.type,
       severity: form.severity,
-      assigned_shop: form.assigned_shop || null,
+      current_status: form.current_status,
     })
     setSaving(false)
     if (error) {
@@ -93,15 +93,12 @@ export function EditDiscrepancyModal({
   return (
     <ModalOverlay title="Edit Discrepancy" onClose={onClose}>
       <div style={{ marginBottom: 12 }}>
-        <FieldLabel>Title</FieldLabel>
-        <input className="input-dark" maxLength={120} value={form.title}
-          onChange={(e) => setForm(p => ({ ...p, title: e.target.value }))} />
-      </div>
-
-      <div style={{ marginBottom: 12 }}>
         <FieldLabel>Location</FieldLabel>
-        <input className="input-dark" value={form.location_text}
-          onChange={(e) => setForm(p => ({ ...p, location_text: e.target.value }))} />
+        <select className="input-dark" value={form.location_text}
+          onChange={(e) => setForm(p => ({ ...p, location_text: e.target.value }))}>
+          <option value="">Select location...</option>
+          {LOCATION_OPTIONS.map(l => <option key={l.value} value={l.value}>{l.emoji} {l.label}</option>)}
+        </select>
       </div>
 
       <div style={{ marginBottom: 12 }}>
@@ -113,7 +110,20 @@ export function EditDiscrepancyModal({
       </div>
 
       <div style={{ marginBottom: 12 }}>
-        <FieldLabel>NOTAM required?</FieldLabel>
+        <FieldLabel>Title</FieldLabel>
+        <input className="input-dark" maxLength={120} value={form.title}
+          onChange={(e) => setForm(p => ({ ...p, title: e.target.value }))} />
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <FieldLabel>Description</FieldLabel>
+        <textarea className="input-dark" rows={3} style={{ resize: 'vertical' }}
+          value={form.description}
+          onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))} />
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <FieldLabel>Associated NOTAM if Applicable</FieldLabel>
         <select className="input-dark" value={form.severity}
           onChange={(e) => setForm(p => ({ ...p, severity: e.target.value }))}>
           <option value="no">No</option>
@@ -122,19 +132,11 @@ export function EditDiscrepancyModal({
       </div>
 
       <div style={{ marginBottom: 12 }}>
-        <FieldLabel>Assigned Shop</FieldLabel>
-        <select className="input-dark" value={form.assigned_shop}
-          onChange={(e) => setForm(p => ({ ...p, assigned_shop: e.target.value }))}>
-          <option value="">Unassigned</option>
-          {INSTALLATION.ce_shops.map(s => <option key={s} value={s}>{s}</option>)}
+        <FieldLabel>Current Status</FieldLabel>
+        <select className="input-dark" value={form.current_status}
+          onChange={(e) => setForm(p => ({ ...p, current_status: e.target.value }))}>
+          {CURRENT_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-      </div>
-
-      <div style={{ marginBottom: 12 }}>
-        <FieldLabel>Description</FieldLabel>
-        <textarea className="input-dark" rows={3} style={{ resize: 'vertical' }}
-          value={form.description}
-          onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))} />
       </div>
 
       <SaveButton saving={saving} onClick={handleSave} />
@@ -156,13 +158,10 @@ export function StatusUpdateModal({
   const [saving, setSaving] = useState(false)
   const [newStatus, setNewStatus] = useState(allowed[0] || '')
   const [notes, setNotes] = useState('')
-  const [resolutionNotes, setResolutionNotes] = useState('')
-
-  const needsResolution = newStatus === 'resolved'
+  const [assignedShop, setAssignedShop] = useState(discrepancy.assigned_shop || '')
 
   const handleSave = async () => {
     if (!newStatus) return
-    if (needsResolution && !resolutionNotes) return
 
     setSaving(true)
 
@@ -183,15 +182,18 @@ export function StatusUpdateModal({
       return
     }
 
+    // Update assigned_shop if changed
+    if (assignedShop !== (discrepancy.assigned_shop || '')) {
+      const { updateDiscrepancy } = await import('@/lib/supabase/discrepancies')
+      await updateDiscrepancy(discrepancy.id, { assigned_shop: assignedShop || null })
+    }
+
     const { updateDiscrepancyStatus } = await import('@/lib/supabase/discrepancies')
     const { data, error } = await updateDiscrepancyStatus(
       discrepancy.id,
       discrepancy.status,
       newStatus,
       notes || undefined,
-      {
-        ...(needsResolution ? { resolution_notes: resolutionNotes } : {}),
-      },
     )
     setSaving(false)
     if (error) {
@@ -242,15 +244,14 @@ export function StatusUpdateModal({
         </div>
       </div>
 
-      {needsResolution && (
-        <div style={{ marginBottom: 12 }}>
-          <FieldLabel>Resolution Notes (required)</FieldLabel>
-          <textarea className="input-dark" rows={3} style={{ resize: 'vertical' }}
-            placeholder="Describe how this was resolved..."
-            value={resolutionNotes}
-            onChange={(e) => setResolutionNotes(e.target.value)} />
-        </div>
-      )}
+      <div style={{ marginBottom: 12 }}>
+        <FieldLabel>Assigned Shop</FieldLabel>
+        <select className="input-dark" value={assignedShop}
+          onChange={(e) => setAssignedShop(e.target.value)}>
+          <option value="">Unassigned</option>
+          {INSTALLATION.ce_shops.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
 
       <div style={{ marginBottom: 12 }}>
         <FieldLabel>Notes (optional)</FieldLabel>

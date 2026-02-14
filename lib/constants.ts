@@ -70,15 +70,30 @@ export const SEVERITY_CONFIG = {
 } as const
 
 export const STATUS_CONFIG = {
-  open:             { color: '#EF4444', bg: '#FEE2E2', label: 'Open' },
-  submitted_to_afm: { color: '#3B82F6', bg: '#DBEAFE', label: 'Submitted to AFM' },
-  submitted_to_ces: { color: '#F97316', bg: '#FED7AA', label: 'Submitted to CES' },
-  in_progress:      { color: '#EAB308', bg: '#FEF3C7', label: 'In Progress' },
-  resolved:         { color: '#22C55E', bg: '#DCFCE7', label: 'Resolved' },
-  closed:           { color: '#6B7280', bg: '#F3F4F6', label: 'Closed' },
-  completed:        { color: '#10B981', bg: '#D1FAE5', label: 'Completed' },
-  cancelled:        { color: '#9CA3AF', bg: '#E5E7EB', label: 'Cancelled' },
+  open:      { color: '#3B82F6', bg: '#DBEAFE', label: 'Open' },
+  completed: { color: '#10B981', bg: '#D1FAE5', label: 'Completed' },
+  cancelled: { color: '#9CA3AF', bg: '#E5E7EB', label: 'Cancelled' },
 } as const
+
+// === Current Status Options (workflow tracking field) ===
+
+export const CURRENT_STATUS_OPTIONS = [
+  { value: 'submitted_to_afm', label: 'Submitted to AFM' },
+  { value: 'submitted_to_ces', label: 'Submitted to CES' },
+  { value: 'awaiting_action_by_ces', label: 'Awaiting Action by CES' },
+  { value: 'work_completed_awaiting_verification', label: 'Work Completed and Awaiting Verification' },
+] as const
+
+// === Location Options ===
+
+export const LOCATION_OPTIONS = [
+  { value: 'TWY', label: 'TWY', emoji: '🛬' },
+  { value: 'RWY', label: 'RWY', emoji: '✈️' },
+  { value: 'Apron', label: 'Apron', emoji: '🅿️' },
+  { value: 'Shelter', label: 'Shelter', emoji: '🏗️' },
+  { value: 'Access Road', label: 'Access Road', emoji: '🛣️' },
+  { value: 'Misc.', label: 'Misc.', emoji: '📌' },
+] as const
 
 // === Status Transitions (SRS Section 6.4) ===
 
@@ -88,10 +103,6 @@ const ALL_STATUSES = Object.keys(STATUS_CONFIG)
 export const ALLOWED_TRANSITIONS: Record<string, string[]> = Object.fromEntries(
   ALL_STATUSES.map(s => [s, ALL_STATUSES.filter(t => t !== s)])
 )
-
-export const TRANSITION_REQUIREMENTS: Record<string, string[]> = {
-  'in_progress→resolved': ['resolution_notes'],
-}
 
 // === Emergency Response (SRS Section 6.6) ===
 

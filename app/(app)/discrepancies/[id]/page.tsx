@@ -7,6 +7,7 @@ import { ActionButton } from '@/components/ui/button'
 import { fetchDiscrepancy, fetchDiscrepancyPhotos, uploadDiscrepancyPhoto, type DiscrepancyRow, type PhotoRow } from '@/lib/supabase/discrepancies'
 import { createClient } from '@/lib/supabase/client'
 import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
+import { CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS } from '@/lib/constants'
 
 import { EditDiscrepancyModal, StatusUpdateModal, WorkOrderModal, PhotoViewerModal } from '@/components/discrepancies/modals'
 import { toast } from 'sonner'
@@ -151,8 +152,9 @@ export default function DiscrepancyDetailPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 11 }}>
           {([
-            ['Location', d.location_text],
+            ['Location', (() => { const loc = LOCATION_OPTIONS.find(l => l.value === d.location_text); return loc ? `${loc.emoji} ${loc.label}` : d.location_text })()],
             ['Type', d.type.charAt(0).toUpperCase() + d.type.slice(1)],
+            ['Current Status', (() => { const cs = (d as typeof d & { current_status?: string }).current_status; return CURRENT_STATUS_OPTIONS.find(o => o.value === cs)?.label || cs || 'N/A' })()],
             ['Shop', d.assigned_shop || 'Unassigned'],
             ['Days Open', daysOpen > 0 ? `${daysOpen}` : 'Resolved'],
             ['Photos', `${d.photo_count}`],

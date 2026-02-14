@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { DISCREPANCY_TYPES, INSTALLATION } from '@/lib/constants'
+import { DISCREPANCY_TYPES, LOCATION_OPTIONS, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
 import { toast } from 'sonner'
 
@@ -18,7 +18,7 @@ export default function NewDiscrepancyPage() {
     location_text: '',
     severity: 'no',
     description: '',
-    assigned_shop: '' as string,
+    current_status: 'submitted_to_afm',
     latitude: null as number | null,
     longitude: null as number | null,
   })
@@ -35,17 +35,9 @@ export default function NewDiscrepancyPage() {
   }
 
   const toggleType = (value: string) => {
-    setSelectedTypes((prev) => {
-      const next = prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
-      // Update assigned_shop from most recently added type
-      if (next.length > 0 && !prev.includes(value)) {
-        const typeConfig = DISCREPANCY_TYPES.find((t) => t.value === value)
-        if (typeConfig?.defaultShop) {
-          setFormData((p) => ({ ...p, assigned_shop: typeConfig.defaultShop || p.assigned_shop }))
-        }
-      }
-      return next
-    })
+    setSelectedTypes((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    )
   }
 
   const captureGPS = () => {
@@ -75,7 +67,7 @@ export default function NewDiscrepancyPage() {
       location_text: formData.location_text,
       type: selectedTypes.join(', '),
       severity: formData.severity,
-      assigned_shop: formData.assigned_shop || undefined,
+      current_status: formData.current_status,
       latitude: formData.latitude,
       longitude: formData.longitude,
     })
@@ -110,15 +102,13 @@ export default function NewDiscrepancyPage() {
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>New Discrepancy</div>
 
       <div className="card">
-        {([
-          { label: 'Title', field: 'title', placeholder: 'Short summary...' },
-          { label: 'Location', field: 'location_text', placeholder: 'e.g., TWY A/B intersection' },
-        ] as const).map(({ label, field, placeholder }) => (
-          <div key={field} style={{ marginBottom: 12 }}>
-            <span className="section-label">{label}</span>
-            <input type="text" className="input-dark" maxLength={field === 'title' ? 120 : undefined} placeholder={placeholder} value={formData[field]} onChange={(e) => setFormData((p) => ({ ...p, [field]: e.target.value }))} />
-          </div>
-        ))}
+        <div style={{ marginBottom: 12 }}>
+          <span className="section-label">Location</span>
+          <select className="input-dark" value={formData.location_text} onChange={(e) => setFormData((p) => ({ ...p, location_text: e.target.value }))}>
+            <option value="">Select location...</option>
+            {LOCATION_OPTIONS.map((l) => <option key={l.value} value={l.value}>{l.emoji} {l.label}</option>)}
+          </select>
+        </div>
 
         <div style={{ marginBottom: 12, position: 'relative' }}>
           <span className="section-label">Type</span>
@@ -165,7 +155,17 @@ export default function NewDiscrepancyPage() {
         </div>
 
         <div style={{ marginBottom: 12 }}>
-          <span className="section-label">NOTAM required?</span>
+          <span className="section-label">Title</span>
+          <input type="text" className="input-dark" maxLength={120} placeholder="Short summary..." value={formData.title} onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value }))} />
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <span className="section-label">Description</span>
+          <textarea className="input-dark" rows={3} style={{ resize: 'vertical' }} placeholder="Detailed description..." value={formData.description} onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))} />
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <span className="section-label">Associated NOTAM if Applicable</span>
           <select className="input-dark" value={formData.severity} onChange={(e) => setFormData((p) => ({ ...p, severity: e.target.value }))}>
             <option value="no">No</option>
             <option value="yes">Yes</option>
@@ -173,16 +173,10 @@ export default function NewDiscrepancyPage() {
         </div>
 
         <div style={{ marginBottom: 12 }}>
-          <span className="section-label">Assigned Shop</span>
-          <select className="input-dark" value={formData.assigned_shop} onChange={(e) => setFormData((p) => ({ ...p, assigned_shop: e.target.value }))}>
-            <option value="">Select shop...</option>
-            {INSTALLATION.ce_shops.map((s) => <option key={s} value={s}>{s}</option>)}
+          <span className="section-label">Current Status</span>
+          <select className="input-dark" value={formData.current_status} onChange={(e) => setFormData((p) => ({ ...p, current_status: e.target.value }))}>
+            {CURRENT_STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-        </div>
-
-        <div style={{ marginBottom: 12 }}>
-          <span className="section-label">Description</span>
-          <textarea className="input-dark" rows={3} style={{ resize: 'vertical' }} placeholder="Detailed description..." value={formData.description} onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))} />
         </div>
 
         {photos.length > 0 && (

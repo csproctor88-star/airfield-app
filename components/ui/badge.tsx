@@ -39,12 +39,7 @@ const SEVERITY_COLORS: Record<string, string> = {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  open: '#EF4444',
-  submitted_to_afm: '#3B82F6',
-  submitted_to_ces: '#F97316',
-  in_progress: '#FBBF24',
-  resolved: '#34D399',
-  closed: '#64748B',
+  open: '#3B82F6',
   completed: '#10B981',
   cancelled: '#9CA3AF',
 }
@@ -56,11 +51,6 @@ export function SeverityBadge({ severity }: { severity: string }) {
 
 const STATUS_LABELS: Record<string, string> = {
   open: 'Open',
-  submitted_to_afm: 'Submitted to AFM',
-  submitted_to_ces: 'Submitted to CES',
-  in_progress: 'In Progress',
-  resolved: 'Resolved',
-  closed: 'Closed',
   completed: 'Completed',
   cancelled: 'Cancelled',
 }
