@@ -227,21 +227,45 @@ export async function uploadDiscrepancyPhoto(
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
 
-  // Upload file to storage
   const ext = file.name.split('.').pop() || 'jpg'
   const storagePath = `discrepancy-photos/${discrepancyId}/${Date.now()}.${ext}`
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: uploadError } = await (supabase as any).storage
-    .from('photos')
-    .upload(storagePath, file, { contentType: file.type || 'image/jpeg' })
+  // Try uploading to Supabase Storage first
+  let storageUrl = storagePath
+  let usedStorage = false
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: uploadError } = await (supabase as any).storage
+      .from('photos')
+      .upload(storagePath, file, { contentType: file.type || 'image/jpeg' })
 
-  if (uploadError) {
-    console.error('Storage upload failed:', uploadError.message)
-    return { data: null, error: uploadError.message }
+    if (!uploadError) {
+      usedStorage = true
+    } else {
+      console.warn('Storage upload failed, storing as data URL:', uploadError.message)
+    }
+  } catch {
+    console.warn('Storage not available, storing as data URL')
   }
 
-  // Insert row into photos table
+  // If storage failed, convert to base64 data URL as fallback
+  if (!usedStorage) {
+    try {
+      const buffer = await file.arrayBuffer()
+      const bytes = new Uint8Array(buffer)
+      let binary = ''
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i])
+      }
+      const base64 = btoa(binary)
+      storageUrl = `data:${file.type || 'image/jpeg'};base64,${base64}`
+    } catch (e) {
+      console.error('Failed to convert file to data URL:', e)
+      return { data: null, error: 'Failed to process photo' }
+    }
+  }
+
+  // Get current user — uploaded_by is optional if constraint was dropped
   let uploaded_by: string | undefined
   try {
     const { data: { user } } = await supabase.auth.getUser()
@@ -252,7 +276,7 @@ export async function uploadDiscrepancyPhoto(
 
   const photoRow: Record<string, unknown> = {
     discrepancy_id: discrepancyId,
-    storage_path: storagePath,
+    storage_path: storageUrl,
     file_name: file.name,
     file_size: file.size,
     mime_type: file.type || 'image/jpeg',

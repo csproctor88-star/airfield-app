@@ -130,9 +130,11 @@ export default function DiscrepancyDetailPage() {
   // Build photo gallery from DB-stored photos
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
   const allPhotos: { url: string; name: string }[] = dbPhotos.map((p) => ({
-    url: supabaseUrl
-      ? `${supabaseUrl}/storage/v1/object/public/${p.storage_path}`
-      : p.storage_path,
+    url: p.storage_path.startsWith('data:')
+      ? p.storage_path
+      : supabaseUrl
+        ? `${supabaseUrl}/storage/v1/object/public/${p.storage_path}`
+        : p.storage_path,
     name: p.file_name,
   }))
 
