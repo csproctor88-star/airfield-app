@@ -75,13 +75,14 @@ export async function createDiscrepancy(input: {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
 
-  // Get the current user for reported_by; fallback for unauthenticated sessions
-  let reported_by = 'anonymous'
+  // Get the current user for reported_by
+  // reported_by is uuid with FK to auth.users — only include it when we have a real user
+  let reported_by: string | undefined
   try {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) reported_by = user.id
   } catch {
-    // Continue with fallback
+    // No authenticated user
   }
 
   // Generate a display ID based on timestamp to avoid count query issues with RLS
@@ -95,23 +96,25 @@ export async function createDiscrepancy(input: {
 
   const status: DiscrepancyStatus = input.assigned_shop ? 'assigned' : 'open'
 
+  const row: Record<string, unknown> = {
+    display_id,
+    type: input.type,
+    severity: input.severity,
+    status,
+    title: input.title,
+    description: input.description,
+    location_text: input.location_text,
+    latitude: input.latitude ?? null,
+    longitude: input.longitude ?? null,
+    assigned_shop: input.assigned_shop || null,
+    sla_deadline,
+  }
+  if (reported_by) row.reported_by = reported_by
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
     .from('discrepancies')
-    .insert({
-      display_id,
-      type: input.type,
-      severity: input.severity,
-      status,
-      title: input.title,
-      description: input.description,
-      location_text: input.location_text,
-      latitude: input.latitude ?? null,
-      longitude: input.longitude ?? null,
-      assigned_shop: input.assigned_shop || null,
-      reported_by,
-      sla_deadline,
-    })
+    .insert(row)
     .select()
     .single()
 
