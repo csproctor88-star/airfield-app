@@ -393,6 +393,34 @@ export async function fetchStatusUpdates(discrepancyId: string): Promise<StatusU
   })) as StatusUpdateRow[]
 }
 
+export async function addStatusNote(discrepancyId: string, notes: string): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+
+  let updated_by = 'unknown'
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) updated_by = user.id
+  } catch { /* no user */ }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from('status_updates')
+    .insert({
+      discrepancy_id: discrepancyId,
+      old_status: null,
+      new_status: '',
+      notes,
+      updated_by,
+    })
+
+  if (error) {
+    console.error('Failed to add note:', error.message)
+    return { error: error.message }
+  }
+  return { error: null }
+}
+
 export async function fetchDiscrepancyKPIs(): Promise<{
   open: number
   critical: number

@@ -144,7 +144,7 @@ export default function DiscrepancyDetailPage() {
 
       <div className="card" style={{ marginBottom: 8 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span style={{ fontSize: 16, fontWeight: 800, color: '#22D3EE', fontFamily: 'monospace' }}>{d.display_id}</span>
+          <span style={{ fontSize: 16, fontWeight: 800, color: '#22D3EE', fontFamily: 'monospace' }}>{d.work_order_number || 'Pending'}</span>
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
             <StatusBadge status={d.status} />
           </div>
@@ -163,7 +163,6 @@ export default function DiscrepancyDetailPage() {
             ['NOTAM', (d as typeof d & { notam_reference?: string }).notam_reference || 'None'],
             ['Days Open', `${daysOpen}`],
             ['Photos', `${d.photo_count}`],
-            ['Work Order', d.work_order_number || 'None'],
           ] as const).map(([label, value], i) => (
             <div key={i}>
               <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{label}</div>

@@ -153,13 +153,11 @@ export function StatusUpdateModal({
 }) {
   const allowed = ALLOWED_TRANSITIONS[discrepancy.status] || []
   const [saving, setSaving] = useState(false)
-  const [newStatus, setNewStatus] = useState(allowed[0] || '')
+  const [newStatus, setNewStatus] = useState('')
   const [notes, setNotes] = useState('')
   const [assignedShop, setAssignedShop] = useState(discrepancy.assigned_shop || '')
 
   const handleSave = async () => {
-    if (!newStatus) return
-
     setSaving(true)
 
     // Cancelled = delete from DB entirely
@@ -185,20 +183,36 @@ export function StatusUpdateModal({
       await updateDiscrepancy(discrepancy.id, { assigned_shop: assignedShop || null })
     }
 
-    const { updateDiscrepancyStatus } = await import('@/lib/supabase/discrepancies')
-    const { data, error } = await updateDiscrepancyStatus(
-      discrepancy.id,
-      discrepancy.status,
-      newStatus,
-      notes || undefined,
-    )
-    setSaving(false)
-    if (error) {
-      const { toast } = await import('sonner')
-      toast.error(error)
+    // Only update status if one was selected
+    if (newStatus) {
+      const { updateDiscrepancyStatus } = await import('@/lib/supabase/discrepancies')
+      const { data, error } = await updateDiscrepancyStatus(
+        discrepancy.id,
+        discrepancy.status,
+        newStatus,
+        notes || undefined,
+      )
+      setSaving(false)
+      if (error) {
+        const { toast } = await import('sonner')
+        toast.error(error)
+        return
+      }
+      if (data) onSaved(data)
+      onClose()
       return
     }
-    if (data) onSaved(data)
+
+    // No status change — just save notes/shop and refresh
+    if (notes) {
+      const { addStatusNote } = await import('@/lib/supabase/discrepancies')
+      await addStatusNote(discrepancy.id, notes)
+    }
+    // Refresh discrepancy to pick up assigned_shop change
+    const { fetchDiscrepancy } = await import('@/lib/supabase/discrepancies')
+    const fresh = await fetchDiscrepancy(discrepancy.id)
+    setSaving(false)
+    if (fresh) onSaved(fresh)
     onClose()
   }
 
