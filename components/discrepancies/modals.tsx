@@ -64,7 +64,7 @@ export function EditDiscrepancyModal({
     description: discrepancy.description,
     location_text: discrepancy.location_text,
     type: discrepancy.type,
-    severity: discrepancy.severity as string,
+    notam_reference: ((discrepancy as DiscrepancyRow & { notam_reference?: string }).notam_reference || '') as string,
     current_status: ((discrepancy as DiscrepancyRow & { current_status?: string }).current_status || 'submitted_to_afm') as string,
   })
 
@@ -77,7 +77,7 @@ export function EditDiscrepancyModal({
       description: form.description,
       location_text: form.location_text,
       type: form.type,
-      severity: form.severity,
+      notam_reference: form.notam_reference || null,
       current_status: form.current_status,
     })
     setSaving(false)
@@ -105,7 +105,7 @@ export function EditDiscrepancyModal({
         <FieldLabel>Type</FieldLabel>
         <select className="input-dark" value={form.type}
           onChange={(e) => setForm(p => ({ ...p, type: e.target.value }))}>
-          {DISCREPANCY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+          {DISCREPANCY_TYPES.map(t => <option key={t.value} value={t.value}>{t.emoji} {t.label}</option>)}
         </select>
       </div>
 
@@ -124,11 +124,8 @@ export function EditDiscrepancyModal({
 
       <div style={{ marginBottom: 12 }}>
         <FieldLabel>Associated NOTAM if Applicable</FieldLabel>
-        <select className="input-dark" value={form.severity}
-          onChange={(e) => setForm(p => ({ ...p, severity: e.target.value }))}>
-          <option value="no">No</option>
-          <option value="yes">Yes</option>
-        </select>
+        <input className="input-dark" placeholder="e.g., 01/003" value={form.notam_reference}
+          onChange={(e) => setForm(p => ({ ...p, notam_reference: e.target.value }))} />
       </div>
 
       <div style={{ marginBottom: 12 }}>
@@ -245,7 +242,7 @@ export function StatusUpdateModal({
       </div>
 
       <div style={{ marginBottom: 12 }}>
-        <FieldLabel>Assigned Shop</FieldLabel>
+        <FieldLabel>Work Order Currently Assigned to:</FieldLabel>
         <select className="input-dark" value={assignedShop}
           onChange={(e) => setAssignedShop(e.target.value)}>
           <option value="">Unassigned</option>

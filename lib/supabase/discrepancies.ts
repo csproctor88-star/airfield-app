@@ -17,6 +17,7 @@ export type DiscrepancyRow = {
   assigned_to: string | null
   reported_by: string
   work_order_number: string | null
+  notam_reference: string | null
   linked_notam_id: string | null
   inspection_id: string | null
   resolution_notes: string | null
@@ -66,7 +67,8 @@ export async function createDiscrepancy(input: {
   description: string
   location_text: string
   type: string
-  severity: string
+  severity?: string
+  notam_reference?: string
   current_status?: string
   latitude?: number | null
   longitude?: number | null
@@ -95,9 +97,10 @@ export async function createDiscrepancy(input: {
   const row: Record<string, unknown> = {
     display_id,
     type: input.type,
-    severity: input.severity,
+    severity: input.severity || 'no',
     status,
     current_status: input.current_status || 'submitted_to_afm',
+    notam_reference: input.notam_reference || null,
     title: input.title,
     description: input.description,
     location_text: input.location_text,
@@ -130,6 +133,7 @@ export async function updateDiscrepancy(
     type?: string
     severity?: string
     current_status?: string
+    notam_reference?: string | null
     assigned_shop?: string | null
     work_order_number?: string | null
     resolution_notes?: string | null
@@ -352,6 +356,40 @@ export async function fetchDiscrepancyPhotos(discrepancyId: string): Promise<Pho
   }
 
   return data as PhotoRow[]
+}
+
+export type StatusUpdateRow = {
+  id: string
+  discrepancy_id: string
+  old_status: string | null
+  new_status: string
+  notes: string | null
+  updated_by: string
+  created_at: string
+  user_name?: string
+}
+
+export async function fetchStatusUpdates(discrepancyId: string): Promise<StatusUpdateRow[]> {
+  const supabase = createClient()
+  if (!supabase) return []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('status_updates')
+    .select('*, profiles:updated_by(name)')
+    .eq('discrepancy_id', discrepancyId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Failed to fetch status updates:', error.message)
+    return []
+  }
+
+  // Flatten the joined profile name
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    ...row,
+    user_name: (row.profiles as { name?: string } | null)?.name || 'Unknown',
+  })) as StatusUpdateRow[]
 }
 
 export async function fetchDiscrepancyKPIs(): Promise<{

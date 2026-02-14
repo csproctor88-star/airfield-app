@@ -38,6 +38,7 @@ export type Database = {
           assigned_to: string | null
           reported_by: string
           work_order_number: string | null
+          notam_reference: string | null
           linked_notam_id: string | null
           inspection_id: string | null
           resolution_notes: string | null

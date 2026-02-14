@@ -16,7 +16,7 @@ export default function NewDiscrepancyPage() {
   const [formData, setFormData] = useState({
     title: '',
     location_text: '',
-    severity: 'no',
+    notam_reference: '',
     description: '',
     current_status: 'submitted_to_afm',
     latitude: null as number | null,
@@ -66,7 +66,7 @@ export default function NewDiscrepancyPage() {
       description: formData.description,
       location_text: formData.location_text,
       type: selectedTypes.join(', '),
-      severity: formData.severity,
+      notam_reference: formData.notam_reference || undefined,
       current_status: formData.current_status,
       latitude: formData.latitude,
       longitude: formData.longitude,
@@ -166,10 +166,7 @@ export default function NewDiscrepancyPage() {
 
         <div style={{ marginBottom: 12 }}>
           <span className="section-label">Associated NOTAM if Applicable</span>
-          <select className="input-dark" value={formData.severity} onChange={(e) => setFormData((p) => ({ ...p, severity: e.target.value }))}>
-            <option value="no">No</option>
-            <option value="yes">Yes</option>
-          </select>
+          <input type="text" className="input-dark" placeholder="e.g., 01/003" value={formData.notam_reference} onChange={(e) => setFormData((p) => ({ ...p, notam_reference: e.target.value }))} />
         </div>
 
         <div style={{ marginBottom: 12 }}>

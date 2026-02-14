@@ -4,7 +4,7 @@ import { useRef, useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { StatusBadge, Badge } from '@/components/ui/badge'
 import { ActionButton } from '@/components/ui/button'
-import { fetchDiscrepancy, fetchDiscrepancyPhotos, uploadDiscrepancyPhoto, type DiscrepancyRow, type PhotoRow } from '@/lib/supabase/discrepancies'
+import { fetchDiscrepancy, fetchDiscrepancyPhotos, uploadDiscrepancyPhoto, fetchStatusUpdates, type DiscrepancyRow, type PhotoRow, type StatusUpdateRow } from '@/lib/supabase/discrepancies'
 import { createClient } from '@/lib/supabase/client'
 import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
 import { CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS } from '@/lib/constants'
@@ -20,6 +20,7 @@ export default function DiscrepancyDetailPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [dbPhotos, setDbPhotos] = useState<PhotoRow[]>([])
+  const [statusUpdates, setStatusUpdates] = useState<StatusUpdateRow[]>([])
   const [liveData, setLiveData] = useState<DiscrepancyRow | null>(null)
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
@@ -40,6 +41,8 @@ export default function DiscrepancyDetailPage() {
     if (data) {
       const photos = await fetchDiscrepancyPhotos(data.id)
       setDbPhotos(photos)
+      const updates = await fetchStatusUpdates(data.id)
+      setStatusUpdates(updates)
     }
 
     setLoading(false)
@@ -78,9 +81,12 @@ export default function DiscrepancyDetailPage() {
     e.target.value = ''
   }
 
-  const handleSaved = (updated: DiscrepancyRow) => {
+  const handleSaved = async (updated: DiscrepancyRow) => {
     setLiveData(updated)
     toast.success('Discrepancy updated')
+    // Refresh notes history
+    const updates = await fetchStatusUpdates(updated.id)
+    setStatusUpdates(updates)
   }
 
   if (loading) {
@@ -156,6 +162,7 @@ export default function DiscrepancyDetailPage() {
             ['Type', d.type.charAt(0).toUpperCase() + d.type.slice(1)],
             ['Current Status', (() => { const cs = (d as typeof d & { current_status?: string }).current_status; return CURRENT_STATUS_OPTIONS.find(o => o.value === cs)?.label || cs || 'N/A' })()],
             ['Shop', d.assigned_shop || 'Unassigned'],
+            ['NOTAM', (d as typeof d & { notam_reference?: string }).notam_reference || 'None'],
             ['Days Open', daysOpen > 0 ? `${daysOpen}` : 'Resolved'],
             ['Photos', `${d.photo_count}`],
             ['Work Order', d.work_order_number || 'None'],
@@ -199,6 +206,32 @@ export default function DiscrepancyDetailPage() {
         <ActionButton color="#FBBF24" onClick={() => setActiveModal('status')}>🔄 Status</ActionButton>
         <ActionButton color="#34D399" onClick={() => setActiveModal('workorder')}>📋 Work Order</ActionButton>
       </div>
+
+      {/* ── Notes History ── */}
+      {statusUpdates.length > 0 && (
+        <div className="card" style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Notes History</div>
+          {statusUpdates.map((update) => (
+            <div key={update.id} style={{ borderLeft: '2px solid #334155', paddingLeft: 10, marginBottom: 10 }}>
+              <div style={{ fontSize: 10, color: '#64748B', marginBottom: 2 }}>
+                <span style={{ fontWeight: 600, color: '#38BDF8' }}>{update.user_name || 'Unknown'}</span>
+                {' — '}
+                {new Date(update.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                {' '}
+                {new Date(update.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+              {update.old_status && (
+                <div style={{ fontSize: 10, color: '#94A3B8', marginBottom: 2 }}>
+                  Status: {update.old_status} → {update.new_status}
+                </div>
+              )}
+              {update.notes && (
+                <div style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.4 }}>{update.notes}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {linkedNotam && (
         <Link
