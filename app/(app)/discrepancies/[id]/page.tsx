@@ -7,7 +7,7 @@ import { ActionButton } from '@/components/ui/button'
 import { fetchDiscrepancy, fetchDiscrepancyPhotos, uploadDiscrepancyPhoto, fetchStatusUpdates, type DiscrepancyRow, type PhotoRow, type StatusUpdateRow } from '@/lib/supabase/discrepancies'
 import { createClient } from '@/lib/supabase/client'
 import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
-import { CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS } from '@/lib/constants'
+import { CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS, DISCREPANCY_TYPES } from '@/lib/constants'
 
 import { EditDiscrepancyModal, StatusUpdateModal, WorkOrderModal, PhotoViewerModal } from '@/components/discrepancies/modals'
 import { toast } from 'sonner'
@@ -159,9 +159,9 @@ export default function DiscrepancyDetailPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 11 }}>
           {([
             ['Location', (() => { const loc = LOCATION_OPTIONS.find(l => l.value === d.location_text); return loc ? `${loc.emoji} ${loc.label}` : d.location_text })()],
-            ['Type', d.type.charAt(0).toUpperCase() + d.type.slice(1)],
+            ['Type', (() => { return d.type.split(', ').map(v => { const t = DISCREPANCY_TYPES.find(dt => dt.value === v); return t ? `${t.emoji} ${t.label}` : v }).join(', ') })()],
             ['Current Status', (() => { const cs = (d as typeof d & { current_status?: string }).current_status; return CURRENT_STATUS_OPTIONS.find(o => o.value === cs)?.label || cs || 'N/A' })()],
-            ['Shop', d.assigned_shop || 'Unassigned'],
+            ['Work Order Currently Assigned to', d.assigned_shop || 'Unassigned'],
             ['NOTAM', (d as typeof d & { notam_reference?: string }).notam_reference || 'None'],
             ['Days Open', daysOpen > 0 ? `${daysOpen}` : 'Resolved'],
             ['Photos', `${d.photo_count}`],
