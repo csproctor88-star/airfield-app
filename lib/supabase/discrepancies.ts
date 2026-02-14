@@ -220,6 +220,75 @@ export type PhotoRow = {
   created_at: string
 }
 
+export async function uploadDiscrepancyPhoto(
+  discrepancyId: string,
+  file: File
+): Promise<{ data: PhotoRow | null; error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { data: null, error: 'Supabase not configured' }
+
+  // Upload file to storage
+  const ext = file.name.split('.').pop() || 'jpg'
+  const storagePath = `discrepancy-photos/${discrepancyId}/${Date.now()}.${ext}`
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: uploadError } = await (supabase as any).storage
+    .from('photos')
+    .upload(storagePath, file, { contentType: file.type || 'image/jpeg' })
+
+  if (uploadError) {
+    console.error('Storage upload failed:', uploadError.message)
+    return { data: null, error: uploadError.message }
+  }
+
+  // Insert row into photos table
+  let uploaded_by: string | undefined
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) uploaded_by = user.id
+  } catch {
+    // No authenticated user
+  }
+
+  const photoRow: Record<string, unknown> = {
+    discrepancy_id: discrepancyId,
+    storage_path: storagePath,
+    file_name: file.name,
+    file_size: file.size,
+    mime_type: file.type || 'image/jpeg',
+  }
+  if (uploaded_by) photoRow.uploaded_by = uploaded_by
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('photos')
+    .insert(photoRow)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Photo record insert failed:', error.message)
+    return { data: null, error: error.message }
+  }
+
+  // Increment photo_count on the discrepancy
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: disc } = await (supabase as any)
+    .from('discrepancies')
+    .select('photo_count')
+    .eq('id', discrepancyId)
+    .single()
+  if (disc) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any)
+      .from('discrepancies')
+      .update({ photo_count: (disc.photo_count || 0) + 1 })
+      .eq('id', discrepancyId)
+  }
+
+  return { data: data as PhotoRow, error: null }
+}
+
 export async function fetchDiscrepancyPhotos(discrepancyId: string): Promise<PhotoRow[]> {
   const supabase = createClient()
   if (!supabase) return []

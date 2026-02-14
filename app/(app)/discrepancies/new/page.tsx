@@ -3,13 +3,13 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { DISCREPANCY_TYPES, INSTALLATION } from '@/lib/constants'
-import { createDiscrepancy } from '@/lib/supabase/discrepancies'
+import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
 import { toast } from 'sonner'
 
 export default function NewDiscrepancyPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [photos, setPhotos] = useState<{ url: string; name: string }[]>([])
+  const [photos, setPhotos] = useState<{ file: File; url: string; name: string }[]>([])
   const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
@@ -27,7 +27,7 @@ export default function NewDiscrepancyPage() {
     if (!files?.length) return
     Array.from(files).forEach((file) => {
       const url = URL.createObjectURL(file)
-      setPhotos((prev) => [...prev, { url, name: file.name }])
+      setPhotos((prev) => [...prev, { file, url, name: file.name }])
     })
     toast.success(`${files.length} photo(s) added`)
     e.target.value = ''
@@ -64,7 +64,7 @@ export default function NewDiscrepancyPage() {
     }
 
     setSaving(true)
-    const { error } = await createDiscrepancy({
+    const { data: created, error } = await createDiscrepancy({
       title: formData.title,
       description: formData.description,
       location_text: formData.location_text,
@@ -75,10 +75,22 @@ export default function NewDiscrepancyPage() {
       longitude: formData.longitude,
     })
 
-    if (error) {
-      toast.error(error)
+    if (error || !created) {
+      toast.error(error || 'Failed to create discrepancy')
       setSaving(false)
       return
+    }
+
+    // Upload photos to the newly created discrepancy
+    if (photos.length > 0) {
+      let uploaded = 0
+      for (const photo of photos) {
+        const { error: photoErr } = await uploadDiscrepancyPhoto(created.id, photo.file)
+        if (!photoErr) uploaded++
+      }
+      if (uploaded < photos.length) {
+        toast.error(`${photos.length - uploaded} photo(s) failed to upload`)
+      }
     }
 
     toast.success('Discrepancy saved!')

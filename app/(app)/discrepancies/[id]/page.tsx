@@ -4,7 +4,7 @@ import { useRef, useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { SeverityBadge, StatusBadge, Badge } from '@/components/ui/badge'
 import { ActionButton } from '@/components/ui/button'
-import { fetchDiscrepancy, fetchDiscrepancyPhotos, type DiscrepancyRow, type PhotoRow } from '@/lib/supabase/discrepancies'
+import { fetchDiscrepancy, fetchDiscrepancyPhotos, uploadDiscrepancyPhoto, type DiscrepancyRow, type PhotoRow } from '@/lib/supabase/discrepancies'
 import { createClient } from '@/lib/supabase/client'
 import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
 import { isOverdue, slaTimeRemaining } from '@/lib/calculations/sla'
@@ -22,7 +22,6 @@ export default function DiscrepancyDetailPage() {
   const params = useParams()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [localPhotos, setLocalPhotos] = useState<{ url: string; name: string }[]>([])
   const [dbPhotos, setDbPhotos] = useState<PhotoRow[]>([])
   const [liveData, setLiveData] = useState<DiscrepancyRow | null>(null)
   const [loading, setLoading] = useState(true)
@@ -53,14 +52,32 @@ export default function DiscrepancyDetailPage() {
     loadData()
   }, [loadData])
 
-  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [uploading, setUploading] = useState(false)
+
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
-    if (!files?.length) return
-    Array.from(files).forEach((file) => {
-      const url = URL.createObjectURL(file)
-      setLocalPhotos((prev) => [...prev, { url, name: file.name }])
-    })
-    toast.success(`${files.length} photo(s) added`)
+    if (!files?.length || !liveData) return
+
+    setUploading(true)
+    let uploaded = 0
+    for (const file of Array.from(files)) {
+      const { error } = await uploadDiscrepancyPhoto(liveData.id, file)
+      if (!error) uploaded++
+    }
+
+    if (uploaded > 0) {
+      toast.success(`${uploaded} photo(s) uploaded`)
+      // Refresh photos and discrepancy data from DB
+      const freshPhotos = await fetchDiscrepancyPhotos(liveData.id)
+      setDbPhotos(freshPhotos)
+      const freshDisc = await fetchDiscrepancy(liveData.id)
+      if (freshDisc) setLiveData(freshDisc)
+    }
+    if (uploaded < files.length) {
+      toast.error(`${files.length - uploaded} photo(s) failed to upload`)
+    }
+
+    setUploading(false)
     e.target.value = ''
   }
 
@@ -110,20 +127,14 @@ export default function DiscrepancyDetailPage() {
       ? 0
       : Math.max(0, Math.floor((Date.now() - new Date(d.created_at).getTime()) / 86400000)))
 
-  // Combine DB-stored photos and locally-added photos for the gallery
-  const supabase = createClient()
+  // Build photo gallery from DB-stored photos
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
-  const allPhotos: { url: string; name: string }[] = [
-    ...dbPhotos.map((p) => ({
-      url: supabase && supabaseUrl
-        ? `${supabaseUrl}/storage/v1/object/public/${p.storage_path}`
-        : p.storage_path,
-      name: p.file_name,
-    })),
-    ...localPhotos,
-  ]
-
-  const totalPhotos = d.photo_count + localPhotos.length
+  const allPhotos: { url: string; name: string }[] = dbPhotos.map((p) => ({
+    url: supabaseUrl
+      ? `${supabaseUrl}/storage/v1/object/public/${p.storage_path}`
+      : p.storage_path,
+    name: p.file_name,
+  }))
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
@@ -157,7 +168,7 @@ export default function DiscrepancyDetailPage() {
             ['Type', d.type.charAt(0).toUpperCase() + d.type.slice(1)],
             ['Shop', d.assigned_shop || 'Unassigned'],
             ['Days Open', daysOpen > 0 ? `${daysOpen}` : 'Resolved'],
-            ['Photos', `${totalPhotos}`],
+            ['Photos', `${d.photo_count}`],
             ['Work Order', d.work_order_number || 'None'],
           ] as const).map(([label, value], i) => (
             <div key={i}>
@@ -185,23 +196,6 @@ export default function DiscrepancyDetailPage() {
               onClick={() => setViewerIndex(i)}
             >
               <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              {/* Show remove button only for locally-added photos */}
-              {i >= dbPhotos.length && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    const localIdx = i - dbPhotos.length
-                    setLocalPhotos((prev) => prev.filter((_, j) => j !== localIdx))
-                  }}
-                  style={{
-                    position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.7)',
-                    border: 'none', color: '#EF4444', fontSize: 12, width: 20, height: 20,
-                    borderRadius: '50%', cursor: 'pointer', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-                  }}
-                >×</button>
-              )}
             </div>
           ))}
         </div>
@@ -210,7 +204,9 @@ export default function DiscrepancyDetailPage() {
       <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
         <ActionButton color="#38BDF8" onClick={() => setActiveModal('edit')}>✏️ Edit</ActionButton>
-        <ActionButton color="#38BDF8" onClick={() => fileInputRef.current?.click()}>📸 Photo{allPhotos.length > 0 ? ` (${allPhotos.length})` : ''}</ActionButton>
+        <ActionButton color="#38BDF8" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+          {uploading ? '⏳ Uploading...' : `📸 Photo${allPhotos.length > 0 ? ` (${allPhotos.length})` : ''}`}
+        </ActionButton>
         <ActionButton color="#FBBF24" onClick={() => setActiveModal('status')}>🔄 Status</ActionButton>
         <ActionButton color="#34D399" onClick={() => setActiveModal('workorder')}>📋 Work Order</ActionButton>
       </div>
