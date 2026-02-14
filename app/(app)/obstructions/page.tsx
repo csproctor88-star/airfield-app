@@ -17,7 +17,6 @@ import {
   createObstructionEvaluation,
   updateObstructionEvaluation,
   fetchObstructionEvaluation,
-  uploadObstructionPhoto,
   parsePhotoPaths,
 } from '@/lib/supabase/obstructions'
 
@@ -68,7 +67,7 @@ function ObstructionsContent() {
   const [analysis, setAnalysis] = useState<ObstructionAnalysis | null>(null)
   const [saving, setSaving] = useState(false)
 
-  // Load existing evaluation in edit mode
+  // Load existing evaluation in edit mode and auto-run analysis
   useEffect(() => {
     if (!editId) return
     async function loadExisting() {
@@ -77,7 +76,8 @@ function ObstructionsContent() {
         toast.error('Evaluation not found')
         return
       }
-      setHeight(String(existing.object_height_agl))
+      const h = Number(existing.object_height_agl)
+      setHeight(String(h))
       setDescription(existing.notes || existing.description || '')
       const existingPhotos = parsePhotoPaths(existing.photo_storage_path)
       if (existingPhotos.length) {
@@ -87,13 +87,19 @@ function ObstructionsContent() {
         const point: LatLon = { lat: existing.latitude, lon: existing.longitude }
         const rwy = getRunwayGeometry(INSTALLATION.runways[0])
         const surfaceName = identifySurface(point, rwy)
+        const groundElev = existing.object_elevation_msl ?? INSTALLATION.elevation_msl
         setPointInfo({
           point,
-          groundElevMSL: existing.object_elevation_msl,
+          groundElevMSL: groundElev,
           distFromCenterline: existing.distance_from_centerline_ft ?? 0,
           surfaceName,
           loadingElev: false,
         })
+        // Auto-run evaluation so results + save button appear immediately
+        if (h > 0) {
+          const result = evaluateObstruction(point, h, groundElev, rwy)
+          setAnalysis(result)
+        }
       }
     }
     loadExisting()
@@ -166,7 +172,30 @@ function ObstructionsContent() {
     }
   }
 
-  // Handle photo — convert to data URL immediately so it can be previewed
+  // Resize and compress a photo to keep data URLs small enough for DB storage
+  const compressPhoto = (file: File, maxDim = 800, quality = 0.7): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        let { width, height } = img
+        if (width > maxDim || height > maxDim) {
+          const scale = maxDim / Math.max(width, height)
+          width = Math.round(width * scale)
+          height = Math.round(height * scale)
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', quality))
+      }
+      img.onerror = reject
+      img.src = URL.createObjectURL(file)
+    })
+  }
+
+  // Handle photo — compress and convert to data URL for preview and storage
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files?.length) return
@@ -174,13 +203,8 @@ function ObstructionsContent() {
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
       try {
-        const reader = new FileReader()
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          reader.onload = () => resolve(reader.result as string)
-          reader.onerror = reject
-          reader.readAsDataURL(file)
-        })
-        setPhotos((prev) => [...prev, { file, url: dataUrl }])
+        const dataUrl = await compressPhoto(file)
+        setPhotos((prev) => [...prev, { url: dataUrl }])
       } catch {
         toast.error('Failed to read photo')
       }
@@ -197,21 +221,8 @@ function ObstructionsContent() {
     if (!analysis || !pointInfo) return
     setSaving(true)
 
-    // Upload any new photos (ones with a File object) and keep existing URLs
-    const photoUrls: string[] = []
-    for (const p of photos) {
-      if (p.file) {
-        const { url, error: uploadErr } = await uploadObstructionPhoto(p.file)
-        if (uploadErr || !url) {
-          toast.error(uploadErr || 'Failed to upload photo')
-          setSaving(false)
-          return
-        }
-        photoUrls.push(url)
-      } else {
-        photoUrls.push(p.url)
-      }
-    }
+    // Collect photo URLs — data URLs for new photos, existing URLs for saved ones
+    const photoUrls = photos.map((p) => p.url)
 
     const evaluationPayload = {
       object_height_agl: analysis.obstructionHeightAGL,
