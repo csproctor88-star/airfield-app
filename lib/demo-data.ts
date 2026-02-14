@@ -4,7 +4,7 @@
 export const DEMO_DISCREPANCIES = [
   {
     id: 'demo-001', display_id: 'D-2026-0042', type: 'pavement', severity: 'critical' as const,
-    status: 'assigned' as const, title: 'Pavement spall TWY A intersection',
+    status: 'submitted_to_afm' as const, title: 'Pavement spall TWY A intersection',
     description: '12x18 inch spall, 2 inch depth. FOD potential from loose aggregate.',
     location_text: 'TWY A/B', assigned_shop: 'CE Pavements', reported_by: 'demo-user',
     work_order_number: 'WO-2026-0038',
@@ -31,7 +31,7 @@ export const DEMO_DISCREPANCIES = [
   },
   {
     id: 'demo-004', display_id: 'D-2026-0038', type: 'lighting', severity: 'low' as const,
-    status: 'assigned' as const, title: 'TWY B edge light #14 lens cracked',
+    status: 'submitted_to_afm' as const, title: 'TWY B edge light #14 lens cracked',
     description: 'Blue edge light lens cracked but illuminating. Replacement on order.',
     location_text: 'TWY B', assigned_shop: 'CE Electrical', reported_by: 'demo-user',
     work_order_number: null,

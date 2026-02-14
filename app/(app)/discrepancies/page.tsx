@@ -7,7 +7,15 @@ import { fetchDiscrepancies, type DiscrepancyRow } from '@/lib/supabase/discrepa
 import { DEMO_DISCREPANCIES } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 
-const FILTERS = ['open', 'submitted', 'in_progress', 'completed', 'all'] as const
+const FILTERS = ['open', 'submitted_to_afm', 'submitted_to_ces', 'in_progress', 'completed', 'all'] as const
+const FILTER_LABELS: Record<string, string> = {
+  open: 'Open',
+  submitted_to_afm: 'AFM',
+  submitted_to_ces: 'CES',
+  in_progress: 'In Progress',
+  completed: 'Completed',
+  all: 'All',
+}
 
 export default function DiscrepanciesPage() {
   const [filter, setFilter] = useState<string>('open')
@@ -96,7 +104,7 @@ export default function DiscrepanciesPage() {
               whiteSpace: 'nowrap',
             }}
           >
-            {v === 'all' ? 'All' : v === 'in_progress' ? 'In Progress' : v.charAt(0).toUpperCase() + v.slice(1)}
+            {FILTER_LABELS[v]}
           </button>
         ))}
       </div>

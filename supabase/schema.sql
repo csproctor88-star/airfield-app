@@ -66,7 +66,7 @@ CREATE TABLE discrepancies (
   display_id TEXT NOT NULL UNIQUE,
   type TEXT NOT NULL,
   severity TEXT NOT NULL DEFAULT 'no' CHECK (severity IN ('yes', 'no', 'critical', 'high', 'medium', 'low')),
-  status TEXT NOT NULL DEFAULT 'submitted' CHECK (status IN ('open', 'submitted', 'assigned', 'in_progress', 'resolved', 'closed', 'completed', 'cancelled')),
+  status TEXT NOT NULL DEFAULT 'submitted_to_afm' CHECK (status IN ('open', 'submitted_to_afm', 'submitted_to_ces', 'in_progress', 'resolved', 'closed', 'completed', 'cancelled')),
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   location_text TEXT NOT NULL,

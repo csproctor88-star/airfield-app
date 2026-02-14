@@ -165,7 +165,7 @@ export default function NewDiscrepancyPage() {
         </div>
 
         <div style={{ marginBottom: 12 }}>
-          <span className="section-label">Work Order Submitted to CES?</span>
+          <span className="section-label">NOTAM required?</span>
           <select className="input-dark" value={formData.severity} onChange={(e) => setFormData((p) => ({ ...p, severity: e.target.value }))}>
             <option value="no">No</option>
             <option value="yes">Yes</option>

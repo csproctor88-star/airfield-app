@@ -113,7 +113,7 @@ export function EditDiscrepancyModal({
       </div>
 
       <div style={{ marginBottom: 12 }}>
-        <FieldLabel>Work Order Submitted to CES?</FieldLabel>
+        <FieldLabel>NOTAM required?</FieldLabel>
         <select className="input-dark" value={form.severity}
           onChange={(e) => setForm(p => ({ ...p, severity: e.target.value }))}>
           <option value="no">No</option>
@@ -157,14 +157,11 @@ export function StatusUpdateModal({
   const [newStatus, setNewStatus] = useState(allowed[0] || '')
   const [notes, setNotes] = useState('')
   const [resolutionNotes, setResolutionNotes] = useState('')
-  const [assignedShop, setAssignedShop] = useState(discrepancy.assigned_shop || '')
 
-  const needsShop = newStatus === 'assigned'
   const needsResolution = newStatus === 'resolved'
 
   const handleSave = async () => {
     if (!newStatus) return
-    if (needsShop && !assignedShop) return
     if (needsResolution && !resolutionNotes) return
 
     setSaving(true)
@@ -193,7 +190,6 @@ export function StatusUpdateModal({
       newStatus,
       notes || undefined,
       {
-        ...(needsShop ? { assigned_shop: assignedShop } : {}),
         ...(needsResolution ? { resolution_notes: resolutionNotes } : {}),
       },
     )
@@ -245,17 +241,6 @@ export function StatusUpdateModal({
           })}
         </div>
       </div>
-
-      {needsShop && (
-        <div style={{ marginBottom: 12 }}>
-          <FieldLabel>Assigned Shop (required)</FieldLabel>
-          <select className="input-dark" value={assignedShop}
-            onChange={(e) => setAssignedShop(e.target.value)}>
-            <option value="">Select shop...</option>
-            {INSTALLATION.ce_shops.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-      )}
 
       {needsResolution && (
         <div style={{ marginBottom: 12 }}>

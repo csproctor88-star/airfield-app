@@ -194,7 +194,7 @@ export type UserRole =
   | 'sys_admin'
 
 export type Severity = 'critical' | 'high' | 'medium' | 'low'
-export type DiscrepancyStatus = 'open' | 'submitted' | 'assigned' | 'in_progress' | 'resolved' | 'closed'
+export type DiscrepancyStatus = 'open' | 'submitted_to_afm' | 'submitted_to_ces' | 'in_progress' | 'resolved' | 'closed' | 'completed' | 'cancelled'
 export type CheckType = 'fod' | 'bash' | 'rcr' | 'rsc' | 'emergency'
 export type InspectionType = 'daily' | 'semi_annual' | 'annual'
 export type NotamStatus = 'draft' | 'active' | 'cancelled' | 'expired'
