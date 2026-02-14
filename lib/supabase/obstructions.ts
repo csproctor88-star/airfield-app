@@ -226,5 +226,17 @@ export async function deleteObstructionEvaluation(
     return { error: error.message }
   }
 
+  // Verify the row was actually deleted (RLS can silently block deletes)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: remaining } = await (supabase as any)
+    .from('obstruction_evaluations')
+    .select('id')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (remaining) {
+    return { error: 'Delete was blocked. You may not have permission to delete this evaluation.' }
+  }
+
   return { error: null }
 }
