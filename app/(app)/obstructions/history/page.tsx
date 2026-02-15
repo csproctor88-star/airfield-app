@@ -205,10 +205,33 @@ export default function ObstructionHistoryPage() {
                 </div>
               )}
 
-              {/* Photo indicator */}
+              {/* Photo thumbnails */}
               {parsePhotoPaths(ev.photo_storage_path).length > 0 && (
-                <div style={{ marginTop: 4, fontSize: 10, color: '#38BDF8' }}>
-                  {parsePhotoPaths(ev.photo_storage_path).length === 1 ? '1 photo' : `${parsePhotoPaths(ev.photo_storage_path).length} photos`}
+                <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                  {parsePhotoPaths(ev.photo_storage_path).slice(0, 4).map((url, pi) => (
+                    <div
+                      key={pi}
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 6,
+                        overflow: 'hidden',
+                        border: '1px solid rgba(56,189,248,0.15)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <img
+                        src={url}
+                        alt={`Photo ${pi + 1}`}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </div>
+                  ))}
+                  {parsePhotoPaths(ev.photo_storage_path).length > 4 && (
+                    <span style={{ fontSize: 9, color: '#64748B' }}>
+                      +{parsePhotoPaths(ev.photo_storage_path).length - 4} more
+                    </span>
+                  )}
                 </div>
               )}
 

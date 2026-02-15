@@ -172,30 +172,39 @@ function ObstructionsContent() {
     }
   }
 
-  // Resize and compress a photo to keep data URLs small enough for DB storage
-  const compressPhoto = (file: File, maxDim = 800, quality = 0.7): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image()
+  // Read file as data URL via FileReader (reliable for preview)
+  const readFileAsDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+
+  // Compress a data URL to keep it small enough for DB storage
+  const compressDataUrl = (dataUrl: string, maxDim = 800, quality = 0.7): Promise<string> =>
+    new Promise((resolve) => {
+      const img = document.createElement('img')
       img.onload = () => {
-        let { width, height } = img
-        if (width > maxDim || height > maxDim) {
-          const scale = maxDim / Math.max(width, height)
-          width = Math.round(width * scale)
-          height = Math.round(height * scale)
+        let w = img.naturalWidth
+        let h = img.naturalHeight
+        if (w > maxDim || h > maxDim) {
+          const scale = maxDim / Math.max(w, h)
+          w = Math.round(w * scale)
+          h = Math.round(h * scale)
         }
         const canvas = document.createElement('canvas')
-        canvas.width = width
-        canvas.height = height
+        canvas.width = w
+        canvas.height = h
         const ctx = canvas.getContext('2d')!
-        ctx.drawImage(img, 0, 0, width, height)
+        ctx.drawImage(img, 0, 0, w, h)
         resolve(canvas.toDataURL('image/jpeg', quality))
       }
-      img.onerror = reject
-      img.src = URL.createObjectURL(file)
+      img.onerror = () => resolve(dataUrl) // fallback to original on error
+      img.src = dataUrl
     })
-  }
 
-  // Handle photo — compress and convert to data URL for preview and storage
+  // Handle photo — use FileReader for immediate preview
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files?.length) return
@@ -203,8 +212,8 @@ function ObstructionsContent() {
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
       try {
-        const dataUrl = await compressPhoto(file)
-        setPhotos((prev) => [...prev, { url: dataUrl }])
+        const dataUrl = await readFileAsDataUrl(file)
+        setPhotos((prev) => [...prev, { file, url: dataUrl }])
       } catch {
         toast.error('Failed to read photo')
       }
@@ -221,8 +230,15 @@ function ObstructionsContent() {
     if (!analysis || !pointInfo) return
     setSaving(true)
 
-    // Collect photo URLs — data URLs for new photos, existing URLs for saved ones
-    const photoUrls = photos.map((p) => p.url)
+    // Compress new photos (with File) for DB storage; keep existing URLs as-is
+    const photoUrls: string[] = []
+    for (const p of photos) {
+      if (p.file) {
+        photoUrls.push(await compressDataUrl(p.url))
+      } else {
+        photoUrls.push(p.url)
+      }
+    }
 
     const evaluationPayload = {
       object_height_agl: analysis.obstructionHeightAGL,
