@@ -1,14 +1,22 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { DISCREPANCY_TYPES, LOCATION_OPTIONS, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
+import type { LocationMapHandle } from '@/components/discrepancies/location-map'
 import { toast } from 'sonner'
+
+const DiscrepancyLocationMap = dynamic(
+  () => import('@/components/discrepancies/location-map'),
+  { ssr: false },
+)
 
 export default function NewDiscrepancyPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const mapRef = useRef<LocationMapHandle>(null)
   const [photos, setPhotos] = useState<{ file: File; url: string; name: string }[]>([])
   const [saving, setSaving] = useState(false)
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
@@ -40,19 +48,10 @@ export default function NewDiscrepancyPage() {
     )
   }
 
-  const captureGPS = () => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocation not available')
-      return
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setFormData((prev) => ({ ...prev, latitude: pos.coords.latitude, longitude: pos.coords.longitude }))
-        toast.success(`GPS: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`)
-      },
-      () => toast.error('GPS capture failed')
-    )
-  }
+  const handlePointSelected = useCallback((lat: number, lng: number) => {
+    setFormData((prev) => ({ ...prev, latitude: lat, longitude: lng }))
+    toast.success(`Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+  }, [])
 
   const handleSubmit = async () => {
     if (!formData.title || !formData.description || !formData.location_text || selectedTypes.length === 0) {
@@ -78,7 +77,20 @@ export default function NewDiscrepancyPage() {
       return
     }
 
-    // Upload photos to the newly created discrepancy
+    // Capture map screenshot and upload as first photo
+    if (formData.latitude != null && mapRef.current) {
+      try {
+        const blob = await mapRef.current.captureScreenshot()
+        if (blob) {
+          const mapFile = new File([blob], 'map-location.png', { type: 'image/png' })
+          await uploadDiscrepancyPhoto(created.id, mapFile)
+        }
+      } catch {
+        console.warn('Map screenshot capture failed')
+      }
+    }
+
+    // Upload user photos
     if (photos.length > 0) {
       let uploaded = 0
       for (const photo of photos) {
@@ -176,6 +188,17 @@ export default function NewDiscrepancyPage() {
           </select>
         </div>
 
+        {/* Location Map */}
+        <div style={{ marginBottom: 12 }}>
+          <span className="section-label">Pin Location on Map</span>
+          <DiscrepancyLocationMap
+            ref={mapRef}
+            onPointSelected={handlePointSelected}
+            selectedLat={formData.latitude}
+            selectedLng={formData.longitude}
+          />
+        </div>
+
         {photos.length > 0 && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
             {photos.map((p, i) => (
@@ -188,14 +211,9 @@ export default function NewDiscrepancyPage() {
         )}
 
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
-          <button type="button" onClick={() => fileInputRef.current?.click()} style={{ background: '#38BDF814', border: '1px solid #38BDF833', borderRadius: 8, padding: 10, color: '#38BDF8', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', minHeight: 44 }}>
-            📸 Add Photo{photos.length > 0 ? ` (${photos.length})` : ''}
-          </button>
-          <button type="button" onClick={captureGPS} style={{ background: '#34D39914', border: '1px solid #34D39933', borderRadius: 8, padding: 10, color: '#34D399', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', minHeight: 44 }}>
-            📍 {formData.latitude ? `${formData.latitude.toFixed(4)}, ${formData.longitude?.toFixed(4)}` : 'Capture GPS'}
-          </button>
-        </div>
+        <button type="button" onClick={() => fileInputRef.current?.click()} style={{ width: '100%', background: '#38BDF814', border: '1px solid #38BDF833', borderRadius: 8, padding: 10, color: '#38BDF8', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', minHeight: 44, marginBottom: 12 }}>
+          📸 Add Photo{photos.length > 0 ? ` (${photos.length})` : ''}
+        </button>
 
         <button type="button" className="btn-primary" onClick={handleSubmit} disabled={saving} style={{ opacity: saving ? 0.7 : 1 }}>
           {saving ? 'Saving...' : 'Save Discrepancy'}

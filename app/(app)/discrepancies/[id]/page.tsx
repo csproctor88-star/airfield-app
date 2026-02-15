@@ -125,7 +125,7 @@ export default function DiscrepancyDetailPage() {
 
   // Build photo gallery from DB-stored photos
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
-  const allPhotos: { url: string; name: string }[] = dbPhotos.map((p) => ({
+  const allDbPhotos: { url: string; name: string }[] = dbPhotos.map((p) => ({
     url: p.storage_path.startsWith('data:')
       ? p.storage_path
       : supabaseUrl
@@ -133,6 +133,10 @@ export default function DiscrepancyDetailPage() {
         : p.storage_path,
     name: p.file_name,
   }))
+
+  // Separate map screenshot from regular photos
+  const mapPhoto = allDbPhotos.find((p) => p.name === 'map-location.png')
+  const allPhotos = allDbPhotos.filter((p) => p.name !== 'map-location.png')
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
@@ -202,6 +206,20 @@ export default function DiscrepancyDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Map location screenshot */}
+      {mapPhoto && (
+        <div className="card" style={{ marginBottom: 8, padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '8px 12px 4px', fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            Pinned Location
+          </div>
+          <img
+            src={mapPhoto.url}
+            alt="Discrepancy location on map"
+            style={{ width: '100%', display: 'block', borderRadius: '0 0 10px 10px' }}
+          />
+        </div>
+      )}
 
       {/* Photo thumbnails — tap to view full screen */}
       {allPhotos.length > 0 && (
