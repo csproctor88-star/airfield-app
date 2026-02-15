@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { INSTALLATION } from '@/lib/constants'
 import { fetchObstructionEvaluation, deleteObstructionEvaluation, parsePhotoPaths, type ObstructionRow } from '@/lib/supabase/obstructions'
+import { PhotoViewerModal } from '@/components/discrepancies/modals'
 
 type SurfaceResult = {
   surfaceKey: string
@@ -35,6 +36,7 @@ export default function ObstructionDetailPage() {
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -156,34 +158,40 @@ export default function ObstructionDetailPage() {
         })}
       </div>
 
-      {/* Photos */}
+      {/* Photos — hero + thumbnail gallery */}
       {photoPaths.length > 0 && (
         <div style={{ marginBottom: 10 }}>
-          {photoPaths.length === 1 ? (
-            <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.1)' }}>
-              <img
-                src={photoPaths[0]}
-                alt="Obstruction"
-                style={{ width: '100%', maxHeight: 200, objectFit: 'cover' }}
-              />
-            </div>
-          ) : (
-            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
-              {photoPaths.map((url, i) => (
+          {/* Hero image (first photo) */}
+          <div
+            style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.1)', cursor: 'pointer' }}
+            onClick={() => setViewerIndex(0)}
+          >
+            <img
+              src={photoPaths[0]}
+              alt="Obstruction"
+              style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }}
+            />
+          </div>
+          {/* Thumbnail row for remaining photos */}
+          {photoPaths.length > 1 && (
+            <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+              {photoPaths.slice(1).map((url, i) => (
                 <div
                   key={i}
                   style={{
-                    width: 120,
-                    height: 90,
+                    width: 64,
+                    height: 64,
                     borderRadius: 8,
                     overflow: 'hidden',
-                    border: '1px solid rgba(56,189,248,0.1)',
+                    border: '1px solid rgba(56,189,248,0.15)',
                     flexShrink: 0,
+                    cursor: 'pointer',
                   }}
+                  onClick={() => setViewerIndex(i + 1)}
                 >
                   <img
                     src={url}
-                    alt={`Obstruction ${i + 1}`}
+                    alt={`Obstruction ${i + 2}`}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                 </div>
@@ -371,6 +379,15 @@ export default function ObstructionDetailPage() {
           {deleting ? 'Deleting...' : 'Delete Evaluation'}
         </button>
       </div>
+
+      {/* Photo viewer modal */}
+      {viewerIndex !== null && photoPaths.length > 0 && (
+        <PhotoViewerModal
+          photos={photoPaths.map((url, i) => ({ url, name: `Photo ${i + 1}` }))}
+          initialIndex={viewerIndex}
+          onClose={() => setViewerIndex(null)}
+        />
+      )}
 
       {/* Delete confirmation dialog */}
       {showDeleteConfirm && (
