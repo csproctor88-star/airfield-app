@@ -187,30 +187,23 @@ export async function updateObstructionEvaluation(
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateError } = await (supabase as any)
+  const { data: updateData, error: updateError } = await (supabase as any)
     .from('obstruction_evaluations')
     .update(updatePayload)
     .eq('id', id)
+    .select()
 
   if (updateError) {
     console.error('Failed to update obstruction evaluation:', updateError.message)
     return { data: null, error: updateError.message }
   }
 
-  // Fetch the updated record separately to avoid .single() coercion issues
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error: fetchError } = await (supabase as any)
-    .from('obstruction_evaluations')
-    .select('*')
-    .eq('id', id)
-    .single()
-
-  if (fetchError) {
-    // Update succeeded but fetch failed — return a minimal object with the id
-    return { data: { id } as ObstructionRow, error: null }
+  // If no rows were updated (RLS blocked), report a clear error
+  if (!updateData || updateData.length === 0) {
+    return { data: null, error: 'Update failed — you may not have permission to edit this evaluation.' }
   }
 
-  return { data: data as ObstructionRow, error: null }
+  return { data: updateData[0] as ObstructionRow, error: null }
 }
 
 export async function deleteObstructionEvaluation(

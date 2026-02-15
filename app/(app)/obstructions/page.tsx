@@ -184,33 +184,53 @@ function ObstructionsContent() {
   // Compress a data URL to keep it small enough for DB storage
   const compressDataUrl = (dataUrl: string, maxDim = 800, quality = 0.7): Promise<string> =>
     new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        console.warn('compressDataUrl: timed out after 10s, using original')
+        resolve(dataUrl)
+      }, 10000)
       const img = document.createElement('img')
       img.onload = () => {
-        let w = img.naturalWidth
-        let h = img.naturalHeight
-        if (w > maxDim || h > maxDim) {
-          const scale = maxDim / Math.max(w, h)
-          w = Math.round(w * scale)
-          h = Math.round(h * scale)
+        clearTimeout(timer)
+        try {
+          let w = img.naturalWidth
+          let h = img.naturalHeight
+          if (w > maxDim || h > maxDim) {
+            const scale = maxDim / Math.max(w, h)
+            w = Math.round(w * scale)
+            h = Math.round(h * scale)
+          }
+          const canvas = document.createElement('canvas')
+          canvas.width = w
+          canvas.height = h
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            console.warn('compressDataUrl: canvas context unavailable, using original')
+            resolve(dataUrl)
+            return
+          }
+          ctx.drawImage(img, 0, 0, w, h)
+          resolve(canvas.toDataURL('image/jpeg', quality))
+        } catch (err) {
+          console.warn('compressDataUrl: compression failed, using original', err)
+          resolve(dataUrl)
         }
-        const canvas = document.createElement('canvas')
-        canvas.width = w
-        canvas.height = h
-        const ctx = canvas.getContext('2d')!
-        ctx.drawImage(img, 0, 0, w, h)
-        resolve(canvas.toDataURL('image/jpeg', quality))
       }
-      img.onerror = () => resolve(dataUrl) // fallback to original on error
+      img.onerror = () => {
+        clearTimeout(timer)
+        console.warn('compressDataUrl: image load failed, using original')
+        resolve(dataUrl)
+      }
       img.src = dataUrl
     })
 
   // Handle photo — use FileReader for immediate preview
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files?.length) return
+    const fileList = e.target.files
+    if (!fileList?.length) return
+    // Copy files before clearing input (some browsers invalidate FileList on reset)
+    const fileArray = Array.from(fileList)
     e.target.value = ''
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]
+    for (const file of fileArray) {
       try {
         const dataUrl = await readFileAsDataUrl(file)
         setPhotos((prev) => [...prev, { file, url: dataUrl }])
@@ -218,7 +238,7 @@ function ObstructionsContent() {
         toast.error('Failed to read photo')
       }
     }
-    toast.success(files.length > 1 ? `${files.length} photos attached` : 'Photo attached')
+    toast.success(fileArray.length > 1 ? `${fileArray.length} photos attached` : 'Photo attached')
   }
 
   const removePhoto = (index: number) => {
@@ -231,13 +251,19 @@ function ObstructionsContent() {
     setSaving(true)
 
     // Compress new photos (with File) for DB storage; keep existing URLs as-is
-    const photoUrls: string[] = []
-    for (const p of photos) {
-      if (p.file) {
-        photoUrls.push(await compressDataUrl(p.url))
-      } else {
-        photoUrls.push(p.url)
+    let photoUrls: string[] = []
+    try {
+      for (const p of photos) {
+        if (p.file) {
+          photoUrls.push(await compressDataUrl(p.url))
+        } else {
+          photoUrls.push(p.url)
+        }
       }
+    } catch (err) {
+      console.error('Photo compression failed:', err)
+      // Fall back to raw data URLs for any remaining photos
+      photoUrls = photos.map((p) => p.url)
     }
 
     const evaluationPayload = {
