@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { DISCREPANCY_TYPES, LOCATION_OPTIONS, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
-import type { LocationMapHandle } from '@/components/discrepancies/location-map'
 import { toast } from 'sonner'
 
 const DiscrepancyLocationMap = dynamic(
@@ -16,7 +15,6 @@ const DiscrepancyLocationMap = dynamic(
 export default function NewDiscrepancyPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const mapRef = useRef<LocationMapHandle>(null)
   const [photos, setPhotos] = useState<{ file: File; url: string; name: string }[]>([])
   const [saving, setSaving] = useState(false)
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
@@ -75,19 +73,6 @@ export default function NewDiscrepancyPage() {
       toast.error(error || 'Failed to create discrepancy')
       setSaving(false)
       return
-    }
-
-    // Capture map screenshot and upload as first photo
-    if (formData.latitude != null && mapRef.current) {
-      try {
-        const blob = await mapRef.current.captureScreenshot()
-        if (blob) {
-          const mapFile = new File([blob], 'map-location.png', { type: 'image/png' })
-          await uploadDiscrepancyPhoto(created.id, mapFile)
-        }
-      } catch {
-        console.warn('Map screenshot capture failed')
-      }
     }
 
     // Upload user photos
@@ -192,7 +177,6 @@ export default function NewDiscrepancyPage() {
         <div style={{ marginBottom: 12 }}>
           <span className="section-label">Pin Location on Map</span>
           <DiscrepancyLocationMap
-            ref={mapRef}
             onPointSelected={handlePointSelected}
             selectedLat={formData.latitude}
             selectedLng={formData.longitude}

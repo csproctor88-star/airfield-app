@@ -125,7 +125,7 @@ export default function DiscrepancyDetailPage() {
 
   // Build photo gallery from DB-stored photos
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
-  const allDbPhotos: { url: string; name: string }[] = dbPhotos.map((p) => ({
+  const allPhotos: { url: string; name: string }[] = dbPhotos.map((p) => ({
     url: p.storage_path.startsWith('data:')
       ? p.storage_path
       : supabaseUrl
@@ -134,9 +134,13 @@ export default function DiscrepancyDetailPage() {
     name: p.file_name,
   }))
 
-  // Separate map screenshot from regular photos
-  const mapPhoto = allDbPhotos.find((p) => p.name === 'map-location.png')
-  const allPhotos = allDbPhotos.filter((p) => p.name !== 'map-location.png')
+  // Generate static map image URL from stored coordinates
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+  const lat = 'latitude' in d ? (d as DiscrepancyRow).latitude : null
+  const lng = 'longitude' in d ? (d as DiscrepancyRow).longitude : null
+  const staticMapUrl = lat != null && lng != null && mapboxToken && mapboxToken !== 'your-mapbox-token-here'
+    ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${lng},${lat})/${lng},${lat},15,0/600x300@2x?access_token=${mapboxToken}`
+    : null
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
@@ -207,17 +211,20 @@ export default function DiscrepancyDetailPage() {
         )}
       </div>
 
-      {/* Map location screenshot */}
-      {mapPhoto && (
+      {/* Pinned location map */}
+      {staticMapUrl && (
         <div className="card" style={{ marginBottom: 8, padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '8px 12px 4px', fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             Pinned Location
           </div>
           <img
-            src={mapPhoto.url}
+            src={staticMapUrl}
             alt="Discrepancy location on map"
             style={{ width: '100%', display: 'block', borderRadius: '0 0 10px 10px' }}
           />
+          <div style={{ padding: '4px 12px 8px', fontSize: 10, color: '#34D399', fontFamily: 'monospace', fontWeight: 600 }}>
+            {lat!.toFixed(5)}, {lng!.toFixed(5)}
+          </div>
         </div>
       )}
 
