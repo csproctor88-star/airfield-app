@@ -734,41 +734,6 @@ function ObstructionsContent() {
                   </div>
                 </div>
               ))}
-
-              {/* Submit W/O to CES button */}
-              <button
-                type="button"
-                onClick={() => {
-                  router.push(
-                    `/discrepancies/new?type=obstruction&title=${encodeURIComponent(
-                      `Obstruction: ${description || 'Imaginary Surface Violation'}`,
-                    )}&description=${encodeURIComponent(
-                      analysis.violatedSurfaces
-                        .map(
-                          (v) =>
-                            `${v.surfaceName}: ${v.penetrationFt.toFixed(1)} ft penetration. Ref: ${v.ufcReference}`,
-                        )
-                        .join('\n'),
-                    )}`,
-                  )
-                }}
-                style={{
-                  marginTop: 10,
-                  width: '100%',
-                  background: 'linear-gradient(135deg, #B91C1C, #EF4444)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: 12,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  minHeight: 44,
-                }}
-              >
-                Submit W/O to CES
-              </button>
             </div>
           )}
 
