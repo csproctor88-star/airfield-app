@@ -5,12 +5,34 @@ import { useRouter } from 'next/navigation'
 import { fetchObstructionEvaluations, deleteObstructionEvaluation, parsePhotoPaths, type ObstructionRow } from '@/lib/supabase/obstructions'
 import { formatDistanceToNow } from 'date-fns'
 
+function matchesSearch(ev: ObstructionRow, query: string): boolean {
+  const q = query.toLowerCase()
+  const fields: string[] = [
+    ev.display_id,
+    ev.notes ?? '',
+    ev.description ?? '',
+    ev.controlling_surface ?? '',
+    ev.runway_class,
+    ev.has_violation ? 'violation' : 'clear',
+    ev.object_height_agl != null ? `${ev.object_height_agl}` : '',
+    ev.distance_from_centerline_ft != null ? `${ev.distance_from_centerline_ft}` : '',
+    ev.object_elevation_msl != null ? `${ev.object_elevation_msl}` : '',
+    ev.obstruction_top_msl != null ? `${ev.obstruction_top_msl}` : '',
+    ev.latitude != null ? `${ev.latitude}` : '',
+    ev.longitude != null ? `${ev.longitude}` : '',
+    ...(ev.violated_surfaces ?? []),
+    new Date(ev.created_at).toLocaleDateString(),
+  ]
+  return fields.some((f) => f.toLowerCase().includes(q))
+}
+
 export default function ObstructionHistoryPage() {
   const router = useRouter()
   const [evaluations, setEvaluations] = useState<ObstructionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     async function load() {
@@ -40,6 +62,10 @@ export default function ObstructionHistoryPage() {
     setDeletingId(null)
   }
 
+  const filtered = search.trim()
+    ? evaluations.filter((ev) => matchesSearch(ev, search.trim()))
+    : evaluations
+
   return (
     <div style={{ padding: 16, paddingBottom: 120 }}>
       {/* Header */}
@@ -59,7 +85,7 @@ export default function ObstructionHistoryPage() {
       >
         ← New Evaluation
       </button>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
         <div style={{ fontSize: 16, fontWeight: 800, flex: 1 }}>
           Evaluation History
         </div>
@@ -74,10 +100,60 @@ export default function ObstructionHistoryPage() {
               borderRadius: 10,
             }}
           >
-            {evaluations.length}
+            {search.trim() ? `${filtered.length} / ${evaluations.length}` : evaluations.length}
           </span>
         )}
       </div>
+
+      {/* Search */}
+      {!loading && evaluations.length > 0 && (
+        <div style={{ position: 'relative', marginBottom: 12 }}>
+          <input
+            type="text"
+            className="input-dark"
+            placeholder="Search evaluations..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ paddingLeft: 32, paddingRight: search ? 32 : undefined }}
+          />
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#64748B"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              style={{
+                position: 'absolute',
+                right: 8,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                color: '#64748B',
+                fontSize: 16,
+                cursor: 'pointer',
+                padding: '0 4px',
+                lineHeight: 1,
+                fontFamily: 'inherit',
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
+      )}
 
       {loading ? (
         <div style={{ textAlign: 'center', paddingTop: 40 }}>
@@ -93,8 +169,30 @@ export default function ObstructionHistoryPage() {
             Saved obstruction evaluations will appear here.
           </div>
         </div>
+      ) : filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', paddingTop: 40 }}>
+          <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>
+            No evaluations match &ldquo;{search.trim()}&rdquo;
+          </div>
+          <button
+            type="button"
+            onClick={() => setSearch('')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#38BDF8',
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              padding: 0,
+            }}
+          >
+            Clear search
+          </button>
+        </div>
       ) : (
-        evaluations.map((ev) => {
+        filtered.map((ev) => {
           const createdAt = new Date(ev.created_at)
           const violatedCount = (ev.violated_surfaces || []).length
 
