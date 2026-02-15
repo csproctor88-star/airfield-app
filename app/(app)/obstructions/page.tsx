@@ -596,7 +596,7 @@ function ObstructionsContent() {
               }}
             >
               <div style={{ background: 'rgba(4,7,12,0.6)', borderRadius: 6, padding: '6px 8px' }}>
-                <div style={{ color: '#64748B', marginBottom: 2 }}>Obstruction Top</div>
+                <div style={{ color: '#64748B', marginBottom: 2 }}>Total Obstruction Height MSL</div>
                 <div style={{ color: '#F1F5F9', fontWeight: 700, fontFamily: 'monospace' }}>
                   {analysis.obstructionTopMSL.toFixed(0)} ft MSL
                 </div>
