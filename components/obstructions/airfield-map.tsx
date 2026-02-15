@@ -329,7 +329,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
       <div
         style={{
           position: 'absolute',
-          bottom: 8,
+          top: 8,
           left: 8,
           background: 'rgba(4, 7, 12, 0.88)',
           borderRadius: 8,
