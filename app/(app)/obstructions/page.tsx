@@ -699,7 +699,7 @@ function ObstructionsContent() {
             )}
           </div>
 
-          {/* Waiver Guidance (only if violations) */}
+          {/* UFC References (only if violations) */}
           {analysis.hasViolation && (
             <div
               className="card"
@@ -710,21 +710,28 @@ function ObstructionsContent() {
               }}
             >
               <span className="section-label" style={{ color: '#EF4444' }}>
-                Required Actions
+                Applicable UFC References
               </span>
-              {analysis.waiverGuidance.map((line, i) => (
+              {analysis.violatedSurfaces.map((vs) => (
                 <div
-                  key={i}
+                  key={vs.surfaceKey}
                   style={{
-                    fontSize: 11,
-                    color: i === 0 ? '#EF4444' : '#CBD5E1',
-                    fontWeight: i === 0 ? 700 : 400,
-                    lineHeight: 1.5,
-                    marginBottom: i === 0 ? 8 : 4,
-                    paddingLeft: i === 0 ? 0 : 8,
+                    background: 'rgba(239, 68, 68, 0.06)',
+                    border: '1px solid rgba(239, 68, 68, 0.15)',
+                    borderRadius: 6,
+                    padding: '8px 10px',
+                    marginBottom: 6,
                   }}
                 >
-                  {line}
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#F1F5F9', marginBottom: 4 }}>
+                    {vs.ufcReference}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#CBD5E1', lineHeight: 1.4 }}>
+                    {vs.surfaceName} — {vs.penetrationFt.toFixed(1)} ft penetration
+                  </div>
+                  <div style={{ fontSize: 9, color: '#94A3B8', marginTop: 4, fontStyle: 'italic', lineHeight: 1.4 }}>
+                    {vs.ufcCriteria}
+                  </div>
                 </div>
               ))}
 

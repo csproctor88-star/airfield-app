@@ -21,7 +21,7 @@ export const IMAGINARY_SURFACES = {
   primary: {
     name: 'Primary Surface',
     criteria: { halfWidth: 1000, extension: 200, maxHeight: 0 },
-    ufcRef: 'UFC 3-260-01, Sec 3-15 & Table 3-7',
+    ufcRef: 'UFC 3-260-01, Table 3-7, Item 1 (Primary Surface)',
     ufcCriteria: 'No object may protrude above the primary surface elevation (runway elevation) within {halfWidth} ft of centerline and {extension} ft beyond each runway end.',
     description: 'No objects permitted above runway elevation within the primary surface boundaries.',
     color: '#EF4444',
@@ -29,7 +29,7 @@ export const IMAGINARY_SURFACES = {
   approach_departure: {
     name: 'Approach-Departure Clearance Surface',
     criteria: { slope: 50, innerHalfWidth: 1000, outerHalfWidth: 2550, length: 25000 },
-    ufcRef: 'UFC 3-260-01, Sec 3-15 & Table 3-7',
+    ufcRef: 'UFC 3-260-01, Table 3-7, Item 2 (Approach-Departure Clearance Surface)',
     ufcCriteria: 'No object may penetrate the 50:1 approach-departure clearance surface extending {length} ft from the primary surface end.',
     description: '50:1 slope extending from each end of the primary surface.',
     color: '#F97316',
@@ -37,7 +37,7 @@ export const IMAGINARY_SURFACES = {
   inner_horizontal: {
     name: 'Inner Horizontal Surface',
     criteria: { height: 150, radius: 13120 },
-    ufcRef: 'UFC 3-260-01, Sec 3-15 & Table 3-7',
+    ufcRef: 'UFC 3-260-01, Table 3-7, Item 4 (Inner Horizontal Surface)',
     ufcCriteria: 'No object may protrude above 150 ft above the established airfield elevation within a {radius} ft radius of the runway ends.',
     description: '150 ft above established airfield elevation within {radius} ft.',
     color: '#22C55E',
@@ -45,7 +45,7 @@ export const IMAGINARY_SURFACES = {
   conical: {
     name: 'Conical Surface',
     criteria: { slope: 20, horizontalExtent: 7000, baseHeight: 150 },
-    ufcRef: 'UFC 3-260-01, Sec 3-15 & Table 3-7',
+    ufcRef: 'UFC 3-260-01, Table 3-7, Item 5 (Conical Surface)',
     ufcCriteria: 'No object may penetrate the 20:1 conical surface extending 7,000 ft outward from the inner horizontal surface boundary.',
     description: '20:1 slope outward from inner horizontal to 500 ft AGL.',
     color: '#3B82F6',
@@ -53,7 +53,7 @@ export const IMAGINARY_SURFACES = {
   outer_horizontal: {
     name: 'Outer Horizontal Surface',
     criteria: { height: 500, radius: 42250 },
-    ufcRef: 'UFC 3-260-01, Sec 3-15 & Table 3-7',
+    ufcRef: 'UFC 3-260-01, Table 3-7, Item 6 (Outer Horizontal Surface)',
     ufcCriteria: 'No object may protrude above 500 ft above the established airfield elevation within a {radius} ft radius of the runway ends.',
     description: '500 ft above established airfield elevation within {radius} ft.',
     color: '#8B5CF6',
@@ -61,7 +61,7 @@ export const IMAGINARY_SURFACES = {
   transitional: {
     name: 'Transitional Surface',
     criteria: { slope: 7, primaryHalfWidth: 1000 },
-    ufcRef: 'UFC 3-260-01, Sec 3-15 & Table 3-7',
+    ufcRef: 'UFC 3-260-01, Table 3-7, Item 3 (Transitional Surface)',
     ufcCriteria: 'No object may penetrate the 7:1 transitional surface extending from the primary surface and approach-departure surface edges to the inner horizontal surface height (150 ft).',
     description: '7:1 slope from primary/approach edges to inner horizontal height.',
     color: '#EAB308',
