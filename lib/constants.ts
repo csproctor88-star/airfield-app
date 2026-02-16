@@ -157,7 +157,7 @@ export const CHECK_TYPE_CONFIG = {
   ground_emergency: { label: 'Ground Emergency', color: '#F97316', icon: '🚒' },
   heavy_aircraft:   { label: 'Heavy Aircraft Check', color: '#8B5CF6', icon: '✈️' },
   bash:             { label: 'BASH Check', color: '#A78BFA', icon: '🦅' },
-  rcr:              { label: 'Runway Condition Reading', color: '#22D3EE', icon: '📊' },
+  rcr:              { label: 'RCR', color: '#22D3EE', icon: '📊' },
 } as const
 
 // === Airfield Areas (Multi-select for checks) ===
