@@ -11,7 +11,7 @@ import {
   type InspectionSection,
 } from '@/lib/constants'
 
-type ItemState = null | 'pass' | 'fail'
+type ItemState = null | 'pass' | 'fail' | 'na'
 type BwcValue = null | (typeof BWC_OPTIONS)[number]
 
 export default function NewInspectionPage() {
@@ -57,8 +57,21 @@ export default function NewInspectionPage() {
       let next: ItemState = null
       if (current === null || current === undefined) next = 'pass'
       else if (current === 'pass') next = 'fail'
+      else if (current === 'fail') next = 'na'
       else next = null
       return { ...prev, [id]: next }
+    })
+  }
+
+  const markAllPass = () => {
+    setResponses((prev) => {
+      const updated = { ...prev }
+      visibleItems.forEach((item) => {
+        if (item.type !== 'bwc') {
+          updated[item.id] = 'pass'
+        }
+      })
+      return updated
     })
   }
 
@@ -141,7 +154,7 @@ export default function NewInspectionPage() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 16,
+          marginBottom: 12,
         }}
       >
         <div>
@@ -184,6 +197,26 @@ export default function NewInspectionPage() {
           </div>
         </div>
       </div>
+
+      {/* Mark All Pass button */}
+      <button
+        onClick={markAllPass}
+        style={{
+          width: '100%',
+          padding: '10px 0',
+          borderRadius: 8,
+          border: '1px solid rgba(34,197,94,0.3)',
+          background: 'rgba(34,197,94,0.08)',
+          color: '#22C55E',
+          fontSize: 12,
+          fontWeight: 700,
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+          marginBottom: 16,
+        }}
+      >
+        Mark All Items as Pass
+      </button>
 
       {/* Conditional section toggles (airfield only) */}
       {conditionalSections.length > 0 && (
@@ -330,16 +363,24 @@ export default function NewInspectionPage() {
                 )
               }
 
-              // Standard pass/fail item
+              // Standard pass/fail/na item
               const state = responses[item.id] ?? null
               const borderColor =
-                state === 'pass' ? '#22C55E' : state === 'fail' ? '#EF4444' : '#334155'
+                state === 'pass'
+                  ? '#22C55E'
+                  : state === 'fail'
+                    ? '#EF4444'
+                    : state === 'na'
+                      ? '#64748B'
+                      : '#334155'
               const bgColor =
                 state === 'pass'
                   ? 'rgba(34,197,94,0.1)'
                   : state === 'fail'
                     ? 'rgba(239,68,68,0.1)'
-                    : 'transparent'
+                    : state === 'na'
+                      ? 'rgba(100,116,139,0.1)'
+                      : 'transparent'
 
               return (
                 <div key={item.id} style={{ borderBottom: '1px solid #1E293B' }}>
@@ -372,17 +413,38 @@ export default function NewInspectionPage() {
                         cursor: 'pointer',
                         padding: 0,
                         flexShrink: 0,
-                        fontSize: 14,
+                        fontSize: state === 'na' ? 9 : 14,
                         fontWeight: 700,
-                        color: state === 'pass' ? '#22C55E' : state === 'fail' ? '#EF4444' : 'transparent',
+                        color:
+                          state === 'pass'
+                            ? '#22C55E'
+                            : state === 'fail'
+                              ? '#EF4444'
+                              : state === 'na'
+                                ? '#64748B'
+                                : 'transparent',
                         fontFamily: 'inherit',
                       }}
                     >
-                      {state === 'pass' ? '\u2713' : state === 'fail' ? '\u2717' : ''}
+                      {state === 'pass'
+                        ? '\u2713'
+                        : state === 'fail'
+                          ? '\u2717'
+                          : state === 'na'
+                            ? 'N/A'
+                            : ''}
                     </button>
 
                     {/* Item text */}
-                    <div style={{ fontSize: 12, color: '#CBD5E1', lineHeight: '18px', paddingTop: 4 }}>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: state === 'na' ? '#64748B' : '#CBD5E1',
+                        lineHeight: '18px',
+                        paddingTop: 4,
+                        textDecoration: state === 'na' ? 'line-through' : 'none',
+                      }}
+                    >
                       {item.item}
                     </div>
                   </div>
