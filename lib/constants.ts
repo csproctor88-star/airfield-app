@@ -153,11 +153,11 @@ export const DAILY_INSPECTION_ITEMS = [
 export const CHECK_TYPE_CONFIG = {
   fod:              { label: 'FOD Check', color: '#EAB308', icon: '🔍' },
   rsc:              { label: 'RSC Check', color: '#3B82F6', icon: '🌧️' },
+  rcr:              { label: 'RCR Check', color: '#22D3EE', icon: '📊' },
   ife:              { label: 'In-Flight Emergency', color: '#EF4444', icon: '🚨' },
   ground_emergency: { label: 'Ground Emergency', color: '#F97316', icon: '🚒' },
   heavy_aircraft:   { label: 'Heavy Aircraft Check', color: '#8B5CF6', icon: '✈️' },
   bash:             { label: 'BASH Check', color: '#A78BFA', icon: '🦅' },
-  rcr:              { label: 'RCR', color: '#22D3EE', icon: '📊' },
 } as const
 
 // === Airfield Areas (Multi-select for checks) ===
