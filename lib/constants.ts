@@ -127,26 +127,204 @@ export const EMERGENCY_AGENCIES = [
   'Command Post', 'ATC / Tower', 'CE', 'Security Forces', 'Medical',
 ] as const
 
-// === Daily Inspection Items (SRS Section 6.7) ===
+// === Inspection Types ===
 
-export const DAILY_INSPECTION_ITEMS = [
-  { id: 'rwy-01', section: 'Runway', item: 'Pavement surface condition — no FOD, spalling, cracking, or settlement' },
-  { id: 'rwy-02', section: 'Runway', item: 'Runway markings — visible, not faded or obscured' },
-  { id: 'rwy-03', section: 'Runway', item: 'Edge lights — operational, lenses clean and unbroken' },
-  { id: 'rwy-04', section: 'Runway', item: 'Threshold and end lights — operational' },
-  { id: 'rwy-05', section: 'Runway', item: 'Touchdown zone lights — operational (if installed)' },
-  { id: 'rwy-06', section: 'Runway', item: 'Centerline lights — operational (if installed)' },
-  { id: 'twy-01', section: 'Taxiway', item: 'Taxiway pavement — no FOD, defects, or standing water' },
-  { id: 'twy-02', section: 'Taxiway', item: 'Taxiway markings and signs — visible, correct, undamaged' },
-  { id: 'twy-03', section: 'Taxiway', item: 'Taxiway edge lights — operational' },
-  { id: 'twy-04', section: 'Taxiway', item: 'Hold position signs and markings — visible and correct' },
-  { id: 'app-01', section: 'Approach/Departure', item: 'Approach lighting system (MALSR) — operational' },
-  { id: 'app-02', section: 'Approach/Departure', item: 'PAPI/VASI — operational and aligned' },
-  { id: 'app-03', section: 'Approach/Departure', item: 'Approach/departure zones — clear of obstructions' },
-  { id: 'sup-01', section: 'Support', item: 'Wind cone/indicator — operational, visible, correct orientation' },
-  { id: 'sup-02', section: 'Support', item: 'Segmented circle — no damage, proper markings' },
-  { id: 'sup-03', section: 'Support', item: 'Airfield perimeter — fencing intact, no unauthorized access points' },
-] as const
+export type InspectionType = 'airfield' | 'lighting'
+
+export interface InspectionItem {
+  id: string
+  itemNumber: number
+  item: string
+  type?: 'pass_fail' | 'bwc'  // default is pass_fail
+}
+
+export interface InspectionSection {
+  id: string
+  title: string
+  guidance?: string
+  conditional?: string  // if set, section is hidden unless user opts in
+  items: InspectionItem[]
+}
+
+// === Airfield Inspection Sections ===
+
+export const AIRFIELD_INSPECTION_SECTIONS: InspectionSection[] = [
+  {
+    id: 'af-1',
+    title: 'Section 1 — Obstacle Clearance Criteria',
+    guidance: 'Tree growth, vegetation, dirt piles, ponding, construction, depressions, mobile/fixed obstacles',
+    items: [
+      { id: 'af-1', itemNumber: 1, item: 'Runway Lateral Clearance (492 ft from centerline)' },
+      { id: 'af-2', itemNumber: 2, item: 'Transitional Slope (7:1)' },
+      { id: 'af-3', itemNumber: 3, item: "Runway Clear Zones — 902'L (NATO) × 984'W" },
+      { id: 'af-4', itemNumber: 4, item: "Graded Area — 902'L (NATO) × 984'W" },
+      { id: 'af-5', itemNumber: 5, item: 'Approach / Departure Surface (50:1)' },
+      { id: 'af-6', itemNumber: 6, item: "Taxiway — 164' from centerline" },
+      { id: 'af-7', itemNumber: 7, item: 'Taxitrack (Loops) — 49.2 ft from centerline' },
+      { id: 'af-8', itemNumber: 8, item: "Apron — 115' from boundary marking" },
+      { id: 'af-9', itemNumber: 9, item: 'Construction Areas' },
+    ],
+  },
+  {
+    id: 'af-2',
+    title: 'Section 2 — Signs/Lights',
+    guidance: 'Correct background/legend, easy to read, unobstructed, frangible, illuminated',
+    items: [
+      { id: 'af-11', itemNumber: 11, item: 'VFR Holding Positions' },
+      { id: 'af-12', itemNumber: 12, item: 'Instrument Holding Positions' },
+      { id: 'af-13', itemNumber: 13, item: 'Elevation Signs' },
+      { id: 'af-14', itemNumber: 14, item: 'Taxiway Signs' },
+      { id: 'af-15', itemNumber: 15, item: 'Windcone' },
+      { id: 'af-16', itemNumber: 16, item: 'FOD/STOP' },
+      { id: 'af-17', itemNumber: 17, item: 'Runway Signs' },
+      { id: 'af-18', itemNumber: 18, item: 'NAVAID Ground Receiver Checkpoints' },
+      { id: 'af-19', itemNumber: 19, item: 'Closed Areas' },
+    ],
+  },
+  {
+    id: 'af-3',
+    title: 'Section 3 — Construction',
+    items: [
+      { id: 'af-20', itemNumber: 20, item: 'Parking' },
+      { id: 'af-21', itemNumber: 21, item: 'Rules Compliance' },
+      { id: 'af-22', itemNumber: 22, item: 'Construction Site Lighting/Marking' },
+      { id: 'af-23', itemNumber: 23, item: 'Storage' },
+      { id: 'af-24', itemNumber: 24, item: 'Vehicles Lighted/Marked' },
+      { id: 'af-25', itemNumber: 25, item: 'FOD Control (Debris/Trash/Vehicle Routes)' },
+    ],
+  },
+  {
+    id: 'af-4',
+    title: 'Section 4 — Habitat Management',
+    items: [
+      { id: 'af-26', itemNumber: 26, item: 'Grass Height (7–14")' },
+      { id: 'af-27', itemNumber: 27, item: 'Ponding Effects' },
+      { id: 'af-28', itemNumber: 28, item: 'Bird/Animal Survey' },
+      { id: 'af-29', itemNumber: 29, item: 'Bird Watch Condition (BWC)', type: 'bwc' },
+    ],
+  },
+  {
+    id: 'af-5',
+    title: 'Section 5 — Pavement Condition / Markings',
+    guidance: 'Conditions: Rubber deposits, cracks, spalling, FOD. Markings: Chipped/peeling/faded, obscure, rubber buildup',
+    items: [
+      { id: 'af-30', itemNumber: 30, item: 'Runway/Overruns 05/23' },
+      { id: 'af-31', itemNumber: 31, item: 'Taxiways' },
+      { id: 'af-32', itemNumber: 32, item: 'North & South Hot Pits' },
+      { id: 'af-33', itemNumber: 33, item: 'Parking Loops' },
+      { id: 'af-34', itemNumber: 34, item: 'Access Roads / FOD Checks' },
+      { id: 'af-35', itemNumber: 35, item: 'Grounding Points' },
+    ],
+  },
+  {
+    id: 'af-6',
+    title: 'Section 6 — Airfield Driving',
+    items: [
+      { id: 'af-36', itemNumber: 36, item: 'FOD Control' },
+      { id: 'af-37', itemNumber: 37, item: 'Compliance with Procedures' },
+      { id: 'af-38', itemNumber: 38, item: 'Properly Stowed/Secured Equipment' },
+    ],
+  },
+  {
+    id: 'af-7',
+    title: 'Section 7 — FOD Control',
+    items: [
+      { id: 'af-39', itemNumber: 39, item: 'Runways/Overruns, Taxiways/Shoulders' },
+      { id: 'af-40', itemNumber: 40, item: 'Parking Aprons' },
+      { id: 'af-41', itemNumber: 41, item: 'Infield Areas Between Runways/Taxiways' },
+      { id: 'af-42', itemNumber: 42, item: 'Perimeter/Access Roads' },
+    ],
+  },
+  {
+    id: 'af-8',
+    title: 'Section 8 — Pre or Post Construction Inspection',
+    conditional: 'Construction meeting inspection',
+    items: [
+      { id: 'af-43', itemNumber: 43, item: 'CE, Wing Safety' },
+    ],
+  },
+  {
+    id: 'af-9',
+    title: 'Section 9 — Joint Monthly Airfield Inspection',
+    conditional: 'Joint Monthly Airfield Inspection',
+    items: [
+      { id: 'af-44', itemNumber: 44, item: 'TERPS, Flight & Ground Safety, SOF, CE, SFS' },
+    ],
+  },
+]
+
+// === BWC Value Options ===
+
+export const BWC_OPTIONS = ['LOW', 'MOD', 'SEV', 'PROHIB'] as const
+
+// === Lighting Inspection Sections ===
+
+export const LIGHTING_INSPECTION_SECTIONS: InspectionSection[] = [
+  {
+    id: 'lt-1',
+    title: 'Section 1 — Runway 01 Lighting',
+    items: [
+      { id: 'lt-1', itemNumber: 1, item: '01/19 Edge Lights' },
+      { id: 'lt-2', itemNumber: 2, item: '01 Approach Lighting (SALS)' },
+      { id: 'lt-3', itemNumber: 3, item: '01 Threshold Bar / 19 Runway End Lights' },
+      { id: 'lt-4', itemNumber: 4, item: '01 PAPI' },
+      { id: 'lt-5', itemNumber: 5, item: 'South Hammerhead Edge Lights' },
+    ],
+  },
+  {
+    id: 'lt-2',
+    title: 'Section 2 — Runway 19 Lighting',
+    items: [
+      { id: 'lt-6', itemNumber: 6, item: '19 Threshold Bar / 01 Runway End Lights' },
+      { id: 'lt-7', itemNumber: 7, item: '19 PAPI' },
+      { id: 'lt-8', itemNumber: 8, item: '19 REILs' },
+      { id: 'lt-9', itemNumber: 9, item: 'Intensity Level Check on HIRLs' },
+    ],
+  },
+  {
+    id: 'lt-3',
+    title: 'Section 3 — Taxiway/Apron Lighting',
+    items: [
+      { id: 'lt-10', itemNumber: 10, item: 'TWY A' },
+      { id: 'lt-11', itemNumber: 11, item: 'TWY K' },
+      { id: 'lt-12', itemNumber: 12, item: 'TWY B' },
+      { id: 'lt-13', itemNumber: 13, item: 'TWY L' },
+      { id: 'lt-14', itemNumber: 14, item: 'TWY J' },
+      { id: 'lt-15', itemNumber: 15, item: 'TWY E' },
+      { id: 'lt-16', itemNumber: 16, item: 'TWY G' },
+      { id: 'lt-17', itemNumber: 17, item: 'East Ramp' },
+      { id: 'lt-18', itemNumber: 18, item: 'West Ramp' },
+      { id: 'lt-19', itemNumber: 19, item: 'USCG Ramp' },
+      { id: 'lt-20', itemNumber: 20, item: 'DHS Ramp' },
+      { id: 'lt-21', itemNumber: 21, item: 'West Side Stadium Lights' },
+      { id: 'lt-22', itemNumber: 22, item: 'East Side Stadium Lights' },
+    ],
+  },
+  {
+    id: 'lt-4',
+    title: 'Section 4 — Signs & Markings',
+    items: [
+      { id: 'lt-23', itemNumber: 23, item: 'Runway Hold Signs' },
+      { id: 'lt-24', itemNumber: 24, item: 'Taxiway Guidance Signs' },
+      { id: 'lt-25', itemNumber: 25, item: 'Instrument Hold Signs' },
+      { id: 'lt-26', itemNumber: 26, item: '01/19 DRMs (Distance Remaining Markers)' },
+      { id: 'lt-27', itemNumber: 27, item: 'NAVAID Checkpoint' },
+      { id: 'lt-28', itemNumber: 28, item: 'Marking Retroreflectivity' },
+    ],
+  },
+  {
+    id: 'lt-5',
+    title: 'Section 5 — Miscellaneous',
+    items: [
+      { id: 'lt-29', itemNumber: 29, item: 'Obstruction Lights' },
+      { id: 'lt-30', itemNumber: 30, item: 'Rotating Beacon' },
+      { id: 'lt-31', itemNumber: 31, item: 'Wind Cones' },
+      { id: 'lt-32', itemNumber: 32, item: 'Traffic Lights' },
+      { id: 'lt-33', itemNumber: 33, item: 'Construction Barriers' },
+      { id: 'lt-34', itemNumber: 34, item: 'North or South Ramp' },
+    ],
+  },
+]
 
 // === Check Type Configuration ===
 

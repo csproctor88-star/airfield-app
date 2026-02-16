@@ -3,56 +3,85 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { DAILY_INSPECTION_ITEMS } from '@/lib/constants'
+import {
+  AIRFIELD_INSPECTION_SECTIONS,
+  LIGHTING_INSPECTION_SECTIONS,
+  BWC_OPTIONS,
+  type InspectionType,
+  type InspectionSection,
+} from '@/lib/constants'
 
 type ItemState = null | 'pass' | 'fail'
+type BwcValue = null | (typeof BWC_OPTIONS)[number]
 
 export default function NewInspectionPage() {
   const router = useRouter()
-  const [responses, setResponses] = useState<Record<string, ItemState>>(() => {
-    const init: Record<string, ItemState> = {}
-    DAILY_INSPECTION_ITEMS.forEach((item) => {
-      init[item.id] = null
-    })
-    return init
-  })
+  const [inspectionType, setInspectionType] = useState<InspectionType>('airfield')
+
+  // Conditional section toggles (airfield sections 8 & 9)
+  const [enabledConditionals, setEnabledConditionals] = useState<Record<string, boolean>>({})
+
+  // Per-item responses keyed by item id
+  const [responses, setResponses] = useState<Record<string, ItemState>>({})
+  // BWC value for item af-29
+  const [bwcValue, setBwcValue] = useState<BwcValue>(null)
+  // Per-item comments keyed by item id
+  const [comments, setComments] = useState<Record<string, string>>({})
+
+  const sections =
+    inspectionType === 'airfield' ? AIRFIELD_INSPECTION_SECTIONS : LIGHTING_INSPECTION_SECTIONS
+
+  // Visible sections — filter out conditional sections that are not enabled
+  const visibleSections = useMemo(() => {
+    return sections.filter(
+      (s) => !s.conditional || enabledConditionals[s.id]
+    )
+  }, [sections, enabledConditionals])
+
+  // All visible items
+  const visibleItems = useMemo(() => {
+    return visibleSections.flatMap((s) => s.items)
+  }, [visibleSections])
+
+  const totalItems = visibleItems.length
+  const answeredCount = visibleItems.filter((item) => {
+    if (item.type === 'bwc') return bwcValue !== null
+    return responses[item.id] != null
+  }).length
+  const progress = totalItems > 0 ? Math.round((answeredCount / totalItems) * 100) : 0
+  const allDone = answeredCount === totalItems && totalItems > 0
 
   const toggle = (id: string) => {
     setResponses((prev) => {
       const current = prev[id]
       let next: ItemState = null
-      if (current === null) next = 'pass'
+      if (current === null || current === undefined) next = 'pass'
       else if (current === 'pass') next = 'fail'
       else next = null
       return { ...prev, [id]: next }
     })
   }
 
-  const totalItems = DAILY_INSPECTION_ITEMS.length
-  const answeredCount = Object.values(responses).filter((v) => v !== null).length
-  const progress = totalItems > 0 ? Math.round((answeredCount / totalItems) * 100) : 0
-  const allDone = answeredCount === totalItems
+  const toggleConditional = (sectionId: string) => {
+    setEnabledConditionals((prev) => ({ ...prev, [sectionId]: !prev[sectionId] }))
+  }
 
-  // Group items by section
-  const sections = useMemo(() => {
-    const map = new Map<string, typeof DAILY_INSPECTION_ITEMS[number][]>()
-    DAILY_INSPECTION_ITEMS.forEach((item) => {
-      const list = map.get(item.section) || []
-      list.push(item)
-      map.set(item.section, list)
-    })
-    return Array.from(map.entries())
-  }, [])
-
-  const sectionDoneCount = (sectionItems: typeof DAILY_INSPECTION_ITEMS[number][]) =>
-    sectionItems.filter((item) => responses[item.id] !== null).length
+  const sectionDoneCount = (section: InspectionSection) =>
+    section.items.filter((item) => {
+      if (item.type === 'bwc') return bwcValue !== null
+      return responses[item.id] != null
+    }).length
 
   const handleSubmit = () => {
-    toast.success('Daily inspection submitted', {
+    const label = inspectionType === 'airfield' ? 'Airfield inspection' : 'Lighting inspection'
+    toast.success(`${label} submitted`, {
       description: `${totalItems} items checked — ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}`,
     })
     setTimeout(() => router.push('/'), 600)
   }
+
+  // Conditional sections that exist but are not yet enabled
+  const conditionalSections = sections.filter((s) => s.conditional)
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
@@ -71,10 +100,42 @@ export default function NewInspectionPage() {
           fontFamily: 'inherit',
         }}
       >
-        ← Back
+        &larr; Back
       </button>
 
-      {/* Header row */}
+      {/* Inspection type toggle */}
+      <div
+        style={{
+          display: 'flex',
+          borderRadius: 8,
+          overflow: 'hidden',
+          border: '1px solid #334155',
+          marginBottom: 16,
+        }}
+      >
+        {(['airfield', 'lighting'] as InspectionType[]).map((type) => (
+          <button
+            key={type}
+            onClick={() => setInspectionType(type)}
+            style={{
+              flex: 1,
+              padding: '10px 0',
+              border: 'none',
+              background: inspectionType === type ? '#0EA5E9' : 'transparent',
+              color: inspectionType === type ? '#FFF' : '#94A3B8',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              transition: 'background 0.15s',
+            }}
+          >
+            {type === 'airfield' ? 'Airfield Inspection' : 'Lighting Inspection'}
+          </button>
+        ))}
+      </div>
+
+      {/* Header row with progress */}
       <div
         style={{
           display: 'flex',
@@ -84,9 +145,11 @@ export default function NewInspectionPage() {
         }}
       >
         <div>
-          <div style={{ fontSize: 16, fontWeight: 800 }}>Daily Inspection</div>
+          <div style={{ fontSize: 16, fontWeight: 800 }}>
+            {inspectionType === 'airfield' ? 'Airfield Inspection' : 'Lighting Inspection'}
+          </div>
           <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
-            DAFI 13-213 &bull; {answeredCount}/{totalItems} items
+            {answeredCount}/{totalItems} items
           </div>
         </div>
 
@@ -122,20 +185,57 @@ export default function NewInspectionPage() {
         </div>
       </div>
 
+      {/* Conditional section toggles (airfield only) */}
+      {conditionalSections.length > 0 && (
+        <div
+          style={{
+            marginBottom: 16,
+            padding: 12,
+            borderRadius: 8,
+            background: 'rgba(10,16,28,0.92)',
+            border: '1px solid rgba(56,189,248,0.06)',
+          }}
+        >
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#64748B', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            Optional Sections
+          </div>
+          {conditionalSections.map((s) => (
+            <label
+              key={s.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                cursor: 'pointer',
+                padding: '6px 0',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={!!enabledConditionals[s.id]}
+                onChange={() => toggleConditional(s.id)}
+                style={{ accentColor: '#0EA5E9', width: 16, height: 16 }}
+              />
+              <span style={{ fontSize: 12, color: '#CBD5E1' }}>{s.conditional}</span>
+            </label>
+          ))}
+        </div>
+      )}
+
       {/* Sections */}
-      {sections.map(([sectionName, sectionItems]) => {
-        const done = sectionDoneCount(sectionItems)
-        const sectionComplete = done === sectionItems.length
+      {visibleSections.map((section) => {
+        const done = sectionDoneCount(section)
+        const sectionComplete = done === section.items.length
 
         return (
-          <div key={sectionName} style={{ marginBottom: 16 }}>
+          <div key={section.id} style={{ marginBottom: 20 }}>
             {/* Section header */}
             <div
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                marginBottom: 8,
+                marginBottom: 4,
               }}
             >
               <div
@@ -145,16 +245,93 @@ export default function NewInspectionPage() {
                   color: sectionComplete ? '#22C55E' : '#94A3B8',
                 }}
               >
-                {sectionName}
+                {section.title}
               </div>
               <div style={{ fontSize: 10, color: '#64748B' }}>
-                {done}/{sectionItems.length}
+                {done}/{section.items.length}
               </div>
             </div>
 
+            {/* Section guidance */}
+            {section.guidance && (
+              <div
+                style={{
+                  fontSize: 10,
+                  color: '#64748B',
+                  marginBottom: 8,
+                  lineHeight: '14px',
+                  fontStyle: 'italic',
+                }}
+              >
+                {section.guidance}
+              </div>
+            )}
+
             {/* Items */}
-            {sectionItems.map((item) => {
-              const state = responses[item.id]
+            {section.items.map((item) => {
+              // BWC item has a special selector
+              if (item.type === 'bwc') {
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      padding: '10px 0',
+                      borderBottom: '1px solid #1E293B',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        marginBottom: 8,
+                      }}
+                    >
+                      <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600, minWidth: 22 }}>
+                        {item.itemNumber}.
+                      </span>
+                      <span style={{ fontSize: 12, color: '#CBD5E1', lineHeight: '18px' }}>
+                        {item.item}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, paddingLeft: 30 }}>
+                      {BWC_OPTIONS.map((opt) => {
+                        const selected = bwcValue === opt
+                        const colorMap: Record<string, string> = {
+                          LOW: '#22C55E',
+                          MOD: '#EAB308',
+                          SEV: '#F97316',
+                          PROHIB: '#EF4444',
+                        }
+                        const color = colorMap[opt] || '#94A3B8'
+                        return (
+                          <button
+                            key={opt}
+                            onClick={() => setBwcValue(selected ? null : opt)}
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: 6,
+                              border: `2px solid ${selected ? color : '#334155'}`,
+                              background: selected ? `${color}20` : 'transparent',
+                              color: selected ? color : '#94A3B8',
+                              fontSize: 11,
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              fontFamily: 'inherit',
+                              transition: 'all 0.15s',
+                            }}
+                          >
+                            {opt}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              }
+
+              // Standard pass/fail item
+              const state = responses[item.id] ?? null
               const borderColor =
                 state === 'pass' ? '#22C55E' : state === 'fail' ? '#EF4444' : '#334155'
               const bgColor =
@@ -165,45 +342,76 @@ export default function NewInspectionPage() {
                     : 'transparent'
 
               return (
-                <div
-                  key={item.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 10,
-                    padding: '10px 0',
-                    borderBottom: '1px solid #1E293B',
-                  }}
-                >
-                  {/* Checkbox button */}
-                  <button
-                    onClick={() => toggle(item.id)}
+                <div key={item.id} style={{ borderBottom: '1px solid #1E293B' }}>
+                  <div
                     style={{
-                      width: 28,
-                      height: 28,
-                      minWidth: 28,
-                      borderRadius: 6,
-                      border: `2px solid ${borderColor}`,
-                      background: bgColor,
                       display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      padding: 0,
-                      flexShrink: 0,
-                      fontSize: 14,
-                      fontWeight: 700,
-                      color: state === 'pass' ? '#22C55E' : state === 'fail' ? '#EF4444' : 'transparent',
-                      fontFamily: 'inherit',
+                      alignItems: 'flex-start',
+                      gap: 8,
+                      padding: '10px 0',
                     }}
                   >
-                    {state === 'pass' ? '✓' : state === 'fail' ? '✗' : ''}
-                  </button>
+                    {/* Item number */}
+                    <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600, minWidth: 22, paddingTop: 5 }}>
+                      {item.itemNumber}.
+                    </span>
 
-                  {/* Item text */}
-                  <div style={{ fontSize: 12, color: '#CBD5E1', lineHeight: '18px', paddingTop: 4 }}>
-                    {item.item}
+                    {/* Checkbox button */}
+                    <button
+                      onClick={() => toggle(item.id)}
+                      style={{
+                        width: 28,
+                        height: 28,
+                        minWidth: 28,
+                        borderRadius: 6,
+                        border: `2px solid ${borderColor}`,
+                        background: bgColor,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        padding: 0,
+                        flexShrink: 0,
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: state === 'pass' ? '#22C55E' : state === 'fail' ? '#EF4444' : 'transparent',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      {state === 'pass' ? '\u2713' : state === 'fail' ? '\u2717' : ''}
+                    </button>
+
+                    {/* Item text */}
+                    <div style={{ fontSize: 12, color: '#CBD5E1', lineHeight: '18px', paddingTop: 4 }}>
+                      {item.item}
+                    </div>
                   </div>
+
+                  {/* Comment field for failed items */}
+                  {state === 'fail' && (
+                    <div style={{ paddingLeft: 58, paddingBottom: 10 }}>
+                      <textarea
+                        placeholder="Describe the discrepancy..."
+                        value={comments[item.id] || ''}
+                        onChange={(e) =>
+                          setComments((prev) => ({ ...prev, [item.id]: e.target.value }))
+                        }
+                        rows={2}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(4,8,14,0.9)',
+                          border: '1px solid rgba(239,68,68,0.3)',
+                          borderRadius: 6,
+                          padding: '8px 10px',
+                          color: '#F1F5F9',
+                          fontSize: 11,
+                          fontFamily: 'inherit',
+                          resize: 'vertical',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               )
             })}
