@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -14,7 +14,7 @@ import {
   EMERGENCY_AGENCIES,
 } from '@/lib/constants'
 import type { CheckType } from '@/lib/supabase/types'
-import { createCheck } from '@/lib/supabase/checks'
+import { createCheck, uploadCheckPhoto } from '@/lib/supabase/checks'
 
 type LocalComment = {
   id: string
@@ -27,9 +27,24 @@ const CURRENT_USER = 'MSgt Proctor'
 
 export default function AirfieldChecksPage() {
   const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [checkType, setCheckType] = useState<CheckType | ''>('')
   const [areas, setAreas] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
+
+  // Photos
+  const [photos, setPhotos] = useState<{ file: File; url: string; name: string }[]>([])
+
+  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files?.length) return
+    Array.from(files).forEach((file) => {
+      const url = URL.createObjectURL(file)
+      setPhotos((prev) => [...prev, { file, url, name: file.name }])
+    })
+    toast.success(`${files.length} photo(s) added`)
+    e.target.value = ''
+  }
 
   // Remarks
   const [remarkText, setRemarkText] = useState('')
@@ -136,15 +151,27 @@ export default function AirfieldChecksPage() {
       comments,
     })
 
-    setSaving(false)
-
-    if (error) {
+    if (error || !created) {
       toast.error(`Failed to save: ${error}`)
+      setSaving(false)
       return
     }
 
-    toast.success(`Check ${created?.display_id || ''} completed`)
-    router.push(created ? `/checks/${created.id}` : '/checks/history')
+    // Upload photos
+    if (photos.length > 0) {
+      let uploaded = 0
+      for (const photo of photos) {
+        const { error: photoErr } = await uploadCheckPhoto(created.id, photo.file)
+        if (!photoErr) uploaded++
+      }
+      if (uploaded < photos.length) {
+        toast.error(`${photos.length - uploaded} photo(s) failed to upload`)
+      }
+    }
+
+    setSaving(false)
+    toast.success(`Check ${created.display_id} completed`)
+    router.push(`/checks/${created.id}`)
   }
 
   const resetTypeFields = () => {
@@ -542,6 +569,49 @@ export default function AirfieldChecksPage() {
           <span style={{ fontSize: 18 }}>🗺️</span>
           View Airfield Diagram
         </button>
+      )}
+
+      {/* Photos Section */}
+      {checkType && (
+        <div className="card" style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            Photos
+          </div>
+
+          {photos.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+              {photos.map((p, i) => (
+                <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid #38BDF833' }}>
+                  <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button
+                    type="button"
+                    onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))}
+                    style={{
+                      position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.7)', border: 'none',
+                      color: '#EF4444', fontSize: 12, width: 20, height: 20, borderRadius: '50%', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              width: '100%', background: '#38BDF814', border: '1px solid #38BDF833', borderRadius: 8,
+              padding: 10, color: '#38BDF8', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+              fontFamily: 'inherit', minHeight: 44,
+            }}
+          >
+            📸 Add Photo{photos.length > 0 ? ` (${photos.length})` : ''}
+          </button>
+        </div>
       )}
 
       {/* Remarks Section */}

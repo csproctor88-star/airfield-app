@@ -181,8 +181,16 @@ export default function CheckHistoryPage() {
             </div>
 
             {/* Footer */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#64748B' }}>
-              <span>{check.completed_by || 'Unknown'}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10, color: '#64748B' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>{check.completed_by || 'Unknown'}</span>
+                {check.photo_count > 0 && (
+                  <>
+                    <span>&bull;</span>
+                    <span>📷 {check.photo_count}</span>
+                  </>
+                )}
+              </div>
               <span>
                 {check.completed_at
                   ? `${new Date(check.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${new Date(check.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`

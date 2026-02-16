@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -8,19 +8,24 @@ import { Badge } from '@/components/ui/badge'
 import { CHECK_TYPE_CONFIG } from '@/lib/constants'
 import { DEMO_CHECKS, DEMO_CHECK_COMMENTS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
-import { fetchCheck, fetchCheckComments, addCheckComment, type CheckRow, type CheckCommentRow } from '@/lib/supabase/checks'
+import { fetchCheck, fetchCheckComments, addCheckComment, fetchCheckPhotos, uploadCheckPhoto, type CheckRow, type CheckCommentRow, type CheckPhotoRow } from '@/lib/supabase/checks'
+import { PhotoViewerModal } from '@/components/discrepancies/modals'
 
 const CURRENT_USER = 'MSgt Proctor'
 
 export default function CheckDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [liveData, setLiveData] = useState<CheckRow | null>(null)
   const [comments, setComments] = useState<CheckCommentRow[]>([])
+  const [dbPhotos, setDbPhotos] = useState<CheckPhotoRow[]>([])
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
   const [remarkText, setRemarkText] = useState('')
   const [savingRemark, setSavingRemark] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null)
 
   const loadData = useCallback(async () => {
     const supabase = createClient()
@@ -36,6 +41,8 @@ export default function CheckDetailPage() {
     if (data) {
       const c = await fetchCheckComments(data.id)
       setComments(c)
+      const p = await fetchCheckPhotos(data.id)
+      setDbPhotos(p)
     }
 
     setLoading(false)
@@ -82,6 +89,32 @@ export default function CheckDetailPage() {
     toast.success('Remark added')
   }
 
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files?.length || !liveData) return
+
+    setUploading(true)
+    let uploaded = 0
+    for (const file of Array.from(files)) {
+      const { error } = await uploadCheckPhoto(liveData.id, file)
+      if (!error) uploaded++
+    }
+
+    if (uploaded > 0) {
+      toast.success(`${uploaded} photo(s) uploaded`)
+      const freshPhotos = await fetchCheckPhotos(liveData.id)
+      setDbPhotos(freshPhotos)
+      const freshCheck = await fetchCheck(liveData.id)
+      if (freshCheck) setLiveData(freshCheck)
+    }
+    if (uploaded < files.length) {
+      toast.error(`${files.length - uploaded} photo(s) failed to upload`)
+    }
+
+    setUploading(false)
+    e.target.value = ''
+  }
+
   if (loading) {
     return (
       <div style={{ padding: 16, paddingBottom: 100 }}>
@@ -109,6 +142,17 @@ export default function CheckDetailPage() {
       </div>
     )
   }
+
+  // Build photo gallery from DB-stored photos
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
+  const allPhotos: { url: string; name: string }[] = dbPhotos.map((p) => ({
+    url: p.storage_path.startsWith('data:')
+      ? p.storage_path
+      : supabaseUrl
+        ? `${supabaseUrl}/storage/v1/object/public/${p.storage_path}`
+        : p.storage_path,
+    name: p.file_name,
+  }))
 
   const typeConfig = CHECK_TYPE_CONFIG[check.check_type as keyof typeof CHECK_TYPE_CONFIG]
   const data = (check.data || {}) as Record<string, unknown>
@@ -279,6 +323,46 @@ export default function CheckDetailPage() {
         )}
       </div>
 
+      {/* Photo Thumbnails */}
+      {allPhotos.length > 0 && (
+        <div className="card" style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            Photos ({allPhotos.length})
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {allPhotos.map((p, i) => (
+              <div
+                key={i}
+                style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid #38BDF833', cursor: 'pointer' }}
+                onClick={() => setViewerIndex(i)}
+              >
+                <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Add Photo Button */}
+      {!usingDemo && (
+        <>
+          <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            style={{
+              width: '100%', padding: 10, marginBottom: 8, borderRadius: 8,
+              background: '#38BDF814', border: '1px solid #38BDF833', cursor: uploading ? 'default' : 'pointer',
+              color: '#38BDF8', fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+              opacity: uploading ? 0.7 : 1,
+            }}
+          >
+            {uploading ? '⏳ Uploading...' : `📸 Add Photo${allPhotos.length > 0 ? ` (${allPhotos.length})` : ''}`}
+          </button>
+        </>
+      )}
+
       {/* Remarks Section */}
       <div className="card" style={{ marginBottom: 8 }}>
         <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
@@ -365,6 +449,11 @@ export default function CheckDetailPage() {
           View History
         </Link>
       </div>
+
+      {/* Photo Viewer Modal */}
+      {viewerIndex !== null && allPhotos.length > 0 && (
+        <PhotoViewerModal photos={allPhotos} initialIndex={viewerIndex} onClose={() => setViewerIndex(null)} />
+      )}
     </div>
   )
 }

@@ -101,14 +101,14 @@ export const DEMO_CHECKS = [
     areas: ['RWY 01/19', 'TWY A', 'TWY B'],
     data: {},
     completed_by: 'TSgt Williams', completed_at: new Date().toISOString(),
-    photo_count: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    photo_count: 2, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   },
   {
     id: 'demo-check-2', display_id: 'AC-0097', check_type: 'bash' as const,
     areas: ['Entire Airfield'],
     data: { condition_code: 'LOW', species_observed: 'Canada geese (4, grazing N side), Red-tailed hawk (1, perched)' },
     completed_by: 'MSgt Proctor', completed_at: new Date().toISOString(),
-    photo_count: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    photo_count: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   },
   {
     id: 'demo-check-3', display_id: 'AC-0096', check_type: 'rcr' as const,
