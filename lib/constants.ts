@@ -163,6 +163,7 @@ export const CHECK_TYPE_CONFIG = {
 // === Airfield Areas (Multi-select for checks) ===
 
 export const AIRFIELD_AREAS = [
+  'Entire Airfield',
   'RWY 01/19',
   'West Ramp',
   'East Ramp',
