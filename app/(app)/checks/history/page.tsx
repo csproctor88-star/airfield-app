@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { CHECK_TYPE_CONFIG } from '@/lib/constants'
 import { DEMO_CHECKS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { fetchChecks, type CheckRow } from '@/lib/supabase/checks'
-import type { CheckType } from '@/lib/supabase/types'
 
 export default function CheckHistoryPage() {
   const [liveChecks, setLiveChecks] = useState<CheckRow[]>([])
@@ -24,9 +24,13 @@ export default function CheckHistoryPage() {
         setLoading(false)
         return
       }
-      const data = await fetchChecks()
-      setLiveChecks(data)
-      if (data.length === 0) setUsingDemo(true)
+      const { data, error } = await fetchChecks()
+      if (error) {
+        toast.error(`DB error: ${error}`)
+        setUsingDemo(true)
+      } else {
+        setLiveChecks(data)
+      }
       setLoading(false)
     }
     load()

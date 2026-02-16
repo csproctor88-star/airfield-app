@@ -78,9 +78,9 @@ export async function createCheck(input: {
   return { data: created, error: null }
 }
 
-export async function fetchChecks(): Promise<CheckRow[]> {
+export async function fetchChecks(): Promise<{ data: CheckRow[]; error: string | null }> {
   const supabase = createClient()
-  if (!supabase) return []
+  if (!supabase) return { data: [], error: 'Supabase not configured' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
@@ -90,10 +90,10 @@ export async function fetchChecks(): Promise<CheckRow[]> {
 
   if (error) {
     console.error('Failed to fetch checks:', error.message)
-    return []
+    return { data: [], error: error.message }
   }
 
-  return data as CheckRow[]
+  return { data: data as CheckRow[], error: null }
 }
 
 export async function fetchCheck(id: string): Promise<CheckRow | null> {

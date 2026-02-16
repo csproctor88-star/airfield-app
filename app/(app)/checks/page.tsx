@@ -136,14 +136,13 @@ export default function AirfieldChecksPage() {
       comments,
     })
 
+    setSaving(false)
+
     if (error) {
-      toast.success('Check completed (demo mode)')
-      setSaving(false)
-      router.push('/checks/history')
+      toast.error(`Failed to save: ${error}`)
       return
     }
 
-    setSaving(false)
     toast.success(`Check ${created?.display_id || ''} completed`)
     router.push(created ? `/checks/${created.id}` : '/checks/history')
   }
