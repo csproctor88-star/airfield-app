@@ -269,6 +269,9 @@ ALTER TABLE airfield_checks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "AM roles full access" ON airfield_checks FOR ALL USING (
   user_has_role(ARRAY['airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'])
 );
+CREATE POLICY "Authenticated users create checks" ON airfield_checks FOR INSERT WITH CHECK (
+  auth.uid() IS NOT NULL
+);
 CREATE POLICY "Others read checks" ON airfield_checks FOR SELECT USING (true);
 
 ALTER TABLE check_comments ENABLE ROW LEVEL SECURITY;
