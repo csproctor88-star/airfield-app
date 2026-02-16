@@ -11,13 +11,13 @@ import {
 } from 'lucide-react'
 
 // Bottom nav matching prototype: 5 tabs, fixed, blur backdrop
-// Home | Discrepancies | Obstructions | Checks | More
+// Home | Checks | Obstructions | Discrepancies | More
 
 const tabs = [
   { href: '/', label: 'HOME', icon: Home },
-  { href: '/discrepancies', label: 'DISCREPANCIES', icon: ClipboardList },
-  { href: '/obstructions', label: 'OBSTRUCTIONS', icon: TriangleAlert },
   { href: '/checks', label: 'CHECKS', icon: ClipboardCheck },
+  { href: '/obstructions', label: 'OBSTRUCTIONS', icon: TriangleAlert },
+  { href: '/discrepancies', label: 'DISCREPANCIES', icon: ClipboardList },
   { href: '/more', label: 'MORE', icon: Menu },
 ] as const
 
