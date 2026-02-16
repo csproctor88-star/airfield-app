@@ -38,6 +38,9 @@ export default function AirfieldChecksPage() {
   const [areas, setAreas] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
 
+  // Issue Found toggle
+  const [issueFound, setIssueFound] = useState(false)
+
   // Location
   const [selectedLat, setSelectedLat] = useState<number | null>(null)
   const [selectedLng, setSelectedLng] = useState<number | null>(null)
@@ -206,6 +209,8 @@ export default function AirfieldChecksPage() {
     setHeavyAircraftType('')
     setSelectedLat(null)
     setSelectedLng(null)
+    setIssueFound(false)
+    setPhotos([])
   }
 
   const typeConfig = checkType ? CHECK_TYPE_CONFIG[checkType] : null
@@ -574,8 +579,60 @@ export default function AirfieldChecksPage() {
         </div>
       )}
 
-      {/* Pin Location on Map */}
+      {/* Airfield Diagram Button */}
       {checkType && (
+        <button
+          type="button"
+          onClick={() => toast.info('Airfield diagram will be added — image pending')}
+          style={{
+            width: '100%', padding: '12px', marginBottom: 8, borderRadius: 10,
+            border: '1px dashed #334155', background: '#0F172A', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            color: '#94A3B8', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+          }}
+        >
+          <span style={{ fontSize: 18 }}>🗺️</span>
+          View Airfield Diagram
+        </button>
+      )}
+
+      {/* Issue Found Toggle */}
+      {checkType && (
+        <button
+          type="button"
+          onClick={() => {
+            const next = !issueFound
+            setIssueFound(next)
+            if (!next) {
+              setPhotos([])
+              setSelectedLat(null)
+              setSelectedLng(null)
+            }
+          }}
+          style={{
+            width: '100%', padding: '12px 14px', marginBottom: 8, borderRadius: 10,
+            display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+            fontFamily: 'inherit', fontSize: 13, fontWeight: 700,
+            border: issueFound ? '2px solid #EF4444' : '2px solid #334155',
+            background: issueFound ? '#EF444414' : '#0F172A',
+            color: issueFound ? '#EF4444' : '#94A3B8',
+          }}
+        >
+          <span style={{
+            width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+            border: issueFound ? '2px solid #EF4444' : '2px solid #475569',
+            background: issueFound ? '#EF4444' : 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 14, fontWeight: 800, color: '#FFFFFF',
+          }}>
+            {issueFound ? '✓' : ''}
+          </span>
+          Issue Found
+        </button>
+      )}
+
+      {/* Pin Location on Map — only when issue found */}
+      {checkType && issueFound && (
         <div className="card" style={{ marginBottom: 8 }}>
           <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
             Pin Location on Map
@@ -588,8 +645,8 @@ export default function AirfieldChecksPage() {
         </div>
       )}
 
-      {/* Photos Section */}
-      {checkType && (
+      {/* Photos Section — only when issue found */}
+      {checkType && issueFound && (
         <div className="card" style={{ marginBottom: 8 }}>
           <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
             Photos
