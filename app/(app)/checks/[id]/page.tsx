@@ -1,310 +1,369 @@
 'use client'
 
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
-import { DEMO_CHECKS } from '@/lib/demo-data'
+import { CHECK_TYPE_CONFIG } from '@/lib/constants'
+import { DEMO_CHECKS, DEMO_CHECK_COMMENTS } from '@/lib/demo-data'
+import { createClient } from '@/lib/supabase/client'
+import { fetchCheck, fetchCheckComments, addCheckComment, type CheckRow, type CheckCommentRow } from '@/lib/supabase/checks'
 
-const TYPE_COLORS: Record<string, string> = {
-  fod: '#FBBF24',
-  bash: '#A78BFA',
-  rcr: '#22D3EE',
-  rsc: '#38BDF8',
-  emergency: '#EF4444',
-}
-
-const TYPE_LABELS: Record<string, string> = {
-  fod: 'FOD',
-  bash: 'BASH',
-  rcr: 'RCR',
-  rsc: 'RSC',
-  emergency: 'Emergency',
-}
-
-const RESULT_COLORS: Record<string, string> = {
-  LOW: '#34D399',
-  MODERATE: '#FBBF24',
-  SEVERE: '#EF4444',
-  IFE: '#EF4444',
-  GE: '#EF4444',
-}
-
-function FodDetail({ data }: { data: any }) {
-  return (
-    <>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 11, marginBottom: 12 }}>
-        <div>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Route</div>
-          <div style={{ fontWeight: 500, marginTop: 2 }}>{data.route}</div>
-        </div>
-        <div>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Clear</div>
-          <div style={{ fontWeight: 500, marginTop: 2 }}>{data.clear ? 'Yes' : 'No'}</div>
-        </div>
-      </div>
-      {data.items_found && data.items_found.length > 0 && (
-        <div>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Items Found</div>
-          {data.items_found.map((item: any, i: number) => (
-            <div
-              key={i}
-              style={{
-                background: 'rgba(4, 8, 14, 0.9)',
-                border: '1px solid rgba(56, 189, 248, 0.06)',
-                borderRadius: 6,
-                padding: '8px 10px',
-                marginBottom: 4,
-                fontSize: 11,
-              }}
-            >
-              <div style={{ fontWeight: 600, marginBottom: 2 }}>{item.description}</div>
-              <div style={{ fontSize: 10, color: '#64748B' }}>
-                Location: {item.location} {item.disposed ? ' -- Disposed' : ''}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </>
-  )
-}
-
-function BashDetail({ data }: { data: any }) {
-  const codeColor = data.condition_code === 'LOW' ? '#34D399' : data.condition_code === 'MODERATE' ? '#FBBF24' : '#EF4444'
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 11 }}>
-      <div>
-        <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Condition Code</div>
-        <div style={{ fontWeight: 700, marginTop: 2, color: codeColor }}>{data.condition_code}</div>
-      </div>
-      <div>
-        <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Mitigation</div>
-        <div style={{ fontWeight: 500, marginTop: 2 }}>{data.mitigation_actions || 'None'}</div>
-      </div>
-      <div style={{ gridColumn: '1 / -1' }}>
-        <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Species Observed</div>
-        <div style={{ fontWeight: 500, marginTop: 2, whiteSpace: 'pre-wrap' }}>{data.species_observed || 'None'}</div>
-      </div>
-      {data.habitat_attractants && (
-        <div style={{ gridColumn: '1 / -1' }}>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Habitat Attractants</div>
-          <div style={{ fontWeight: 500, marginTop: 2 }}>{data.habitat_attractants}</div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function RcrDetail({ data }: { data: any }) {
-  const avg = data.readings
-    ? Math.round((data.readings.rollout + data.readings.midpoint + data.readings.departure) / 3)
-    : null
-  return (
-    <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, fontSize: 11, marginBottom: 12 }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Rollout</div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: '#22D3EE', marginTop: 2 }}>{data.readings?.rollout}</div>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Midpoint</div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: '#22D3EE', marginTop: 2 }}>{data.readings?.midpoint}</div>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Departure</div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: '#22D3EE', marginTop: 2 }}>{data.readings?.departure}</div>
-        </div>
-      </div>
-      {avg !== null && (
-        <div style={{
-          background: 'rgba(34, 211, 238, 0.08)',
-          border: '1px solid rgba(34, 211, 238, 0.15)',
-          borderRadius: 8,
-          padding: '8px 12px',
-          marginBottom: 12,
-          textAlign: 'center',
-        }}>
-          <span style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-            AVG Mu:{' '}
-          </span>
-          <span style={{ fontSize: 18, fontWeight: 800, color: '#22D3EE' }}>{avg}</span>
-        </div>
-      )}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 11 }}>
-        <div>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Equipment</div>
-          <div style={{ fontWeight: 500, marginTop: 2 }}>{data.equipment}</div>
-        </div>
-        <div>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Surface</div>
-          <div style={{ fontWeight: 500, marginTop: 2 }}>{data.surface_condition}</div>
-        </div>
-        <div>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Temperature</div>
-          <div style={{ fontWeight: 500, marginTop: 2 }}>{data.temperature_f}°F</div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function RscDetail({ data }: { data: any }) {
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 11 }}>
-      <div>
-        <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Contaminant</div>
-        <div style={{ fontWeight: 500, marginTop: 2 }}>{data.contaminant}</div>
-      </div>
-      <div>
-        <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Braking Action</div>
-        <div style={{ fontWeight: 500, marginTop: 2 }}>{data.braking_action}</div>
-      </div>
-      <div>
-        <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Depth</div>
-        <div style={{ fontWeight: 500, marginTop: 2 }}>{data.depth_inches}" </div>
-      </div>
-      <div>
-        <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Coverage</div>
-        <div style={{ fontWeight: 500, marginTop: 2 }}>{data.coverage_percent}%</div>
-      </div>
-      <div style={{ gridColumn: '1 / -1' }}>
-        <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Treatment</div>
-        <div style={{ fontWeight: 500, marginTop: 2 }}>{data.treatment_applied}</div>
-      </div>
-    </div>
-  )
-}
-
-function EmergencyDetail({ data }: { data: any }) {
-  return (
-    <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 11, marginBottom: 12 }}>
-        <div>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Type</div>
-          <div style={{ fontWeight: 500, marginTop: 2 }}>{data.emergency_type}</div>
-        </div>
-        <div>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Runway</div>
-          <div style={{ fontWeight: 500, marginTop: 2 }}>RWY {data.runway}</div>
-        </div>
-        <div>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Aircraft</div>
-          <div style={{ fontWeight: 500, marginTop: 2 }}>{data.aircraft_type}</div>
-        </div>
-        <div>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Callsign</div>
-          <div style={{ fontWeight: 500, marginTop: 2 }}>{data.callsign}</div>
-        </div>
-        <div style={{ gridColumn: '1 / -1' }}>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Nature</div>
-          <div style={{ fontWeight: 500, marginTop: 2 }}>{data.nature}</div>
-        </div>
-        {data.duration_minutes && (
-          <div>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Duration</div>
-            <div style={{ fontWeight: 500, marginTop: 2 }}>{data.duration_minutes} min</div>
-          </div>
-        )}
-      </div>
-      {data.actions && data.actions.length > 0 && (
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Actions Completed</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {data.actions.map((a: string, i: number) => (
-              <Badge key={i} label={a} color="#22D3EE" />
-            ))}
-          </div>
-        </div>
-      )}
-      {data.agencies_notified && data.agencies_notified.length > 0 && (
-        <div>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Agencies Notified</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {data.agencies_notified.map((a: string, i: number) => (
-              <Badge key={i} label={a} color="#34D399" />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
+const CURRENT_USER = 'MSgt Proctor'
 
 export default function CheckDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const check = DEMO_CHECKS.find((c) => c.id === params.id)
+  const [liveData, setLiveData] = useState<CheckRow | null>(null)
+  const [comments, setComments] = useState<CheckCommentRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [usingDemo, setUsingDemo] = useState(false)
+  const [remarkText, setRemarkText] = useState('')
+  const [savingRemark, setSavingRemark] = useState(false)
 
-  const backButtonStyle = {
-    background: 'none' as const,
-    border: 'none' as const,
-    color: '#22D3EE',
-    fontSize: 12,
-    fontWeight: 600 as const,
-    cursor: 'pointer' as const,
-    padding: 0,
-    marginBottom: 12,
-    fontFamily: 'inherit',
+  const loadData = useCallback(async () => {
+    const supabase = createClient()
+    if (!supabase) {
+      setUsingDemo(true)
+      setLoading(false)
+      return
+    }
+
+    const data = await fetchCheck(params.id as string)
+    setLiveData(data)
+
+    if (data) {
+      const c = await fetchCheckComments(data.id)
+      setComments(c)
+    }
+
+    setLoading(false)
+  }, [params.id])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  const handleAddRemark = async () => {
+    if (!remarkText.trim()) return
+    setSavingRemark(true)
+
+    if (usingDemo) {
+      // Demo mode — add locally
+      const newComment: CheckCommentRow = {
+        id: `demo-${Date.now()}`,
+        check_id: params.id as string,
+        comment: remarkText.trim(),
+        user_name: CURRENT_USER,
+        created_at: new Date().toISOString(),
+      }
+      setComments((prev) => [...prev, newComment])
+      setRemarkText('')
+      setSavingRemark(false)
+      toast.success('Remark added')
+      return
+    }
+
+    if (!liveData) return
+
+    const { error } = await addCheckComment(liveData.id, remarkText.trim(), CURRENT_USER)
+    if (error) {
+      toast.error('Failed to save remark')
+      setSavingRemark(false)
+      return
+    }
+
+    // Refresh comments
+    const freshComments = await fetchCheckComments(liveData.id)
+    setComments(freshComments)
+    setRemarkText('')
+    setSavingRemark(false)
+    toast.success('Remark added')
   }
 
-  if (!check) {
+  if (loading) {
     return (
       <div style={{ padding: 16, paddingBottom: 100 }}>
-        <button onClick={() => router.back()} style={backButtonStyle}>
-          ← Back
-        </button>
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>
-          Check not found
-        </div>
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>Loading...</div>
       </div>
     )
   }
 
-  const color = TYPE_COLORS[check.check_type] || '#94A3B8'
-  const resultColor = RESULT_COLORS[check.result] || color
+  // Resolve data — use explicit interface for rendering
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const check: any = usingDemo
+    ? DEMO_CHECKS.find((x) => x.id === params.id) || null
+    : liveData
+  const displayComments = usingDemo
+    ? [...DEMO_CHECK_COMMENTS.filter((c) => c.check_id === params.id), ...comments.filter(c => c.id.startsWith('demo-'))]
+    : comments
+
+  if (!check) {
+    return (
+      <div style={{ padding: 16, paddingBottom: 100 }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#22D3EE', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
+          ← Back
+        </button>
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>Check not found</div>
+      </div>
+    )
+  }
+
+  const typeConfig = CHECK_TYPE_CONFIG[check.check_type as keyof typeof CHECK_TYPE_CONFIG]
+  const data = (check.data || {}) as Record<string, unknown>
+  const completedBy = String(check.completed_by || 'Unknown')
+  const completedAt = check.completed_at ? String(check.completed_at) : null
+  const displayId = String(check.display_id)
+  const checkAreas: string[] = Array.isArray(check.areas) ? check.areas.map(String) : []
+  const checkTypeStr = String(check.check_type)
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
-      <button onClick={() => router.back()} style={backButtonStyle}>
-        ← Back
-      </button>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#22D3EE', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+          ← Back
+        </button>
+        <Link
+          href="/checks/history"
+          style={{ color: '#22D3EE', fontSize: 11, fontWeight: 600, textDecoration: 'none' }}
+        >
+          All History
+        </Link>
+      </div>
 
-      <div className="card" style={{ borderLeft: `3px solid ${color}`, marginBottom: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <span style={{ fontSize: 14, fontWeight: 800, color: '#22D3EE', fontFamily: 'monospace' }}>
-            {check.display_id}
+      {/* Check Summary Card */}
+      <div className="card" style={{ marginBottom: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <span style={{ fontSize: 16, fontWeight: 800, color: '#22D3EE', fontFamily: 'monospace' }}>
+            {displayId}
           </span>
-          <div style={{ display: 'flex', gap: 4 }}>
-            <Badge label={TYPE_LABELS[check.check_type] || check.check_type.toUpperCase()} color={color} />
-            <Badge label={check.result} color={resultColor} />
-          </div>
+          <Badge label="COMPLETED" color="#22C55E" />
         </div>
 
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{check.area}</div>
-
-        <div style={{ fontSize: 10, color: '#64748B', marginBottom: 12 }}>
-          {new Date(check.check_date).toLocaleString()} &middot; {check.performed_by}
-        </div>
-
-        <div style={{
-          background: 'rgba(4, 8, 14, 0.9)',
-          border: '1px solid rgba(56, 189, 248, 0.06)',
-          borderRadius: 8,
-          padding: 12,
-          marginBottom: check.notes ? 12 : 0,
-        }}>
-          {check.check_type === 'fod' && <FodDetail data={check.data} />}
-          {check.check_type === 'bash' && <BashDetail data={check.data} />}
-          {check.check_type === 'rcr' && <RcrDetail data={check.data} />}
-          {check.check_type === 'rsc' && <RscDetail data={check.data} />}
-          {check.check_type === 'emergency' && <EmergencyDetail data={check.data} />}
-        </div>
-
-        {check.notes && (
-          <div>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Notes</div>
-            <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.6 }}>{check.notes}</div>
+        {/* Check Type */}
+        {typeConfig && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 20 }}>{typeConfig.icon}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: typeConfig.color }}>{typeConfig.label}</span>
           </div>
         )}
+
+        {/* Info Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 11, marginBottom: 12 }}>
+          <div>
+            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Completed By</div>
+            <div style={{ fontWeight: 600, marginTop: 2, color: '#38BDF8' }}>{completedBy}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Completed At</div>
+            <div style={{ fontWeight: 500, marginTop: 2 }}>
+              {completedAt
+                ? `${new Date(completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${new Date(completedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
+                : 'N/A'}
+            </div>
+          </div>
+        </div>
+
+        {/* Areas */}
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Areas Checked</div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {checkAreas.map((area) => (
+              <Badge key={area} label={area} color="#22D3EE" />
+            ))}
+          </div>
+        </div>
+
+        {/* Type-Specific Details */}
+        {checkTypeStr === 'rsc' && !!data.condition && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Runway Surface Condition</div>
+            <Badge
+              label={data.condition as string}
+              color={(data.condition as string) === 'Dry' ? '#22C55E' : '#3B82F6'}
+            />
+          </div>
+        )}
+
+        {checkTypeStr === 'rcr' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>RCR Value</div>
+              <div style={{ fontSize: 24, fontWeight: 800, fontFamily: 'monospace', color: '#22D3EE', marginTop: 2 }}>{(data.rcr_value as string) || '—'}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Condition</div>
+              <div style={{ fontWeight: 600, marginTop: 2 }}>{(data.condition_type as string) || '—'}</div>
+            </div>
+          </div>
+        )}
+
+        {checkTypeStr === 'bash' && (
+          <>
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Condition Code</div>
+              {!!data.condition_code && (
+                <Badge
+                  label={data.condition_code as string}
+                  color={
+                    data.condition_code === 'LOW' ? '#22C55E'
+                    : data.condition_code === 'MODERATE' ? '#EAB308'
+                    : '#EF4444'
+                  }
+                />
+              )}
+            </div>
+            {!!data.species_observed && (
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Species Observed</div>
+                <div style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.4 }}>{data.species_observed as string}</div>
+              </div>
+            )}
+          </>
+        )}
+
+        {(checkTypeStr === 'ife' || checkTypeStr === 'ground_emergency') && (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 8 }}>
+              {!!data.aircraft_type && (
+                <div>
+                  <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Aircraft Type</div>
+                  <div style={{ fontWeight: 600, marginTop: 2 }}>{data.aircraft_type as string}</div>
+                </div>
+              )}
+              {!!data.callsign && (
+                <div>
+                  <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Callsign</div>
+                  <div style={{ fontWeight: 600, marginTop: 2 }}>{data.callsign as string}</div>
+                </div>
+              )}
+            </div>
+            {!!data.nature && (
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Nature of Emergency</div>
+                <div style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.4 }}>{data.nature as string}</div>
+              </div>
+            )}
+            {Array.isArray(data.actions) && (data.actions as string[]).length > 0 && (
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Actions Completed</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  {(data.actions as string[]).map((action, i) => (
+                    <div key={i} style={{ fontSize: 10, color: '#22C55E', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>✓</span> {action}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {Array.isArray(data.agencies_notified) && (data.agencies_notified as string[]).length > 0 && (
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Agencies Notified</div>
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {(data.agencies_notified as string[]).map((agency, i) => (
+                    <Badge key={i} label={agency} color="#38BDF8" />
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {checkTypeStr === 'heavy_aircraft' && !!data.aircraft_type && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Aircraft Type / MDS</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#8B5CF6' }}>{data.aircraft_type as string}</div>
+          </div>
+        )}
+      </div>
+
+      {/* Remarks Section */}
+      <div className="card" style={{ marginBottom: 8 }}>
+        <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+          Remarks
+        </div>
+
+        {/* Add Remark */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: displayComments.length > 0 ? 12 : 0 }}>
+          <textarea
+            className="input-dark"
+            rows={2}
+            placeholder="Add a follow-up remark..."
+            value={remarkText}
+            onChange={(e) => setRemarkText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleAddRemark()
+              }
+            }}
+            style={{ resize: 'vertical', flex: 1 }}
+          />
+          <button
+            type="button"
+            onClick={handleAddRemark}
+            disabled={!remarkText.trim() || savingRemark}
+            style={{
+              padding: '0 14px', borderRadius: 8, border: 'none',
+              background: remarkText.trim() ? '#22D3EE' : '#1E293B',
+              color: remarkText.trim() ? '#0F172A' : '#334155',
+              fontSize: 11, fontWeight: 700, cursor: remarkText.trim() ? 'pointer' : 'default',
+              fontFamily: 'inherit', alignSelf: 'flex-end', height: 36,
+            }}
+          >
+            {savingRemark ? '...' : 'Save'}
+          </button>
+        </div>
+
+        {/* Comments Timeline */}
+        {displayComments.length > 0 && (
+          <div style={{ borderTop: '1px solid #1E293B', paddingTop: 10 }}>
+            {displayComments.map((c) => (
+              <div key={c.id} style={{ borderLeft: '2px solid #334155', paddingLeft: 10, marginBottom: 10 }}>
+                <div style={{ fontSize: 10, color: '#64748B', marginBottom: 2 }}>
+                  <span style={{ fontWeight: 600, color: '#38BDF8' }}>{c.user_name}</span>
+                  {' — '}
+                  {new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {' '}
+                  {new Date(c.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                </div>
+                <div style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.4 }}>{c.comment}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {displayComments.length === 0 && (
+          <div style={{ fontSize: 11, color: '#475569', fontStyle: 'italic' }}>No remarks yet.</div>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <Link
+          href="/checks"
+          style={{
+            flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
+            background: '#22C55E14', border: '1px solid #22C55E33',
+            color: '#22C55E', fontSize: 12, fontWeight: 700,
+            textDecoration: 'none', fontFamily: 'inherit',
+          }}
+        >
+          + New Check
+        </Link>
+        <Link
+          href="/checks/history"
+          style={{
+            flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
+            background: '#22D3EE14', border: '1px solid #22D3EE33',
+            color: '#22D3EE', fontSize: 12, fontWeight: 700,
+            textDecoration: 'none', fontFamily: 'inherit',
+          }}
+        >
+          View History
+        </Link>
       </div>
     </div>
   )

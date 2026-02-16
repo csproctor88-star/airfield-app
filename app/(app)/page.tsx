@@ -6,9 +6,6 @@ import { Badge } from '@/components/ui/badge'
 import {
   Plus,
   Search,
-  Bird,
-  BarChart3,
-  Snowflake,
   AlertTriangle,
   ClipboardCheck,
   Megaphone,
@@ -23,13 +20,11 @@ const PLACEHOLDER_KPIS = { open: 4, critical: 2, notams: 3 }
 
 const QUICK_ACTIONS = [
   { label: 'New Discrep', icon: Plus, color: '#EF4444', href: '/discrepancies/new' },
-  { label: 'FOD Check', icon: Search, color: '#FBBF24', href: '/checks/fod' },
-  { label: 'BASH Check', icon: Bird, color: '#A78BFA', href: '/checks/bash' },
-  { label: 'RCR Reading', icon: BarChart3, color: '#22D3EE', href: '/checks/rcr' },
-  { label: 'RSC Report', icon: Snowflake, color: '#38BDF8', href: '/checks/rsc' },
-  { label: 'Emergency', icon: AlertTriangle, color: '#EF4444', href: '/checks/emergency' },
+  { label: 'Airfield Check', icon: Search, color: '#FBBF24', href: '/checks' },
+  { label: 'Check History', icon: ClipboardCheck, color: '#22D3EE', href: '/checks/history' },
   { label: 'Inspection', icon: ClipboardCheck, color: '#34D399', href: '/inspections/new' },
   { label: 'NOTAM', icon: Megaphone, color: '#A78BFA', href: '/notams/new' },
+  { label: 'Obstructions', icon: AlertTriangle, color: '#F97316', href: '/obstructions' },
 ]
 
 const PLACEHOLDER_ACTIVITY = [

@@ -151,12 +151,43 @@ export const DAILY_INSPECTION_ITEMS = [
 // === Check Type Configuration ===
 
 export const CHECK_TYPE_CONFIG = {
-  fod:       { label: 'FOD Check', icon: 'Search', color: '#EAB308' },
-  bash:      { label: 'BASH Assessment', icon: 'Bird', color: '#A78BFA' },
-  rcr:       { label: 'RCR Reading', icon: 'BarChart3', color: '#22D3EE' },
-  rsc:       { label: 'RSC Report', icon: 'Snowflake', color: '#3B82F6' },
-  emergency: { label: 'Emergency Response', icon: 'Siren', color: '#EF4444' },
+  fod:              { label: 'FOD Check', color: '#EAB308', icon: '🔍' },
+  rsc:              { label: 'RSC Check', color: '#3B82F6', icon: '🌧️' },
+  ife:              { label: 'In-Flight Emergency', color: '#EF4444', icon: '🚨' },
+  ground_emergency: { label: 'Ground Emergency', color: '#F97316', icon: '🚒' },
+  heavy_aircraft:   { label: 'Heavy Aircraft Check', color: '#8B5CF6', icon: '✈️' },
+  bash:             { label: 'BASH Check', color: '#A78BFA', icon: '🦅' },
+  rcr:              { label: 'Runway Condition Reading', color: '#22D3EE', icon: '📊' },
 } as const
+
+// === Airfield Areas (Multi-select for checks) ===
+
+export const AIRFIELD_AREAS = [
+  'RWY 01/19',
+  'TWY A',
+  'TWY B',
+  'TWY C',
+  'Apron/Ramp',
+  'Overruns',
+  'Shoulders',
+  'Approach Zones',
+  'Full Airfield',
+] as const
+
+// === RSC Conditions ===
+
+export const RSC_CONDITIONS = ['Dry', 'Wet'] as const
+
+// === RCR Condition Types ===
+
+export const RCR_CONDITION_TYPES = [
+  'Dry', 'Wet', 'Slush', 'Ice', 'Patchy Ice', 'Snow',
+  'Patchy Snow', 'Frost', 'Standing Water', 'Flooded',
+] as const
+
+// === BASH Condition Codes ===
+
+export const BASH_CONDITION_CODES = ['LOW', 'MODERATE', 'SEVERE'] as const
 
 // === NOTAM Types ===
 

@@ -98,32 +98,66 @@ export const DEMO_NOTAMS = [
 export const DEMO_CHECKS = [
   {
     id: 'demo-check-1', display_id: 'AC-0098', check_type: 'fod' as const,
-    check_date: new Date().toISOString(), performed_by: 'TSgt Williams',
-    data: { route: 'RWY 01/19', items_found: [{ description: 'Metal bolt (1/4") near TWY A', location: 'TWY A', disposed: true }, { description: 'Rubber fragment (3") midfield', location: 'Midfield', disposed: true }], clear: false },
-    notes: 'Weather: Clear 28°F 310/08.', area: 'RWY 01/19', result: '2 FOUND',
+    areas: ['RWY 01/19', 'TWY A', 'TWY B'],
+    data: {},
+    completed_by: 'TSgt Williams', completed_at: new Date().toISOString(),
+    photo_count: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   },
   {
     id: 'demo-check-2', display_id: 'AC-0097', check_type: 'bash' as const,
-    check_date: new Date().toISOString(), performed_by: 'MSgt Proctor',
-    data: { condition_code: 'LOW', species_observed: 'Canada geese (4, grazing N side), Red-tailed hawk (1, perched)', mitigation_actions: 'Vehicle horn hazed geese', habitat_attractants: '' },
-    notes: null, area: 'Full Airfield', result: 'LOW',
+    areas: ['Full Airfield'],
+    data: { condition_code: 'LOW', species_observed: 'Canada geese (4, grazing N side), Red-tailed hawk (1, perched)' },
+    completed_by: 'MSgt Proctor', completed_at: new Date().toISOString(),
+    photo_count: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   },
   {
     id: 'demo-check-3', display_id: 'AC-0096', check_type: 'rcr' as const,
-    check_date: new Date(Date.now() - 86400000).toISOString(), performed_by: 'SrA Martinez',
-    data: { equipment: 'RT3 Flight', runway: '01/19', readings: { rollout: 66, midpoint: 60, departure: 66 }, surface_condition: 'Dry', temperature_f: 28, rt3_imported: false },
-    notes: 'Source: rt3grip.com.', area: 'RWY 01/19', result: 'AVG Mu: 64',
+    areas: ['RWY 01/19'],
+    data: { rcr_value: '64', condition_type: 'Dry' },
+    completed_by: 'SrA Martinez', completed_at: new Date(Date.now() - 86400000).toISOString(),
+    photo_count: 0, created_at: new Date(Date.now() - 86400000).toISOString(), updated_at: new Date(Date.now() - 86400000).toISOString(),
   },
   {
     id: 'demo-check-4', display_id: 'AC-0095', check_type: 'rsc' as const,
-    check_date: '2026-02-05T06:30:00Z', performed_by: 'TSgt Williams',
-    data: { runway: '01/19', contaminant: 'Frost', depth_inches: 0, coverage_percent: 40, treatment_applied: 'KAc', braking_action: 'Good' },
-    notes: 'Cleared by 0730L.', area: 'RWY 01/19', result: 'Frost',
+    areas: ['RWY 01/19'],
+    data: { condition: 'Wet' },
+    completed_by: 'TSgt Williams', completed_at: '2026-02-05T06:30:00Z',
+    photo_count: 0, created_at: '2026-02-05T06:30:00Z', updated_at: '2026-02-05T06:30:00Z',
   },
   {
-    id: 'demo-check-5', display_id: 'AC-0094', check_type: 'emergency' as const,
-    check_date: '2026-02-04T14:22:00Z', performed_by: 'MSgt Proctor',
-    data: { emergency_type: 'IFE', aircraft_type: 'KC-135R', callsign: 'BOLT 31', runway: '01', nature: 'Hydraulic failure', actions: [], agencies_notified: [], start_time: '2026-02-04T14:22:00Z', end_time: '2026-02-04T15:04:00Z', duration_minutes: 42 },
-    notes: 'All AM actions completed. Landed safely. Runway inspected and released.', area: 'RWY 01', result: 'IFE',
+    id: 'demo-check-5', display_id: 'AC-0094', check_type: 'ife' as const,
+    areas: ['RWY 01/19'],
+    data: { aircraft_type: 'KC-135R', callsign: 'BOLT 31', nature: 'Hydraulic failure', actions: ['Notified ATC / Tower', 'Activated crash phone / primary crash net', 'Coordinated with Fire Department / ARFF'], agencies_notified: ['SOF', 'Fire Chief / ARFF', 'ATC / Tower', 'Command Post'] },
+    completed_by: 'MSgt Proctor', completed_at: '2026-02-04T14:22:00Z',
+    photo_count: 0, created_at: '2026-02-04T14:22:00Z', updated_at: '2026-02-04T14:22:00Z',
+  },
+  {
+    id: 'demo-check-6', display_id: 'AC-0093', check_type: 'heavy_aircraft' as const,
+    areas: ['RWY 01/19', 'TWY A', 'Apron/Ramp'],
+    data: { aircraft_type: 'C-17A Globemaster III' },
+    completed_by: 'MSgt Proctor', completed_at: '2026-02-03T18:45:00Z',
+    photo_count: 0, created_at: '2026-02-03T18:45:00Z', updated_at: '2026-02-03T18:45:00Z',
+  },
+  {
+    id: 'demo-check-7', display_id: 'AC-0092', check_type: 'ground_emergency' as const,
+    areas: ['Apron/Ramp'],
+    data: { aircraft_type: 'A-10C', nature: 'Hot brakes', actions: ['Notified ATC / Tower', 'Coordinated with Fire Department / ARFF'], agencies_notified: ['Fire Chief / ARFF', 'MOC', 'Wing Safety'] },
+    completed_by: 'TSgt Williams', completed_at: '2026-02-02T11:15:00Z',
+    photo_count: 0, created_at: '2026-02-02T11:15:00Z', updated_at: '2026-02-02T11:15:00Z',
+  },
+]
+
+export const DEMO_CHECK_COMMENTS = [
+  {
+    id: 'demo-cc-1', check_id: 'demo-check-1', comment: 'Metal bolt (1/4") found near TWY A intersection — disposed.',
+    user_name: 'TSgt Williams', created_at: new Date(Date.now() - 3600000).toISOString(),
+  },
+  {
+    id: 'demo-cc-2', check_id: 'demo-check-1', comment: 'Rubber fragment (3") found midfield — disposed. All areas clear.',
+    user_name: 'TSgt Williams', created_at: new Date(Date.now() - 1800000).toISOString(),
+  },
+  {
+    id: 'demo-cc-3', check_id: 'demo-check-5', comment: 'Aircraft landed safely RWY 01. Post-landing inspection complete. Runway released to ATC.',
+    user_name: 'MSgt Proctor', created_at: '2026-02-04T15:04:00Z',
   },
 ]

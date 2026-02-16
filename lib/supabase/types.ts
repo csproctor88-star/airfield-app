@@ -87,18 +87,27 @@ export type Database = {
           id: string
           display_id: string
           check_type: CheckType
-          performed_by: string
-          check_date: string
-          latitude: number | null
-          longitude: number | null
+          areas: string[]
           data: Record<string, unknown>
-          notes: string | null
+          completed_by: string | null
+          completed_at: string | null
           photo_count: number
           created_at: string
           updated_at: string
         }
         Insert: Omit<Database['public']['Tables']['airfield_checks']['Row'], 'id' | 'created_at' | 'updated_at' | 'photo_count'>
         Update: Partial<Database['public']['Tables']['airfield_checks']['Insert']>
+      }
+      check_comments: {
+        Row: {
+          id: string
+          check_id: string
+          comment: string
+          user_name: string
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['check_comments']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['check_comments']['Insert']>
       }
       inspections: {
         Row: {
@@ -205,7 +214,7 @@ export type UserRole =
 export type Severity = 'critical' | 'high' | 'medium' | 'low'
 export type DiscrepancyStatus = 'open' | 'completed' | 'cancelled'
 export type CurrentStatus = 'submitted_to_afm' | 'submitted_to_ces' | 'awaiting_action_by_ces' | 'work_completed_awaiting_verification'
-export type CheckType = 'fod' | 'bash' | 'rcr' | 'rsc' | 'emergency'
+export type CheckType = 'fod' | 'rsc' | 'ife' | 'ground_emergency' | 'heavy_aircraft' | 'bash' | 'rcr'
 export type InspectionType = 'daily' | 'semi_annual' | 'annual'
 export type NotamStatus = 'draft' | 'active' | 'cancelled' | 'expired'
 
@@ -225,6 +234,7 @@ export type Discrepancy = Database['public']['Tables']['discrepancies']['Row']
 export type Photo = Database['public']['Tables']['photos']['Row']
 export type StatusUpdate = Database['public']['Tables']['status_updates']['Row']
 export type AirfieldCheck = Database['public']['Tables']['airfield_checks']['Row']
+export type CheckComment = Database['public']['Tables']['check_comments']['Row']
 export type Inspection = Database['public']['Tables']['inspections']['Row']
 export type Notam = Database['public']['Tables']['notams']['Row']
 export type ObstructionEvaluation = Database['public']['Tables']['obstruction_evaluations']['Row']

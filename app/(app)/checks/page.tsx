@@ -1,149 +1,627 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Badge } from '@/components/ui/badge'
-import { DEMO_CHECKS } from '@/lib/demo-data'
+import { toast } from 'sonner'
+import {
+  CHECK_TYPE_CONFIG,
+  AIRFIELD_AREAS,
+  RSC_CONDITIONS,
+  RCR_CONDITION_TYPES,
+  BASH_CONDITION_CODES,
+  EMERGENCY_ACTIONS,
+  EMERGENCY_AGENCIES,
+} from '@/lib/constants'
+import type { CheckType } from '@/lib/supabase/types'
+import { createCheck } from '@/lib/supabase/checks'
 
-const CHECK_TYPES = [
-  { key: 'fod', label: 'FOD', color: '#FBBF24', icon: '🔍' },
-  { key: 'bash', label: 'BASH', color: '#A78BFA', icon: '🦅' },
-  { key: 'rcr', label: 'RCR', color: '#22D3EE', icon: '📏' },
-  { key: 'rsc', label: 'RSC', color: '#38BDF8', icon: '❄️' },
-  { key: 'emergency', label: 'Emergency', color: '#EF4444', icon: '🚨' },
-] as const
-
-const TYPE_COLORS: Record<string, string> = {
-  fod: '#FBBF24',
-  bash: '#A78BFA',
-  rcr: '#22D3EE',
-  rsc: '#38BDF8',
-  emergency: '#EF4444',
+type LocalComment = {
+  id: string
+  comment: string
+  user_name: string
+  created_at: string
 }
 
-const RESULT_COLORS: Record<string, string> = {
-  LOW: '#34D399',
-  MODERATE: '#FBBF24',
-  SEVERE: '#EF4444',
-  IFE: '#EF4444',
-  GE: '#EF4444',
-}
+const CURRENT_USER = 'MSgt Proctor'
 
-export default function ChecksPage() {
-  const [filter, setFilter] = useState<string | null>(null)
+export default function AirfieldChecksPage() {
+  const router = useRouter()
+  const [checkType, setCheckType] = useState<CheckType | ''>('')
+  const [areas, setAreas] = useState<string[]>([])
+  const [saving, setSaving] = useState(false)
 
-  const filtered = filter
-    ? DEMO_CHECKS.filter((c) => c.check_type === filter)
-    : DEMO_CHECKS
+  // Remarks
+  const [remarkText, setRemarkText] = useState('')
+  const [remarks, setRemarks] = useState<LocalComment[]>([])
 
-  const counts = CHECK_TYPES.reduce<Record<string, number>>((acc, t) => {
-    acc[t.key] = DEMO_CHECKS.filter((c) => c.check_type === t.key).length
-    return acc
-  }, {})
+  // Type-specific fields
+  const [rscCondition, setRscCondition] = useState('')
+  const [rcrValue, setRcrValue] = useState('')
+  const [rcrConditionType, setRcrConditionType] = useState('')
+  const [bashCondition, setBashCondition] = useState('')
+  const [bashSpecies, setBashSpecies] = useState('')
+  const [aircraftType, setAircraftType] = useState('')
+  const [callsign, setCallsign] = useState('')
+  const [emergencyNature, setEmergencyNature] = useState('')
+  const [checkedActions, setCheckedActions] = useState<string[]>([])
+  const [notifiedAgencies, setNotifiedAgencies] = useState<string[]>([])
+  const [heavyAircraftType, setHeavyAircraftType] = useState('')
+
+  const toggleArea = (area: string) => {
+    setAreas((prev) =>
+      prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]
+    )
+  }
+
+  const toggleAction = (action: string) => {
+    setCheckedActions((prev) =>
+      prev.includes(action) ? prev.filter((a) => a !== action) : [...prev, action]
+    )
+  }
+
+  const toggleAgency = (agency: string) => {
+    setNotifiedAgencies((prev) =>
+      prev.includes(agency) ? prev.filter((a) => a !== agency) : [...prev, agency]
+    )
+  }
+
+  const addRemark = () => {
+    if (!remarkText.trim()) return
+    const newRemark: LocalComment = {
+      id: `local-${Date.now()}`,
+      comment: remarkText.trim(),
+      user_name: CURRENT_USER,
+      created_at: new Date().toISOString(),
+    }
+    setRemarks((prev) => [newRemark, ...prev])
+    setRemarkText('')
+  }
+
+  const buildCheckData = (): Record<string, unknown> => {
+    switch (checkType) {
+      case 'rsc':
+        return { condition: rscCondition }
+      case 'rcr':
+        return { rcr_value: rcrValue, condition_type: rcrConditionType }
+      case 'bash':
+        return { condition_code: bashCondition, species_observed: bashSpecies }
+      case 'ife':
+        return {
+          aircraft_type: aircraftType,
+          callsign,
+          nature: emergencyNature,
+          actions: checkedActions,
+          agencies_notified: notifiedAgencies,
+        }
+      case 'ground_emergency':
+        return {
+          aircraft_type: aircraftType,
+          nature: emergencyNature,
+          actions: checkedActions,
+          agencies_notified: notifiedAgencies,
+        }
+      case 'heavy_aircraft':
+        return { aircraft_type: heavyAircraftType }
+      case 'fod':
+      default:
+        return {}
+    }
+  }
+
+  const handleComplete = async () => {
+    if (!checkType) {
+      toast.error('Select a check type')
+      return
+    }
+    if (areas.length === 0) {
+      toast.error('Select at least one area')
+      return
+    }
+
+    setSaving(true)
+
+    const data = buildCheckData()
+    const comments = remarks.map((r) => ({
+      comment: r.comment,
+      user_name: r.user_name,
+      created_at: r.created_at,
+    }))
+
+    const { data: created, error } = await createCheck({
+      check_type: checkType,
+      areas,
+      data,
+      completed_by: CURRENT_USER,
+      comments,
+    })
+
+    if (error) {
+      toast.success('Check completed (demo mode)')
+      setSaving(false)
+      router.push('/checks/history')
+      return
+    }
+
+    setSaving(false)
+    toast.success(`Check ${created?.display_id || ''} completed`)
+    router.push(created ? `/checks/${created.id}` : '/checks/history')
+  }
+
+  const resetTypeFields = () => {
+    setRscCondition('')
+    setRcrValue('')
+    setRcrConditionType('')
+    setBashCondition('')
+    setBashSpecies('')
+    setAircraftType('')
+    setCallsign('')
+    setEmergencyNature('')
+    setCheckedActions([])
+    setNotifiedAgencies([])
+    setHeavyAircraftType('')
+  }
+
+  const typeConfig = checkType ? CHECK_TYPE_CONFIG[checkType] : null
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div style={{ fontSize: 16, fontWeight: 800 }}>Airfield Checks</div>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 800 }}>Airfield Check</div>
+          <div style={{ fontSize: 10, color: '#64748B' }}>DAFI 13-213 / UFC 3-260-01</div>
+        </div>
+        <Link
+          href="/checks/history"
+          style={{
+            background: '#22D3EE14', border: '1px solid #22D3EE33', borderRadius: 8,
+            padding: '8px 14px', color: '#22D3EE', fontSize: 11, fontWeight: 600,
+            textDecoration: 'none', fontFamily: 'inherit',
+          }}
+        >
+          Check History
+        </Link>
       </div>
 
-      {/* Type filter tiles */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
-        {CHECK_TYPES.map((t) => {
-          const isActive = filter === t.key
-          return (
-            <button
-              key={t.key}
-              onClick={() => setFilter(isActive ? null : t.key)}
-              style={{
-                flex: '1 1 0',
-                minWidth: 56,
-                background: isActive ? `${t.color}1A` : 'rgba(10, 16, 28, 0.92)',
-                border: `1px solid ${isActive ? `${t.color}55` : 'rgba(56, 189, 248, 0.06)'}`,
-                borderRadius: 8,
-                padding: '8px 4px',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 2,
-              }}
-            >
-              <span style={{ fontSize: 16 }}>{t.icon}</span>
-              <span style={{ fontSize: 14, fontWeight: 800, color: t.color }}>{counts[t.key]}</span>
-              <span style={{ fontSize: 8, fontWeight: 700, color: isActive ? t.color : '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                {t.label}
-              </span>
-            </button>
-          )
-        })}
+      {/* Check Type Dropdown */}
+      <div className="card" style={{ marginBottom: 8 }}>
+        <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+          Check Type
+        </div>
+        <select
+          className="input-dark"
+          value={checkType}
+          onChange={(e) => {
+            setCheckType(e.target.value as CheckType | '')
+            resetTypeFields()
+          }}
+          style={{ fontSize: 13 }}
+        >
+          <option value="">Select check type...</option>
+          {Object.entries(CHECK_TYPE_CONFIG).map(([key, cfg]) => (
+            <option key={key} value={key}>
+              {cfg.icon} {cfg.label}
+            </option>
+          ))}
+        </select>
+
+        {typeConfig && (
+          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 4, background: typeConfig.color }} />
+            <span style={{ fontSize: 11, color: typeConfig.color, fontWeight: 600 }}>{typeConfig.label}</span>
+          </div>
+        )}
       </div>
 
-      {/* New check buttons */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
-        {CHECK_TYPES.map((t) => (
-          <Link
-            key={t.key}
-            href={`/checks/${t.key}`}
-            style={{
-              background: `${t.color}14`,
-              border: `1px solid ${t.color}33`,
-              borderRadius: 8,
-              padding: '6px 10px',
-              color: t.color,
-              fontSize: 10,
-              fontWeight: 700,
-              cursor: 'pointer',
-              textDecoration: 'none',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            + {t.label}
-          </Link>
-        ))}
-      </div>
+      {/* Dynamic Fields Based on Check Type */}
+      {checkType && (
+        <div className="card" style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            {typeConfig?.label} Details
+          </div>
 
-      {/* Check cards */}
-      {filtered.map((c) => {
-        const color = TYPE_COLORS[c.check_type] || '#94A3B8'
-        const resultColor = RESULT_COLORS[c.result] || color
-        return (
-          <Link
-            key={c.id}
-            href={`/checks/${c.id}`}
-            className="card"
-            style={{
-              display: 'block',
-              textDecoration: 'none',
-              color: 'inherit',
-              borderLeft: `3px solid ${color}`,
-              marginBottom: 8,
-              cursor: 'pointer',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#22D3EE', fontFamily: 'monospace' }}>
-                {c.display_id}
-              </span>
-              <div style={{ display: 'flex', gap: 4 }}>
-                <Badge label={c.check_type.toUpperCase()} color={color} />
-                <Badge label={c.result} color={resultColor} />
+          {/* RSC */}
+          {checkType === 'rsc' && (
+            <div>
+              <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Runway Surface Condition</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {RSC_CONDITIONS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setRscCondition(c)}
+                    style={{
+                      flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                      cursor: 'pointer', fontFamily: 'inherit', border: 'none',
+                      background: rscCondition === c
+                        ? c === 'Dry' ? '#22C55E22' : '#3B82F622'
+                        : '#1E293B',
+                      color: rscCondition === c
+                        ? c === 'Dry' ? '#22C55E' : '#3B82F6'
+                        : '#64748B',
+                      outline: rscCondition === c ? `2px solid ${c === 'Dry' ? '#22C55E' : '#3B82F6'}` : 'none',
+                    }}
+                  >
+                    {c === 'Dry' ? '☀️' : '💧'} {c}
+                  </button>
+                ))}
               </div>
             </div>
-            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>{c.area}</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 10, color: '#64748B' }}>
-                {new Date(c.check_date).toLocaleDateString()} &middot; {c.performed_by}
-              </span>
-            </div>
-          </Link>
-        )
-      })}
+          )}
 
-      {filtered.length === 0 && (
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B', fontSize: 12 }}>
-          No checks match this filter
+          {/* RCR */}
+          {checkType === 'rcr' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>RCR Value</div>
+                <input
+                  className="input-dark"
+                  type="number"
+                  placeholder="e.g., 23"
+                  value={rcrValue}
+                  onChange={(e) => setRcrValue(e.target.value)}
+                  style={{ fontSize: 18, fontWeight: 700, fontFamily: 'monospace', textAlign: 'center' }}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Condition Type</div>
+                <select
+                  className="input-dark"
+                  value={rcrConditionType}
+                  onChange={(e) => setRcrConditionType(e.target.value)}
+                >
+                  <option value="">Select condition...</option>
+                  {RCR_CONDITION_TYPES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* BASH */}
+          {checkType === 'bash' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Condition Code</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {BASH_CONDITION_CODES.map((code) => {
+                    const colors: Record<string, string> = { LOW: '#22C55E', MODERATE: '#EAB308', SEVERE: '#EF4444' }
+                    const active = bashCondition === code
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        onClick={() => setBashCondition(code)}
+                        style={{
+                          flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                          cursor: 'pointer', fontFamily: 'inherit', border: 'none',
+                          background: active ? `${colors[code]}22` : '#1E293B',
+                          color: active ? colors[code] : '#64748B',
+                          outline: active ? `2px solid ${colors[code]}` : 'none',
+                        }}
+                      >
+                        {code}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Species Observed</div>
+                <textarea
+                  className="input-dark"
+                  rows={2}
+                  placeholder="Species, count, behavior..."
+                  value={bashSpecies}
+                  onChange={(e) => setBashSpecies(e.target.value)}
+                  style={{ resize: 'vertical' }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* IFE */}
+          {checkType === 'ife' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Aircraft Type</div>
+                  <input className="input-dark" placeholder="e.g., KC-135R" value={aircraftType}
+                    onChange={(e) => setAircraftType(e.target.value)} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Callsign</div>
+                  <input className="input-dark" placeholder="e.g., BOLT 31" value={callsign}
+                    onChange={(e) => setCallsign(e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Nature of Emergency</div>
+                <input className="input-dark" placeholder="Describe the emergency..."
+                  value={emergencyNature} onChange={(e) => setEmergencyNature(e.target.value)} />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 6 }}>AM Action Checklist</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {EMERGENCY_ACTIONS.map((action) => {
+                    const checked = checkedActions.includes(action)
+                    return (
+                      <button
+                        key={action}
+                        type="button"
+                        onClick={() => toggleAction(action)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
+                          borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                          fontSize: 11, textAlign: 'left',
+                          background: checked ? '#22C55E11' : '#1E293B',
+                          color: checked ? '#22C55E' : '#94A3B8',
+                        }}
+                      >
+                        <span style={{
+                          width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                          border: checked ? '2px solid #22C55E' : '2px solid #334155',
+                          background: checked ? '#22C55E22' : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 12, fontWeight: 700,
+                        }}>
+                          {checked ? '✓' : ''}
+                        </span>
+                        {action}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 6 }}>Agency Notifications</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {EMERGENCY_AGENCIES.map((agency) => {
+                    const active = notifiedAgencies.includes(agency)
+                    return (
+                      <button
+                        key={agency}
+                        type="button"
+                        onClick={() => toggleAgency(agency)}
+                        style={{
+                          padding: '6px 12px', borderRadius: 6, fontSize: 10, fontWeight: 600,
+                          cursor: 'pointer', fontFamily: 'inherit', border: 'none',
+                          background: active ? '#38BDF822' : '#1E293B',
+                          color: active ? '#38BDF8' : '#64748B',
+                          outline: active ? '1px solid #38BDF8' : 'none',
+                        }}
+                      >
+                        {active ? '✓ ' : ''}{agency}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Ground Emergency */}
+          {checkType === 'ground_emergency' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Aircraft Type (if applicable)</div>
+                <input className="input-dark" placeholder="e.g., A-10C" value={aircraftType}
+                  onChange={(e) => setAircraftType(e.target.value)} />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Nature of Emergency</div>
+                <input className="input-dark" placeholder="Describe the emergency..."
+                  value={emergencyNature} onChange={(e) => setEmergencyNature(e.target.value)} />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 6 }}>AM Action Checklist</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {EMERGENCY_ACTIONS.map((action) => {
+                    const checked = checkedActions.includes(action)
+                    return (
+                      <button
+                        key={action}
+                        type="button"
+                        onClick={() => toggleAction(action)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
+                          borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                          fontSize: 11, textAlign: 'left',
+                          background: checked ? '#22C55E11' : '#1E293B',
+                          color: checked ? '#22C55E' : '#94A3B8',
+                        }}
+                      >
+                        <span style={{
+                          width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                          border: checked ? '2px solid #22C55E' : '2px solid #334155',
+                          background: checked ? '#22C55E22' : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 12, fontWeight: 700,
+                        }}>
+                          {checked ? '✓' : ''}
+                        </span>
+                        {action}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 6 }}>Agency Notifications</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {EMERGENCY_AGENCIES.map((agency) => {
+                    const active = notifiedAgencies.includes(agency)
+                    return (
+                      <button
+                        key={agency}
+                        type="button"
+                        onClick={() => toggleAgency(agency)}
+                        style={{
+                          padding: '6px 12px', borderRadius: 6, fontSize: 10, fontWeight: 600,
+                          cursor: 'pointer', fontFamily: 'inherit', border: 'none',
+                          background: active ? '#38BDF822' : '#1E293B',
+                          color: active ? '#38BDF8' : '#64748B',
+                          outline: active ? '1px solid #38BDF8' : 'none',
+                        }}
+                      >
+                        {active ? '✓ ' : ''}{agency}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Heavy Aircraft */}
+          {checkType === 'heavy_aircraft' && (
+            <div>
+              <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Aircraft Type / MDS</div>
+              <input className="input-dark" placeholder="e.g., C-17A Globemaster III"
+                value={heavyAircraftType} onChange={(e) => setHeavyAircraftType(e.target.value)} />
+            </div>
+          )}
+
+          {/* FOD */}
+          {checkType === 'fod' && (
+            <div style={{ fontSize: 11, color: '#64748B', fontStyle: 'italic' }}>
+              Document FOD items found in the remarks section below.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Areas Checked */}
+      {checkType && (
+        <div className="card" style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            Areas Checked
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {AIRFIELD_AREAS.map((area) => {
+              const selected = areas.includes(area)
+              return (
+                <button
+                  key={area}
+                  type="button"
+                  onClick={() => toggleArea(area)}
+                  style={{
+                    padding: '8px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'inherit', border: 'none',
+                    background: selected ? '#22D3EE18' : '#1E293B',
+                    color: selected ? '#22D3EE' : '#64748B',
+                    outline: selected ? '1.5px solid #22D3EE' : 'none',
+                  }}
+                >
+                  {selected ? '✓ ' : ''}{area}
+                </button>
+              )
+            })}
+          </div>
+          {areas.length > 0 && (
+            <div style={{ marginTop: 8, fontSize: 10, color: '#94A3B8' }}>
+              {areas.length} area{areas.length !== 1 ? 's' : ''} selected
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Airfield Diagram Button */}
+      {checkType && (
+        <button
+          type="button"
+          onClick={() => toast.info('Airfield diagram will be added — image pending')}
+          style={{
+            width: '100%', padding: '12px', marginBottom: 8, borderRadius: 10,
+            border: '1px dashed #334155', background: '#0F172A', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            color: '#94A3B8', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+          }}
+        >
+          <span style={{ fontSize: 18 }}>🗺️</span>
+          View Airfield Diagram
+        </button>
+      )}
+
+      {/* Remarks Section */}
+      {checkType && (
+        <div className="card" style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            Remarks
+          </div>
+
+          <div style={{ display: 'flex', gap: 6, marginBottom: remarks.length > 0 ? 12 : 0 }}>
+            <textarea
+              className="input-dark"
+              rows={2}
+              placeholder="Add a remark..."
+              value={remarkText}
+              onChange={(e) => setRemarkText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  addRemark()
+                }
+              }}
+              style={{ resize: 'vertical', flex: 1 }}
+            />
+            <button
+              type="button"
+              onClick={addRemark}
+              disabled={!remarkText.trim()}
+              style={{
+                padding: '0 14px', borderRadius: 8, border: 'none',
+                background: remarkText.trim() ? '#22D3EE' : '#1E293B',
+                color: remarkText.trim() ? '#0F172A' : '#334155',
+                fontSize: 11, fontWeight: 700, cursor: remarkText.trim() ? 'pointer' : 'default',
+                fontFamily: 'inherit', alignSelf: 'flex-end', height: 36,
+              }}
+            >
+              Save
+            </button>
+          </div>
+
+          {remarks.length > 0 && (
+            <div style={{ borderTop: '1px solid #1E293B', paddingTop: 10 }}>
+              {remarks.map((remark) => (
+                <div key={remark.id} style={{ borderLeft: '2px solid #334155', paddingLeft: 10, marginBottom: 10 }}>
+                  <div style={{ fontSize: 10, color: '#64748B', marginBottom: 2 }}>
+                    <span style={{ fontWeight: 600, color: '#38BDF8' }}>{remark.user_name}</span>
+                    {' — '}
+                    {new Date(remark.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {' '}
+                    {new Date(remark.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.4 }}>{remark.comment}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Complete Check Button */}
+      {checkType && (
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={handleComplete}
+          disabled={saving || !checkType || areas.length === 0}
+          style={{
+            width: '100%', opacity: saving ? 0.7 : 1,
+            background: '#22C55E', fontSize: 14, fontWeight: 800,
+            padding: '14px', borderRadius: 10,
+          }}
+        >
+          {saving ? 'Saving...' : '✓ Complete Check'}
+        </button>
+      )}
+
+      {checkType && (
+        <div style={{ textAlign: 'center', marginTop: 8, fontSize: 10, color: '#64748B' }}>
+          Will be recorded as completed by <span style={{ color: '#38BDF8', fontWeight: 600 }}>{CURRENT_USER}</span>
         </div>
       )}
     </div>
