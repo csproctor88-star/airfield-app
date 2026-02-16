@@ -101,20 +101,29 @@ ALTER TABLE notams ADD CONSTRAINT fk_notams_discrepancy
 CREATE TABLE airfield_checks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   display_id TEXT NOT NULL UNIQUE,
-  check_type TEXT NOT NULL CHECK (check_type IN ('fod', 'bash', 'rcr', 'rsc', 'emergency')),
-  performed_by UUID NOT NULL REFERENCES profiles(id),
-  check_date TIMESTAMPTZ NOT NULL DEFAULT now(),
-  latitude DOUBLE PRECISION,
-  longitude DOUBLE PRECISION,
+  check_type TEXT NOT NULL CHECK (check_type IN ('fod', 'rsc', 'ife', 'ground_emergency', 'heavy_aircraft', 'bash', 'rcr')),
+  areas TEXT[] NOT NULL DEFAULT '{}',
   data JSONB NOT NULL DEFAULT '{}',
-  notes TEXT,
+  completed_by TEXT,
+  completed_at TIMESTAMPTZ,
   photo_count INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX idx_checks_type ON airfield_checks(check_type);
-CREATE INDEX idx_checks_date ON airfield_checks(check_date DESC);
+CREATE INDEX idx_checks_completed ON airfield_checks(completed_at DESC);
+
+-- 5.5b Check Comments (remarks timeline)
+CREATE TABLE check_comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  check_id UUID NOT NULL REFERENCES airfield_checks(id) ON DELETE CASCADE,
+  comment TEXT NOT NULL,
+  user_name TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_check_comments_check ON check_comments(check_id, created_at ASC);
 
 -- 5.3 Photos
 CREATE TABLE photos (
@@ -261,6 +270,15 @@ CREATE POLICY "AM roles full access" ON airfield_checks FOR ALL USING (
   user_has_role(ARRAY['airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'])
 );
 CREATE POLICY "Others read checks" ON airfield_checks FOR SELECT USING (true);
+
+ALTER TABLE check_comments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "AM roles manage check comments" ON check_comments FOR ALL USING (
+  user_has_role(ARRAY['airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'])
+);
+CREATE POLICY "Authenticated users add comments" ON check_comments FOR INSERT WITH CHECK (
+  auth.uid() IS NOT NULL
+);
+CREATE POLICY "Everyone reads check comments" ON check_comments FOR SELECT USING (true);
 
 ALTER TABLE inspections ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "AM roles full access" ON inspections FOR ALL USING (
