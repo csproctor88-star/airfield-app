@@ -164,14 +164,21 @@ export const CHECK_TYPE_CONFIG = {
 
 export const AIRFIELD_AREAS = [
   'RWY 01/19',
+  'West Ramp',
+  'East Ramp',
+  'HAZ Cargo Pad',
+  'USCG Apron',
+  'DHS Apron',
+  'Army Apron',
   'TWY A',
+  'TWY G',
+  'TWY K',
+  'TWY E',
   'TWY B',
-  'TWY C',
-  'Apron/Ramp',
-  'Overruns',
-  'Shoulders',
-  'Approach Zones',
-  'Full Airfield',
+  'TWY L',
+  'TWY H',
+  'TWY J',
+  'Access Road',
 ] as const
 
 // === RSC Conditions ===
