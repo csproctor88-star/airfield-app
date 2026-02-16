@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
 import {
   CHECK_TYPE_CONFIG,
@@ -15,6 +16,11 @@ import {
 } from '@/lib/constants'
 import type { CheckType } from '@/lib/supabase/types'
 import { createCheck, uploadCheckPhoto } from '@/lib/supabase/checks'
+
+const CheckLocationMap = dynamic(
+  () => import('@/components/discrepancies/location-map'),
+  { ssr: false },
+)
 
 type LocalComment = {
   id: string
@@ -31,6 +37,16 @@ export default function AirfieldChecksPage() {
   const [checkType, setCheckType] = useState<CheckType | ''>('')
   const [areas, setAreas] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
+
+  // Location
+  const [selectedLat, setSelectedLat] = useState<number | null>(null)
+  const [selectedLng, setSelectedLng] = useState<number | null>(null)
+
+  const handlePointSelected = useCallback((lat: number, lng: number) => {
+    setSelectedLat(lat)
+    setSelectedLng(lng)
+    toast.success(`Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+  }, [])
 
   // Photos
   const [photos, setPhotos] = useState<{ file: File; url: string; name: string }[]>([])
@@ -149,6 +165,8 @@ export default function AirfieldChecksPage() {
       data,
       completed_by: CURRENT_USER,
       comments,
+      latitude: selectedLat,
+      longitude: selectedLng,
     })
 
     if (error || !created) {
@@ -186,6 +204,8 @@ export default function AirfieldChecksPage() {
     setCheckedActions([])
     setNotifiedAgencies([])
     setHeavyAircraftType('')
+    setSelectedLat(null)
+    setSelectedLng(null)
   }
 
   const typeConfig = checkType ? CHECK_TYPE_CONFIG[checkType] : null
@@ -554,21 +574,18 @@ export default function AirfieldChecksPage() {
         </div>
       )}
 
-      {/* Airfield Diagram Button */}
+      {/* Pin Location on Map */}
       {checkType && (
-        <button
-          type="button"
-          onClick={() => toast.info('Airfield diagram will be added — image pending')}
-          style={{
-            width: '100%', padding: '12px', marginBottom: 8, borderRadius: 10,
-            border: '1px dashed #334155', background: '#0F172A', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            color: '#94A3B8', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
-          }}
-        >
-          <span style={{ fontSize: 18 }}>🗺️</span>
-          View Airfield Diagram
-        </button>
+        <div className="card" style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            Pin Location on Map
+          </div>
+          <CheckLocationMap
+            onPointSelected={handlePointSelected}
+            selectedLat={selectedLat}
+            selectedLng={selectedLng}
+          />
+        </div>
       )}
 
       {/* Photos Section */}

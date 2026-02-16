@@ -9,9 +9,10 @@ type Props = {
   onPointSelected: (lat: number, lng: number) => void
   selectedLat: number | null
   selectedLng: number | null
+  promptText?: string
 }
 
-export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, selectedLng }: Props) {
+export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, selectedLng, promptText }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const marker = useRef<mapboxgl.Marker | null>(null)
@@ -152,7 +153,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
             whiteSpace: 'nowrap',
           }}
         >
-          Tap map to mark discrepancy location
+          {promptText || 'Tap map to mark location'}
         </div>
       )}
       {selectedLat != null && selectedLng != null && (

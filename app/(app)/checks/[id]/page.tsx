@@ -154,6 +154,14 @@ export default function CheckDetailPage() {
     name: p.file_name,
   }))
 
+  // Generate static map image URL from stored coordinates
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+  const checkLat = check.latitude != null ? Number(check.latitude) : null
+  const checkLng = check.longitude != null ? Number(check.longitude) : null
+  const staticMapUrl = checkLat != null && checkLng != null && mapboxToken && mapboxToken !== 'your-mapbox-token-here'
+    ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+22d3ee(${checkLng},${checkLat})/${checkLng},${checkLat},15,0/600x300@2x?access_token=${mapboxToken}`
+    : null
+
   const typeConfig = CHECK_TYPE_CONFIG[check.check_type as keyof typeof CHECK_TYPE_CONFIG]
   const data = (check.data || {}) as Record<string, unknown>
   const completedBy = String(check.completed_by || 'Unknown')
@@ -323,46 +331,6 @@ export default function CheckDetailPage() {
         )}
       </div>
 
-      {/* Photo Thumbnails */}
-      {allPhotos.length > 0 && (
-        <div className="card" style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-            Photos ({allPhotos.length})
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {allPhotos.map((p, i) => (
-              <div
-                key={i}
-                style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid #38BDF833', cursor: 'pointer' }}
-                onClick={() => setViewerIndex(i)}
-              >
-                <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Add Photo Button */}
-      {!usingDemo && (
-        <>
-          <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            style={{
-              width: '100%', padding: 10, marginBottom: 8, borderRadius: 8,
-              background: '#38BDF814', border: '1px solid #38BDF833', cursor: uploading ? 'default' : 'pointer',
-              color: '#38BDF8', fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
-              opacity: uploading ? 0.7 : 1,
-            }}
-          >
-            {uploading ? '⏳ Uploading...' : `📸 Add Photo${allPhotos.length > 0 ? ` (${allPhotos.length})` : ''}`}
-          </button>
-        </>
-      )}
-
       {/* Remarks Section */}
       <div className="card" style={{ marginBottom: 8 }}>
         <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
@@ -423,6 +391,63 @@ export default function CheckDetailPage() {
           <div style={{ fontSize: 11, color: '#475569', fontStyle: 'italic' }}>No remarks yet.</div>
         )}
       </div>
+
+      {/* Pinned Location Map */}
+      {staticMapUrl && (
+        <div className="card" style={{ marginBottom: 8, padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '8px 12px 4px', fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            Pinned Location
+          </div>
+          <img
+            src={staticMapUrl}
+            alt="Check location on map"
+            style={{ width: '100%', display: 'block', borderRadius: '0 0 10px 10px' }}
+          />
+          <div style={{ padding: '4px 12px 8px', fontSize: 10, color: '#34D399', fontFamily: 'monospace', fontWeight: 600 }}>
+            {checkLat!.toFixed(5)}, {checkLng!.toFixed(5)}
+          </div>
+        </div>
+      )}
+
+      {/* Photo Thumbnails */}
+      {allPhotos.length > 0 && (
+        <div className="card" style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            Photos ({allPhotos.length})
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {allPhotos.map((p, i) => (
+              <div
+                key={i}
+                style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid #38BDF833', cursor: 'pointer' }}
+                onClick={() => setViewerIndex(i)}
+              >
+                <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Add Photo Button */}
+      {!usingDemo && (
+        <>
+          <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            style={{
+              width: '100%', padding: 10, marginBottom: 8, borderRadius: 8,
+              background: '#38BDF814', border: '1px solid #38BDF833', cursor: uploading ? 'default' : 'pointer',
+              color: '#38BDF8', fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+              opacity: uploading ? 0.7 : 1,
+            }}
+          >
+            {uploading ? '⏳ Uploading...' : `📸 Add Photo${allPhotos.length > 0 ? ` (${allPhotos.length})` : ''}`}
+          </button>
+        </>
+      )}
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: 8 }}>

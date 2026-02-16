@@ -101,6 +101,7 @@ export const DEMO_CHECKS = [
     areas: ['RWY 01/19', 'TWY A', 'TWY B'],
     data: {},
     completed_by: 'TSgt Williams', completed_at: new Date().toISOString(),
+    latitude: 42.6108, longitude: -82.8371,
     photo_count: 2, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   },
   {
@@ -108,6 +109,7 @@ export const DEMO_CHECKS = [
     areas: ['Entire Airfield'],
     data: { condition_code: 'LOW', species_observed: 'Canada geese (4, grazing N side), Red-tailed hawk (1, perched)' },
     completed_by: 'MSgt Proctor', completed_at: new Date().toISOString(),
+    latitude: null as number | null, longitude: null as number | null,
     photo_count: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   },
   {
@@ -115,6 +117,7 @@ export const DEMO_CHECKS = [
     areas: ['RWY 01/19'],
     data: { rcr_value: '64', condition_type: 'Dry' },
     completed_by: 'SrA Martinez', completed_at: new Date(Date.now() - 86400000).toISOString(),
+    latitude: null as number | null, longitude: null as number | null,
     photo_count: 0, created_at: new Date(Date.now() - 86400000).toISOString(), updated_at: new Date(Date.now() - 86400000).toISOString(),
   },
   {
@@ -122,6 +125,7 @@ export const DEMO_CHECKS = [
     areas: ['RWY 01/19'],
     data: { condition: 'Wet' },
     completed_by: 'TSgt Williams', completed_at: '2026-02-05T06:30:00Z',
+    latitude: null as number | null, longitude: null as number | null,
     photo_count: 0, created_at: '2026-02-05T06:30:00Z', updated_at: '2026-02-05T06:30:00Z',
   },
   {
@@ -129,6 +133,7 @@ export const DEMO_CHECKS = [
     areas: ['RWY 01/19'],
     data: { aircraft_type: 'KC-135R', callsign: 'BOLT 31', nature: 'Hydraulic failure', actions: ['Notified ATC / Tower', 'Activated crash phone / primary crash net', 'Coordinated with Fire Department / ARFF'], agencies_notified: ['SOF', 'Fire Chief / ARFF', 'ATC / Tower', 'Command Post'] },
     completed_by: 'MSgt Proctor', completed_at: '2026-02-04T14:22:00Z',
+    latitude: null as number | null, longitude: null as number | null,
     photo_count: 0, created_at: '2026-02-04T14:22:00Z', updated_at: '2026-02-04T14:22:00Z',
   },
   {
@@ -136,6 +141,7 @@ export const DEMO_CHECKS = [
     areas: ['RWY 01/19', 'TWY A', 'Apron/Ramp'],
     data: { aircraft_type: 'C-17A Globemaster III' },
     completed_by: 'MSgt Proctor', completed_at: '2026-02-03T18:45:00Z',
+    latitude: null as number | null, longitude: null as number | null,
     photo_count: 0, created_at: '2026-02-03T18:45:00Z', updated_at: '2026-02-03T18:45:00Z',
   },
   {
@@ -143,6 +149,7 @@ export const DEMO_CHECKS = [
     areas: ['Apron/Ramp'],
     data: { aircraft_type: 'A-10C', nature: 'Hot brakes', actions: ['Notified ATC / Tower', 'Coordinated with Fire Department / ARFF'], agencies_notified: ['Fire Chief / ARFF', 'MOC', 'Wing Safety'] },
     completed_by: 'TSgt Williams', completed_at: '2026-02-02T11:15:00Z',
+    latitude: null as number | null, longitude: null as number | null,
     photo_count: 0, created_at: '2026-02-02T11:15:00Z', updated_at: '2026-02-02T11:15:00Z',
   },
 ]
