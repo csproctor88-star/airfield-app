@@ -296,22 +296,114 @@ export default function InspectionsPage() {
   // ── Conditional sections list (airfield only) ──
   const conditionalSections = sections.filter((s) => s.conditional)
 
-  // ── History data ──
+  // ── History data — group by daily_group_id ──
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const inspections: any[] = usingDemo ? DEMO_INSPECTIONS : liveInspections
+  const rawInspections: any[] = usingDemo ? DEMO_INSPECTIONS : liveInspections
 
-  const filtered = inspections.filter((insp) => {
-    if (typeFilter !== 'all' && insp.inspection_type !== typeFilter) return false
+  // Group inspections into daily reports (combined airfield + lighting)
+  type DailyReport = {
+    id: string                // the group ID or single inspection ID
+    type: 'daily' | 'single'  // grouped or standalone
+    airfield: typeof rawInspections[0] | null
+    lighting: typeof rawInspections[0] | null
+    date: string
+    inspectorName: string
+    totalPassed: number
+    totalFailed: number
+    totalNa: number
+    totalItems: number
+    bwcValue: string | null
+    weatherConditions: string | null
+    temperatureF: number | null
+    completedAt: string | null
+  }
+
+  const dailyReports: DailyReport[] = useMemo(() => {
+    const groupMap = new Map<string, typeof rawInspections>()
+    const ungrouped: typeof rawInspections = []
+
+    for (const insp of rawInspections) {
+      if (insp.daily_group_id) {
+        const group = groupMap.get(insp.daily_group_id) || []
+        group.push(insp)
+        groupMap.set(insp.daily_group_id, group)
+      } else {
+        ungrouped.push(insp)
+      }
+    }
+
+    const reports: DailyReport[] = []
+
+    // Add grouped daily reports
+    for (const [groupId, members] of Array.from(groupMap)) {
+      const af = members.find((m: typeof rawInspections[0]) => m.inspection_type === 'airfield') || null
+      const lt = members.find((m: typeof rawInspections[0]) => m.inspection_type === 'lighting') || null
+      const primary = af || lt
+      reports.push({
+        id: groupId,
+        type: 'daily',
+        airfield: af,
+        lighting: lt,
+        date: primary.inspection_date,
+        inspectorName: primary.inspector_name || 'Unknown',
+        totalPassed: (af?.passed_count || 0) + (lt?.passed_count || 0),
+        totalFailed: (af?.failed_count || 0) + (lt?.failed_count || 0),
+        totalNa: (af?.na_count || 0) + (lt?.na_count || 0),
+        totalItems: (af?.total_items || 0) + (lt?.total_items || 0),
+        bwcValue: af?.bwc_value || lt?.bwc_value || null,
+        weatherConditions: primary.weather_conditions,
+        temperatureF: primary.temperature_f,
+        completedAt: primary.completed_at,
+      })
+    }
+
+    // Add ungrouped inspections as standalone reports
+    for (const insp of ungrouped) {
+      reports.push({
+        id: insp.id,
+        type: 'single',
+        airfield: insp.inspection_type === 'airfield' ? insp : null,
+        lighting: insp.inspection_type === 'lighting' ? insp : null,
+        date: insp.inspection_date,
+        inspectorName: insp.inspector_name || 'Unknown',
+        totalPassed: insp.passed_count,
+        totalFailed: insp.failed_count,
+        totalNa: insp.na_count,
+        totalItems: insp.total_items,
+        bwcValue: insp.bwc_value,
+        weatherConditions: insp.weather_conditions,
+        temperatureF: insp.temperature_f,
+        completedAt: insp.completed_at,
+      })
+    }
+
+    // Sort by completion date descending
+    reports.sort((a, b) => {
+      const da = a.completedAt || a.date
+      const db = b.completedAt || b.date
+      return db.localeCompare(da)
+    })
+
+    return reports
+  }, [rawInspections])
+
+  const filtered = dailyReports.filter((report) => {
+    if (typeFilter !== 'all') {
+      if (typeFilter === 'airfield' && !report.airfield) return false
+      if (typeFilter === 'lighting' && !report.lighting) return false
+    }
     if (search) {
       const q = search.toLowerCase()
-      const searchable = `${insp.display_id} ${insp.inspector_name || ''} ${insp.inspection_type} ${insp.weather_conditions || ''}`.toLowerCase()
+      const afId = report.airfield?.display_id || ''
+      const ltId = report.lighting?.display_id || ''
+      const searchable = `${afId} ${ltId} ${report.inspectorName} ${report.weatherConditions || ''}`.toLowerCase()
       if (!searchable.includes(q)) return false
     }
     return true
   })
 
-  const airfieldCount = inspections.filter((i) => i.inspection_type === 'airfield').length
-  const lightingCount = inspections.filter((i) => i.inspection_type === 'lighting').length
+  const airfieldCount = dailyReports.filter((r) => r.airfield).length
+  const lightingCount = dailyReports.filter((r) => r.lighting).length
 
   // ── Don't render until draft state is known ──
   if (!draftLoaded) {
@@ -654,7 +746,7 @@ export default function InspectionsPage() {
         <div>
           <div style={{ fontSize: 16, fontWeight: 800 }}>Inspections</div>
           <div style={{ fontSize: 10, color: '#64748B' }}>
-            {inspections.length} filed inspection{inspections.length !== 1 ? 's' : ''}
+            {dailyReports.length} filed report{dailyReports.length !== 1 ? 's' : ''}
           </div>
         </div>
         <button
@@ -672,7 +764,7 @@ export default function InspectionsPage() {
       {/* Type Filter Chips */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
         {[
-          { key: 'all', label: `All (${inspections.length})`, color: '#22D3EE' },
+          { key: 'all', label: `All (${dailyReports.length})`, color: '#22D3EE' },
           { key: 'airfield', label: `Airfield (${airfieldCount})`, color: '#34D399' },
           { key: 'lighting', label: `Lighting (${lightingCount})`, color: '#FBBF24' },
         ].map((chip) => {
@@ -716,68 +808,89 @@ export default function InspectionsPage() {
         </div>
       )}
 
-      {/* Inspection Cards */}
-      {!loading && filtered.map((insp) => {
-        const isAirfield = insp.inspection_type === 'airfield'
-        const borderColor = isAirfield ? '#34D399' : '#FBBF24'
-        const typeLabel = isAirfield ? 'Airfield' : 'Lighting'
-        const typeColor = isAirfield ? '#34D399' : '#FBBF24'
+      {/* Inspection Report Cards */}
+      {!loading && filtered.map((report) => {
+        const isDaily = report.type === 'daily'
+        const hasBoth = !!(report.airfield && report.lighting)
+        // Link to the airfield inspection detail (which will fetch the full group)
+        const linkId = report.airfield?.id || report.lighting?.id
+        const displayIds = [report.airfield?.display_id, report.lighting?.display_id].filter(Boolean)
 
         return (
           <Link
-            key={insp.id}
-            href={`/inspections/${insp.id}`}
+            key={report.id}
+            href={`/inspections/${linkId}`}
             className="card"
             style={{
               display: 'block', marginBottom: 6, cursor: 'pointer',
               textDecoration: 'none', color: 'inherit',
-              borderLeft: `3px solid ${borderColor}`,
+              borderLeft: `3px solid ${isDaily ? '#22D3EE' : report.airfield ? '#34D399' : '#FBBF24'}`,
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'monospace', color: '#22D3EE' }}>
-                {insp.display_id}
-              </span>
-              <Badge label={typeLabel} color={typeColor} />
+              <div>
+                {isDaily ? (
+                  <span style={{ fontSize: 12, fontWeight: 800, color: '#22D3EE' }}>
+                    Airfield Inspection Report
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'monospace', color: '#22D3EE' }}>
+                    {displayIds[0]}
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {report.airfield && <Badge label="Airfield" color="#34D399" />}
+                {report.lighting && <Badge label="Lighting" color="#FBBF24" />}
+              </div>
             </div>
+
+            {/* Show both display IDs for daily reports */}
+            {isDaily && displayIds.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, marginBottom: 6, fontSize: 10, fontFamily: 'monospace', color: '#94A3B8' }}>
+                {displayIds.map((did) => (
+                  <span key={did}>{did}</span>
+                ))}
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: 8, marginBottom: 6, fontSize: 11 }}>
-              <span style={{ color: '#22C55E', fontWeight: 700 }}>{insp.passed_count} Pass</span>
-              {insp.failed_count > 0 && (
-                <span style={{ color: '#EF4444', fontWeight: 700 }}>{insp.failed_count} Fail</span>
+              <span style={{ color: '#22C55E', fontWeight: 700 }}>{report.totalPassed} Pass</span>
+              {report.totalFailed > 0 && (
+                <span style={{ color: '#EF4444', fontWeight: 700 }}>{report.totalFailed} Fail</span>
               )}
-              {insp.na_count > 0 && (
-                <span style={{ color: '#64748B', fontWeight: 600 }}>{insp.na_count} N/A</span>
+              {report.totalNa > 0 && (
+                <span style={{ color: '#64748B', fontWeight: 600 }}>{report.totalNa} N/A</span>
               )}
-              <span style={{ color: '#475569' }}>/ {insp.total_items} items</span>
+              <span style={{ color: '#475569' }}>/ {report.totalItems} items</span>
             </div>
 
-            {insp.bwc_value && (
+            {report.bwcValue && (
               <div style={{ marginBottom: 6 }}>
                 <span style={{
                   fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-                  color: insp.bwc_value === 'LOW' ? '#22C55E' : insp.bwc_value === 'MOD' ? '#EAB308' : insp.bwc_value === 'SEV' ? '#F97316' : '#EF4444',
-                  background: insp.bwc_value === 'LOW' ? 'rgba(34,197,94,0.1)' : insp.bwc_value === 'MOD' ? 'rgba(234,179,8,0.1)' : insp.bwc_value === 'SEV' ? 'rgba(249,115,22,0.1)' : 'rgba(239,68,68,0.1)',
+                  color: report.bwcValue === 'LOW' ? '#22C55E' : report.bwcValue === 'MOD' ? '#EAB308' : report.bwcValue === 'SEV' ? '#F97316' : '#EF4444',
+                  background: report.bwcValue === 'LOW' ? 'rgba(34,197,94,0.1)' : report.bwcValue === 'MOD' ? 'rgba(234,179,8,0.1)' : report.bwcValue === 'SEV' ? 'rgba(249,115,22,0.1)' : 'rgba(239,68,68,0.1)',
                 }}>
-                  BWC: {insp.bwc_value}
+                  BWC: {report.bwcValue}
                 </span>
               </div>
             )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10, color: '#64748B' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span>{insp.inspector_name || 'Unknown'}</span>
-                {insp.weather_conditions && (
+                <span>{report.inspectorName}</span>
+                {report.weatherConditions && (
                   <>
                     <span>&bull;</span>
-                    <span>{insp.weather_conditions}{insp.temperature_f != null ? ` ${insp.temperature_f}°F` : ''}</span>
+                    <span>{report.weatherConditions}{report.temperatureF != null ? ` ${report.temperatureF}°F` : ''}</span>
                   </>
                 )}
               </div>
               <span>
-                {insp.completed_at
-                  ? `${new Date(insp.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${new Date(insp.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
-                  : insp.inspection_date}
+                {report.completedAt
+                  ? `${new Date(report.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${new Date(report.completedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
+                  : report.date}
               </span>
             </div>
           </Link>
