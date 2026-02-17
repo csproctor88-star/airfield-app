@@ -17,6 +17,7 @@ export default function InspectionDetailPage() {
   const [usingDemo, setUsingDemo] = useState(false)
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ airfield: false, lighting: false })
+  const [showFailedItems, setShowFailedItems] = useState(false)
 
   const loadData = useCallback(async () => {
     const supabase = createClient()
@@ -291,10 +292,19 @@ export default function InspectionDetailPage() {
             <div style={{ fontSize: 20, fontWeight: 800, color: '#22C55E' }}>{totalPassed}</div>
             <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>PASS</div>
           </div>
-          <div style={{ textAlign: 'center', padding: 8, background: 'rgba(239,68,68,0.08)', borderRadius: 8, border: '1px solid rgba(239,68,68,0.2)' }}>
+          <button
+            onClick={() => totalFailed > 0 && setShowFailedItems((p) => !p)}
+            style={{
+              textAlign: 'center', padding: 8, borderRadius: 8,
+              background: showFailedItems ? 'rgba(239,68,68,0.18)' : 'rgba(239,68,68,0.08)',
+              border: `1px solid ${showFailedItems ? 'rgba(239,68,68,0.5)' : 'rgba(239,68,68,0.2)'}`,
+              cursor: totalFailed > 0 ? 'pointer' : 'default',
+              fontFamily: 'inherit',
+            }}
+          >
             <div style={{ fontSize: 20, fontWeight: 800, color: '#EF4444' }}>{totalFailed}</div>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>FAIL</div>
-          </div>
+            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>FAIL {totalFailed > 0 ? (showFailedItems ? '▴' : '▾') : ''}</div>
+          </button>
           <div style={{ textAlign: 'center', padding: 8, background: 'rgba(100,116,139,0.08)', borderRadius: 8, border: '1px solid rgba(100,116,139,0.2)' }}>
             <div style={{ fontSize: 20, fontWeight: 800, color: '#64748B' }}>{totalNa}</div>
             <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>N/A</div>
@@ -306,8 +316,8 @@ export default function InspectionDetailPage() {
         </div>
       </div>
 
-      {/* Combined Failed Items */}
-      {allFailedItems.length > 0 && (
+      {/* Combined Failed Items — toggled by Fail button */}
+      {showFailedItems && allFailedItems.length > 0 && (
         <div className="card" style={{ marginBottom: 8, borderLeft: '3px solid #EF4444' }}>
           <div style={{ fontSize: 9, color: '#EF4444', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
             Failed Items ({allFailedItems.length})
