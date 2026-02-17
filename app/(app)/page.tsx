@@ -161,7 +161,7 @@ export default function HomePage() {
       <div className="card" style={{ marginBottom: 8 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
           {[
-            { icon: '📋', label: 'Inspection', value: 'Not Started', color: '#FBBF24', href: '/inspections/new' },
+            { icon: '📋', label: 'Inspection', value: 'Not Started', color: '#FBBF24', href: '/inspections' },
             { icon: '⚠️', label: 'FOD', value: '0715L (2 found)', color: '#FBBF24', href: '/checks' },
             { icon: '🦅', label: 'BASH', value: '0645L (LOW)', color: '#34D399', href: '/checks' },
             { icon: '📊', label: 'RCR', value: 'Yest (Mu 64)', color: '#FBBF24', href: '/checks' },

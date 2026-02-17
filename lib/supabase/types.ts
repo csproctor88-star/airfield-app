@@ -117,6 +117,7 @@ export type Database = {
           display_id: string
           inspection_type: InspectionType
           inspector_id: string
+          inspector_name: string | null
           inspection_date: string
           status: 'in_progress' | 'completed'
           items: InspectionItem[]
@@ -125,6 +126,11 @@ export type Database = {
           failed_count: number
           na_count: number
           completion_percent: number
+          construction_meeting: boolean
+          joint_monthly: boolean
+          bwc_value: string | null
+          weather_conditions: string | null
+          temperature_f: number | null
           notes: string | null
           completed_at: string | null
           created_at: string
@@ -217,7 +223,7 @@ export type Severity = 'critical' | 'high' | 'medium' | 'low'
 export type DiscrepancyStatus = 'open' | 'completed' | 'cancelled'
 export type CurrentStatus = 'submitted_to_afm' | 'submitted_to_ces' | 'awaiting_action_by_ces' | 'work_completed_awaiting_verification'
 export type CheckType = 'fod' | 'rsc' | 'ife' | 'ground_emergency' | 'heavy_aircraft' | 'bash' | 'rcr'
-export type InspectionType = 'daily' | 'semi_annual' | 'annual'
+export type InspectionType = 'airfield' | 'lighting'
 export type NotamStatus = 'draft' | 'active' | 'cancelled' | 'expired'
 
 export type InspectionItem = {
