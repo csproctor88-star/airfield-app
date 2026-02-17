@@ -59,6 +59,6 @@ DROP POLICY IF EXISTS "Everyone reads activity" ON activity_log;
 DROP POLICY IF EXISTS "System inserts activity" ON activity_log;
 ALTER TABLE activity_log DISABLE ROW LEVEL SECURITY;
 
--- Drop RLS helper functions
-DROP FUNCTION IF EXISTS public.user_has_role(text[]);
-DROP FUNCTION IF EXISTS public.user_shop();
+-- Drop RLS helper functions (CASCADE removes any remaining dependent policies)
+DROP FUNCTION IF EXISTS public.user_has_role(text[]) CASCADE;
+DROP FUNCTION IF EXISTS public.user_shop() CASCADE;
