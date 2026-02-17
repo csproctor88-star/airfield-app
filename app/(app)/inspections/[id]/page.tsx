@@ -16,6 +16,7 @@ export default function InspectionDetailPage() {
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
   const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ airfield: true, lighting: true })
 
   const loadData = useCallback(async () => {
     const supabase = createClient()
@@ -339,21 +340,34 @@ export default function InspectionDetailPage() {
       )}
 
       {/* Section-by-Section Detail — grouped by inspection type */}
-      {allInspections.map((insp: { id: string; inspection_type: string; items: InspectionItem[]; notes: string | null }) => {
+      {allInspections.map((insp: { id: string; inspection_type: string; items: InspectionItem[]; notes: string | null; passed_count: number; failed_count: number; na_count: number; total_items: number }) => {
         const items: InspectionItem[] = insp.items || []
         if (items.length === 0 && !insp.notes) return null
+        const isExpanded = expandedSections[insp.inspection_type] !== false
 
         return (
           <div key={insp.id}>
-            {/* Type divider for combined reports */}
+            {/* Type divider — collapsible for combined reports */}
             {isDaily && (
-              <div style={{
-                margin: '12px 0 8px',
-                padding: '8px 12px',
-                borderRadius: 8,
-                background: insp.inspection_type === 'airfield' ? 'rgba(52,211,153,0.06)' : 'rgba(251,191,36,0.06)',
-                border: `1px solid ${insp.inspection_type === 'airfield' ? 'rgba(52,211,153,0.2)' : 'rgba(251,191,36,0.2)'}`,
-              }}>
+              <button
+                onClick={() => setExpandedSections((prev) => ({
+                  ...prev,
+                  [insp.inspection_type]: !prev[insp.inspection_type],
+                }))}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                  margin: '12px 0 8px',
+                  padding: '10px 12px',
+                  borderRadius: 8,
+                  background: insp.inspection_type === 'airfield' ? 'rgba(52,211,153,0.06)' : 'rgba(251,191,36,0.06)',
+                  border: `1px solid ${insp.inspection_type === 'airfield' ? 'rgba(52,211,153,0.2)' : 'rgba(251,191,36,0.2)'}`,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
                 <div style={{
                   fontSize: 12, fontWeight: 800,
                   color: insp.inspection_type === 'airfield' ? '#34D399' : '#FBBF24',
@@ -361,20 +375,38 @@ export default function InspectionDetailPage() {
                 }}>
                   <span>{insp.inspection_type === 'airfield' ? '📋' : '💡'}</span>
                   {insp.inspection_type === 'airfield' ? 'Airfield Inspection' : 'Lighting Inspection'}
+                  <span style={{ fontSize: 10, fontWeight: 600, color: '#64748B', marginLeft: 4 }}>
+                    {insp.passed_count}/{insp.total_items}
+                    {insp.failed_count > 0 && <span style={{ color: '#EF4444', marginLeft: 4 }}>{insp.failed_count} fail</span>}
+                  </span>
                 </div>
-              </div>
+                <span style={{
+                  fontSize: 14,
+                  color: insp.inspection_type === 'airfield' ? '#34D399' : '#FBBF24',
+                  transition: 'transform 0.2s',
+                  transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                  display: 'inline-block',
+                }}>
+                  ▾
+                </span>
+              </button>
             )}
 
-            {renderInspectionSections(insp)}
+            {/* Collapsible content (always visible for single inspections) */}
+            {(!isDaily || isExpanded) && (
+              <>
+                {renderInspectionSections(insp)}
 
-            {/* Notes for this half */}
-            {insp.notes && (
-              <div className="card" style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
-                  {isDaily ? `${insp.inspection_type === 'airfield' ? 'Airfield' : 'Lighting'} Notes` : 'Notes'}
-                </div>
-                <div style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.5 }}>{insp.notes}</div>
-              </div>
+                {/* Notes for this half */}
+                {insp.notes && (
+                  <div className="card" style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+                      {isDaily ? `${insp.inspection_type === 'airfield' ? 'Airfield' : 'Lighting'} Notes` : 'Notes'}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.5 }}>{insp.notes}</div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )
