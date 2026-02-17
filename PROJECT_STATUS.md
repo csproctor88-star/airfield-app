@@ -1,8 +1,8 @@
 # Airfield OPS Management Suite — Project Status
 
 > **Last updated:** 2026-02-17
-> **Branch:** `claude/build-app-from-design-4qtNG`
-> **Commits:** 101
+> **Branch:** `claude/review-airfield-project-P7wT4`
+> **Commits:** 104+
 
 ---
 
@@ -48,7 +48,8 @@ A mobile-first Next.js 14 web application for managing airfield operations at **
 - **`validators.ts`** — Zod schemas for discrepancies, status updates, FOD/RCR/RSC/BASH/emergency checks, NOTAMs, inspection responses
 - **`constants.ts`** — Installation config (KMTC), discrepancy types (11), check types (7), inspection sections (airfield: 9 sections / 44 items, lighting: 5 sections / 34 items), locations, status workflow, user roles
 - **`utils.ts`** — Class merging, relative time formatting, display ID generation
-- **`demo-data.ts`** — Sample discrepancies for offline mode
+- **`demo-data.ts`** — Sample discrepancies, checks, inspections, NOTAMs for offline mode
+- **`pdf-export.ts`** — jsPDF generation for inspection reports
 - **`calculations/`** — FAA Part 77 geometry and obstruction clearance analysis
 
 ### Supabase Client Libraries (`lib/supabase/`)
@@ -56,6 +57,7 @@ A mobile-first Next.js 14 web application for managing airfield operations at **
 - **`client.ts`** / **`server.ts`** / **`middleware.ts`** — Browser and SSR Supabase clients with demo-mode detection
 - **`discrepancies.ts`** — CRUD + KPI queries
 - **`checks.ts`** — CRUD + photo uploads + comments
+- **`inspections.ts`** — CRUD for inspections (fetch, create, delete)
 - **`obstructions.ts`** — Obstruction evaluation CRUD
 - **`notams.ts`** — NOTAM management
 
@@ -71,7 +73,9 @@ A mobile-first Next.js 14 web application for managing airfield operations at **
 | `/checks` | Done | Unified check page with 7 types (FOD, RSC, RCR, IFE, Ground Emergency, Heavy Aircraft, BASH) |
 | `/checks/history` | Done | Completed checks list with filtering |
 | `/checks/[id]` | Done | Check detail with comments, photos, map |
-| `/inspections/new` | Partial | Type selection (airfield/lighting), section/item checklist with pass/fail/N/A toggle, BWC selector, "Mark All Pass" button, progress bar |
+| `/inspections` | Done | Inspection history list with type filter chips (All/Airfield/Lighting), search, demo data fallback |
+| `/inspections/new` | Done | Full creation form: type toggle, inspector/weather/temp fields, section/item checklist with pass/fail/N/A toggle, BWC selector, "Mark All Pass", conditional sections, comments on failed items, review step, Supabase persistence |
+| `/inspections/[id]` | Done | Detail view with summary card, results grid, failed items highlight, section-by-section breakdown, notes, PDF export |
 | `/notams` | Done | NOTAM list with status/source filters |
 | `/notams/new` | Done | Create FAA or local NOTAM |
 | `/notams/[id]` | Done | NOTAM detail and editing |
@@ -96,40 +100,22 @@ A mobile-first Next.js 14 web application for managing airfield operations at **
 
 ## What's Left To Do
 
-### High Priority — Inspection Modules (Not Yet Complete)
+### Completed — Inspection Module
 
-The inspection system has the **data model** (constants, types, schema) and a **basic checklist UI** (`/inspections/new`), but the full inspection workflows still need significant work:
+The inspection system is **feature-complete** with the following:
 
-#### Airfield Inspection (9 sections, 44 items)
-1. Obstacle Clearance Surfaces (5 items)
-2. Signs / Markings (5 items)
-3. Lighting (4 items)
-4. Construction Activity / NOTAMS (3 items)
-5. Habitat Assessment / BASH (7 items, includes BWC value selector)
-6. Pavement / Drainage (7 items)
-7. Driving (6 items)
-8. FOD Prevention (7 items)
-9. *Construction Meeting* (conditional, opt-in)
-10. *Joint Monthly* (conditional, opt-in)
+- **Data Model**: `inspections` table in Supabase with RLS, TypeScript types, Zod validation
+- **Constants**: 9 airfield sections (44 items) + 5 lighting sections (34 items) + BWC options
+- **CRUD**: `fetchInspections()`, `fetchInspection(id)`, `createInspection()`, `deleteInspection()`
+- **Creation Form** (`/inspections/new`): Type toggle, inspector/weather/temp fields, full section-by-section checklist, three-state toggle (Pass/Fail/N/A), BWC selector, "Mark All Pass", conditional sections, comments on failed items, review step, Supabase persistence
+- **History List** (`/inspections`): Filterable by type (All/Airfield/Lighting), searchable, demo data fallback
+- **Detail View** (`/inspections/[id]`): Summary card, results grid (Pass/Fail/N/A/Total), BWC display, failed items highlight, section-by-section breakdown, notes, PDF export
+- **PDF Export**: Full jsPDF report with header, info box, results summary, section-by-section items, notes, footer
+- **Demo Data**: 3 sample inspections (2 airfield, 1 lighting) with realistic item-level data
 
-**What's needed:**
-- Inspection history list page (`/inspections` or `/inspections/history`)
-- Inspection detail/review page (`/inspections/[id]`)
-- Save-to-Supabase integration (currently UI-only, no persistence)
+**Future enhancements** (not blocking):
 - Photo attachment per inspection item
-- Comments/notes per item and per section
-- Inspector name, weather conditions, temperature fields on the form
-- Summary/review step before final submission
-- PDF report generation for completed inspections
-
-#### Lighting Inspection (5 sections, 34 items)
-1. Runway Lighting (9 items)
-2. Taxiway / Apron Lighting (8 items)
-3. Signs (6 items)
-4. Markings (6 items)
-5. Miscellaneous Lighting (5 items)
-
-**What's needed:** Same as airfield inspection above — history, detail, persistence, photos, summary, and PDF export.
+- Auto-generate discrepancy from failed inspection items
 
 ### Medium Priority — Backend Integration
 
@@ -145,7 +131,6 @@ The inspection system has the **data model** (constants, types, schema) and a **
 | Task | Description |
 |------|-------------|
 | **Offline / PWA support** | Service worker, IndexedDB caching for inspections started in the field with poor connectivity |
-| **PDF report generation** | Export completed inspections as downloadable PDF matching regulatory format |
 | **Notifications** | Flag overdue inspections, critical discrepancies, expiring NOTAMs |
 | **Testing** | Unit tests for components, integration tests for inspection flow |
 | **Deployment** | Vercel deployment, environment configuration, CI/CD |
@@ -191,7 +176,9 @@ airfield-app/
 │   │   ├── discrepancies/            # List, new, [id] detail
 │   │   ├── checks/                   # Unified check form, history, [id] detail
 │   │   ├── inspections/
-│   │   │   └── new/page.tsx          # Inspection creation (airfield/lighting)
+│   │   │   ├── page.tsx              # Inspection history list
+│   │   │   ├── new/page.tsx          # Inspection creation (airfield/lighting)
+│   │   │   └── [id]/page.tsx         # Inspection detail + PDF export
 │   │   ├── notams/                   # List, new, [id] detail
 │   │   ├── obstructions/             # Evaluation, history, [id] detail
 │   │   └── more/page.tsx             # Settings
