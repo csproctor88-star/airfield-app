@@ -16,7 +16,7 @@ export default function InspectionDetailPage() {
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
   const [generatingPdf, setGeneratingPdf] = useState(false)
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ airfield: true, lighting: true })
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ airfield: false, lighting: false })
 
   const loadData = useCallback(async () => {
     const supabase = createClient()
