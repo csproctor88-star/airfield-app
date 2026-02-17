@@ -1,40 +1,302 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
-import { DEMO_INSPECTIONS } from '@/lib/demo-data'
+import {
+  AIRFIELD_INSPECTION_SECTIONS,
+  LIGHTING_INSPECTION_SECTIONS,
+  BWC_OPTIONS,
+  type InspectionType,
+  type InspectionSection,
+} from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
-import { fetchInspections, type InspectionRow } from '@/lib/supabase/inspections'
+import { fetchInspections, createInspection, getInspectorName, type InspectionRow } from '@/lib/supabase/inspections'
+import { fetchCurrentWeather } from '@/lib/weather'
+import {
+  loadDraft,
+  saveDraftToStorage,
+  clearDraft,
+  createNewDraft,
+  type DailyInspectionDraft,
+  type InspectionHalfDraft,
+} from '@/lib/inspection-draft'
+import { DEMO_INSPECTIONS } from '@/lib/demo-data'
+import type { InspectionItem } from '@/lib/supabase/types'
+
+type BwcValue = null | (typeof BWC_OPTIONS)[number]
 
 export default function InspectionsPage() {
+  // ── Core state ──
+  const [draft, setDraft] = useState<DailyInspectionDraft | null>(null)
+  const [activeTab, setActiveTab] = useState<InspectionType>('airfield')
+  const [draftLoaded, setDraftLoaded] = useState(false)
+
+  // ── History state ──
   const [liveInspections, setLiveInspections] = useState<InspectionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
 
+  // ── Action state ──
+  const [saving, setSaving] = useState(false)
+  const [filing, setFiling] = useState(false)
+
+  // ── Load draft from localStorage on mount ──
   useEffect(() => {
-    async function load() {
-      const supabase = createClient()
-      if (!supabase) {
-        setUsingDemo(true)
-        setLoading(false)
-        return
-      }
-      const data = await fetchInspections()
-      if (data.length === 0) {
-        // May not have any yet — check if Supabase is really working
-        setLiveInspections(data)
-      } else {
-        setLiveInspections(data)
-      }
-      setLoading(false)
-    }
-    load()
+    const stored = loadDraft()
+    if (stored) setDraft(stored)
+    setDraftLoaded(true)
   }, [])
 
+  // ── Load history ──
+  const loadHistory = useCallback(async () => {
+    const supabase = createClient()
+    if (!supabase) {
+      setUsingDemo(true)
+      setLoading(false)
+      return
+    }
+    const data = await fetchInspections()
+    setLiveInspections(data)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    loadHistory()
+  }, [loadHistory])
+
+  // ── Save draft to localStorage whenever it changes ──
+  useEffect(() => {
+    if (draft && draftLoaded) saveDraftToStorage(draft)
+  }, [draft, draftLoaded])
+
+  // ── Current half helpers ──
+  const currentHalf: InspectionHalfDraft | null = draft ? draft[activeTab] : null
+  const sections = activeTab === 'airfield' ? AIRFIELD_INSPECTION_SECTIONS : LIGHTING_INSPECTION_SECTIONS
+
+  const visibleSections = useMemo(() => {
+    if (!currentHalf) return []
+    return sections.filter(
+      (s) => !s.conditional || currentHalf.enabledConditionals[s.id]
+    )
+  }, [sections, currentHalf])
+
+  const visibleItems = useMemo(() => {
+    return visibleSections.flatMap((s) => s.items)
+  }, [visibleSections])
+
+  const totalItems = visibleItems.length
+  const answeredCount = currentHalf
+    ? visibleItems.filter((item) => {
+        if (item.type === 'bwc') return currentHalf.bwcValue !== null
+        return currentHalf.responses[item.id] != null
+      }).length
+    : 0
+  const progress = totalItems > 0 ? Math.round((answeredCount / totalItems) * 100) : 0
+
+  const passedCount = currentHalf
+    ? visibleItems.filter((item) => {
+        if (item.type === 'bwc') return currentHalf.bwcValue !== null
+        return currentHalf.responses[item.id] === 'pass'
+      }).length
+    : 0
+  const failedCount = currentHalf
+    ? visibleItems.filter((item) => currentHalf.responses[item.id] === 'fail').length
+    : 0
+  const naCount = currentHalf
+    ? visibleItems.filter((item) => {
+        if (item.type === 'bwc') return false
+        return currentHalf.responses[item.id] === 'na'
+      }).length
+    : 0
+
+  // ── Draft mutation helpers ──
+  const updateHalf = (tab: InspectionType, updater: (h: InspectionHalfDraft) => InspectionHalfDraft) => {
+    setDraft((prev) => {
+      if (!prev) return prev
+      return { ...prev, [tab]: updater(prev[tab]) }
+    })
+  }
+
+  const toggle = (id: string) => {
+    updateHalf(activeTab, (h) => {
+      const current = h.responses[id]
+      let next: 'pass' | 'fail' | 'na' | null = null
+      if (current === null || current === undefined) next = 'pass'
+      else if (current === 'pass') next = 'fail'
+      else if (current === 'fail') next = 'na'
+      return { ...h, responses: { ...h.responses, [id]: next } }
+    })
+  }
+
+  const markAllPass = () => {
+    updateHalf(activeTab, (h) => {
+      const updated = { ...h.responses }
+      visibleItems.forEach((item) => {
+        if (item.type !== 'bwc') updated[item.id] = 'pass'
+      })
+      return { ...h, responses: updated }
+    })
+  }
+
+  const setBwcValue = (val: BwcValue) => {
+    updateHalf(activeTab, (h) => ({ ...h, bwcValue: h.bwcValue === val ? null : val }))
+  }
+
+  const setComment = (itemId: string, text: string) => {
+    updateHalf(activeTab, (h) => ({ ...h, comments: { ...h.comments, [itemId]: text } }))
+  }
+
+  const setNotes = (text: string) => {
+    updateHalf(activeTab, (h) => ({ ...h, notes: text }))
+  }
+
+  const toggleConditional = (sectionId: string) => {
+    updateHalf(activeTab, (h) => ({
+      ...h,
+      enabledConditionals: { ...h.enabledConditionals, [sectionId]: !h.enabledConditionals[sectionId] },
+    }))
+  }
+
+  const sectionDoneCount = (section: InspectionSection) =>
+    currentHalf
+      ? section.items.filter((item) => {
+          if (item.type === 'bwc') return currentHalf.bwcValue !== null
+          return currentHalf.responses[item.id] != null
+        }).length
+      : 0
+
+  // ── Begin new inspection ──
+  const handleBeginNew = () => {
+    const newDraft = createNewDraft()
+    setDraft(newDraft)
+    setActiveTab('airfield')
+    saveDraftToStorage(newDraft)
+    toast.success('New daily inspection started')
+  }
+
+  // ── Save current tab (auto-captures weather + inspector) ──
+  const handleSave = async () => {
+    if (!draft || !currentHalf) return
+    setSaving(true)
+
+    // Auto-fetch weather
+    const weather = await fetchCurrentWeather()
+
+    // Auto-fetch inspector name from auth
+    const inspector = await getInspectorName()
+    const fallbackName = usingDemo ? 'Demo Inspector' : null
+
+    updateHalf(activeTab, (h) => ({
+      ...h,
+      inspectorName: inspector.name || fallbackName,
+      inspectorId: inspector.id,
+      savedAt: new Date().toISOString(),
+      weatherConditions: weather?.conditions || h.weatherConditions || null,
+      temperatureF: weather?.temperature_f ?? h.temperatureF ?? null,
+    }))
+
+    setSaving(false)
+    const label = activeTab === 'airfield' ? 'Airfield' : 'Lighting'
+    toast.success(`${label} inspection saved`, {
+      description: weather
+        ? `${weather.conditions}, ${weather.temperature_f}°F`
+        : 'Weather data unavailable',
+    })
+  }
+
+  // ── File the daily inspection (write to Supabase) ──
+  const handleFile = async () => {
+    if (!draft) return
+    const airfieldSaved = !!draft.airfield.savedAt
+    const lightingSaved = !!draft.lighting.savedAt
+
+    if (!airfieldSaved && !lightingSaved) {
+      toast.error('Save at least one inspection half before filing')
+      return
+    }
+
+    setFiling(true)
+    const groupId = draft.id
+    let filed = 0
+
+    // File each saved half
+    for (const type of ['airfield', 'lighting'] as InspectionType[]) {
+      const half = draft[type]
+      if (!half.savedAt) continue
+
+      const secs = type === 'airfield' ? AIRFIELD_INSPECTION_SECTIONS : LIGHTING_INSPECTION_SECTIONS
+      const visSecs = secs.filter((s) => !s.conditional || half.enabledConditionals[s.id])
+      const visItems = visSecs.flatMap((s) => s.items)
+
+      const items: InspectionItem[] = visItems.map((item) => {
+        const section = visSecs.find((s) => s.items.some((i) => i.id === item.id))
+        const response = item.type === 'bwc'
+          ? (half.bwcValue ? 'pass' : null)
+          : (half.responses[item.id] ?? null)
+        return {
+          id: item.id,
+          section: section?.title || '',
+          item: item.item,
+          response: response as 'pass' | 'fail' | 'na' | null,
+          notes: item.type === 'bwc' ? (half.bwcValue || '') : (half.comments[item.id] || ''),
+          photo_id: null,
+          generated_discrepancy_id: null,
+        }
+      })
+
+      const passed = visItems.filter((i) => {
+        if (i.type === 'bwc') return half.bwcValue !== null
+        return half.responses[i.id] === 'pass'
+      }).length
+      const failed = visItems.filter((i) => half.responses[i.id] === 'fail').length
+      const na = visItems.filter((i) => {
+        if (i.type === 'bwc') return false
+        return half.responses[i.id] === 'na'
+      }).length
+
+      const { error } = await createInspection({
+        inspection_type: type,
+        inspector_name: half.inspectorName || 'Unknown',
+        items,
+        total_items: visItems.length,
+        passed_count: passed,
+        failed_count: failed,
+        na_count: na,
+        construction_meeting: !!half.enabledConditionals['af-8'],
+        joint_monthly: !!half.enabledConditionals['af-9'],
+        bwc_value: half.bwcValue,
+        weather_conditions: half.weatherConditions,
+        temperature_f: half.temperatureF,
+        notes: half.notes || null,
+        daily_group_id: groupId,
+      })
+
+      if (error) {
+        toast.error(`Failed to file ${type}: ${error}`)
+      } else {
+        filed++
+      }
+    }
+
+    if (filed > 0 || usingDemo) {
+      clearDraft()
+      setDraft(null)
+      toast.success(`Daily inspection filed`, {
+        description: `${filed} inspection${filed !== 1 ? 's' : ''} saved to history`,
+      })
+      await loadHistory()
+    }
+    setFiling(false)
+  }
+
+  // ── Conditional sections list (airfield only) ──
+  const conditionalSections = sections.filter((s) => s.conditional)
+
+  // ── History data ──
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const inspections: any[] = usingDemo ? DEMO_INSPECTIONS : liveInspections
 
@@ -51,6 +313,340 @@ export default function InspectionsPage() {
   const airfieldCount = inspections.filter((i) => i.inspection_type === 'airfield').length
   const lightingCount = inspections.filter((i) => i.inspection_type === 'lighting').length
 
+  // ── Don't render until draft state is known ──
+  if (!draftLoaded) {
+    return (
+      <div style={{ padding: 16, paddingBottom: 100 }}>
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>Loading...</div>
+      </div>
+    )
+  }
+
+  // ══════════════════════════════════════════════
+  // ══  WORKSPACE VIEW (active draft exists)  ══
+  // ══════════════════════════════════════════════
+  if (draft) {
+    const airfieldSaved = !!draft.airfield.savedAt
+    const lightingSaved = !!draft.lighting.savedAt
+    const canFile = airfieldSaved || lightingSaved
+
+    return (
+      <div style={{ padding: 16, paddingBottom: 120 }}>
+        {/* ── Header ── */}
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 16, fontWeight: 800 }}>Daily Inspection</div>
+          <div style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>
+            Started {new Date(draft.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </div>
+        </div>
+
+        {/* ── Tab Bar ── */}
+        <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid #334155', marginBottom: 12 }}>
+          {(['airfield', 'lighting'] as InspectionType[]).map((type) => {
+            const active = activeTab === type
+            const half = draft[type]
+            const saved = !!half.savedAt
+            const label = type === 'airfield' ? 'Airfield' : 'Lighting'
+            return (
+              <button
+                key={type}
+                onClick={() => setActiveTab(type)}
+                style={{
+                  flex: 1,
+                  padding: '10px 0',
+                  border: 'none',
+                  background: active ? '#0EA5E9' : 'transparent',
+                  color: active ? '#FFF' : '#94A3B8',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}
+              >
+                {label}
+                {saved && (
+                  <span style={{
+                    width: 16, height: 16, borderRadius: '50%',
+                    background: '#22C55E', color: '#FFF', fontSize: 10,
+                    fontWeight: 800, display: 'inline-flex', alignItems: 'center',
+                    justifyContent: 'center', lineHeight: 1,
+                  }}>
+                    {'\u2713'}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* ── Status Bar ── */}
+        <div className="card" style={{ marginBottom: 12, padding: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 10 }}>
+            <div>
+              <div style={{ color: '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 8, marginBottom: 2 }}>
+                Airfield
+              </div>
+              {draft.airfield.savedAt ? (
+                <>
+                  <div style={{ color: '#22C55E', fontWeight: 600 }}>
+                    Saved {new Date(draft.airfield.savedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                  <div style={{ color: '#94A3B8', fontSize: 9 }}>{draft.airfield.inspectorName}</div>
+                </>
+              ) : (
+                <div style={{ color: '#475569' }}>Not saved</div>
+              )}
+            </div>
+            <div>
+              <div style={{ color: '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 8, marginBottom: 2 }}>
+                Lighting
+              </div>
+              {draft.lighting.savedAt ? (
+                <>
+                  <div style={{ color: '#22C55E', fontWeight: 600 }}>
+                    Saved {new Date(draft.lighting.savedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                  <div style={{ color: '#94A3B8', fontSize: 9 }}>{draft.lighting.inspectorName}</div>
+                </>
+              ) : (
+                <div style={{ color: '#475569' }}>Not saved</div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Progress + Mark All Pass ── */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>
+              {activeTab === 'airfield' ? 'Airfield Inspection' : 'Lighting Inspection'}
+            </div>
+            <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
+              {answeredCount}/{totalItems} items
+            </div>
+          </div>
+          <div
+            style={{
+              width: 44, height: 44, borderRadius: '50%',
+              background: `conic-gradient(#22C55E ${progress * 3.6}deg, #1E293B ${progress * 3.6}deg)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}
+          >
+            <div
+              style={{
+                width: 36, height: 36, borderRadius: '50%', background: '#0F172A',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, fontWeight: 700, color: '#F1F5F9',
+              }}
+            >
+              {progress}%
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={markAllPass}
+          style={{
+            width: '100%', padding: '10px 0', borderRadius: 8,
+            border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)',
+            color: '#22C55E', fontSize: 12, fontWeight: 700,
+            cursor: 'pointer', fontFamily: 'inherit', marginBottom: 12,
+          }}
+        >
+          Mark All Items as Pass
+        </button>
+
+        {/* ── Conditional Section Toggles (airfield only) ── */}
+        {conditionalSections.length > 0 && (
+          <div style={{ marginBottom: 12, padding: 12, borderRadius: 8, background: 'rgba(10,16,28,0.92)', border: '1px solid rgba(56,189,248,0.06)' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#64748B', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+              Optional Sections
+            </div>
+            {conditionalSections.map((s) => (
+              <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 0' }}>
+                <input
+                  type="checkbox"
+                  checked={!!currentHalf?.enabledConditionals[s.id]}
+                  onChange={() => toggleConditional(s.id)}
+                  style={{ accentColor: '#0EA5E9', width: 16, height: 16 }}
+                />
+                <span style={{ fontSize: 12, color: '#CBD5E1' }}>{s.conditional}</span>
+              </label>
+            ))}
+          </div>
+        )}
+
+        {/* ── Sections & Items ── */}
+        {visibleSections.map((section) => {
+          const done = sectionDoneCount(section)
+          const sectionComplete = done === section.items.length
+
+          return (
+            <div key={section.id} style={{ marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: sectionComplete ? '#22C55E' : '#94A3B8' }}>
+                  {section.title}
+                </div>
+                <div style={{ fontSize: 10, color: '#64748B' }}>{done}/{section.items.length}</div>
+              </div>
+
+              {section.guidance && (
+                <div style={{ fontSize: 10, color: '#64748B', marginBottom: 8, lineHeight: '14px', fontStyle: 'italic' }}>
+                  {section.guidance}
+                </div>
+              )}
+
+              {section.items.map((item) => {
+                // BWC item
+                if (item.type === 'bwc') {
+                  return (
+                    <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid #1E293B' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600, minWidth: 22 }}>{item.itemNumber}.</span>
+                        <span style={{ fontSize: 12, color: '#CBD5E1', lineHeight: '18px' }}>{item.item}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, paddingLeft: 30 }}>
+                        {BWC_OPTIONS.map((opt) => {
+                          const selected = currentHalf?.bwcValue === opt
+                          const colorMap: Record<string, string> = { LOW: '#22C55E', MOD: '#EAB308', SEV: '#F97316', PROHIB: '#EF4444' }
+                          const color = colorMap[opt] || '#94A3B8'
+                          return (
+                            <button
+                              key={opt}
+                              onClick={() => setBwcValue(opt)}
+                              style={{
+                                padding: '6px 12px', borderRadius: 6,
+                                border: `2px solid ${selected ? color : '#334155'}`,
+                                background: selected ? `${color}20` : 'transparent',
+                                color: selected ? color : '#94A3B8',
+                                fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                              }}
+                            >
+                              {opt}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                }
+
+                // Standard pass/fail/na item
+                const state = currentHalf?.responses[item.id] ?? null
+                const borderColor = state === 'pass' ? '#22C55E' : state === 'fail' ? '#EF4444' : state === 'na' ? '#64748B' : '#334155'
+                const bgColor = state === 'pass' ? 'rgba(34,197,94,0.1)' : state === 'fail' ? 'rgba(239,68,68,0.1)' : state === 'na' ? 'rgba(100,116,139,0.1)' : 'transparent'
+
+                return (
+                  <div key={item.id} style={{ borderBottom: '1px solid #1E293B' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 0' }}>
+                      <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600, minWidth: 22, paddingTop: 5 }}>
+                        {item.itemNumber}.
+                      </span>
+                      <button
+                        onClick={() => toggle(item.id)}
+                        style={{
+                          width: 28, height: 28, minWidth: 28, borderRadius: 6,
+                          border: `2px solid ${borderColor}`, background: bgColor,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          cursor: 'pointer', padding: 0, flexShrink: 0,
+                          fontSize: state === 'na' ? 9 : 14, fontWeight: 700,
+                          color: state === 'pass' ? '#22C55E' : state === 'fail' ? '#EF4444' : state === 'na' ? '#64748B' : 'transparent',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        {state === 'pass' ? '\u2713' : state === 'fail' ? '\u2717' : state === 'na' ? 'N/A' : ''}
+                      </button>
+                      <div
+                        style={{
+                          fontSize: 12, color: state === 'na' ? '#64748B' : '#CBD5E1',
+                          lineHeight: '18px', paddingTop: 4,
+                          textDecoration: state === 'na' ? 'line-through' : 'none',
+                        }}
+                      >
+                        {item.item}
+                      </div>
+                    </div>
+
+                    {state === 'fail' && (
+                      <div style={{ paddingLeft: 58, paddingBottom: 10 }}>
+                        <textarea
+                          placeholder="Describe the discrepancy..."
+                          value={currentHalf?.comments[item.id] || ''}
+                          onChange={(e) => setComment(item.id, e.target.value)}
+                          rows={2}
+                          style={{
+                            width: '100%', background: 'rgba(4,8,14,0.9)',
+                            border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6,
+                            padding: '8px 10px', color: '#F1F5F9', fontSize: 11,
+                            fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box',
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })}
+
+        {/* ── Notes ── */}
+        <div className="card" style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+            General Notes (Optional)
+          </div>
+          <textarea
+            className="input-dark"
+            rows={3}
+            placeholder="Any additional notes..."
+            value={currentHalf?.notes || ''}
+            onChange={(e) => setNotes(e.target.value)}
+            style={{ resize: 'vertical', fontSize: 12 }}
+          />
+        </div>
+
+        {/* ── Action Buttons ── */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
+              background: 'linear-gradient(135deg, #0EA5E9, #22D3EE)',
+              color: '#FFF', fontSize: 14, fontWeight: 700,
+              cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
+              opacity: saving ? 0.7 : 1,
+            }}
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+          <button
+            onClick={handleFile}
+            disabled={filing || !canFile}
+            style={{
+              flex: 1, padding: '14px 0', borderRadius: 10,
+              border: canFile ? '1px solid rgba(34,197,94,0.4)' : '1px solid #334155',
+              background: canFile ? 'rgba(34,197,94,0.1)' : 'transparent',
+              color: canFile ? '#22C55E' : '#475569',
+              fontSize: 14, fontWeight: 700,
+              cursor: canFile && !filing ? 'pointer' : 'default', fontFamily: 'inherit',
+              opacity: filing ? 0.7 : 1,
+            }}
+          >
+            {filing ? 'Filing...' : 'File'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ══════════════════════════════════════════════
+  // ══  HISTORY VIEW (no active draft)         ══
+  // ══════════════════════════════════════════════
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
       {/* Header */}
@@ -58,19 +654,19 @@ export default function InspectionsPage() {
         <div>
           <div style={{ fontSize: 16, fontWeight: 800 }}>Inspections</div>
           <div style={{ fontSize: 10, color: '#64748B' }}>
-            {inspections.length} completed inspection{inspections.length !== 1 ? 's' : ''}
+            {inspections.length} filed inspection{inspections.length !== 1 ? 's' : ''}
           </div>
         </div>
-        <Link
-          href="/inspections/new"
+        <button
+          onClick={handleBeginNew}
           style={{
             background: '#22C55E14', border: '1px solid #22C55E33', borderRadius: 8,
             padding: '8px 14px', color: '#22C55E', fontSize: 11, fontWeight: 600,
-            textDecoration: 'none', fontFamily: 'inherit',
+            fontFamily: 'inherit', cursor: 'pointer',
           }}
         >
-          + New Inspection
-        </Link>
+          + Begin New Inspection
+        </button>
       </div>
 
       {/* Type Filter Chips */}
@@ -110,15 +706,13 @@ export default function InspectionsPage() {
 
       {/* Loading */}
       {loading && (
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>
-          Loading...
-        </div>
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>Loading...</div>
       )}
 
       {/* Empty State */}
       {!loading && filtered.length === 0 && (
         <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>
-          {search || typeFilter !== 'all' ? 'No inspections match your filter.' : 'No inspections completed yet.'}
+          {search || typeFilter !== 'all' ? 'No inspections match your filter.' : 'No inspections filed yet.'}
         </div>
       )}
 
@@ -140,7 +734,6 @@ export default function InspectionsPage() {
               borderLeft: `3px solid ${borderColor}`,
             }}
           >
-            {/* Row 1: Display ID + Type Badge */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'monospace', color: '#22D3EE' }}>
                 {insp.display_id}
@@ -148,7 +741,6 @@ export default function InspectionsPage() {
               <Badge label={typeLabel} color={typeColor} />
             </div>
 
-            {/* Row 2: Results summary */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 6, fontSize: 11 }}>
               <span style={{ color: '#22C55E', fontWeight: 700 }}>{insp.passed_count} Pass</span>
               {insp.failed_count > 0 && (
@@ -160,7 +752,6 @@ export default function InspectionsPage() {
               <span style={{ color: '#475569' }}>/ {insp.total_items} items</span>
             </div>
 
-            {/* Row 3: BWC if applicable */}
             {insp.bwc_value && (
               <div style={{ marginBottom: 6 }}>
                 <span style={{
@@ -173,7 +764,6 @@ export default function InspectionsPage() {
               </div>
             )}
 
-            {/* Row 4: Footer */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10, color: '#64748B' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span>{insp.inspector_name || 'Unknown'}</span>

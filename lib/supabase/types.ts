@@ -132,6 +132,7 @@ export type Database = {
           weather_conditions: string | null
           temperature_f: number | null
           notes: string | null
+          daily_group_id: string | null
           completed_at: string | null
           created_at: string
           updated_at: string

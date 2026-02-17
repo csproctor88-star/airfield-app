@@ -21,6 +21,7 @@ export type InspectionRow = {
   weather_conditions: string | null
   temperature_f: number | null
   notes: string | null
+  daily_group_id: string | null
   completed_at: string | null
   created_at: string
   updated_at: string
@@ -63,6 +64,26 @@ export async function fetchInspection(id: string): Promise<InspectionRow | null>
   return data as InspectionRow
 }
 
+/** Fetch both halves of a daily inspection by group ID */
+export async function fetchDailyGroup(groupId: string): Promise<InspectionRow[]> {
+  const supabase = createClient()
+  if (!supabase) return []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('inspections')
+    .select('*')
+    .eq('daily_group_id', groupId)
+    .order('inspection_type', { ascending: true })
+
+  if (error) {
+    console.error('Failed to fetch daily group:', error.message)
+    return []
+  }
+
+  return (data ?? []) as InspectionRow[]
+}
+
 export async function createInspection(input: {
   inspection_type: InspectionType
   inspector_name: string
@@ -77,6 +98,7 @@ export async function createInspection(input: {
   weather_conditions: string | null
   temperature_f: number | null
   notes: string | null
+  daily_group_id?: string | null
 }): Promise<{ data: InspectionRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -119,6 +141,7 @@ export async function createInspection(input: {
     weather_conditions: input.weather_conditions,
     temperature_f: input.temperature_f,
     notes: input.notes,
+    daily_group_id: input.daily_group_id || null,
     completed_at: now.toISOString(),
   }
   if (inspector_id) row.inspector_id = inspector_id
@@ -136,6 +159,36 @@ export async function createInspection(input: {
   }
 
   return { data: data as InspectionRow, error: null }
+}
+
+/** Get the current user's profile name for auto-fill */
+export async function getInspectorName(): Promise<{ name: string | null; id: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { name: null, id: null }
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { name: null, id: null }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profile } = await (supabase as any)
+      .from('profiles')
+      .select('name, rank')
+      .eq('id', user.id)
+      .single()
+
+    if (profile) {
+      const displayName = profile.rank
+        ? `${profile.rank} ${profile.name}`
+        : profile.name
+      return { name: displayName, id: user.id }
+    }
+
+    // Fall back to email if no profile
+    return { name: user.email || null, id: user.id }
+  } catch {
+    return { name: null, id: null }
+  }
 }
 
 export async function deleteInspection(id: string): Promise<{ error: string | null }> {

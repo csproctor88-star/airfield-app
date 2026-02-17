@@ -288,7 +288,7 @@ export default function InspectionDetailPage() {
           {generatingPdf ? 'Generating...' : 'Export PDF'}
         </button>
         <Link
-          href="/inspections/new"
+          href="/inspections"
           style={{
             flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
             background: '#22C55E14', border: '1px solid #22C55E33',
@@ -296,7 +296,7 @@ export default function InspectionDetailPage() {
             textDecoration: 'none', fontFamily: 'inherit',
           }}
         >
-          + New Inspection
+          All Inspections
         </Link>
       </div>
     </div>

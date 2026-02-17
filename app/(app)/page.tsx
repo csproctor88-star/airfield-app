@@ -22,7 +22,7 @@ const QUICK_ACTIONS = [
   { label: 'New Discrep', icon: Plus, color: '#EF4444', href: '/discrepancies/new' },
   { label: 'Airfield Check', icon: Search, color: '#FBBF24', href: '/checks' },
   { label: 'Check History', icon: ClipboardCheck, color: '#22D3EE', href: '/checks/history' },
-  { label: 'Inspection', icon: ClipboardCheck, color: '#34D399', href: '/inspections/new' },
+  { label: 'Inspection', icon: ClipboardCheck, color: '#34D399', href: '/inspections' },
   { label: 'NOTAM', icon: Megaphone, color: '#A78BFA', href: '/notams/new' },
   { label: 'Obstructions', icon: AlertTriangle, color: '#F97316', href: '/obstructions' },
 ]

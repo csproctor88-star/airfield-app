@@ -61,10 +61,13 @@ CREATE TABLE inspections (
   weather_conditions TEXT,
   temperature_f NUMERIC(5,1),
   notes TEXT,
+  daily_group_id UUID,
   completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX idx_inspections_daily_group ON inspections(daily_group_id);
 
 -- 5.2 Discrepancies
 CREATE TABLE discrepancies (
