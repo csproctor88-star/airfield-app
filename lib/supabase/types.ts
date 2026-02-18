@@ -15,11 +15,13 @@ export type Database = {
           shop: string | null
           phone: string | null
           is_active: boolean
+          last_seen_at: string | null
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'created_at' | 'updated_at'>
+        Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'created_at' | 'updated_at' | 'last_seen_at'>
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>
+        Relationships: []
       }
       discrepancies: {
         Row: {
@@ -49,6 +51,7 @@ export type Database = {
         }
         Insert: Omit<Database['public']['Tables']['discrepancies']['Row'], 'id' | 'created_at' | 'updated_at' | 'photo_count'>
         Update: Partial<Database['public']['Tables']['discrepancies']['Insert']>
+        Relationships: []
       }
       photos: {
         Row: {
@@ -68,6 +71,7 @@ export type Database = {
         }
         Insert: Omit<Database['public']['Tables']['photos']['Row'], 'id' | 'created_at' | 'captured_at'>
         Update: Partial<Database['public']['Tables']['photos']['Insert']>
+        Relationships: []
       }
       status_updates: {
         Row: {
@@ -81,6 +85,7 @@ export type Database = {
         }
         Insert: Omit<Database['public']['Tables']['status_updates']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['status_updates']['Insert']>
+        Relationships: []
       }
       airfield_checks: {
         Row: {
@@ -99,6 +104,7 @@ export type Database = {
         }
         Insert: Omit<Database['public']['Tables']['airfield_checks']['Row'], 'id' | 'created_at' | 'updated_at' | 'photo_count'>
         Update: Partial<Database['public']['Tables']['airfield_checks']['Insert']>
+        Relationships: []
       }
       check_comments: {
         Row: {
@@ -110,6 +116,7 @@ export type Database = {
         }
         Insert: Omit<Database['public']['Tables']['check_comments']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['check_comments']['Insert']>
+        Relationships: []
       }
       inspections: {
         Row: {
@@ -140,6 +147,7 @@ export type Database = {
         }
         Insert: Omit<Database['public']['Tables']['inspections']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['inspections']['Insert']>
+        Relationships: []
       }
       notams: {
         Row: {
@@ -161,6 +169,7 @@ export type Database = {
         }
         Insert: Omit<Database['public']['Tables']['notams']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['notams']['Insert']>
+        Relationships: []
       }
       obstruction_evaluations: {
         Row: {
@@ -187,6 +196,7 @@ export type Database = {
         }
         Insert: Omit<Database['public']['Tables']['obstruction_evaluations']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['obstruction_evaluations']['Insert']>
+        Relationships: []
       }
       activity_log: {
         Row: {
@@ -201,6 +211,20 @@ export type Database = {
         }
         Insert: Omit<Database['public']['Tables']['activity_log']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['activity_log']['Insert']>
+        Relationships: []
+      }
+      navaid_statuses: {
+        Row: {
+          id: string
+          navaid_name: string
+          status: 'green' | 'yellow' | 'red'
+          notes: string | null
+          updated_by: string | null
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['navaid_statuses']['Row'], 'id' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['navaid_statuses']['Insert']>
+        Relationships: []
       }
     }
     Views: Record<string, never>
@@ -249,3 +273,4 @@ export type Inspection = Database['public']['Tables']['inspections']['Row']
 export type Notam = Database['public']['Tables']['notams']['Row']
 export type ObstructionEvaluation = Database['public']['Tables']['obstruction_evaluations']['Row']
 export type ActivityLog = Database['public']['Tables']['activity_log']['Row']
+export type NavaidStatus = Database['public']['Tables']['navaid_statuses']['Row']
