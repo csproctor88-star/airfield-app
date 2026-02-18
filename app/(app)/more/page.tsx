@@ -12,9 +12,9 @@ const modules = [
   { name: 'Airfield Check History', icon: '🛡️', color: '#22D3EE', badge: null, href: '/checks/history' },
   { name: 'Airfield Inspection History', icon: '📋', color: '#34D399', badge: null, href: '/inspections?view=history' },
   { name: 'Obstruction Database', icon: '🗺️', color: '#F97316', badge: null, href: '/obstructions/history' },
-  { name: 'Users & Security', icon: '👥', color: '#64748B', badge: '3 online', href: '#' },
-  { name: 'Sync & Data', icon: '🔄', color: '#22D3EE', badge: '3 pending', href: '#' },
-  { name: 'Settings', icon: '⚙️', color: '#64748B', badge: null, href: '#' },
+  { name: 'Users & Security', icon: '👥', color: '#64748B', badge: '3 online', href: '/users' },
+  { name: 'Sync & Data', icon: '🔄', color: '#22D3EE', badge: '3 pending', href: '/sync' },
+  { name: 'Settings', icon: '⚙️', color: '#64748B', badge: null, href: '/settings' },
 ]
 
 export default function MorePage() {
