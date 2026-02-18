@@ -108,6 +108,7 @@ export default function HomePage() {
   const [navaids, setNavaids] = useState<NavaidStatus[]>([])
   const [navaidNotes, setNavaidNotes] = useState<Record<string, string>>({})
   const [activity, setActivity] = useState<ActivityEntry[]>([])
+  const [activityExpanded, setActivityExpanded] = useState(false)
   const [currentStatus, setCurrentStatus] = useState<CurrentStatusData>({
     bwc: null, lastCheckType: null, lastCheckTime: null, inspectionCompletion: null, rscCondition: null, rscTime: null, activeRunway: '01', runwayStatus: 'open',
   })
@@ -323,7 +324,7 @@ export default function HomePage() {
           alignItems: 'center',
           background: 'rgba(56,189,248,0.03)',
           border: '1px solid rgba(56,189,248,0.1)',
-          marginBottom: 8,
+          marginBottom: 16,
         }}
       >
         {weatherLoaded ? (
@@ -367,7 +368,7 @@ export default function HomePage() {
 
       {/* ===== Current Status ===== */}
       <span className="section-label">Current Status</span>
-      <div className="card" style={{ marginBottom: 6 }}>
+      <div className="card" style={{ marginBottom: 8 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
           <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
             <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 4 }}>RSC</div>
@@ -462,7 +463,7 @@ export default function HomePage() {
       </div>
 
       {/* ===== Last Completed ===== */}
-      <div className="card" style={{ marginBottom: 10 }}>
+      <div className="card" style={{ marginBottom: 16 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
           <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
             <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>Last Inspection Completed</div>
@@ -483,77 +484,78 @@ export default function HomePage() {
 
       {/* ===== NAVAID Status ===== */}
       <span className="section-label">NAVAID Status</span>
-      <div className="card" style={{ marginBottom: 10, padding: '10px 12px' }}>
-        {navaids.length === 0 ? (
-          <div style={{ fontSize: 11, color: '#64748B', textAlign: 'center', padding: 12 }}>
+      {navaids.length === 0 ? (
+        <div className="card" style={{ marginBottom: 16, padding: 12 }}>
+          <div style={{ fontSize: 11, color: '#64748B', textAlign: 'center' }}>
             Connect to Supabase to manage NAVAID statuses
           </div>
-        ) : (
-          <>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {navaids.map((n) => (
-                <div key={n.id}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#E2E8F0' }}>{n.navaid_name}</span>
-                    <div style={{ display: 'flex', gap: 3 }}>
-                      {(['green', 'yellow', 'red'] as const).map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => handleNavaidToggle(n, s)}
-                          style={{
-                            width: 24,
-                            height: 20,
-                            borderRadius: 5,
-                            border: n.status === s
-                              ? `2px solid ${STATUS_COLORS[s]}`
-                              : '1px solid rgba(56,189,248,0.12)',
-                            background: n.status === s
-                              ? `${STATUS_COLORS[s]}20`
-                              : 'rgba(4,7,12,0.5)',
-                            cursor: 'pointer',
-                            fontSize: 8,
-                            fontWeight: 700,
-                            color: STATUS_COLORS[s],
-                            textTransform: 'uppercase',
-                            padding: 0,
-                          }}
-                        >
-                          {s.charAt(0).toUpperCase()}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  {(n.status === 'yellow' || n.status === 'red') && (
-                    <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
-                      <input
-                        type="text"
-                        placeholder="Add note..."
-                        value={navaidNotes[n.id] || ''}
-                        onChange={(e) => setNavaidNotes((prev) => ({ ...prev, [n.id]: e.target.value }))}
-                        onBlur={() => handleNavaidNotesSave(n)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleNavaidNotesSave(n) }}
-                        style={{
-                          flex: 1,
-                          background: 'rgba(4,7,12,0.7)',
-                          border: `1px solid ${STATUS_COLORS[n.status]}40`,
-                          borderRadius: 6,
-                          padding: '4px 8px',
-                          fontSize: 10,
-                          color: '#E2E8F0',
-                          outline: 'none',
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
+        </div>
+      ) : (() => {
+        const rwy01 = navaids
+          .filter((n) => n.navaid_name.startsWith('01'))
+          .sort((a, b) => (a.navaid_name.includes('ILS') ? -1 : b.navaid_name.includes('ILS') ? 1 : 0))
+        const rwy19 = navaids
+          .filter((n) => n.navaid_name.startsWith('19'))
+          .sort((a, b) => (a.navaid_name.includes('ILS') ? -1 : b.navaid_name.includes('ILS') ? 1 : 0))
+        const renderNavaidItem = (n: NavaidStatus) => (
+          <div key={n.id} style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#E2E8F0' }}>
+                {n.navaid_name.replace(/^(01|19)\s*/, '')}
+              </span>
+              <div style={{ display: 'flex', gap: 3 }}>
+                {(['green', 'yellow', 'red'] as const).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => handleNavaidToggle(n, s)}
+                    style={{
+                      width: 22, height: 18, borderRadius: 4,
+                      border: n.status === s ? `2px solid ${STATUS_COLORS[s]}` : '1px solid rgba(56,189,248,0.12)',
+                      background: n.status === s ? `${STATUS_COLORS[s]}20` : 'rgba(4,7,12,0.5)',
+                      cursor: 'pointer', fontSize: 7, fontWeight: 700,
+                      color: STATUS_COLORS[s], textTransform: 'uppercase', padding: 0,
+                    }}
+                  >
+                    {s.charAt(0).toUpperCase()}
+                  </button>
+                ))}
+              </div>
             </div>
-          </>
-        )}
-      </div>
+            {(n.status === 'yellow' || n.status === 'red') && (
+              <input
+                type="text"
+                placeholder="Add note..."
+                value={navaidNotes[n.id] || ''}
+                onChange={(e) => setNavaidNotes((prev) => ({ ...prev, [n.id]: e.target.value }))}
+                onBlur={() => handleNavaidNotesSave(n)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleNavaidNotesSave(n) }}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  background: 'rgba(4,7,12,0.7)',
+                  border: `1px solid ${STATUS_COLORS[n.status]}40`,
+                  borderRadius: 5, padding: '3px 6px', fontSize: 9,
+                  color: '#E2E8F0', outline: 'none',
+                }}
+              />
+            )}
+          </div>
+        )
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+            <div className="card" style={{ padding: '10px 10px 4px' }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#34D399', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 01</div>
+              {rwy01.map(renderNavaidItem)}
+            </div>
+            <div className="card" style={{ padding: '10px 10px 4px' }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#FBBF24', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 19</div>
+              {rwy19.map(renderNavaidItem)}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ===== KPI Tiles — 3 across ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 18 }}>
         {KPI_TILES.map((k) => (
           <Link
             key={k.label}
@@ -578,7 +580,7 @@ export default function HomePage() {
 
       {/* ===== Quick Actions ===== */}
       <span className="section-label">Quick Actions</span>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 20 }}>
         {QUICK_ACTIONS.map((q) => (
           <Link
             key={q.label}
@@ -624,60 +626,75 @@ export default function HomePage() {
           <div style={{ fontSize: 11, color: '#64748B' }}>No activity recorded yet</div>
         </div>
       ) : (
-        activity.map((a, i) => {
-          const actionColor: Record<string, string> = {
-            created: '#34D399',
-            completed: '#22D3EE',
-            updated: '#FBBF24',
-            status_updated: '#A78BFA',
-            deleted: '#EF4444',
-          }
-          const color = actionColor[a.action] || '#64748B'
-          const date = new Date(a.created_at)
-          const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-          const timeStr = date.toTimeString().slice(0, 5)
-          const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
+        <>
+          {(activityExpanded ? activity : activity.slice(0, 6)).map((a, i, arr) => {
+            const actionColor: Record<string, string> = {
+              created: '#34D399',
+              completed: '#22D3EE',
+              updated: '#FBBF24',
+              status_updated: '#A78BFA',
+              deleted: '#EF4444',
+            }
+            const color = actionColor[a.action] || '#64748B'
+            const date = new Date(a.created_at)
+            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            const timeStr = date.toTimeString().slice(0, 5)
+            const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
 
-          return (
-            <div
-              key={a.id}
-              style={{
-                display: 'flex',
-                gap: 8,
-                padding: '7px 0',
-                borderBottom: i < activity.length - 1 ? '1px solid rgba(56,189,248,0.06)' : 'none',
-              }}
-            >
+            return (
               <div
+                key={a.id}
                 style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 6,
-                  background: `${color}12`,
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 10,
-                  flexShrink: 0,
-                  color,
+                  gap: 8,
+                  padding: '7px 0',
+                  borderBottom: i < arr.length - 1 ? '1px solid rgba(56,189,248,0.06)' : 'none',
                 }}
               >
-                &bull;
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#22D3EE' }}>
-                    {userName}
-                  </span>
-                  <span style={{ fontSize: 9, color: '#64748B' }}>{dateStr} {timeStr}</span>
+                <div
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: 6,
+                    background: `${color}12`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 10,
+                    flexShrink: 0,
+                    color,
+                  }}
+                >
+                  &bull;
                 </div>
-                <div style={{ fontSize: 10, color: '#94A3B8' }}>
-                  {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined)}
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#22D3EE' }}>
+                      {userName}
+                    </span>
+                    <span style={{ fontSize: 9, color: '#64748B' }}>{dateStr} {timeStr}</span>
+                  </div>
+                  <div style={{ fontSize: 10, color: '#94A3B8' }}>
+                    {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined)}
+                  </div>
                 </div>
               </div>
-            </div>
-          )
-        })
+            )
+          })}
+          {activity.length > 6 && (
+            <button
+              onClick={() => setActivityExpanded((p) => !p)}
+              style={{
+                width: '100%', padding: '8px 0', marginTop: 4,
+                background: 'none', border: 'none',
+                color: '#0EA5E9', fontSize: 11, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              {activityExpanded ? 'Show Less' : `Show All (${activity.length})`}
+            </button>
+          )}
+        </>
       )}
     </div>
   )
