@@ -438,71 +438,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ===== KPI Tiles — 3 across ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
-        {KPI_TILES.map((k) => (
-          <Link
-            key={k.label}
-            href={k.href}
-            style={{
-              background: 'rgba(10,16,28,0.92)',
-              border: '1px solid rgba(56,189,248,0.06)',
-              borderRadius: 10,
-              padding: '14px 6px',
-              textAlign: 'center',
-              cursor: 'pointer',
-              textDecoration: 'none',
-            }}
-          >
-            <div style={{ fontSize: 22, marginBottom: 4 }}>{k.icon}</div>
-            <div style={{ fontSize: 12, color: k.color, letterSpacing: '0.04em', fontWeight: 700, whiteSpace: 'pre-line', lineHeight: 1.3 }}>
-              {k.label}
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      {/* ===== Quick Actions ===== */}
-      <span className="section-label">Quick Actions</span>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 14 }}>
-        {QUICK_ACTIONS.map((q) => (
-          <Link
-            key={q.label}
-            href={q.href}
-            style={{
-              background: 'rgba(10,16,28,0.92)',
-              border: '1px solid rgba(56,189,248,0.06)',
-              borderRadius: 10,
-              padding: '14px 8px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              cursor: 'pointer',
-              textDecoration: 'none',
-            }}
-          >
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 9,
-                background: `${q.color}12`,
-                border: `1px solid ${q.color}25`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <q.icon size={18} color={q.color} />
-            </div>
-            <span style={{ fontSize: 11, color: '#E2E8F0', fontWeight: 700, lineHeight: 1.3 }}>
-              {q.label}
-            </span>
-          </Link>
-        ))}
-      </div>
-
       {/* ===== NAVAID Status ===== */}
       <span className="section-label">NAVAID Status</span>
       <div className="card" style={{ marginBottom: 10, padding: '10px 12px' }}>
@@ -568,6 +503,71 @@ export default function HomePage() {
             </div>
           ))
         )}
+      </div>
+
+      {/* ===== KPI Tiles — 3 across ===== */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
+        {KPI_TILES.map((k) => (
+          <Link
+            key={k.label}
+            href={k.href}
+            style={{
+              background: 'rgba(10,16,28,0.92)',
+              border: '1px solid rgba(56,189,248,0.06)',
+              borderRadius: 10,
+              padding: '14px 6px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              textDecoration: 'none',
+            }}
+          >
+            <div style={{ fontSize: 22, marginBottom: 4 }}>{k.icon}</div>
+            <div style={{ fontSize: 12, color: k.color, letterSpacing: '0.04em', fontWeight: 700, whiteSpace: 'pre-line', lineHeight: 1.3 }}>
+              {k.label}
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      {/* ===== Quick Actions ===== */}
+      <span className="section-label">Quick Actions</span>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 14 }}>
+        {QUICK_ACTIONS.map((q) => (
+          <Link
+            key={q.label}
+            href={q.href}
+            style={{
+              background: 'rgba(10,16,28,0.92)',
+              border: '1px solid rgba(56,189,248,0.06)',
+              borderRadius: 10,
+              padding: '14px 8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              cursor: 'pointer',
+              textDecoration: 'none',
+            }}
+          >
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 9,
+                background: `${q.color}12`,
+                border: `1px solid ${q.color}25`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <q.icon size={18} color={q.color} />
+            </div>
+            <span style={{ fontSize: 11, color: '#E2E8F0', fontWeight: 700, lineHeight: 1.3 }}>
+              {q.label}
+            </span>
+          </Link>
+        ))}
       </div>
 
       {/* ===== Recent Activity ===== */}
