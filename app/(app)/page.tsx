@@ -2,12 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import {
-  Plus,
-  ClipboardCheck,
-  TriangleAlert,
-  ClipboardList,
-} from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { fetchCurrentWeather, type WeatherResult } from '@/lib/weather'
 import { fetchNavaidStatuses, updateNavaidStatus, type NavaidStatus } from '@/lib/supabase/navaids'
@@ -37,16 +31,9 @@ function presenceLabel(lastSeen: string | null): { label: string; color: string 
   return { label: 'Inactive', color: '#64748B' }
 }
 
-// --- Quick Actions ---
+// --- Quick Actions (KPI badges) ---
 const QUICK_ACTIONS = [
-  { label: 'New Discrepancy', icon: Plus, color: '#EF4444', href: '/discrepancies/new' },
-  { label: 'Airfield Check History', icon: ClipboardCheck, color: '#22D3EE', href: '/checks/history' },
-  { label: 'Obstruction Database', icon: TriangleAlert, color: '#F97316', href: '/obstructions/history' },
-  { label: 'Airfield Inspection History', icon: ClipboardList, color: '#34D399', href: '/inspections?view=history' },
-]
-
-// --- KPI Tiles ---
-const KPI_TILES = [
+  { label: 'New\nDiscrepancy', icon: '🚨', color: '#EF4444', href: '/discrepancies/new' },
   { label: 'Begin\nAirfield Check', icon: '🛡️', color: '#FBBF24', href: '/checks' },
   { label: 'Begin/Continue\nAirfield Inspection', icon: '📋', color: '#34D399', href: '/inspections?action=begin' },
   { label: 'Obstruction\nEvaluation', icon: '🗺️', color: '#38BDF8', href: '/obstructions' },
@@ -368,31 +355,31 @@ export default function HomePage() {
 
       {/* ===== Current Status ===== */}
       <span className="section-label">Current Status</span>
-      <div className="card" style={{ marginBottom: 8 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
-          <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 4 }}>RSC</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#38BDF8' }}>
+      <div className="card" style={{ marginBottom: 12, padding: '12px 10px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+          <div style={{ padding: 12, background: 'rgba(4,7,12,0.5)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
+            <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600, marginBottom: 6 }}>RSC</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#38BDF8' }}>
               {currentStatus.rscCondition
                 ? `${currentStatus.rscCondition}${currentStatus.rscTime ? ` @ ${currentStatus.rscTime}` : ''}`
                 : 'No Data'}
             </div>
           </div>
-          <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 4 }}>BWC</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: currentStatus.bwc === 'SEV' || currentStatus.bwc === 'PROHIB' ? '#EF4444' : currentStatus.bwc === 'MOD' ? '#FBBF24' : '#34D399' }}>
+          <div style={{ padding: 12, background: 'rgba(4,7,12,0.5)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
+            <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600, marginBottom: 6 }}>BWC</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: currentStatus.bwc === 'SEV' || currentStatus.bwc === 'PROHIB' ? '#EF4444' : currentStatus.bwc === 'MOD' ? '#FBBF24' : '#34D399' }}>
               {currentStatus.bwc || 'No Data'}
             </div>
           </div>
-          <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 4 }}>Active RWY</div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginBottom: 6 }}>
+          <div style={{ padding: 12, background: 'rgba(4,7,12,0.5)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
+            <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600, marginBottom: 6 }}>Active RWY</div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 8 }}>
               <button
                 onClick={() => setCurrentStatus((prev) => ({ ...prev, activeRunway: '01' }))}
                 style={{
-                  padding: '2px 10px',
-                  borderRadius: 5,
-                  fontSize: 11,
+                  padding: '4px 14px',
+                  borderRadius: 6,
+                  fontSize: 14,
                   fontWeight: 700,
                   cursor: 'pointer',
                   border: currentStatus.activeRunway === '01'
@@ -409,9 +396,9 @@ export default function HomePage() {
               <button
                 onClick={() => setCurrentStatus((prev) => ({ ...prev, activeRunway: '19' }))}
                 style={{
-                  padding: '2px 10px',
-                  borderRadius: 5,
-                  fontSize: 11,
+                  padding: '4px 14px',
+                  borderRadius: 6,
+                  fontSize: 14,
                   fontWeight: 700,
                   cursor: 'pointer',
                   border: currentStatus.activeRunway === '19'
@@ -426,7 +413,7 @@ export default function HomePage() {
                 19
               </button>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 3 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 4 }}>
               {([
                 { key: 'open', label: 'Open', color: '#34D399' },
                 { key: 'suspended', label: 'SUSP', color: '#FBBF24' },
@@ -438,9 +425,9 @@ export default function HomePage() {
                     key={s.key}
                     onClick={() => setCurrentStatus((prev) => ({ ...prev, runwayStatus: s.key }))}
                     style={{
-                      padding: '2px 6px',
-                      borderRadius: 4,
-                      fontSize: 8,
+                      padding: '3px 8px',
+                      borderRadius: 5,
+                      fontSize: 11,
                       fontWeight: 700,
                       cursor: 'pointer',
                       border: active
@@ -478,21 +465,21 @@ export default function HomePage() {
           .filter((n) => n.navaid_name.startsWith('19'))
           .sort((a, b) => (a.navaid_name.includes('ILS') ? -1 : b.navaid_name.includes('ILS') ? 1 : 0))
         const renderNavaidItem = (n: NavaidStatus) => (
-          <div key={n.id} style={{ marginBottom: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#E2E8F0' }}>
+          <div key={n.id} style={{ marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#E2E8F0' }}>
                 {n.navaid_name.replace(/^(01|19)\s*/, '')}
               </span>
-              <div style={{ display: 'flex', gap: 3 }}>
+              <div style={{ display: 'flex', gap: 6 }}>
                 {(['green', 'yellow', 'red'] as const).map((s) => (
                   <button
                     key={s}
                     onClick={() => handleNavaidToggle(n, s)}
                     style={{
-                      width: 22, height: 18, borderRadius: 4,
+                      width: 36, height: 28, borderRadius: 6,
                       border: n.status === s ? `2px solid ${STATUS_COLORS[s]}` : '1px solid rgba(56,189,248,0.12)',
                       background: n.status === s ? `${STATUS_COLORS[s]}20` : 'rgba(4,7,12,0.5)',
-                      cursor: 'pointer', fontSize: 7, fontWeight: 700,
+                      cursor: 'pointer', fontSize: 11, fontWeight: 700,
                       color: STATUS_COLORS[s], textTransform: 'uppercase', padding: 0,
                     }}
                   >
@@ -513,7 +500,7 @@ export default function HomePage() {
                   width: '100%', boxSizing: 'border-box',
                   background: 'rgba(4,7,12,0.7)',
                   border: `1px solid ${STATUS_COLORS[n.status]}40`,
-                  borderRadius: 5, padding: '3px 6px', fontSize: 9,
+                  borderRadius: 6, padding: '6px 10px', fontSize: 13,
                   color: '#E2E8F0', outline: 'none',
                 }}
               />
@@ -521,13 +508,13 @@ export default function HomePage() {
           </div>
         )
         return (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
-            <div className="card" style={{ padding: '10px 10px 4px' }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: '#34D399', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 01</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+            <div className="card" style={{ padding: '12px 14px 6px' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#34D399', marginBottom: 10, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 01</div>
               {rwy01.map(renderNavaidItem)}
             </div>
-            <div className="card" style={{ padding: '10px 10px 4px' }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: '#FBBF24', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 19</div>
+            <div className="card" style={{ padding: '12px 14px 6px' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#FBBF24', marginBottom: 10, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 19</div>
               {rwy19.map(renderNavaidItem)}
             </div>
           </div>
@@ -536,9 +523,9 @@ export default function HomePage() {
 
       {/* ===== Last Check Completed ===== */}
       <div className="card" style={{ marginBottom: 16 }}>
-        <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>Last Check Completed</div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#22D3EE' }}>
+        <div style={{ padding: 12, background: 'rgba(4,7,12,0.5)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
+          <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600, marginBottom: 4 }}>Last Check Completed</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#22D3EE' }}>
             {currentStatus.lastCheckType && currentStatus.lastCheckTime
               ? `${currentStatus.lastCheckType} @ ${currentStatus.lastCheckTime}`
               : 'No Data'}
@@ -546,33 +533,9 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ===== KPI Tiles — 3 across ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 18 }}>
-        {KPI_TILES.map((k) => (
-          <Link
-            key={k.label}
-            href={k.href}
-            style={{
-              background: 'rgba(10,16,28,0.92)',
-              border: '1px solid rgba(56,189,248,0.06)',
-              borderRadius: 10,
-              padding: '14px 6px',
-              textAlign: 'center',
-              cursor: 'pointer',
-              textDecoration: 'none',
-            }}
-          >
-            <div style={{ fontSize: 22, marginBottom: 4 }}>{k.icon}</div>
-            <div style={{ fontSize: 12, color: k.color, letterSpacing: '0.04em', fontWeight: 700, whiteSpace: 'pre-line', lineHeight: 1.3 }}>
-              {k.label}
-            </div>
-          </Link>
-        ))}
-      </div>
-
       {/* ===== Quick Actions ===== */}
       <span className="section-label">Quick Actions</span>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
         {QUICK_ACTIONS.map((q) => (
           <Link
             key={q.label}
@@ -580,33 +543,17 @@ export default function HomePage() {
             style={{
               background: 'rgba(10,16,28,0.92)',
               border: '1px solid rgba(56,189,248,0.06)',
-              borderRadius: 10,
-              padding: '14px 8px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
+              borderRadius: 12,
+              padding: '18px 8px',
+              textAlign: 'center',
               cursor: 'pointer',
               textDecoration: 'none',
             }}
           >
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 9,
-                background: `${q.color}12`,
-                border: `1px solid ${q.color}25`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <q.icon size={18} color={q.color} />
-            </div>
-            <span style={{ fontSize: 11, color: '#E2E8F0', fontWeight: 700, lineHeight: 1.3 }}>
+            <div style={{ fontSize: 28, marginBottom: 6 }}>{q.icon}</div>
+            <div style={{ fontSize: 13, color: q.color, letterSpacing: '0.04em', fontWeight: 700, whiteSpace: 'pre-line', lineHeight: 1.3 }}>
               {q.label}
-            </span>
+            </div>
           </Link>
         ))}
       </div>
