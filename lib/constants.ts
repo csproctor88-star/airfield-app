@@ -318,9 +318,7 @@ export const LIGHTING_INSPECTION_SECTIONS: InspectionSection[] = [
       { id: 'lt-29', itemNumber: 29, item: 'Obstruction Lights' },
       { id: 'lt-30', itemNumber: 30, item: 'Rotating Beacon' },
       { id: 'lt-31', itemNumber: 31, item: 'Wind Cones' },
-      { id: 'lt-32', itemNumber: 32, item: 'Traffic Lights' },
-      { id: 'lt-33', itemNumber: 33, item: 'Construction Barriers' },
-      { id: 'lt-34', itemNumber: 34, item: 'North or South Ramp' },
+      { id: 'lt-32', itemNumber: 32, item: 'Construction Barriers' },
     ],
   },
 ]
