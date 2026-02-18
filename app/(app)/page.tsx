@@ -47,9 +47,9 @@ const QUICK_ACTIONS = [
 
 // --- KPI Tiles ---
 const KPI_TILES = [
-  { label: 'CHECKS', icon: '🛡️', color: '#FBBF24', href: '/checks' },
-  { label: 'INSPECTIONS', icon: '📋', color: '#34D399', href: '/inspections' },
-  { label: 'OBSTR EVAL', icon: '🗺️', color: '#38BDF8', href: '/obstructions' },
+  { label: 'Start\nCheck', icon: '🛡️', color: '#FBBF24', href: '/checks' },
+  { label: 'Start\nInspection', icon: '📋', color: '#34D399', href: '/inspections' },
+  { label: 'Obstruction\nEvaluation', icon: '🗺️', color: '#38BDF8', href: '/obstructions' },
 ]
 
 // --- NAVAID color map ---
@@ -96,6 +96,7 @@ type CurrentStatusData = {
   inspectionCompletion: string | null
   rscCondition: string | null
   rscTime: string | null
+  activeRunway: '01' | '19'
 }
 
 export default function HomePage() {
@@ -107,7 +108,7 @@ export default function HomePage() {
   const [navaidNotes, setNavaidNotes] = useState<Record<string, string>>({})
   const [activity, setActivity] = useState<ActivityEntry[]>([])
   const [currentStatus, setCurrentStatus] = useState<CurrentStatusData>({
-    bwc: null, lastCheckType: null, lastCheckTime: null, inspectionCompletion: null, rscCondition: null, rscTime: null,
+    bwc: null, lastCheckType: null, lastCheckTime: null, inspectionCompletion: null, rscCondition: null, rscTime: null, activeRunway: '01',
   })
 
   // --- Clock ---
@@ -229,14 +230,15 @@ export default function HomePage() {
         ? new Date(rscCheck[0].completed_at).toTimeString().slice(0, 5)
         : null
 
-      setCurrentStatus({
+      setCurrentStatus((prev) => ({
+        ...prev,
         bwc,
         lastCheckType: checkType,
         lastCheckTime: checkTime,
         inspectionCompletion: inspTime,
         rscCondition,
         rscTime,
-      })
+      }))
     }
     loadCurrentStatus()
   }, [])
@@ -354,33 +356,82 @@ export default function HomePage() {
 
       {/* ===== Current Status ===== */}
       <span className="section-label">Current Status</span>
-      <div className="card" style={{ marginBottom: 10 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-          <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)' }}>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>BWC</div>
+      <div className="card" style={{ marginBottom: 6 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+          <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
+            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 4 }}>RSC</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#38BDF8' }}>
+              {currentStatus.rscCondition
+                ? `${currentStatus.rscCondition}${currentStatus.rscTime ? ` @ ${currentStatus.rscTime}` : ''}`
+                : 'No Data'}
+            </div>
+          </div>
+          <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
+            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 4 }}>BWC</div>
             <div style={{ fontSize: 12, fontWeight: 700, color: currentStatus.bwc === 'SEV' || currentStatus.bwc === 'PROHIB' ? '#EF4444' : currentStatus.bwc === 'MOD' ? '#FBBF24' : '#34D399' }}>
               {currentStatus.bwc || 'No Data'}
             </div>
           </div>
-          <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)' }}>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>Last Check</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#22D3EE' }}>
-              {currentStatus.lastCheckType && currentStatus.lastCheckTime
-                ? `${currentStatus.lastCheckType} @ ${currentStatus.lastCheckTime}`
-                : 'No Data'}
+          <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
+            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 4 }}>Active RWY</div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 4 }}>
+              <button
+                onClick={() => setCurrentStatus((prev) => ({ ...prev, activeRunway: '01' }))}
+                style={{
+                  padding: '2px 10px',
+                  borderRadius: 5,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: currentStatus.activeRunway === '01'
+                    ? '2px solid #34D399'
+                    : '1px solid rgba(56,189,248,0.12)',
+                  background: currentStatus.activeRunway === '01'
+                    ? 'rgba(52,211,153,0.15)'
+                    : 'rgba(4,7,12,0.5)',
+                  color: currentStatus.activeRunway === '01' ? '#34D399' : '#64748B',
+                }}
+              >
+                01
+              </button>
+              <button
+                onClick={() => setCurrentStatus((prev) => ({ ...prev, activeRunway: '19' }))}
+                style={{
+                  padding: '2px 10px',
+                  borderRadius: 5,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: currentStatus.activeRunway === '19'
+                    ? '2px solid #34D399'
+                    : '1px solid rgba(56,189,248,0.12)',
+                  background: currentStatus.activeRunway === '19'
+                    ? 'rgba(52,211,153,0.15)'
+                    : 'rgba(4,7,12,0.5)',
+                  color: currentStatus.activeRunway === '19' ? '#34D399' : '#64748B',
+                }}
+              >
+                19
+              </button>
             </div>
           </div>
-          <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)' }}>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>Inspection Complete</div>
+        </div>
+      </div>
+
+      {/* ===== Last Completed ===== */}
+      <div className="card" style={{ marginBottom: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+          <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
+            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>Last Inspection Completed</div>
             <div style={{ fontSize: 12, fontWeight: 700, color: currentStatus.inspectionCompletion ? '#34D399' : '#FBBF24' }}>
               {currentStatus.inspectionCompletion || 'Not Completed'}
             </div>
           </div>
-          <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)' }}>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>RSC</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#38BDF8' }}>
-              {currentStatus.rscCondition
-                ? `${currentStatus.rscCondition}${currentStatus.rscTime ? ` @ ${currentStatus.rscTime}` : ''}`
+          <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
+            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>Last Check Completed</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#22D3EE' }}>
+              {currentStatus.lastCheckType && currentStatus.lastCheckTime
+                ? `${currentStatus.lastCheckType} @ ${currentStatus.lastCheckTime}`
                 : 'No Data'}
             </div>
           </div>
@@ -404,7 +455,7 @@ export default function HomePage() {
             }}
           >
             <div style={{ fontSize: 22, marginBottom: 4 }}>{k.icon}</div>
-            <div style={{ fontSize: 9, color: k.color, letterSpacing: '0.08em', fontWeight: 700 }}>
+            <div style={{ fontSize: 9, color: k.color, letterSpacing: '0.08em', fontWeight: 700, whiteSpace: 'pre-line', lineHeight: 1.3 }}>
               {k.label}
             </div>
           </Link>
