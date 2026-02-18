@@ -462,26 +462,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ===== Last Completed ===== */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-          <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>Last Inspection Completed</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: currentStatus.inspectionCompletion ? '#34D399' : '#FBBF24' }}>
-              {currentStatus.inspectionCompletion || 'Not Completed'}
-            </div>
-          </div>
-          <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>Last Check Completed</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#22D3EE' }}>
-              {currentStatus.lastCheckType && currentStatus.lastCheckTime
-                ? `${currentStatus.lastCheckType} @ ${currentStatus.lastCheckTime}`
-                : 'No Data'}
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* ===== NAVAID Status ===== */}
       <span className="section-label">NAVAID Status</span>
       {navaids.length === 0 ? (
@@ -553,6 +533,18 @@ export default function HomePage() {
           </div>
         )
       })()}
+
+      {/* ===== Last Check Completed ===== */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
+          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>Last Check Completed</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#22D3EE' }}>
+            {currentStatus.lastCheckType && currentStatus.lastCheckTime
+              ? `${currentStatus.lastCheckType} @ ${currentStatus.lastCheckTime}`
+              : 'No Data'}
+          </div>
+        </div>
+      </div>
 
       {/* ===== KPI Tiles — 3 across ===== */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 18 }}>
@@ -627,7 +619,7 @@ export default function HomePage() {
         </div>
       ) : (
         <>
-          {(activityExpanded ? activity : activity.slice(0, 6)).map((a, i, arr) => {
+          {(activityExpanded ? activity : activity.slice(0, 3)).map((a, i, arr) => {
             const actionColor: Record<string, string> = {
               created: '#34D399',
               completed: '#22D3EE',
@@ -681,7 +673,7 @@ export default function HomePage() {
               </div>
             )
           })}
-          {activity.length > 6 && (
+          {activity.length > 3 && (
             <button
               onClick={() => setActivityExpanded((p) => !p)}
               style={{
