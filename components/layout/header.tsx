@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { RefreshCw } from 'lucide-react'
 
 // Header matching prototype: gradient bg, logo, "AIRFIELD OPS" gradient text, sync + status dot
@@ -25,7 +26,7 @@ export function Header() {
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <div
             style={{
               width: 36,
@@ -58,7 +59,7 @@ export function Header() {
               SELFRIDGE ANGB &bull; KMTC
             </div>
           </div>
-        </div>
+        </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <button
             onClick={handleSync}

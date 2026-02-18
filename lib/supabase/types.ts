@@ -15,11 +15,13 @@ export type Database = {
           shop: string | null
           phone: string | null
           is_active: boolean
+          last_seen_at: string | null
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'created_at' | 'updated_at'>
+        Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'created_at' | 'updated_at' | 'last_seen_at'>
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>
+        Relationships: []
       }
       discrepancies: {
         Row: {
@@ -28,6 +30,7 @@ export type Database = {
           type: string
           severity: Severity
           status: DiscrepancyStatus
+          current_status: CurrentStatus
           title: string
           description: string
           location_text: string
@@ -37,7 +40,7 @@ export type Database = {
           assigned_to: string | null
           reported_by: string
           work_order_number: string | null
-          sla_deadline: string | null
+          notam_reference: string | null
           linked_notam_id: string | null
           inspection_id: string | null
           resolution_notes: string | null
@@ -48,6 +51,7 @@ export type Database = {
         }
         Insert: Omit<Database['public']['Tables']['discrepancies']['Row'], 'id' | 'created_at' | 'updated_at' | 'photo_count'>
         Update: Partial<Database['public']['Tables']['discrepancies']['Insert']>
+        Relationships: []
       }
       photos: {
         Row: {
@@ -67,37 +71,52 @@ export type Database = {
         }
         Insert: Omit<Database['public']['Tables']['photos']['Row'], 'id' | 'created_at' | 'captured_at'>
         Update: Partial<Database['public']['Tables']['photos']['Insert']>
+        Relationships: []
       }
       status_updates: {
         Row: {
           id: string
           discrepancy_id: string
           old_status: string | null
-          new_status: string
+          new_status: string | null
           notes: string | null
           updated_by: string
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['status_updates']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['status_updates']['Insert']>
+        Relationships: []
       }
       airfield_checks: {
         Row: {
           id: string
           display_id: string
           check_type: CheckType
-          performed_by: string
-          check_date: string
+          areas: string[]
+          data: Record<string, unknown>
+          completed_by: string | null
+          completed_at: string | null
           latitude: number | null
           longitude: number | null
-          data: Record<string, unknown>
-          notes: string | null
           photo_count: number
           created_at: string
           updated_at: string
         }
         Insert: Omit<Database['public']['Tables']['airfield_checks']['Row'], 'id' | 'created_at' | 'updated_at' | 'photo_count'>
         Update: Partial<Database['public']['Tables']['airfield_checks']['Insert']>
+        Relationships: []
+      }
+      check_comments: {
+        Row: {
+          id: string
+          check_id: string
+          comment: string
+          user_name: string
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['check_comments']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['check_comments']['Insert']>
+        Relationships: []
       }
       inspections: {
         Row: {
@@ -105,6 +124,7 @@ export type Database = {
           display_id: string
           inspection_type: InspectionType
           inspector_id: string
+          inspector_name: string | null
           inspection_date: string
           status: 'in_progress' | 'completed'
           items: InspectionItem[]
@@ -113,13 +133,21 @@ export type Database = {
           failed_count: number
           na_count: number
           completion_percent: number
+          construction_meeting: boolean
+          joint_monthly: boolean
+          personnel: string[]
+          bwc_value: string | null
+          weather_conditions: string | null
+          temperature_f: number | null
           notes: string | null
+          daily_group_id: string | null
           completed_at: string | null
           created_at: string
           updated_at: string
         }
         Insert: Omit<Database['public']['Tables']['inspections']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['inspections']['Insert']>
+        Relationships: []
       }
       notams: {
         Row: {
@@ -141,17 +169,25 @@ export type Database = {
         }
         Insert: Omit<Database['public']['Tables']['notams']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['notams']['Insert']>
+        Relationships: []
       }
       obstruction_evaluations: {
         Row: {
           id: string
+          display_id: string
           runway_class: 'A' | 'B'
           object_height_agl: number
           object_distance_ft: number | null
+          distance_from_centerline_ft: number | null
           object_elevation_msl: number | null
+          obstruction_top_msl: number | null
           latitude: number | null
           longitude: number | null
+          description: string | null
+          photo_storage_path: string | null
           results: Record<string, unknown>[]
+          controlling_surface: string | null
+          violated_surfaces: string[]
           has_violation: boolean
           evaluated_by: string
           linked_discrepancy_id: string | null
@@ -160,6 +196,7 @@ export type Database = {
         }
         Insert: Omit<Database['public']['Tables']['obstruction_evaluations']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['obstruction_evaluations']['Insert']>
+        Relationships: []
       }
       activity_log: {
         Row: {
@@ -174,6 +211,20 @@ export type Database = {
         }
         Insert: Omit<Database['public']['Tables']['activity_log']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['activity_log']['Insert']>
+        Relationships: []
+      }
+      navaid_statuses: {
+        Row: {
+          id: string
+          navaid_name: string
+          status: 'green' | 'yellow' | 'red'
+          notes: string | null
+          updated_by: string | null
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['navaid_statuses']['Row'], 'id' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['navaid_statuses']['Insert']>
+        Relationships: []
       }
     }
     Views: Record<string, never>
@@ -195,9 +246,10 @@ export type UserRole =
   | 'sys_admin'
 
 export type Severity = 'critical' | 'high' | 'medium' | 'low'
-export type DiscrepancyStatus = 'open' | 'assigned' | 'in_progress' | 'resolved' | 'closed'
-export type CheckType = 'fod' | 'bash' | 'rcr' | 'rsc' | 'emergency'
-export type InspectionType = 'daily' | 'semi_annual' | 'annual'
+export type DiscrepancyStatus = 'open' | 'completed' | 'cancelled'
+export type CurrentStatus = 'submitted_to_afm' | 'submitted_to_ces' | 'awaiting_action_by_ces' | 'work_completed_awaiting_verification'
+export type CheckType = 'fod' | 'rsc' | 'ife' | 'ground_emergency' | 'heavy_aircraft' | 'bash' | 'rcr'
+export type InspectionType = 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
 export type NotamStatus = 'draft' | 'active' | 'cancelled' | 'expired'
 
 export type InspectionItem = {
@@ -216,7 +268,9 @@ export type Discrepancy = Database['public']['Tables']['discrepancies']['Row']
 export type Photo = Database['public']['Tables']['photos']['Row']
 export type StatusUpdate = Database['public']['Tables']['status_updates']['Row']
 export type AirfieldCheck = Database['public']['Tables']['airfield_checks']['Row']
+export type CheckComment = Database['public']['Tables']['check_comments']['Row']
 export type Inspection = Database['public']['Tables']['inspections']['Row']
 export type Notam = Database['public']['Tables']['notams']['Row']
 export type ObstructionEvaluation = Database['public']['Tables']['obstruction_evaluations']['Row']
 export type ActivityLog = Database['public']['Tables']['activity_log']['Row']
+export type NavaidStatus = Database['public']['Tables']['navaid_statuses']['Row']
