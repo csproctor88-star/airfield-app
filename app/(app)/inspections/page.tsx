@@ -580,16 +580,28 @@ export default function InspectionsPage() {
               Started {new Date(draft.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </div>
           </div>
-          <button
-            onClick={() => setShowHistory(true)}
-            style={{
-              background: '#0EA5E914', border: '1px solid #0EA5E933', borderRadius: 8,
-              padding: '8px 14px', color: '#0EA5E9', fontSize: 11, fontWeight: 600,
-              fontFamily: 'inherit', cursor: 'pointer',
-            }}
-          >
-            View History
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => toast.info('Airfield diagram coming soon')}
+              style={{
+                background: '#A78BFA14', border: '1px solid #A78BFA33', borderRadius: 8,
+                padding: '8px 14px', color: '#A78BFA', fontSize: 11, fontWeight: 600,
+                fontFamily: 'inherit', cursor: 'pointer',
+              }}
+            >
+              Airfield Diagram
+            </button>
+            <button
+              onClick={() => setShowHistory(true)}
+              style={{
+                background: '#0EA5E914', border: '1px solid #0EA5E933', borderRadius: 8,
+                padding: '8px 14px', color: '#0EA5E9', fontSize: 11, fontWeight: 600,
+                fontFamily: 'inherit', cursor: 'pointer',
+              }}
+            >
+              View History
+            </button>
+          </div>
         </div>
 
         {/* ── Tab Bar ── */}
