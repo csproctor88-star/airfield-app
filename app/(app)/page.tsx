@@ -40,9 +40,9 @@ function presenceLabel(lastSeen: string | null): { label: string; color: string 
 // --- Quick Actions ---
 const QUICK_ACTIONS = [
   { label: 'New Discrepancy', icon: Plus, color: '#EF4444', href: '/discrepancies/new' },
-  { label: 'Check History', icon: ClipboardCheck, color: '#22D3EE', href: '/checks/history' },
-  { label: 'Obstruction Eval List', icon: TriangleAlert, color: '#F97316', href: '/obstructions/history' },
-  { label: 'Inspection History', icon: ClipboardList, color: '#34D399', href: '/inspections' },
+  { label: 'Airfield Check History', icon: ClipboardCheck, color: '#22D3EE', href: '/checks/history' },
+  { label: 'Obstruction Database', icon: TriangleAlert, color: '#F97316', href: '/obstructions/history' },
+  { label: 'Airfield Inspection History', icon: ClipboardList, color: '#34D399', href: '/inspections' },
 ]
 
 // --- KPI Tiles ---
