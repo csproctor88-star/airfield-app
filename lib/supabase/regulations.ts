@@ -15,6 +15,10 @@ export type RegulationRow = {
   is_cross_ref: boolean
   is_scrubbed: boolean
   tags: string[]
+  storage_path: string | null
+  file_size_bytes: number | null
+  last_verified_at: string | null
+  verified_date: string | null
   created_at: string
 }
 
@@ -79,4 +83,24 @@ export async function searchRegulations(query: string): Promise<RegulationRow[]>
   }
 
   return data as RegulationRow[]
+}
+
+/**
+ * Get a signed URL for a cached PDF in Supabase Storage.
+ * Returns null if the regulation has no cached PDF.
+ */
+export async function getRegulationPdfUrl(storagePath: string): Promise<string | null> {
+  const supabase = createClient()
+  if (!supabase) return null
+
+  const { data, error } = await supabase.storage
+    .from('regulation-pdfs')
+    .createSignedUrl(storagePath, 3600) // 1 hour expiry
+
+  if (error) {
+    console.error('Failed to get signed URL:', error.message)
+    return null
+  }
+
+  return data.signedUrl
 }

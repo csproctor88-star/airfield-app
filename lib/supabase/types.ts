@@ -242,6 +242,10 @@ export type Database = {
           is_cross_ref: boolean
           is_scrubbed: boolean
           tags: string[]
+          storage_path: string | null
+          file_size_bytes: number | null
+          last_verified_at: string | null
+          verified_date: string | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['regulations']['Row'], 'id' | 'created_at'>

@@ -272,6 +272,13 @@ CREATE INDEX idx_regulations_pub_type ON regulations(pub_type);
 CREATE INDEX idx_regulations_source_section ON regulations(source_section);
 CREATE INDEX idx_regulations_reg_id ON regulations(reg_id);
 
+-- 5.11b Regulation PDF storage tracking
+-- Tracks which regulations have cached PDFs in Supabase Storage
+ALTER TABLE regulations ADD COLUMN IF NOT EXISTS storage_path TEXT;
+ALTER TABLE regulations ADD COLUMN IF NOT EXISTS file_size_bytes INTEGER;
+ALTER TABLE regulations ADD COLUMN IF NOT EXISTS last_verified_at TIMESTAMPTZ;
+ALTER TABLE regulations ADD COLUMN IF NOT EXISTS verified_date TEXT;
+
 -- NOTE: Row Level Security policies are intentionally omitted from this schema.
 -- RLS and role-based access control will be added in a later development phase.
 -- For now, all authenticated users have full access to all tables.
