@@ -207,31 +207,29 @@ export const AIRFIELD_INSPECTION_SECTIONS: InspectionSection[] = [
     title: 'Section 5 — Pavement Condition / Markings',
     guidance: 'Conditions: Rubber deposits, cracks, spalling, FOD. Markings: Chipped/peeling/faded, obscure, rubber buildup',
     items: [
-      { id: 'af-30', itemNumber: 30, item: 'Runway/Overruns 05/23' },
+      { id: 'af-30', itemNumber: 30, item: 'Runway/Overruns 01/19' },
       { id: 'af-31', itemNumber: 31, item: 'Taxiways' },
-      { id: 'af-32', itemNumber: 32, item: 'North & South Hot Pits' },
-      { id: 'af-33', itemNumber: 33, item: 'Parking Loops' },
-      { id: 'af-34', itemNumber: 34, item: 'Access Roads / FOD Checks' },
-      { id: 'af-35', itemNumber: 35, item: 'Grounding Points' },
+      { id: 'af-32', itemNumber: 32, item: 'Access Roads / FOD Checks' },
+      { id: 'af-33', itemNumber: 33, item: 'Grounding Points' },
     ],
   },
   {
     id: 'af-6',
     title: 'Section 6 — Airfield Driving',
     items: [
-      { id: 'af-36', itemNumber: 36, item: 'FOD Control' },
-      { id: 'af-37', itemNumber: 37, item: 'Compliance with Procedures' },
-      { id: 'af-38', itemNumber: 38, item: 'Properly Stowed/Secured Equipment' },
+      { id: 'af-34', itemNumber: 34, item: 'FOD Control' },
+      { id: 'af-35', itemNumber: 35, item: 'Compliance with Procedures' },
+      { id: 'af-36', itemNumber: 36, item: 'Properly Stowed/Secured Equipment' },
     ],
   },
   {
     id: 'af-7',
     title: 'Section 7 — FOD Control',
     items: [
-      { id: 'af-39', itemNumber: 39, item: 'Runways/Overruns, Taxiways/Shoulders' },
-      { id: 'af-40', itemNumber: 40, item: 'Parking Aprons' },
-      { id: 'af-41', itemNumber: 41, item: 'Infield Areas Between Runways/Taxiways' },
-      { id: 'af-42', itemNumber: 42, item: 'Perimeter/Access Roads' },
+      { id: 'af-37', itemNumber: 37, item: 'Runways/Overruns, Taxiways/Shoulders' },
+      { id: 'af-38', itemNumber: 38, item: 'Parking Aprons' },
+      { id: 'af-39', itemNumber: 39, item: 'Infield Areas Between Runways/Taxiways' },
+      { id: 'af-40', itemNumber: 40, item: 'Perimeter/Access Roads' },
     ],
   },
   {
@@ -239,7 +237,7 @@ export const AIRFIELD_INSPECTION_SECTIONS: InspectionSection[] = [
     title: 'Section 8 — Pre or Post Construction Inspection',
     conditional: 'Construction meeting inspection',
     items: [
-      { id: 'af-43', itemNumber: 43, item: 'CE, Wing Safety' },
+      { id: 'af-41', itemNumber: 41, item: 'CE, Wing Safety' },
     ],
   },
   {
@@ -247,7 +245,7 @@ export const AIRFIELD_INSPECTION_SECTIONS: InspectionSection[] = [
     title: 'Section 9 — Joint Monthly Airfield Inspection',
     conditional: 'Joint Monthly Airfield Inspection',
     items: [
-      { id: 'af-44', itemNumber: 44, item: 'TERPS, Flight & Ground Safety, SOF, CE, SFS' },
+      { id: 'af-42', itemNumber: 42, item: 'TERPS, Flight & Ground Safety, SOF, CE, SFS' },
     ],
   },
 ]
