@@ -97,6 +97,7 @@ type CurrentStatusData = {
   rscCondition: string | null
   rscTime: string | null
   activeRunway: '01' | '19'
+  runwayStatus: 'open' | 'suspended' | 'closed'
 }
 
 export default function HomePage() {
@@ -108,7 +109,7 @@ export default function HomePage() {
   const [navaidNotes, setNavaidNotes] = useState<Record<string, string>>({})
   const [activity, setActivity] = useState<ActivityEntry[]>([])
   const [currentStatus, setCurrentStatus] = useState<CurrentStatusData>({
-    bwc: null, lastCheckType: null, lastCheckTime: null, inspectionCompletion: null, rscCondition: null, rscTime: null, activeRunway: '01',
+    bwc: null, lastCheckType: null, lastCheckTime: null, inspectionCompletion: null, rscCondition: null, rscTime: null, activeRunway: '01', runwayStatus: 'open',
   })
 
   // --- Clock ---
@@ -339,15 +340,25 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Advisory</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#475569' }}>None</div>
+              </div>
             </>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 18 }}>❓</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#64748B' }}>UNKWN</div>
-                <div style={{ fontSize: 10, color: '#475569' }}>Weather data unavailable</div>
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 18 }}>❓</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#64748B' }}>UNKWN</div>
+                  <div style={{ fontSize: 10, color: '#475569' }}>Weather data unavailable</div>
+                </div>
               </div>
-            </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Advisory</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#475569' }}>None</div>
+              </div>
+            </>
           )
         ) : (
           <div style={{ fontSize: 11, color: '#64748B' }}>Loading weather...</div>
@@ -374,7 +385,7 @@ export default function HomePage() {
           </div>
           <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
             <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 4 }}>Active RWY</div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginBottom: 6 }}>
               <button
                 onClick={() => setCurrentStatus((prev) => ({ ...prev, activeRunway: '01' }))}
                 style={{
@@ -413,6 +424,38 @@ export default function HomePage() {
               >
                 19
               </button>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 3 }}>
+              {([
+                { key: 'open', label: 'Open', color: '#34D399' },
+                { key: 'suspended', label: 'SUSP', color: '#FBBF24' },
+                { key: 'closed', label: 'Closed', color: '#EF4444' },
+              ] as const).map((s) => {
+                const active = currentStatus.runwayStatus === s.key
+                return (
+                  <button
+                    key={s.key}
+                    onClick={() => setCurrentStatus((prev) => ({ ...prev, runwayStatus: s.key }))}
+                    style={{
+                      padding: '2px 6px',
+                      borderRadius: 4,
+                      fontSize: 8,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      border: active
+                        ? `2px solid ${s.color}`
+                        : '1px solid rgba(56,189,248,0.12)',
+                      background: active
+                        ? `${s.color}20`
+                        : 'rgba(4,7,12,0.5)',
+                      color: active ? s.color : '#64748B',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {s.label}
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>
