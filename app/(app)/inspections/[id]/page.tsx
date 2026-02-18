@@ -202,7 +202,7 @@ export default function InspectionDetailPage() {
           &larr; Back
         </button>
         <Link
-          href="/inspections"
+          href="/inspections?view=history"
           style={{ color: '#22D3EE', fontSize: 11, fontWeight: 600, textDecoration: 'none' }}
         >
           All Inspections
@@ -502,7 +502,7 @@ export default function InspectionDetailPage() {
           {generatingPdf ? 'Generating...' : 'Export PDF'}
         </button>
         <Link
-          href="/inspections"
+          href="/inspections?view=history"
           style={{
             flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
             background: '#22C55E14', border: '1px solid #22C55E33',

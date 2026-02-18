@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -29,6 +30,8 @@ type BwcValue = null | (typeof BWC_OPTIONS)[number]
 type TabType = 'airfield' | 'lighting'
 
 export default function InspectionsPage() {
+  const router = useRouter()
+
   // ── Core state ──
   const [draft, setDraft] = useState<DailyInspectionDraft | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('airfield')
@@ -41,7 +44,10 @@ export default function InspectionsPage() {
   const [usingDemo, setUsingDemo] = useState(false)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
-  const [showHistory, setShowHistory] = useState(false)
+  const [showHistory, setShowHistory] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return new URLSearchParams(window.location.search).get('view') === 'history'
+  })
 
   // ── Action state ──
   const [saving, setSaving] = useState(false)
@@ -296,12 +302,13 @@ export default function InspectionsPage() {
     setFiling(true)
     const groupId = draft.id
     let filed = 0
+    let filedId: string | null = null
 
     // File airfield half
     if (airfieldSaved) {
       if (airfieldSpecialMode && airfieldSpecialType) {
         // ── Special mode: file as standalone construction_meeting or joint_monthly ──
-        const { error } = await createInspection({
+        const { data: created, error } = await createInspection({
           inspection_type: airfieldSpecialType,
           inspector_name: airfieldHalf.inspectorName || 'Unknown',
           items: [],
@@ -325,6 +332,7 @@ export default function InspectionsPage() {
           toast.error(`Failed to file ${airfieldSpecialType}: ${error}`)
         } else {
           filed++
+          if (created && !filedId) filedId = created.id
         }
       } else {
         // ── Normal airfield inspection ──
@@ -358,7 +366,7 @@ export default function InspectionsPage() {
           return airfieldHalf.responses[i.id] === 'na'
         }).length
 
-        const { error } = await createInspection({
+        const { data: created, error } = await createInspection({
           inspection_type: 'airfield',
           inspector_name: airfieldHalf.inspectorName || 'Unknown',
           items,
@@ -378,6 +386,7 @@ export default function InspectionsPage() {
           toast.error(`Failed to file airfield: ${error}`)
         } else {
           filed++
+          if (created && !filedId) filedId = created.id
         }
       }
     }
@@ -417,7 +426,7 @@ export default function InspectionsPage() {
       // If airfield was special mode, lighting is standalone (no group)
       const lightingGroupId = airfieldSpecialMode ? undefined : groupId
 
-      const { error } = await createInspection({
+      const { data: created, error } = await createInspection({
         inspection_type: 'lighting',
         inspector_name: lightingHalf.inspectorName || 'Unknown',
         items,
@@ -437,6 +446,7 @@ export default function InspectionsPage() {
         toast.error(`Failed to file lighting: ${error}`)
       } else {
         filed++
+        if (created && !filedId) filedId = created.id
       }
     }
 
@@ -446,6 +456,11 @@ export default function InspectionsPage() {
       toast.success(`Inspection${filed !== 1 ? 's' : ''} filed`, {
         description: `${filed} record${filed !== 1 ? 's' : ''} saved to history`,
       })
+      // Navigate to the filed inspection detail page
+      if (filedId) {
+        router.push(`/inspections/${filedId}`)
+        return
+      }
       await loadHistory()
     }
     setFiling(false)
