@@ -11,7 +11,44 @@ All notable changes to the Airfield OPS Management Suite.
 - NASA DIP API integration for FAA NOTAM sync
 - METAR weather API integration (aviationweather.gov)
 - Role-based access control (re-enable RLS policies)
+- NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
+
+---
+
+## [1.0.0] — 2026-02-18
+
+### Homepage Build — Complete
+
+This release completes the homepage build phase. The dashboard is now a fully functional operational hub with live data, and all navigation paths are wired to real pages.
+
+#### Dashboard (`/`)
+- **Live weather**: Open-Meteo API integration with temperature, conditions, wind speed, visibility
+- **Weather emoji mapping**: Dynamic icons based on conditions (thunderstorm, snow, rain, fog, clear, etc.)
+- **Advisory system**: Clickable advisory dialog with INFO/CAUTION/WARNING levels, banner display, set/clear actions
+- **Active Runway toggle**: RWY 01/19 button with Open/Suspended/Closed status dropdown, color-coded card backgrounds
+- **Current Status panel**: RSC condition, BWC value, and Last Check Completed — all pulled from Supabase
+- **NAVAID Status**: Side-by-side RWY 01 and RWY 19 panels with G/Y/R single-tap toggle buttons, auto-expanding note fields for yellow/red statuses, Supabase persistence
+- **User presence**: Profile display with Online/Away/Inactive status based on `last_seen_at`, 5-minute heartbeat updates
+- **Activity feed**: Real-time feed from `activity_log` table with profile joins, expandable to 20 entries
+- **Quick Actions**: Begin/Continue Airfield Inspection, Begin Airfield Check, New Discrepancy — large touch targets linking to respective forms
+- **Clock**: Live HH:MM display updated every second
+
+#### Navigation
+- **Bottom nav restructured**: Home, Aircraft, Regulations, Obstruction Eval, More — 5 tabs with active state highlighting
+- **More menu reordered**: Airfield Inspection History, Airfield Check History, Obstruction Database, Waivers, Reports, NOTAMs, Sync & Data, Users & Security, Settings
+- **All More links now functional**: Created coming soon placeholder pages for Aircraft, Regulations, Waivers, Reports, Settings, Users & Security, Sync & Data
+- **No dead `#` links remain** in the More menu
+
+#### Inspection History UX
+- **Button text**: "Back to Draft" renamed to "View Current Inspection Form"
+- **Search expanded**: Now covers inspection type, construction/joint labels, failed item count, personnel names, BWC value, inspector name, weather conditions, and display IDs
+- **Collapsible sections**: Airfield/Lighting sections default to collapsed in combined reports
+
+#### Database
+- **`navaid_statuses` table**: New table for NAVAID G/Y/R status and notes per approach system
+- **`last_seen_at` column**: Added to `profiles` for user presence tracking
+- **Migrations**: `20260218_create_navaid_statuses.sql`, `20260218_add_last_seen_at.sql`
 
 ---
 
