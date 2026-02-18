@@ -39,11 +39,9 @@ const SEVERITY_COLORS: Record<string, string> = {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  open: '#EF4444',
-  assigned: '#F97316',
-  in_progress: '#FBBF24',
-  resolved: '#34D399',
-  closed: '#64748B',
+  open: '#3B82F6',
+  completed: '#10B981',
+  cancelled: '#9CA3AF',
 }
 
 export function SeverityBadge({ severity }: { severity: string }) {
@@ -51,8 +49,15 @@ export function SeverityBadge({ severity }: { severity: string }) {
   return <Badge label={severity.toUpperCase()} color={color} />
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  open: 'Open',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+}
+
 export function StatusBadge({ status }: { status: string }) {
-  const color = STATUS_COLORS[status.toLowerCase().replace(/ /g, '_')] || '#94A3B8'
-  const label = status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  const key = status.toLowerCase().replace(/ /g, '_')
+  const color = STATUS_COLORS[key] || '#94A3B8'
+  const label = STATUS_LABELS[key] || status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   return <Badge label={label} color={color} />
 }

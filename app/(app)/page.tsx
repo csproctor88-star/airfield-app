@@ -6,28 +6,25 @@ import { Badge } from '@/components/ui/badge'
 import {
   Plus,
   Search,
-  Bird,
-  BarChart3,
-  Snowflake,
   AlertTriangle,
   ClipboardCheck,
   Megaphone,
 } from 'lucide-react'
+import { fetchDiscrepancyKPIs } from '@/lib/supabase/discrepancies'
+import { createClient } from '@/lib/supabase/client'
 
 // Home screen matching prototype: clock, weather, KPI tiles, quick actions, today's status, activity
 
-// Placeholder data for initial render — will connect to Supabase in Step 9
-const PLACEHOLDER_KPIS = { open: 4, critical: 2, overdue: 1, notams: 3 }
+// Placeholder data used as fallback when Supabase is not configured
+const PLACEHOLDER_KPIS = { open: 4, critical: 2, notams: 3 }
 
 const QUICK_ACTIONS = [
   { label: 'New Discrep', icon: Plus, color: '#EF4444', href: '/discrepancies/new' },
-  { label: 'FOD Check', icon: Search, color: '#FBBF24', href: '/checks/fod' },
-  { label: 'BASH Check', icon: Bird, color: '#A78BFA', href: '/checks/bash' },
-  { label: 'RCR Reading', icon: BarChart3, color: '#22D3EE', href: '/checks/rcr' },
-  { label: 'RSC Report', icon: Snowflake, color: '#38BDF8', href: '/checks/rsc' },
-  { label: 'Emergency', icon: AlertTriangle, color: '#EF4444', href: '/checks/emergency' },
-  { label: 'Inspection', icon: ClipboardCheck, color: '#34D399', href: '/inspections/new' },
+  { label: 'Airfield Check', icon: Search, color: '#FBBF24', href: '/checks' },
+  { label: 'Check History', icon: ClipboardCheck, color: '#22D3EE', href: '/checks/history' },
+  { label: 'Inspection', icon: ClipboardCheck, color: '#34D399', href: '/inspections' },
   { label: 'NOTAM', icon: Megaphone, color: '#A78BFA', href: '/notams/new' },
+  { label: 'Obstructions', icon: AlertTriangle, color: '#F97316', href: '/obstructions' },
 ]
 
 const PLACEHOLDER_ACTIVITY = [
@@ -39,6 +36,7 @@ const PLACEHOLDER_ACTIVITY = [
 
 export default function HomePage() {
   const [time, setTime] = useState('')
+  const [kpis, setKpis] = useState(PLACEHOLDER_KPIS)
 
   useEffect(() => {
     const update = () => setTime(new Date().toTimeString().slice(0, 5))
@@ -47,7 +45,16 @@ export default function HomePage() {
     return () => clearInterval(t)
   }, [])
 
-  const kpis = PLACEHOLDER_KPIS
+  useEffect(() => {
+    async function loadKpis() {
+      const supabase = createClient()
+      if (!supabase) return // keep placeholders
+
+      const data = await fetchDiscrepancyKPIs()
+      setKpis({ ...data, notams: PLACEHOLDER_KPIS.notams })
+    }
+    loadKpis()
+  }, [])
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
@@ -80,12 +87,11 @@ export default function HomePage() {
         <Badge label="ADVISORY" color="#FBBF24" />
       </div>
 
-      {/* KPI Tiles — 4 across */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
+      {/* KPI Tiles — 3 across */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
         {[
           { label: 'OPEN', value: kpis.open, color: '#FBBF24', href: '/discrepancies' },
           { label: 'CRITICAL', value: kpis.critical, color: kpis.critical > 0 ? '#EF4444' : '#34D399', href: '/discrepancies' },
-          { label: 'OVERDUE', value: kpis.overdue, color: kpis.overdue > 0 ? '#EF4444' : '#34D399', href: '/discrepancies' },
           { label: 'NOTAMS', value: kpis.notams, color: '#A78BFA', href: '/notams' },
         ].map((k) => (
           <Link
@@ -155,7 +161,7 @@ export default function HomePage() {
       <div className="card" style={{ marginBottom: 8 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
           {[
-            { icon: '📋', label: 'Inspection', value: 'Not Started', color: '#FBBF24', href: '/inspections/new' },
+            { icon: '📋', label: 'Inspection', value: 'Not Started', color: '#FBBF24', href: '/inspections' },
             { icon: '⚠️', label: 'FOD', value: '0715L (2 found)', color: '#FBBF24', href: '/checks' },
             { icon: '🦅', label: 'BASH', value: '0645L (LOW)', color: '#34D399', href: '/checks' },
             { icon: '📊', label: 'RCR', value: 'Yest (Mu 64)', color: '#FBBF24', href: '/checks' },

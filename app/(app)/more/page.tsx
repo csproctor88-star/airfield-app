@@ -7,10 +7,10 @@ import { Badge } from '@/components/ui/badge'
 
 const modules = [
   { name: 'Discrepancies', icon: '📝', color: '#EF4444', badge: '4 open', href: '/discrepancies' },
-  { name: 'Inspections', icon: '📋', color: '#34D399', badge: null, href: '/inspections/new' },
+  { name: 'Inspections', icon: '📋', color: '#34D399', badge: null, href: '/inspections' },
   { name: 'NOTAMs', icon: '📡', color: '#A78BFA', badge: '3 active', href: '/notams' },
   { name: 'Airfield Checks', icon: '🛡️', color: '#FBBF24', badge: null, href: '/checks' },
-  { name: 'Obstructions', icon: '🗺️', color: '#38BDF8', badge: null, href: '#' },
+  { name: 'Obstructions', icon: '🗺️', color: '#38BDF8', badge: null, href: '/obstructions' },
   { name: 'Reports', icon: '📊', color: '#22D3EE', badge: null, href: '#' },
   { name: 'Users & Security', icon: '👥', color: '#64748B', badge: '3 online', href: '#' },
   { name: 'Sync & Data', icon: '🔄', color: '#22D3EE', badge: '3 pending', href: '#' },
