@@ -419,53 +419,51 @@ export default function InspectionDetailPage() {
 
             return (
               <div key={insp.id}>
-                {/* Type divider — collapsible for combined reports */}
-                {isDaily && (
-                  <button
-                    onClick={() => setExpandedSections((prev) => ({
-                      ...prev,
-                      [insp.inspection_type]: !prev[insp.inspection_type],
-                    }))}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      width: '100%',
-                      margin: '12px 0 8px',
-                      padding: '10px 12px',
-                      borderRadius: 8,
-                      background: insp.inspection_type === 'airfield' ? 'rgba(52,211,153,0.06)' : 'rgba(251,191,36,0.06)',
-                      border: `1px solid ${insp.inspection_type === 'airfield' ? 'rgba(52,211,153,0.2)' : 'rgba(251,191,36,0.2)'}`,
-                      cursor: 'pointer',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    <div style={{
-                      fontSize: 12, fontWeight: 800,
-                      color: insp.inspection_type === 'airfield' ? '#34D399' : '#FBBF24',
-                      display: 'flex', alignItems: 'center', gap: 6,
-                    }}>
-                      <span>{insp.inspection_type === 'airfield' ? '📋' : '💡'}</span>
-                      {insp.inspection_type === 'airfield' ? 'Airfield Inspection' : 'Lighting Inspection'}
-                      <span style={{ fontSize: 10, fontWeight: 600, color: '#64748B', marginLeft: 4 }}>
-                        {insp.passed_count}/{insp.total_items}
-                        {insp.failed_count > 0 && <span style={{ color: '#EF4444', marginLeft: 4 }}>{insp.failed_count} fail</span>}
-                      </span>
-                    </div>
-                    <span style={{
-                      fontSize: 14,
-                      color: insp.inspection_type === 'airfield' ? '#34D399' : '#FBBF24',
-                      transition: 'transform 0.2s',
-                      transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
-                      display: 'inline-block',
-                    }}>
-                      ▾
+                {/* Type divider — collapsible toggle */}
+                <button
+                  onClick={() => setExpandedSections((prev) => ({
+                    ...prev,
+                    [insp.inspection_type]: !prev[insp.inspection_type],
+                  }))}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    margin: '12px 0 8px',
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    background: insp.inspection_type === 'airfield' ? 'rgba(52,211,153,0.06)' : 'rgba(251,191,36,0.06)',
+                    border: `1px solid ${insp.inspection_type === 'airfield' ? 'rgba(52,211,153,0.2)' : 'rgba(251,191,36,0.2)'}`,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <div style={{
+                    fontSize: 12, fontWeight: 800,
+                    color: insp.inspection_type === 'airfield' ? '#34D399' : '#FBBF24',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                  }}>
+                    <span>{insp.inspection_type === 'airfield' ? '📋' : '💡'}</span>
+                    {insp.inspection_type === 'airfield' ? 'Airfield Inspection' : 'Lighting Inspection'}
+                    <span style={{ fontSize: 10, fontWeight: 600, color: '#64748B', marginLeft: 4 }}>
+                      {insp.passed_count}/{insp.total_items}
+                      {insp.failed_count > 0 && <span style={{ color: '#EF4444', marginLeft: 4 }}>{insp.failed_count} fail</span>}
                     </span>
-                  </button>
-                )}
+                  </div>
+                  <span style={{
+                    fontSize: 14,
+                    color: insp.inspection_type === 'airfield' ? '#34D399' : '#FBBF24',
+                    transition: 'transform 0.2s',
+                    transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                    display: 'inline-block',
+                  }}>
+                    ▾
+                  </span>
+                </button>
 
-                {/* Collapsible content (always visible for single inspections) */}
-                {(!isDaily || isExpanded) && (
+                {/* Collapsible content */}
+                {isExpanded && (
                   <>
                     {renderInspectionSections(insp)}
 

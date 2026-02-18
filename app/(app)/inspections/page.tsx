@@ -44,10 +44,14 @@ export default function InspectionsPage() {
   const [usingDemo, setUsingDemo] = useState(false)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
-  const [showHistory, setShowHistory] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return new URLSearchParams(window.location.search).get('view') === 'history'
-  })
+  const [showHistory, setShowHistory] = useState(false)
+
+  // ── Sync showHistory from URL (handles client-side navigation) ──
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('view') === 'history') {
+      setShowHistory(true)
+    }
+  }, [])
 
   // ── Action state ──
   const [saving, setSaving] = useState(false)
