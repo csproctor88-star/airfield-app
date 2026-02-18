@@ -3,7 +3,7 @@ import type { InspectionItem } from '@/lib/supabase/types'
 
 interface InspectionData {
   display_id: string
-  inspection_type: 'airfield' | 'lighting'
+  inspection_type: 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
   inspector_name: string | null
   inspection_date: string
   completed_at: string | null
@@ -12,6 +12,7 @@ interface InspectionData {
   bwc_value: string | null
   construction_meeting: boolean
   joint_monthly: boolean
+  personnel?: string[]
   items: InspectionItem[]
   total_items: number
   passed_count: number
@@ -510,5 +511,127 @@ export function generateCombinedInspectionPdf(inspections: InspectionData[]) {
     ? new Date(primary.completed_at).toISOString().split('T')[0]
     : primary.inspection_date
   const filename = `Airfield_Inspection_Report_${dateForFilename}.pdf`
+  doc.save(filename)
+}
+
+/**
+ * Generate a PDF for a Construction Meeting or Joint Monthly Airfield Inspection.
+ * These are standalone records with a comment and personnel list (no checklist items).
+ */
+export function generateSpecialInspectionPdf(inspection: InspectionData) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const margin = 15
+  const contentWidth = pageWidth - margin * 2
+  let y = margin
+
+  const isConstruction = inspection.inspection_type === 'construction_meeting'
+  const title = isConstruction
+    ? 'PRE/POST CONSTRUCTION INSPECTION'
+    : 'JOINT MONTHLY AIRFIELD INSPECTION'
+
+  // ── Header ──
+  doc.setFontSize(8)
+  doc.setTextColor(100)
+  doc.text('SELFRIDGE AIR NATIONAL GUARD BASE (KMTC) — 127TH WING', margin, y)
+  y += 4
+  doc.text('AIRFIELD MANAGEMENT SECTION', margin, y)
+  y += 8
+
+  // Title
+  doc.setFontSize(16)
+  doc.setTextColor(0)
+  doc.text(title, margin, y)
+  y += 6
+
+  // Display ID
+  doc.setFontSize(10)
+  doc.setTextColor(80)
+  doc.text(`Report: ${inspection.display_id}`, margin, y)
+  y += 8
+
+  // ── Info Box ──
+  doc.setDrawColor(180)
+  doc.setLineWidth(0.3)
+  doc.rect(margin, y, contentWidth, 18)
+
+  doc.setFontSize(8)
+  doc.setTextColor(100)
+  const col1 = margin + 3
+  const col2 = margin + contentWidth / 3
+  const col3 = margin + (contentWidth * 2) / 3
+
+  doc.text('Inspector:', col1, y + 5)
+  doc.text('Date:', col2, y + 5)
+  doc.text('Weather:', col3, y + 5)
+
+  doc.setFontSize(9)
+  doc.setTextColor(0)
+  doc.text(inspection.inspector_name || 'N/A', col1, y + 10)
+  const dateStr = inspection.completed_at
+    ? new Date(inspection.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : inspection.inspection_date
+  doc.text(dateStr, col2, y + 10)
+  const weatherStr = [
+    inspection.weather_conditions || '',
+    inspection.temperature_f != null ? `${inspection.temperature_f}°F` : '',
+  ].filter(Boolean).join(', ') || 'N/A'
+  doc.text(weatherStr, col3, y + 10)
+
+  y += 24
+
+  // ── Personnel ──
+  const personnel = inspection.personnel || []
+  if (personnel.length > 0) {
+    doc.setFontSize(10)
+    doc.setTextColor(0)
+    doc.setFont('helvetica', 'bold')
+    doc.text('PERSONNEL / OFFICES PRESENT', margin, y)
+    y += 6
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.setTextColor(40)
+    for (const person of personnel) {
+      doc.text(`• ${person}`, margin + 4, y)
+      y += 5
+    }
+    y += 4
+  }
+
+  // ── Comments ──
+  if (inspection.notes) {
+    doc.setFontSize(10)
+    doc.setTextColor(0)
+    doc.setFont('helvetica', 'bold')
+    doc.text('COMMENTS', margin, y)
+    y += 6
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.setTextColor(40)
+    const noteLines = doc.splitTextToSize(inspection.notes, contentWidth)
+    doc.text(noteLines, margin, y)
+    y += noteLines.length * 4.5
+  }
+
+  // ── Footer ──
+  const totalPages = doc.getNumberOfPages()
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i)
+    doc.setFontSize(7)
+    doc.setTextColor(150)
+    const footerY = doc.internal.pageSize.getHeight() - 8
+    doc.text(
+      `${inspection.display_id} — Page ${i} of ${totalPages} — Generated ${new Date().toLocaleDateString('en-US')}`,
+      margin,
+      footerY,
+    )
+    doc.text('SELFRIDGE ANGB (KMTC) — AIRFIELD OPS', pageWidth - margin, footerY, { align: 'right' })
+  }
+
+  // Download
+  const typeSlug = isConstruction ? 'Construction_Meeting' : 'Joint_Monthly'
+  const filename = `${inspection.display_id}_${typeSlug}_Report.pdf`
   doc.save(filename)
 }

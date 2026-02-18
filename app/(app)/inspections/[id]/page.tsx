@@ -86,6 +86,12 @@ export default function InspectionDetailPage() {
   const airfieldInsp = allInspections.find((i: { inspection_type: string }) => i.inspection_type === 'airfield')
   const lightingInsp = allInspections.find((i: { inspection_type: string }) => i.inspection_type === 'lighting')
   const primary = airfieldInsp || allInspections[0]
+  const isSpecialType = primary.inspection_type === 'construction_meeting' || primary.inspection_type === 'joint_monthly'
+  const specialLabel = primary.inspection_type === 'construction_meeting'
+    ? 'Pre/Post Construction Inspection'
+    : primary.inspection_type === 'joint_monthly'
+    ? 'Joint Monthly Airfield Inspection'
+    : ''
 
   // Combined totals
   const totalPassed = allInspections.reduce((s: number, i: { passed_count: number }) => s + i.passed_count, 0)
@@ -104,7 +110,10 @@ export default function InspectionDetailPage() {
   const handleExportPdf = async () => {
     setGeneratingPdf(true)
     try {
-      if (isDaily) {
+      if (isSpecialType) {
+        const { generateSpecialInspectionPdf } = await import('@/lib/pdf-export')
+        generateSpecialInspectionPdf(allInspections[0])
+      } else if (isDaily) {
         const { generateCombinedInspectionPdf } = await import('@/lib/pdf-export')
         generateCombinedInspectionPdf(allInspections)
       } else {
@@ -203,8 +212,8 @@ export default function InspectionDetailPage() {
       {/* Summary Card */}
       <div className="card" style={{ marginBottom: 8 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <span style={{ fontSize: 16, fontWeight: 800, color: '#22D3EE' }}>
-            {isDaily ? 'Airfield Inspection Report' : primary.display_id}
+          <span style={{ fontSize: 16, fontWeight: 800, color: isSpecialType ? '#A78BFA' : '#22D3EE' }}>
+            {isSpecialType ? specialLabel : isDaily ? 'Airfield Inspection Report' : primary.display_id}
           </span>
           <Badge label="COMPLETED" color="#22C55E" />
         </div>
@@ -218,19 +227,37 @@ export default function InspectionDetailPage() {
           </div>
         )}
 
+        {/* Show display ID for special types */}
+        {isSpecialType && (
+          <div style={{ marginBottom: 10, fontSize: 11, fontFamily: 'monospace', color: '#94A3B8' }}>
+            {primary.display_id}
+          </div>
+        )}
+
         {/* Type badges */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          {airfieldInsp && (
+          {isSpecialType ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ fontSize: 16 }}>📋</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#34D399' }}>Airfield</span>
+              <span style={{ fontSize: 16 }}>{primary.inspection_type === 'construction_meeting' ? '🏗️' : '📋'}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#A78BFA' }}>
+                {primary.inspection_type === 'construction_meeting' ? 'Construction Meeting' : 'Joint Monthly'}
+              </span>
             </div>
-          )}
-          {lightingInsp && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ fontSize: 16 }}>💡</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#FBBF24' }}>Lighting</span>
-            </div>
+          ) : (
+            <>
+              {airfieldInsp && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontSize: 16 }}>📋</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#34D399' }}>Airfield</span>
+                </div>
+              )}
+              {lightingInsp && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontSize: 16 }}>💡</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#FBBF24' }}>Lighting</span>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -282,145 +309,182 @@ export default function InspectionDetailPage() {
         })()}
       </div>
 
-      {/* Combined Results Card */}
-      <div className="card" style={{ marginBottom: 8 }}>
-        <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-          {isDaily ? 'Combined Results' : 'Results'}
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
-          <div style={{ textAlign: 'center', padding: 8, background: 'rgba(34,197,94,0.08)', borderRadius: 8, border: '1px solid rgba(34,197,94,0.2)' }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#22C55E' }}>{totalPassed}</div>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>PASS</div>
-          </div>
-          <button
-            onClick={() => totalFailed > 0 && setShowFailedItems((p) => !p)}
-            style={{
-              textAlign: 'center', padding: 8, borderRadius: 8,
-              background: showFailedItems ? 'rgba(239,68,68,0.18)' : 'rgba(239,68,68,0.08)',
-              border: `1px solid ${showFailedItems ? 'rgba(239,68,68,0.5)' : 'rgba(239,68,68,0.2)'}`,
-              cursor: totalFailed > 0 ? 'pointer' : 'default',
-              fontFamily: 'inherit',
-            }}
-          >
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#EF4444' }}>{totalFailed}</div>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>FAIL {totalFailed > 0 ? (showFailedItems ? '▴' : '▾') : ''}</div>
-          </button>
-          <div style={{ textAlign: 'center', padding: 8, background: 'rgba(100,116,139,0.08)', borderRadius: 8, border: '1px solid rgba(100,116,139,0.2)' }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#64748B' }}>{totalNa}</div>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>N/A</div>
-          </div>
-          <div style={{ textAlign: 'center', padding: 8, background: 'rgba(56,189,248,0.08)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.2)' }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#38BDF8' }}>{totalItems}</div>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>TOTAL</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Combined Failed Items — toggled by Fail button */}
-      {showFailedItems && allFailedItems.length > 0 && (
-        <div className="card" style={{ marginBottom: 8, borderLeft: '3px solid #EF4444' }}>
-          <div style={{ fontSize: 9, color: '#EF4444', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-            Failed Items ({allFailedItems.length})
-          </div>
-          {allFailedItems.map((item) => (
-            <div key={item.id} style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #1E293B' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#F1F5F9' }}>
-                {item.item}
+      {/* ══ Special Type Content (Construction Meeting / Joint Monthly) ══ */}
+      {isSpecialType ? (
+        <>
+          {/* Personnel */}
+          {primary.personnel && primary.personnel.length > 0 && (
+            <div className="card" style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+                Personnel / Offices Present
               </div>
-              <div style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>
-                {item.section}
-                {isDaily && (
-                  <span style={{
-                    marginLeft: 6, fontSize: 9, fontWeight: 600, padding: '1px 4px', borderRadius: 3,
-                    color: item.fromType === 'airfield' ? '#34D399' : '#FBBF24',
-                    background: item.fromType === 'airfield' ? 'rgba(52,211,153,0.1)' : 'rgba(251,191,36,0.1)',
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {primary.personnel.map((person: string) => (
+                  <span key={person} style={{
+                    fontSize: 11, padding: '4px 10px', borderRadius: 6, fontWeight: 600,
+                    background: 'rgba(167,139,250,0.1)', color: '#A78BFA',
+                    border: '1px solid rgba(167,139,250,0.2)',
                   }}>
-                    {item.fromType === 'airfield' ? 'Airfield' : 'Lighting'}
+                    {person}
                   </span>
-                )}
+                ))}
               </div>
-              {item.notes && (
-                <div style={{ fontSize: 11, color: '#FBBF24', marginTop: 4, fontStyle: 'italic' }}>
-                  {item.notes}
-                </div>
-              )}
             </div>
-          ))}
-        </div>
-      )}
+          )}
 
-      {/* Section-by-Section Detail — grouped by inspection type */}
-      {allInspections.map((insp: { id: string; inspection_type: string; items: InspectionItem[]; notes: string | null; passed_count: number; failed_count: number; na_count: number; total_items: number }) => {
-        const items: InspectionItem[] = insp.items || []
-        if (items.length === 0 && !insp.notes) return null
-        const isExpanded = expandedSections[insp.inspection_type] !== false
-
-        return (
-          <div key={insp.id}>
-            {/* Type divider — collapsible for combined reports */}
-            {isDaily && (
+          {/* Comments */}
+          {primary.notes && (
+            <div className="card" style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+                Comments
+              </div>
+              <div style={{ fontSize: 12, color: '#CBD5E1', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{primary.notes}</div>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Combined Results Card */}
+          <div className="card" style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+              {isDaily ? 'Combined Results' : 'Results'}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
+              <div style={{ textAlign: 'center', padding: 8, background: 'rgba(34,197,94,0.08)', borderRadius: 8, border: '1px solid rgba(34,197,94,0.2)' }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#22C55E' }}>{totalPassed}</div>
+                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>PASS</div>
+              </div>
               <button
-                onClick={() => setExpandedSections((prev) => ({
-                  ...prev,
-                  [insp.inspection_type]: !prev[insp.inspection_type],
-                }))}
+                onClick={() => totalFailed > 0 && setShowFailedItems((p) => !p)}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  width: '100%',
-                  margin: '12px 0 8px',
-                  padding: '10px 12px',
-                  borderRadius: 8,
-                  background: insp.inspection_type === 'airfield' ? 'rgba(52,211,153,0.06)' : 'rgba(251,191,36,0.06)',
-                  border: `1px solid ${insp.inspection_type === 'airfield' ? 'rgba(52,211,153,0.2)' : 'rgba(251,191,36,0.2)'}`,
-                  cursor: 'pointer',
+                  textAlign: 'center', padding: 8, borderRadius: 8,
+                  background: showFailedItems ? 'rgba(239,68,68,0.18)' : 'rgba(239,68,68,0.08)',
+                  border: `1px solid ${showFailedItems ? 'rgba(239,68,68,0.5)' : 'rgba(239,68,68,0.2)'}`,
+                  cursor: totalFailed > 0 ? 'pointer' : 'default',
                   fontFamily: 'inherit',
                 }}
               >
-                <div style={{
-                  fontSize: 12, fontWeight: 800,
-                  color: insp.inspection_type === 'airfield' ? '#34D399' : '#FBBF24',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                }}>
-                  <span>{insp.inspection_type === 'airfield' ? '📋' : '💡'}</span>
-                  {insp.inspection_type === 'airfield' ? 'Airfield Inspection' : 'Lighting Inspection'}
-                  <span style={{ fontSize: 10, fontWeight: 600, color: '#64748B', marginLeft: 4 }}>
-                    {insp.passed_count}/{insp.total_items}
-                    {insp.failed_count > 0 && <span style={{ color: '#EF4444', marginLeft: 4 }}>{insp.failed_count} fail</span>}
-                  </span>
-                </div>
-                <span style={{
-                  fontSize: 14,
-                  color: insp.inspection_type === 'airfield' ? '#34D399' : '#FBBF24',
-                  transition: 'transform 0.2s',
-                  transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
-                  display: 'inline-block',
-                }}>
-                  ▾
-                </span>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#EF4444' }}>{totalFailed}</div>
+                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>FAIL {totalFailed > 0 ? (showFailedItems ? '▴' : '▾') : ''}</div>
               </button>
-            )}
-
-            {/* Collapsible content (always visible for single inspections) */}
-            {(!isDaily || isExpanded) && (
-              <>
-                {renderInspectionSections(insp)}
-
-                {/* Notes for this half */}
-                {insp.notes && (
-                  <div className="card" style={{ marginBottom: 8 }}>
-                    <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
-                      {isDaily ? `${insp.inspection_type === 'airfield' ? 'Airfield' : 'Lighting'} Notes` : 'Notes'}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.5 }}>{insp.notes}</div>
-                  </div>
-                )}
-              </>
-            )}
+              <div style={{ textAlign: 'center', padding: 8, background: 'rgba(100,116,139,0.08)', borderRadius: 8, border: '1px solid rgba(100,116,139,0.2)' }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#64748B' }}>{totalNa}</div>
+                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>N/A</div>
+              </div>
+              <div style={{ textAlign: 'center', padding: 8, background: 'rgba(56,189,248,0.08)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.2)' }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#38BDF8' }}>{totalItems}</div>
+                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>TOTAL</div>
+              </div>
+            </div>
           </div>
-        )
-      })}
+
+          {/* Combined Failed Items — toggled by Fail button */}
+          {showFailedItems && allFailedItems.length > 0 && (
+            <div className="card" style={{ marginBottom: 8, borderLeft: '3px solid #EF4444' }}>
+              <div style={{ fontSize: 9, color: '#EF4444', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+                Failed Items ({allFailedItems.length})
+              </div>
+              {allFailedItems.map((item) => (
+                <div key={item.id} style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #1E293B' }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#F1F5F9' }}>
+                    {item.item}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>
+                    {item.section}
+                    {isDaily && (
+                      <span style={{
+                        marginLeft: 6, fontSize: 9, fontWeight: 600, padding: '1px 4px', borderRadius: 3,
+                        color: item.fromType === 'airfield' ? '#34D399' : '#FBBF24',
+                        background: item.fromType === 'airfield' ? 'rgba(52,211,153,0.1)' : 'rgba(251,191,36,0.1)',
+                      }}>
+                        {item.fromType === 'airfield' ? 'Airfield' : 'Lighting'}
+                      </span>
+                    )}
+                  </div>
+                  {item.notes && (
+                    <div style={{ fontSize: 11, color: '#FBBF24', marginTop: 4, fontStyle: 'italic' }}>
+                      {item.notes}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Section-by-Section Detail — grouped by inspection type */}
+          {allInspections.map((insp: { id: string; inspection_type: string; items: InspectionItem[]; notes: string | null; passed_count: number; failed_count: number; na_count: number; total_items: number }) => {
+            const items: InspectionItem[] = insp.items || []
+            if (items.length === 0 && !insp.notes) return null
+            const isExpanded = expandedSections[insp.inspection_type] !== false
+
+            return (
+              <div key={insp.id}>
+                {/* Type divider — collapsible for combined reports */}
+                {isDaily && (
+                  <button
+                    onClick={() => setExpandedSections((prev) => ({
+                      ...prev,
+                      [insp.inspection_type]: !prev[insp.inspection_type],
+                    }))}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      margin: '12px 0 8px',
+                      padding: '10px 12px',
+                      borderRadius: 8,
+                      background: insp.inspection_type === 'airfield' ? 'rgba(52,211,153,0.06)' : 'rgba(251,191,36,0.06)',
+                      border: `1px solid ${insp.inspection_type === 'airfield' ? 'rgba(52,211,153,0.2)' : 'rgba(251,191,36,0.2)'}`,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    <div style={{
+                      fontSize: 12, fontWeight: 800,
+                      color: insp.inspection_type === 'airfield' ? '#34D399' : '#FBBF24',
+                      display: 'flex', alignItems: 'center', gap: 6,
+                    }}>
+                      <span>{insp.inspection_type === 'airfield' ? '📋' : '💡'}</span>
+                      {insp.inspection_type === 'airfield' ? 'Airfield Inspection' : 'Lighting Inspection'}
+                      <span style={{ fontSize: 10, fontWeight: 600, color: '#64748B', marginLeft: 4 }}>
+                        {insp.passed_count}/{insp.total_items}
+                        {insp.failed_count > 0 && <span style={{ color: '#EF4444', marginLeft: 4 }}>{insp.failed_count} fail</span>}
+                      </span>
+                    </div>
+                    <span style={{
+                      fontSize: 14,
+                      color: insp.inspection_type === 'airfield' ? '#34D399' : '#FBBF24',
+                      transition: 'transform 0.2s',
+                      transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                      display: 'inline-block',
+                    }}>
+                      ▾
+                    </span>
+                  </button>
+                )}
+
+                {/* Collapsible content (always visible for single inspections) */}
+                {(!isDaily || isExpanded) && (
+                  <>
+                    {renderInspectionSections(insp)}
+
+                    {/* Notes for this half */}
+                    {insp.notes && (
+                      <div className="card" style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+                          {isDaily ? `${insp.inspection_type === 'airfield' ? 'Airfield' : 'Lighting'} Notes` : 'Notes'}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.5 }}>{insp.notes}</div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )
+          })}
+        </>
+      )}
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>

@@ -44,7 +44,7 @@ CREATE INDEX idx_notams_effective ON notams(effective_start, effective_end);
 CREATE TABLE inspections (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   display_id TEXT NOT NULL UNIQUE,
-  inspection_type TEXT NOT NULL CHECK (inspection_type IN ('airfield', 'lighting')),
+  inspection_type TEXT NOT NULL CHECK (inspection_type IN ('airfield', 'lighting', 'construction_meeting', 'joint_monthly')),
   inspector_id UUID REFERENCES profiles(id),
   inspector_name TEXT,
   inspection_date DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -57,6 +57,7 @@ CREATE TABLE inspections (
   completion_percent NUMERIC(5,2) NOT NULL DEFAULT 0,
   construction_meeting BOOLEAN NOT NULL DEFAULT false,
   joint_monthly BOOLEAN NOT NULL DEFAULT false,
+  personnel TEXT[] NOT NULL DEFAULT '{}',
   bwc_value TEXT CHECK (bwc_value IS NULL OR bwc_value IN ('LOW', 'MOD', 'SEV', 'PROHIB')),
   weather_conditions TEXT,
   temperature_f NUMERIC(5,1),

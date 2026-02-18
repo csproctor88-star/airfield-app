@@ -14,6 +14,8 @@ export interface InspectionHalfDraft {
   savedAt: string | null
   weatherConditions: string | null
   temperatureF: number | null
+  specialComment: string
+  selectedPersonnel: string[]
 }
 
 export interface DailyInspectionDraft {
@@ -35,6 +37,8 @@ function createEmptyHalf(): InspectionHalfDraft {
     savedAt: null,
     weatherConditions: null,
     temperatureF: null,
+    specialComment: '',
+    selectedPersonnel: [],
   }
 }
 

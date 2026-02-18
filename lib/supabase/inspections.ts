@@ -17,6 +17,7 @@ export type InspectionRow = {
   completion_percent: number
   construction_meeting: boolean
   joint_monthly: boolean
+  personnel: string[]
   bwc_value: string | null
   weather_conditions: string | null
   temperature_f: number | null
@@ -94,6 +95,7 @@ export async function createInspection(input: {
   na_count: number
   construction_meeting: boolean
   joint_monthly: boolean
+  personnel?: string[]
   bwc_value: string | null
   weather_conditions: string | null
   temperature_f: number | null
@@ -116,7 +118,13 @@ export async function createInspection(input: {
   const now = new Date()
   const year = now.getFullYear()
   const ts = now.getTime().toString(36).slice(-4).toUpperCase()
-  const prefix = input.inspection_type === 'airfield' ? 'AI' : 'LI'
+  const prefixMap: Record<string, string> = {
+    airfield: 'AI',
+    lighting: 'LI',
+    construction_meeting: 'CM',
+    joint_monthly: 'JM',
+  }
+  const prefix = prefixMap[input.inspection_type] || 'AI'
   const display_id = `${prefix}-${year}-${ts}`
 
   const completion_percent = input.total_items > 0
@@ -137,6 +145,7 @@ export async function createInspection(input: {
     completion_percent,
     construction_meeting: input.construction_meeting,
     joint_monthly: input.joint_monthly,
+    personnel: input.personnel || [],
     bwc_value: input.bwc_value,
     weather_conditions: input.weather_conditions,
     temperature_f: input.temperature_f,

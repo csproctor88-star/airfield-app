@@ -129,7 +129,7 @@ export const EMERGENCY_AGENCIES = [
 
 // === Inspection Types ===
 
-export type InspectionType = 'airfield' | 'lighting'
+export type InspectionType = 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
 
 export interface InspectionItem {
   id: string
@@ -381,6 +381,18 @@ export const NOTAM_TYPES = [
   'Construction',
   'NAVAID',
   'Custom',
+] as const
+
+// === Inspection Personnel (for Construction Meeting / Joint Monthly) ===
+
+export const INSPECTION_PERSONNEL = [
+  'Contracting',
+  'CES',
+  'Safety',
+  'Security Forces',
+  'ATC',
+  'AMOPS',
+  'TERPS',
 ] as const
 
 // === User Roles (SRS Section 2.1) ===

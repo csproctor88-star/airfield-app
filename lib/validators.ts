@@ -126,15 +126,16 @@ export const inspectionItemSchema = z.object({
 })
 
 export const inspectionFormSchema = z.object({
-  inspection_type: z.enum(['airfield', 'lighting']),
+  inspection_type: z.enum(['airfield', 'lighting', 'construction_meeting', 'joint_monthly']),
   inspector_name: z.string().min(1, 'Inspector name is required'),
-  items: z.array(inspectionItemSchema).min(1, 'At least one item is required'),
-  total_items: z.number().min(1),
+  items: z.array(inspectionItemSchema),
+  total_items: z.number().min(0),
   passed_count: z.number().min(0),
   failed_count: z.number().min(0),
   na_count: z.number().min(0),
   construction_meeting: z.boolean(),
   joint_monthly: z.boolean(),
+  personnel: z.array(z.string()).default([]),
   bwc_value: z.enum(['LOW', 'MOD', 'SEV', 'PROHIB']).nullable(),
   weather_conditions: z.string().nullable(),
   temperature_f: z.number().nullable(),
