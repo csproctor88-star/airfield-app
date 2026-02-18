@@ -6,13 +6,9 @@ import { Badge } from '@/components/ui/badge'
 // "More" menu matching prototype: full module list
 
 const modules = [
-  { name: 'Discrepancies', icon: '📝', color: '#EF4444', badge: '4 open', href: '/discrepancies' },
   { name: 'Waivers', icon: '📄', color: '#A78BFA', badge: null, href: '/waivers' },
   { name: 'Reports', icon: '📊', color: '#22D3EE', badge: null, href: '/reports' },
   { name: 'NOTAMs', icon: '📡', color: '#A78BFA', badge: '3 active', href: '/notams' },
-  { name: 'Users & Security', icon: '👥', color: '#64748B', badge: '3 online', href: '#' },
-  { name: 'Sync & Data', icon: '🔄', color: '#22D3EE', badge: '3 pending', href: '#' },
-  { name: 'Settings', icon: '⚙️', color: '#64748B', badge: null, href: '#' },
 ]
 
 export default function MorePage() {
