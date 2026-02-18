@@ -190,11 +190,24 @@ export default function InspectionsPage() {
   const togglePersonnel = (person: string) => {
     updateHalf(activeTab, (h) => {
       const current = h.selectedPersonnel || []
-      const next = current.includes(person)
+      const names = h.personnelNames || {}
+      const removing = current.includes(person)
+      const next = removing
         ? current.filter((p) => p !== person)
         : [...current, person]
-      return { ...h, selectedPersonnel: next }
+      // Clear the name when unchecking
+      const nextNames = removing
+        ? (({ [person]: _, ...rest }) => rest)(names)
+        : names
+      return { ...h, selectedPersonnel: next, personnelNames: nextNames }
     })
+  }
+
+  const setPersonnelName = (person: string, name: string) => {
+    updateHalf(activeTab, (h) => ({
+      ...h,
+      personnelNames: { ...(h.personnelNames || {}), [person]: name },
+    }))
   }
 
   const sectionDoneCount = (section: InspectionSection) =>
@@ -282,7 +295,10 @@ export default function InspectionsPage() {
           na_count: 0,
           construction_meeting: airfieldSpecialType === 'construction_meeting',
           joint_monthly: airfieldSpecialType === 'joint_monthly',
-          personnel: airfieldHalf.selectedPersonnel || [],
+          personnel: (airfieldHalf.selectedPersonnel || []).map((p) => {
+            const name = airfieldHalf.personnelNames?.[p]
+            return name ? `${p} — ${name}` : p
+          }),
           bwc_value: null,
           weather_conditions: airfieldHalf.weatherConditions,
           temperature_f: airfieldHalf.temperatureF,
@@ -682,29 +698,50 @@ export default function InspectionsPage() {
               <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
                 Personnel / Offices Present
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {INSPECTION_PERSONNEL.map((person) => {
                   const selected = currentHalf?.selectedPersonnel?.includes(person)
+                  const repName = currentHalf?.personnelNames?.[person] || ''
                   return (
-                    <label
-                      key={person}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 6,
-                        padding: '8px 12px', borderRadius: 8, cursor: 'pointer',
-                        border: `1px solid ${selected ? 'rgba(56,189,248,0.5)' : '#334155'}`,
-                        background: selected ? 'rgba(56,189,248,0.1)' : 'transparent',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={!!selected}
-                        onChange={() => togglePersonnel(person)}
-                        style={{ accentColor: '#38BDF8', width: 14, height: 14 }}
-                      />
-                      <span style={{ fontSize: 12, color: selected ? '#38BDF8' : '#94A3B8', fontWeight: selected ? 600 : 400 }}>
-                        {person}
-                      </span>
-                    </label>
+                    <div key={person}>
+                      <label
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          padding: '8px 12px', borderRadius: selected ? '8px 8px 0 0' : 8, cursor: 'pointer',
+                          border: `1px solid ${selected ? 'rgba(56,189,248,0.5)' : '#334155'}`,
+                          borderBottom: selected ? 'none' : undefined,
+                          background: selected ? 'rgba(56,189,248,0.1)' : 'transparent',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!selected}
+                          onChange={() => togglePersonnel(person)}
+                          style={{ accentColor: '#38BDF8', width: 14, height: 14 }}
+                        />
+                        <span style={{ fontSize: 12, color: selected ? '#38BDF8' : '#94A3B8', fontWeight: selected ? 600 : 400 }}>
+                          {person}
+                        </span>
+                      </label>
+                      {selected && (
+                        <div style={{
+                          padding: '6px 12px 8px',
+                          borderRadius: '0 0 8px 8px',
+                          border: '1px solid rgba(56,189,248,0.5)',
+                          borderTop: 'none',
+                          background: 'rgba(56,189,248,0.05)',
+                        }}>
+                          <input
+                            type="text"
+                            className="input-dark"
+                            placeholder={`Representative name...`}
+                            value={repName}
+                            onChange={(e) => setPersonnelName(person, e.target.value)}
+                            style={{ fontSize: 11, padding: '6px 8px', width: '100%' }}
+                          />
+                        </div>
+                      )}
+                    </div>
                   )
                 })}
               </div>

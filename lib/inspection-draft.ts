@@ -16,6 +16,7 @@ export interface InspectionHalfDraft {
   temperatureF: number | null
   specialComment: string
   selectedPersonnel: string[]
+  personnelNames: Record<string, string>
 }
 
 export interface DailyInspectionDraft {
@@ -39,6 +40,7 @@ function createEmptyHalf(): InspectionHalfDraft {
     temperatureF: null,
     specialComment: '',
     selectedPersonnel: [],
+    personnelNames: {},
   }
 }
 
