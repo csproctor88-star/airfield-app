@@ -564,7 +564,7 @@ export default function HomePage() {
           .filter((n) => n.navaid_name.startsWith('01'))
           .sort((a, b) => (a.navaid_name.includes('ILS') ? -1 : b.navaid_name.includes('ILS') ? 1 : 0))
         const rwy19 = navaids
-          .filter((n) => n.navaid_name.startsWith('19'))
+          .filter((n) => n.navaid_name.startsWith('19') && !n.navaid_name.includes('Localizer'))
           .sort((a, b) => (a.navaid_name.includes('ILS') ? -1 : b.navaid_name.includes('ILS') ? 1 : 0))
         const NAVAID_CYCLE: ('green' | 'yellow' | 'red')[] = ['green', 'yellow', 'red']
         const NAVAID_LABELS: Record<string, string> = { green: 'G', yellow: 'Y', red: 'R' }
