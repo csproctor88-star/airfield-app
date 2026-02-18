@@ -1,6 +1,6 @@
 # Airfield OPS Management Suite — Project Status
 
-> **Last updated:** 2026-02-17
+> **Last updated:** 2026-02-18
 > **Branch:** `claude/review-airfield-project-P7wT4`
 > **Commits:** 104+
 
@@ -205,6 +205,67 @@ airfield-app/
 
 ---
 
+## Tech Debt & Cleanup — Pre-Branch Audit (2026-02-18)
+
+### Orphaned / Dead Code
+
+| Item | Location | Issue |
+|------|----------|-------|
+| **`/inspections/new` route** | `app/(app)/inspections/new/page.tsx` | Redirects to `/inspections` — dead route, serves no purpose. The workspace is now on the main inspections page. |
+| **NOTAM draft form** | `app/(app)/notams/new/page.tsx` | Shows success toast but never persists to database. Drafts are lost on navigation. |
+| **NOTAM edit button** | `app/(app)/notams/[id]/page.tsx` | Edit button navigates to `/notams/new` instead of inline editing. No real edit flow exists. |
+| **API stubs** | `app/api/notams/sync/route.ts`, `app/api/weather/route.ts` | Return hardcoded placeholder responses. Not wired to real services. |
+| **Sync button** | `components/layout/header.tsx` | Animates for 1.5s but performs no real sync operation. |
+| **Airfield Diagram button** | `app/(app)/inspections/page.tsx` | Shows "coming soon" toast — placeholder only. |
+| **More page links** | `app/(app)/more/page.tsx` | Reports, Users, Sync, and Settings link to `#` — not implemented. |
+| **Severity/Status badge wrappers** | `components/discrepancies/severity-badge.tsx`, `status-badge.tsx` | Single-line re-exports of `components/ui/badge.tsx` — unnecessary indirection. |
+
+### Type Safety Issues
+
+| Item | Location | Issue |
+|------|----------|-------|
+| **50+ `eslint-disable` directives** | `lib/supabase/*.ts`, `app/(app)/inspections/*.tsx`, `app/(app)/checks/[id]/page.tsx` | All suppress `@typescript-eslint/no-explicit-any`. Supabase query returns need proper typing. |
+| **Validator enum mismatch** | `lib/validators.ts` | `statusUpdateSchema` uses `'assigned'`, `'in_progress'`, `'resolved'` — but actual statuses are `'open'`, `'completed'`, `'cancelled'`, plus the current_status workflow values. |
+| **KPI filter mismatch** | `lib/supabase/discrepancies.ts` | `fetchDiscrepancyKPIs()` filters by `status not in ('closed')` but `'closed'` is not a valid status value. |
+| **Flexible JSON columns** | `lib/supabase/types.ts` | `airfield_checks.data` and `obstruction_evaluations.results` typed as `Record<string, unknown>` — no compile-time safety. |
+
+### Duplicated Logic
+
+| Item | Locations | Issue |
+|------|-----------|-------|
+| **Supabase config detection** | `middleware.ts`, `lib/supabase/client.ts`, `lib/supabase/server.ts`, `lib/supabase/middleware.ts` | Same "is Supabase configured" check with placeholder string detection duplicated 4 times. Should be a shared utility. |
+| **Mapbox token validation** | `components/discrepancies/location-map.tsx`, `components/obstructions/airfield-map.tsx` | Same token check and placeholder string (`"your-mapbox-token-here"`) duplicated. |
+| **Surface colors** | `components/obstructions/airfield-map.tsx`, `app/(app)/obstructions/[id]/page.tsx` | Imaginary surface color definitions duplicated between map component and detail page. |
+| **Photo count sync** | `lib/supabase/discrepancies.ts`, `lib/supabase/checks.ts` | Manual `photo_count` increment on insert — can desync if the update step fails after the photo insert succeeds. |
+
+### Data & Consistency Issues
+
+| Item | Location | Issue |
+|------|----------|-------|
+| **Hardcoded inspector name** | `app/(app)/checks/page.tsx:32` | "MSgt Proctor" is hardcoded instead of reading from auth session. |
+| **Dashboard activity feed** | `app/(app)/page.tsx` | Recent activity items are hardcoded placeholders — never reads from `activity_log` table. |
+| **Dashboard weather** | `app/(app)/page.tsx` | Falls back to hardcoded mock weather (28°F, Clear) — real `lib/weather.ts` fetch may be silently failing. |
+| **Base64 photo fallback** | `lib/supabase/checks.ts`, `lib/supabase/obstructions.ts` | When Storage bucket is unavailable, photos are stored as base64 data URLs in the database — not scalable. |
+| **Missing PWA icons** | `public/manifest.json` | References `/icons/icon-192.png` and `/icons/icon-512.png` but the `public/icons/` directory does not exist. |
+| **Missing env var in template** | `.env.example` | Does not include `NEXT_PUBLIC_MAPBOX_TOKEN` (required for map features). |
+
+### Component Size
+
+| File | Lines | Notes |
+|------|-------|-------|
+| `app/(app)/inspections/page.tsx` | ~1,200 | Workspace + history + draft management all in one file. Could be split into sub-components. |
+| `components/discrepancies/modals.tsx` | ~400 | 4 modals in one file with business logic (cancel-as-delete). Could extract individual modals. |
+| `components/obstructions/airfield-map.tsx` | ~387 | GeoJSON polygon building + Mapbox setup + legend. Polygon generation could move to `lib/calculations/`. |
+
+### Security Notes (Before Production)
+
+- **RLS is disabled** — all authenticated users have full CRUD on all tables. Must re-enable with role-based policies.
+- **No CSRF protection** beyond Next.js defaults on the login form.
+- **No input sanitization** on free-text fields (notes, descriptions) — XSS risk if content is rendered as HTML.
+- **Password policy** allows 6-character minimum — may not meet DoD security requirements.
+
+---
+
 ## Open Questions for Next Phase
 
 1. **Supabase project** — Is there a Supabase project already created, or do we need to set one up?
@@ -212,3 +273,4 @@ airfield-app/
 3. **Offline priority** — How critical is offline support? Affects architecture decisions if tackled early.
 4. **PDF format** — Is there a specific regulatory template for inspection reports?
 5. **Deployment target** — Vercel, or another platform?
+6. **Server-side email** — Planned for inspection report delivery. Which provider (Resend, SendGrid, SES)? What sender domain?
