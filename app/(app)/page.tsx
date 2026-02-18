@@ -33,9 +33,9 @@ function presenceLabel(lastSeen: string | null): { label: string; color: string 
 
 // --- Quick Actions (KPI badges) ---
 const QUICK_ACTIONS = [
+  { label: 'Begin/Continue\nAirfield Inspection', icon: '📋', color: '#34D399', href: '/inspections?action=begin' },
   { label: 'New\nDiscrepancy', icon: '🚨', color: '#EF4444', href: '/discrepancies/new' },
   { label: 'Begin\nAirfield Check', icon: '🛡️', color: '#FBBF24', href: '/checks' },
-  { label: 'Begin/Continue\nAirfield Inspection', icon: '📋', color: '#34D399', href: '/inspections?action=begin' },
   { label: 'Obstruction\nEvaluation', icon: '🗺️', color: '#38BDF8', href: '/obstructions' },
 ]
 
@@ -357,7 +357,7 @@ export default function HomePage() {
       <span className="section-label">Current Status</span>
       <div className="card" style={{ marginBottom: 12, padding: '12px 10px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-          <div style={{ padding: 12, background: 'rgba(4,7,12,0.5)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
+          <div style={{ padding: 12, background: 'rgba(4,7,12,0.5)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600, marginBottom: 6 }}>RSC</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: '#38BDF8' }}>
               {currentStatus.rscCondition
@@ -365,13 +365,27 @@ export default function HomePage() {
                 : 'No Data'}
             </div>
           </div>
-          <div style={{ padding: 12, background: 'rgba(4,7,12,0.5)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
+          <div style={{ padding: 12, background: 'rgba(4,7,12,0.5)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600, marginBottom: 6 }}>BWC</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: currentStatus.bwc === 'SEV' || currentStatus.bwc === 'PROHIB' ? '#EF4444' : currentStatus.bwc === 'MOD' ? '#FBBF24' : '#34D399' }}>
               {currentStatus.bwc || 'No Data'}
             </div>
           </div>
-          <div style={{ padding: 12, background: 'rgba(4,7,12,0.5)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
+          <div style={{
+            padding: 12,
+            background: currentStatus.runwayStatus === 'suspended'
+              ? 'rgba(251,191,36,0.1)'
+              : currentStatus.runwayStatus === 'closed'
+                ? 'rgba(239,68,68,0.1)'
+                : 'rgba(4,7,12,0.5)',
+            borderRadius: 10,
+            border: currentStatus.runwayStatus === 'suspended'
+              ? '1px solid rgba(251,191,36,0.25)'
+              : currentStatus.runwayStatus === 'closed'
+                ? '1px solid rgba(239,68,68,0.25)'
+                : '1px solid rgba(56,189,248,0.06)',
+            textAlign: 'center',
+          }}>
             <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600, marginBottom: 6 }}>Active RWY</div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 8 }}>
               <button
@@ -413,38 +427,35 @@ export default function HomePage() {
                 19
               </button>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 4 }}>
-              {([
-                { key: 'open', label: 'Open', color: '#34D399' },
-                { key: 'suspended', label: 'SUSP', color: '#FBBF24' },
-                { key: 'closed', label: 'Closed', color: '#EF4444' },
-              ] as const).map((s) => {
-                const active = currentStatus.runwayStatus === s.key
-                return (
-                  <button
-                    key={s.key}
-                    onClick={() => setCurrentStatus((prev) => ({ ...prev, runwayStatus: s.key }))}
-                    style={{
-                      padding: '3px 8px',
-                      borderRadius: 5,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      border: active
-                        ? `2px solid ${s.color}`
-                        : '1px solid rgba(56,189,248,0.12)',
-                      background: active
-                        ? `${s.color}20`
-                        : 'rgba(4,7,12,0.5)',
-                      color: active ? s.color : '#64748B',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    {s.label}
-                  </button>
-                )
-              })}
-            </div>
+            <select
+              value={currentStatus.runwayStatus}
+              onChange={(e) => setCurrentStatus((prev) => ({ ...prev, runwayStatus: e.target.value as 'open' | 'suspended' | 'closed' }))}
+              style={{
+                width: '100%',
+                padding: '4px 6px',
+                borderRadius: 6,
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                border: currentStatus.runwayStatus === 'suspended'
+                  ? '1px solid rgba(251,191,36,0.4)'
+                  : currentStatus.runwayStatus === 'closed'
+                    ? '1px solid rgba(239,68,68,0.4)'
+                    : '1px solid rgba(52,211,153,0.3)',
+                background: 'rgba(4,7,12,0.7)',
+                color: currentStatus.runwayStatus === 'suspended'
+                  ? '#FBBF24'
+                  : currentStatus.runwayStatus === 'closed'
+                    ? '#EF4444'
+                    : '#34D399',
+                fontFamily: 'inherit',
+                outline: 'none',
+              }}
+            >
+              <option value="open">Open</option>
+              <option value="suspended">Suspended</option>
+              <option value="closed">Closed</option>
+            </select>
           </div>
         </div>
       </div>
@@ -508,12 +519,12 @@ export default function HomePage() {
           </div>
         )
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
-            <div className="card" style={{ padding: '12px 14px 6px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+            <div className="card" style={{ padding: '12px 10px 6px' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#34D399', marginBottom: 10, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 01</div>
               {rwy01.map(renderNavaidItem)}
             </div>
-            <div className="card" style={{ padding: '12px 14px 6px' }}>
+            <div className="card" style={{ padding: '12px 10px 6px' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#FBBF24', marginBottom: 10, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 19</div>
               {rwy19.map(renderNavaidItem)}
             </div>
