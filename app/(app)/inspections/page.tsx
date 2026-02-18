@@ -578,7 +578,13 @@ export default function InspectionsPage() {
       const q = search.toLowerCase()
       const afId = report.airfield?.display_id || ''
       const ltId = report.lighting?.display_id || ''
-      const searchable = `${afId} ${ltId} ${report.inspectorName} ${report.weatherConditions || ''}`.toLowerCase()
+      const inspType = report.inspectionType || (report.type === 'daily' ? 'daily airfield lighting' : '')
+      const typeLabel = report.inspectionType === 'construction_meeting' ? 'construction meeting'
+        : report.inspectionType === 'joint_monthly' ? 'joint monthly'
+        : ''
+      const issuesStr = report.totalFailed > 0 ? `${report.totalFailed} fail issues` : ''
+      const personnelStr = (report.personnel || []).join(' ')
+      const searchable = `${afId} ${ltId} ${report.inspectorName} ${report.weatherConditions || ''} ${inspType} ${typeLabel} ${issuesStr} ${personnelStr} ${report.bwcValue || ''}`.toLowerCase()
       if (!searchable.includes(q)) return false
     }
     return true
@@ -1057,7 +1063,7 @@ export default function InspectionsPage() {
                 fontFamily: 'inherit', cursor: 'pointer',
               }}
             >
-              Back to Draft
+              View Current Inspection Form
             </button>
           )}
           {!draft && (

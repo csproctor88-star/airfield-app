@@ -592,19 +592,34 @@ export default function HomePage() {
               </button>
             </div>
             {(n.status === 'yellow' || n.status === 'red') && (
-              <input
-                type="text"
+              <textarea
                 placeholder="Add note..."
                 value={navaidNotes[n.id] || ''}
                 onChange={(e) => setNavaidNotes((prev) => ({ ...prev, [n.id]: e.target.value }))}
                 onBlur={() => handleNavaidNotesSave(n)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleNavaidNotesSave(n) }}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) handleNavaidNotesSave(n) }}
+                rows={1}
                 style={{
                   width: '100%', boxSizing: 'border-box',
                   background: 'rgba(4,7,12,0.7)',
                   border: `1px solid ${STATUS_COLORS[n.status]}40`,
                   borderRadius: 6, padding: '6px 10px', fontSize: 13,
                   color: '#E2E8F0', outline: 'none',
+                  resize: 'none', overflow: 'hidden',
+                  fontFamily: 'inherit',
+                  fieldSizing: 'content' as unknown as undefined,
+                  minHeight: 32,
+                }}
+                ref={(el) => {
+                  if (el) {
+                    el.style.height = 'auto'
+                    el.style.height = el.scrollHeight + 'px'
+                  }
+                }}
+                onInput={(e) => {
+                  const target = e.target as HTMLTextAreaElement
+                  target.style.height = 'auto'
+                  target.style.height = target.scrollHeight + 'px'
                 }}
               />
             )}
