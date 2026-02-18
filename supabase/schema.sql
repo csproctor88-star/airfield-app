@@ -248,6 +248,30 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- 5.11 Regulations Database
+CREATE TABLE regulations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  reg_id TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  publication_date TEXT,
+  url TEXT,
+  source_section TEXT NOT NULL,
+  source_volume TEXT,
+  category TEXT NOT NULL,
+  pub_type TEXT NOT NULL,
+  is_core BOOLEAN NOT NULL DEFAULT false,
+  is_cross_ref BOOLEAN NOT NULL DEFAULT false,
+  is_scrubbed BOOLEAN NOT NULL DEFAULT false,
+  tags TEXT[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_regulations_category ON regulations(category);
+CREATE INDEX idx_regulations_pub_type ON regulations(pub_type);
+CREATE INDEX idx_regulations_source_section ON regulations(source_section);
+CREATE INDEX idx_regulations_reg_id ON regulations(reg_id);
+
 -- NOTE: Row Level Security policies are intentionally omitted from this schema.
 -- RLS and role-based access control will be added in a later development phase.
 -- For now, all authenticated users have full access to all tables.
