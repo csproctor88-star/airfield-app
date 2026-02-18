@@ -4,19 +4,19 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
   Home,
-  ClipboardList,
-  FileText,
-  BarChart3,
+  Plane,
+  BookOpen,
+  Radio,
   Menu,
 } from 'lucide-react'
 
-// Bottom nav: Home | Discrepancies | Waivers | Reports | More
+// Bottom nav: Home | Aircraft Database | Regulations | NOTAMs | More
 
 const tabs = [
   { href: '/', label: 'HOME', icon: Home },
-  { href: '/discrepancies', label: 'DISCREPANCIES', icon: ClipboardList },
-  { href: '/waivers', label: 'WAIVERS', icon: FileText },
-  { href: '/reports', label: 'REPORTS', icon: BarChart3 },
+  { href: '/aircraft', label: 'AIRCRAFT', icon: Plane },
+  { href: '/regulations', label: 'REGS', icon: BookOpen },
+  { href: '/notams', label: 'NOTAMS', icon: Radio },
   { href: '/more', label: 'MORE', icon: Menu },
 ] as const
 
