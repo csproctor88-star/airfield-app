@@ -1,4 +1,5 @@
 import { createClient } from './client'
+import { logActivity } from './activity'
 import type { Severity, DiscrepancyStatus, CurrentStatus } from './types'
 
 export type DiscrepancyRow = {
@@ -122,7 +123,10 @@ export async function createDiscrepancy(input: {
     return { data: null, error: error.message }
   }
 
-  return { data: data as DiscrepancyRow, error: null }
+  const created = data as DiscrepancyRow
+  logActivity('created', 'discrepancy', created.id, created.display_id, { title: input.title, type: input.type })
+
+  return { data: created, error: null }
 }
 
 export async function updateDiscrepancy(
@@ -156,7 +160,10 @@ export async function updateDiscrepancy(
     return { data: null, error: error.message }
   }
 
-  return { data: data as DiscrepancyRow, error: null }
+  const updated = data as DiscrepancyRow
+  logActivity('updated', 'discrepancy', updated.id, updated.display_id, { fields: Object.keys(fields) })
+
+  return { data: updated, error: null }
 }
 
 export async function updateDiscrepancyStatus(
@@ -209,7 +216,10 @@ export async function updateDiscrepancyStatus(
     console.error('Audit trail insert failed:', e)
   }
 
-  return { data: data as DiscrepancyRow, error: null }
+  const statusUpdated = data as DiscrepancyRow
+  logActivity('status_updated', 'discrepancy', statusUpdated.id, statusUpdated.display_id, { old_status: oldStatus, new_status: newStatus })
+
+  return { data: statusUpdated, error: null }
 }
 
 export async function deleteDiscrepancy(
@@ -217,6 +227,10 @@ export async function deleteDiscrepancy(
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
+
+  // Capture display_id before deletion for activity log
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: existing } = await (supabase as any).from('discrepancies').select('display_id, title').eq('id', id).single()
 
   // Delete related photos first
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -234,6 +248,8 @@ export async function deleteDiscrepancy(
     console.error('Delete discrepancy failed:', error.message)
     return { error: error.message }
   }
+
+  logActivity('deleted', 'discrepancy', id, existing?.display_id, { title: existing?.title })
 
   return { error: null }
 }

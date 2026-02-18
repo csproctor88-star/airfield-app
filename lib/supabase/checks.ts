@@ -1,4 +1,5 @@
 import { createClient } from './client'
+import { logActivity } from './activity'
 import type { CheckType } from './types'
 
 export type CheckPhotoRow = {
@@ -93,6 +94,8 @@ export async function createCheck(input: {
     }
   }
 
+  logActivity('completed', 'check', created.id, created.display_id, { check_type: input.check_type, areas: input.areas })
+
   return { data: created, error: null }
 }
 
@@ -179,6 +182,10 @@ export async function deleteCheck(id: string): Promise<{ error: string | null }>
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
+  // Capture display info before deletion for activity log
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: existing } = await (supabase as any).from('airfield_checks').select('display_id, check_type').eq('id', id).single()
+
   // Delete comments first
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (supabase as any).from('check_comments').delete().eq('check_id', id)
@@ -195,6 +202,8 @@ export async function deleteCheck(id: string): Promise<{ error: string | null }>
     console.error('Delete check failed:', error.message)
     return { error: error.message }
   }
+
+  logActivity('deleted', 'check', id, existing?.display_id, { check_type: existing?.check_type })
 
   return { error: null }
 }

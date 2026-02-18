@@ -1,4 +1,5 @@
 import { createClient } from './client'
+import { logActivity } from './activity'
 import type { InspectionType, InspectionItem } from './types'
 
 export type InspectionRow = {
@@ -167,7 +168,10 @@ export async function createInspection(input: {
     return { data: null, error: error.message }
   }
 
-  return { data: data as InspectionRow, error: null }
+  const created = data as InspectionRow
+  logActivity('completed', 'inspection', created.id, created.display_id, { inspection_type: input.inspection_type })
+
+  return { data: created, error: null }
 }
 
 /** Get the current user's profile name for auto-fill */
@@ -204,6 +208,10 @@ export async function deleteInspection(id: string): Promise<{ error: string | nu
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
+  // Capture display info before deletion for activity log
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: existing } = await (supabase as any).from('inspections').select('display_id, inspection_type').eq('id', id).single()
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)
     .from('inspections')
@@ -214,6 +222,8 @@ export async function deleteInspection(id: string): Promise<{ error: string | nu
     console.error('Delete inspection failed:', error.message)
     return { error: error.message }
   }
+
+  logActivity('deleted', 'inspection', id, existing?.display_id, { inspection_type: existing?.inspection_type })
 
   return { error: null }
 }

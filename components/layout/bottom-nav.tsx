@@ -5,19 +5,18 @@ import Link from 'next/link'
 import {
   Home,
   ClipboardList,
-  TriangleAlert,
-  ClipboardCheck,
+  FileText,
+  BarChart3,
   Menu,
 } from 'lucide-react'
 
-// Bottom nav matching prototype: 5 tabs, fixed, blur backdrop
-// Home | Checks | Obstructions | Discrepancies | More
+// Bottom nav: Home | Discrepancies | Waivers | Reports | More
 
 const tabs = [
   { href: '/', label: 'HOME', icon: Home },
-  { href: '/checks', label: 'CHECKS', icon: ClipboardCheck },
-  { href: '/obstructions', label: 'OBSTRUCTIONS', icon: TriangleAlert },
   { href: '/discrepancies', label: 'DISCREPANCIES', icon: ClipboardList },
+  { href: '/waivers', label: 'WAIVERS', icon: FileText },
+  { href: '/reports', label: 'REPORTS', icon: BarChart3 },
   { href: '/more', label: 'MORE', icon: Menu },
 ] as const
 
@@ -71,20 +70,6 @@ export function BottomNav() {
             <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.08em' }}>
               {label}
             </span>
-            {/* Alert dot for Home when there are critical items */}
-            {href === '/' && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  right: 4,
-                  width: 7,
-                  height: 7,
-                  borderRadius: 4,
-                  background: '#EF4444',
-                }}
-              />
-            )}
           </Link>
         )
       })}

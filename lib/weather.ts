@@ -39,6 +39,8 @@ const WEATHER_CODES: Record<number, string> = {
 export interface WeatherResult {
   conditions: string
   temperature_f: number
+  wind_speed_mph: number
+  visibility_miles: number
 }
 
 export async function fetchCurrentWeather(): Promise<WeatherResult | null> {
@@ -62,7 +64,7 @@ export async function fetchCurrentWeather(): Promise<WeatherResult | null> {
       }
     }
 
-    const url = `${OPEN_METEO_URL}?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`
+    const url = `${OPEN_METEO_URL}?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&current=temperature_2m,weather_code,wind_speed_10m,visibility&temperature_unit=fahrenheit&wind_speed_unit=mph`
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
     if (!res.ok) return null
 
@@ -72,6 +74,8 @@ export async function fetchCurrentWeather(): Promise<WeatherResult | null> {
     return {
       conditions: WEATHER_CODES[current.weather_code] || 'Unknown',
       temperature_f: Math.round(current.temperature_2m),
+      wind_speed_mph: Math.round(current.wind_speed_10m ?? 0),
+      visibility_miles: Math.round((current.visibility ?? 10000) / 1609.34), // API returns meters
     }
   } catch {
     return null

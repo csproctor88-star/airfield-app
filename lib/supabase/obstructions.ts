@@ -1,4 +1,5 @@
 import { createClient } from './client'
+import { logActivity } from './activity'
 import type { ObstructionEvaluation } from './types'
 
 export type ObstructionRow = ObstructionEvaluation
@@ -105,7 +106,10 @@ export async function createObstructionEvaluation(input: {
     return { data: null, error: error.message }
   }
 
-  return { data: data as ObstructionRow, error: null }
+  const created = data as ObstructionRow
+  logActivity('created', 'obstruction_evaluation', created.id, created.display_id ?? undefined, { has_violation: input.has_violation })
+
+  return { data: created, error: null }
 }
 
 export async function uploadObstructionPhoto(
@@ -203,7 +207,10 @@ export async function updateObstructionEvaluation(
     return { data: null, error: 'Update failed — you may not have permission to edit this evaluation.' }
   }
 
-  return { data: updateData[0] as ObstructionRow, error: null }
+  const updated = updateData[0] as ObstructionRow
+  logActivity('updated', 'obstruction_evaluation', updated.id, updated.display_id ?? undefined, { has_violation: input.has_violation })
+
+  return { data: updated, error: null }
 }
 
 export async function deleteObstructionEvaluation(
@@ -211,6 +218,10 @@ export async function deleteObstructionEvaluation(
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
+
+  // Capture display info before deletion for activity log
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: existing } = await (supabase as any).from('obstruction_evaluations').select('display_id').eq('id', id).single()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)
@@ -234,6 +245,8 @@ export async function deleteObstructionEvaluation(
   if (remaining) {
     return { error: 'Delete was blocked. You may not have permission to delete this evaluation.' }
   }
+
+  logActivity('deleted', 'obstruction_evaluation', id, existing?.display_id)
 
   return { error: null }
 }

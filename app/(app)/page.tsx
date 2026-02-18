@@ -1,43 +1,116 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Badge } from '@/components/ui/badge'
 import {
   Plus,
-  Search,
-  AlertTriangle,
   ClipboardCheck,
-  Megaphone,
+  TriangleAlert,
+  ClipboardList,
 } from 'lucide-react'
-import { fetchDiscrepancyKPIs } from '@/lib/supabase/discrepancies'
 import { createClient } from '@/lib/supabase/client'
+import { fetchCurrentWeather, type WeatherResult } from '@/lib/weather'
+import { fetchNavaidStatuses, updateNavaidStatus, type NavaidStatus } from '@/lib/supabase/navaids'
 
-// Home screen matching prototype: clock, weather, KPI tiles, quick actions, today's status, activity
+// --- Weather emoji mapping ---
+function weatherEmoji(conditions: string): string {
+  const c = conditions.toLowerCase()
+  if (c.includes('thunderstorm')) return '⛈️'
+  if (c.includes('heavy snow') || c.includes('snow grains')) return '❄️'
+  if (c.includes('snow')) return '🌨️'
+  if (c.includes('freezing')) return '🌨️'
+  if (c.includes('heavy rain') || c.includes('heavy showers')) return '🌧️'
+  if (c.includes('rain') || c.includes('drizzle') || c.includes('showers')) return '🌧️'
+  if (c.includes('fog')) return '🌫️'
+  if (c.includes('overcast')) return '☁️'
+  if (c.includes('partly cloudy')) return '⛅'
+  if (c.includes('mostly clear')) return '🌤️'
+  return '☀️'
+}
 
-// Placeholder data used as fallback when Supabase is not configured
-const PLACEHOLDER_KPIS = { open: 4, critical: 2, notams: 3 }
+// --- User presence helpers ---
+function presenceLabel(lastSeen: string | null): { label: string; color: string } {
+  if (!lastSeen) return { label: 'Offline', color: '#64748B' }
+  const diff = Date.now() - new Date(lastSeen).getTime()
+  if (diff < 15 * 60 * 1000) return { label: 'Online', color: '#34D399' }
+  if (diff < 60 * 60 * 1000) return { label: 'Away', color: '#FBBF24' }
+  return { label: 'Inactive', color: '#64748B' }
+}
 
+// --- Quick Actions ---
 const QUICK_ACTIONS = [
-  { label: 'New Discrep', icon: Plus, color: '#EF4444', href: '/discrepancies/new' },
-  { label: 'Airfield Check', icon: Search, color: '#FBBF24', href: '/checks' },
+  { label: 'New Discrepancy', icon: Plus, color: '#EF4444', href: '/discrepancies/new' },
   { label: 'Check History', icon: ClipboardCheck, color: '#22D3EE', href: '/checks/history' },
-  { label: 'Inspection', icon: ClipboardCheck, color: '#34D399', href: '/inspections' },
-  { label: 'NOTAM', icon: Megaphone, color: '#A78BFA', href: '/notams/new' },
-  { label: 'Obstructions', icon: AlertTriangle, color: '#F97316', href: '/obstructions' },
+  { label: 'Obstruction Eval List', icon: TriangleAlert, color: '#F97316', href: '/obstructions/history' },
+  { label: 'Inspection History', icon: ClipboardList, color: '#34D399', href: '/inspections' },
 ]
 
-const PLACEHOLDER_ACTIVITY = [
-  { time: '07:52', user: 'TSgt Nakamura', text: 'Updated D-2026-0041: parts ETA Monday', color: '#38BDF8' },
-  { time: '07:45', user: 'You', text: 'Escalated D-2026-0042 to Critical', color: '#EF4444' },
-  { time: '07:15', user: 'TSgt Williams', text: 'FOD check — 2 items found', color: '#FBBF24' },
-  { time: '06:45', user: 'You', text: 'BASH check — LOW condition', color: '#A78BFA' },
+// --- KPI Tiles ---
+const KPI_TILES = [
+  { label: 'CHECKS', icon: '🛡️', color: '#FBBF24', href: '/checks' },
+  { label: 'INSPECTIONS', icon: '📋', color: '#34D399', href: '/inspections' },
+  { label: 'OBSTR EVAL', icon: '🗺️', color: '#38BDF8', href: '/obstructions' },
 ]
+
+// --- NAVAID color map ---
+const STATUS_COLORS: Record<string, string> = {
+  green: '#34D399',
+  yellow: '#FBBF24',
+  red: '#EF4444',
+}
+
+// --- Activity action formatting ---
+function formatAction(action: string, entityType: string, displayId?: string): string {
+  const typeLabel: Record<string, string> = {
+    discrepancy: 'Discrepancy',
+    check: 'Check',
+    inspection: 'Inspection',
+    obstruction_evaluation: 'Obstruction Eval',
+  }
+  const entity = typeLabel[entityType] || entityType
+  const id = displayId ? ` ${displayId}` : ''
+  const actionLabel: Record<string, string> = {
+    created: 'Created',
+    updated: 'Updated',
+    deleted: 'Deleted',
+    completed: 'Completed',
+    status_updated: 'Status changed on',
+  }
+  return `${actionLabel[action] || action} ${entity}${id}`
+}
+
+type ActivityEntry = {
+  id: string
+  action: string
+  entity_type: string
+  entity_display_id: string | null
+  created_at: string
+  user_name: string
+  user_rank: string | null
+}
+
+type CurrentStatusData = {
+  bwc: string | null
+  lastCheckType: string | null
+  lastCheckTime: string | null
+  inspectionCompletion: string | null
+  rscCondition: string | null
+  rscTime: string | null
+}
 
 export default function HomePage() {
   const [time, setTime] = useState('')
-  const [kpis, setKpis] = useState(PLACEHOLDER_KPIS)
+  const [weather, setWeather] = useState<WeatherResult | null>(null)
+  const [weatherLoaded, setWeatherLoaded] = useState(false)
+  const [userDisplay, setUserDisplay] = useState<{ name: string; lastSeen: string | null }>({ name: '—', lastSeen: null })
+  const [navaids, setNavaids] = useState<NavaidStatus[]>([])
+  const [navaidNotes, setNavaidNotes] = useState<Record<string, string>>({})
+  const [activity, setActivity] = useState<ActivityEntry[]>([])
+  const [currentStatus, setCurrentStatus] = useState<CurrentStatusData>({
+    bwc: null, lastCheckType: null, lastCheckTime: null, inspectionCompletion: null, rscCondition: null, rscTime: null,
+  })
 
+  // --- Clock ---
   useEffect(() => {
     const update = () => setTime(new Date().toTimeString().slice(0, 5))
     update()
@@ -45,26 +118,199 @@ export default function HomePage() {
     return () => clearInterval(t)
   }, [])
 
+  // --- Load user profile + update last_seen_at ---
   useEffect(() => {
-    async function loadKpis() {
+    async function loadUser() {
       const supabase = createClient()
-      if (!supabase) return // keep placeholders
+      if (!supabase) return
 
-      const data = await fetchDiscrepancyKPIs()
-      setKpis({ ...data, notams: PLACEHOLDER_KPIS.notams })
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        // Update last_seen_at
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', user.id)
+
+        // Fetch profile
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: profile } = await (supabase as any).from('profiles').select('name, rank, last_seen_at').eq('id', user.id).single()
+
+        if (profile) {
+          const displayName = profile.rank ? `${profile.rank} ${profile.name}` : profile.name
+          setUserDisplay({ name: displayName, lastSeen: profile.last_seen_at })
+        }
+      } catch {
+        // No auth — keep default
+      }
     }
-    loadKpis()
+    loadUser()
+    // Update presence every 5 min
+    const interval = setInterval(loadUser, 5 * 60 * 1000)
+    return () => clearInterval(interval)
   }, [])
+
+  // --- Load weather ---
+  useEffect(() => {
+    async function loadWeather() {
+      const result = await fetchCurrentWeather()
+      setWeather(result)
+      setWeatherLoaded(true)
+    }
+    loadWeather()
+  }, [])
+
+  // --- Load NAVAIDs ---
+  const loadNavaids = useCallback(async () => {
+    const supabase = createClient()
+    if (!supabase) return
+
+    const data = await fetchNavaidStatuses()
+    setNavaids(data)
+    const notes: Record<string, string> = {}
+    data.forEach((n) => { notes[n.id] = n.notes || '' })
+    setNavaidNotes(notes)
+  }, [])
+
+  useEffect(() => { loadNavaids() }, [loadNavaids])
+
+  // --- Load Current Status (BWC, Last Check, Inspection, RSC) ---
+  useEffect(() => {
+    async function loadCurrentStatus() {
+      const supabase = createClient()
+      if (!supabase) return
+
+      // Latest inspection with BWC
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: insp } = await (supabase as any)
+        .from('inspections')
+        .select('bwc_value, completed_at')
+        .not('bwc_value', 'is', null)
+        .order('completed_at', { ascending: false })
+        .limit(1)
+
+      // Latest completed inspection
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: latestInsp } = await (supabase as any)
+        .from('inspections')
+        .select('completed_at')
+        .eq('status', 'completed')
+        .order('completed_at', { ascending: false })
+        .limit(1)
+
+      // Latest check of any type
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: lastCheck } = await (supabase as any)
+        .from('airfield_checks')
+        .select('check_type, completed_at')
+        .order('completed_at', { ascending: false })
+        .limit(1)
+
+      // Latest RSC check
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: rscCheck } = await (supabase as any)
+        .from('airfield_checks')
+        .select('data, completed_at')
+        .eq('check_type', 'rsc')
+        .order('completed_at', { ascending: false })
+        .limit(1)
+
+      const bwc = insp?.[0]?.bwc_value || null
+      const checkType = lastCheck?.[0]?.check_type?.toUpperCase() || null
+      const checkTime = lastCheck?.[0]?.completed_at
+        ? new Date(lastCheck[0].completed_at).toTimeString().slice(0, 5)
+        : null
+      const inspTime = latestInsp?.[0]?.completed_at
+        ? new Date(latestInsp[0].completed_at).toTimeString().slice(0, 5)
+        : null
+      const rscData = rscCheck?.[0]?.data as Record<string, unknown> | undefined
+      const rscCondition = (rscData?.condition as string) || (rscData?.runway_condition as string) || null
+      const rscTime = rscCheck?.[0]?.completed_at
+        ? new Date(rscCheck[0].completed_at).toTimeString().slice(0, 5)
+        : null
+
+      setCurrentStatus({
+        bwc,
+        lastCheckType: checkType,
+        lastCheckTime: checkTime,
+        inspectionCompletion: inspTime,
+        rscCondition,
+        rscTime,
+      })
+    }
+    loadCurrentStatus()
+  }, [])
+
+  // --- Load Activity Feed ---
+  useEffect(() => {
+    async function loadActivity() {
+      const supabase = createClient()
+      if (!supabase) return
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('activity_log')
+        .select('id, action, entity_type, entity_display_id, created_at, user_id, profiles:user_id(name, rank)')
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (error) {
+        // Try without join
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: fallback } = await (supabase as any)
+          .from('activity_log')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(20)
+
+        if (fallback) {
+          setActivity(fallback.map((r: Record<string, unknown>) => ({
+            ...r,
+            user_name: 'Unknown',
+            user_rank: null,
+          })) as ActivityEntry[])
+        }
+        return
+      }
+
+      if (data) {
+        setActivity(data.map((r: Record<string, unknown>) => ({
+          ...r,
+          user_name: (r.profiles as { name?: string } | null)?.name || 'Unknown',
+          user_rank: (r.profiles as { rank?: string } | null)?.rank || null,
+        })) as ActivityEntry[])
+      }
+    }
+    loadActivity()
+  }, [])
+
+  // --- NAVAID status toggle handler ---
+  async function handleNavaidToggle(navaid: NavaidStatus, newStatus: 'green' | 'yellow' | 'red') {
+    const notes = newStatus === 'green' ? null : (navaidNotes[navaid.id] || null)
+    const ok = await updateNavaidStatus(navaid.id, newStatus, notes)
+    if (ok) loadNavaids()
+  }
+
+  async function handleNavaidNotesSave(navaid: NavaidStatus) {
+    const notes = navaidNotes[navaid.id] || null
+    await updateNavaidStatus(navaid.id, navaid.status, notes)
+    loadNavaids()
+  }
+
+  const presence = presenceLabel(userDisplay.lastSeen)
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
-      {/* Clock + User */}
+      {/* ===== Clock + User ===== */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ fontSize: 22, fontWeight: 800 }}>{time || '08:15'}</span>
-        <span style={{ fontSize: 10, color: '#64748B' }}>MSgt Proctor &bull; Online</span>
+        <span style={{ fontSize: 22, fontWeight: 800 }}>{time || '--:--'}</span>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#F1F5F9' }}>{userDisplay.name}</div>
+          <div style={{ fontSize: 9, color: presence.color, fontWeight: 600 }}>{presence.label}</div>
+        </div>
       </div>
 
-      {/* Weather Strip */}
+      {/* ===== Weather Strip ===== */}
       <div
         className="card"
         style={{
@@ -77,23 +323,73 @@ export default function HomePage() {
           marginBottom: 8,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 18 }}>☀️</span>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700 }}>28°F &bull; Clear</div>
-            <div style={{ fontSize: 10, color: '#64748B' }}>Wind 310/08 &bull; Vis 10SM &bull; Alt 30.12</div>
-          </div>
-        </div>
-        <Badge label="ADVISORY" color="#FBBF24" />
+        {weatherLoaded ? (
+          weather ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 18 }}>{weatherEmoji(weather.conditions)}</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>
+                    {weather.temperature_f}&deg;F &bull; {weather.conditions}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#64748B' }}>
+                    Wind {weather.wind_speed_mph} mph &bull; Vis {weather.visibility_miles} SM
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 18 }}>❓</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#64748B' }}>UNKWN</div>
+                <div style={{ fontSize: 10, color: '#475569' }}>Weather data unavailable</div>
+              </div>
+            </div>
+          )
+        ) : (
+          <div style={{ fontSize: 11, color: '#64748B' }}>Loading weather...</div>
+        )}
       </div>
 
-      {/* KPI Tiles — 3 across */}
+      {/* ===== Current Status ===== */}
+      <span className="section-label">Current Status</span>
+      <div className="card" style={{ marginBottom: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+          <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)' }}>
+            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>BWC</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: currentStatus.bwc === 'SEV' || currentStatus.bwc === 'PROHIB' ? '#EF4444' : currentStatus.bwc === 'MOD' ? '#FBBF24' : '#34D399' }}>
+              {currentStatus.bwc || 'No Data'}
+            </div>
+          </div>
+          <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)' }}>
+            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>Last Check</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#22D3EE' }}>
+              {currentStatus.lastCheckType && currentStatus.lastCheckTime
+                ? `${currentStatus.lastCheckType} @ ${currentStatus.lastCheckTime}`
+                : 'No Data'}
+            </div>
+          </div>
+          <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)' }}>
+            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>Inspection Complete</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: currentStatus.inspectionCompletion ? '#34D399' : '#FBBF24' }}>
+              {currentStatus.inspectionCompletion || 'Not Completed'}
+            </div>
+          </div>
+          <div style={{ padding: 8, background: 'rgba(4,7,12,0.5)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.06)' }}>
+            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>RSC</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#38BDF8' }}>
+              {currentStatus.rscCondition
+                ? `${currentStatus.rscCondition}${currentStatus.rscTime ? ` @ ${currentStatus.rscTime}` : ''}`
+                : 'No Data'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== KPI Tiles — 3 across ===== */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
-        {[
-          { label: 'OPEN', value: kpis.open, color: '#FBBF24', href: '/discrepancies' },
-          { label: 'CRITICAL', value: kpis.critical, color: kpis.critical > 0 ? '#EF4444' : '#34D399', href: '/discrepancies' },
-          { label: 'NOTAMS', value: kpis.notams, color: '#A78BFA', href: '/notams' },
-        ].map((k) => (
+        {KPI_TILES.map((k) => (
           <Link
             key={k.label}
             href={k.href}
@@ -101,23 +397,23 @@ export default function HomePage() {
               background: 'rgba(10,16,28,0.92)',
               border: '1px solid rgba(56,189,248,0.06)',
               borderRadius: 10,
-              padding: '10px 6px',
+              padding: '14px 6px',
               textAlign: 'center',
               cursor: 'pointer',
               textDecoration: 'none',
             }}
           >
-            <div style={{ fontSize: 9, color: '#64748B', letterSpacing: '0.08em', fontWeight: 600 }}>
+            <div style={{ fontSize: 22, marginBottom: 4 }}>{k.icon}</div>
+            <div style={{ fontSize: 9, color: k.color, letterSpacing: '0.08em', fontWeight: 700 }}>
               {k.label}
             </div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: k.color }}>{k.value}</div>
           </Link>
         ))}
       </div>
 
-      {/* Quick Actions — 4x2 grid */}
+      {/* ===== Quick Actions ===== */}
       <span className="section-label">Quick Actions</span>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 14 }}>
         {QUICK_ACTIONS.map((q) => (
           <Link
             key={q.label}
@@ -126,107 +422,165 @@ export default function HomePage() {
               background: 'rgba(10,16,28,0.92)',
               border: '1px solid rgba(56,189,248,0.06)',
               borderRadius: 10,
-              padding: '12px 4px',
+              padding: '14px 8px',
               display: 'flex',
-              flexDirection: 'column',
               alignItems: 'center',
-              gap: 4,
+              gap: 10,
               cursor: 'pointer',
               textDecoration: 'none',
             }}
           >
             <div
               style={{
-                width: 28,
-                height: 28,
-                borderRadius: 7,
+                width: 36,
+                height: 36,
+                borderRadius: 9,
                 background: `${q.color}12`,
                 border: `1px solid ${q.color}25`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexShrink: 0,
               }}
             >
-              <q.icon size={14} color={q.color} />
+              <q.icon size={18} color={q.color} />
             </div>
-            <span style={{ fontSize: 8, color: '#94A3B8', fontWeight: 600, textAlign: 'center', lineHeight: 1.2 }}>
+            <span style={{ fontSize: 11, color: '#E2E8F0', fontWeight: 700, lineHeight: 1.3 }}>
               {q.label}
             </span>
           </Link>
         ))}
       </div>
 
-      {/* Today's Status */}
-      <span className="section-label">{"Today's Status"}</span>
-      <div className="card" style={{ marginBottom: 8 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-          {[
-            { icon: '📋', label: 'Inspection', value: 'Not Started', color: '#FBBF24', href: '/inspections' },
-            { icon: '⚠️', label: 'FOD', value: '0715L (2 found)', color: '#FBBF24', href: '/checks' },
-            { icon: '🦅', label: 'BASH', value: '0645L (LOW)', color: '#34D399', href: '/checks' },
-            { icon: '📊', label: 'RCR', value: 'Yest (Mu 64)', color: '#FBBF24', href: '/checks' },
-          ].map((s) => (
-            <Link
-              key={s.label}
-              href={s.href}
-              style={{
-                padding: 8,
-                background: 'rgba(4,7,12,0.5)',
-                borderRadius: 8,
-                cursor: 'pointer',
-                border: '1px solid rgba(56,189,248,0.06)',
-                textDecoration: 'none',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-                <span style={{ fontSize: 11 }}>{s.icon}</span>
-                <span style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>{s.label}</span>
+      {/* ===== NAVAID Status ===== */}
+      <span className="section-label">NAVAID Status</span>
+      <div className="card" style={{ marginBottom: 10, padding: '10px 12px' }}>
+        {navaids.length === 0 ? (
+          <div style={{ fontSize: 11, color: '#64748B', textAlign: 'center', padding: 12 }}>
+            Connect to Supabase to manage NAVAID statuses
+          </div>
+        ) : (
+          navaids.map((n) => (
+            <div key={n.id} style={{ marginBottom: navaids.indexOf(n) < navaids.length - 1 ? 10 : 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#E2E8F0' }}>{n.navaid_name}</span>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {(['green', 'yellow', 'red'] as const).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => handleNavaidToggle(n, s)}
+                      style={{
+                        width: 28,
+                        height: 22,
+                        borderRadius: 5,
+                        border: n.status === s
+                          ? `2px solid ${STATUS_COLORS[s]}`
+                          : '1px solid rgba(56,189,248,0.12)',
+                        background: n.status === s
+                          ? `${STATUS_COLORS[s]}20`
+                          : 'rgba(4,7,12,0.5)',
+                        cursor: 'pointer',
+                        fontSize: 8,
+                        fontWeight: 700,
+                        color: STATUS_COLORS[s],
+                        textTransform: 'uppercase',
+                        padding: 0,
+                      }}
+                    >
+                      {s.charAt(0).toUpperCase()}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: s.color }}>{s.value}</div>
-            </Link>
-          ))}
-        </div>
+              {(n.status === 'yellow' || n.status === 'red') && (
+                <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                  <input
+                    type="text"
+                    placeholder="Add note..."
+                    value={navaidNotes[n.id] || ''}
+                    onChange={(e) => setNavaidNotes((prev) => ({ ...prev, [n.id]: e.target.value }))}
+                    onBlur={() => handleNavaidNotesSave(n)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleNavaidNotesSave(n) }}
+                    style={{
+                      flex: 1,
+                      background: 'rgba(4,7,12,0.7)',
+                      border: `1px solid ${STATUS_COLORS[n.status]}40`,
+                      borderRadius: 6,
+                      padding: '4px 8px',
+                      fontSize: 10,
+                      color: '#E2E8F0',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
 
-      {/* Recent Activity */}
+      {/* ===== Recent Activity ===== */}
       <span className="section-label">Recent Activity</span>
-      {PLACEHOLDER_ACTIVITY.map((a, i) => (
-        <div
-          key={i}
-          style={{
-            display: 'flex',
-            gap: 8,
-            padding: '6px 0',
-            borderBottom: i < PLACEHOLDER_ACTIVITY.length - 1 ? '1px solid rgba(56,189,248,0.06)' : 'none',
-          }}
-        >
-          <div
-            style={{
-              width: 24,
-              height: 24,
-              borderRadius: 6,
-              background: `${a.color}12`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 10,
-              flexShrink: 0,
-              color: a.color,
-            }}
-          >
-            &bull;
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: a.user === 'You' ? '#22D3EE' : '#F1F5F9' }}>
-                {a.user}
-              </span>
-              <span style={{ fontSize: 9, color: '#64748B' }}>{a.time}</span>
-            </div>
-            <div style={{ fontSize: 10, color: '#94A3B8' }}>{a.text}</div>
-          </div>
+      {activity.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: 16 }}>
+          <div style={{ fontSize: 11, color: '#64748B' }}>No activity recorded yet</div>
         </div>
-      ))}
+      ) : (
+        activity.map((a, i) => {
+          const actionColor: Record<string, string> = {
+            created: '#34D399',
+            completed: '#22D3EE',
+            updated: '#FBBF24',
+            status_updated: '#A78BFA',
+            deleted: '#EF4444',
+          }
+          const color = actionColor[a.action] || '#64748B'
+          const date = new Date(a.created_at)
+          const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          const timeStr = date.toTimeString().slice(0, 5)
+          const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
+
+          return (
+            <div
+              key={a.id}
+              style={{
+                display: 'flex',
+                gap: 8,
+                padding: '7px 0',
+                borderBottom: i < activity.length - 1 ? '1px solid rgba(56,189,248,0.06)' : 'none',
+              }}
+            >
+              <div
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: 6,
+                  background: `${color}12`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 10,
+                  flexShrink: 0,
+                  color,
+                }}
+              >
+                &bull;
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#22D3EE' }}>
+                    {userName}
+                  </span>
+                  <span style={{ fontSize: 9, color: '#64748B' }}>{dateStr} {timeStr}</span>
+                </div>
+                <div style={{ fontSize: 10, color: '#94A3B8' }}>
+                  {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined)}
+                </div>
+              </div>
+            </div>
+          )
+        })
+      )}
     </div>
   )
 }

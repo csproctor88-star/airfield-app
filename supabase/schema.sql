@@ -13,6 +13,7 @@ CREATE TABLE profiles (
   shop TEXT,
   phone TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
+  last_seen_at TIMESTAMPTZ DEFAULT now(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -209,6 +210,24 @@ CREATE TABLE activity_log (
 
 CREATE INDEX idx_activity_log_created ON activity_log(created_at DESC);
 CREATE INDEX idx_activity_log_entity ON activity_log(entity_type, entity_id);
+
+-- 5.9b NAVAID Status Tracking
+CREATE TABLE navaid_statuses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  navaid_name TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'green' CHECK (status IN ('green', 'yellow', 'red')),
+  notes TEXT,
+  updated_by UUID REFERENCES profiles(id),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO navaid_statuses (navaid_name) VALUES
+  ('01 Localizer'),
+  ('01 Glideslope'),
+  ('01 ILS'),
+  ('19 Localizer'),
+  ('19 Glideslope'),
+  ('19 ILS');
 
 -- 5.10 Sequences for display IDs
 CREATE SEQUENCE discrepancy_seq START 1;
