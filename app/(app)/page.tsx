@@ -33,10 +33,9 @@ function presenceLabel(lastSeen: string | null): { label: string; color: string 
 
 // --- Quick Actions (KPI badges) ---
 const QUICK_ACTIONS = [
-  { label: 'Begin/Continue\nAirfield Inspection', icon: '📋', color: '#34D399', href: '/inspections?action=begin' },
-  { label: 'Begin\nAirfield Check', icon: '🛡️', color: '#FBBF24', href: '/checks' },
-  { label: 'New\nDiscrepancy', icon: '🚨', color: '#EF4444', href: '/discrepancies/new' },
-  { label: 'Obstruction\nEvaluation', icon: '🗺️', color: '#38BDF8', href: '/obstructions' },
+  { label: 'Begin/Continue Airfield Inspection', icon: '📋', color: '#34D399', href: '/inspections?action=begin' },
+  { label: 'Begin Airfield Check', icon: '🛡️', color: '#FBBF24', href: '/checks' },
+  { label: 'New Discrepancy', icon: '🚨', color: '#EF4444', href: '/discrepancies/new' },
 ]
 
 // --- NAVAID color map ---
@@ -613,11 +612,11 @@ export default function HomePage() {
         )
         return (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-            <div className="card" style={{ padding: '10px 8px 4px' }}>
+            <div className="card" style={{ padding: '10px 14px 4px' }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: '#FBBF24', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 01</div>
               {rwy01.map(renderNavaidItem)}
             </div>
-            <div className="card" style={{ padding: '10px 8px 4px' }}>
+            <div className="card" style={{ padding: '10px 14px 4px' }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: '#FBBF24', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 19</div>
               {rwy19.map(renderNavaidItem)}
             </div>
@@ -639,7 +638,7 @@ export default function HomePage() {
 
       {/* ===== Quick Actions ===== */}
       <span className="section-label">Quick Actions</span>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
         {QUICK_ACTIONS.map((q) => (
           <Link
             key={q.label}
@@ -648,16 +647,19 @@ export default function HomePage() {
               background: 'rgba(10,16,28,0.92)',
               border: '1px solid rgba(56,189,248,0.06)',
               borderRadius: 12,
-              padding: '18px 8px',
-              textAlign: 'center',
+              padding: '14px 16px',
               cursor: 'pointer',
               textDecoration: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
             }}
           >
-            <div style={{ fontSize: 28, marginBottom: 6 }}>{q.icon}</div>
-            <div style={{ fontSize: 13, color: q.color, letterSpacing: '0.04em', fontWeight: 700, whiteSpace: 'pre-line', lineHeight: 1.3 }}>
+            <span style={{ fontSize: 24 }}>{q.icon}</span>
+            <span style={{ fontSize: 14, color: q.color, letterSpacing: '0.04em', fontWeight: 700 }}>
               {q.label}
-            </div>
+            </span>
           </Link>
         ))}
       </div>

@@ -6,17 +6,17 @@ import {
   Home,
   Plane,
   BookOpen,
-  Radio,
+  MapPin,
   Menu,
 } from 'lucide-react'
 
-// Bottom nav: Home | Aircraft Database | Regulations | NOTAMs | More
+// Bottom nav: Home | Aircraft Database | Regulations | Obstruction Eval | More
 
 const tabs = [
   { href: '/', label: 'HOME', icon: Home },
   { href: '/aircraft', label: 'AIRCRAFT', icon: Plane },
   { href: '/regulations', label: 'REGS', icon: BookOpen },
-  { href: '/notams', label: 'NOTAMS', icon: Radio },
+  { href: '/obstructions', label: 'OBS EVAL', icon: MapPin },
   { href: '/more', label: 'MORE', icon: Menu },
 ] as const
 
