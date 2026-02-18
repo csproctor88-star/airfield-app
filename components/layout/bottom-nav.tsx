@@ -4,20 +4,19 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
   Home,
-  ClipboardList,
-  ShieldCheck,
-  Megaphone,
+  Plane,
+  BookOpen,
+  MapPin,
   Menu,
 } from 'lucide-react'
 
-// Bottom nav matching prototype: 5 tabs, fixed, blur backdrop
-// Home | Discrepancies | Checks | NOTAMs | More
+// Bottom nav: Home | Aircraft Database | Regulations | Obstruction Eval | More
 
 const tabs = [
   { href: '/', label: 'HOME', icon: Home },
-  { href: '/discrepancies', label: 'DISCREP', icon: ClipboardList },
-  { href: '/checks', label: 'CHECKS', icon: ShieldCheck },
-  { href: '/notams', label: 'NOTAMS', icon: Megaphone },
+  { href: '/aircraft', label: 'AIRCRAFT', icon: Plane },
+  { href: '/regulations', label: 'REGS', icon: BookOpen },
+  { href: '/obstructions', label: 'OBS EVAL', icon: MapPin },
   { href: '/more', label: 'MORE', icon: Menu },
 ] as const
 
@@ -71,20 +70,6 @@ export function BottomNav() {
             <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.08em' }}>
               {label}
             </span>
-            {/* Alert dot for Home when there are critical items */}
-            {href === '/' && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  right: 4,
-                  width: 7,
-                  height: 7,
-                  borderRadius: 4,
-                  background: '#EF4444',
-                }}
-              />
-            )}
           </Link>
         )
       })}

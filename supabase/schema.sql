@@ -13,6 +13,7 @@ CREATE TABLE profiles (
   shop TEXT,
   phone TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
+  last_seen_at TIMESTAMPTZ DEFAULT now(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -44,8 +45,9 @@ CREATE INDEX idx_notams_effective ON notams(effective_start, effective_end);
 CREATE TABLE inspections (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   display_id TEXT NOT NULL UNIQUE,
-  inspection_type TEXT NOT NULL CHECK (inspection_type IN ('daily', 'semi_annual', 'annual')),
-  inspector_id UUID NOT NULL REFERENCES profiles(id),
+  inspection_type TEXT NOT NULL CHECK (inspection_type IN ('airfield', 'lighting', 'construction_meeting', 'joint_monthly')),
+  inspector_id UUID REFERENCES profiles(id),
+  inspector_name TEXT,
   inspection_date DATE NOT NULL DEFAULT CURRENT_DATE,
   status TEXT NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'completed')),
   items JSONB NOT NULL DEFAULT '[]',
@@ -54,19 +56,29 @@ CREATE TABLE inspections (
   failed_count INTEGER NOT NULL DEFAULT 0,
   na_count INTEGER NOT NULL DEFAULT 0,
   completion_percent NUMERIC(5,2) NOT NULL DEFAULT 0,
+  construction_meeting BOOLEAN NOT NULL DEFAULT false,
+  joint_monthly BOOLEAN NOT NULL DEFAULT false,
+  personnel TEXT[] NOT NULL DEFAULT '{}',
+  bwc_value TEXT CHECK (bwc_value IS NULL OR bwc_value IN ('LOW', 'MOD', 'SEV', 'PROHIB')),
+  weather_conditions TEXT,
+  temperature_f NUMERIC(5,1),
   notes TEXT,
+  daily_group_id UUID,
   completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX idx_inspections_daily_group ON inspections(daily_group_id);
 
 -- 5.2 Discrepancies
 CREATE TABLE discrepancies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   display_id TEXT NOT NULL UNIQUE,
   type TEXT NOT NULL,
-  severity TEXT NOT NULL CHECK (severity IN ('critical', 'high', 'medium', 'low')),
-  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'assigned', 'in_progress', 'resolved', 'closed')),
+  severity TEXT NOT NULL DEFAULT 'no' CHECK (severity IN ('yes', 'no', 'critical', 'high', 'medium', 'low')),
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'completed', 'cancelled')),
+  current_status TEXT NOT NULL DEFAULT 'submitted_to_afm' CHECK (current_status IN ('submitted_to_afm', 'submitted_to_ces', 'awaiting_action_by_ces', 'work_completed_awaiting_verification')),
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   location_text TEXT NOT NULL,
@@ -76,7 +88,7 @@ CREATE TABLE discrepancies (
   assigned_to UUID REFERENCES profiles(id),
   reported_by UUID NOT NULL REFERENCES profiles(id),
   work_order_number TEXT,
-  sla_deadline TIMESTAMPTZ,
+  notam_reference TEXT,
   linked_notam_id UUID REFERENCES notams(id),
   inspection_id UUID REFERENCES inspections(id),
   resolution_notes TEXT,
@@ -100,20 +112,31 @@ ALTER TABLE notams ADD CONSTRAINT fk_notams_discrepancy
 CREATE TABLE airfield_checks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   display_id TEXT NOT NULL UNIQUE,
-  check_type TEXT NOT NULL CHECK (check_type IN ('fod', 'bash', 'rcr', 'rsc', 'emergency')),
-  performed_by UUID NOT NULL REFERENCES profiles(id),
-  check_date TIMESTAMPTZ NOT NULL DEFAULT now(),
+  check_type TEXT NOT NULL CHECK (check_type IN ('fod', 'rsc', 'ife', 'ground_emergency', 'heavy_aircraft', 'bash', 'rcr')),
+  areas TEXT[] NOT NULL DEFAULT '{}',
+  data JSONB NOT NULL DEFAULT '{}',
+  completed_by TEXT,
+  completed_at TIMESTAMPTZ,
   latitude DOUBLE PRECISION,
   longitude DOUBLE PRECISION,
-  data JSONB NOT NULL DEFAULT '{}',
-  notes TEXT,
   photo_count INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX idx_checks_type ON airfield_checks(check_type);
-CREATE INDEX idx_checks_date ON airfield_checks(check_date DESC);
+CREATE INDEX idx_checks_completed ON airfield_checks(completed_at DESC);
+
+-- 5.5b Check Comments (remarks timeline)
+CREATE TABLE check_comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  check_id UUID NOT NULL REFERENCES airfield_checks(id) ON DELETE CASCADE,
+  comment TEXT NOT NULL,
+  user_name TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_check_comments_check ON check_comments(check_id, created_at ASC);
 
 -- 5.3 Photos
 CREATE TABLE photos (
@@ -141,7 +164,7 @@ CREATE TABLE status_updates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   discrepancy_id UUID NOT NULL REFERENCES discrepancies(id) ON DELETE CASCADE,
   old_status TEXT,
-  new_status TEXT NOT NULL,
+  new_status TEXT,
   notes TEXT,
   updated_by UUID NOT NULL REFERENCES profiles(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -152,13 +175,20 @@ CREATE INDEX idx_status_updates_discrepancy ON status_updates(discrepancy_id, cr
 -- 5.8 Obstruction Evaluations
 CREATE TABLE obstruction_evaluations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  display_id TEXT UNIQUE,
   runway_class TEXT NOT NULL CHECK (runway_class IN ('A', 'B')),
   object_height_agl NUMERIC(10,2) NOT NULL,
   object_distance_ft NUMERIC(10,2),
+  distance_from_centerline_ft NUMERIC(10,2),
   object_elevation_msl NUMERIC(10,2),
+  obstruction_top_msl NUMERIC(10,2),
   latitude DOUBLE PRECISION,
   longitude DOUBLE PRECISION,
+  description TEXT,
+  photo_storage_path TEXT,
   results JSONB NOT NULL DEFAULT '[]',
+  controlling_surface TEXT,
+  violated_surfaces TEXT[] DEFAULT '{}',
   has_violation BOOLEAN NOT NULL DEFAULT false,
   evaluated_by UUID NOT NULL REFERENCES profiles(id),
   linked_discrepancy_id UUID REFERENCES discrepancies(id),
@@ -181,6 +211,24 @@ CREATE TABLE activity_log (
 CREATE INDEX idx_activity_log_created ON activity_log(created_at DESC);
 CREATE INDEX idx_activity_log_entity ON activity_log(entity_type, entity_id);
 
+-- 5.9b NAVAID Status Tracking
+CREATE TABLE navaid_statuses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  navaid_name TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'green' CHECK (status IN ('green', 'yellow', 'red')),
+  notes TEXT,
+  updated_by UUID REFERENCES profiles(id),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO navaid_statuses (navaid_name) VALUES
+  ('01 Localizer'),
+  ('01 Glideslope'),
+  ('01 ILS'),
+  ('19 Localizer'),
+  ('19 Glideslope'),
+  ('19 ILS');
+
 -- 5.10 Sequences for display IDs
 CREATE SEQUENCE discrepancy_seq START 1;
 CREATE SEQUENCE work_order_seq START 1;
@@ -200,62 +248,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 5.12 Row Level Security
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Anyone can view active profiles" ON profiles FOR SELECT USING (is_active = true);
-CREATE POLICY "Admins manage profiles" ON profiles FOR ALL USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role IN ('sys_admin', 'airfield_manager'))
-);
-
-ALTER TABLE discrepancies ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "AM roles full access" ON discrepancies FOR ALL USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role IN ('airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'))
-);
-CREATE POLICY "CE sees assigned" ON discrepancies FOR SELECT USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role = 'ce_shop')
-  AND assigned_shop = (SELECT shop FROM profiles WHERE id = auth.uid())
-);
-CREATE POLICY "CE updates assigned" ON discrepancies FOR UPDATE USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role = 'ce_shop')
-  AND assigned_shop = (SELECT shop FROM profiles WHERE id = auth.uid())
-);
-CREATE POLICY "Observers read all" ON discrepancies FOR SELECT USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role IN ('wing_safety', 'atc', 'observer'))
-);
-
-ALTER TABLE airfield_checks ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "AM roles full access" ON airfield_checks FOR ALL USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role IN ('airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'))
-);
-CREATE POLICY "Others read checks" ON airfield_checks FOR SELECT USING (true);
-
-ALTER TABLE inspections ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "AM roles full access" ON inspections FOR ALL USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role IN ('airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'))
-);
-CREATE POLICY "Others read inspections" ON inspections FOR SELECT USING (true);
-
-ALTER TABLE notams ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "AM roles manage notams" ON notams FOR ALL USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role IN ('airfield_manager', 'am_ncoic', 'sys_admin'))
-);
-CREATE POLICY "Everyone reads notams" ON notams FOR SELECT USING (true);
-
-ALTER TABLE photos ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "AM roles manage photos" ON photos FOR ALL USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role IN ('airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'))
-);
-CREATE POLICY "Everyone reads photos" ON photos FOR SELECT USING (true);
-
-ALTER TABLE status_updates ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "AM roles manage status" ON status_updates FOR ALL USING (
-  auth.uid() IN (SELECT id FROM profiles WHERE role IN ('airfield_manager', 'am_ncoic', 'am_tech', 'sys_admin'))
-);
-CREATE POLICY "CE updates own" ON status_updates FOR INSERT WITH CHECK (
-  auth.uid() IN (SELECT id FROM profiles WHERE role = 'ce_shop')
-);
-CREATE POLICY "Everyone reads status" ON status_updates FOR SELECT USING (true);
-
-ALTER TABLE activity_log ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Everyone reads activity" ON activity_log FOR SELECT USING (true);
-CREATE POLICY "System inserts activity" ON activity_log FOR INSERT WITH CHECK (true);
+-- NOTE: Row Level Security policies are intentionally omitted from this schema.
+-- RLS and role-based access control will be added in a later development phase.
+-- For now, all authenticated users have full access to all tables.
