@@ -34,8 +34,8 @@ function presenceLabel(lastSeen: string | null): { label: string; color: string 
 // --- Quick Actions (KPI badges) ---
 const QUICK_ACTIONS = [
   { label: 'Begin/Continue\nAirfield Inspection', icon: '📋', color: '#34D399', href: '/inspections?action=begin' },
-  { label: 'New\nDiscrepancy', icon: '🚨', color: '#EF4444', href: '/discrepancies/new' },
   { label: 'Begin\nAirfield Check', icon: '🛡️', color: '#FBBF24', href: '/checks' },
+  { label: 'New\nDiscrepancy', icon: '🚨', color: '#EF4444', href: '/discrepancies/new' },
   { label: 'Obstruction\nEvaluation', icon: '🗺️', color: '#38BDF8', href: '/obstructions' },
 ]
 
@@ -76,6 +76,17 @@ type ActivityEntry = {
   user_rank: string | null
 }
 
+type Advisory = {
+  type: 'INFO' | 'CAUTION' | 'WARNING'
+  text: string
+}
+
+const ADVISORY_COLORS: Record<string, { bg: string; border: string; text: string }> = {
+  INFO: { bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.35)', text: '#38BDF8' },
+  CAUTION: { bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.35)', text: '#FBBF24' },
+  WARNING: { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)', text: '#EF4444' },
+}
+
 type CurrentStatusData = {
   bwc: string | null
   lastCheckType: string | null
@@ -99,6 +110,10 @@ export default function HomePage() {
   const [currentStatus, setCurrentStatus] = useState<CurrentStatusData>({
     bwc: null, lastCheckType: null, lastCheckTime: null, inspectionCompletion: null, rscCondition: null, rscTime: null, activeRunway: '01', runwayStatus: 'open',
   })
+  const [advisory, setAdvisory] = useState<Advisory | null>(null)
+  const [advisoryDialogOpen, setAdvisoryDialogOpen] = useState(false)
+  const [advisoryDraftType, setAdvisoryDraftType] = useState<'INFO' | 'CAUTION' | 'WARNING'>('INFO')
+  const [advisoryDraftText, setAdvisoryDraftText] = useState('')
 
   // --- Clock ---
   useEffect(() => {
@@ -328,9 +343,16 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
+              <div
+                onClick={() => setAdvisoryDialogOpen(true)}
+                style={{ textAlign: 'right', cursor: 'pointer', minWidth: 60 }}
+              >
                 <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Advisory</div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#475569' }}>None</div>
+                {advisory ? (
+                  <div style={{ fontSize: 11, fontWeight: 700, color: ADVISORY_COLORS[advisory.type].text }}>{advisory.type}</div>
+                ) : (
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#475569' }}>None</div>
+                )}
               </div>
             </>
           ) : (
@@ -342,9 +364,16 @@ export default function HomePage() {
                   <div style={{ fontSize: 10, color: '#475569' }}>Weather data unavailable</div>
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
+              <div
+                onClick={() => setAdvisoryDialogOpen(true)}
+                style={{ textAlign: 'right', cursor: 'pointer', minWidth: 60 }}
+              >
                 <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Advisory</div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#475569' }}>None</div>
+                {advisory ? (
+                  <div style={{ fontSize: 11, fontWeight: 700, color: ADVISORY_COLORS[advisory.type].text }}>{advisory.type}</div>
+                ) : (
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#475569' }}>None</div>
+                )}
               </div>
             </>
           )
@@ -352,6 +381,111 @@ export default function HomePage() {
           <div style={{ fontSize: 11, color: '#64748B' }}>Loading weather...</div>
         )}
       </div>
+
+      {/* Advisory banner */}
+      {advisory && (
+        <div
+          onClick={() => setAdvisoryDialogOpen(true)}
+          style={{
+            padding: '8px 12px',
+            marginBottom: 12,
+            borderRadius: 10,
+            background: ADVISORY_COLORS[advisory.type].bg,
+            border: `1px solid ${ADVISORY_COLORS[advisory.type].border}`,
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{ fontSize: 11, fontWeight: 800, color: ADVISORY_COLORS[advisory.type].text, marginBottom: 2 }}>{advisory.type}</div>
+          <div style={{ fontSize: 12, color: '#E2E8F0', lineHeight: 1.4 }}>{advisory.text}</div>
+        </div>
+      )}
+
+      {/* Advisory dialog */}
+      {advisoryDialogOpen && (
+        <div
+          onClick={() => setAdvisoryDialogOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#0F172A', borderRadius: 14, padding: 20, width: '100%', maxWidth: 340,
+              border: '1px solid rgba(56,189,248,0.12)',
+            }}
+          >
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#F1F5F9', marginBottom: 14 }}>Set Advisory</div>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+              {(['INFO', 'CAUTION', 'WARNING'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setAdvisoryDraftType(t)}
+                  style={{
+                    flex: 1, padding: '8px 4px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                    cursor: 'pointer', textAlign: 'center',
+                    border: advisoryDraftType === t
+                      ? `2px solid ${ADVISORY_COLORS[t].text}`
+                      : '1px solid rgba(56,189,248,0.12)',
+                    background: advisoryDraftType === t ? ADVISORY_COLORS[t].bg : 'rgba(4,7,12,0.5)',
+                    color: ADVISORY_COLORS[t].text,
+                  }}
+                >{t}</button>
+              ))}
+            </div>
+            <input
+              type="text"
+              placeholder="Advisory text..."
+              value={advisoryDraftText}
+              onChange={(e) => setAdvisoryDraftText(e.target.value)}
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8,
+                background: 'rgba(4,7,12,0.7)', border: '1px solid rgba(56,189,248,0.12)',
+                color: '#E2E8F0', fontSize: 13, outline: 'none', marginBottom: 14,
+                fontFamily: 'inherit',
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              {advisory && (
+                <button
+                  onClick={() => {
+                    setAdvisory(null)
+                    setAdvisoryDraftText('')
+                    setAdvisoryDialogOpen(false)
+                  }}
+                  style={{
+                    flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                    cursor: 'pointer', border: '1px solid rgba(239,68,68,0.3)',
+                    background: 'rgba(239,68,68,0.1)', color: '#EF4444',
+                  }}
+                >Clear</button>
+              )}
+              <button
+                onClick={() => {
+                  if (advisoryDraftText.trim()) {
+                    setAdvisory({ type: advisoryDraftType, text: advisoryDraftText.trim() })
+                  }
+                  setAdvisoryDialogOpen(false)
+                }}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid rgba(52,211,153,0.3)',
+                  background: 'rgba(52,211,153,0.15)', color: '#34D399',
+                }}
+              >Save</button>
+              <button
+                onClick={() => setAdvisoryDialogOpen(false)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid rgba(56,189,248,0.12)',
+                  background: 'rgba(4,7,12,0.5)', color: '#64748B',
+                }}
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===== Current Status ===== */}
       <span className="section-label">Current Status</span>
@@ -383,7 +517,7 @@ export default function HomePage() {
           value={currentStatus.runwayStatus}
           onChange={(e) => setCurrentStatus((prev) => ({ ...prev, runwayStatus: e.target.value as 'open' | 'suspended' | 'closed' }))}
           style={{
-            padding: '2px 8px', borderRadius: 5, fontSize: 10, fontWeight: 700, cursor: 'pointer',
+            padding: '2px 8px', borderRadius: 5, fontSize: 10, fontWeight: 700, cursor: 'pointer', textAlign: 'center',
             border: currentStatus.runwayStatus === 'suspended'
               ? '1px solid rgba(251,191,36,0.4)'
               : currentStatus.runwayStatus === 'closed'
@@ -478,9 +612,9 @@ export default function HomePage() {
           </div>
         )
         return (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 16, maxWidth: 360, margin: '0 auto 16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
             <div className="card" style={{ padding: '10px 8px 4px' }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: '#34D399', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 01</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#FBBF24', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 01</div>
               {rwy01.map(renderNavaidItem)}
             </div>
             <div className="card" style={{ padding: '10px 8px 4px' }}>
