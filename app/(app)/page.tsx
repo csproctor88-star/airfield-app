@@ -446,62 +446,66 @@ export default function HomePage() {
             Connect to Supabase to manage NAVAID statuses
           </div>
         ) : (
-          navaids.map((n) => (
-            <div key={n.id} style={{ marginBottom: navaids.indexOf(n) < navaids.length - 1 ? 10 : 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#E2E8F0' }}>{n.navaid_name}</span>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  {(['green', 'yellow', 'red'] as const).map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => handleNavaidToggle(n, s)}
-                      style={{
-                        width: 28,
-                        height: 22,
-                        borderRadius: 5,
-                        border: n.status === s
-                          ? `2px solid ${STATUS_COLORS[s]}`
-                          : '1px solid rgba(56,189,248,0.12)',
-                        background: n.status === s
-                          ? `${STATUS_COLORS[s]}20`
-                          : 'rgba(4,7,12,0.5)',
-                        cursor: 'pointer',
-                        fontSize: 8,
-                        fontWeight: 700,
-                        color: STATUS_COLORS[s],
-                        textTransform: 'uppercase',
-                        padding: 0,
-                      }}
-                    >
-                      {s.charAt(0).toUpperCase()}
-                    </button>
-                  ))}
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {navaids.map((n) => (
+                <div key={n.id}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#E2E8F0' }}>{n.navaid_name}</span>
+                    <div style={{ display: 'flex', gap: 3 }}>
+                      {(['green', 'yellow', 'red'] as const).map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => handleNavaidToggle(n, s)}
+                          style={{
+                            width: 24,
+                            height: 20,
+                            borderRadius: 5,
+                            border: n.status === s
+                              ? `2px solid ${STATUS_COLORS[s]}`
+                              : '1px solid rgba(56,189,248,0.12)',
+                            background: n.status === s
+                              ? `${STATUS_COLORS[s]}20`
+                              : 'rgba(4,7,12,0.5)',
+                            cursor: 'pointer',
+                            fontSize: 8,
+                            fontWeight: 700,
+                            color: STATUS_COLORS[s],
+                            textTransform: 'uppercase',
+                            padding: 0,
+                          }}
+                        >
+                          {s.charAt(0).toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {(n.status === 'yellow' || n.status === 'red') && (
+                    <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
+                      <input
+                        type="text"
+                        placeholder="Add note..."
+                        value={navaidNotes[n.id] || ''}
+                        onChange={(e) => setNavaidNotes((prev) => ({ ...prev, [n.id]: e.target.value }))}
+                        onBlur={() => handleNavaidNotesSave(n)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleNavaidNotesSave(n) }}
+                        style={{
+                          flex: 1,
+                          background: 'rgba(4,7,12,0.7)',
+                          border: `1px solid ${STATUS_COLORS[n.status]}40`,
+                          borderRadius: 6,
+                          padding: '4px 8px',
+                          fontSize: 10,
+                          color: '#E2E8F0',
+                          outline: 'none',
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
-              </div>
-              {(n.status === 'yellow' || n.status === 'red') && (
-                <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-                  <input
-                    type="text"
-                    placeholder="Add note..."
-                    value={navaidNotes[n.id] || ''}
-                    onChange={(e) => setNavaidNotes((prev) => ({ ...prev, [n.id]: e.target.value }))}
-                    onBlur={() => handleNavaidNotesSave(n)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleNavaidNotesSave(n) }}
-                    style={{
-                      flex: 1,
-                      background: 'rgba(4,7,12,0.7)',
-                      border: `1px solid ${STATUS_COLORS[n.status]}40`,
-                      borderRadius: 6,
-                      padding: '4px 8px',
-                      fontSize: 10,
-                      color: '#E2E8F0',
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-              )}
+              ))}
             </div>
-          ))
+          </>
         )}
       </div>
 
