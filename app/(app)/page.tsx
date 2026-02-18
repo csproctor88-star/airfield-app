@@ -355,8 +355,63 @@ export default function HomePage() {
 
       {/* ===== Current Status ===== */}
       <span className="section-label">Current Status</span>
+      <div className="card" style={{
+        marginBottom: 8, padding: '10px 12px',
+        display: 'flex', alignItems: 'center', gap: 10,
+        background: currentStatus.runwayStatus === 'suspended'
+          ? 'rgba(251,191,36,0.08)'
+          : currentStatus.runwayStatus === 'closed'
+            ? 'rgba(239,68,68,0.08)'
+            : undefined,
+        border: currentStatus.runwayStatus === 'suspended'
+          ? '1px solid rgba(251,191,36,0.2)'
+          : currentStatus.runwayStatus === 'closed'
+            ? '1px solid rgba(239,68,68,0.2)'
+            : undefined,
+      }}>
+        <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600, whiteSpace: 'nowrap' }}>Active RWY</div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button
+            onClick={() => setCurrentStatus((prev) => ({ ...prev, activeRunway: '01' }))}
+            style={{
+              padding: '4px 12px', borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              border: currentStatus.activeRunway === '01' ? '2px solid #34D399' : '1px solid rgba(56,189,248,0.12)',
+              background: currentStatus.activeRunway === '01' ? 'rgba(52,211,153,0.15)' : 'rgba(4,7,12,0.5)',
+              color: currentStatus.activeRunway === '01' ? '#34D399' : '#64748B',
+            }}
+          >01</button>
+          <button
+            onClick={() => setCurrentStatus((prev) => ({ ...prev, activeRunway: '19' }))}
+            style={{
+              padding: '4px 12px', borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              border: currentStatus.activeRunway === '19' ? '2px solid #34D399' : '1px solid rgba(56,189,248,0.12)',
+              background: currentStatus.activeRunway === '19' ? 'rgba(52,211,153,0.15)' : 'rgba(4,7,12,0.5)',
+              color: currentStatus.activeRunway === '19' ? '#34D399' : '#64748B',
+            }}
+          >19</button>
+        </div>
+        <select
+          value={currentStatus.runwayStatus}
+          onChange={(e) => setCurrentStatus((prev) => ({ ...prev, runwayStatus: e.target.value as 'open' | 'suspended' | 'closed' }))}
+          style={{
+            flex: 1, padding: '4px 6px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+            border: currentStatus.runwayStatus === 'suspended'
+              ? '1px solid rgba(251,191,36,0.4)'
+              : currentStatus.runwayStatus === 'closed'
+                ? '1px solid rgba(239,68,68,0.4)'
+                : '1px solid rgba(52,211,153,0.3)',
+            background: 'rgba(4,7,12,0.7)',
+            color: currentStatus.runwayStatus === 'suspended' ? '#FBBF24' : currentStatus.runwayStatus === 'closed' ? '#EF4444' : '#34D399',
+            fontFamily: 'inherit', outline: 'none',
+          }}
+        >
+          <option value="open">Open</option>
+          <option value="suspended">Suspended</option>
+          <option value="closed">Closed</option>
+        </select>
+      </div>
       <div className="card" style={{ marginBottom: 12, padding: '12px 10px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <div style={{ padding: 12, background: 'rgba(4,7,12,0.5)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600, marginBottom: 6 }}>RSC</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: '#38BDF8' }}>
@@ -370,92 +425,6 @@ export default function HomePage() {
             <div style={{ fontSize: 14, fontWeight: 700, color: currentStatus.bwc === 'SEV' || currentStatus.bwc === 'PROHIB' ? '#EF4444' : currentStatus.bwc === 'MOD' ? '#FBBF24' : '#34D399' }}>
               {currentStatus.bwc || 'No Data'}
             </div>
-          </div>
-          <div style={{
-            padding: 12,
-            background: currentStatus.runwayStatus === 'suspended'
-              ? 'rgba(251,191,36,0.1)'
-              : currentStatus.runwayStatus === 'closed'
-                ? 'rgba(239,68,68,0.1)'
-                : 'rgba(4,7,12,0.5)',
-            borderRadius: 10,
-            border: currentStatus.runwayStatus === 'suspended'
-              ? '1px solid rgba(251,191,36,0.25)'
-              : currentStatus.runwayStatus === 'closed'
-                ? '1px solid rgba(239,68,68,0.25)'
-                : '1px solid rgba(56,189,248,0.06)',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600, marginBottom: 6 }}>Active RWY</div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 8 }}>
-              <button
-                onClick={() => setCurrentStatus((prev) => ({ ...prev, activeRunway: '01' }))}
-                style={{
-                  padding: '4px 14px',
-                  borderRadius: 6,
-                  fontSize: 14,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  border: currentStatus.activeRunway === '01'
-                    ? '2px solid #34D399'
-                    : '1px solid rgba(56,189,248,0.12)',
-                  background: currentStatus.activeRunway === '01'
-                    ? 'rgba(52,211,153,0.15)'
-                    : 'rgba(4,7,12,0.5)',
-                  color: currentStatus.activeRunway === '01' ? '#34D399' : '#64748B',
-                }}
-              >
-                01
-              </button>
-              <button
-                onClick={() => setCurrentStatus((prev) => ({ ...prev, activeRunway: '19' }))}
-                style={{
-                  padding: '4px 14px',
-                  borderRadius: 6,
-                  fontSize: 14,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  border: currentStatus.activeRunway === '19'
-                    ? '2px solid #34D399'
-                    : '1px solid rgba(56,189,248,0.12)',
-                  background: currentStatus.activeRunway === '19'
-                    ? 'rgba(52,211,153,0.15)'
-                    : 'rgba(4,7,12,0.5)',
-                  color: currentStatus.activeRunway === '19' ? '#34D399' : '#64748B',
-                }}
-              >
-                19
-              </button>
-            </div>
-            <select
-              value={currentStatus.runwayStatus}
-              onChange={(e) => setCurrentStatus((prev) => ({ ...prev, runwayStatus: e.target.value as 'open' | 'suspended' | 'closed' }))}
-              style={{
-                width: '100%',
-                padding: '4px 6px',
-                borderRadius: 6,
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: 'pointer',
-                border: currentStatus.runwayStatus === 'suspended'
-                  ? '1px solid rgba(251,191,36,0.4)'
-                  : currentStatus.runwayStatus === 'closed'
-                    ? '1px solid rgba(239,68,68,0.4)'
-                    : '1px solid rgba(52,211,153,0.3)',
-                background: 'rgba(4,7,12,0.7)',
-                color: currentStatus.runwayStatus === 'suspended'
-                  ? '#FBBF24'
-                  : currentStatus.runwayStatus === 'closed'
-                    ? '#EF4444'
-                    : '#34D399',
-                fontFamily: 'inherit',
-                outline: 'none',
-              }}
-            >
-              <option value="open">Open</option>
-              <option value="suspended">Suspended</option>
-              <option value="closed">Closed</option>
-            </select>
           </div>
         </div>
       </div>
@@ -475,29 +444,30 @@ export default function HomePage() {
         const rwy19 = navaids
           .filter((n) => n.navaid_name.startsWith('19'))
           .sort((a, b) => (a.navaid_name.includes('ILS') ? -1 : b.navaid_name.includes('ILS') ? 1 : 0))
+        const NAVAID_CYCLE: ('green' | 'yellow' | 'red')[] = ['green', 'yellow', 'red']
+        const NAVAID_LABELS: Record<string, string> = { green: 'G', yellow: 'Y', red: 'R' }
         const renderNavaidItem = (n: NavaidStatus) => (
           <div key={n.id} style={{ marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: '#E2E8F0' }}>
                 {n.navaid_name.replace(/^(01|19)\s*/, '')}
               </span>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {(['green', 'yellow', 'red'] as const).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => handleNavaidToggle(n, s)}
-                    style={{
-                      width: 36, height: 28, borderRadius: 6,
-                      border: n.status === s ? `2px solid ${STATUS_COLORS[s]}` : '1px solid rgba(56,189,248,0.12)',
-                      background: n.status === s ? `${STATUS_COLORS[s]}20` : 'rgba(4,7,12,0.5)',
-                      cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                      color: STATUS_COLORS[s], textTransform: 'uppercase', padding: 0,
-                    }}
-                  >
-                    {s.charAt(0).toUpperCase()}
-                  </button>
-                ))}
-              </div>
+              <button
+                onClick={() => {
+                  const idx = NAVAID_CYCLE.indexOf(n.status as 'green' | 'yellow' | 'red')
+                  const next = NAVAID_CYCLE[(idx + 1) % NAVAID_CYCLE.length]
+                  handleNavaidToggle(n, next)
+                }}
+                style={{
+                  width: 36, height: 28, borderRadius: 6,
+                  border: `2px solid ${STATUS_COLORS[n.status]}`,
+                  background: `${STATUS_COLORS[n.status]}20`,
+                  cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                  color: STATUS_COLORS[n.status], textTransform: 'uppercase', padding: 0,
+                }}
+              >
+                {NAVAID_LABELS[n.status] || 'G'}
+              </button>
             </div>
             {(n.status === 'yellow' || n.status === 'red') && (
               <input
