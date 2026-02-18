@@ -40,6 +40,7 @@ export default function InspectionsPage() {
   const [usingDemo, setUsingDemo] = useState(false)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
+  const [showHistory, setShowHistory] = useState(false)
 
   // ── Action state ──
   const [saving, setSaving] = useState(false)
@@ -564,7 +565,7 @@ export default function InspectionsPage() {
   // ══════════════════════════════════════════════
   // ══  WORKSPACE VIEW (active draft exists)  ══
   // ══════════════════════════════════════════════
-  if (draft) {
+  if (draft && !showHistory) {
     const airfieldSaved = !!draft.airfield.savedAt
     const lightingSaved = !!draft.lighting.savedAt
     const canFile = airfieldSaved || lightingSaved
@@ -572,11 +573,23 @@ export default function InspectionsPage() {
     return (
       <div style={{ padding: 16, paddingBottom: 120 }}>
         {/* ── Header ── */}
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 16, fontWeight: 800 }}>Daily Inspection</div>
-          <div style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>
-            Started {new Date(draft.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 800 }}>Daily Inspection</div>
+            <div style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>
+              Started {new Date(draft.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </div>
           </div>
+          <button
+            onClick={() => setShowHistory(true)}
+            style={{
+              background: '#0EA5E914', border: '1px solid #0EA5E933', borderRadius: 8,
+              padding: '8px 14px', color: '#0EA5E9', fontSize: 11, fontWeight: 600,
+              fontFamily: 'inherit', cursor: 'pointer',
+            }}
+          >
+            View History
+          </button>
         </div>
 
         {/* ── Tab Bar ── */}
@@ -988,16 +1001,32 @@ export default function InspectionsPage() {
             {dailyReports.length} filed report{dailyReports.length !== 1 ? 's' : ''}
           </div>
         </div>
-        <button
-          onClick={handleBeginNew}
-          style={{
-            background: '#22C55E14', border: '1px solid #22C55E33', borderRadius: 8,
-            padding: '8px 14px', color: '#22C55E', fontSize: 11, fontWeight: 600,
-            fontFamily: 'inherit', cursor: 'pointer',
-          }}
-        >
-          + Begin New Inspection
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {draft && showHistory && (
+            <button
+              onClick={() => setShowHistory(false)}
+              style={{
+                background: '#0EA5E914', border: '1px solid #0EA5E933', borderRadius: 8,
+                padding: '8px 14px', color: '#0EA5E9', fontSize: 11, fontWeight: 600,
+                fontFamily: 'inherit', cursor: 'pointer',
+              }}
+            >
+              Back to Draft
+            </button>
+          )}
+          {!draft && (
+            <button
+              onClick={handleBeginNew}
+              style={{
+                background: '#22C55E14', border: '1px solid #22C55E33', borderRadius: 8,
+                padding: '8px 14px', color: '#22C55E', fontSize: 11, fontWeight: 600,
+                fontFamily: 'inherit', cursor: 'pointer',
+              }}
+            >
+              + Begin New Inspection
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Type Filter Chips */}
