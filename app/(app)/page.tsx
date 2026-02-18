@@ -455,7 +455,7 @@ export default function HomePage() {
             }}
           >
             <div style={{ fontSize: 22, marginBottom: 4 }}>{k.icon}</div>
-            <div style={{ fontSize: 9, color: k.color, letterSpacing: '0.08em', fontWeight: 700, whiteSpace: 'pre-line', lineHeight: 1.3 }}>
+            <div style={{ fontSize: 12, color: k.color, letterSpacing: '0.04em', fontWeight: 700, whiteSpace: 'pre-line', lineHeight: 1.3 }}>
               {k.label}
             </div>
           </Link>
