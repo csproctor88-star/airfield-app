@@ -507,9 +507,9 @@ export default function HomePage() {
           onClick={() => setCurrentStatus((prev) => ({ ...prev, activeRunway: prev.activeRunway === '01' ? '19' : '01' }))}
           style={{
             padding: '4px 20px', borderRadius: 6, fontSize: 15, fontWeight: 800, cursor: 'pointer',
-            border: '2px solid #34D399',
-            background: 'rgba(52,211,153,0.15)',
-            color: '#34D399',
+            border: '2px solid #475569',
+            background: 'rgba(71,85,105,0.15)',
+            color: '#E2E8F0',
           }}
         >{currentStatus.activeRunway}</button>
         <select
