@@ -48,7 +48,7 @@ const QUICK_ACTIONS = [
 // --- KPI Tiles ---
 const KPI_TILES = [
   { label: 'Begin\nAirfield Check', icon: '🛡️', color: '#FBBF24', href: '/checks' },
-  { label: 'Begin/Continue\nAirfield Inspection', icon: '📋', color: '#34D399', href: '/inspections' },
+  { label: 'Begin/Continue\nAirfield Inspection', icon: '📋', color: '#34D399', href: '/inspections?action=begin' },
   { label: 'Obstruction\nEvaluation', icon: '🗺️', color: '#38BDF8', href: '/obstructions' },
 ]
 

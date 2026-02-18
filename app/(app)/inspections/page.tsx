@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
@@ -33,6 +33,7 @@ export default function InspectionsPage() {
   const [draft, setDraft] = useState<DailyInspectionDraft | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('airfield')
   const [draftLoaded, setDraftLoaded] = useState(false)
+  const autoBeginHandled = useRef(false)
 
   // ── History state ──
   const [liveInspections, setLiveInspections] = useState<InspectionRow[]>([])
@@ -52,6 +53,20 @@ export default function InspectionsPage() {
     if (stored) setDraft(stored)
     setDraftLoaded(true)
   }, [])
+
+  // ── Auto-begin: if ?action=begin and no draft, create one ──
+  useEffect(() => {
+    if (!draftLoaded || autoBeginHandled.current) return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('action') === 'begin' && !draft) {
+      autoBeginHandled.current = true
+      const newDraft = createNewDraft()
+      setDraft(newDraft)
+      setActiveTab('airfield')
+      saveDraftToStorage(newDraft)
+      toast.success('New daily inspection started')
+    }
+  }, [draftLoaded, draft])
 
   // ── Load history ──
   const loadHistory = useCallback(async () => {
