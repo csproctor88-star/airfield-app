@@ -357,7 +357,7 @@ export default function HomePage() {
       <span className="section-label">Current Status</span>
       <div className="card" style={{
         marginBottom: 8, padding: '10px 12px',
-        display: 'flex', alignItems: 'center', gap: 10,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
         background: currentStatus.runwayStatus === 'suspended'
           ? 'rgba(251,191,36,0.08)'
           : currentStatus.runwayStatus === 'closed'
@@ -369,32 +369,21 @@ export default function HomePage() {
             ? '1px solid rgba(239,68,68,0.2)'
             : undefined,
       }}>
-        <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600, whiteSpace: 'nowrap' }}>Active RWY</div>
-        <div style={{ display: 'flex', gap: 4 }}>
-          <button
-            onClick={() => setCurrentStatus((prev) => ({ ...prev, activeRunway: '01' }))}
-            style={{
-              padding: '4px 12px', borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-              border: currentStatus.activeRunway === '01' ? '2px solid #34D399' : '1px solid rgba(56,189,248,0.12)',
-              background: currentStatus.activeRunway === '01' ? 'rgba(52,211,153,0.15)' : 'rgba(4,7,12,0.5)',
-              color: currentStatus.activeRunway === '01' ? '#34D399' : '#64748B',
-            }}
-          >01</button>
-          <button
-            onClick={() => setCurrentStatus((prev) => ({ ...prev, activeRunway: '19' }))}
-            style={{
-              padding: '4px 12px', borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-              border: currentStatus.activeRunway === '19' ? '2px solid #34D399' : '1px solid rgba(56,189,248,0.12)',
-              background: currentStatus.activeRunway === '19' ? 'rgba(52,211,153,0.15)' : 'rgba(4,7,12,0.5)',
-              color: currentStatus.activeRunway === '19' ? '#34D399' : '#64748B',
-            }}
-          >19</button>
-        </div>
+        <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600 }}>Active RWY</div>
+        <button
+          onClick={() => setCurrentStatus((prev) => ({ ...prev, activeRunway: prev.activeRunway === '01' ? '19' : '01' }))}
+          style={{
+            padding: '4px 20px', borderRadius: 6, fontSize: 15, fontWeight: 800, cursor: 'pointer',
+            border: '2px solid #34D399',
+            background: 'rgba(52,211,153,0.15)',
+            color: '#34D399',
+          }}
+        >{currentStatus.activeRunway}</button>
         <select
           value={currentStatus.runwayStatus}
           onChange={(e) => setCurrentStatus((prev) => ({ ...prev, runwayStatus: e.target.value as 'open' | 'suspended' | 'closed' }))}
           style={{
-            flex: 1, padding: '4px 6px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+            padding: '2px 8px', borderRadius: 5, fontSize: 10, fontWeight: 700, cursor: 'pointer',
             border: currentStatus.runwayStatus === 'suspended'
               ? '1px solid rgba(251,191,36,0.4)'
               : currentStatus.runwayStatus === 'closed'
@@ -489,13 +478,13 @@ export default function HomePage() {
           </div>
         )
         return (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
-            <div className="card" style={{ padding: '12px 10px 6px' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#34D399', marginBottom: 10, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 01</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 16, maxWidth: 360, margin: '0 auto 16px' }}>
+            <div className="card" style={{ padding: '10px 8px 4px' }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#34D399', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 01</div>
               {rwy01.map(renderNavaidItem)}
             </div>
-            <div className="card" style={{ padding: '12px 10px 6px' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#FBBF24', marginBottom: 10, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 19</div>
+            <div className="card" style={{ padding: '10px 8px 4px' }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#FBBF24', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 19</div>
               {rwy19.map(renderNavaidItem)}
             </div>
           </div>
