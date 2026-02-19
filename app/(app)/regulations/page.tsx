@@ -582,13 +582,14 @@ export default function RegulationsPage() {
                             const storageName = cachedPdfMap.get(reg.reg_id)
                             console.log('[Regs] View clicked:', reg.reg_id, '→ storageName:', storageName)
                             if (storageName) {
-                              const pdfUrl = await getRegulationPdfUrl(storageName)
-                              console.log('[Regs] PDF URL result:', pdfUrl ? 'OK' : 'null')
-                              if (pdfUrl) {
-                                setViewerUrl(pdfUrl)
+                              const result = await getRegulationPdfUrl(storageName)
+                              if ('url' in result) {
+                                console.log('[Regs] Signed URL OK')
+                                setViewerUrl(result.url)
                                 setViewerReg(reg)
                                 return
                               }
+                              console.warn('[Regs] Signed URL failed:', result.error)
                             }
                             // Fallback to external URL
                             if (reg.url) {
@@ -596,9 +597,13 @@ export default function RegulationsPage() {
                               setViewerReg(reg)
                               return
                             }
-                            // No PDF source available
-                            console.warn('[Regs] No PDF source for', reg.reg_id)
-                            alert(`Unable to load PDF for "${reg.reg_id}". The file may not be available in storage yet.`)
+                            // No PDF source available — surface the storage error
+                            const storageName2 = cachedPdfMap.get(reg.reg_id)
+                            const detail = storageName2
+                              ? `Signed URL failed for "${storageName2}". Check that this file exists in the regulation-pdfs bucket.`
+                              : `No storage file matched for "${reg.reg_id}". Check that the PDF is uploaded to the regulation-pdfs bucket.`
+                            console.warn('[Regs]', detail)
+                            alert(detail)
                           } catch (err) {
                             console.error('[Regs] Error opening PDF:', err)
                             alert(`Error loading PDF for "${reg.reg_id}". Please try again.`)

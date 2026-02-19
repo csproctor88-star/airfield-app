@@ -125,32 +125,24 @@ export async function listCachedRegulationPdfs(): Promise<string[]> {
 }
 
 /**
- * Get a URL for a cached PDF in Supabase Storage.
- * Tries a signed URL first; falls back to the public URL if the bucket
- * is public but signed-URL creation fails (e.g. missing storage policies
- * for the anon key).
+ * Get a signed URL for a cached PDF in Supabase Storage.
+ * Returns { url } on success or { error } with a diagnostic message.
  */
-export async function getRegulationPdfUrl(storagePath: string): Promise<string | null> {
+export async function getRegulationPdfUrl(
+  storagePath: string
+): Promise<{ url: string } | { error: string }> {
   const supabase = createClient()
-  if (!supabase) return null
+  if (!supabase) return { error: 'Supabase client not available' }
 
-  // 1. Try signed URL (works for private buckets with correct policies)
   const { data, error } = await supabase.storage
     .from('regulation-pdfs')
     .createSignedUrl(storagePath, 3600) // 1 hour expiry
 
-  if (!error && data?.signedUrl) return data.signedUrl
+  if (!error && data?.signedUrl) return { url: data.signedUrl }
 
-  if (error) {
-    console.warn('[Regs] Signed URL failed for', storagePath, '–', error.message)
-  }
-
-  // 2. Fallback: public URL (works if bucket has a public access policy)
-  const { data: pubData } = supabase.storage
-    .from('regulation-pdfs')
-    .getPublicUrl(storagePath)
-
-  return pubData?.publicUrl ?? null
+  const msg = error?.message ?? 'Unknown error (no signedUrl returned)'
+  console.warn('[Regs] Signed URL failed for', storagePath, '–', msg)
+  return { error: `${msg} [file: ${storagePath}]` }
 }
 
 // ── User-uploaded regulation PDFs ──────────────────────────────
@@ -249,7 +241,8 @@ export async function fetchUserRegulationPdfs(
  * Get a signed URL for a user-uploaded PDF.
  */
 export async function getUserPdfSignedUrl(storagePath: string): Promise<string | null> {
-  return getRegulationPdfUrl(storagePath)
+  const result = await getRegulationPdfUrl(storagePath)
+  return 'url' in result ? result.url : null
 }
 
 /**
