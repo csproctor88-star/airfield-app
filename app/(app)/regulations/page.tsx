@@ -119,8 +119,9 @@ export default function RegulationsPage() {
       const map = new Map<string, string>()
 
       // 1. Seed with known storage filenames (always resolves, no bucket listing needed)
-      for (const [regId, fileName] of Object.entries(KNOWN_STORAGE_FILES)) {
-        map.set(regId, fileName)
+      const knownIds = Object.keys(KNOWN_STORAGE_FILES)
+      for (let i = 0; i < knownIds.length; i++) {
+        map.set(knownIds[i], KNOWN_STORAGE_FILES[knownIds[i]])
       }
 
       // 2. List the bucket and match remaining regulations via fuzzy logic
