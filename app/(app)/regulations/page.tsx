@@ -1,9 +1,37 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Search, ExternalLink, ChevronDown, ChevronUp, X, FileText } from 'lucide-react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { Search, ExternalLink, ChevronDown, ChevronUp, X, FileText, ArrowLeft, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import 'react-pdf/dist/Page/AnnotationLayer.css'
+import 'react-pdf/dist/Page/TextLayer.css'
+import { createClient } from '@/lib/supabase/client'
 import { ALL_REGULATIONS, type RegulationEntry } from '@/lib/regulations-data'
 import { REGULATION_CATEGORIES, REGULATION_PUB_TYPES, REGULATION_SOURCE_SECTIONS } from '@/lib/constants'
+
+// Dynamically import react-pdf to avoid SSR issues (DOMMatrix not available in Node)
+const PDFDocument = dynamic(
+  () => import('react-pdf').then(mod => {
+    mod.pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${mod.pdfjs.version}/build/pdf.worker.min.mjs`
+    return mod.Document
+  }),
+  { ssr: false },
+)
+const PDFPage = dynamic(
+  () => import('react-pdf').then(mod => mod.Page),
+  { ssr: false },
+)
+
+const BUCKET_NAME = 'regulation-pdfs'
+
+function sanitizeFileName(regId: string): string {
+  return regId
+    .replace(/[/\\:*?"<>|]/g, '-')
+    .replace(/,\s*/g, '-')
+    .replace(/\s+/g, '_')
+    .replace(/-+/g, '-')
+    .toLowerCase()
+}
 
 // --- Badge color by entry type ---
 function entryTypeBadge(entry: RegulationEntry): { label: string; bg: string; color: string } {
@@ -29,12 +57,89 @@ function getSectionLabel(section: string) {
 }
 
 export default function RegulationsPage() {
+  const supabase = createClient()
+
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [pubTypeFilter, setPubTypeFilter] = useState<string>('all')
   const [sourceFilter, setSourceFilter] = useState<string>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+
+  // PDF viewer state
+  const [viewingReg, setViewingReg] = useState<RegulationEntry | null>(null)
+  const [pdfData, setPdfData] = useState<Uint8Array | null>(null)
+  const [numPages, setNumPages] = useState<number | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [scale, setScale] = useState(1.0)
+  const [pdfLoading, setPdfLoading] = useState(false)
+  const [pdfError, setPdfError] = useState<string | null>(null)
+  const viewerRef = useRef<HTMLDivElement>(null)
+
+  // Open PDF in viewer — tries Supabase storage first
+  const viewPdf = useCallback(async (reg: RegulationEntry) => {
+    setPdfLoading(true)
+    setPdfError(null)
+    setPdfData(null)
+    setNumPages(null)
+    setCurrentPage(1)
+    setViewingReg(reg)
+
+    const fileName = `${sanitizeFileName(reg.reg_id)}.pdf`
+
+    try {
+      // Try Supabase storage
+      if (supabase) {
+        const { data, error } = await supabase.storage
+          .from(BUCKET_NAME)
+          .download(fileName)
+        if (!error && data) {
+          const uint8 = new Uint8Array(await data.arrayBuffer())
+          setPdfData(uint8)
+          setPdfLoading(false)
+          return
+        }
+      }
+
+      // Storage failed — show appropriate message
+      if (reg.url) {
+        setPdfError('PDF not found in storage. Use "Open External" to view this document, or ask an admin to run the download script.')
+      } else {
+        setPdfError('PDF not available. This regulation has no external URL and is not yet in storage. Ask an admin to upload it.')
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setPdfError(`Failed to load PDF: ${msg}`)
+    } finally {
+      setPdfLoading(false)
+    }
+  }, [supabase])
+
+  const closeViewer = useCallback(() => {
+    setViewingReg(null)
+    setPdfData(null)
+    setNumPages(null)
+    setCurrentPage(1)
+    setPdfError(null)
+  }, [])
+
+  // Keyboard navigation for viewer
+  useEffect(() => {
+    if (!viewingReg) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault()
+        setCurrentPage(p => Math.min(p + 1, numPages || p))
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        setCurrentPage(p => Math.max(p - 1, 1))
+      } else if (e.key === 'Escape') {
+        closeViewer()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [viewingReg, numPages, closeViewer])
 
   // Derive counts
   const coreCount = ALL_REGULATIONS.filter(r => r.is_core).length
@@ -60,6 +165,198 @@ export default function RegulationsPage() {
   }, [search, categoryFilter, pubTypeFilter, sourceFilter])
 
   const hasActiveFilters = categoryFilter !== 'all' || pubTypeFilter !== 'all' || sourceFilter !== 'all'
+
+  // PDF viewer overlay
+  if (viewingReg) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0A101C' }}>
+        {/* Viewer header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px',
+          background: 'rgba(15,23,42,0.95)', borderBottom: '1px solid rgba(56,189,248,0.1)',
+          flexWrap: 'wrap',
+        }}>
+          <button
+            onClick={closeViewer}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '6px 10px', borderRadius: 6,
+              background: 'rgba(241,245,249,0.05)', border: '1px solid #334155',
+              color: '#94A3B8', fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+              cursor: 'pointer', whiteSpace: 'nowrap',
+            }}
+          >
+            <ArrowLeft size={12} />
+            Back
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#38BDF8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {viewingReg.reg_id}
+            </div>
+            <div style={{ fontSize: 10, color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {viewingReg.title}
+            </div>
+          </div>
+          {viewingReg.url && (
+            <a
+              href={viewingReg.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '6px 10px', borderRadius: 6,
+                background: 'transparent', border: '1px solid rgba(56,189,248,0.2)',
+                color: '#94A3B8', fontSize: 10, fontWeight: 600, textDecoration: 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <ExternalLink size={10} />
+              External
+            </a>
+          )}
+        </div>
+
+        {/* Page controls */}
+        {pdfData && !pdfError && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            padding: '6px 12px', background: 'rgba(15,23,42,0.8)',
+            borderBottom: '1px solid rgba(56,189,248,0.06)',
+          }}>
+            <button
+              onClick={() => setScale(s => Math.max(0.5, s - 0.2))}
+              style={{
+                width: 28, height: 28, borderRadius: 6,
+                background: 'rgba(241,245,249,0.05)', border: '1px solid #334155',
+                color: '#94A3B8', cursor: 'pointer', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <ZoomOut size={12} />
+            </button>
+            <span style={{ fontSize: 10, color: '#64748B', minWidth: 36, textAlign: 'center', fontFamily: 'monospace' }}>
+              {Math.round(scale * 100)}%
+            </span>
+            <button
+              onClick={() => setScale(s => Math.min(3, s + 0.2))}
+              style={{
+                width: 28, height: 28, borderRadius: 6,
+                background: 'rgba(241,245,249,0.05)', border: '1px solid #334155',
+                color: '#94A3B8', cursor: 'pointer', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <ZoomIn size={12} />
+            </button>
+            <div style={{ width: 1, height: 18, background: '#334155', margin: '0 4px' }} />
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              style={{
+                width: 28, height: 28, borderRadius: 6,
+                background: 'rgba(241,245,249,0.05)', border: '1px solid #334155',
+                color: currentPage <= 1 ? '#334155' : '#94A3B8', cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <span style={{ fontSize: 10, color: '#94A3B8', minWidth: 50, textAlign: 'center', fontFamily: 'monospace' }}>
+              {currentPage} / {numPages || '\u2013'}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(numPages || p, p + 1))}
+              disabled={currentPage >= (numPages || 1)}
+              style={{
+                width: 28, height: 28, borderRadius: 6,
+                background: 'rgba(241,245,249,0.05)', border: '1px solid #334155',
+                color: currentPage >= (numPages || 1) ? '#334155' : '#94A3B8',
+                cursor: currentPage >= (numPages || 1) ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
+
+        {/* PDF content area */}
+        <div ref={viewerRef} style={{ flex: 1, overflow: 'auto', display: 'flex', justifyContent: 'center', padding: 12, background: '#0A101C' }}>
+          {pdfLoading && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40, gap: 8 }}>
+              <span style={{
+                display: 'inline-block', width: 16, height: 16,
+                border: '2px solid #334155', borderTopColor: '#38BDF8',
+                borderRadius: '50%', animation: 'spin 0.6s linear infinite',
+              }} />
+              <span style={{ color: '#64748B', fontSize: 12 }}>Loading PDF...</span>
+            </div>
+          )}
+          {pdfError && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12, textAlign: 'center' }}>
+              <div style={{
+                maxWidth: 360, padding: 16,
+                background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
+                borderRadius: 10, color: '#CBD5E1', fontSize: 12, lineHeight: 1.6,
+              }}>
+                <strong style={{ color: '#EF4444' }}>PDF Unavailable</strong>
+                <p style={{ margin: '8px 0 0' }}>{pdfError}</p>
+              </div>
+              {viewingReg.url && (
+                <a
+                  href={viewingReg.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
+                    color: '#fff', fontSize: 11, fontWeight: 700,
+                    padding: '8px 16px', borderRadius: 6, textDecoration: 'none',
+                  }}
+                >
+                  <ExternalLink size={12} />
+                  Open External Link
+                </a>
+              )}
+            </div>
+          )}
+          {pdfData && !pdfError && (
+            <PDFDocument
+              file={{ data: pdfData }}
+              onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+              onLoadError={(err) => setPdfError(`PDF render failed: ${err.message}`)}
+              loading={
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+                  <span style={{
+                    display: 'inline-block', width: 16, height: 16,
+                    border: '2px solid #334155', borderTopColor: '#38BDF8',
+                    borderRadius: '50%', animation: 'spin 0.6s linear infinite',
+                  }} />
+                </div>
+              }
+            >
+              <PDFPage
+                pageNumber={currentPage}
+                scale={scale}
+                renderTextLayer={true}
+                renderAnnotationLayer={true}
+                loading={
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400, padding: 40 }}>
+                    <span style={{
+                      display: 'inline-block', width: 16, height: 16,
+                      border: '2px solid #334155', borderTopColor: '#38BDF8',
+                      borderRadius: '50%', animation: 'spin 0.6s linear infinite',
+                    }} />
+                  </div>
+                }
+              />
+
+            </PDFDocument>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
@@ -355,41 +652,36 @@ export default function RegulationsPage() {
 
                   {/* Action buttons */}
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      onClick={e => { e.stopPropagation(); viewPdf(reg) }}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
+                        color: '#fff', fontSize: 11, fontWeight: 700,
+                        padding: '6px 14px', borderRadius: 6, textDecoration: 'none',
+                        border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >
+                      <FileText size={12} />
+                      View in App
+                    </button>
                     {reg.url && (
-                      <>
-                        <a
-                          href={reg.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={e => e.stopPropagation()}
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
-                            color: '#fff', fontSize: 11, fontWeight: 700,
-                            padding: '6px 14px', borderRadius: 6, textDecoration: 'none',
-                            border: 'none',
-                          }}
-                        >
-                          <FileText size={12} />
-                          View in App
-                        </a>
-                        <a
-                          href={reg.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={e => e.stopPropagation()}
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            background: 'transparent',
-                            border: '1px solid rgba(56,189,248,0.2)',
-                            color: '#94A3B8', fontSize: 11, fontWeight: 700,
-                            padding: '6px 14px', borderRadius: 6, textDecoration: 'none',
-                          }}
-                        >
-                          <ExternalLink size={12} />
-                          Open External
-                        </a>
-                      </>
+                      <a
+                        href={reg.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          background: 'transparent',
+                          border: '1px solid rgba(56,189,248,0.2)',
+                          color: '#94A3B8', fontSize: 11, fontWeight: 700,
+                          padding: '6px 14px', borderRadius: 6, textDecoration: 'none',
+                        }}
+                      >
+                        <ExternalLink size={12} />
+                        Open External
+                      </a>
                     )}
                   </div>
                 </div>
@@ -401,4 +693,15 @@ export default function RegulationsPage() {
 
     </div>
   )
+}
+
+// Inject spinner keyframe animation
+if (typeof document !== 'undefined') {
+  const id = 'aoms-reg-keyframes'
+  if (!document.getElementById(id)) {
+    const style = document.createElement('style')
+    style.id = id
+    style.textContent = `@keyframes spin { to { transform: rotate(360deg); } }`
+    document.head.appendChild(style)
+  }
 }
