@@ -105,12 +105,16 @@ export default function RegulationsPage() {
     async function loadCachedPdfs() {
       // Get the set of files actually in the storage bucket
       const bucketFiles = await listCachedRegulationPdfs()
+      console.log('[Regs] Storage bucket files:', [...bucketFiles])
 
       const map = new Map<string, string>()
       for (const reg of ALL_REGULATIONS) {
         const match = findStorageFile(reg.reg_id, bucketFiles)
         if (match) map.set(reg.reg_id, match)
       }
+      console.log('[Regs] Matched regulations:', [...map.entries()])
+      const unmatched = ALL_REGULATIONS.filter(r => !map.has(r.reg_id)).map(r => r.reg_id)
+      if (unmatched.length > 0) console.log('[Regs] Unmatched regulations:', unmatched)
       setCachedPdfMap(map)
     }
     loadUser()

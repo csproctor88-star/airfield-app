@@ -15,7 +15,8 @@ export function PdfViewer({ url, title, regId, onClose }: PdfViewerProps) {
   const [error, setError] = useState(false)
 
   // Detect if the URL is a direct PDF link vs a web page
-  const isPdfUrl = url.toLowerCase().endsWith('.pdf')
+  // Supabase signed URLs have .pdf in the path but end with ?token=...
+  const isPdfUrl = /\.pdf(\?|$)/i.test(url)
 
   // For Google Docs viewer fallback (handles CORS/X-Frame-Options)
   const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`
@@ -242,7 +243,7 @@ export function PdfViewer({ url, title, regId, onClose }: PdfViewerProps) {
               background: '#fff',
             }}
             title={`${regId} — ${title}`}
-            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+            {...(!isPdfUrl ? { sandbox: 'allow-same-origin allow-scripts allow-popups allow-forms' } : {})}
           />
         )}
       </div>

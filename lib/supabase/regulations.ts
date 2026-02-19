@@ -86,7 +86,8 @@ export async function searchRegulations(query: string): Promise<RegulationRow[]>
 }
 
 /**
- * List all files in the regulation-pdfs bucket (excluding user-uploads/).
+ * List all PDF files in the regulation-pdfs bucket.
+ * Checks both root level and one level of subfolders.
  * Returns a Set of storage paths like "dafman_13-204-_vol._1.pdf".
  */
 export async function listCachedRegulationPdfs(): Promise<Set<string>> {
@@ -95,16 +96,31 @@ export async function listCachedRegulationPdfs(): Promise<Set<string>> {
 
   const { data, error } = await supabase.storage
     .from('regulation-pdfs')
-    .list('', { limit: 200 })
+    .list('', { limit: 500 })
 
   if (error || !data) return new Set()
 
-  // Only include PDF files at root level (user uploads are in user-uploads/ folder)
-  return new Set(
-    data
-      .filter(f => f.name.endsWith('.pdf'))
-      .map(f => f.name)
-  )
+  const pdfFiles = new Set<string>()
+
+  for (const item of data) {
+    if (item.name.endsWith('.pdf')) {
+      pdfFiles.add(item.name)
+    } else if (item.id === null && item.name !== 'user-uploads') {
+      // This is a folder — list its contents too
+      const { data: subData } = await supabase.storage
+        .from('regulation-pdfs')
+        .list(item.name, { limit: 200 })
+      if (subData) {
+        for (const sub of subData) {
+          if (sub.name.endsWith('.pdf')) {
+            pdfFiles.add(`${item.name}/${sub.name}`)
+          }
+        }
+      }
+    }
+  }
+
+  return pdfFiles
 }
 
 /**
