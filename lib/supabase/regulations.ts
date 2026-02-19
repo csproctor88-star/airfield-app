@@ -104,3 +104,146 @@ export async function getRegulationPdfUrl(storagePath: string): Promise<string |
 
   return data.signedUrl
 }
+
+// ── User-uploaded regulation PDFs ──────────────────────────────
+
+export type UserRegulationPdf = {
+  id: string
+  user_id: string
+  reg_id: string
+  storage_path: string
+  file_name: string
+  file_size_bytes: number | null
+  uploaded_at: string
+}
+
+const USER_PDF_BUCKET = 'regulation-pdfs'
+
+/**
+ * Upload a personal PDF copy of a regulation for the current user.
+ * Replaces any existing upload for the same regulation.
+ */
+export async function uploadUserRegulationPdf(
+  userId: string,
+  regId: string,
+  file: File
+): Promise<UserRegulationPdf | null> {
+  const supabase = createClient()
+  if (!supabase) return null
+
+  const storagePath = `user-uploads/${userId}/${sanitizeStorageName(regId)}.pdf`
+
+  // Upload file to storage (upsert to replace existing)
+  const { error: uploadError } = await supabase.storage
+    .from(USER_PDF_BUCKET)
+    .upload(storagePath, file, {
+      contentType: 'application/pdf',
+      upsert: true,
+    })
+
+  if (uploadError) {
+    console.error('Failed to upload PDF:', uploadError.message)
+    return null
+  }
+
+  // Upsert the database record
+  const { data, error: dbError } = await supabase
+    .from('user_regulation_pdfs')
+    .upsert(
+      {
+        user_id: userId,
+        reg_id: regId,
+        storage_path: storagePath,
+        file_name: file.name,
+        file_size_bytes: file.size,
+        uploaded_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,reg_id' }
+    )
+    .select()
+    .single()
+
+  if (dbError) {
+    console.error('Failed to save upload record:', dbError.message)
+    return null
+  }
+
+  return data as UserRegulationPdf
+}
+
+/**
+ * Fetch all user-uploaded PDFs for the current user, keyed by reg_id.
+ */
+export async function fetchUserRegulationPdfs(
+  userId: string
+): Promise<Map<string, UserRegulationPdf>> {
+  const supabase = createClient()
+  if (!supabase) return new Map()
+
+  const { data, error } = await supabase
+    .from('user_regulation_pdfs')
+    .select('*')
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('Failed to fetch user PDFs:', error.message)
+    return new Map()
+  }
+
+  const map = new Map<string, UserRegulationPdf>()
+  for (const row of data as UserRegulationPdf[]) {
+    map.set(row.reg_id, row)
+  }
+  return map
+}
+
+/**
+ * Get a signed URL for a user-uploaded PDF.
+ */
+export async function getUserPdfSignedUrl(storagePath: string): Promise<string | null> {
+  return getRegulationPdfUrl(storagePath)
+}
+
+/**
+ * Delete a user's uploaded PDF for a regulation.
+ */
+export async function deleteUserRegulationPdf(
+  userId: string,
+  regId: string,
+  storagePath: string
+): Promise<boolean> {
+  const supabase = createClient()
+  if (!supabase) return false
+
+  // Remove from storage
+  const { error: storageError } = await supabase.storage
+    .from(USER_PDF_BUCKET)
+    .remove([storagePath])
+
+  if (storageError) {
+    console.error('Failed to delete PDF from storage:', storageError.message)
+  }
+
+  // Remove database record
+  const { error: dbError } = await supabase
+    .from('user_regulation_pdfs')
+    .delete()
+    .eq('user_id', userId)
+    .eq('reg_id', regId)
+
+  if (dbError) {
+    console.error('Failed to delete upload record:', dbError.message)
+    return false
+  }
+
+  return true
+}
+
+function sanitizeStorageName(regId: string): string {
+  return regId
+    .replace(/[/\\:*?"<>|]/g, '-')
+    .replace(/,\s*/g, '-')
+    .replace(/\s+/g, '_')
+    .replace(/-+/g, '-')
+    .toLowerCase()
+}

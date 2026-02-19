@@ -1,10 +1,18 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { BookOpen, Search, ExternalLink, ChevronDown, ChevronUp, X, FileText } from 'lucide-react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { BookOpen, Search, ExternalLink, ChevronDown, ChevronUp, X, FileText, Upload, Trash2, Loader2 } from 'lucide-react'
 import { ALL_REGULATIONS, type RegulationEntry } from '@/lib/regulations-data'
 import { REGULATION_CATEGORIES, REGULATION_PUB_TYPES, REGULATION_SOURCE_SECTIONS } from '@/lib/constants'
 import { PdfViewer } from '@/components/regulations/pdf-viewer'
+import { createClient } from '@/lib/supabase/client'
+import {
+  type UserRegulationPdf,
+  fetchUserRegulationPdfs,
+  uploadUserRegulationPdf,
+  deleteUserRegulationPdf,
+  getUserPdfSignedUrl,
+} from '@/lib/supabase/regulations'
 
 // --- Badge color by entry type ---
 function entryTypeBadge(entry: RegulationEntry): { label: string; bg: string; color: string } {
@@ -37,6 +45,91 @@ export default function RegulationsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
   const [viewerReg, setViewerReg] = useState<RegulationEntry | null>(null)
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null)
+
+  // User PDF upload state
+  const [userId, setUserId] = useState<string | null>(null)
+  const [userPdfs, setUserPdfs] = useState<Map<string, UserRegulationPdf>>(new Map())
+  const [uploading, setUploading] = useState<string | null>(null) // reg_id being uploaded
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploadTargetRegId, setUploadTargetRegId] = useState<string | null>(null)
+
+  // Load current user + their uploaded PDFs
+  useEffect(() => {
+    async function loadUser() {
+      const supabase = createClient()
+      if (!supabase) return
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      setUserId(user.id)
+      const pdfs = await fetchUserRegulationPdfs(user.id)
+      setUserPdfs(pdfs)
+    }
+    loadUser()
+  }, [])
+
+  const handleUploadClick = useCallback((regId: string) => {
+    setUploadTargetRegId(regId)
+    fileInputRef.current?.click()
+  }, [])
+
+  const handleFileSelected = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !userId || !uploadTargetRegId) return
+
+    if (file.type !== 'application/pdf') {
+      alert('Please select a PDF file.')
+      e.target.value = ''
+      return
+    }
+
+    if (file.size > 52_428_800) {
+      alert('File too large. Maximum size is 50 MB.')
+      e.target.value = ''
+      return
+    }
+
+    setUploading(uploadTargetRegId)
+    const result = await uploadUserRegulationPdf(userId, uploadTargetRegId, file)
+    if (result) {
+      setUserPdfs(prev => {
+        const next = new Map(prev)
+        next.set(uploadTargetRegId, result)
+        return next
+      })
+    }
+    setUploading(null)
+    setUploadTargetRegId(null)
+    e.target.value = ''
+  }, [userId, uploadTargetRegId])
+
+  const handleDelete = useCallback(async (regId: string) => {
+    const pdf = userPdfs.get(regId)
+    if (!pdf || !userId) return
+    if (!confirm('Remove your uploaded PDF for this regulation?')) return
+
+    setDeleting(regId)
+    const ok = await deleteUserRegulationPdf(userId, regId, pdf.storage_path)
+    if (ok) {
+      setUserPdfs(prev => {
+        const next = new Map(prev)
+        next.delete(regId)
+        return next
+      })
+    }
+    setDeleting(null)
+  }, [userId, userPdfs])
+
+  const handleViewUserPdf = useCallback(async (reg: RegulationEntry) => {
+    const pdf = userPdfs.get(reg.reg_id)
+    if (!pdf) return
+    const signedUrl = await getUserPdfSignedUrl(pdf.storage_path)
+    if (signedUrl) {
+      setViewerUrl(signedUrl)
+      setViewerReg(reg)
+    }
+  }, [userPdfs])
 
   // Derive counts
   const coreCount = ALL_REGULATIONS.filter(r => r.is_core).length
@@ -267,12 +360,23 @@ export default function RegulationsPage() {
                     {reg.title}
                   </div>
                 </div>
-                <div style={{
-                  fontSize: 8, fontWeight: 700, letterSpacing: '0.06em',
-                  background: badge.bg, color: badge.color,
-                  padding: '2px 6px', borderRadius: 4, whiteSpace: 'nowrap', flexShrink: 0,
-                }}>
-                  {badge.label}
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}>
+                  {userPdfs.has(reg.reg_id) && (
+                    <div style={{
+                      fontSize: 7, fontWeight: 700, letterSpacing: '0.06em',
+                      background: 'rgba(16,185,129,0.15)', color: '#10B981',
+                      padding: '2px 5px', borderRadius: 4, whiteSpace: 'nowrap',
+                    }}>
+                      MY PDF
+                    </div>
+                  )}
+                  <div style={{
+                    fontSize: 8, fontWeight: 700, letterSpacing: '0.06em',
+                    background: badge.bg, color: badge.color,
+                    padding: '2px 6px', borderRadius: 4, whiteSpace: 'nowrap',
+                  }}>
+                    {badge.label}
+                  </div>
                 </div>
               </div>
 
@@ -354,10 +458,46 @@ export default function RegulationsPage() {
                   )}
 
                   {/* Action buttons */}
-                  {reg.url && (
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {/* User has uploaded PDF — show "View My PDF" */}
+                    {userPdfs.has(reg.reg_id) && (
+                      <>
+                        <button
+                          onClick={e => { e.stopPropagation(); handleViewUserPdf(reg) }}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            background: 'linear-gradient(135deg, #065F46, #10B981)',
+                            color: '#fff', fontSize: 11, fontWeight: 700,
+                            padding: '6px 14px', borderRadius: 6, border: 'none',
+                            cursor: 'pointer', fontFamily: 'inherit',
+                          }}
+                        >
+                          <FileText size={12} />
+                          View My PDF
+                        </button>
+                        <button
+                          onClick={e => { e.stopPropagation(); handleDelete(reg.reg_id) }}
+                          disabled={deleting === reg.reg_id}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            background: 'rgba(239,68,68,0.08)',
+                            border: '1px solid rgba(239,68,68,0.2)',
+                            color: '#EF4444', fontSize: 10, fontWeight: 700,
+                            padding: '6px 10px', borderRadius: 6,
+                            cursor: deleting === reg.reg_id ? 'wait' : 'pointer',
+                            fontFamily: 'inherit', opacity: deleting === reg.reg_id ? 0.5 : 1,
+                          }}
+                        >
+                          {deleting === reg.reg_id ? <Loader2 size={10} style={{ animation: 'spin 0.8s linear infinite' }} /> : <Trash2 size={10} />}
+                          Remove
+                        </button>
+                      </>
+                    )}
+
+                    {/* Standard "View in App" for regulations with a URL */}
+                    {reg.url && (
                       <button
-                        onClick={e => { e.stopPropagation(); setViewerReg(reg) }}
+                        onClick={e => { e.stopPropagation(); setViewerUrl(null); setViewerReg(reg) }}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 6,
                           background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
@@ -367,8 +507,11 @@ export default function RegulationsPage() {
                         }}
                       >
                         <FileText size={12} />
-                        View in App
+                        {userPdfs.has(reg.reg_id) ? 'View Original' : 'View in App'}
                       </button>
+                    )}
+
+                    {reg.url && (
                       <a
                         href={reg.url}
                         target="_blank"
@@ -385,8 +528,34 @@ export default function RegulationsPage() {
                         <ExternalLink size={12} />
                         Open External
                       </a>
-                    </div>
-                  )}
+                    )}
+
+                    {/* Upload PDF button */}
+                    {userId && (
+                      <button
+                        onClick={e => { e.stopPropagation(); handleUploadClick(reg.reg_id) }}
+                        disabled={uploading === reg.reg_id}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          background: 'rgba(168,85,247,0.08)',
+                          border: '1px solid rgba(168,85,247,0.2)',
+                          color: '#A855F7', fontSize: 11, fontWeight: 700,
+                          padding: '6px 14px', borderRadius: 6,
+                          cursor: uploading === reg.reg_id ? 'wait' : 'pointer',
+                          fontFamily: 'inherit', opacity: uploading === reg.reg_id ? 0.5 : 1,
+                        }}
+                      >
+                        {uploading === reg.reg_id
+                          ? <Loader2 size={12} style={{ animation: 'spin 0.8s linear infinite' }} />
+                          : <Upload size={12} />
+                        }
+                        {uploading === reg.reg_id
+                          ? 'Uploading...'
+                          : userPdfs.has(reg.reg_id) ? 'Replace PDF' : 'Upload PDF'
+                        }
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -394,13 +563,22 @@ export default function RegulationsPage() {
         })
       )}
 
+      {/* Hidden file input for PDF uploads */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/pdf"
+        style={{ display: 'none' }}
+        onChange={handleFileSelected}
+      />
+
       {/* PDF Viewer overlay */}
-      {viewerReg && viewerReg.url && (
+      {viewerReg && (viewerUrl || viewerReg.url) && (
         <PdfViewer
-          url={viewerReg.url}
+          url={viewerUrl || viewerReg.url!}
           title={viewerReg.title}
           regId={viewerReg.reg_id}
-          onClose={() => setViewerReg(null)}
+          onClose={() => { setViewerReg(null); setViewerUrl(null) }}
         />
       )}
     </div>
