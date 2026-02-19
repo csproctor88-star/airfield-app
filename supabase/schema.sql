@@ -248,6 +248,54 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- 5.11 Regulations Database
+CREATE TABLE regulations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  reg_id TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  publication_date TEXT,
+  url TEXT,
+  source_section TEXT NOT NULL,
+  source_volume TEXT,
+  category TEXT NOT NULL,
+  pub_type TEXT NOT NULL,
+  is_core BOOLEAN NOT NULL DEFAULT false,
+  is_cross_ref BOOLEAN NOT NULL DEFAULT false,
+  is_scrubbed BOOLEAN NOT NULL DEFAULT false,
+  tags TEXT[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_regulations_category ON regulations(category);
+CREATE INDEX idx_regulations_pub_type ON regulations(pub_type);
+CREATE INDEX idx_regulations_source_section ON regulations(source_section);
+CREATE INDEX idx_regulations_reg_id ON regulations(reg_id);
+
+-- 5.11b Regulation PDF storage tracking
+-- Tracks which regulations have cached PDFs in Supabase Storage
+ALTER TABLE regulations ADD COLUMN IF NOT EXISTS storage_path TEXT;
+ALTER TABLE regulations ADD COLUMN IF NOT EXISTS file_size_bytes INTEGER;
+ALTER TABLE regulations ADD COLUMN IF NOT EXISTS last_verified_at TIMESTAMPTZ;
+ALTER TABLE regulations ADD COLUMN IF NOT EXISTS verified_date TEXT;
+
+-- 5.11c User-uploaded regulation PDFs
+-- Each user can upload their own personal copy of a regulation PDF.
+-- These are scoped per-user and not shared with other users.
+CREATE TABLE user_regulation_pdfs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  reg_id TEXT NOT NULL,
+  storage_path TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  file_size_bytes INTEGER,
+  uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, reg_id)
+);
+
+CREATE INDEX idx_user_reg_pdfs_user ON user_regulation_pdfs(user_id);
+CREATE INDEX idx_user_reg_pdfs_reg ON user_regulation_pdfs(reg_id);
+
 -- NOTE: Row Level Security policies are intentionally omitted from this schema.
 -- RLS and role-based access control will be added in a later development phase.
 -- For now, all authenticated users have full access to all tables.

@@ -393,6 +393,55 @@ export const INSPECTION_PERSONNEL = [
   'TERPS',
 ] as const
 
+// === Regulation Categories (AOMS Regulation Database v4) ===
+
+export const REGULATION_CATEGORIES = [
+  { value: 'airfield_ops', label: 'Airfield Operations', color: '#38BDF8' },
+  { value: 'airfield_mgmt', label: 'Airfield Management', color: '#34D399' },
+  { value: 'atc', label: 'Air Traffic Control', color: '#A78BFA' },
+  { value: 'airfield_design', label: 'Airfield Design & Planning', color: '#F97316' },
+  { value: 'pavement', label: 'Pavement & Surfaces', color: '#EAB308' },
+  { value: 'lighting', label: 'Lighting & NAVAIDs', color: '#FBBF24' },
+  { value: 'safety', label: 'Safety & Mishap Prevention', color: '#EF4444' },
+  { value: 'bash_wildlife', label: 'BASH / Wildlife', color: '#10B981' },
+  { value: 'driving', label: 'Airfield Driving', color: '#6366F1' },
+  { value: 'emergency', label: 'Emergency Management', color: '#F43F5E' },
+  { value: 'publications', label: 'Publications & Records', color: '#94A3B8' },
+  { value: 'personnel', label: 'Personnel & Training', color: '#8B5CF6' },
+  { value: 'construction', label: 'Construction & Facilities', color: '#FB923C' },
+  { value: 'fueling', label: 'Fueling & Hazmat', color: '#FACC15' },
+  { value: 'security', label: 'Security & Force Protection', color: '#64748B' },
+  { value: 'international', label: 'International & Joint Use', color: '#22D3EE' },
+  { value: 'notams', label: 'NOTAMs & Flight Info', color: '#2DD4BF' },
+  { value: 'uas', label: 'UAS Operations', color: '#C084FC' },
+  { value: 'contingency', label: 'Contingency Operations', color: '#FB7185' },
+  { value: 'financial', label: 'Financial & Manpower', color: '#A3E635' },
+] as const
+
+export const REGULATION_PUB_TYPES = [
+  { value: 'DAF', label: 'DAF (AFI/DAFI/AFMAN/DAFMAN/AFH/AFPD)' },
+  { value: 'FAA', label: 'FAA Orders & Advisory Circulars' },
+  { value: 'UFC', label: 'UFC / Unified Facilities Criteria' },
+  { value: 'CFR', label: 'Code of Federal Regulations' },
+  { value: 'DoD', label: 'DoD Publications' },
+  { value: 'ICAO', label: 'ICAO Standards' },
+] as const
+
+export const REGULATION_SOURCE_SECTIONS = [
+  { value: 'core', label: 'Core Publications', color: '#34D399' },
+  { value: 'I', label: 'I — Vol. 1 Refs', color: '#F1F5F9' },
+  { value: 'II', label: 'II — Vol. 2 Refs', color: '#BFDBFE' },
+  { value: 'III', label: 'III — Vol. 3 Refs', color: '#F1F5F9' },
+  { value: 'IV', label: 'IV — UFC 3-260-01 Refs', color: '#BFDBFE' },
+  { value: 'V', label: 'V — Additional UFC/FC', color: '#F1F5F9' },
+  { value: 'VI-A', label: 'VI-A — DAF Cross-Refs', color: '#FDE68A' },
+  { value: 'VI-B', label: 'VI-B — FAA/DOT Cross-Refs', color: '#FDE68A' },
+  { value: 'VI-C', label: 'VI-C — UFC/DoD Cross-Refs', color: '#FDE68A' },
+  { value: 'VII-A', label: 'VII-A — Scrubbed (DAF)', color: '#A5B4FC' },
+  { value: 'VII-B', label: 'VII-B — Scrubbed (FAA)', color: '#A5B4FC' },
+  { value: 'VII-C', label: 'VII-C — Scrubbed (Vols 2-3)', color: '#A5B4FC' },
+] as const
+
 // === User Roles (SRS Section 2.1) ===
 
 export const USER_ROLES = {

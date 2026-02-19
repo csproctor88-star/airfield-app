@@ -226,6 +226,46 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['navaid_statuses']['Insert']>
         Relationships: []
       }
+      regulations: {
+        Row: {
+          id: string
+          reg_id: string
+          title: string
+          description: string
+          publication_date: string | null
+          url: string | null
+          source_section: string
+          source_volume: string | null
+          category: string
+          pub_type: RegulationPubType
+          is_core: boolean
+          is_cross_ref: boolean
+          is_scrubbed: boolean
+          tags: string[]
+          storage_path: string | null
+          file_size_bytes: number | null
+          last_verified_at: string | null
+          verified_date: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['regulations']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['regulations']['Insert']>
+        Relationships: []
+      }
+      user_regulation_pdfs: {
+        Row: {
+          id: string
+          user_id: string
+          reg_id: string
+          storage_path: string
+          file_name: string
+          file_size_bytes: number | null
+          uploaded_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['user_regulation_pdfs']['Row'], 'id'>
+        Update: Partial<Database['public']['Tables']['user_regulation_pdfs']['Insert']>
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
@@ -251,6 +291,7 @@ export type CurrentStatus = 'submitted_to_afm' | 'submitted_to_ces' | 'awaiting_
 export type CheckType = 'fod' | 'rsc' | 'ife' | 'ground_emergency' | 'heavy_aircraft' | 'bash' | 'rcr'
 export type InspectionType = 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
 export type NotamStatus = 'draft' | 'active' | 'cancelled' | 'expired'
+export type RegulationPubType = 'DAF' | 'FAA' | 'UFC' | 'DoD' | 'ICAO' | 'CFR'
 
 export type InspectionItem = {
   id: string
@@ -274,3 +315,5 @@ export type Notam = Database['public']['Tables']['notams']['Row']
 export type ObstructionEvaluation = Database['public']['Tables']['obstruction_evaluations']['Row']
 export type ActivityLog = Database['public']['Tables']['activity_log']['Row']
 export type NavaidStatus = Database['public']['Tables']['navaid_statuses']['Row']
+export type Regulation = Database['public']['Tables']['regulations']['Row']
+export type UserRegulationPdf = Database['public']['Tables']['user_regulation_pdfs']['Row']
