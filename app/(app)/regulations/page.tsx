@@ -133,14 +133,11 @@ export default function RegulationsPage() {
     setDeleting(null)
   }, [userId, userPdfs])
 
-  const handleViewUserPdf = useCallback(async (reg: RegulationRow) => {
+  const handleViewUserPdf = useCallback((reg: RegulationRow) => {
     const pdf = userPdfs.get(reg.reg_id)
     if (!pdf) return
-    const signedUrl = await getUserPdfSignedUrl(pdf.storage_path)
-    if (signedUrl) {
-      setViewerUrl(signedUrl)
-      setViewerReg(reg)
-    }
+    setViewerUrl(getUserPdfSignedUrl(pdf.storage_path))
+    setViewerReg(reg)
   }, [userPdfs])
 
   // Derive counts from DB data
@@ -519,27 +516,16 @@ export default function RegulationsPage() {
                     {/* View in App — uses storage_path from DB, falls back to external URL */}
                     {(reg.storage_path || reg.url) && (
                       <button
-                        onClick={async e => {
+                        onClick={e => {
                           e.stopPropagation()
-                          try {
-                            if (reg.storage_path) {
-                              const result = await getRegulationPdfUrl(reg.storage_path)
-                              if ('url' in result) {
-                                setViewerUrl(result.url)
-                                setViewerReg(reg)
-                                return
-                              }
-                              console.warn('[Regs] Signed URL failed:', result.error)
-                            }
-                            if (reg.url) {
-                              setViewerUrl(null)
-                              setViewerReg(reg)
-                              return
-                            }
-                            alert(`Unable to load PDF for "${reg.reg_id}".`)
-                          } catch (err) {
-                            console.error('[Regs] Error opening PDF:', err)
-                            alert(`Error loading PDF for "${reg.reg_id}". Please try again.`)
+                          if (reg.storage_path) {
+                            setViewerUrl(getRegulationPdfUrl(reg.storage_path))
+                            setViewerReg(reg)
+                            return
+                          }
+                          if (reg.url) {
+                            setViewerUrl(null)
+                            setViewerReg(reg)
                           }
                         }}
                         style={{

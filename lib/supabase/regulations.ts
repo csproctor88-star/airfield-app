@@ -86,24 +86,12 @@ export async function searchRegulations(query: string): Promise<RegulationRow[]>
 }
 
 /**
- * Get a signed URL for a cached PDF in Supabase Storage.
- * Returns { url } on success or { error } with a diagnostic message.
+ * Get a URL for viewing a PDF from Supabase Storage.
+ * Returns a local API route URL that proxies the download server-side
+ * (uses service role key, avoids CORS / client-side signed-URL issues).
  */
-export async function getRegulationPdfUrl(
-  storagePath: string
-): Promise<{ url: string } | { error: string }> {
-  const supabase = createClient()
-  if (!supabase) return { error: 'Supabase client not available' }
-
-  const { data, error } = await supabase.storage
-    .from('regulation-pdfs')
-    .createSignedUrl(storagePath, 3600, { download: false }) // 1 hour, inline display
-
-  if (!error && data?.signedUrl) return { url: data.signedUrl }
-
-  const msg = error?.message ?? 'Unknown error (no signedUrl returned)'
-  console.warn('[Regs] Signed URL failed for', storagePath, '–', msg)
-  return { error: `${msg} [file: ${storagePath}]` }
+export function getRegulationPdfUrl(storagePath: string): string {
+  return `/api/regulations/pdf?path=${encodeURIComponent(storagePath)}`
 }
 
 // ── User-uploaded regulation PDFs ──────────────────────────────
@@ -199,11 +187,10 @@ export async function fetchUserRegulationPdfs(
 }
 
 /**
- * Get a signed URL for a user-uploaded PDF.
+ * Get a URL for a user-uploaded PDF (same proxy route as regulation PDFs).
  */
-export async function getUserPdfSignedUrl(storagePath: string): Promise<string | null> {
-  const result = await getRegulationPdfUrl(storagePath)
-  return 'url' in result ? result.url : null
+export function getUserPdfSignedUrl(storagePath: string): string {
+  return getRegulationPdfUrl(storagePath)
 }
 
 /**
