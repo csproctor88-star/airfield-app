@@ -4,7 +4,6 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { BookOpen, Search, ExternalLink, ChevronDown, ChevronUp, X, FileText, Upload, Trash2, Loader2 } from 'lucide-react'
 import { ALL_REGULATIONS, type RegulationEntry } from '@/lib/regulations-data'
 import { REGULATION_CATEGORIES, REGULATION_PUB_TYPES, REGULATION_SOURCE_SECTIONS } from '@/lib/constants'
-import { PdfViewer } from '@/components/regulations/pdf-viewer'
 import { createClient } from '@/lib/supabase/client'
 import {
   type UserRegulationPdf,
@@ -92,8 +91,6 @@ export default function RegulationsPage() {
   const [sourceFilter, setSourceFilter] = useState<string>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
-  const [viewerReg, setViewerReg] = useState<RegulationEntry | null>(null)
-  const [viewerUrl, setViewerUrl] = useState<string | null>(null)
 
   // User PDF upload state
   const [userId, setUserId] = useState<string | null>(null)
@@ -205,8 +202,7 @@ export default function RegulationsPage() {
     if (!pdf) return
     const signedUrl = await getUserPdfSignedUrl(pdf.storage_path)
     if (signedUrl) {
-      setViewerUrl(signedUrl)
-      setViewerReg(reg)
+      window.open(signedUrl, '_blank')
     }
   }, [userPdfs])
 
@@ -573,40 +569,29 @@ export default function RegulationsPage() {
                       </>
                     )}
 
-                    {/* Standard "View in App" — cached Supabase PDF preferred, external URL fallback */}
+                    {/* View PDF — open signed URL or external URL in new tab */}
                     <button
                         onClick={async e => {
                           e.stopPropagation()
                           try {
-                            // Prefer cached Supabase Storage PDF
                             const storageName = cachedPdfMap.get(reg.reg_id)
-                            console.log('[Regs] View clicked:', reg.reg_id, '→ storageName:', storageName)
                             if (storageName) {
                               const result = await getRegulationPdfUrl(storageName)
                               if ('url' in result) {
-                                console.log('[Regs] Signed URL OK')
-                                setViewerUrl(result.url)
-                                setViewerReg(reg)
+                                window.open(result.url, '_blank')
                                 return
                               }
-                              console.warn('[Regs] Signed URL failed:', result.error)
                             }
-                            // Fallback to external URL
                             if (reg.url) {
-                              setViewerUrl(null)
-                              setViewerReg(reg)
+                              window.open(reg.url, '_blank')
                               return
                             }
-                            // No PDF source available — surface the storage error
-                            const storageName2 = cachedPdfMap.get(reg.reg_id)
-                            const detail = storageName2
-                              ? `Signed URL failed for "${storageName2}". Check that this file exists in the regulation-pdfs bucket.`
-                              : `No storage file matched for "${reg.reg_id}". Check that the PDF is uploaded to the regulation-pdfs bucket.`
-                            console.warn('[Regs]', detail)
-                            alert(detail)
+                            alert(`No PDF available for "${reg.reg_id}".`)
                           } catch (err) {
                             console.error('[Regs] Error opening PDF:', err)
-                            alert(`Error loading PDF for "${reg.reg_id}". Please try again.`)
+                            if (reg.url) {
+                              window.open(reg.url, '_blank')
+                            }
                           }
                         }}
                         style={{
@@ -618,7 +603,7 @@ export default function RegulationsPage() {
                         }}
                       >
                         <FileText size={12} />
-                        {userPdfs.has(reg.reg_id) ? 'View Original' : 'View in App'}
+                        {userPdfs.has(reg.reg_id) ? 'View Original' : 'View PDF'}
                       </button>
 
                     {reg.url && (
@@ -682,15 +667,6 @@ export default function RegulationsPage() {
         onChange={handleFileSelected}
       />
 
-      {/* PDF Viewer overlay */}
-      {viewerReg && (viewerUrl || viewerReg.url) && (
-        <PdfViewer
-          url={viewerUrl || viewerReg.url!}
-          title={viewerReg.title}
-          regId={viewerReg.reg_id}
-          onClose={() => { setViewerReg(null); setViewerUrl(null) }}
-        />
-      )}
     </div>
   )
 }
