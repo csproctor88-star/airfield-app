@@ -252,6 +252,20 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['regulations']['Insert']>
         Relationships: []
       }
+      user_regulation_pdfs: {
+        Row: {
+          id: string
+          user_id: string
+          reg_id: string
+          storage_path: string
+          file_name: string
+          file_size_bytes: number | null
+          uploaded_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['user_regulation_pdfs']['Row'], 'id'>
+        Update: Partial<Database['public']['Tables']['user_regulation_pdfs']['Insert']>
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
@@ -302,3 +316,4 @@ export type ObstructionEvaluation = Database['public']['Tables']['obstruction_ev
 export type ActivityLog = Database['public']['Tables']['activity_log']['Row']
 export type NavaidStatus = Database['public']['Tables']['navaid_statuses']['Row']
 export type Regulation = Database['public']['Tables']['regulations']['Row']
+export type UserRegulationPdf = Database['public']['Tables']['user_regulation_pdfs']['Row']
