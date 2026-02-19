@@ -441,6 +441,15 @@ export default function PDFLibrary() {
             <div style={S.viewerBar}>
               <button onClick={closeViewer} style={S.backBtn}>Back</button>
               <span style={S.viewerName}>{viewingFile}</span>
+              {blobUrl && (
+                <button
+                  onClick={() => window.open(blobUrl!, '_blank')}
+                  style={S.backBtn}
+                  title="Open PDF in new browser tab"
+                >
+                  New Tab
+                </button>
+              )}
               <div style={S.viewerControls}>
                 <button
                   onClick={() => setViewMode((m) => m === "native" ? "react-pdf" : "native")}
@@ -483,7 +492,7 @@ export default function PDFLibrary() {
               </div>
             )}
             {viewMode === "native" && blobUrl && !pdfError && (
-              <div style={{ flex: 1, position: 'relative' }}>
+              <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
                 <iframe
                   src={blobUrl}
                   title={viewingFile || 'PDF Viewer'}

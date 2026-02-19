@@ -165,6 +165,21 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
             {title}
           </div>
         </div>
+        {blobUrl && (
+          <button
+            onClick={() => window.open(blobUrl!, '_blank')}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '6px 10px', borderRadius: 6,
+              background: 'transparent', border: '1px solid rgba(56,189,248,0.2)',
+              color: '#94A3B8', fontSize: 10, fontWeight: 600, fontFamily: 'inherit',
+              cursor: 'pointer', whiteSpace: 'nowrap',
+            }}
+          >
+            <ExternalLink size={10} />
+            New Tab
+          </button>
+        )}
         {url && (
           <a
             href={url}
@@ -301,7 +316,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
         </div>
       )}
       {viewMode === "native" && blobUrl && !error && (
-        <div style={{ flex: 1, position: 'relative' }}>
+        <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
           <iframe
             src={blobUrl}
             title={title || 'PDF Viewer'}
