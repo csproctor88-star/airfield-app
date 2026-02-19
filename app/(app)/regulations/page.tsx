@@ -575,39 +575,23 @@ export default function RegulationsPage() {
 
                     {/* Standard "View in App" — cached Supabase PDF preferred, external URL fallback */}
                     <button
-                        onClick={async e => {
+                        onClick={e => {
                           e.stopPropagation()
-                          try {
-                            // Prefer cached Supabase Storage PDF
-                            const storageName = cachedPdfMap.get(reg.reg_id)
-                            console.log('[Regs] View clicked:', reg.reg_id, '→ storageName:', storageName)
-                            if (storageName) {
-                              const result = await getRegulationPdfUrl(storageName)
-                              if ('url' in result) {
-                                console.log('[Regs] Signed URL OK')
-                                setViewerUrl(result.url)
-                                setViewerReg(reg)
-                                return
-                              }
-                              console.warn('[Regs] Signed URL failed:', result.error)
-                            }
-                            // Fallback to external URL
-                            if (reg.url) {
-                              setViewerUrl(null)
-                              setViewerReg(reg)
-                              return
-                            }
-                            // No PDF source available — surface the storage error
-                            const storageName2 = cachedPdfMap.get(reg.reg_id)
-                            const detail = storageName2
-                              ? `Signed URL failed for "${storageName2}". Check that this file exists in the regulation-pdfs bucket.`
-                              : `No storage file matched for "${reg.reg_id}". Check that the PDF is uploaded to the regulation-pdfs bucket.`
-                            console.warn('[Regs]', detail)
-                            alert(detail)
-                          } catch (err) {
-                            console.error('[Regs] Error opening PDF:', err)
-                            alert(`Error loading PDF for "${reg.reg_id}". Please try again.`)
+                          // Prefer cached Supabase Storage PDF via local API route
+                          const storageName = cachedPdfMap.get(reg.reg_id)
+                          if (storageName) {
+                            const { url } = getRegulationPdfUrl(storageName)
+                            setViewerUrl(url)
+                            setViewerReg(reg)
+                            return
                           }
+                          // Fallback to external URL
+                          if (reg.url) {
+                            setViewerUrl(null)
+                            setViewerReg(reg)
+                            return
+                          }
+                          alert(`No PDF found for "${reg.reg_id}". Check that the PDF is uploaded to the regulation-pdfs bucket.`)
                         }}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 6,

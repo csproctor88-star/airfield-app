@@ -18,13 +18,17 @@ export function PdfViewer({ url, title, regId, onClose }: PdfViewerProps) {
   // Supabase signed URLs have .pdf in the path but end with ?token=...
   const isPdfUrl = /\.pdf(\?|$)/i.test(url)
 
+  // Local API route URLs (e.g. /api/regulations/pdf?path=...) can't be
+  // proxied through Google Docs Viewer since Google can't reach them.
+  const isLocalUrl = url.startsWith('/')
+
   // For Google Docs viewer fallback (handles CORS/X-Frame-Options)
   const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`
 
-  // Use direct embed for PDFs, Google viewer as fallback
+  // Use direct embed for PDFs, Google viewer as fallback (external URLs only)
   const [useGoogleViewer, setUseGoogleViewer] = useState(false)
   const embedUrl = isPdfUrl
-    ? (useGoogleViewer ? googleViewerUrl : url)
+    ? (useGoogleViewer && !isLocalUrl ? googleViewerUrl : url)
     : url
 
   useEffect(() => {
@@ -38,8 +42,8 @@ export function PdfViewer({ url, title, regId, onClose }: PdfViewerProps) {
   }
 
   const handleIframeError = () => {
-    if (isPdfUrl && !useGoogleViewer) {
-      // Try Google Docs viewer as fallback
+    if (isPdfUrl && !useGoogleViewer && !isLocalUrl) {
+      // Try Google Docs viewer as fallback for external URLs
       setUseGoogleViewer(true)
       setLoading(true)
     } else {
@@ -49,14 +53,16 @@ export function PdfViewer({ url, title, regId, onClose }: PdfViewerProps) {
   }
 
   // Fallback after timeout — some blocked iframes don't fire onerror
+  // Skip for local API routes (Google can't reach them)
   useEffect(() => {
+    if (isLocalUrl) return
     const timer = setTimeout(() => {
       if (loading && isPdfUrl && !useGoogleViewer) {
         setUseGoogleViewer(true)
       }
     }, 5000)
     return () => clearTimeout(timer)
-  }, [loading, isPdfUrl, useGoogleViewer])
+  }, [loading, isPdfUrl, useGoogleViewer, isLocalUrl])
 
   return (
     <div
