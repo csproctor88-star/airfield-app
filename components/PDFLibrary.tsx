@@ -32,6 +32,16 @@ interface StorageFile {
 
 // ── Utilities ────────────────────────────────────────────────
 
+function getDefaultViewMode(): "native" | "react-pdf" {
+  if (typeof navigator === "undefined") return "react-pdf"
+  const ua = navigator.userAgent.toLowerCase()
+  const isIOS = /ipad|iphone|ipod/.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) // iPad OS
+  const isAndroid = /android/.test(ua)
+  const isMobile = isIOS || isAndroid
+  return isMobile ? "react-pdf" : "native"
+}
+
 function formatBytes(bytes?: number | null): string {
   if (!bytes) return '\u2014'
   if (bytes < 1024) return `${bytes} B`
@@ -70,7 +80,7 @@ export default function PDFLibrary() {
 
   // Viewer state
   const [viewingFile, setViewingFile] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<"native" | "react-pdf">("native")
+  const [viewMode, setViewMode] = useState<"native" | "react-pdf">(getDefaultViewMode)
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const blobUrlRef = useRef<string | null>(null)
   // Store the original data — never pass this directly to anything
@@ -182,27 +192,22 @@ export default function PDFLibrary() {
     }
   }, [files, cachedKeys, downloadAndCache])
 
-  // Fresh blob URL from masterBuffer (for native viewer)
-  const createBlobUrl = useCallback(() => {
-    if (!masterBuffer) return null
-    if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
-    const copy = masterBuffer.slice(0)
-    const blob = new Blob([copy], { type: "application/pdf" })
-    const url = URL.createObjectURL(blob)
-    blobUrlRef.current = url
-    return url
-  }, [masterBuffer])
-
   // Toggle between native iframe and react-pdf page view
   const toggleViewMode = useCallback(() => {
     if (viewMode === "native") {
       setViewMode("react-pdf")
     } else {
-      const url = createBlobUrl()
-      setBlobUrl(url)
+      if (masterBuffer) {
+        if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
+        const copy = masterBuffer.slice(0)
+        const pdfBlob = new Blob([copy], { type: "application/pdf" })
+        const url = URL.createObjectURL(pdfBlob)
+        blobUrlRef.current = url
+        setBlobUrl(url)
+      }
       setViewMode("native")
     }
-  }, [viewMode, createBlobUrl])
+  }, [viewMode, masterBuffer])
 
   // Open PDF in viewer
   const viewPdf = useCallback(
@@ -235,14 +240,18 @@ export default function PDFLibrary() {
             : blob
           setMasterBuffer(arrayBuffer)
 
-          // Create initial blob URL from a fresh copy
-          if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
-          const copy = arrayBuffer.slice(0)
-          const pdfBlob = new Blob([copy], { type: "application/pdf" })
-          const url = URL.createObjectURL(pdfBlob)
-          blobUrlRef.current = url
-          setBlobUrl(url)
-          setViewMode("native")
+          // For native mode — create blob URL from copy
+          if (getDefaultViewMode() === "native") {
+            const copy = arrayBuffer.slice(0)
+            const pdfBlob = new Blob([copy], { type: "application/pdf" })
+            if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
+            const url = URL.createObjectURL(pdfBlob)
+            blobUrlRef.current = url
+            setBlobUrl(url)
+            setViewMode("native")
+          } else {
+            setViewMode("react-pdf")
+          }
         } else {
           // No blob available — offline with no cache
           setViewMode("react-pdf")
@@ -264,7 +273,7 @@ export default function PDFLibrary() {
       blobUrlRef.current = null
     }
     setBlobUrl(null)
-    setViewMode("native")
+    setViewMode(getDefaultViewMode())
     setViewingFile(null)
     setMasterBuffer(null)
     setNumPages(null)
@@ -472,14 +481,18 @@ export default function PDFLibrary() {
                 </button>
               )}
               <div style={S.viewerControls}>
-                <button
-                  onClick={toggleViewMode}
-                  style={S.ctrlBtn}
-                  title={viewMode === "native" ? "Switch to page view" : "Switch to full document"}
-                >
-                  {viewMode === "native" ? "\u229E" : "\u2630"}
-                </button>
-                <div style={S.divider} />
+                {getDefaultViewMode() === "native" && (
+                  <>
+                    <button
+                      onClick={toggleViewMode}
+                      style={S.ctrlBtn}
+                      title={viewMode === "native" ? "Switch to page view" : "Switch to full document"}
+                    >
+                      {viewMode === "native" ? "\u229E" : "\u2630"}
+                    </button>
+                    <div style={S.divider} />
+                  </>
+                )}
                 {viewMode === "react-pdf" && (
                   <>
                     <button onClick={() => setScale((s) => Math.max(0.5, s - 0.2))} style={S.ctrlBtn} title="Zoom out">-</button>

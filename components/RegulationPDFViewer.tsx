@@ -11,6 +11,16 @@ pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"
 
 const BUCKET_NAME = 'regulation-pdfs'
 
+function getDefaultViewMode(): "native" | "react-pdf" {
+  if (typeof navigator === "undefined") return "react-pdf"
+  const ua = navigator.userAgent.toLowerCase()
+  const isIOS = /ipad|iphone|ipod/.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) // iPad OS
+  const isAndroid = /android/.test(ua)
+  const isMobile = isIOS || isAndroid
+  return isMobile ? "react-pdf" : "native"
+}
+
 function sanitizeFileName(regId: string): string {
   return regId
     .replace(/[/\\:*?"<>|]/g, '-')
@@ -50,7 +60,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
   const supabase = createClient()
   const viewerRef = useRef<HTMLDivElement>(null)
 
-  const [viewMode, setViewMode] = useState<"native" | "react-pdf">("native")
+  const [viewMode, setViewMode] = useState<"native" | "react-pdf">(getDefaultViewMode)
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const blobUrlRef = useRef<string | null>(null)
   const [pdfData, setPdfData] = useState<Uint8Array | null>(null)
@@ -88,7 +98,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
             const nativeUrl = URL.createObjectURL(data)
             blobUrlRef.current = nativeUrl
             setBlobUrl(nativeUrl)
-            setViewMode("native")
+            setViewMode(getDefaultViewMode())
 
             // Also keep Uint8Array for react-pdf fallback
             const uint8 = new Uint8Array(await data.arrayBuffer())
