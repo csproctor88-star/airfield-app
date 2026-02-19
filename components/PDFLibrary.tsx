@@ -70,6 +70,9 @@ export default function PDFLibrary() {
 
   // Viewer state
   const [viewingFile, setViewingFile] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<"native" | "react-pdf">("native")
+  const [blobUrl, setBlobUrl] = useState<string | null>(null)
+  const blobUrlRef = useRef<string | null>(null)
   const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null)
   const [numPages, setNumPages] = useState<number | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -189,30 +192,41 @@ export default function PDFLibrary() {
       setViewingFile(fileName)
 
       try {
-        let cached = await idbGet<ArrayBuffer | Blob>(STORE_BLOBS, fileName)
+        let blob = await idbGet<ArrayBuffer | Blob>(STORE_BLOBS, fileName)
 
-        if (!cached && navigator.onLine && supabase) {
+        if (!blob && navigator.onLine && supabase) {
           const { data, error: dlErr } = await supabase.storage
             .from(BUCKET_NAME)
             .download(fileName)
           if (dlErr) throw dlErr
-          const arrayBuffer = await data.arrayBuffer()
-          await idbSet(STORE_BLOBS, fileName, arrayBuffer)
+          // Cache as ArrayBuffer for react-pdf fallback
+          await idbSet(STORE_BLOBS, fileName, await data.arrayBuffer())
           await refreshCache()
-          cached = arrayBuffer
+          blob = data
         }
 
-        if (!cached) {
+        if (blob) {
+          // If it's an ArrayBuffer from cache, convert back to Blob
+          const pdfBlob = blob instanceof Blob
+            ? blob
+            : new Blob([blob], { type: "application/pdf" })
+
+          // Revoke old URL
+          if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
+
+          const url = URL.createObjectURL(pdfBlob)
+          blobUrlRef.current = url
+          setBlobUrl(url)
+          setViewMode("native")
+
+          // Also keep ArrayBuffer for react-pdf fallback
+          const ab = blob instanceof Blob ? await blob.arrayBuffer() : blob
+          setPdfData(ab)
+        } else {
+          // No blob available — offline with no cache, use react-pdf if text cached
+          setViewMode("react-pdf")
           setPdfError('PDF not available offline. Connect to download first.')
-          setPdfLoading(false)
-          return
         }
-
-        // Handle both Blob (legacy cache) and ArrayBuffer (new)
-        if (cached instanceof Blob) {
-          cached = await cached.arrayBuffer()
-        }
-        setPdfData(cached)
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e)
         setPdfError(`Failed to load: ${msg}`)
@@ -224,6 +238,12 @@ export default function PDFLibrary() {
   )
 
   const closeViewer = useCallback(() => {
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current)
+      blobUrlRef.current = null
+    }
+    setBlobUrl(null)
+    setViewMode("native")
     setViewingFile(null)
     setPdfData(null)
     setNumPages(null)
@@ -422,36 +442,64 @@ export default function PDFLibrary() {
               <button onClick={closeViewer} style={S.backBtn}>Back</button>
               <span style={S.viewerName}>{viewingFile}</span>
               <div style={S.viewerControls}>
-                <button onClick={() => setScale((s) => Math.max(0.5, s - 0.2))} style={S.ctrlBtn} title="Zoom out">-</button>
-                <span style={S.zoomLabel}>{Math.round(scale * 100)}%</span>
-                <button onClick={() => setScale((s) => Math.min(3, s + 0.2))} style={S.ctrlBtn} title="Zoom in">+</button>
+                <button
+                  onClick={() => setViewMode((m) => m === "native" ? "react-pdf" : "native")}
+                  style={S.ctrlBtn}
+                  title={viewMode === "native" ? "Switch to page view" : "Switch to full document"}
+                >
+                  {viewMode === "native" ? "\u229E" : "\u2630"}
+                </button>
                 <div style={S.divider} />
-                <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage <= 1} style={{ ...S.ctrlBtn, ...(currentPage <= 1 ? S.btnOff : {}) }}>
-                  &lsaquo;
-                </button>
-                <span style={S.pageLabel}>{currentPage} / {numPages || '\u2013'}</span>
-                <button onClick={() => setCurrentPage((p) => Math.min(numPages || p, p + 1))} disabled={currentPage >= (numPages || 1)} style={{ ...S.ctrlBtn, ...(currentPage >= (numPages || 1) ? S.btnOff : {}) }}>
-                  &rsaquo;
-                </button>
+                {viewMode === "react-pdf" && (
+                  <>
+                    <button onClick={() => setScale((s) => Math.max(0.5, s - 0.2))} style={S.ctrlBtn} title="Zoom out">-</button>
+                    <span style={S.zoomLabel}>{Math.round(scale * 100)}%</span>
+                    <button onClick={() => setScale((s) => Math.min(3, s + 0.2))} style={S.ctrlBtn} title="Zoom in">+</button>
+                    <div style={S.divider} />
+                    <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage <= 1} style={{ ...S.ctrlBtn, ...(currentPage <= 1 ? S.btnOff : {}) }}>
+                      &lsaquo;
+                    </button>
+                    <span style={S.pageLabel}>{currentPage} / {numPages || '\u2013'}</span>
+                    <button onClick={() => setCurrentPage((p) => Math.min(numPages || p, p + 1))} disabled={currentPage >= (numPages || 1)} style={{ ...S.ctrlBtn, ...(currentPage >= (numPages || 1) ? S.btnOff : {}) }}>
+                      &rsaquo;
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
-            <div ref={containerRef} style={S.viewerBody}>
-              {pdfLoading && (
-                <div style={S.center}>
-                  <span style={S.spinner} />
-                  <span style={{ color: '#64748B', marginLeft: 8 }}>Loading PDF...</span>
+            {pdfLoading && (
+              <div style={{ ...S.center, flex: 1 }}>
+                <span style={S.spinner} />
+                <span style={{ color: '#64748B', marginLeft: 8 }}>Loading PDF...</span>
+              </div>
+            )}
+            {pdfError && (
+              <div style={{ ...S.center, flex: 1 }}>
+                <div style={S.pdfErrBox}>
+                  <strong style={{ color: '#EF4444' }}>Failed to render PDF</strong>
+                  <p style={{ margin: '8px 0 0', fontSize: 13 }}>{pdfError}</p>
                 </div>
-              )}
-              {pdfError && (
-                <div style={S.center}>
-                  <div style={S.pdfErrBox}>
-                    <strong style={{ color: '#EF4444' }}>Failed to render PDF</strong>
-                    <p style={{ margin: '8px 0 0', fontSize: 13 }}>{pdfError}</p>
-                  </div>
-                </div>
-              )}
-              {fileData && !pdfError && (
+              </div>
+            )}
+            {viewMode === "native" && blobUrl && !pdfError && (
+              <div style={{ flex: 1, position: 'relative' }}>
+                <iframe
+                  src={blobUrl}
+                  title={viewingFile || 'PDF Viewer'}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    border: 'none',
+                    background: '#FFF',
+                  }}
+                />
+              </div>
+            )}
+            {viewMode === "react-pdf" && fileData && !pdfError && (
+              <div ref={containerRef} style={S.viewerBody}>
                 <Document
                   file={fileData}
                   onLoadSuccess={onDocumentLoadSuccess}
@@ -466,8 +514,8 @@ export default function PDFLibrary() {
                     loading={<div style={{ ...S.center, minHeight: 600 }}><span style={S.spinner} /></div>}
                   />
                 </Document>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         ) : loading ? (
           <div style={S.center}>

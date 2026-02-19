@@ -50,6 +50,9 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
   const supabase = createClient()
   const viewerRef = useRef<HTMLDivElement>(null)
 
+  const [viewMode, setViewMode] = useState<"native" | "react-pdf">("native")
+  const [blobUrl, setBlobUrl] = useState<string | null>(null)
+  const blobUrlRef = useRef<string | null>(null)
   const [pdfData, setPdfData] = useState<Uint8Array | null>(null)
   const [numPages, setNumPages] = useState<number | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -80,6 +83,14 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
             .from(BUCKET_NAME)
             .download(fileName)
           if (!dlErr && data && !cancelled) {
+            // Create blob URL for native viewer
+            if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
+            const nativeUrl = URL.createObjectURL(data)
+            blobUrlRef.current = nativeUrl
+            setBlobUrl(nativeUrl)
+            setViewMode("native")
+
+            // Also keep Uint8Array for react-pdf fallback
             const uint8 = new Uint8Array(await data.arrayBuffer())
             setPdfData(uint8)
             setLoading(false)
@@ -181,99 +192,132 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
           borderBottom: '1px solid rgba(56,189,248,0.06)',
         }}>
           <button
-            onClick={() => setScale(s => Math.max(0.5, s - 0.2))}
+            onClick={() => setViewMode(m => m === "native" ? "react-pdf" : "native")}
             style={{
               width: 28, height: 28, borderRadius: 6,
               background: 'rgba(241,245,249,0.05)', border: '1px solid #334155',
               color: '#94A3B8', cursor: 'pointer', display: 'flex',
-              alignItems: 'center', justifyContent: 'center',
+              alignItems: 'center', justifyContent: 'center', fontSize: 14,
             }}
+            title={viewMode === "native" ? "Switch to page view" : "Switch to full document"}
           >
-            <ZoomOut size={12} />
+            {viewMode === "native" ? "\u229E" : "\u2630"}
           </button>
-          <span style={{ fontSize: 10, color: '#64748B', minWidth: 36, textAlign: 'center', fontFamily: 'monospace' }}>
-            {Math.round(scale * 100)}%
-          </span>
-          <button
-            onClick={() => setScale(s => Math.min(3, s + 0.2))}
-            style={{
-              width: 28, height: 28, borderRadius: 6,
-              background: 'rgba(241,245,249,0.05)', border: '1px solid #334155',
-              color: '#94A3B8', cursor: 'pointer', display: 'flex',
-              alignItems: 'center', justifyContent: 'center',
-            }}
-          >
-            <ZoomIn size={12} />
-          </button>
-          <div style={{ width: 1, height: 18, background: '#334155', margin: '0 4px' }} />
-          <button
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            disabled={currentPage <= 1}
-            style={{
-              width: 28, height: 28, borderRadius: 6,
-              background: 'rgba(241,245,249,0.05)', border: '1px solid #334155',
-              color: currentPage <= 1 ? '#334155' : '#94A3B8', cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >
-            <ChevronLeft size={14} />
-          </button>
-          <span style={{ fontSize: 10, color: '#94A3B8', minWidth: 50, textAlign: 'center', fontFamily: 'monospace' }}>
-            {currentPage} / {numPages || '\u2013'}
-          </span>
-          <button
-            onClick={() => setCurrentPage(p => Math.min(numPages || p, p + 1))}
-            disabled={currentPage >= (numPages || 1)}
-            style={{
-              width: 28, height: 28, borderRadius: 6,
-              background: 'rgba(241,245,249,0.05)', border: '1px solid #334155',
-              color: currentPage >= (numPages || 1) ? '#334155' : '#94A3B8',
-              cursor: currentPage >= (numPages || 1) ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >
-            <ChevronRight size={14} />
-          </button>
+          {viewMode === "react-pdf" && (
+            <>
+              <div style={{ width: 1, height: 18, background: '#334155', margin: '0 4px' }} />
+              <button
+                onClick={() => setScale(s => Math.max(0.5, s - 0.2))}
+                style={{
+                  width: 28, height: 28, borderRadius: 6,
+                  background: 'rgba(241,245,249,0.05)', border: '1px solid #334155',
+                  color: '#94A3B8', cursor: 'pointer', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <ZoomOut size={12} />
+              </button>
+              <span style={{ fontSize: 10, color: '#64748B', minWidth: 36, textAlign: 'center', fontFamily: 'monospace' }}>
+                {Math.round(scale * 100)}%
+              </span>
+              <button
+                onClick={() => setScale(s => Math.min(3, s + 0.2))}
+                style={{
+                  width: 28, height: 28, borderRadius: 6,
+                  background: 'rgba(241,245,249,0.05)', border: '1px solid #334155',
+                  color: '#94A3B8', cursor: 'pointer', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <ZoomIn size={12} />
+              </button>
+              <div style={{ width: 1, height: 18, background: '#334155', margin: '0 4px' }} />
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                style={{
+                  width: 28, height: 28, borderRadius: 6,
+                  background: 'rgba(241,245,249,0.05)', border: '1px solid #334155',
+                  color: currentPage <= 1 ? '#334155' : '#94A3B8', cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <span style={{ fontSize: 10, color: '#94A3B8', minWidth: 50, textAlign: 'center', fontFamily: 'monospace' }}>
+                {currentPage} / {numPages || '\u2013'}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(numPages || p, p + 1))}
+                disabled={currentPage >= (numPages || 1)}
+                style={{
+                  width: 28, height: 28, borderRadius: 6,
+                  background: 'rgba(241,245,249,0.05)', border: '1px solid #334155',
+                  color: currentPage >= (numPages || 1) ? '#334155' : '#94A3B8',
+                  cursor: currentPage >= (numPages || 1) ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <ChevronRight size={14} />
+              </button>
+            </>
+          )}
         </div>
       )}
 
       {/* PDF content area */}
-      <div ref={viewerRef} style={{ flex: 1, overflow: 'auto', display: 'flex', justifyContent: 'center', padding: 12, background: '#0A101C' }}>
-        {loading && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40, gap: 8 }}>
-            <Spinner />
-            <span style={{ color: '#64748B', fontSize: 12 }}>Loading PDF...</span>
+      {loading && (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40, gap: 8 }}>
+          <Spinner />
+          <span style={{ color: '#64748B', fontSize: 12 }}>Loading PDF...</span>
+        </div>
+      )}
+      {error && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12, textAlign: 'center' }}>
+          <div style={{
+            maxWidth: 360, padding: 16,
+            background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
+            borderRadius: 10, color: '#CBD5E1', fontSize: 12, lineHeight: 1.6,
+          }}>
+            <strong style={{ color: '#EF4444' }}>PDF Unavailable</strong>
+            <p style={{ margin: '8px 0 0' }}>{error}</p>
           </div>
-        )}
-        {error && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12, textAlign: 'center' }}>
-            <div style={{
-              maxWidth: 360, padding: 16,
-              background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
-              borderRadius: 10, color: '#CBD5E1', fontSize: 12, lineHeight: 1.6,
-            }}>
-              <strong style={{ color: '#EF4444' }}>PDF Unavailable</strong>
-              <p style={{ margin: '8px 0 0' }}>{error}</p>
-            </div>
-            {url && (
-              <a
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
-                  color: '#fff', fontSize: 11, fontWeight: 700,
-                  padding: '8px 16px', borderRadius: 6, textDecoration: 'none',
-                }}
-              >
-                <ExternalLink size={12} />
-                Open External Link
-              </a>
-            )}
-          </div>
-        )}
-        {fileData && !error && (
+          {url && (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
+                color: '#fff', fontSize: 11, fontWeight: 700,
+                padding: '8px 16px', borderRadius: 6, textDecoration: 'none',
+              }}
+            >
+              <ExternalLink size={12} />
+              Open External Link
+            </a>
+          )}
+        </div>
+      )}
+      {viewMode === "native" && blobUrl && !error && (
+        <div style={{ flex: 1, position: 'relative' }}>
+          <iframe
+            src={blobUrl}
+            title={title || 'PDF Viewer'}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              background: '#FFF',
+            }}
+          />
+        </div>
+      )}
+      {viewMode === "react-pdf" && fileData && !error && (
+        <div ref={viewerRef} style={{ flex: 1, overflow: 'auto', display: 'flex', justifyContent: 'center', padding: 12, background: '#0A101C' }}>
           <Document
             file={fileData}
             onLoadSuccess={({ numPages: n }) => setNumPages(n)}
@@ -296,8 +340,8 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
               }
             />
           </Document>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
