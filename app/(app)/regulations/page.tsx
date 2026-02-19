@@ -2,10 +2,16 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { BookOpen, Search, ExternalLink, ChevronDown, ChevronUp, X, FileText, Upload, Trash2, Loader2 } from 'lucide-react'
+import dynamic from 'next/dynamic'
 import { ALL_REGULATIONS, type RegulationEntry } from '@/lib/regulations-data'
 import { REGULATION_CATEGORIES, REGULATION_PUB_TYPES, REGULATION_SOURCE_SECTIONS } from '@/lib/constants'
-import { PdfViewer } from '@/components/regulations/pdf-viewer'
 import { createClient } from '@/lib/supabase/client'
+
+// Dynamically import PdfViewer so react-pdf + pdfjs-dist are fully client-only
+const PdfViewer = dynamic(
+  () => import('@/components/regulations/pdf-viewer').then(mod => ({ default: mod.PdfViewer })),
+  { ssr: false }
+)
 import {
   type UserRegulationPdf,
   fetchUserRegulationPdfs,

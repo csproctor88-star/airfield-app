@@ -2,18 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { X, ExternalLink, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Search, Loader2, AlertTriangle } from 'lucide-react'
-import dynamic from 'next/dynamic'
+import { Document, Page, pdfjs } from 'react-pdf'
+import 'react-pdf/dist/Page/AnnotationLayer.css'
+import 'react-pdf/dist/Page/TextLayer.css'
 import { getCachedPdf, cachePdf } from '@/lib/pdf-cache'
 
-// Dynamically import react-pdf wrapper to avoid SSR issues (DOMMatrix not available in Node)
-const ReactPdfDocument = dynamic(
-  () => import('./react-pdf-wrapper').then(mod => ({ default: mod.Document })),
-  { ssr: false }
-)
-const ReactPdfPage = dynamic(
-  () => import('./react-pdf-wrapper').then(mod => ({ default: mod.Page })),
-  { ssr: false }
-)
+// Configure PDF.js worker — loaded from CDN to avoid bundling the large worker file
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
 
 interface PdfViewerProps {
   url: string          // signed URL or external URL to fetch/display
@@ -410,7 +405,7 @@ export function PdfViewer({ url, title, regId, onClose }: PdfViewerProps) {
 
         {/* PDF document */}
         {pdfData && !error && (
-          <ReactPdfDocument
+          <Document
             file={{ data: pdfData }}
             onLoadSuccess={onDocumentLoadSuccess}
             onLoadError={(err) => {
@@ -419,7 +414,7 @@ export function PdfViewer({ url, title, regId, onClose }: PdfViewerProps) {
             }}
             loading={null}
           >
-            <ReactPdfPage
+            <Page
               pageNumber={currentPage}
               width={pageWidth * scale}
               renderTextLayer={true}
@@ -430,7 +425,7 @@ export function PdfViewer({ url, title, regId, onClose }: PdfViewerProps) {
                 </div>
               }
             />
-          </ReactPdfDocument>
+          </Document>
         )}
       </div>
 
