@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -56,6 +56,11 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
   const [scale, setScale] = useState(1.0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const fileData = useMemo(() => {
+    if (!pdfData) return null
+    return { data: pdfData.slice(0) }  // fresh copy every time
+  }, [pdfData, currentPage])  // currentPage forces a new copy on page change
 
   // Load PDF from Supabase storage
   useEffect(() => {
@@ -268,9 +273,9 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
             )}
           </div>
         )}
-        {pdfData && !error && (
+        {fileData && !error && (
           <Document
-            file={{ data: pdfData }}
+            file={fileData}
             onLoadSuccess={({ numPages: n }) => setNumPages(n)}
             onLoadError={(err) => setError(`PDF render failed: ${err.message}`)}
             loading={

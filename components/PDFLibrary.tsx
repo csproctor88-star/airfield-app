@@ -290,8 +290,8 @@ export default function PDFLibrary() {
   // Memoize the file prop to prevent re-clone issues
   const fileData = useMemo(() => {
     if (!pdfData) return null
-    return { data: pdfData.slice(0) }
-  }, [pdfData])
+    return { data: pdfData.slice(0) }  // fresh copy every time
+  }, [pdfData, currentPage])  // currentPage forces a new copy on page change
 
   // react-pdf callbacks
   function onDocumentLoadSuccess({ numPages: n }: { numPages: number }) {
