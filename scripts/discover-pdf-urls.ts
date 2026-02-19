@@ -58,7 +58,7 @@ function regIdToPubIds(regId: string): string[] {
     ids.push(base.replace(/\./g, '-'))
   }
 
-  return [...new Set(ids)]
+  return Array.from(new Set(ids))
 }
 
 // Extract pub_id from an existing URL
