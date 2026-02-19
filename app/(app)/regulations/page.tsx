@@ -12,6 +12,8 @@ import {
   uploadUserRegulationPdf,
   deleteUserRegulationPdf,
   getUserPdfSignedUrl,
+  getRegulationPdfUrl,
+  fetchRegulations,
 } from '@/lib/supabase/regulations'
 
 // --- Badge color by entry type ---
@@ -55,7 +57,10 @@ export default function RegulationsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploadTargetRegId, setUploadTargetRegId] = useState<string | null>(null)
 
-  // Load current user + their uploaded PDFs
+  // Cached storage paths from the regulations table (reg_id -> storage_path)
+  const [cachedPaths, setCachedPaths] = useState<Map<string, string>>(new Map())
+
+  // Load current user + their uploaded PDFs + cached storage paths
   useEffect(() => {
     async function loadUser() {
       const supabase = createClient()
@@ -66,7 +71,16 @@ export default function RegulationsPage() {
       const pdfs = await fetchUserRegulationPdfs(user.id)
       setUserPdfs(pdfs)
     }
+    async function loadCachedPaths() {
+      const rows = await fetchRegulations()
+      const paths = new Map<string, string>()
+      for (const row of rows) {
+        if (row.storage_path) paths.set(row.reg_id, row.storage_path)
+      }
+      setCachedPaths(paths)
+    }
     loadUser()
+    loadCachedPaths()
   }, [])
 
   const handleUploadClick = useCallback((regId: string) => {
@@ -497,7 +511,21 @@ export default function RegulationsPage() {
                     {/* Standard "View in App" for regulations with a URL */}
                     {reg.url && (
                       <button
-                        onClick={e => { e.stopPropagation(); setViewerUrl(null); setViewerReg(reg) }}
+                        onClick={async e => {
+                          e.stopPropagation()
+                          // Prefer cached Supabase Storage PDF (avoids X-Frame-Options blocking)
+                          const storagePath = cachedPaths.get(reg.reg_id)
+                          if (storagePath) {
+                            const signedUrl = await getRegulationPdfUrl(storagePath)
+                            if (signedUrl) {
+                              setViewerUrl(signedUrl)
+                              setViewerReg(reg)
+                              return
+                            }
+                          }
+                          setViewerUrl(null)
+                          setViewerReg(reg)
+                        }}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 6,
                           background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
