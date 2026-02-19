@@ -546,12 +546,11 @@ export default function RegulationsPage() {
                       </>
                     )}
 
-                    {/* Standard "View in App" for regulations with a URL or cached PDF */}
-                    {(reg.url || cachedPdfMap.has(reg.reg_id)) && (
-                      <button
+                    {/* Standard "View in App" — cached Supabase PDF preferred, external URL fallback */}
+                    <button
                         onClick={async e => {
                           e.stopPropagation()
-                          // Prefer cached Supabase Storage PDF (avoids X-Frame-Options blocking)
+                          // Prefer cached Supabase Storage PDF
                           const storageName = cachedPdfMap.get(reg.reg_id)
                           if (storageName) {
                             const signedUrl = await getRegulationPdfUrl(storageName)
@@ -561,7 +560,7 @@ export default function RegulationsPage() {
                               return
                             }
                           }
-                          // Fallback to external URL (only if available)
+                          // Fallback to external URL
                           if (reg.url) {
                             setViewerUrl(null)
                             setViewerReg(reg)
@@ -578,7 +577,6 @@ export default function RegulationsPage() {
                         <FileText size={12} />
                         {userPdfs.has(reg.reg_id) ? 'View Original' : 'View in App'}
                       </button>
-                    )}
 
                     {reg.url && (
                       <a
