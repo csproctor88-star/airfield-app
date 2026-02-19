@@ -97,7 +97,7 @@ export async function getRegulationPdfUrl(
 
   const { data, error } = await supabase.storage
     .from('regulation-pdfs')
-    .createSignedUrl(storagePath, 3600) // 1 hour expiry
+    .createSignedUrl(storagePath, 3600, { download: false }) // 1 hour, inline display
 
   if (!error && data?.signedUrl) return { url: data.signedUrl }
 
