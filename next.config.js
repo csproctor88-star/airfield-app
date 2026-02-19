@@ -10,6 +10,11 @@ const nextConfig = {
       },
     ],
   },
+  webpack: (config) => {
+    // react-pdf / pdfjs-dist needs canvas as an optional external
+    config.resolve.alias.canvas = false
+    return config
+  },
 }
 
 module.exports = nextConfig
