@@ -86,6 +86,28 @@ export async function searchRegulations(query: string): Promise<RegulationRow[]>
 }
 
 /**
+ * List all files in the regulation-pdfs bucket (excluding user-uploads/).
+ * Returns a Set of storage paths like "dafman_13-204-_vol._1.pdf".
+ */
+export async function listCachedRegulationPdfs(): Promise<Set<string>> {
+  const supabase = createClient()
+  if (!supabase) return new Set()
+
+  const { data, error } = await supabase.storage
+    .from('regulation-pdfs')
+    .list('', { limit: 200 })
+
+  if (error || !data) return new Set()
+
+  // Only include PDF files at root level (user uploads are in user-uploads/ folder)
+  return new Set(
+    data
+      .filter(f => f.name.endsWith('.pdf'))
+      .map(f => f.name)
+  )
+}
+
+/**
  * Get a signed URL for a cached PDF in Supabase Storage.
  * Returns null if the regulation has no cached PDF.
  */

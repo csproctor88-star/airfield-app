@@ -9,12 +9,23 @@ import { createClient } from '@/lib/supabase/client'
 import {
   type UserRegulationPdf,
   fetchUserRegulationPdfs,
+  fetchRegulations,
   uploadUserRegulationPdf,
   deleteUserRegulationPdf,
   getUserPdfSignedUrl,
   getRegulationPdfUrl,
-  fetchRegulations,
+  listCachedRegulationPdfs,
 } from '@/lib/supabase/regulations'
+
+// --- Convert reg_id to storage filename (must match download-regulations.ts) ---
+function regIdToFileName(regId: string): string {
+  return regId
+    .replace(/[/\\:*?"<>|]/g, '-')
+    .replace(/,\s*/g, '-')
+    .replace(/\s+/g, '_')
+    .replace(/-+/g, '-')
+    .toLowerCase() + '.pdf'
+}
 
 // --- Badge color by entry type ---
 function entryTypeBadge(entry: RegulationEntry): { label: string; bg: string; color: string } {
@@ -57,10 +68,10 @@ export default function RegulationsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploadTargetRegId, setUploadTargetRegId] = useState<string | null>(null)
 
-  // Cached storage paths from the regulations table (reg_id -> storage_path)
-  const [cachedPaths, setCachedPaths] = useState<Map<string, string>>(new Map())
+  // Map of reg_id -> storage filename for regulations with a cached PDF
+  const [cachedPdfMap, setCachedPdfMap] = useState<Map<string, string>>(new Map())
 
-  // Load current user + their uploaded PDFs + cached storage paths
+  // Load current user + their uploaded PDFs + cached storage files
   useEffect(() => {
     async function loadUser() {
       const supabase = createClient()
@@ -71,16 +82,30 @@ export default function RegulationsPage() {
       const pdfs = await fetchUserRegulationPdfs(user.id)
       setUserPdfs(pdfs)
     }
-    async function loadCachedPaths() {
-      const rows = await fetchRegulations()
-      const paths = new Map<string, string>()
-      for (const row of rows) {
-        if (row.storage_path) paths.set(row.reg_id, row.storage_path)
+    async function loadCachedPdfs() {
+      // Get the set of files actually in the storage bucket
+      const bucketFiles = await listCachedRegulationPdfs()
+      // Also get DB storage_path values (set by the download script)
+      const dbRows = await fetchRegulations()
+
+      const map = new Map<string, string>()
+      for (const reg of ALL_REGULATIONS) {
+        // 1. Check if sanitized reg_id filename exists in bucket
+        const expectedName = regIdToFileName(reg.reg_id)
+        if (bucketFiles.has(expectedName)) {
+          map.set(reg.reg_id, expectedName)
+          continue
+        }
+        // 2. Check DB storage_path as fallback (may differ from expected name)
+        const dbRow = dbRows.find(r => r.reg_id === reg.reg_id)
+        if (dbRow?.storage_path && bucketFiles.has(dbRow.storage_path)) {
+          map.set(reg.reg_id, dbRow.storage_path)
+        }
       }
-      setCachedPaths(paths)
+      setCachedPdfMap(map)
     }
     loadUser()
-    loadCachedPaths()
+    loadCachedPdfs()
   }, [])
 
   const handleUploadClick = useCallback((regId: string) => {
@@ -514,9 +539,9 @@ export default function RegulationsPage() {
                         onClick={async e => {
                           e.stopPropagation()
                           // Prefer cached Supabase Storage PDF (avoids X-Frame-Options blocking)
-                          const storagePath = cachedPaths.get(reg.reg_id)
-                          if (storagePath) {
-                            const signedUrl = await getRegulationPdfUrl(storagePath)
+                          const storageName = cachedPdfMap.get(reg.reg_id)
+                          if (storageName) {
+                            const signedUrl = await getRegulationPdfUrl(storageName)
                             if (signedUrl) {
                               setViewerUrl(signedUrl)
                               setViewerReg(reg)
