@@ -1,72 +1,26 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { BookOpen, Search, ExternalLink, ChevronDown, ChevronUp, X, FileText, Upload, Trash2, Loader2 } from 'lucide-react'
-import { ALL_REGULATIONS, type RegulationEntry } from '@/lib/regulations-data'
+import { Search, ExternalLink, ChevronDown, ChevronUp, X, FileText, Upload, Trash2, Loader2 } from 'lucide-react'
 import { REGULATION_CATEGORIES, REGULATION_PUB_TYPES, REGULATION_SOURCE_SECTIONS } from '@/lib/constants'
 import { PdfViewer } from '@/components/regulations/pdf-viewer'
 import { createClient } from '@/lib/supabase/client'
 import {
+  type RegulationRow,
   type UserRegulationPdf,
+  fetchRegulations,
   fetchUserRegulationPdfs,
   uploadUserRegulationPdf,
   deleteUserRegulationPdf,
   getUserPdfSignedUrl,
   getRegulationPdfUrl,
-  listCachedRegulationPdfs,
 } from '@/lib/supabase/regulations'
 
-// --- Known storage filenames for regulations uploaded directly to the bucket ---
-// These bypass the bucket-listing + fuzzy-match path so they always resolve.
-// Filenames must use the sanitized format (no spaces/special chars) to avoid
-// issues with Supabase Storage signed-URL generation.
-const KNOWN_STORAGE_FILES: Record<string, string> = {
-  '14 CFR Part 139': '14_cfr_part_139.pdf',
-  '14 CFR Part 77': '14_cfr_part_77.pdf',
-  '14 CFR Part 121': '14_cfr_part_121.pdf',
-  '14 CFR Part 380': '14_cfr_part_380.pdf',
-  '14 CFR Part 5': '14_cfr_part_5.pdf',
-  '14 CFR Part 11': '14_cfr_part_11.pdf',
-  '49 CFR 830': '49_cfr_830.pdf',
-  'ICAO Annex 14': 'icao_annex_14.pdf',
-}
-
-// --- Convert reg_id to storage filename (must match download-regulations.ts) ---
-function regIdToFileName(regId: string): string {
-  return regId
-    .replace(/[/\\:*?"<>|]/g, '-')
-    .replace(/,\s*/g, '-')
-    .replace(/\s+/g, '_')
-    .replace(/-+/g, '-')
-    .toLowerCase() + '.pdf'
-}
-
-// --- Normalize string for fuzzy matching (strip "part", non-alnum chars, lowercase) ---
-function normalizeForMatch(s: string): string {
-  return s.toLowerCase().replace(/\bpart\b/g, '').replace(/[^a-z0-9]/g, '')
-}
-
-// --- Find a storage file matching a reg_id from the bucket file list ---
-function findStorageFile(regId: string, bucketFiles: string[]): string | null {
-  // 1. Exact sanitized match (for script-downloaded files)
-  const sanitized = regIdToFileName(regId)
-  if (bucketFiles.indexOf(sanitized) !== -1) return sanitized
-
-  // 2. Normalized prefix match (for manually uploaded files like
-  //    "14 CFR Part 139 (up to date as of 2-13-2026).pdf")
-  const normalizedId = normalizeForMatch(regId)
-  for (let i = 0; i < bucketFiles.length; i++) {
-    if (normalizeForMatch(bucketFiles[i]).startsWith(normalizedId)) return bucketFiles[i]
-  }
-
-  return null
-}
-
 // --- Badge color by entry type ---
-function entryTypeBadge(entry: RegulationEntry): { label: string; bg: string; color: string } {
-  if (entry.is_core) return { label: 'CORE', bg: 'rgba(52,211,153,0.15)', color: '#34D399' }
-  if (entry.is_scrubbed) return { label: 'SCRUBBED', bg: 'rgba(165,180,252,0.15)', color: '#A5B4FC' }
-  if (entry.is_cross_ref) return { label: 'CROSS-REF', bg: 'rgba(253,230,138,0.15)', color: '#FDE68A' }
+function entryTypeBadge(reg: RegulationRow): { label: string; bg: string; color: string } {
+  if (reg.is_core) return { label: 'CORE', bg: 'rgba(52,211,153,0.15)', color: '#34D399' }
+  if (reg.is_scrubbed) return { label: 'SCRUBBED', bg: 'rgba(165,180,252,0.15)', color: '#A5B4FC' }
+  if (reg.is_cross_ref) return { label: 'CROSS-REF', bg: 'rgba(253,230,138,0.15)', color: '#FDE68A' }
   return { label: 'DIRECT', bg: 'rgba(241,245,249,0.10)', color: '#CBD5E1' }
 }
 
@@ -86,28 +40,34 @@ function getSectionLabel(section: string) {
 }
 
 export default function RegulationsPage() {
+  // Regulation data from DB
+  const [regulations, setRegulations] = useState<RegulationRow[]>([])
+  const [loading, setLoading] = useState(true)
+
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [pubTypeFilter, setPubTypeFilter] = useState<string>('all')
   const [sourceFilter, setSourceFilter] = useState<string>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
-  const [viewerReg, setViewerReg] = useState<RegulationEntry | null>(null)
+  const [viewerReg, setViewerReg] = useState<RegulationRow | null>(null)
   const [viewerUrl, setViewerUrl] = useState<string | null>(null)
 
   // User PDF upload state
   const [userId, setUserId] = useState<string | null>(null)
   const [userPdfs, setUserPdfs] = useState<Map<string, UserRegulationPdf>>(new Map())
-  const [uploading, setUploading] = useState<string | null>(null) // reg_id being uploaded
+  const [uploading, setUploading] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploadTargetRegId, setUploadTargetRegId] = useState<string | null>(null)
 
-  // Map of reg_id -> storage filename for regulations with a cached PDF
-  const [cachedPdfMap, setCachedPdfMap] = useState<Map<string, string>>(new Map())
-
-  // Load current user + their uploaded PDFs + cached storage files
+  // Load regulations from DB + current user + their uploaded PDFs
   useEffect(() => {
+    async function loadRegulations() {
+      const rows = await fetchRegulations()
+      setRegulations(rows)
+      setLoading(false)
+    }
     async function loadUser() {
       const supabase = createClient()
       if (!supabase) return
@@ -117,35 +77,8 @@ export default function RegulationsPage() {
       const pdfs = await fetchUserRegulationPdfs(user.id)
       setUserPdfs(pdfs)
     }
-    async function loadCachedPdfs() {
-      const map = new Map<string, string>()
-
-      try {
-        // 1. List the bucket and match regulations via fuzzy logic.
-        //    Bucket listing reflects the ACTUAL filenames so it takes priority.
-        const bucketFiles = await listCachedRegulationPdfs()
-        console.log('[Regs] Storage bucket files:', bucketFiles)
-
-        for (const reg of ALL_REGULATIONS) {
-          const match = findStorageFile(reg.reg_id, bucketFiles)
-          if (match) map.set(reg.reg_id, match)
-        }
-      } catch (err) {
-        console.warn('[Regs] Bucket listing failed:', err)
-      }
-
-      // 2. Fill in KNOWN_STORAGE_FILES as fallback for any unmatched regulations
-      for (const [regId, fileName] of Object.entries(KNOWN_STORAGE_FILES)) {
-        if (!map.has(regId)) map.set(regId, fileName)
-      }
-
-      console.log('[Regs] Matched regulations:', Array.from(map.entries()))
-      const unmatched = ALL_REGULATIONS.filter(r => !map.has(r.reg_id)).map(r => r.reg_id)
-      if (unmatched.length > 0) console.log('[Regs] Unmatched regulations:', unmatched)
-      setCachedPdfMap(map)
-    }
+    loadRegulations()
     loadUser()
-    loadCachedPdfs()
   }, [])
 
   const handleUploadClick = useCallback((regId: string) => {
@@ -200,7 +133,7 @@ export default function RegulationsPage() {
     setDeleting(null)
   }, [userId, userPdfs])
 
-  const handleViewUserPdf = useCallback(async (reg: RegulationEntry) => {
+  const handleViewUserPdf = useCallback(async (reg: RegulationRow) => {
     const pdf = userPdfs.get(reg.reg_id)
     if (!pdf) return
     const signedUrl = await getUserPdfSignedUrl(pdf.storage_path)
@@ -210,16 +143,16 @@ export default function RegulationsPage() {
     }
   }, [userPdfs])
 
-  // Derive counts
-  const coreCount = ALL_REGULATIONS.filter(r => r.is_core).length
-  const directCount = ALL_REGULATIONS.filter(r => !r.is_core && !r.is_cross_ref && !r.is_scrubbed).length
-  const crossRefCount = ALL_REGULATIONS.filter(r => r.is_cross_ref).length
-  const scrubbedCount = ALL_REGULATIONS.filter(r => r.is_scrubbed).length
+  // Derive counts from DB data
+  const coreCount = useMemo(() => regulations.filter(r => r.is_core).length, [regulations])
+  const directCount = useMemo(() => regulations.filter(r => !r.is_core && !r.is_cross_ref && !r.is_scrubbed).length, [regulations])
+  const crossRefCount = useMemo(() => regulations.filter(r => r.is_cross_ref).length, [regulations])
+  const scrubbedCount = useMemo(() => regulations.filter(r => r.is_scrubbed).length, [regulations])
 
   // Filter & search
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
-    return ALL_REGULATIONS.filter(r => {
+    return regulations.filter(r => {
       if (categoryFilter !== 'all' && r.category !== categoryFilter) return false
       if (pubTypeFilter !== 'all' && r.pub_type !== pubTypeFilter) return false
       if (sourceFilter !== 'all' && r.source_section !== sourceFilter) return false
@@ -231,9 +164,19 @@ export default function RegulationsPage() {
         r.tags.some(t => t.toLowerCase().includes(q))
       )
     })
-  }, [search, categoryFilter, pubTypeFilter, sourceFilter])
+  }, [regulations, search, categoryFilter, pubTypeFilter, sourceFilter])
 
   const hasActiveFilters = categoryFilter !== 'all' || pubTypeFilter !== 'all' || sourceFilter !== 'all'
+
+  // Loading state
+  if (loading) {
+    return (
+      <div style={{ padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, paddingTop: 80 }}>
+        <Loader2 size={24} color="#38BDF8" style={{ animation: 'spin 0.8s linear infinite' }} />
+        <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600 }}>Loading regulations...</div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
@@ -241,7 +184,7 @@ export default function RegulationsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
         <div style={{ fontSize: 16, fontWeight: 800 }}>Regulations</div>
         <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600 }}>
-          {ALL_REGULATIONS.length} total
+          {regulations.length} total
         </div>
       </div>
 
@@ -397,9 +340,9 @@ export default function RegulationsPage() {
 
       {/* Results count */}
       <div style={{ fontSize: 10, color: '#64748B', marginBottom: 8, fontWeight: 600 }}>
-        {filtered.length === ALL_REGULATIONS.length
+        {filtered.length === regulations.length
           ? `Showing all ${filtered.length} regulations`
-          : `${filtered.length} of ${ALL_REGULATIONS.length} regulations`
+          : `${filtered.length} of ${regulations.length} regulations`
         }
       </div>
 
@@ -573,37 +516,27 @@ export default function RegulationsPage() {
                       </>
                     )}
 
-                    {/* Standard "View in App" — cached Supabase PDF preferred, external URL fallback */}
-                    <button
+                    {/* View in App — uses storage_path from DB, falls back to external URL */}
+                    {(reg.storage_path || reg.url) && (
+                      <button
                         onClick={async e => {
                           e.stopPropagation()
                           try {
-                            // Prefer cached Supabase Storage PDF
-                            const storageName = cachedPdfMap.get(reg.reg_id)
-                            console.log('[Regs] View clicked:', reg.reg_id, '→ storageName:', storageName)
-                            if (storageName) {
-                              const result = await getRegulationPdfUrl(storageName)
+                            if (reg.storage_path) {
+                              const result = await getRegulationPdfUrl(reg.storage_path)
                               if ('url' in result) {
-                                console.log('[Regs] Signed URL OK')
                                 setViewerUrl(result.url)
                                 setViewerReg(reg)
                                 return
                               }
                               console.warn('[Regs] Signed URL failed:', result.error)
                             }
-                            // Fallback to external URL
                             if (reg.url) {
                               setViewerUrl(null)
                               setViewerReg(reg)
                               return
                             }
-                            // No PDF source available — surface the storage error
-                            const storageName2 = cachedPdfMap.get(reg.reg_id)
-                            const detail = storageName2
-                              ? `Signed URL failed for "${storageName2}". Check that this file exists in the regulation-pdfs bucket.`
-                              : `No storage file matched for "${reg.reg_id}". Check that the PDF is uploaded to the regulation-pdfs bucket.`
-                            console.warn('[Regs]', detail)
-                            alert(detail)
+                            alert(`Unable to load PDF for "${reg.reg_id}".`)
                           } catch (err) {
                             console.error('[Regs] Error opening PDF:', err)
                             alert(`Error loading PDF for "${reg.reg_id}". Please try again.`)
@@ -620,6 +553,7 @@ export default function RegulationsPage() {
                         <FileText size={12} />
                         {userPdfs.has(reg.reg_id) ? 'View Original' : 'View in App'}
                       </button>
+                    )}
 
                     {reg.url && (
                       <a
