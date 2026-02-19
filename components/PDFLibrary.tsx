@@ -73,7 +73,8 @@ export default function PDFLibrary() {
   const [viewMode, setViewMode] = useState<"native" | "react-pdf">("native")
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const blobUrlRef = useRef<string | null>(null)
-  const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null)
+  // Store the original data — never pass this directly to anything
+  const [masterBuffer, setMasterBuffer] = useState<ArrayBuffer | null>(null)
   const [numPages, setNumPages] = useState<number | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [scale, setScale] = useState(1.2)
@@ -181,12 +182,34 @@ export default function PDFLibrary() {
     }
   }, [files, cachedKeys, downloadAndCache])
 
+  // Fresh blob URL from masterBuffer (for native viewer)
+  const createBlobUrl = useCallback(() => {
+    if (!masterBuffer) return null
+    if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
+    const copy = masterBuffer.slice(0)
+    const blob = new Blob([copy], { type: "application/pdf" })
+    const url = URL.createObjectURL(blob)
+    blobUrlRef.current = url
+    return url
+  }, [masterBuffer])
+
+  // Toggle between native iframe and react-pdf page view
+  const toggleViewMode = useCallback(() => {
+    if (viewMode === "native") {
+      setViewMode("react-pdf")
+    } else {
+      const url = createBlobUrl()
+      setBlobUrl(url)
+      setViewMode("native")
+    }
+  }, [viewMode, createBlobUrl])
+
   // Open PDF in viewer
   const viewPdf = useCallback(
     async (fileName: string) => {
       setPdfLoading(true)
       setPdfError(null)
-      setPdfData(null)
+      setMasterBuffer(null)
       setNumPages(null)
       setCurrentPage(1)
       setViewingFile(fileName)
@@ -199,31 +222,29 @@ export default function PDFLibrary() {
             .from(BUCKET_NAME)
             .download(fileName)
           if (dlErr) throw dlErr
-          // Cache as ArrayBuffer for react-pdf fallback
+          // Cache as ArrayBuffer
           await idbSet(STORE_BLOBS, fileName, await data.arrayBuffer())
           await refreshCache()
           blob = data
         }
 
         if (blob) {
-          // If it's an ArrayBuffer from cache, convert back to Blob
-          const pdfBlob = blob instanceof Blob
-            ? blob
-            : new Blob([blob], { type: "application/pdf" })
+          // Get the raw ArrayBuffer as the master copy
+          const arrayBuffer = blob instanceof Blob
+            ? await blob.arrayBuffer()
+            : blob
+          setMasterBuffer(arrayBuffer)
 
-          // Revoke old URL
+          // Create initial blob URL from a fresh copy
           if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
-
+          const copy = arrayBuffer.slice(0)
+          const pdfBlob = new Blob([copy], { type: "application/pdf" })
           const url = URL.createObjectURL(pdfBlob)
           blobUrlRef.current = url
           setBlobUrl(url)
           setViewMode("native")
-
-          // Also keep ArrayBuffer for react-pdf fallback
-          const ab = blob instanceof Blob ? await blob.arrayBuffer() : blob
-          setPdfData(ab)
         } else {
-          // No blob available — offline with no cache, use react-pdf if text cached
+          // No blob available — offline with no cache
           setViewMode("react-pdf")
           setPdfError('PDF not available offline. Connect to download first.')
         }
@@ -245,7 +266,7 @@ export default function PDFLibrary() {
     setBlobUrl(null)
     setViewMode("native")
     setViewingFile(null)
-    setPdfData(null)
+    setMasterBuffer(null)
     setNumPages(null)
     setCurrentPage(1)
     setPdfError(null)
@@ -307,11 +328,11 @@ export default function PDFLibrary() {
     }
   }, [supabase, files, extracting, refreshCache])
 
-  // Memoize the file prop to prevent re-clone issues
+  // Fresh copy for react-pdf (from masterBuffer, never the original)
   const fileData = useMemo(() => {
-    if (!pdfData) return null
-    return { data: pdfData.slice(0) }  // fresh copy every time
-  }, [pdfData, currentPage])  // currentPage forces a new copy on page change
+    if (!masterBuffer) return null
+    return { data: masterBuffer.slice(0) }
+  }, [masterBuffer, currentPage])  // currentPage forces a new copy on page change
 
   // react-pdf callbacks
   function onDocumentLoadSuccess({ numPages: n }: { numPages: number }) {
@@ -452,7 +473,7 @@ export default function PDFLibrary() {
               )}
               <div style={S.viewerControls}>
                 <button
-                  onClick={() => setViewMode((m) => m === "native" ? "react-pdf" : "native")}
+                  onClick={toggleViewMode}
                   style={S.ctrlBtn}
                   title={viewMode === "native" ? "Switch to page view" : "Switch to full document"}
                 >
