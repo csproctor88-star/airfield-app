@@ -7,7 +7,8 @@ import 'react-pdf/dist/Page/TextLayer.css'
 import { ExternalLink, ArrowLeft, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
-pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"
+// Temporary — runs PDF.js on main thread (slower but no worker comms)
+pdfjs.GlobalWorkerOptions.workerSrc = ""
 
 const BUCKET_NAME = 'regulation-pdfs'
 
