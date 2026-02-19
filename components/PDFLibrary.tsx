@@ -17,8 +17,7 @@ import {
 import { textCache } from '@/lib/pdfTextCache'
 
 // PDF.js worker — match version to react-pdf's bundled pdfjs
-// Temporary — runs PDF.js on main thread (slower but no worker comms)
-pdfjs.GlobalWorkerOptions.workerSrc = ""
+pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"
 
 const BUCKET_NAME = 'regulation-pdfs'
 
