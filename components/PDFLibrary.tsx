@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -70,7 +70,7 @@ export default function PDFLibrary() {
 
   // Viewer state
   const [viewingFile, setViewingFile] = useState<string | null>(null)
-  const [pdfData, setPdfData] = useState<Uint8Array | null>(null)
+  const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null)
   const [numPages, setNumPages] = useState<number | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [scale, setScale] = useState(1.2)
@@ -153,7 +153,8 @@ export default function PDFLibrary() {
           .from(BUCKET_NAME)
           .download(fileName)
         if (dlErr) throw dlErr
-        await idbSet(STORE_BLOBS, fileName, data)
+        const arrayBuffer = await data.arrayBuffer()
+        await idbSet(STORE_BLOBS, fileName, arrayBuffer)
         await refreshCache()
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e)
@@ -188,26 +189,30 @@ export default function PDFLibrary() {
       setViewingFile(fileName)
 
       try {
-        let blob = await idbGet<Blob>(STORE_BLOBS, fileName)
+        let cached = await idbGet<ArrayBuffer | Blob>(STORE_BLOBS, fileName)
 
-        if (!blob && navigator.onLine && supabase) {
+        if (!cached && navigator.onLine && supabase) {
           const { data, error: dlErr } = await supabase.storage
             .from(BUCKET_NAME)
             .download(fileName)
           if (dlErr) throw dlErr
-          blob = data
-          await idbSet(STORE_BLOBS, fileName, blob)
+          const arrayBuffer = await data.arrayBuffer()
+          await idbSet(STORE_BLOBS, fileName, arrayBuffer)
           await refreshCache()
+          cached = arrayBuffer
         }
 
-        if (!blob) {
+        if (!cached) {
           setPdfError('PDF not available offline. Connect to download first.')
           setPdfLoading(false)
           return
         }
 
-        const uint8 = await blobToUint8Array(blob)
-        setPdfData(uint8)
+        // Handle both Blob (legacy cache) and ArrayBuffer (new)
+        if (cached instanceof Blob) {
+          cached = await cached.arrayBuffer()
+        }
+        setPdfData(cached)
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e)
         setPdfError(`Failed to load: ${msg}`)
@@ -247,9 +252,9 @@ export default function PDFLibrary() {
         const file = files[i]
         setExtractProgress(`Extracting ${i + 1}/${files.length}: ${file.name}`)
 
-        // Get or download the PDF blob
-        let blob = await idbGet<Blob>(STORE_BLOBS, file.name)
-        if (!blob) {
+        // Get or download the PDF
+        let cached = await idbGet<ArrayBuffer | Blob>(STORE_BLOBS, file.name)
+        if (!cached) {
           const { data, error: dlErr } = await supabase.storage
             .from(BUCKET_NAME)
             .download(file.name)
@@ -257,12 +262,18 @@ export default function PDFLibrary() {
             console.warn(`Skipping ${file.name}: ${dlErr.message}`)
             continue
           }
-          blob = data
-          await idbSet(STORE_BLOBS, file.name, blob)
+          const arrayBuffer = await data.arrayBuffer()
+          await idbSet(STORE_BLOBS, file.name, arrayBuffer)
+          cached = arrayBuffer
+        }
+
+        // Handle legacy Blob from cache
+        if (cached instanceof Blob) {
+          cached = await cached.arrayBuffer()
         }
 
         // Extract text and upload to Supabase
-        const uint8 = await blobToUint8Array(blob)
+        const uint8 = new Uint8Array(cached)
         await textCache.getTextForFile(supabase, file.name, uint8)
       }
 
@@ -275,6 +286,12 @@ export default function PDFLibrary() {
       setExtracting(false)
     }
   }, [supabase, files, extracting, refreshCache])
+
+  // Memoize the file prop to prevent re-clone issues
+  const fileData = useMemo(() => {
+    if (!pdfData) return null
+    return { data: pdfData.slice(0) }
+  }, [pdfData])
 
   // react-pdf callbacks
   function onDocumentLoadSuccess({ numPages: n }: { numPages: number }) {
@@ -434,9 +451,9 @@ export default function PDFLibrary() {
                   </div>
                 </div>
               )}
-              {pdfData && !pdfError && (
+              {fileData && !pdfError && (
                 <Document
-                  file={{ data: pdfData }}
+                  file={fileData}
                   onLoadSuccess={onDocumentLoadSuccess}
                   onLoadError={onDocumentLoadError}
                   loading={<div style={S.center}><span style={S.spinner} /></div>}
