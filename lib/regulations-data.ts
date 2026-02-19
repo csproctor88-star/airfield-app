@@ -1,6 +1,8 @@
-// AOMS Regulation Database — 78 Total Entries
-// 3 Core + 32 Direct Refs + 29 Cross-Refs + 15 Scrubbed from Vols 1–3
-// Generated February 18, 2026 | Source: AOMS_Regulation_Database_v4
+// AOMS Regulation Database — 74 Total Entries
+// 3 Core + 30 Direct Refs + 29 Cross-Refs + 12 Scrubbed from Vols 1–3
+// Updated February 19, 2026 | Source: AOMS_Regulation_Database_v5
+// Removed: NFPA 780, NFPA 415, IEEE 142, DoD 7000.14-R
+// Updated: FAA Order direct PDF links; CFR URLs kept for currency verification
 //
 // Used as demo/seed data until Supabase is connected.
 // Each entry matches the RegulationRow type from lib/supabase/regulations.ts
@@ -277,7 +279,7 @@ const SECTION_III: RegulationEntry[] = [
     title: 'Facility Operation and Administration',
     description: 'Administration of air traffic control facilities.',
     publication_date: '22 Jan 2026',
-    url: 'https://www.faa.gov/regulations_policies/orders_notices/index.cfm/go/document.information/documentID/1040564',
+    url: 'https://www.faa.gov/documentLibrary/media/Order/7210.3DD_Bsc_w_Chg_1_2_and_3_dtd_9-5-24.pdf',
     source_section: 'III',
     source_volume: 'Vol. 3',
     category: 'atc',
@@ -292,7 +294,7 @@ const SECTION_III: RegulationEntry[] = [
     title: 'Flight Services',
     description: 'Flight service personnel briefings and radio contact.',
     publication_date: '22 Jan 2026',
-    url: 'https://www.faa.gov/regulations_policies/orders_notices/index.cfm/go/document.information/documentID/1040566',
+    url: 'https://www.faa.gov/documentLibrary/media/Order/7110.10EE_Bsc_w_Chg_1_and_2_dtd_1-22-26_Final.pdf',
     source_section: 'III',
     source_volume: 'Vol. 3',
     category: 'atc',
@@ -307,7 +309,7 @@ const SECTION_III: RegulationEntry[] = [
     title: 'ATC Operational Readiness and Contingency Planning',
     description: 'ATC facility management during emergencies or disruptions.',
     publication_date: '30 Apr 2024',
-    url: 'https://www.faa.gov/regulations_policies/orders_notices/index.cfm/go/document.information/documentID/1042413',
+    url: 'https://www.faa.gov/documentLibrary/media/Order/Final_Order_JO_1900.47G_05_01_23.pdf',
     source_section: 'III',
     source_volume: 'Vol. 3',
     category: 'emergency',
@@ -350,7 +352,7 @@ const SECTION_III: RegulationEntry[] = [
 ]
 
 // ═══════════════════════════════════════════════════════════════════
-// SECTION IV — References from UFC 3-260-01 (9)
+// SECTION IV — References from UFC 3-260-01 (7)
 // ═══════════════════════════════════════════════════════════════════
 
 const SECTION_IV: RegulationEntry[] = [
@@ -404,7 +406,7 @@ const SECTION_IV: RegulationEntry[] = [
     title: 'Airport Design',
     description: 'Primary civilian standard for airfield geometry and runway layout.',
     publication_date: 'Current Ed.',
-    url: 'https://www.faa.gov/airports/resources/advisory_circulars/index.cfm/go/document.current/documentNumber/150_5300-13',
+    url: 'https://www.faa.gov/documentLibrary/media/Advisory_Circular/AC-150-5300-13B-Airport-Design-Chg1-w-errata.pdf',
     source_section: 'IV',
     source_volume: 'UFC 3-260-01',
     category: 'airfield_design',
@@ -419,7 +421,7 @@ const SECTION_IV: RegulationEntry[] = [
     title: 'US Standard for TERPS',
     description: 'Criteria for instrument approach and departure procedures.',
     publication_date: 'Current Ed.',
-    url: 'https://www.faa.gov/regulations_policies/orders_notices/index.cfm/go/document.information/documentID/1029737',
+    url: 'https://www.faa.gov/documentLibrary/media/Order/Order_8260.3G.pdf',
     source_section: 'IV',
     source_volume: 'UFC 3-260-01',
     category: 'atc',
@@ -428,36 +430,6 @@ const SECTION_IV: RegulationEntry[] = [
     is_cross_ref: false,
     is_scrubbed: false,
     tags: ['TERPS', 'instrument approach', 'departure procedures', '8260.3'],
-  },
-  {
-    reg_id: 'NFPA 780',
-    title: 'Lightning Protection Systems',
-    description: 'Protecting airfield facilities and aircraft parking spots.',
-    publication_date: '2017 Ed.',
-    url: 'https://www.nfpa.org/codes-and-standards/nfpa-780-standard-for-the-installation-of-lightning-protection-systems',
-    source_section: 'IV',
-    source_volume: 'UFC 3-260-01',
-    category: 'safety',
-    pub_type: 'NFPA',
-    is_core: false,
-    is_cross_ref: false,
-    is_scrubbed: false,
-    tags: ['lightning protection', 'NFPA', 'aircraft parking'],
-  },
-  {
-    reg_id: 'NFPA 415',
-    title: 'Airport Terminal Buildings',
-    description: 'Fire protection for fueling ramps and passenger boarding areas.',
-    publication_date: '2016 Ed.',
-    url: 'https://www.nfpa.org/codes-and-standards/nfpa-415-standard-on-airport-terminal-buildings-fueling-ramp-drainage-and-loading-walkways',
-    source_section: 'IV',
-    source_volume: 'UFC 3-260-01',
-    category: 'fueling',
-    pub_type: 'NFPA',
-    is_core: false,
-    is_cross_ref: false,
-    is_scrubbed: false,
-    tags: ['fire protection', 'fueling ramps', 'terminal buildings', 'NFPA'],
   },
   {
     reg_id: 'MIL-STD 3007',
@@ -492,7 +464,7 @@ const SECTION_IV: RegulationEntry[] = [
 ]
 
 // ═══════════════════════════════════════════════════════════════════
-// SECTION V — Additional Airfield Systems Publications (5)
+// SECTION V — Additional Airfield Systems Publications (4)
 // ═══════════════════════════════════════════════════════════════════
 
 const SECTION_V: RegulationEntry[] = [
@@ -555,21 +527,6 @@ const SECTION_V: RegulationEntry[] = [
     is_cross_ref: false,
     is_scrubbed: false,
     tags: ['hangars', 'maintenance bays', 'structural requirements'],
-  },
-  {
-    reg_id: 'IEEE 142',
-    title: 'Grounding of Industrial Power Systems',
-    description: 'Electrical grounding systems for the flightline.',
-    publication_date: '2007 Ed.',
-    url: 'https://standards.ieee.org/ieee/142/4669/',
-    source_section: 'V',
-    source_volume: null,
-    category: 'lighting',
-    pub_type: 'IEEE',
-    is_core: false,
-    is_cross_ref: false,
-    is_scrubbed: false,
-    tags: ['grounding', 'electrical', 'flightline', 'IEEE', 'power systems'],
   },
 ]
 
@@ -815,7 +772,7 @@ const SECTION_VI_B: RegulationEntry[] = [
     title: 'Air Traffic Control',
     description: 'Primary FAA order for ATC procedures, phraseology, and separation standards. Core reference for Vol 3.',
     publication_date: 'Current Ed.',
-    url: 'https://www.faa.gov/air_traffic/publications/atpubs/atc_html/',
+    url: 'https://www.faa.gov/documentLibrary/media/Order/7110.65BB_Bsc_w_Chg_1_and_2_dtd_1-22-26_Final.pdf',
     source_section: 'VI-B',
     source_volume: null,
     category: 'atc',
@@ -1030,7 +987,7 @@ const SECTION_VI_C: RegulationEntry[] = [
 ]
 
 // ═══════════════════════════════════════════════════════════════════
-// SECTION VII-A — Scrubbed from Vols 1-3: DAF Publications (11)
+// SECTION VII-A — Scrubbed from Vols 1-3: DAF Publications (10)
 // ═══════════════════════════════════════════════════════════════════
 
 const SECTION_VII_A: RegulationEntry[] = [
@@ -1184,21 +1141,6 @@ const SECTION_VII_A: RegulationEntry[] = [
     is_scrubbed: true,
     tags: ['contingency', 'deployed', 'TTP', 'tactical', 'opening airfield'],
   },
-  {
-    reg_id: 'DoD 7000.14-R',
-    title: 'DoD Financial Management Regulation',
-    description: 'Governs Basic Allowance for Subsistence authorization for rotating-shift airfield ops personnel. Referenced in Vol 1 para 3.2.2.',
-    publication_date: 'Current Ed.',
-    url: 'https://comptroller.defense.gov/FMR/',
-    source_section: 'VII-A',
-    source_volume: 'Vol. 1',
-    category: 'financial',
-    pub_type: 'DoD',
-    is_core: false,
-    is_cross_ref: false,
-    is_scrubbed: true,
-    tags: ['financial management', 'BAS', 'subsistence', 'rotating shift'],
-  },
 ]
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1211,7 +1153,7 @@ const SECTION_VII_B: RegulationEntry[] = [
     title: 'Non-Sensitive Procedures for Special Operations',
     description: 'Contains the MOA between DOT/FAA and US Army-Navy-Air Force (Appendix 4-2). Governs ATC evaluation authority and AO-CV guiding regulations. Referenced in Vol 1 Att 7 (A7.1.1.1-A7.1.1.2).',
     publication_date: 'Current Ed.',
-    url: 'https://www.faa.gov/regulations_policies/orders_notices/index.cfm/go/document.information/documentID/1040568',
+    url: 'https://www.faa.gov/documentLibrary/media/Order/7610.14_NSMIL_Bsc_w_Chg_1_2_and_3_dtd_2-20-25.pdf',
     source_section: 'VII-B',
     source_volume: 'Vol. 1',
     category: 'atc',
@@ -1226,7 +1168,7 @@ const SECTION_VII_B: RegulationEntry[] = [
     title: 'United States Flight Inspection Manual',
     description: 'Flight inspection procedures for RAWS equipment and NAVAID certification. Referenced in Vol 1 DAFGM Att 1 references and A7.1.1.4.',
     publication_date: '6 Nov 2016',
-    url: 'https://www.faa.gov/regulations_policies/orders_notices/index.cfm/go/document.information/documentID/1029824',
+    url: 'https://www.faa.gov/documentLibrary/media/Order/8200.1D_CHG_1_2_(Final).pdf',
     source_section: 'VII-B',
     source_volume: 'Vol. 1',
     category: 'lighting',
@@ -1276,7 +1218,7 @@ const SECTION_VII_C: RegulationEntry[] = [
 ]
 
 // ═══════════════════════════════════════════════════════════════════
-// COMBINED EXPORT — All 78 Regulations
+// COMBINED EXPORT — All 74 Regulations
 // ═══════════════════════════════════════════════════════════════════
 
 export const ALL_REGULATIONS: RegulationEntry[] = [
@@ -1294,4 +1236,4 @@ export const ALL_REGULATIONS: RegulationEntry[] = [
   ...SECTION_VII_C,
 ]
 
-// Verification: 3 + 6 + 6 + 5 + 9 + 5 + 15 + 8 + 6 + 11 + 2 + 2 = 78
+// Verification: 3 + 6 + 6 + 5 + 7 + 4 + 15 + 8 + 6 + 10 + 2 + 2 = 74
