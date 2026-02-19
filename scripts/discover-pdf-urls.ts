@@ -118,6 +118,22 @@ const EPUB_REGULATIONS: RegEntry[] = [
   { reg_id: 'AFI 36-2110', current_url: 'https://static.e-publishing.af.mil/production/1/af_a1/publication/afi36-2110/afi36-2110.pdf', pub_id: 'afi36-2110' },
 ]
 
+// ── FAA / MIL-STD currency-check URLs ─────────────────────────────
+// These are the FAA info pages used to verify whether newer editions
+// have been published. The DB stores direct PDF links for downloading;
+// these web pages are for manual or scripted currency verification only.
+export const FAA_CURRENCY_URLS: Record<string, string> = {
+  'FAA Order JO 7210.3': 'https://www.faa.gov/regulations_policies/orders_notices/index.cfm/go/document.information/documentID/1040564',
+  'FAA Order JO 7110.10': 'https://www.faa.gov/regulations_policies/orders_notices/index.cfm/go/document.information/documentID/1040566',
+  'FAA Order JO 1900.47': 'https://www.faa.gov/regulations_policies/orders_notices/index.cfm/go/document.information/documentID/1042413',
+  'FAA AC 150/5300-13': 'https://www.faa.gov/airports/resources/advisory_circulars/index.cfm/go/document.current/documentNumber/150_5300-13',
+  'FAA Order 8260.3': 'https://www.faa.gov/regulations_policies/orders_notices/index.cfm/go/document.information/documentID/1029737',
+  'FAA JO 7110.65': 'https://www.faa.gov/air_traffic/publications/atpubs/atc_html/',
+  'FAA Order JO 7610.14': 'https://www.faa.gov/regulations_policies/orders_notices/index.cfm/go/document.information/documentID/1040568',
+  'FAAO 8200.1D': 'https://www.faa.gov/regulations_policies/orders_notices/index.cfm/go/document.information/documentID/1029824',
+  'MIL-STD 3007': 'https://www.wbdg.org/ffc/dod/mil-std/mil_std_3007f',
+}
+
 async function checkUrl(url: string): Promise<boolean> {
   try {
     const response = await fetch(url, {
