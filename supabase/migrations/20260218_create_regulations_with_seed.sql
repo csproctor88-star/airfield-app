@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════
 -- AOMS Regulation Database — Complete Schema + Seed Data
--- 70 Total Entries: 3 Core + 26 Direct Refs + 27 Cross-Refs + 14 Scrubbed
+-- 69 Total Entries: 3 Core + 26 Direct Refs + 26 Cross-Refs + 14 Scrubbed
 -- Run this in the Supabase SQL Editor
 -- ═══════════════════════════════════════════════════════════════════
 
@@ -105,7 +105,7 @@ INSERT INTO regulations (reg_id, title, description, publication_date, url, sour
 ('AFMAN 11-230', 'Instrument Procedures', 'Instrument approach/departure procedures managed by TERPS specialists within the AOF.', 'Current Ed.', 'https://static.e-publishing.af.mil/production/1/af_a3/publication/dafman11-230/dafman11-230.pdf', 'VI-A', NULL, 'atc', 'DAF', false, true, false, ARRAY['instrument procedures', 'TERPS', 'approach', 'departure']),
 ('AFMAN 11-202 Vol 3', 'General Flight Rules', 'General USAF flight rules; intersects with ATC procedures in DAFMAN 13-204 Vol 3.', 'Current Ed.', 'https://static.e-publishing.af.mil/production/1/af_a3/publication/afman11-202v3/afman11-202v3.pdf', 'VI-A', NULL, 'atc', 'DAF', false, true, false, ARRAY['flight rules', 'USAF', 'ATC procedures', 'general flight']);
 
--- ── SECTION VI-B — FAA/DOT/NTSB Cross-References (8) ─────────────
+-- ── SECTION VI-B — FAA/DOT/NTSB Cross-References (7) ─────────────
 
 INSERT INTO regulations (reg_id, title, description, publication_date, url, source_section, source_volume, category, pub_type, is_core, is_cross_ref, is_scrubbed, tags) VALUES
 ('FAA JO 7110.65', 'Air Traffic Control', 'Primary FAA order for ATC procedures, phraseology, and separation standards. Core reference for Vol 3.', 'Current Ed.', 'https://www.faa.gov/documentLibrary/media/Order/7110.65BB_Bsc_w_Chg_1_and_2_dtd_1-22-26_Final.pdf', 'VI-B', NULL, 'atc', 'FAA', false, true, false, ARRAY['ATC', '7110.65', 'phraseology', 'separation standards', 'procedures']),
@@ -114,7 +114,6 @@ INSERT INTO regulations (reg_id, title, description, publication_date, url, sour
 ('14 CFR Part 380', 'Public Charters', 'Public charter operations regulations referenced in 14 CFR Part 139 applicability.', 'Current Ed.', 'https://www.ecfr.gov/current/title-14/chapter-II/subchapter-D/part-380', 'VI-B', NULL, 'international', 'CFR', false, true, false, ARRAY['Part 380', 'public charters', 'charter operations']),
 ('14 CFR Part 5', 'Safety Management Systems', 'FAA SMS requirements; referenced in 14 CFR 139 Subpart E for airport-tenant SMS data sharing.', 'Current Ed.', 'https://www.ecfr.gov/current/title-14/chapter-I/subchapter-A/part-5', 'VI-B', NULL, 'safety', 'CFR', false, true, false, ARRAY['SMS', 'safety management systems', 'Part 5', 'data sharing']),
 ('14 CFR Part 11', 'General Rulemaking Procedures', 'Procedures for petitioning FAA for exemptions from Part 139 requirements.', 'Current Ed.', 'https://www.ecfr.gov/current/title-14/chapter-I/subchapter-B/part-11', 'VI-B', NULL, 'publications', 'CFR', false, true, false, ARRAY['Part 11', 'rulemaking', 'exemptions', 'petitions']),
-('49 CFR 171-180', 'Hazardous Materials Regulations', 'DOT hazmat handling/transport; referenced by 14 CFR 139.321 for cargo and fueling safety.', 'Current Ed.', 'https://www.ecfr.gov/current/title-49/subtitle-B/chapter-I/subchapter-C', 'VI-B', NULL, 'fueling', 'CFR', false, true, false, ARRAY['hazmat', 'hazardous materials', 'fueling safety', 'cargo', 'DOT']),
 ('49 CFR 830', 'NTSB Notification and Reporting', 'Defines aircraft accidents/incidents; Part 139 references 830.2 for hazard definitions.', 'Current Ed.', 'https://www.ecfr.gov/current/title-49/subtitle-B/chapter-VIII/part-830', 'VI-B', NULL, 'safety', 'CFR', false, true, false, ARRAY['NTSB', 'accident reporting', 'incident notification', 'hazard definitions']);
 
 -- ── SECTION VI-C — UFC/DoD Cross-References (6) ──────────────────
@@ -153,7 +152,7 @@ INSERT INTO regulations (reg_id, title, description, publication_date, url, sour
 ('AFI 36-2110', 'Total Force Assignments', 'Personnel assignment procedures for ATC and AM career fields. Referenced in Vol 3 Attachment 1 references for controller assignment management.', 'Current Ed.', 'https://static.e-publishing.af.mil/production/1/af_a1/publication/dafi36-2110/dafi36-2110.pdf', 'VII-C', 'Vol. 3', 'personnel', 'DAF', false, false, true, ARRAY['assignments', 'ATC', 'AM', 'controller assignment', 'total force']);
 
 -- ── VERIFICATION ──────────────────────────────────────────────────
--- Expected: 74 rows (3 + 6 + 5 + 5 + 9 + 5 + 13 + 8 + 6 + 10 + 2 + 2)
+-- Expected: 69 rows (3 + 6 + 5 + 5 + 7 + 4 + 13 + 7 + 6 + 9 + 2 + 2)
 SELECT
   count(*) AS total,
   count(*) FILTER (WHERE is_core) AS core,

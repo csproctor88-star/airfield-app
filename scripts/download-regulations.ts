@@ -144,11 +144,22 @@ async function main() {
   const alreadyCached = pdfRegs.filter(r => r.storage_path)
   const toDownload = pdfRegs.filter(r => !r.storage_path)
 
+  const noUrlRegs = regulations.filter(r => !r.url)
+
   console.log(`Total regulations: ${regulations.length}`)
   console.log(`PDF URLs: ${pdfRegs.length}`)
   console.log(`Non-PDF URLs (web pages): ${nonPdfRegs.length} — skipped`)
+  console.log(`No URL: ${noUrlRegs.length}`)
   console.log(`Already cached: ${alreadyCached.length}`)
   console.log(`To download: ${toDownload.length}\n`)
+
+  if (nonPdfRegs.length > 0) {
+    console.log('Non-PDF regulations (skipped):')
+    for (const r of nonPdfRegs) {
+      console.log(`  - ${r.reg_id}: ${r.url}`)
+    }
+    console.log()
+  }
 
   let success = 0
   let failed = 0
