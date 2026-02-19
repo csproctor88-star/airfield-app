@@ -32,16 +32,16 @@ function normalizeForMatch(s: string): string {
 }
 
 // --- Find a storage file matching a reg_id from the bucket file list ---
-function findStorageFile(regId: string, bucketFiles: Set<string>): string | null {
+function findStorageFile(regId: string, bucketFiles: string[]): string | null {
   // 1. Exact sanitized match (for script-downloaded files)
   const sanitized = regIdToFileName(regId)
-  if (bucketFiles.has(sanitized)) return sanitized
+  if (bucketFiles.indexOf(sanitized) !== -1) return sanitized
 
   // 2. Normalized prefix match (for manually uploaded files like
   //    "14 CFR Part 139 (up to date as of 2-13-2026).pdf")
   const normalizedId = normalizeForMatch(regId)
-  for (const file of bucketFiles) {
-    if (normalizeForMatch(file).startsWith(normalizedId)) return file
+  for (let i = 0; i < bucketFiles.length; i++) {
+    if (normalizeForMatch(bucketFiles[i]).startsWith(normalizedId)) return bucketFiles[i]
   }
 
   return null
