@@ -9,7 +9,6 @@ import { createClient } from '@/lib/supabase/client'
 import {
   type UserRegulationPdf,
   fetchUserRegulationPdfs,
-  fetchRegulations,
   uploadUserRegulationPdf,
   deleteUserRegulationPdf,
   getUserPdfSignedUrl,
@@ -25,6 +24,27 @@ function regIdToFileName(regId: string): string {
     .replace(/\s+/g, '_')
     .replace(/-+/g, '-')
     .toLowerCase() + '.pdf'
+}
+
+// --- Normalize string for fuzzy matching (strip "part", non-alnum chars, lowercase) ---
+function normalizeForMatch(s: string): string {
+  return s.toLowerCase().replace(/\bpart\b/g, '').replace(/[^a-z0-9]/g, '')
+}
+
+// --- Find a storage file matching a reg_id from the bucket file list ---
+function findStorageFile(regId: string, bucketFiles: Set<string>): string | null {
+  // 1. Exact sanitized match (for script-downloaded files)
+  const sanitized = regIdToFileName(regId)
+  if (bucketFiles.has(sanitized)) return sanitized
+
+  // 2. Normalized prefix match (for manually uploaded files like
+  //    "14 CFR Part 139 (up to date as of 2-13-2026).pdf")
+  const normalizedId = normalizeForMatch(regId)
+  for (const file of bucketFiles) {
+    if (normalizeForMatch(file).startsWith(normalizedId)) return file
+  }
+
+  return null
 }
 
 // --- Badge color by entry type ---
@@ -85,22 +105,11 @@ export default function RegulationsPage() {
     async function loadCachedPdfs() {
       // Get the set of files actually in the storage bucket
       const bucketFiles = await listCachedRegulationPdfs()
-      // Also get DB storage_path values (set by the download script)
-      const dbRows = await fetchRegulations()
 
       const map = new Map<string, string>()
       for (const reg of ALL_REGULATIONS) {
-        // 1. Check if sanitized reg_id filename exists in bucket
-        const expectedName = regIdToFileName(reg.reg_id)
-        if (bucketFiles.has(expectedName)) {
-          map.set(reg.reg_id, expectedName)
-          continue
-        }
-        // 2. Check DB storage_path as fallback (may differ from expected name)
-        const dbRow = dbRows.find(r => r.reg_id === reg.reg_id)
-        if (dbRow?.storage_path && bucketFiles.has(dbRow.storage_path)) {
-          map.set(reg.reg_id, dbRow.storage_path)
-        }
+        const match = findStorageFile(reg.reg_id, bucketFiles)
+        if (match) map.set(reg.reg_id, match)
       }
       setCachedPdfMap(map)
     }
