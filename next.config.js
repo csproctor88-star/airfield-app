@@ -10,6 +10,11 @@ const nextConfig = {
       },
     ],
   },
+  // react-pdf uses canvas internally; alias to false to prevent SSR build errors
+  webpack: (config) => {
+    config.resolve.alias.canvas = false
+    return config
+  },
 }
 
 module.exports = nextConfig
