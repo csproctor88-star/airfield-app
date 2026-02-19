@@ -16,6 +16,19 @@ import {
   listCachedRegulationPdfs,
 } from '@/lib/supabase/regulations'
 
+// --- Known storage filenames for regulations uploaded directly to the bucket ---
+// These bypass the bucket-listing + fuzzy-match path so they always resolve.
+const KNOWN_STORAGE_FILES: Record<string, string> = {
+  '14 CFR Part 139': '14 CFR Part 139 (up to date as of 2-13-2026).pdf',
+  '14 CFR Part 77': '14 CFR Part 77 (up to date as of 2-13-2026).pdf',
+  '14 CFR Part 121': '14 CFR Part 121 (up to date as of 2-13-2026).pdf',
+  '14 CFR Part 380': '14 CFR Part 380 (up to date as of 2-13-2026).pdf',
+  '14 CFR Part 5': '14 CFR Part 5 (up to date as of 2-13-2026).pdf',
+  '14 CFR Part 11': '14 CFR Part 11 (up to date as of 2-13-2026).pdf',
+  '49 CFR 830': '49 CFR Part 830 (up to date as of 2-13-2026).pdf',
+  'ICAO Annex 14': 'icao_annex_14.pdf',
+}
+
 // --- Convert reg_id to storage filename (must match download-regulations.ts) ---
 function regIdToFileName(regId: string): string {
   return regId
@@ -103,12 +116,19 @@ export default function RegulationsPage() {
       setUserPdfs(pdfs)
     }
     async function loadCachedPdfs() {
-      // Get the set of files actually in the storage bucket
-      const bucketFiles = await listCachedRegulationPdfs()
-      console.log('[Regs] Storage bucket files:', [...bucketFiles])
-
       const map = new Map<string, string>()
+
+      // 1. Seed with known storage filenames (always resolves, no bucket listing needed)
+      for (const [regId, fileName] of Object.entries(KNOWN_STORAGE_FILES)) {
+        map.set(regId, fileName)
+      }
+
+      // 2. List the bucket and match remaining regulations via fuzzy logic
+      const bucketFiles = await listCachedRegulationPdfs()
+      console.log('[Regs] Storage bucket files:', bucketFiles)
+
       for (const reg of ALL_REGULATIONS) {
+        if (map.has(reg.reg_id)) continue // already resolved via known files
         const match = findStorageFile(reg.reg_id, bucketFiles)
         if (match) map.set(reg.reg_id, match)
       }
