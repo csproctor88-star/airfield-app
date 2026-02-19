@@ -1,5 +1,5 @@
 -- 5.11 Regulations Database
--- AOMS Regulation Database — 74 entries across 7 sections
+-- AOMS Regulation Database — 70 entries across 7 sections
 -- Source: AOMS_Regulation_Database_v6
 
 CREATE TABLE regulations (
@@ -12,7 +12,7 @@ CREATE TABLE regulations (
   source_section TEXT NOT NULL,          -- Which section of the AOMS database (I–VII)
   source_volume TEXT,                    -- Parent DAFMAN volume or UFC if applicable
   category TEXT NOT NULL,                -- Functional category for filtering
-  pub_type TEXT NOT NULL,                -- Publication type: DAF, FAA, UFC, DoD, NFPA, ICAO, IEEE
+  pub_type TEXT NOT NULL,                -- Publication type: DAF, FAA, UFC, DoD, ICAO, CFR
   is_core BOOLEAN NOT NULL DEFAULT false,
   is_cross_ref BOOLEAN NOT NULL DEFAULT false,
   is_scrubbed BOOLEAN NOT NULL DEFAULT false,

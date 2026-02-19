@@ -5,7 +5,7 @@
  *   1. Already cached in Supabase Storage (storage_path is set), OR
  *   2. Has a direct PDF URL (url ends in .pdf) that the downloader can fetch
  *
- * Regulations with web-only URLs (eCFR, NFPA paywall, etc.) are flagged
+ * Regulations with web-only URLs (eCFR, etc.) are flagged
  * as "WEB ONLY" — these must be accessed online and cannot be cached.
  *
  * Run with: npx tsx scripts/verify-pdf-coverage.ts
@@ -110,7 +110,7 @@ async function main() {
   if (pdfAvailable.length === 0 && webOnly.length === 0) {
     console.log('ALL regulations are cached in Supabase Storage.')
   } else if (pdfAvailable.length === 0) {
-    console.log(`ALL downloadable PDFs are cached. ${webOnly.length} regulations are web-only (eCFR, NFPA, ICAO, IEEE paywalls).`)
+    console.log(`ALL downloadable PDFs are cached. ${webOnly.length} regulations are web-only.`)
   } else {
     console.log(`${pdfAvailable.length} PDFs still need to be downloaded. Run: npx tsx scripts/download-regulations.ts`)
   }

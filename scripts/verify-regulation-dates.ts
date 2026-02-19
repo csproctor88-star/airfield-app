@@ -171,7 +171,7 @@ async function checkDate(url: string): Promise<string | null> {
   if (url.includes('ecfr.gov')) return checkEcfr(url)
   if (url.includes('faa.gov')) return checkFaa(url)
   if (url.includes('wbdg.org')) return checkWbdg(url)
-  // NFPA, IEEE, ICAO — can't easily scrape, return null
+  // ICAO — can't easily scrape, return null
   return null
 }
 

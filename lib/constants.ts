@@ -424,9 +424,7 @@ export const REGULATION_PUB_TYPES = [
   { value: 'UFC', label: 'UFC / Unified Facilities Criteria' },
   { value: 'CFR', label: 'Code of Federal Regulations' },
   { value: 'DoD', label: 'DoD Publications' },
-  { value: 'NFPA', label: 'NFPA Standards' },
   { value: 'ICAO', label: 'ICAO Standards' },
-  { value: 'IEEE', label: 'IEEE Standards' },
 ] as const
 
 export const REGULATION_SOURCE_SECTIONS = [

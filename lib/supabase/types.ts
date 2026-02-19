@@ -277,7 +277,7 @@ export type CurrentStatus = 'submitted_to_afm' | 'submitted_to_ces' | 'awaiting_
 export type CheckType = 'fod' | 'rsc' | 'ife' | 'ground_emergency' | 'heavy_aircraft' | 'bash' | 'rcr'
 export type InspectionType = 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
 export type NotamStatus = 'draft' | 'active' | 'cancelled' | 'expired'
-export type RegulationPubType = 'DAF' | 'FAA' | 'UFC' | 'DoD' | 'NFPA' | 'ICAO' | 'IEEE' | 'CFR'
+export type RegulationPubType = 'DAF' | 'FAA' | 'UFC' | 'DoD' | 'ICAO' | 'CFR'
 
 export type InspectionItem = {
   id: string

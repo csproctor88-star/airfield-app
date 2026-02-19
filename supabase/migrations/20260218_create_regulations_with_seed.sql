@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════
 -- AOMS Regulation Database — Complete Schema + Seed Data
--- 74 Total Entries: 3 Core + 29 Direct Refs + 27 Cross-Refs + 15 Scrubbed
+-- 70 Total Entries: 3 Core + 26 Direct Refs + 27 Cross-Refs + 14 Scrubbed
 -- Run this in the Supabase SQL Editor
 -- ═══════════════════════════════════════════════════════════════════
 
@@ -32,7 +32,7 @@ CREATE INDEX idx_regulations_fts ON regulations USING gin(
   to_tsvector('english', coalesce(reg_id, '') || ' ' || coalesce(title, '') || ' ' || coalesce(description, ''))
 );
 
--- 3. SEED DATA — 78 Regulations
+-- 3. SEED DATA — 70 Regulations
 
 -- ── CORE PUBLICATIONS (3) ──────────────────────────────────────────
 
@@ -69,7 +69,7 @@ INSERT INTO regulations (reg_id, title, description, publication_date, url, sour
 ('AFI 17-221', 'Spectrum Interference Resolution Program', 'Resolving radio interference affecting ATC communications.', '11 May 2018', 'https://static.e-publishing.af.mil/production/1/af_a2_6/publication/dafi17-221/dafi17-221.pdf', 'III', 'Vol. 3', 'atc', 'DAF', false, false, false, ARRAY['spectrum', 'radio interference', 'communications', 'ATC']),
 ('AFI 33-322', 'Records Management and Information Governance', 'Official logs, recorded radio data, and historical files.', '6 Mar 2020', 'https://static.e-publishing.af.mil/production/1/saf_cn/publication/afi33-322/afi33-322.pdf', 'III', 'Vol. 3', 'publications', 'DAF', false, false, false, ARRAY['records management', 'radio recordings', 'logs', 'information governance']);
 
--- ── SECTION IV — UFC 3-260-01 References (9) ─────────────────────
+-- ── SECTION IV — UFC 3-260-01 References (7) ─────────────────────
 
 INSERT INTO regulations (reg_id, title, description, publication_date, url, source_section, source_volume, category, pub_type, is_core, is_cross_ref, is_scrubbed, tags) VALUES
 ('UFC 1-200-01', 'DoD Building Code', 'Overarching criteria for all DoD facility construction and modernization.', '17 Dec 2024', 'https://www.wbdg.org/FFC/DOD/UFC/ufc_1_200_01_2022_c4.pdf', 'IV', 'UFC 3-260-01', 'construction', 'UFC', false, false, false, ARRAY['building code', 'DoD construction', 'modernization']),
@@ -77,19 +77,16 @@ INSERT INTO regulations (reg_id, title, description, publication_date, url, sour
 ('UFC 3-260-16', 'Airfield Pavement Condition Surveys', 'PCI surveys and identifying pavement distress.', '3 Feb 2019', 'https://www.wbdg.org/FFC/DOD/UFC/ufc_3_260_16_2019.pdf', 'IV', 'UFC 3-260-01', 'pavement', 'UFC', false, false, false, ARRAY['PCI', 'pavement condition', 'survey', 'distress']),
 ('FAA AC 150/5300-13', 'Airport Design', 'Primary civilian standard for airfield geometry and runway layout.', 'Current Ed.', 'https://www.faa.gov/documentLibrary/media/Advisory_Circular/AC-150-5300-13B-Airport-Design-Chg1-w-errata.pdf', 'IV', 'UFC 3-260-01', 'airfield_design', 'FAA', false, false, false, ARRAY['airport design', 'runway layout', 'geometry', 'AC 150/5300-13']),
 ('FAA Order 8260.3', 'US Standard for TERPS', 'Criteria for instrument approach and departure procedures.', 'Current Ed.', 'https://www.faa.gov/documentLibrary/media/Order/Order_8260.3G.pdf', 'IV', 'UFC 3-260-01', 'atc', 'FAA', false, false, false, ARRAY['TERPS', 'instrument approach', 'departure procedures', '8260.3']),
-('NFPA 780', 'Lightning Protection Systems', 'Protecting airfield facilities and aircraft parking spots.', '2017 Ed.', 'https://www.nfpa.org/codes-and-standards/nfpa-780-standard-for-the-installation-of-lightning-protection-systems', 'IV', 'UFC 3-260-01', 'safety', 'NFPA', false, false, false, ARRAY['lightning protection', 'NFPA', 'aircraft parking']),
-('NFPA 415', 'Airport Terminal Buildings', 'Fire protection for fueling ramps and passenger boarding areas.', '2016 Ed.', 'https://www.nfpa.org/codes-and-standards/nfpa-415-standard-on-airport-terminal-buildings-fueling-ramp-drainage-and-loading-walkways', 'IV', 'UFC 3-260-01', 'fueling', 'NFPA', false, false, false, ARRAY['fire protection', 'fueling ramps', 'terminal buildings', 'NFPA']),
 ('MIL-STD 3007', 'UFC Format and Standard', 'How technical criteria are updated across tri-services.', '13 Dec 2019', 'https://www.wbdg.org/FFC/FEDMIL/milstd3007g.pdf', 'IV', 'UFC 3-260-01', 'construction', 'DoD', false, false, false, ARRAY['MIL-STD', 'UFC format', 'tri-service', 'technical criteria']),
 ('ICAO Annex 14', 'Aerodromes - Vol. I', 'International aerodrome design and operations standards.', 'Jul 2022', 'https://store.icao.int/en/annex-14-aerodromes-volume-i-aerodrome-design-and-operations', 'IV', 'UFC 3-260-01', 'airfield_design', 'ICAO', false, false, false, ARRAY['ICAO', 'aerodrome', 'international standards', 'Annex 14']);
 
--- ── SECTION V — Additional UFC/FC (5) ─────────────────────────────
+-- ── SECTION V — Additional UFC/FC (4) ─────────────────────────────
 
 INSERT INTO regulations (reg_id, title, description, publication_date, url, source_section, source_volume, category, pub_type, is_core, is_cross_ref, is_scrubbed, tags) VALUES
 ('UFC 3-260-17', 'Dust Control for Roads and Airfields', 'Stabilizing unpaved surfaces to prevent FOD and engine damage.', '26 Apr 2023', 'https://www.wbdg.org/FFC/DOD/UFC/ufc_3_260_17_2018_c1.pdf', 'V', NULL, 'pavement', 'UFC', false, false, false, ARRAY['dust control', 'FOD prevention', 'unpaved surfaces', 'engine damage']),
 ('UFC 3-270-01', 'Pavement Maintenance and Repair', 'Asphalt spall repair and joint sealing.', '17 Mar 2022', 'https://www.wbdg.org/FFC/DOD/UFC/ufc_3_270_01_2018_c1.pdf', 'V', NULL, 'pavement', 'UFC', false, false, false, ARRAY['pavement maintenance', 'spall repair', 'joint sealing', 'asphalt']),
 ('UFC 3-270-08', 'Pavement Management', 'Long-term airfield pavement lifecycle planning.', '19 Jan 2024', 'https://www.wbdg.org/FFC/DOD/UFC/ufc_3_270_08_2024.pdf', 'V', NULL, 'pavement', 'UFC', false, false, false, ARRAY['pavement management', 'lifecycle planning', 'long-term']),
-('UFC 4-211-01', 'Aircraft Maintenance Hangars', 'Structural and safety requirements for maintenance bays.', '1 Oct 2024', 'https://www.wbdg.org/FFC/DOD/UFC/ufc_4_211_01_2017_c3.pdf', 'V', NULL, 'construction', 'UFC', false, false, false, ARRAY['hangars', 'maintenance bays', 'structural requirements']),
-('IEEE 142', 'Grounding of Industrial Power Systems', 'Electrical grounding systems for the flightline.', '2007 Ed.', 'https://standards.ieee.org/ieee/142/4669/', 'V', NULL, 'lighting', 'IEEE', false, false, false, ARRAY['grounding', 'electrical', 'flightline', 'IEEE', 'power systems']);
+('UFC 4-211-01', 'Aircraft Maintenance Hangars', 'Structural and safety requirements for maintenance bays.', '1 Oct 2024', 'https://www.wbdg.org/FFC/DOD/UFC/ufc_4_211_01_2017_c3.pdf', 'V', NULL, 'construction', 'UFC', false, false, false, ARRAY['hangars', 'maintenance bays', 'structural requirements']);
 
 -- ── SECTION VI-A — DAF Cross-References (13) ─────────────────────
 
@@ -130,7 +127,7 @@ INSERT INTO regulations (reg_id, title, description, publication_date, url, sour
 ('UFC 4-010-01', 'DoD Minimum Antiterrorism Standards for Buildings', 'Security and force protection standards for airfield facilities and access control points.', 'Current Ed.', 'https://www.wbdg.org/FFC/DOD/UFC/ufc_4_010_01_2018_c3.pdf', 'VI-C', NULL, 'security', 'UFC', false, true, false, ARRAY['antiterrorism', 'force protection', 'security', 'access control']),
 ('UFC 1-200-02', 'High-Performance and Sustainable Building Requirements', 'Energy and sustainability standards for airfield support facility construction/renovation.', 'Current Ed.', 'https://www.wbdg.org/FFC/DOD/UFC/ufc_1_200_02_2020_c3.pdf', 'VI-C', NULL, 'construction', 'UFC', false, true, false, ARRAY['sustainability', 'energy', 'high-performance', 'green building']);
 
--- ── SECTION VII-A — Scrubbed from Vols 1-3: DAF (10) ─────────────
+-- ── SECTION VII-A — Scrubbed from Vols 1-3: DAF (9) ──────────────
 
 INSERT INTO regulations (reg_id, title, description, publication_date, url, source_section, source_volume, category, pub_type, is_core, is_cross_ref, is_scrubbed, tags) VALUES
 ('DAFMAN 13-204, Vol. 4', 'Radar, Airfield and Weather Systems (RAWS)', 'Companion volume governing RAWS personnel duties, qualifications, equipment maintenance, and flight inspection support. Directly referenced throughout Vol 1 Ch 1, 2, 3, and Attachment 7.', 'Current Ed.', 'https://static.e-publishing.af.mil/production/1/af_a3/publication/dafman13-204v4/dafman13-204_v4.pdf', 'VII-A', 'Vol. 1', 'airfield_ops', 'DAF', false, false, true, ARRAY['RAWS', 'radar', 'weather systems', 'equipment maintenance', 'flight inspection']),
@@ -141,8 +138,7 @@ INSERT INTO regulations (reg_id, title, description, publication_date, url, sour
 ('AFI 51-403', 'International Agreements', 'Coordination requirements for LOPs with host nation agencies. Referenced in Vol 1 para 4.1.1.2.', 'Current Ed.', 'https://static.e-publishing.af.mil/production/1/af_ja/publication/dafi51-403/dafi51-403.pdf', 'VII-A', 'Vol. 1', 'international', 'DAF', false, false, true, ARRAY['international agreements', 'LOP', 'host nation', 'coordination']),
 ('AFI 10-401', 'Air Force Operations Planning and Execution', 'Format and content guidance for OPLANs containing airfield operations tasks. Referenced in Vol 1 para 4.1.2.5.', 'Current Ed.', 'https://static.e-publishing.af.mil/production/1/af_a3/publication/afi10-401/afi10-401.pdf', 'VII-A', 'Vol. 1', 'contingency', 'DAF', false, false, true, ARRAY['OPLAN', 'operations planning', 'execution', 'airfield tasks']),
 ('AFMAN 11-502', 'Small Unmanned Aircraft Systems', 'Defines DoD UAS categories (Groups 1-5) used for UAS airfield ops procedures. Referenced in Vol 1 para 3.10.2.', 'Current Ed.', 'https://static.e-publishing.af.mil/production/1/af_a3/publication/dafman11-502/dafman11-502.pdf', 'VII-A', 'Vol. 1', 'uas', 'DAF', false, false, true, ARRAY['UAS', 'sUAS', 'unmanned', 'drone', 'Groups 1-5']),
-('AFI 36-2619', 'Military Personnel Appropriation Manday Program', 'Provides manday resources for critical ATC/AM manning shortfalls. Referenced in Vol 1 para 4.5.7.', 'Current Ed.', 'https://static.e-publishing.af.mil/production/1/af_a1/publication/dafi36-2619/dafi36-2619.pdf', 'VII-A', 'Vol. 1', 'financial', 'DAF', false, false, true, ARRAY['manday', 'manning', 'ATC', 'AM', 'personnel shortfall']),
-('DoD 7000.14-R', 'DoD Financial Management Regulation', 'Governs Basic Allowance for Subsistence authorization for rotating-shift airfield ops personnel. Referenced in Vol 1 para 3.2.2.', 'Current Ed.', 'https://comptroller.defense.gov/FMR/', 'VII-A', 'Vol. 1', 'financial', 'DoD', false, false, true, ARRAY['financial management', 'BAS', 'subsistence', 'rotating shift']);
+('AFI 36-2619', 'Military Personnel Appropriation Manday Program', 'Provides manday resources for critical ATC/AM manning shortfalls. Referenced in Vol 1 para 4.5.7.', 'Current Ed.', 'https://static.e-publishing.af.mil/production/1/af_a1/publication/dafi36-2619/dafi36-2619.pdf', 'VII-A', 'Vol. 1', 'financial', 'DAF', false, false, true, ARRAY['manday', 'manning', 'ATC', 'AM', 'personnel shortfall']);
 
 -- ── SECTION VII-B — Scrubbed: FAA Orders (2) ─────────────────────
 
