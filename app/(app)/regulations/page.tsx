@@ -546,8 +546,8 @@ export default function RegulationsPage() {
                       </>
                     )}
 
-                    {/* Standard "View in App" for regulations with a URL */}
-                    {reg.url && (
+                    {/* Standard "View in App" for regulations with a URL or cached PDF */}
+                    {(reg.url || cachedPdfMap.has(reg.reg_id)) && (
                       <button
                         onClick={async e => {
                           e.stopPropagation()
@@ -561,8 +561,11 @@ export default function RegulationsPage() {
                               return
                             }
                           }
-                          setViewerUrl(null)
-                          setViewerReg(reg)
+                          // Fallback to external URL (only if available)
+                          if (reg.url) {
+                            setViewerUrl(null)
+                            setViewerReg(reg)
+                          }
                         }}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 6,
