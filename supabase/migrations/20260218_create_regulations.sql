@@ -1,6 +1,6 @@
 -- 5.11 Regulations Database
--- AOMS Regulation Database — 78 entries across 7 sections
--- Source: AOMS_Regulation_Database_v4
+-- AOMS Regulation Database — 74 entries across 7 sections
+-- Source: AOMS_Regulation_Database_v6
 
 CREATE TABLE regulations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

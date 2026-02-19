@@ -82,11 +82,10 @@ const EPUB_REGULATIONS: RegEntry[] = [
   { reg_id: 'AFI 10-1801', current_url: 'https://static.e-publishing.af.mil/production/1/af_a3/publication/afi10-1801/afi10-1801.pdf', pub_id: 'afi10-1801' },
   { reg_id: 'AFI 38-402', current_url: 'https://static.e-publishing.af.mil/production/1/af_a1/publication/afi38-402/afi38-402.pdf', pub_id: 'afi38-402' },
   // Section II
-  { reg_id: 'AFI 90-201', current_url: 'https://static.e-publishing.af.mil/production/1/saf_ig/publication/afi90-201/afi90-201.pdf', pub_id: 'afi90-201' },
   { reg_id: 'AFI 10-1001', current_url: 'https://static.e-publishing.af.mil/production/1/af_a3/publication/afi10-1001/afi10-1001.pdf', pub_id: 'afi10-1001' },
   { reg_id: 'AFI 10-2501', current_url: 'https://static.e-publishing.af.mil/production/1/af_a4/publication/afi10-2501/afi10-2501.pdf', pub_id: 'afi10-2501' },
   { reg_id: 'AFH 32-7084', current_url: 'https://static.e-publishing.af.mil/production/1/af_a4/publication/afh32-7084/afh32-7084.pdf', pub_id: 'afh32-7084' },
-  { reg_id: 'AFMAN 32-1084', current_url: 'https://static.e-publishing.af.mil/production/1/af_a4/publication/afman32-1084/afman32-1084.pdf', pub_id: 'afman32-1084' },
+  { reg_id: 'DAFMAN 32-1084', current_url: 'https://static.e-publishing.af.mil/production/1/af_a4/publication/dafman32-1084/dafman32-1084.pdf', pub_id: 'dafman32-1084' },
   // Section III
   { reg_id: 'AFI 17-221', current_url: 'https://static.e-publishing.af.mil/production/1/saf_cn/publication/afi17-221/afi17-221.pdf', pub_id: 'afi17-221' },
   { reg_id: 'AFI 33-322', current_url: 'https://static.e-publishing.af.mil/production/1/saf_cn/publication/afi33-322/afi33-322.pdf', pub_id: 'afi33-322' },
@@ -101,8 +100,6 @@ const EPUB_REGULATIONS: RegEntry[] = [
   { reg_id: 'AFI 33-332', current_url: 'https://static.e-publishing.af.mil/production/1/saf_cn/publication/afi33-332/afi33-332.pdf', pub_id: 'afi33-332' },
   { reg_id: 'AFI 36-2101', current_url: 'https://static.e-publishing.af.mil/production/1/af_a1/publication/afi36-2101/afi36-2101.pdf', pub_id: 'afi36-2101' },
   { reg_id: 'AFI 36-2670', current_url: 'https://static.e-publishing.af.mil/production/1/af_a1/publication/afi36-2670/afi36-2670.pdf', pub_id: 'afi36-2670' },
-  { reg_id: 'AFI 38-201', current_url: 'https://static.e-publishing.af.mil/production/1/af_a1/publication/afi38-201/afi38-201.pdf', pub_id: 'afi38-201' },
-  { reg_id: 'AFH 36-2618', current_url: 'https://static.e-publishing.af.mil/production/1/af_a1/publication/afh36-2618/afh36-2618.pdf', pub_id: 'afh36-2618' },
   { reg_id: 'AFI 32-1041', current_url: 'https://static.e-publishing.af.mil/production/1/af_a4/publication/afi32-1041/afi32-1041.pdf', pub_id: 'afi32-1041' },
   { reg_id: 'AFMAN 11-230', current_url: 'https://static.e-publishing.af.mil/production/1/af_a3/publication/afman11-230/afman11-230.pdf', pub_id: 'afman11-230' },
   { reg_id: 'AFMAN 11-202 Vol 3', current_url: 'https://static.e-publishing.af.mil/production/1/af_a3/publication/afman11-202v3/afman11-202v3.pdf', pub_id: 'afman11-202v3' },
@@ -116,7 +113,6 @@ const EPUB_REGULATIONS: RegEntry[] = [
   { reg_id: 'AFI 10-401', current_url: 'https://static.e-publishing.af.mil/production/1/af_a3/publication/afi10-401/afi10-401.pdf', pub_id: 'afi10-401' },
   { reg_id: 'AFMAN 11-502', current_url: 'https://static.e-publishing.af.mil/production/1/af_a3/publication/afman11-502/afman11-502.pdf', pub_id: 'afman11-502' },
   { reg_id: 'AFI 36-2619', current_url: 'https://static.e-publishing.af.mil/production/1/af_a1/publication/afi36-2619/afi36-2619.pdf', pub_id: 'afi36-2619' },
-  { reg_id: 'AFTTP 3-4.4', current_url: 'https://static.e-publishing.af.mil/production/1/af_a3/publication/afttp3-4.4/afttp3-4.4.pdf', pub_id: 'afttp3-4.4' },
   // Section VII-C
   { reg_id: 'AFI 11-208', current_url: 'https://static.e-publishing.af.mil/production/1/af_a3/publication/afi11-208/afi11-208.pdf', pub_id: 'afi11-208' },
   { reg_id: 'AFI 36-2110', current_url: 'https://static.e-publishing.af.mil/production/1/af_a1/publication/afi36-2110/afi36-2110.pdf', pub_id: 'afi36-2110' },

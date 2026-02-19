@@ -1,8 +1,8 @@
-// AOMS Regulation Database — 74 Total Entries
-// 3 Core + 30 Direct Refs + 29 Cross-Refs + 12 Scrubbed from Vols 1–3
-// Updated February 19, 2026 | Source: AOMS_Regulation_Database_v5
-// Removed: NFPA 780, NFPA 415, IEEE 142, DoD 7000.14-R
-// Updated: FAA Order direct PDF links; CFR URLs kept for currency verification
+// AOMS Regulation Database — 70 Total Entries
+// 3 Core + 27 Direct Refs + 27 Cross-Refs + 13 Scrubbed from Vols 1–3
+// Updated February 19, 2026 | Source: AOMS_Regulation_Database_v6
+// Removed: NFPA 780, NFPA 415, IEEE 142, DoD 7000.14-R, AFI 90-201, AFH 36-2618, AFI 38-201, AFTTP 3-4.4
+// Updated: AFH 32-7084 URL (DAFH), AFMAN 32-1084→DAFMAN 32-1084, DAFMAN 13-204 V3/V4 URLs
 //
 // Used as demo/seed data until Supabase is connected.
 // Each entry matches the RegulationRow type from lib/supabase/regulations.ts
@@ -63,7 +63,7 @@ const CORE_PUBLICATIONS: RegulationEntry[] = [
     title: 'Air Traffic Control',
     description: 'The primary manual for DAF air traffic control operations. Covers ATC duties and qualifications, facility ratings, local procedures, ATC training programs, watch supervisor responsibilities, and coordination with FAA JO 7110.65.',
     publication_date: '10 Jun 2020',
-    url: 'https://static.e-publishing.af.mil/production/1/af_a3/publication/dafman13-204v3/dafman13-204v3.pdf',
+    url: 'https://static.e-publishing.af.mil/production/1/af_a3/publication/afman13-204v3/dafman13-204v3.pdf',
     source_section: 'core',
     source_volume: null,
     category: 'atc',
@@ -173,7 +173,7 @@ const SECTION_I: RegulationEntry[] = [
 ]
 
 // ═══════════════════════════════════════════════════════════════════
-// SECTION II — References from DAFMAN 13-204, Vol. 2 (6)
+// SECTION II — References from DAFMAN 13-204, Vol. 2 (5)
 // ═══════════════════════════════════════════════════════════════════
 
 const SECTION_II: RegulationEntry[] = [
@@ -191,21 +191,6 @@ const SECTION_II: RegulationEntry[] = [
     is_cross_ref: false,
     is_scrubbed: false,
     tags: ['Part 139', 'airport certification', 'ARFF', 'emergency planning', 'joint-use'],
-  },
-  {
-    reg_id: 'AFI 90-201',
-    title: 'The Air Force Inspection System',
-    description: 'Wing inspections and the Management Internal Control Toolset (MICT).',
-    publication_date: '21 Jul 2023',
-    url: 'https://static.e-publishing.af.mil/production/1/saf_ig/publication/dafi90-201/dafi90-201.pdf',
-    source_section: 'II',
-    source_volume: 'Vol. 2',
-    category: 'airfield_ops',
-    pub_type: 'DAF',
-    is_core: false,
-    is_cross_ref: false,
-    is_scrubbed: false,
-    tags: ['inspection system', 'MICT', 'wing inspection'],
   },
   {
     reg_id: 'AFI 10-1001',
@@ -242,7 +227,7 @@ const SECTION_II: RegulationEntry[] = [
     title: 'AICUZ Program Manager\'s Guide',
     description: 'Air Installations Compatible Use Zones; land use and noise management.',
     publication_date: '2 Nov 2017',
-    url: 'https://static.e-publishing.af.mil/production/1/af_a4/publication/afh32-7084/afh32-7084.pdf',
+    url: 'https://static.e-publishing.af.mil/production/1/af_a4/publication/dafh32-7084/dafh32-7084.pdf',
     source_section: 'II',
     source_volume: 'Vol. 2',
     category: 'airfield_design',
@@ -253,11 +238,11 @@ const SECTION_II: RegulationEntry[] = [
     tags: ['AICUZ', 'land use', 'noise', 'compatible use zones'],
   },
   {
-    reg_id: 'AFMAN 32-1084',
+    reg_id: 'DAFMAN 32-1084',
     title: 'Facility Requirements',
     description: 'Space allocations for airfield buildings and hangars.',
     publication_date: '26 Feb 2016',
-    url: 'https://static.e-publishing.af.mil/production/1/af_a4/publication/dafman32-1084/afman32-1084.pdf',
+    url: 'https://static.e-publishing.af.mil/production/1/af_a4/publication/dafman32-1084/dafman32-1084.pdf',
     source_section: 'II',
     source_volume: 'Vol. 2',
     category: 'construction',
@@ -531,7 +516,7 @@ const SECTION_V: RegulationEntry[] = [
 ]
 
 // ═══════════════════════════════════════════════════════════════════
-// SECTION VI-A — DAF Cross-Referenced Publications (15)
+// SECTION VI-A — DAF Cross-Referenced Publications (13)
 // ═══════════════════════════════════════════════════════════════════
 
 const SECTION_VI_A: RegulationEntry[] = [
@@ -684,36 +669,6 @@ const SECTION_VI_A: RegulationEntry[] = [
     is_cross_ref: true,
     is_scrubbed: false,
     tags: ['training', 'education', 'professional development', 'total force'],
-  },
-  {
-    reg_id: 'AFI 38-201',
-    title: 'Management of Manpower Requirements and Authorizations',
-    description: 'Manpower requirements determination for AOF staffing levels.',
-    publication_date: 'Current Ed.',
-    url: 'https://static.e-publishing.af.mil/production/1/af_a1/publication/dafi38-201/dafi38-201.pdf',
-    source_section: 'VI-A',
-    source_volume: null,
-    category: 'financial',
-    pub_type: 'DAF',
-    is_core: false,
-    is_cross_ref: true,
-    is_scrubbed: false,
-    tags: ['manpower', 'staffing', 'AOF', 'authorizations'],
-  },
-  {
-    reg_id: 'AFH 36-2618',
-    title: 'The Enlisted Force Structure',
-    description: 'Enlisted ranks, duties, and leadership responsibilities for ATC and AM personnel.',
-    publication_date: 'Current Ed.',
-    url: 'https://static.e-publishing.af.mil/production/1/af_a1/publication/afh36-2618/afh36-2618.pdf',
-    source_section: 'VI-A',
-    source_volume: null,
-    category: 'personnel',
-    pub_type: 'DAF',
-    is_core: false,
-    is_cross_ref: true,
-    is_scrubbed: false,
-    tags: ['enlisted', 'force structure', 'leadership', 'ATC', 'AM'],
   },
   {
     reg_id: 'AFI 32-1041',
@@ -987,7 +942,7 @@ const SECTION_VI_C: RegulationEntry[] = [
 ]
 
 // ═══════════════════════════════════════════════════════════════════
-// SECTION VII-A — Scrubbed from Vols 1-3: DAF Publications (10)
+// SECTION VII-A — Scrubbed from Vols 1-3: DAF Publications (9)
 // ═══════════════════════════════════════════════════════════════════
 
 const SECTION_VII_A: RegulationEntry[] = [
@@ -996,7 +951,7 @@ const SECTION_VII_A: RegulationEntry[] = [
     title: 'Radar, Airfield and Weather Systems (RAWS)',
     description: 'Companion volume governing RAWS personnel duties, qualifications, equipment maintenance, and flight inspection support. Directly referenced throughout Vol 1 Ch 1, 2, 3, and Attachment 7.',
     publication_date: 'Current Ed.',
-    url: 'https://static.e-publishing.af.mil/production/1/af_a3/publication/dafman13-204v4/dafman13-204v4.pdf',
+    url: 'https://static.e-publishing.af.mil/production/1/af_a3/publication/dafman13-204v4/dafman13-204_v4.pdf',
     source_section: 'VII-A',
     source_volume: 'Vol. 1',
     category: 'airfield_ops',
@@ -1126,21 +1081,6 @@ const SECTION_VII_A: RegulationEntry[] = [
     is_scrubbed: true,
     tags: ['manday', 'manning', 'ATC', 'AM', 'personnel shortfall'],
   },
-  {
-    reg_id: 'AFTTP 3-4.4',
-    title: 'Contingency Airfield Operations',
-    description: 'Tactical, Techniques, and Procedures for opening and operating deployed/contingency airfields. Referenced in Vol 1 para 1.4.3.',
-    publication_date: 'Current Ed.',
-    url: 'https://static.e-publishing.af.mil/production/1/af_a3/publication/afttp3-4.4/afttp3-4.4.pdf',
-    source_section: 'VII-A',
-    source_volume: 'Vol. 1',
-    category: 'contingency',
-    pub_type: 'DAF',
-    is_core: false,
-    is_cross_ref: false,
-    is_scrubbed: true,
-    tags: ['contingency', 'deployed', 'TTP', 'tactical', 'opening airfield'],
-  },
 ]
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1218,7 +1158,7 @@ const SECTION_VII_C: RegulationEntry[] = [
 ]
 
 // ═══════════════════════════════════════════════════════════════════
-// COMBINED EXPORT — All 74 Regulations
+// COMBINED EXPORT — All 70 Regulations
 // ═══════════════════════════════════════════════════════════════════
 
 export const ALL_REGULATIONS: RegulationEntry[] = [
@@ -1236,4 +1176,4 @@ export const ALL_REGULATIONS: RegulationEntry[] = [
   ...SECTION_VII_C,
 ]
 
-// Verification: 3 + 6 + 6 + 5 + 7 + 4 + 15 + 8 + 6 + 10 + 2 + 2 = 74
+// Verification: 3 + 6 + 5 + 5 + 7 + 4 + 13 + 8 + 6 + 9 + 2 + 2 = 70

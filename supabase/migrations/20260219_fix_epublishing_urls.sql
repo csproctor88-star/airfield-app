@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════
--- Fix 21 e-publishing PDF URLs
+-- Fix 18 e-publishing PDF URLs
 -- Many AF publications were renamed AFI->DAFI / AFMAN->DAFMAN
 -- and the static e-publishing paths changed accordingly.
 -- Run this in the Supabase SQL Editor.
@@ -27,19 +27,9 @@ UPDATE regulations SET
 WHERE reg_id = 'AFI 38-402';
 
 UPDATE regulations SET
-  url = 'https://static.e-publishing.af.mil/production/1/saf_ig/publication/dafi90-201/dafi90-201.pdf',
-  storage_path = NULL, file_size_bytes = NULL
-WHERE reg_id = 'AFI 90-201';
-
-UPDATE regulations SET
   url = 'https://static.e-publishing.af.mil/production/1/af_a4/publication/dafi10-2501/dafi10-2501.pdf',
   storage_path = NULL, file_size_bytes = NULL
 WHERE reg_id = 'AFI 10-2501';
-
-UPDATE regulations SET
-  url = 'https://static.e-publishing.af.mil/production/1/af_a4/publication/dafman32-1084/afman32-1084.pdf',
-  storage_path = NULL, file_size_bytes = NULL
-WHERE reg_id = 'AFMAN 32-1084';
 
 UPDATE regulations SET
   url = 'https://static.e-publishing.af.mil/production/1/af_a2_6/publication/dafi17-221/dafi17-221.pdf',
@@ -55,11 +45,6 @@ UPDATE regulations SET
   url = 'https://static.e-publishing.af.mil/production/1/af_a1/publication/dafi36-2670/dafi36-2670.pdf',
   storage_path = NULL, file_size_bytes = NULL
 WHERE reg_id = 'AFI 36-2670';
-
-UPDATE regulations SET
-  url = 'https://static.e-publishing.af.mil/production/1/af_a1/publication/dafi38-201/dafi38-201.pdf',
-  storage_path = NULL, file_size_bytes = NULL
-WHERE reg_id = 'AFI 38-201';
 
 UPDATE regulations SET
   url = 'https://static.e-publishing.af.mil/production/1/af_a4/publication/dafi32-1041/dafi32-1041.pdf',
@@ -111,7 +96,7 @@ UPDATE regulations SET
   storage_path = NULL, file_size_bytes = NULL
 WHERE reg_id = 'AFI 36-2110';
 
--- Verify: should show 21 rows with updated URLs
+-- Verify: should show 18 rows with updated URLs
 SELECT reg_id, url FROM regulations
 WHERE url LIKE '%dafi%' OR url LIKE '%dafman%' OR url LIKE '%afman13-204v1%'
 ORDER BY reg_id;
