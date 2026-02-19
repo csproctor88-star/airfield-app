@@ -19,7 +19,7 @@ import { textCache } from '@/lib/pdfTextCache'
 // PDF.js worker — match version to react-pdf's bundled pdfjs
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
 
-const BUCKET_NAME = 'regulations-pdf'
+const BUCKET_NAME = 'regulation-pdfs'
 
 // ── Types ────────────────────────────────────────────────────
 

@@ -16,7 +16,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import pdfParse from "https://esm.sh/pdf-parse@1.1.1";
 
-const BUCKET_NAME = "regulations-pdf";
+const BUCKET_NAME = "regulation-pdfs";
 
 Deno.serve(async (req: Request) => {
   try {
