@@ -125,23 +125,32 @@ export async function listCachedRegulationPdfs(): Promise<string[]> {
 }
 
 /**
- * Get a signed URL for a cached PDF in Supabase Storage.
- * Returns null if the regulation has no cached PDF.
+ * Get a URL for a cached PDF in Supabase Storage.
+ * Tries a signed URL first; falls back to the public URL if the bucket
+ * is public but signed-URL creation fails (e.g. missing storage policies
+ * for the anon key).
  */
 export async function getRegulationPdfUrl(storagePath: string): Promise<string | null> {
   const supabase = createClient()
   if (!supabase) return null
 
+  // 1. Try signed URL (works for private buckets with correct policies)
   const { data, error } = await supabase.storage
     .from('regulation-pdfs')
     .createSignedUrl(storagePath, 3600) // 1 hour expiry
 
+  if (!error && data?.signedUrl) return data.signedUrl
+
   if (error) {
-    console.error('Failed to get signed URL:', error.message)
-    return null
+    console.warn('[Regs] Signed URL failed for', storagePath, '–', error.message)
   }
 
-  return data.signedUrl
+  // 2. Fallback: public URL (works if bucket has a public access policy)
+  const { data: pubData } = supabase.storage
+    .from('regulation-pdfs')
+    .getPublicUrl(storagePath)
+
+  return pubData?.publicUrl ?? null
 }
 
 // ── User-uploaded regulation PDFs ──────────────────────────────

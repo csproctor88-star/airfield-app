@@ -120,21 +120,25 @@ export default function RegulationsPage() {
     async function loadCachedPdfs() {
       const map = new Map<string, string>()
 
-      // 1. Seed with known storage filenames (always resolves, no bucket listing needed)
-      const knownIds = Object.keys(KNOWN_STORAGE_FILES)
-      for (let i = 0; i < knownIds.length; i++) {
-        map.set(knownIds[i], KNOWN_STORAGE_FILES[knownIds[i]])
+      try {
+        // 1. List the bucket and match regulations via fuzzy logic.
+        //    Bucket listing reflects the ACTUAL filenames so it takes priority.
+        const bucketFiles = await listCachedRegulationPdfs()
+        console.log('[Regs] Storage bucket files:', bucketFiles)
+
+        for (const reg of ALL_REGULATIONS) {
+          const match = findStorageFile(reg.reg_id, bucketFiles)
+          if (match) map.set(reg.reg_id, match)
+        }
+      } catch (err) {
+        console.warn('[Regs] Bucket listing failed:', err)
       }
 
-      // 2. List the bucket and match remaining regulations via fuzzy logic
-      const bucketFiles = await listCachedRegulationPdfs()
-      console.log('[Regs] Storage bucket files:', bucketFiles)
-
-      for (const reg of ALL_REGULATIONS) {
-        if (map.has(reg.reg_id)) continue // already resolved via known files
-        const match = findStorageFile(reg.reg_id, bucketFiles)
-        if (match) map.set(reg.reg_id, match)
+      // 2. Fill in KNOWN_STORAGE_FILES as fallback for any unmatched regulations
+      for (const [regId, fileName] of Object.entries(KNOWN_STORAGE_FILES)) {
+        if (!map.has(regId)) map.set(regId, fileName)
       }
+
       console.log('[Regs] Matched regulations:', Array.from(map.entries()))
       const unmatched = ALL_REGULATIONS.filter(r => !map.has(r.reg_id)).map(r => r.reg_id)
       if (unmatched.length > 0) console.log('[Regs] Unmatched regulations:', unmatched)
@@ -573,20 +577,31 @@ export default function RegulationsPage() {
                     <button
                         onClick={async e => {
                           e.stopPropagation()
-                          // Prefer cached Supabase Storage PDF
-                          const storageName = cachedPdfMap.get(reg.reg_id)
-                          if (storageName) {
-                            const signedUrl = await getRegulationPdfUrl(storageName)
-                            if (signedUrl) {
-                              setViewerUrl(signedUrl)
+                          try {
+                            // Prefer cached Supabase Storage PDF
+                            const storageName = cachedPdfMap.get(reg.reg_id)
+                            console.log('[Regs] View clicked:', reg.reg_id, '→ storageName:', storageName)
+                            if (storageName) {
+                              const pdfUrl = await getRegulationPdfUrl(storageName)
+                              console.log('[Regs] PDF URL result:', pdfUrl ? 'OK' : 'null')
+                              if (pdfUrl) {
+                                setViewerUrl(pdfUrl)
+                                setViewerReg(reg)
+                                return
+                              }
+                            }
+                            // Fallback to external URL
+                            if (reg.url) {
+                              setViewerUrl(null)
                               setViewerReg(reg)
                               return
                             }
-                          }
-                          // Fallback to external URL
-                          if (reg.url) {
-                            setViewerUrl(null)
-                            setViewerReg(reg)
+                            // No PDF source available
+                            console.warn('[Regs] No PDF source for', reg.reg_id)
+                            alert(`Unable to load PDF for "${reg.reg_id}". The file may not be available in storage yet.`)
+                          } catch (err) {
+                            console.error('[Regs] Error opening PDF:', err)
+                            alert(`Error loading PDF for "${reg.reg_id}". Please try again.`)
                           }
                         }}
                         style={{
