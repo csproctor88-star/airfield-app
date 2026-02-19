@@ -3,12 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { X, ExternalLink, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Search, Loader2, AlertTriangle } from 'lucide-react'
 import { Document, Page, pdfjs } from 'react-pdf'
-import 'react-pdf/dist/Page/AnnotationLayer.css'
-import 'react-pdf/dist/Page/TextLayer.css'
+// CSS for TextLayer + AnnotationLayer is in globals.css (avoids dynamic-import CSS issues)
 import { getCachedPdf, cachePdf } from '@/lib/pdf-cache'
 
-// Configure PDF.js worker — loaded from CDN to avoid bundling the large worker file
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
+// Load worker from public/ — avoids CDN dependency and cross-origin issues
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
 
 interface PdfViewerProps {
   url: string          // signed URL or external URL to fetch/display
