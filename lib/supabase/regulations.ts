@@ -125,14 +125,24 @@ export async function listCachedRegulationPdfs(): Promise<string[]> {
 }
 
 /**
- * Get a URL for a cached PDF in Supabase Storage.
- * Returns a local API route URL that streams the PDF server-side
- * with Content-Disposition: inline for proper in-app rendering.
+ * Get a signed URL for a cached PDF in Supabase Storage.
+ * Returns { url } on success or { error } with a diagnostic message.
  */
-export function getRegulationPdfUrl(
+export async function getRegulationPdfUrl(
   storagePath: string
-): { url: string } {
-  return { url: `/api/regulations/pdf?path=${encodeURIComponent(storagePath)}` }
+): Promise<{ url: string } | { error: string }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase client not available' }
+
+  const { data, error } = await supabase.storage
+    .from('regulation-pdfs')
+    .createSignedUrl(storagePath, 3600) // 1 hour expiry
+
+  if (!error && data?.signedUrl) return { url: data.signedUrl }
+
+  const msg = error?.message ?? 'Unknown error (no signedUrl returned)'
+  console.warn('[Regs] Signed URL failed for', storagePath, '–', msg)
+  return { error: `${msg} [file: ${storagePath}]` }
 }
 
 // ── User-uploaded regulation PDFs ──────────────────────────────
