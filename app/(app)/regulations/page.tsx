@@ -1,65 +1,9 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { BookOpen, Search, ExternalLink, ChevronDown, ChevronUp, X, FileText, Upload, Trash2, Loader2 } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Search, ExternalLink, ChevronDown, ChevronUp, X, FileText } from 'lucide-react'
 import { ALL_REGULATIONS, type RegulationEntry } from '@/lib/regulations-data'
 import { REGULATION_CATEGORIES, REGULATION_PUB_TYPES, REGULATION_SOURCE_SECTIONS } from '@/lib/constants'
-import { createClient } from '@/lib/supabase/client'
-import {
-  type UserRegulationPdf,
-  fetchUserRegulationPdfs,
-  uploadUserRegulationPdf,
-  deleteUserRegulationPdf,
-  getUserPdfSignedUrl,
-  getRegulationPdfUrl,
-  listCachedRegulationPdfs,
-} from '@/lib/supabase/regulations'
-
-// --- Known storage filenames for regulations uploaded directly to the bucket ---
-// These bypass the bucket-listing + fuzzy-match path so they always resolve.
-// Filenames must use the sanitized format (no spaces/special chars) to avoid
-// issues with Supabase Storage signed-URL generation.
-const KNOWN_STORAGE_FILES: Record<string, string> = {
-  '14 CFR Part 139': '14_cfr_part_139.pdf',
-  '14 CFR Part 77': '14_cfr_part_77.pdf',
-  '14 CFR Part 121': '14_cfr_part_121.pdf',
-  '14 CFR Part 380': '14_cfr_part_380.pdf',
-  '14 CFR Part 5': '14_cfr_part_5.pdf',
-  '14 CFR Part 11': '14_cfr_part_11.pdf',
-  '49 CFR 830': '49_cfr_830.pdf',
-  'ICAO Annex 14': 'icao_annex_14.pdf',
-}
-
-// --- Convert reg_id to storage filename (must match download-regulations.ts) ---
-function regIdToFileName(regId: string): string {
-  return regId
-    .replace(/[/\\:*?"<>|]/g, '-')
-    .replace(/,\s*/g, '-')
-    .replace(/\s+/g, '_')
-    .replace(/-+/g, '-')
-    .toLowerCase() + '.pdf'
-}
-
-// --- Normalize string for fuzzy matching (strip "part", non-alnum chars, lowercase) ---
-function normalizeForMatch(s: string): string {
-  return s.toLowerCase().replace(/\bpart\b/g, '').replace(/[^a-z0-9]/g, '')
-}
-
-// --- Find a storage file matching a reg_id from the bucket file list ---
-function findStorageFile(regId: string, bucketFiles: string[]): string | null {
-  // 1. Exact sanitized match (for script-downloaded files)
-  const sanitized = regIdToFileName(regId)
-  if (bucketFiles.indexOf(sanitized) !== -1) return sanitized
-
-  // 2. Normalized prefix match (for manually uploaded files like
-  //    "14 CFR Part 139 (up to date as of 2-13-2026).pdf")
-  const normalizedId = normalizeForMatch(regId)
-  for (let i = 0; i < bucketFiles.length; i++) {
-    if (normalizeForMatch(bucketFiles[i]).startsWith(normalizedId)) return bucketFiles[i]
-  }
-
-  return null
-}
 
 // --- Badge color by entry type ---
 function entryTypeBadge(entry: RegulationEntry): { label: string; bg: string; color: string } {
@@ -91,120 +35,6 @@ export default function RegulationsPage() {
   const [sourceFilter, setSourceFilter] = useState<string>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
-
-  // User PDF upload state
-  const [userId, setUserId] = useState<string | null>(null)
-  const [userPdfs, setUserPdfs] = useState<Map<string, UserRegulationPdf>>(new Map())
-  const [uploading, setUploading] = useState<string | null>(null) // reg_id being uploaded
-  const [deleting, setDeleting] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [uploadTargetRegId, setUploadTargetRegId] = useState<string | null>(null)
-
-  // Map of reg_id -> storage filename for regulations with a cached PDF
-  const [cachedPdfMap, setCachedPdfMap] = useState<Map<string, string>>(new Map())
-
-  // Load current user + their uploaded PDFs + cached storage files
-  useEffect(() => {
-    async function loadUser() {
-      const supabase = createClient()
-      if (!supabase) return
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      setUserId(user.id)
-      const pdfs = await fetchUserRegulationPdfs(user.id)
-      setUserPdfs(pdfs)
-    }
-    async function loadCachedPdfs() {
-      const map = new Map<string, string>()
-
-      try {
-        // 1. List the bucket and match regulations via fuzzy logic.
-        //    Bucket listing reflects the ACTUAL filenames so it takes priority.
-        const bucketFiles = await listCachedRegulationPdfs()
-        console.log('[Regs] Storage bucket files:', bucketFiles)
-
-        for (const reg of ALL_REGULATIONS) {
-          const match = findStorageFile(reg.reg_id, bucketFiles)
-          if (match) map.set(reg.reg_id, match)
-        }
-      } catch (err) {
-        console.warn('[Regs] Bucket listing failed:', err)
-      }
-
-      // 2. Fill in KNOWN_STORAGE_FILES as fallback for any unmatched regulations
-      for (const [regId, fileName] of Object.entries(KNOWN_STORAGE_FILES)) {
-        if (!map.has(regId)) map.set(regId, fileName)
-      }
-
-      console.log('[Regs] Matched regulations:', Array.from(map.entries()))
-      const unmatched = ALL_REGULATIONS.filter(r => !map.has(r.reg_id)).map(r => r.reg_id)
-      if (unmatched.length > 0) console.log('[Regs] Unmatched regulations:', unmatched)
-      setCachedPdfMap(map)
-    }
-    loadUser()
-    loadCachedPdfs()
-  }, [])
-
-  const handleUploadClick = useCallback((regId: string) => {
-    setUploadTargetRegId(regId)
-    fileInputRef.current?.click()
-  }, [])
-
-  const handleFileSelected = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !userId || !uploadTargetRegId) return
-
-    if (file.type !== 'application/pdf') {
-      alert('Please select a PDF file.')
-      e.target.value = ''
-      return
-    }
-
-    if (file.size > 52_428_800) {
-      alert('File too large. Maximum size is 50 MB.')
-      e.target.value = ''
-      return
-    }
-
-    setUploading(uploadTargetRegId)
-    const result = await uploadUserRegulationPdf(userId, uploadTargetRegId, file)
-    if (result) {
-      setUserPdfs(prev => {
-        const next = new Map(prev)
-        next.set(uploadTargetRegId, result)
-        return next
-      })
-    }
-    setUploading(null)
-    setUploadTargetRegId(null)
-    e.target.value = ''
-  }, [userId, uploadTargetRegId])
-
-  const handleDelete = useCallback(async (regId: string) => {
-    const pdf = userPdfs.get(regId)
-    if (!pdf || !userId) return
-    if (!confirm('Remove your uploaded PDF for this regulation?')) return
-
-    setDeleting(regId)
-    const ok = await deleteUserRegulationPdf(userId, regId, pdf.storage_path)
-    if (ok) {
-      setUserPdfs(prev => {
-        const next = new Map(prev)
-        next.delete(regId)
-        return next
-      })
-    }
-    setDeleting(null)
-  }, [userId, userPdfs])
-
-  const handleViewUserPdf = useCallback(async (reg: RegulationEntry) => {
-    const pdf = userPdfs.get(reg.reg_id)
-    if (!pdf) return
-    const signedUrl = await getUserPdfSignedUrl(pdf.storage_path)
-    if (signedUrl) {
-      window.open(signedUrl, '_blank')
-    }
-  }, [userPdfs])
 
   // Derive counts
   const coreCount = ALL_REGULATIONS.filter(r => r.is_core).length
@@ -436,15 +266,6 @@ export default function RegulationsPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}>
-                  {userPdfs.has(reg.reg_id) && (
-                    <div style={{
-                      fontSize: 7, fontWeight: 700, letterSpacing: '0.06em',
-                      background: 'rgba(16,185,129,0.15)', color: '#10B981',
-                      padding: '2px 5px', borderRadius: 4, whiteSpace: 'nowrap',
-                    }}>
-                      MY PDF
-                    </div>
-                  )}
                   <div style={{
                     fontSize: 8, fontWeight: 700, letterSpacing: '0.06em',
                     background: badge.bg, color: badge.color,
@@ -534,121 +355,41 @@ export default function RegulationsPage() {
 
                   {/* Action buttons */}
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {/* User has uploaded PDF — show "View My PDF" */}
-                    {userPdfs.has(reg.reg_id) && (
+                    {reg.url && (
                       <>
-                        <button
-                          onClick={e => { e.stopPropagation(); handleViewUserPdf(reg) }}
+                        <a
+                          href={reg.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
                           style={{
                             display: 'inline-flex', alignItems: 'center', gap: 6,
-                            background: 'linear-gradient(135deg, #065F46, #10B981)',
+                            background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
                             color: '#fff', fontSize: 11, fontWeight: 700,
-                            padding: '6px 14px', borderRadius: 6, border: 'none',
-                            cursor: 'pointer', fontFamily: 'inherit',
+                            padding: '6px 14px', borderRadius: 6, textDecoration: 'none',
+                            border: 'none',
                           }}
                         >
                           <FileText size={12} />
-                          View My PDF
-                        </button>
-                        <button
-                          onClick={e => { e.stopPropagation(); handleDelete(reg.reg_id) }}
-                          disabled={deleting === reg.reg_id}
+                          View in App
+                        </a>
+                        <a
+                          href={reg.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
                           style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 4,
-                            background: 'rgba(239,68,68,0.08)',
-                            border: '1px solid rgba(239,68,68,0.2)',
-                            color: '#EF4444', fontSize: 10, fontWeight: 700,
-                            padding: '6px 10px', borderRadius: 6,
-                            cursor: deleting === reg.reg_id ? 'wait' : 'pointer',
-                            fontFamily: 'inherit', opacity: deleting === reg.reg_id ? 0.5 : 1,
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            background: 'transparent',
+                            border: '1px solid rgba(56,189,248,0.2)',
+                            color: '#94A3B8', fontSize: 11, fontWeight: 700,
+                            padding: '6px 14px', borderRadius: 6, textDecoration: 'none',
                           }}
                         >
-                          {deleting === reg.reg_id ? <Loader2 size={10} style={{ animation: 'spin 0.8s linear infinite' }} /> : <Trash2 size={10} />}
-                          Remove
-                        </button>
+                          <ExternalLink size={12} />
+                          Open External
+                        </a>
                       </>
-                    )}
-
-                    {/* View PDF — open signed URL or external URL in new tab */}
-                    <button
-                        onClick={async e => {
-                          e.stopPropagation()
-                          try {
-                            const storageName = cachedPdfMap.get(reg.reg_id)
-                            if (storageName) {
-                              const result = await getRegulationPdfUrl(storageName)
-                              if ('url' in result) {
-                                window.open(result.url, '_blank')
-                                return
-                              }
-                            }
-                            if (reg.url) {
-                              window.open(reg.url, '_blank')
-                              return
-                            }
-                            alert(`No PDF available for "${reg.reg_id}".`)
-                          } catch (err) {
-                            console.error('[Regs] Error opening PDF:', err)
-                            if (reg.url) {
-                              window.open(reg.url, '_blank')
-                            }
-                          }
-                        }}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
-                          color: '#fff', fontSize: 11, fontWeight: 700,
-                          padding: '6px 14px', borderRadius: 6, border: 'none',
-                          cursor: 'pointer', fontFamily: 'inherit',
-                        }}
-                      >
-                        <FileText size={12} />
-                        {userPdfs.has(reg.reg_id) ? 'View Original' : 'View PDF'}
-                      </button>
-
-                    {reg.url && (
-                      <a
-                        href={reg.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={e => e.stopPropagation()}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          background: 'transparent',
-                          border: '1px solid rgba(56,189,248,0.2)',
-                          color: '#94A3B8', fontSize: 11, fontWeight: 700,
-                          padding: '6px 14px', borderRadius: 6, textDecoration: 'none',
-                        }}
-                      >
-                        <ExternalLink size={12} />
-                        Open External
-                      </a>
-                    )}
-
-                    {/* Upload PDF button */}
-                    {userId && (
-                      <button
-                        onClick={e => { e.stopPropagation(); handleUploadClick(reg.reg_id) }}
-                        disabled={uploading === reg.reg_id}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 5,
-                          background: 'rgba(168,85,247,0.08)',
-                          border: '1px solid rgba(168,85,247,0.2)',
-                          color: '#A855F7', fontSize: 11, fontWeight: 700,
-                          padding: '6px 14px', borderRadius: 6,
-                          cursor: uploading === reg.reg_id ? 'wait' : 'pointer',
-                          fontFamily: 'inherit', opacity: uploading === reg.reg_id ? 0.5 : 1,
-                        }}
-                      >
-                        {uploading === reg.reg_id
-                          ? <Loader2 size={12} style={{ animation: 'spin 0.8s linear infinite' }} />
-                          : <Upload size={12} />
-                        }
-                        {uploading === reg.reg_id
-                          ? 'Uploading...'
-                          : userPdfs.has(reg.reg_id) ? 'Replace PDF' : 'Upload PDF'
-                        }
-                      </button>
                     )}
                   </div>
                 </div>
@@ -657,15 +398,6 @@ export default function RegulationsPage() {
           )
         })
       )}
-
-      {/* Hidden file input for PDF uploads */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="application/pdf"
-        style={{ display: 'none' }}
-        onChange={handleFileSelected}
-      />
 
     </div>
   )
