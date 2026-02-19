@@ -18,14 +18,16 @@ import {
 
 // --- Known storage filenames for regulations uploaded directly to the bucket ---
 // These bypass the bucket-listing + fuzzy-match path so they always resolve.
+// Filenames must use the sanitized format (no spaces/special chars) to avoid
+// issues with Supabase Storage signed-URL generation.
 const KNOWN_STORAGE_FILES: Record<string, string> = {
-  '14 CFR Part 139': '14 CFR Part 139 (up to date as of 2-13-2026).pdf',
-  '14 CFR Part 77': '14 CFR Part 77 (up to date as of 2-13-2026).pdf',
-  '14 CFR Part 121': '14 CFR Part 121 (up to date as of 2-13-2026).pdf',
-  '14 CFR Part 380': '14 CFR Part 380 (up to date as of 2-13-2026).pdf',
-  '14 CFR Part 5': '14 CFR Part 5 (up to date as of 2-13-2026).pdf',
-  '14 CFR Part 11': '14 CFR Part 11 (up to date as of 2-13-2026).pdf',
-  '49 CFR 830': '49 CFR Part 830 (up to date as of 2-13-2026).pdf',
+  '14 CFR Part 139': '14_cfr_part_139.pdf',
+  '14 CFR Part 77': '14_cfr_part_77.pdf',
+  '14 CFR Part 121': '14_cfr_part_121.pdf',
+  '14 CFR Part 380': '14_cfr_part_380.pdf',
+  '14 CFR Part 5': '14_cfr_part_5.pdf',
+  '14 CFR Part 11': '14_cfr_part_11.pdf',
+  '49 CFR 830': '49_cfr_830.pdf',
   'ICAO Annex 14': 'icao_annex_14.pdf',
 }
 
