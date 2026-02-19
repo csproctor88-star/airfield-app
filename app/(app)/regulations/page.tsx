@@ -112,7 +112,7 @@ export default function RegulationsPage() {
         const match = findStorageFile(reg.reg_id, bucketFiles)
         if (match) map.set(reg.reg_id, match)
       }
-      console.log('[Regs] Matched regulations:', [...map.entries()])
+      console.log('[Regs] Matched regulations:', Array.from(map.entries()))
       const unmatched = ALL_REGULATIONS.filter(r => !map.has(r.reg_id)).map(r => r.reg_id)
       if (unmatched.length > 0) console.log('[Regs] Unmatched regulations:', unmatched)
       setCachedPdfMap(map)
