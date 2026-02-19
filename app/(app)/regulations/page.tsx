@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { Search, ExternalLink, ChevronDown, ChevronUp, X, FileText } from 'lucide-react'
 import { ALL_REGULATIONS, type RegulationEntry } from '@/lib/regulations-data'
 import { REGULATION_CATEGORIES, REGULATION_PUB_TYPES, REGULATION_SOURCE_SECTIONS } from '@/lib/constants'
+import { fetchRegulationStoragePaths } from '@/lib/supabase/regulations'
 
 // --- Badge color by entry type ---
 function entryTypeBadge(entry: RegulationEntry): { label: string; bg: string; color: string } {
@@ -29,12 +31,18 @@ function getSectionLabel(section: string) {
 }
 
 export default function RegulationsPage() {
+  const router = useRouter()
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [pubTypeFilter, setPubTypeFilter] = useState<string>('all')
   const [sourceFilter, setSourceFilter] = useState<string>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [storagePaths, setStoragePaths] = useState<Record<string, { id: string; storage_path: string }>>({})
+
+  useEffect(() => {
+    fetchRegulationStoragePaths().then(setStoragePaths)
+  }, [])
 
   // Derive counts
   const coreCount = ALL_REGULATIONS.filter(r => r.is_core).length
@@ -355,41 +363,41 @@ export default function RegulationsPage() {
 
                   {/* Action buttons */}
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {storagePaths[reg.reg_id] && (
+                      <button
+                        onClick={e => {
+                          e.stopPropagation()
+                          router.push(`/regulations/view?id=${storagePaths[reg.reg_id].id}`)
+                        }}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
+                          color: '#fff', fontSize: 11, fontWeight: 700,
+                          padding: '6px 14px', borderRadius: 6,
+                          border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                        }}
+                      >
+                        <FileText size={12} />
+                        View in App
+                      </button>
+                    )}
                     {reg.url && (
-                      <>
-                        <a
-                          href={reg.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={e => e.stopPropagation()}
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
-                            color: '#fff', fontSize: 11, fontWeight: 700,
-                            padding: '6px 14px', borderRadius: 6, textDecoration: 'none',
-                            border: 'none',
-                          }}
-                        >
-                          <FileText size={12} />
-                          View in App
-                        </a>
-                        <a
-                          href={reg.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={e => e.stopPropagation()}
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            background: 'transparent',
-                            border: '1px solid rgba(56,189,248,0.2)',
-                            color: '#94A3B8', fontSize: 11, fontWeight: 700,
-                            padding: '6px 14px', borderRadius: 6, textDecoration: 'none',
-                          }}
-                        >
-                          <ExternalLink size={12} />
-                          Open External
-                        </a>
-                      </>
+                      <a
+                        href={reg.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          background: 'transparent',
+                          border: '1px solid rgba(56,189,248,0.2)',
+                          color: '#94A3B8', fontSize: 11, fontWeight: 700,
+                          padding: '6px 14px', borderRadius: 6, textDecoration: 'none',
+                        }}
+                      >
+                        <ExternalLink size={12} />
+                        Open External
+                      </a>
                     )}
                   </div>
                 </div>

@@ -57,6 +57,42 @@ export async function fetchRegulation(id: string): Promise<RegulationRow | null>
   return data as RegulationRow
 }
 
+export async function fetchRegulationStoragePaths(): Promise<Record<string, { id: string; storage_path: string }>> {
+  const supabase = createClient()
+  if (!supabase) return {}
+
+  const { data, error } = await supabase
+    .from('regulations')
+    .select('id, reg_id, storage_path')
+    .not('storage_path', 'is', null)
+
+  if (error || !data) return {}
+
+  const map: Record<string, { id: string; storage_path: string }> = {}
+  for (const row of data) {
+    if (row.storage_path) {
+      map[row.reg_id] = { id: row.id, storage_path: row.storage_path }
+    }
+  }
+  return map
+}
+
+export async function getRegulationPdfSignedUrl(storagePath: string): Promise<string | null> {
+  const supabase = createClient()
+  if (!supabase) return null
+
+  const { data, error } = await supabase.storage
+    .from('regulation-pdfs')
+    .createSignedUrl(storagePath, 3600) // 1 hour
+
+  if (error || !data?.signedUrl) {
+    console.error('Failed to create signed URL:', error?.message)
+    return null
+  }
+
+  return data.signedUrl
+}
+
 export async function searchRegulations(query: string): Promise<RegulationRow[]> {
   const supabase = createClient()
   if (!supabase) return []
