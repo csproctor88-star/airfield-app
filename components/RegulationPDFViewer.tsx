@@ -7,11 +7,12 @@ import 'react-pdf/dist/Page/TextLayer.css'
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
 import { ExternalLink, ArrowLeft, ZoomIn, ZoomOut, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { idbGet, idbSet, STORE_BLOBS } from '@/lib/idb'
+import { idbGet, idbSet, STORE_BLOBS, STORE_USER_BLOBS } from '@/lib/idb'
 
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"
 
-const BUCKET_NAME = 'regulation-pdfs'
+const REG_BUCKET = 'regulation-pdfs'
+const USER_BUCKET = 'user-uploads'
 
 function getDefaultViewMode(): "native" | "react-pdf" {
   if (typeof navigator === "undefined") return "react-pdf"
@@ -170,9 +171,15 @@ interface RegulationPDFViewerProps {
   title: string
   url: string | null
   onClose: () => void
+  /** For user documents: 'user' uses user-uploads bucket + user_blobs IDB store */
+  source?: 'regulation' | 'user'
+  /** For user documents: the userId folder prefix in storage */
+  userId?: string
+  /** For user documents: pre-sanitized fileName to use instead of deriving from regId */
+  storedFileName?: string
 }
 
-export default function RegulationPDFViewer({ regId, title, url, onClose }: RegulationPDFViewerProps) {
+export default function RegulationPDFViewer({ regId, title, url, onClose, source = 'regulation', userId, storedFileName }: RegulationPDFViewerProps) {
   const supabase = createClient()
   const viewerRef = useRef<HTMLDivElement>(null)
 
@@ -220,7 +227,10 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
   // Load PDF from Supabase storage
   useEffect(() => {
     let cancelled = false
-    const fileName = `${sanitizeFileName(regId)}.pdf`
+    const fileName = storedFileName || `${sanitizeFileName(regId)}.pdf`
+    const idbStore = source === 'user' ? STORE_USER_BLOBS : STORE_BLOBS
+    const bucketName = source === 'user' ? USER_BUCKET : REG_BUCKET
+    const storagePath = source === 'user' && userId ? `${userId}/${fileName}` : fileName
 
     async function loadPdf() {
       setLoading(true)
@@ -264,7 +274,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
 
       try {
         // 1. Try IndexedDB cache first (works offline)
-        let cached = await idbGet<ArrayBuffer | Blob>(STORE_BLOBS, fileName)
+        let cached = await idbGet<ArrayBuffer | Blob>(idbStore, fileName)
         if (cached) {
           const arrayBuffer = cached instanceof Blob ? await cached.arrayBuffer() : cached
           presentPdf(arrayBuffer)
@@ -275,12 +285,12 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
         // 2. Fall back to Supabase download (requires network)
         if (supabase) {
           const { data, error: dlErr } = await supabase.storage
-            .from(BUCKET_NAME)
-            .download(fileName)
+            .from(bucketName)
+            .download(storagePath)
           if (!dlErr && data && !cancelled) {
             const arrayBuffer = await data.arrayBuffer()
             // Cache to IndexedDB for offline use
-            idbSet(STORE_BLOBS, fileName, arrayBuffer).catch((e) =>
+            idbSet(idbStore, fileName, arrayBuffer).catch((e) =>
               console.warn('Failed to cache PDF to IndexedDB:', e)
             )
             presentPdf(arrayBuffer)
@@ -317,7 +327,8 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
         blobUrlRef.current = null
       }
     }
-  }, [regId, url, supabase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regId, url, source, userId, storedFileName])
 
   // Compute search matches
   useEffect(() => {

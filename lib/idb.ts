@@ -4,12 +4,14 @@
  */
 
 const DB_NAME = 'aoms_pdf_cache'
-const DB_VERSION = 3
+const DB_VERSION = 4
 
 export const STORE_BLOBS = 'blobs'
 export const STORE_META = 'meta'
 export const STORE_TEXT = 'text_pages'
 export const STORE_TEXT_META = 'text_meta'
+export const STORE_USER_BLOBS = 'user_blobs'
+export const STORE_USER_TEXT = 'user_text'
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -24,6 +26,8 @@ export function openDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORE_META)) db.createObjectStore(STORE_META)
       if (!db.objectStoreNames.contains(STORE_TEXT)) db.createObjectStore(STORE_TEXT)
       if (!db.objectStoreNames.contains(STORE_TEXT_META)) db.createObjectStore(STORE_TEXT_META)
+      if (!db.objectStoreNames.contains(STORE_USER_BLOBS)) db.createObjectStore(STORE_USER_BLOBS)
+      if (!db.objectStoreNames.contains(STORE_USER_TEXT)) db.createObjectStore(STORE_USER_TEXT)
     }
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => {
