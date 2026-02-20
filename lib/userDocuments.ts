@@ -42,13 +42,18 @@ interface CachedUserText {
 }
 
 function sanitizeFileName(name: string): string {
-  return name
+  const ext = name.match(/\.(pdf|jpe?g|png)$/i)?.[0]?.toLowerCase() || '.pdf'
+  const base = name
+    .replace(/\.(pdf|jpe?g|png)$/i, '')
     .toLowerCase()
-    .replace(/\.pdf$/i, '')
     .replace(/[^a-z0-9._-]/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
-    + '.pdf'
+  return base + ext
+}
+
+function isImageFile(fileName: string): boolean {
+  return /\.(jpg|jpeg|png)$/i.test(fileName)
 }
 
 export const userDocService = {
@@ -69,7 +74,7 @@ export const userDocService = {
     onProgress?.('Uploading...')
     const { error: upErr } = await supabase.storage
       .from(BUCKET)
-      .upload(storagePath, file, { upsert: true, contentType: 'application/pdf' })
+      .upload(storagePath, file, { upsert: true, contentType: file.type })
     if (upErr) throw new Error(`Upload failed: ${upErr.message}`)
 
     // 2. Read the file as ArrayBuffer for extraction + caching
@@ -90,48 +95,51 @@ export const userDocService = {
       .single()
     if (insertErr) throw new Error(`Metadata insert failed: ${insertErr.message}`)
 
-    // 4. Extract text client-side
-    onProgress?.('Extracting text...')
+    // 4. Extract text client-side (PDFs only — images skip extraction)
     let pages: UserDocTextPage[] = []
     let totalPages = 0
-    try {
-      const { pdfjs } = await import('react-pdf')
-      const pdf = await pdfjs.getDocument({ data: new Uint8Array(arrayBuffer.slice(0)) }).promise
-      totalPages = pdf.numPages
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i)
-        const content = await page.getTextContent()
-        const text = content.items
-          .map((item) => ('str' in item ? item.str : ''))
-          .join(' ')
-        pages.push({ page: i, text })
-      }
-    } catch (e) {
-      console.warn('Text extraction failed:', e)
-      // Still save the doc, just mark as failed extraction
-      await supabase
-        .from('user_documents')
-        .update({ status: 'failed', total_pages: totalPages || null })
-        .eq('id', doc.id)
-      // Cache blob anyway so the PDF is still viewable
-      await idbSet(STORE_USER_BLOBS, fileName, arrayBuffer).catch(() => {})
-      return { ...doc, status: 'failed', total_pages: totalPages || null } as UserDocument
-    }
 
-    // 5. Insert extracted text into user_document_pages
-    onProgress?.('Indexing pages...')
-    for (let i = 0; i < pages.length; i += 50) {
-      const batch = pages.slice(i, i + 50).map((p) => ({
-        user_id: userId,
-        document_id: doc.id,
-        file_name: fileName,
-        page_number: p.page,
-        text_content: p.text,
-      }))
-      const { error: textErr } = await supabase
-        .from('user_document_pages')
-        .insert(batch)
-      if (textErr) console.warn('Text insert batch failed:', textErr.message)
+    if (!isImageFile(fileName)) {
+      onProgress?.('Extracting text...')
+      try {
+        const { pdfjs } = await import('react-pdf')
+        const pdf = await pdfjs.getDocument({ data: new Uint8Array(arrayBuffer.slice(0)) }).promise
+        totalPages = pdf.numPages
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i)
+          const content = await page.getTextContent()
+          const text = content.items
+            .map((item) => ('str' in item ? item.str : ''))
+            .join(' ')
+          pages.push({ page: i, text })
+        }
+      } catch (e) {
+        console.warn('Text extraction failed:', e)
+        await supabase
+          .from('user_documents')
+          .update({ status: 'failed', total_pages: totalPages || null })
+          .eq('id', doc.id)
+        await idbSet(STORE_USER_BLOBS, fileName, arrayBuffer).catch(() => {})
+        return { ...doc, status: 'failed', total_pages: totalPages || null } as UserDocument
+      }
+
+      // 5. Insert extracted text into user_document_pages
+      onProgress?.('Indexing pages...')
+      for (let i = 0; i < pages.length; i += 50) {
+        const batch = pages.slice(i, i + 50).map((p) => ({
+          user_id: userId,
+          document_id: doc.id,
+          file_name: fileName,
+          page_number: p.page,
+          text_content: p.text,
+        }))
+        const { error: textErr } = await supabase
+          .from('user_document_pages')
+          .insert(batch)
+        if (textErr) console.warn('Text insert batch failed:', textErr.message)
+      }
+    } else {
+      totalPages = 1
     }
 
     // 6. Update status to ready

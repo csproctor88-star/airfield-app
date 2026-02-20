@@ -539,8 +539,9 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
     // Reset file input
     if (fileInputRef.current) fileInputRef.current.value = ''
 
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
-      setError('Only PDF files are supported.')
+    const ext = file.name.toLowerCase().split('.').pop()
+    if (!['pdf', 'jpg', 'jpeg', 'png'].includes(ext || '')) {
+      setError('Only PDF, JPG, and PNG files are supported.')
       return
     }
     if (file.size > 50 * 1024 * 1024) {
@@ -642,11 +643,11 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
           }}
         >
           <Upload size={12} />
-          {uploading ? uploadStage || 'Uploading...' : 'Upload PDF'}
+          {uploading ? uploadStage || 'Uploading...' : 'Upload File'}
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,application/pdf"
+            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
             style={{ display: 'none' }}
             onChange={handleUpload}
             disabled={uploading}

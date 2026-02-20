@@ -126,7 +126,7 @@ $$;
 --   Name: user-uploads
 --   Public: No
 --   File size limit: 50MB
---   Allowed MIME types: application/pdf
+--   Allowed MIME types: application/pdf, image/jpeg, image/png
 
 CREATE POLICY "Users can upload to own folder"
   ON storage.objects FOR INSERT
