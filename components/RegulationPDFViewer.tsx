@@ -7,6 +7,7 @@ import 'react-pdf/dist/Page/TextLayer.css'
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
 import { ExternalLink, ArrowLeft, ZoomIn, ZoomOut, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { idbGet, idbSet, STORE_BLOBS } from '@/lib/idb'
 
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"
 
@@ -229,52 +230,70 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
       setSearchTerm('')
       setMatches([])
       setPageTexts([])
-try {
+
+      // Helper: once we have an ArrayBuffer, set up viewer + text extraction
+      function presentPdf(arrayBuffer: ArrayBuffer) {
+        if (cancelled) return
+        setMasterBuffer(arrayBuffer)
+
+        if (getDefaultViewMode() === 'native') {
+          if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
+          const nativeUrl = URL.createObjectURL(new Blob([arrayBuffer.slice(0)], { type: 'application/pdf' }))
+          blobUrlRef.current = nativeUrl
+          setBlobUrl(nativeUrl)
+          setViewMode('native')
+        } else {
+          setViewMode('react-pdf')
+        }
+
+        // Extract text in background for search
+        setTextExtracting(true)
+        pdfjs.getDocument({ data: new Uint8Array(arrayBuffer.slice(0)) }).promise
+          .then(async (pdf) => {
+            const texts: { page: number; text: string }[] = []
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const page = await pdf.getPage(i)
+              const content = await page.getTextContent()
+              texts.push({ page: i, text: content.items.map((item: any) => item.str).join(' ') })
+            }
+            if (!cancelled) setPageTexts(texts)
+          })
+          .catch((e) => console.warn('Text extraction failed:', e))
+          .finally(() => { if (!cancelled) setTextExtracting(false) })
+      }
+
+      try {
+        // 1. Try IndexedDB cache first (works offline)
+        let cached = await idbGet<ArrayBuffer | Blob>(STORE_BLOBS, fileName)
+        if (cached) {
+          const arrayBuffer = cached instanceof Blob ? await cached.arrayBuffer() : cached
+          presentPdf(arrayBuffer)
+          setLoading(false)
+          return
+        }
+
+        // 2. Fall back to Supabase download (requires network)
         if (supabase) {
           const { data, error: dlErr } = await supabase.storage
             .from(BUCKET_NAME)
             .download(fileName)
           if (!dlErr && data && !cancelled) {
             const arrayBuffer = await data.arrayBuffer()
-            setMasterBuffer(arrayBuffer)
-
-            // Native mode — create blob URL
-            if (getDefaultViewMode() === 'native') {
-              if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
-              const nativeUrl = URL.createObjectURL(new Blob([arrayBuffer.slice(0)], { type: 'application/pdf' }))
-              blobUrlRef.current = nativeUrl
-              setBlobUrl(nativeUrl)
-              setViewMode('native')
-            } else {
-              setViewMode('react-pdf')
-            }
-
-            // Extract text in background for search
-            setTextExtracting(true)
-            try {
-              const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer.slice(0)) })
-              const pdf = await loadingTask.promise
-              const texts: { page: number; text: string }[] = []
-              for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i)
-                const content = await page.getTextContent()
-                const text = content.items.map((item: any) => item.str).join(' ')
-                texts.push({ page: i, text })
-              }
-              if (!cancelled) setPageTexts(texts)
-            } catch (e) {
-              console.warn('Text extraction failed:', e)
-            } finally {
-              if (!cancelled) setTextExtracting(false)
-            }
-
+            // Cache to IndexedDB for offline use
+            idbSet(STORE_BLOBS, fileName, arrayBuffer).catch((e) =>
+              console.warn('Failed to cache PDF to IndexedDB:', e)
+            )
+            presentPdf(arrayBuffer)
             setLoading(false)
             return
           }
         }
 
+        // 3. Nothing worked
         if (!cancelled) {
-          if (url) {
+          if (!navigator.onLine) {
+            setError('You are offline and this PDF has not been cached yet. Connect to WiFi and view this document once, or use "Cache All" in the PDF Library to pre-download all regulations.')
+          } else if (url) {
             setError('PDF not found in storage. Use "Open External" to view this document, or ask an admin to run the download script.')
           } else {
             setError('PDF not available. This regulation has no external URL and is not yet in storage. Ask an admin to upload it.')
