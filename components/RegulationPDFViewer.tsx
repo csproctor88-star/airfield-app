@@ -227,6 +227,8 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
       setMatches([])
       setPageTexts([])
   console.log('Looking for:', fileName, '| regId:', regId)
+      const { data: { session } } = await supabase.auth.getSession()
+console.log('Auth:', session ? session.user.email : 'NO SESSION')
       try {
         if (supabase) {
           const { data, error: dlErr } = await supabase.storage
