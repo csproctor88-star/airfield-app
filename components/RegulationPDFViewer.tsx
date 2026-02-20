@@ -225,7 +225,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
       setSearchTerm('')
       setMatches([])
       setPageTexts([])
-
+  console.log('Looking for:', fileName, '| regId:', regId)
       try {
         if (supabase) {
           const { data, error: dlErr } = await supabase.storage
