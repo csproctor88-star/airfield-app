@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
 import { ExternalLink, ArrowLeft, ZoomIn, ZoomOut, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -180,6 +181,8 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
   const [masterBuffer, setMasterBuffer] = useState<ArrayBuffer | null>(null)
   const [numPages, setNumPages] = useState<number | null>(null)
   const [scale, setScale] = useState(isMobileDevice() ? 0.8 : 1.0)
+  const transformRef = useRef<any>(null)
+  const [touchScale, setTouchScale] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -428,15 +431,28 @@ try {
           {viewMode === 'react-pdf' && (
             <>
               <div style={dividerStyle} />
-              <button onClick={() => setScale(s => Math.max(0.4, s - 0.2))} style={ctrlBtnStyle}>
+              <button onClick={() => {
+                if (transformRef.current) transformRef.current.zoomOut(0.3)
+                else setScale(s => Math.max(0.4, s - 0.2))
+              }} style={ctrlBtnStyle}>
                 <ZoomOut size={12} />
               </button>
               <span style={{ fontSize: 10, color: '#64748B', minWidth: 36, textAlign: 'center', fontFamily: 'monospace' }}>
-                {Math.round(scale * 100)}%
+                {Math.round(scale * touchScale * 100)}%
               </span>
-              <button onClick={() => setScale(s => Math.min(3, s + 0.2))} style={ctrlBtnStyle}>
+              <button onClick={() => {
+                if (transformRef.current) transformRef.current.zoomIn(0.3)
+                else setScale(s => Math.min(3, s + 0.2))
+              }} style={ctrlBtnStyle}>
                 <ZoomIn size={12} />
               </button>
+              {touchScale > 1.05 && (
+                <button
+                  onClick={() => transformRef.current && transformRef.current.resetTransform()}
+                  style={{ ...ctrlBtnStyle, fontSize: 10, width: 'auto', padding: '0 8px', fontFamily: 'monospace' }}
+                  title="Reset zoom"
+                >1:1</button>
+              )}
             </>
           )}
 
@@ -579,26 +595,45 @@ try {
             alignItems: 'center', padding: 12, background: '#0A101C', minHeight: 0,
           }}
         >
-          <Document
-            file={fileData}
-            onLoadSuccess={({ numPages: n }) => setNumPages(n)}
-            onLoadError={(err) => setError(`PDF render failed: ${err.message}`)}
-            loading={
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
-                <Spinner />
-              </div>
-            }
+          <TransformWrapper
+            ref={transformRef}
+            initialScale={1}
+            minScale={0.5}
+            maxScale={5}
+            centerOnInit={false}
+            limitToBounds={false}
+            wheel={{ disabled: true }}
+            doubleClick={{ mode: 'zoomIn', step: 0.7 }}
+            pinch={{ step: 5 }}
+            panning={{ disabled: false, velocityDisabled: true }}
+            onTransformed={(_, state) => { setTouchScale(state.scale) }}
           >
-            {numPages && Array.from({ length: numPages }, (_, i) => (
-              <LazyPage
-                key={`page-${i + 1}`}
-                pageNumber={i + 1}
-                scale={scale}
-                searchTerm={searchTerm}
-                scrollRoot={viewerRef}
-              />
-            ))}
-          </Document>
+            <TransformComponent
+              wrapperStyle={{ width: '100%', maxHeight: '100%', overflow: 'visible' }}
+              contentStyle={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+            >
+              <Document
+                file={fileData}
+                onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+                onLoadError={(err) => setError(`PDF render failed: ${err.message}`)}
+                loading={
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+                    <Spinner />
+                  </div>
+                }
+              >
+                {numPages && Array.from({ length: numPages }, (_, i) => (
+                  <LazyPage
+                    key={`page-${i + 1}`}
+                    pageNumber={i + 1}
+                    scale={scale}
+                    searchTerm={searchTerm}
+                    scrollRoot={viewerRef}
+                  />
+                ))}
+              </Document>
+            </TransformComponent>
+          </TransformWrapper>
         </div>
       )}
     </div>

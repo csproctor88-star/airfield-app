@@ -38,6 +38,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
 // ─── Worker — local file from public/ ────────────────────────
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
@@ -413,6 +414,8 @@ export default function PDFLibrary() {
 
   const searchInputRef = useRef(null);
   const viewerBodyRef = useRef(null);
+  const transformRef = useRef(null);
+  const [touchScale, setTouchScale] = useState(1);
 
   // ── Request persistent storage (prevent IndexedDB eviction) ──
   useEffect(() => {
@@ -690,6 +693,7 @@ export default function PDFLibrary() {
     setViewingFile(null); setNumPages(null); setCurrentPage(1);
     setPdfError(null); setViewMode(getDefaultViewMode);
     setDocSearchOpen(false); setDocSearchTerm(""); setDocMatches([]); setDocPageTexts([]);
+    setTouchScale(1);
   }, []);
 
   // ── Toggle view mode ──
@@ -917,9 +921,20 @@ export default function PDFLibrary() {
                 {viewMode === "react-pdf" && (
                   <>
                     <div style={S.div} />
-                    <button onClick={() => setScale((s) => Math.max(0.4, s - 0.2))} style={S.cb}>&minus;</button>
-                    <span style={S.zoom}>{Math.round(scale * 100)}%</span>
-                    <button onClick={() => setScale((s) => Math.min(3, s + 0.2))} style={S.cb}>+</button>
+                    <button onClick={() => {
+                      if (transformRef.current) transformRef.current.zoomOut(0.3);
+                      else setScale((s) => Math.max(0.4, s - 0.2));
+                    }} style={S.cb}>&minus;</button>
+                    <span style={S.zoom}>{Math.round(scale * touchScale * 100)}%</span>
+                    <button onClick={() => {
+                      if (transformRef.current) transformRef.current.zoomIn(0.3);
+                      else setScale((s) => Math.min(3, s + 0.2));
+                    }} style={S.cb}>+</button>
+                    {touchScale > 1.05 && (
+                      <button onClick={() => transformRef.current && transformRef.current.resetTransform()}
+                        style={Object.assign({}, S.cb, { fontSize: 11, width: "auto", padding: "0 8px" })}
+                        title="Reset zoom">1:1</button>
+                    )}
                   </>
                 )}
               </div>
@@ -971,14 +986,33 @@ export default function PDFLibrary() {
               )}
 
               {!pdfLoading && !pdfError && viewMode === "react-pdf" && fileData && (
-                <Document file={fileData} onLoadSuccess={onDocumentLoadSuccess} onLoadError={onDocumentLoadError}
-                  loading={<div style={S.ctr}><span style={S.spin} /></div>}>
-                  {numPages && Array.from({ length: numPages }, function(_, i) {
-                    return (
-                      <LazyPage key={"p" + (i + 1)} pageNumber={i + 1} scale={scale} searchTerm={docSearchTerm} />
-                    );
-                  })}
-                </Document>
+                <TransformWrapper
+                  ref={transformRef}
+                  initialScale={1}
+                  minScale={0.5}
+                  maxScale={5}
+                  centerOnInit={false}
+                  limitToBounds={false}
+                  wheel={{ disabled: true }}
+                  doubleClick={{ mode: "zoomIn", step: 0.7 }}
+                  pinch={{ step: 5 }}
+                  panning={{ disabled: false, velocityDisabled: true }}
+                  onTransformed={function(_, state) { setTouchScale(state.scale); }}
+                >
+                  <TransformComponent
+                    wrapperStyle={{ width: "100%", maxHeight: "100%", overflow: "visible" }}
+                    contentStyle={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}
+                  >
+                    <Document file={fileData} onLoadSuccess={onDocumentLoadSuccess} onLoadError={onDocumentLoadError}
+                      loading={<div style={S.ctr}><span style={S.spin} /></div>}>
+                      {numPages && Array.from({ length: numPages }, function(_, i) {
+                        return (
+                          <LazyPage key={"p" + (i + 1)} pageNumber={i + 1} scale={scale} searchTerm={docSearchTerm} />
+                        );
+                      })}
+                    </Document>
+                  </TransformComponent>
+                </TransformWrapper>
               )}
             </div>
           </div>
