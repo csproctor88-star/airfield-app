@@ -228,7 +228,6 @@ export default function RegulationPDFViewer({ regId, title, url, onClose }: Regu
       setPageTexts([])
 try {
         if (supabase) {
-          const { data: { session } } = await supabase.auth.getSession())
           const { data, error: dlErr } = await supabase.storage
             .from(BUCKET_NAME)
             .download(fileName)
