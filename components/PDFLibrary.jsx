@@ -124,8 +124,6 @@ chain.upsert = async (rows, opts = {}) => {
         return { data: null, error: null };
       };
       chain.insert = async (rows) => {
-          console.log('Insert headers:', JSON.stringify(headers))
-  console.log('Insert to:', `${url}/rest/v1/${table}`)
         const res = await fetch(`${url}/rest/v1/${table}`, {
           method: "POST",
           headers: { ...headers, "Content-Type": "application/json" },
@@ -161,8 +159,6 @@ chain.upsert = async (rows, opts = {}) => {
 }
 
 const supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-console.log('Supabase URL:', SUPABASE_URL)
-console.log('Key starts with:', SUPABASE_ANON_KEY?.substring(0, 10))
 // ─── IndexedDB ───────────────────────────────────────────────
 const DB_NAME = "aoms_pdf_cache";
 const DB_VERSION = 3;
