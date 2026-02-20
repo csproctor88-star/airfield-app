@@ -521,8 +521,6 @@ export default function PDFLibrary() {
   // Supabase + IndexedDB. One-time operation.
   // ═══════════════════════════════════════════════════════════
   const extractAll = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-console.log('Auth:', session ? session.user.email : 'NO SESSION')
     if (extracting) return;
     setExtracting(true);
     const toProcess = files.filter((f) => !extractedKeys.has(f.name));
