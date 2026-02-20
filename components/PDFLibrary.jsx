@@ -112,15 +112,14 @@ function createSupabaseClient(url, key) {
         },
       };
       // Upsert support
-      chain.upsert = async (rows, opts = {}) => {
-        const prefer = opts.onConflict
-          ? `resolution=merge-duplicates,on_conflict=${opts.onConflict}`
-          : "resolution=merge-duplicates";
-        const res = await fetch(`${url}/rest/v1/${table}`, {
-          method: "POST",
-          headers: { ...headers, "Content-Type": "application/json", Prefer: prefer },
-          body: JSON.stringify(Array.isArray(rows) ? rows : [rows]),
-        });
+chain.upsert = async (rows, opts = {}) => {
+  let endpoint = `${url}/rest/v1/${table}`;
+  if (opts.onConflict) endpoint += `?on_conflict=${opts.onConflict}`;
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates" },
+    body: JSON.stringify(Array.isArray(rows) ? rows : [rows]),
+  });
         if (!res.ok) return { data: null, error: { message: res.statusText } };
         return { data: null, error: null };
       };
