@@ -966,7 +966,7 @@ export default function PDFLibrary() {
               {pdfError && <div style={S.ctr}><div style={S.eBox}><strong style={{ color: "#EF4444" }}>PDF Unavailable</strong><p style={{ margin: "8px 0 0", fontSize: 13 }}>{pdfError}</p></div></div>}
 
               {!pdfLoading && !pdfError && viewMode === "native" && blobUrl && (
-                <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
+<div style={{ flex: 1, position: 'relative', minHeight: 0, width: '100%' }}>
                   <iframe src={blobUrl} title={viewingFile}
                     style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none", background: "#FFF" }} />
                 </div>
