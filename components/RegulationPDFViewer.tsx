@@ -29,11 +29,10 @@ function isMobileDevice(): boolean {
 
 function sanitizeFileName(regId: string): string {
   return regId
-    .replace(/[/\\:*?"<>|]/g, '-')
-    .replace(/,\s*/g, '-')
-    .replace(/\s+/g, '_')
-    .replace(/-+/g, '-')
     .toLowerCase()
+    .replace(/,\s*/g, '-')
+    .replace(/\./g, '-')
+    .replace(/\s+/g, '-')
 }
 
 function escapeHtml(str: string): string {
