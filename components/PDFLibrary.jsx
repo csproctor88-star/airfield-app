@@ -159,7 +159,8 @@ chain.upsert = async (rows, opts = {}) => {
 }
 
 const supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+console.log('Supabase URL:', SUPABASE_URL)
+console.log('Key starts with:', SUPABASE_ANON_KEY?.substring(0, 10))
 // ─── IndexedDB ───────────────────────────────────────────────
 const DB_NAME = "aoms_pdf_cache";
 const DB_VERSION = 3;
