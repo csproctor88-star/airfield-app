@@ -72,9 +72,13 @@ export const userDocService = {
 
     // 1. Upload to Storage
     onProgress?.('Uploading...')
+    // First remove any existing file at this path (avoids needing x-upsert header
+    // which can trigger CORS preflight failures on some Supabase configurations)
+    await supabase.storage.from(BUCKET).remove([storagePath])
+
     const { error: upErr } = await supabase.storage
       .from(BUCKET)
-      .upload(storagePath, file, { upsert: true, contentType: file.type })
+      .upload(storagePath, file, { contentType: file.type })
     if (upErr) throw new Error(`Upload failed: ${upErr.message}`)
 
     // 2. Read the file as ArrayBuffer for extraction + caching
