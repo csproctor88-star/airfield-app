@@ -416,6 +416,15 @@ export default function PDFLibrary() {
   const searchInputRef = useRef(null);
   const viewerBodyRef = useRef(null);
 
+  // ── Request persistent storage (prevent IndexedDB eviction) ──
+  useEffect(() => {
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().then((granted) => {
+        console.log("Persistent storage:", granted ? "granted" : "denied");
+      });
+    }
+  }, []);
+
   // ── Online/offline ──
   useEffect(() => {
     const on = () => setIsOnline(true);
