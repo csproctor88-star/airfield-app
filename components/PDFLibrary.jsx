@@ -996,7 +996,7 @@ export default function PDFLibrary() {
                   wheel={{ disabled: true }}
                   doubleClick={{ mode: "zoomIn", step: 0.7 }}
                   pinch={{ step: 5 }}
-                  panning={{ disabled: false, velocityDisabled: true }}
+                  panning={{ disabled: touchScale <= 1, velocityDisabled: true }}
                   onTransformed={function(_, state) { setTouchScale(state.scale); }}
                 >
                   <TransformComponent
