@@ -124,6 +124,8 @@ chain.upsert = async (rows, opts = {}) => {
         return { data: null, error: null };
       };
       chain.insert = async (rows) => {
+          console.log('Insert headers:', JSON.stringify(headers))
+  console.log('Insert to:', `${url}/rest/v1/${table}`)
         const res = await fetch(`${url}/rest/v1/${table}`, {
           method: "POST",
           headers: { ...headers, "Content-Type": "application/json" },
