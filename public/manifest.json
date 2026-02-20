@@ -1,13 +1,24 @@
 {
-  "name": "Airfield OPS Management Suite",
-  "short_name": "Airfield OPS",
-  "description": "Airfield management operations for 127th Wing",
+  "name": "AOMS - Airfield Operations Management Suite",
+  "short_name": "AOMS",
+  "description": "Airfield operations management with offline regulation access",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0F172A",
   "theme_color": "#0EA5E9",
+  "orientation": "any",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }
