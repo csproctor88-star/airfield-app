@@ -31,8 +31,9 @@ function sanitizeFileName(regId: string): string {
   return regId
     .toLowerCase()
     .replace(/,\s*/g, '-')
-    .replace(/\./g, '-')
+    .replace(/\.\s+/g, '-')
     .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')       // collapse double hyphens
 }
 
 function escapeHtml(str: string): string {
