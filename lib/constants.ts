@@ -157,7 +157,7 @@ export const AIRFIELD_INSPECTION_SECTIONS: InspectionSection[] = [
       { id: 'af-1', itemNumber: 1, item: "Primary Surface — 1000' from runway centerline" },
       { id: 'af-2', itemNumber: 2, item: 'Transitional Slope (7:1)' },
       { id: 'af-3', itemNumber: 3, item: "Runway Clear Zones — 3000'L x 3000'W" },
-      { id: 'af-4', itemNumber: 4, item: "Graded Area — 1000'L x 1000'W" },
+      { id: 'af-4', itemNumber: 4, item: "Graded Portion of Clear Zone — 1000'L x 3000'W" },
       { id: 'af-5', itemNumber: 5, item: 'Approach / Departure Surface (50:1)' },
       { id: 'af-6', itemNumber: 6, item: "Taxiway — 200' from centerline" },
       { id: 'af-7', itemNumber: 7, item: "Apron — 110' from boundary marking" },
