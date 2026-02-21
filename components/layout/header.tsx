@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { RefreshCw } from 'lucide-react'
 
-// Header matching prototype: gradient bg, logo, "AIRFIELD OPS" gradient text, sync + status dot
+// Header: gradient bg, logo, "GLIDEPATH" gradient text, sync + status dot
 
 export function Header() {
   const [syncing, setSyncing] = useState(false)
@@ -53,7 +53,7 @@ export function Header() {
                 WebkitTextFillColor: 'transparent',
               }}
             >
-              AIRFIELD OPS
+              GLIDEPATH
             </div>
             <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.12em' }}>
               SELFRIDGE ANGB &bull; KMTC

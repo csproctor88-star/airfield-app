@@ -50,7 +50,7 @@ async function downloadPdf(url: string): Promise<{ buffer: ArrayBuffer; size: nu
   try {
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'AOMS-RegDownloader/1.0 (Airfield OPS Management Suite)',
+        'User-Agent': 'Glidepath-RegDownloader/1.0',
       },
       redirect: 'follow',
     })

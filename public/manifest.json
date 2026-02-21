@@ -1,7 +1,7 @@
 {
-  "name": "Airfield OPS Management Suite",
-  "short_name": "Airfield OPS",
-  "description": "Airfield management operations for 127th Wing",
+  "name": "Glidepath",
+  "short_name": "Glidepath",
+  "description": "Glidepath — Airfield operations suite for 127th Wing",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0F172A",

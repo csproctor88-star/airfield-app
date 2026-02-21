@@ -3,8 +3,8 @@ import { Toaster } from 'sonner'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Airfield OPS | 127th Wing',
-  description: 'Airfield Operations Management Suite — Selfridge ANGB (KMTC)',
+  title: 'Glidepath | 127th Wing',
+  description: 'Glidepath — Airfield Operations Suite — Selfridge ANGB (KMTC)',
   manifest: '/manifest.json',
 }
 

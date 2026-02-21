@@ -64,10 +64,10 @@ export default function MorePage() {
         style={{ marginTop: 8, textAlign: 'center', padding: 16 }}
       >
         <div style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8' }}>
-          Airfield OPS Management Suite
+          Glidepath
         </div>
         <div style={{ fontSize: 10, color: '#64748B' }}>
-          v1.0.0 &bull; Phases 1–8 &bull; 127th Wing
+          v2.1.0 &bull; 127th Wing
         </div>
       </div>
     </div>
