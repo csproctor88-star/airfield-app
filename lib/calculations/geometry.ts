@@ -239,6 +239,66 @@ export function generatePrimarySurfacePolygon(rwy: RunwayGeometry): [number, num
   ]
 }
 
+/** Generate clear zone rectangles (3,000 ft x 3,000 ft) at each runway end. */
+export function generateClearZonePolygons(rwy: RunwayGeometry): {
+  end1: [number, number][]
+  end2: [number, number][]
+} {
+  const halfWidth = 1500
+  const length = 3000
+  const perpL = normalizeBearing(rwy.bearingDeg - 90)
+  const perpR = normalizeBearing(rwy.bearingDeg + 90)
+  const revBearing = normalizeBearing(rwy.bearingDeg + 180)
+
+  function buildRect(end: LatLon, outwardBearing: number): [number, number][] {
+    const far = offsetPoint(end, outwardBearing, length)
+    const p1 = offsetPoint(end, perpL, halfWidth)
+    const p2 = offsetPoint(end, perpR, halfWidth)
+    const p3 = offsetPoint(far, perpR, halfWidth)
+    const p4 = offsetPoint(far, perpL, halfWidth)
+    return [
+      [p1.lon, p1.lat], [p2.lon, p2.lat],
+      [p3.lon, p3.lat], [p4.lon, p4.lat],
+      [p1.lon, p1.lat],
+    ]
+  }
+
+  return {
+    end1: buildRect(rwy.end1, revBearing),
+    end2: buildRect(rwy.end2, rwy.bearingDeg),
+  }
+}
+
+/** Generate graded area rectangles (1,000 ft x 3,000 ft wide) at each runway end. */
+export function generateGradedAreaPolygons(rwy: RunwayGeometry): {
+  end1: [number, number][]
+  end2: [number, number][]
+} {
+  const halfWidth = 1500
+  const length = 1000
+  const perpL = normalizeBearing(rwy.bearingDeg - 90)
+  const perpR = normalizeBearing(rwy.bearingDeg + 90)
+  const revBearing = normalizeBearing(rwy.bearingDeg + 180)
+
+  function buildRect(end: LatLon, outwardBearing: number): [number, number][] {
+    const far = offsetPoint(end, outwardBearing, length)
+    const p1 = offsetPoint(end, perpL, halfWidth)
+    const p2 = offsetPoint(end, perpR, halfWidth)
+    const p3 = offsetPoint(far, perpR, halfWidth)
+    const p4 = offsetPoint(far, perpL, halfWidth)
+    return [
+      [p1.lon, p1.lat], [p2.lon, p2.lat],
+      [p3.lon, p3.lat], [p4.lon, p4.lat],
+      [p1.lon, p1.lat],
+    ]
+  }
+
+  return {
+    end1: buildRect(rwy.end1, revBearing),
+    end2: buildRect(rwy.end2, rwy.bearingDeg),
+  }
+}
+
 /** Generate one approach-departure trapezoid for a given runway end. */
 function generateApproachTrapezoid(
   rwy: RunwayGeometry,

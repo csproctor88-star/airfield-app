@@ -18,6 +18,22 @@ import {
 // ---------------------------------------------------------------------------
 
 export const IMAGINARY_SURFACES = {
+  clear_zone: {
+    name: 'Runway Clear Zone',
+    criteria: { halfWidth: 1500, length: 3000, maxHeight: 0 },
+    ufcRef: 'UFC 3-260-01, Chapter 3 & Appendix B, Section 13 (Runway Clear Zone)',
+    ufcCriteria: 'The clear zone must remain essentially obstruction free. No fixed or non-frangible objects permitted within {length} ft x {width} ft from each runway end unless meeting B13 permissible deviation criteria.',
+    description: 'Obstruction-free zone extending 3,000 ft from each runway threshold, 3,000 ft wide.',
+    color: '#EC4899',
+  },
+  graded_area: {
+    name: 'Graded Area',
+    criteria: { halfWidth: 1500, length: 1000, maxHeight: 0 },
+    ufcRef: 'UFC 3-260-01, Chapter 3 & Appendix B, Section 13 (Graded Portion of Clear Zone)',
+    ufcCriteria: 'The graded portion ({length} ft from runway end, {width} ft wide) must be rough graded and obstruction free. No above-ground fixed obstacles, structures, rigid poles, towers, or non-frangible equipment permitted.',
+    description: 'Rough-graded, obstruction-free portion of the clear zone extending 1,000 ft from each threshold.',
+    color: '#F43F5E',
+  },
   primary: {
     name: 'Primary Surface',
     criteria: { halfWidth: 1000, extension: 200, maxHeight: 0 },
@@ -193,6 +209,63 @@ export function evaluateObstruction(
   const stadiumDist = distanceFromStadiumCenter(point, runway)
 
   const surfaces: SurfaceEvaluation[] = []
+
+  // Helper: along-track distances from each threshold (positive = beyond threshold, away from runway)
+  const halfLength = runway.lengthFt / 2
+  const beyondEnd1 = Math.max(0, -(relation.alongTrackFromMidpoint + halfLength))
+  const beyondEnd2 = Math.max(0, relation.alongTrackFromMidpoint - halfLength)
+
+  // --- Clear Zone (both ends) ---
+  {
+    const c = IMAGINARY_SURFACES.clear_zone.criteria
+    const withinEnd1 = beyondEnd1 > 0 && beyondEnd1 <= c.length && relation.distanceFromCenterline <= c.halfWidth
+    const withinEnd2 = beyondEnd2 > 0 && beyondEnd2 <= c.length && relation.distanceFromCenterline <= c.halfWidth
+    const isWithin = withinEnd1 || withinEnd2
+    const maxAGL = c.maxHeight // 0 ft
+    const maxMSL = airfieldElev + maxAGL
+    const violated = isWithin && obstructionTopMSL > maxMSL
+    surfaces.push({
+      surfaceKey: 'clear_zone',
+      surfaceName: IMAGINARY_SURFACES.clear_zone.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: maxAGL,
+      maxAllowableHeightMSL: maxMSL,
+      obstructionTopMSL,
+      violated,
+      penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
+      ufcReference: IMAGINARY_SURFACES.clear_zone.ufcRef,
+      ufcCriteria: IMAGINARY_SURFACES.clear_zone.ufcCriteria
+        .replace('{length}', String(c.length).replace(/\B(?=(\d{3})+(?!\d))/g, ','))
+        .replace('{width}', String(c.halfWidth * 2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
+      color: IMAGINARY_SURFACES.clear_zone.color,
+    })
+  }
+
+  // --- Graded Area (both ends) ---
+  {
+    const c = IMAGINARY_SURFACES.graded_area.criteria
+    const withinEnd1 = beyondEnd1 > 0 && beyondEnd1 <= c.length && relation.distanceFromCenterline <= c.halfWidth
+    const withinEnd2 = beyondEnd2 > 0 && beyondEnd2 <= c.length && relation.distanceFromCenterline <= c.halfWidth
+    const isWithin = withinEnd1 || withinEnd2
+    const maxAGL = c.maxHeight // 0 ft
+    const maxMSL = airfieldElev + maxAGL
+    const violated = isWithin && obstructionTopMSL > maxMSL
+    surfaces.push({
+      surfaceKey: 'graded_area',
+      surfaceName: IMAGINARY_SURFACES.graded_area.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: maxAGL,
+      maxAllowableHeightMSL: maxMSL,
+      obstructionTopMSL,
+      violated,
+      penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
+      ufcReference: IMAGINARY_SURFACES.graded_area.ufcRef,
+      ufcCriteria: IMAGINARY_SURFACES.graded_area.ufcCriteria
+        .replace('{length}', String(c.length).replace(/\B(?=(\d{3})+(?!\d))/g, ','))
+        .replace('{width}', String(c.halfWidth * 2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
+      color: IMAGINARY_SURFACES.graded_area.color,
+    })
+  }
 
   // --- 1. Primary Surface ---
   {

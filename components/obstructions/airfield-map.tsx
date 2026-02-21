@@ -10,6 +10,8 @@ import {
   getRunwayGeometry,
   generateRunwayPolygon,
   generatePrimarySurfacePolygon,
+  generateClearZonePolygons,
+  generateGradedAreaPolygons,
   generateApproachDeparturePolygons,
   generateStadiumPolygon,
   generateTransitionalPolygons,
@@ -30,7 +32,11 @@ const SURFACE_LAYERS = [
   { id: 'transitional-right', label: 'Transitional', color: IMAGINARY_SURFACES.transitional.color, opacity: 0.15 },
   { id: 'approach-end1', label: 'Approach-Departure', color: IMAGINARY_SURFACES.approach_departure.color, opacity: 0.14 },
   { id: 'approach-end2', label: 'Approach-Departure', color: IMAGINARY_SURFACES.approach_departure.color, opacity: 0.14 },
+  { id: 'clear-zone-end1', label: 'Clear Zone', color: IMAGINARY_SURFACES.clear_zone.color, opacity: 0.16 },
+  { id: 'clear-zone-end2', label: 'Clear Zone', color: IMAGINARY_SURFACES.clear_zone.color, opacity: 0.16 },
   { id: 'primary-surface', label: 'Primary Surface', color: IMAGINARY_SURFACES.primary.color, opacity: 0.18 },
+  { id: 'graded-area-end1', label: 'Graded Area', color: IMAGINARY_SURFACES.graded_area.color, opacity: 0.2 },
+  { id: 'graded-area-end2', label: 'Graded Area', color: IMAGINARY_SURFACES.graded_area.color, opacity: 0.2 },
   { id: 'runway', label: 'Runway', color: '#FFFFFF', opacity: 0.5 },
 ]
 
@@ -96,12 +102,38 @@ function buildSurfaceGeoJSON(rwy: RunwayGeometry) {
     geometry: { type: 'Polygon', coordinates: [approach.end2] },
   })
 
+  // Clear zones (3,000 ft x 3,000 ft at each end)
+  const clearZones = generateClearZonePolygons(rwy)
+  features.push({
+    type: 'Feature',
+    properties: { id: 'clear-zone-end1' },
+    geometry: { type: 'Polygon', coordinates: [clearZones.end1] },
+  })
+  features.push({
+    type: 'Feature',
+    properties: { id: 'clear-zone-end2' },
+    geometry: { type: 'Polygon', coordinates: [clearZones.end2] },
+  })
+
   // Primary surface
   const primary = generatePrimarySurfacePolygon(rwy)
   features.push({
     type: 'Feature',
     properties: { id: 'primary-surface' },
     geometry: { type: 'Polygon', coordinates: [primary] },
+  })
+
+  // Graded areas (1,000 ft x 3,000 ft at each end)
+  const gradedAreas = generateGradedAreaPolygons(rwy)
+  features.push({
+    type: 'Feature',
+    properties: { id: 'graded-area-end1' },
+    geometry: { type: 'Polygon', coordinates: [gradedAreas.end1] },
+  })
+  features.push({
+    type: 'Feature',
+    properties: { id: 'graded-area-end2' },
+    geometry: { type: 'Polygon', coordinates: [gradedAreas.end2] },
   })
 
   // Runway pavement
@@ -340,6 +372,8 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
         }}
       >
         {[
+          { color: IMAGINARY_SURFACES.graded_area.color, label: 'Graded Area' },
+          { color: IMAGINARY_SURFACES.clear_zone.color, label: 'Clear Zone' },
           { color: IMAGINARY_SURFACES.primary.color, label: 'Primary' },
           { color: IMAGINARY_SURFACES.approach_departure.color, label: 'Approach/Departure' },
           { color: IMAGINARY_SURFACES.transitional.color, label: 'Transitional' },
