@@ -662,52 +662,76 @@ function ObstructionsContent() {
             <span className="section-label">Surface Analysis</span>
             {analysis.surfaces
               .filter((s) => s.isWithinBounds)
-              .map((s) => (
-                <div
-                  key={s.surfaceKey}
-                  style={{
-                    background: 'rgba(4,7,12,0.6)',
-                    border: `1px solid ${s.violated ? 'rgba(239,68,68,0.3)' : 'rgba(56,189,248,0.06)'}`,
-                    borderRadius: 8,
-                    padding: 10,
-                    marginBottom: 6,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: 2,
-                        background: s.color,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#F1F5F9', flex: 1 }}>
-                      {s.surfaceName}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 800,
-                        padding: '2px 6px',
-                        borderRadius: 4,
-                        background: s.violated ? '#EF444422' : '#22C55E22',
-                        color: s.violated ? '#EF4444' : '#22C55E',
-                      }}
-                    >
-                      {s.violated ? `VIOLATION (${s.penetrationFt.toFixed(1)} ft)` : 'CLEAR'}
-                    </span>
+              .map((s) => {
+                const isLandUseZone = s.maxAllowableHeightMSL === -1
+                return (
+                  <div
+                    key={s.surfaceKey}
+                    style={{
+                      background: 'rgba(4,7,12,0.6)',
+                      border: `1px solid ${s.violated ? 'rgba(239,68,68,0.3)' : isLandUseZone ? `${s.color}33` : 'rgba(56,189,248,0.06)'}`,
+                      borderRadius: 8,
+                      padding: 10,
+                      marginBottom: 6,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 2,
+                          background: s.color,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#F1F5F9', flex: 1 }}>
+                        {s.surfaceName}
+                      </span>
+                      {isLandUseZone ? (
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 800,
+                            padding: '2px 6px',
+                            borderRadius: 4,
+                            background: `${s.color}22`,
+                            color: s.color,
+                          }}
+                        >
+                          WITHIN ZONE
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 800,
+                            padding: '2px 6px',
+                            borderRadius: 4,
+                            background: s.violated ? '#EF444422' : '#22C55E22',
+                            color: s.violated ? '#EF4444' : '#22C55E',
+                          }}
+                        >
+                          {s.violated ? `VIOLATION (${s.penetrationFt.toFixed(1)} ft)` : 'CLEAR'}
+                        </span>
+                      )}
+                    </div>
+                    {isLandUseZone ? (
+                      <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.5 }}>
+                        {s.ufcCriteria}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.4 }}>
+                        Max allowable: <strong style={{ color: '#CBD5E1' }}>{s.maxAllowableHeightMSL.toFixed(0)} ft MSL</strong>
+                        {' '}({s.maxAllowableHeightAGL.toFixed(0)} ft AGL)
+                      </div>
+                    )}
+                    <div style={{ fontSize: 10, color: '#64748B', marginTop: 4, fontStyle: 'italic' }}>
+                      {s.ufcReference}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.4 }}>
-                    Max allowable: <strong style={{ color: '#CBD5E1' }}>{s.maxAllowableHeightMSL.toFixed(0)} ft MSL</strong>
-                    {' '}({s.maxAllowableHeightAGL.toFixed(0)} ft AGL)
-                  </div>
-                  <div style={{ fontSize: 10, color: '#64748B', marginTop: 4, fontStyle: 'italic' }}>
-                    {s.ufcReference}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
 
             {/* Surfaces the point is NOT within */}
             {analysis.surfaces.filter((s) => !s.isWithinBounds).length > 0 && (

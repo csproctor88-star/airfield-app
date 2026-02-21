@@ -15,6 +15,7 @@ import {
   generateApproachDeparturePolygons,
   generateStadiumPolygon,
   generateTransitionalPolygons,
+  generateAPZPolygons,
 } from '@/lib/calculations/geometry'
 import { IMAGINARY_SURFACES } from '@/lib/calculations/obstructions'
 
@@ -24,6 +25,47 @@ type Props = {
   surfaceAtPoint: string | null
 }
 
+// Toggle group keys used for visibility state
+type ToggleKey =
+  | 'outer-horizontal'
+  | 'conical'
+  | 'inner-horizontal'
+  | 'transitional'
+  | 'approach-departure'
+  | 'primary-surface'
+  | 'clear-zone'
+  | 'graded-area'
+  | 'apz-i'
+  | 'apz-ii'
+
+// Map each toggle key to the Mapbox layer IDs it controls
+const TOGGLE_LAYER_IDS: Record<ToggleKey, string[]> = {
+  'outer-horizontal': ['fill-outer-horizontal', 'line-outer-horizontal'],
+  'conical': ['fill-conical', 'line-conical'],
+  'inner-horizontal': ['fill-inner-horizontal', 'line-inner-horizontal'],
+  'transitional': ['fill-transitional-left', 'line-transitional-left', 'fill-transitional-right', 'line-transitional-right'],
+  'approach-departure': ['fill-approach-end1', 'line-approach-end1', 'fill-approach-end2', 'line-approach-end2'],
+  'primary-surface': ['fill-primary-surface', 'line-primary-surface'],
+  'clear-zone': ['fill-clear-zone-end1', 'line-clear-zone-end1', 'fill-clear-zone-end2', 'line-clear-zone-end2'],
+  'graded-area': ['fill-graded-area-end1', 'line-graded-area-end1', 'fill-graded-area-end2', 'line-graded-area-end2'],
+  'apz-i': ['fill-apz-i-end1', 'line-apz-i-end1', 'fill-apz-i-end2', 'line-apz-i-end2'],
+  'apz-ii': ['fill-apz-ii-end1', 'line-apz-ii-end1', 'fill-apz-ii-end2', 'line-apz-ii-end2'],
+}
+
+// Legend items: label, color, toggleKey, default visibility
+const LEGEND_ITEMS: { label: string; color: string; toggleKey: ToggleKey; defaultOn: boolean }[] = [
+  { label: 'Outer Horizontal', color: IMAGINARY_SURFACES.outer_horizontal.color, toggleKey: 'outer-horizontal', defaultOn: true },
+  { label: 'Conical', color: IMAGINARY_SURFACES.conical.color, toggleKey: 'conical', defaultOn: true },
+  { label: 'Inner Horizontal', color: IMAGINARY_SURFACES.inner_horizontal.color, toggleKey: 'inner-horizontal', defaultOn: true },
+  { label: 'Transitional', color: IMAGINARY_SURFACES.transitional.color, toggleKey: 'transitional', defaultOn: true },
+  { label: 'Approach/Departure', color: IMAGINARY_SURFACES.approach_departure.color, toggleKey: 'approach-departure', defaultOn: true },
+  { label: 'Primary', color: IMAGINARY_SURFACES.primary.color, toggleKey: 'primary-surface', defaultOn: true },
+  { label: 'Clear Zone', color: IMAGINARY_SURFACES.clear_zone.color, toggleKey: 'clear-zone', defaultOn: false },
+  { label: 'Graded Portion of CZ', color: IMAGINARY_SURFACES.graded_area.color, toggleKey: 'graded-area', defaultOn: false },
+  { label: 'APZ I', color: IMAGINARY_SURFACES.apz_i.color, toggleKey: 'apz-i', defaultOn: false },
+  { label: 'APZ II', color: IMAGINARY_SURFACES.apz_ii.color, toggleKey: 'apz-ii', defaultOn: false },
+]
+
 const SURFACE_LAYERS = [
   { id: 'outer-horizontal', label: 'Outer Horizontal', color: IMAGINARY_SURFACES.outer_horizontal.color, opacity: 0.08 },
   { id: 'conical', label: 'Conical', color: IMAGINARY_SURFACES.conical.color, opacity: 0.1 },
@@ -32,6 +74,10 @@ const SURFACE_LAYERS = [
   { id: 'transitional-right', label: 'Transitional', color: IMAGINARY_SURFACES.transitional.color, opacity: 0.15 },
   { id: 'approach-end1', label: 'Approach-Departure', color: IMAGINARY_SURFACES.approach_departure.color, opacity: 0.14 },
   { id: 'approach-end2', label: 'Approach-Departure', color: IMAGINARY_SURFACES.approach_departure.color, opacity: 0.14 },
+  { id: 'apz-ii-end1', label: 'APZ II', color: IMAGINARY_SURFACES.apz_ii.color, opacity: 0.12 },
+  { id: 'apz-ii-end2', label: 'APZ II', color: IMAGINARY_SURFACES.apz_ii.color, opacity: 0.12 },
+  { id: 'apz-i-end1', label: 'APZ I', color: IMAGINARY_SURFACES.apz_i.color, opacity: 0.14 },
+  { id: 'apz-i-end2', label: 'APZ I', color: IMAGINARY_SURFACES.apz_i.color, opacity: 0.14 },
   { id: 'clear-zone-end1', label: 'Clear Zone', color: IMAGINARY_SURFACES.clear_zone.color, opacity: 0.16 },
   { id: 'clear-zone-end2', label: 'Clear Zone', color: IMAGINARY_SURFACES.clear_zone.color, opacity: 0.16 },
   { id: 'primary-surface', label: 'Primary Surface', color: IMAGINARY_SURFACES.primary.color, opacity: 0.18 },
@@ -102,6 +148,31 @@ function buildSurfaceGeoJSON(rwy: RunwayGeometry) {
     geometry: { type: 'Polygon', coordinates: [approach.end2] },
   })
 
+  // APZ II (behind APZ I for correct z-ordering)
+  const apz = generateAPZPolygons(rwy)
+  features.push({
+    type: 'Feature',
+    properties: { id: 'apz-ii-end1' },
+    geometry: { type: 'Polygon', coordinates: [apz.apz_ii_end1] },
+  })
+  features.push({
+    type: 'Feature',
+    properties: { id: 'apz-ii-end2' },
+    geometry: { type: 'Polygon', coordinates: [apz.apz_ii_end2] },
+  })
+
+  // APZ I
+  features.push({
+    type: 'Feature',
+    properties: { id: 'apz-i-end1' },
+    geometry: { type: 'Polygon', coordinates: [apz.apz_i_end1] },
+  })
+  features.push({
+    type: 'Feature',
+    properties: { id: 'apz-i-end2' },
+    geometry: { type: 'Polygon', coordinates: [apz.apz_i_end2] },
+  })
+
   // Clear zones (3,000 ft x 3,000 ft at each end)
   const clearZones = generateClearZonePolygons(rwy)
   features.push({
@@ -150,11 +221,21 @@ function buildSurfaceGeoJSON(rwy: RunwayGeometry) {
   }
 }
 
+// Build default toggle state from LEGEND_ITEMS
+function getDefaultVisibility(): Record<ToggleKey, boolean> {
+  const state = {} as Record<ToggleKey, boolean>
+  for (const item of LEGEND_ITEMS) {
+    state[item.toggleKey] = item.defaultOn
+  }
+  return state
+}
+
 export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtPoint }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const marker = useRef<mapboxgl.Marker | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [visibility, setVisibility] = useState<Record<ToggleKey, boolean>>(getDefaultVisibility)
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
@@ -205,11 +286,20 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
           },
         })
 
+        // Determine initial visibility based on toggle state
+        const toggleKey = LEGEND_ITEMS.find((li) =>
+          TOGGLE_LAYER_IDS[li.toggleKey]?.includes(`fill-${layer.id}`),
+        )?.toggleKey
+        const initiallyVisible = toggleKey ? visibility[toggleKey] : true
+
         // Fill layer
         m.addLayer({
           id: `fill-${layer.id}`,
           type: 'fill',
           source: sourceId,
+          layout: {
+            visibility: initiallyVisible ? 'visible' : 'none',
+          },
           paint: {
             'fill-color': layer.color,
             'fill-opacity': layer.opacity,
@@ -221,6 +311,9 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
           id: `line-${layer.id}`,
           type: 'line',
           source: sourceId,
+          layout: {
+            visibility: initiallyVisible ? 'visible' : 'none',
+          },
           paint: {
             'line-color': layer.color,
             'line-opacity': Math.min(1, layer.opacity * 3),
@@ -296,6 +389,21 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
     }
   }, [handleClick, mapLoaded])
 
+  // Sync toggle visibility to Mapbox layers
+  useEffect(() => {
+    const m = map.current
+    if (!m || !mapLoaded) return
+
+    for (const [key, layerIds] of Object.entries(TOGGLE_LAYER_IDS)) {
+      const vis = visibility[key as ToggleKey] ? 'visible' : 'none'
+      for (const layerId of layerIds) {
+        if (m.getLayer(layerId)) {
+          m.setLayoutProperty(layerId, 'visibility', vis)
+        }
+      }
+    }
+  }, [visibility, mapLoaded])
+
   // Update marker when selectedPoint changes
   useEffect(() => {
     if (!map.current || !mapLoaded) return
@@ -320,6 +428,10 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
         .addTo(map.current)
     }
   }, [selectedPoint, mapLoaded, surfaceAtPoint])
+
+  const toggleLayer = (key: ToggleKey) => {
+    setVisibility((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
 
   if (!token || token === 'your-mapbox-token-here') {
     return (
@@ -357,7 +469,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
           border: '1px solid rgba(56, 189, 248, 0.1)',
         }}
       />
-      {/* Surface legend */}
+      {/* Interactive surface legend with toggles */}
       <div
         style={{
           position: 'absolute',
@@ -368,31 +480,35 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
           padding: '6px 8px',
           fontSize: 10,
           lineHeight: 1.6,
-          maxWidth: 160,
+          maxWidth: 175,
+          maxHeight: 340,
+          overflowY: 'auto',
         }}
       >
-        {[
-          { color: IMAGINARY_SURFACES.graded_area.color, label: 'Graded Portion of CZ' },
-          { color: IMAGINARY_SURFACES.clear_zone.color, label: 'Clear Zone' },
-          { color: IMAGINARY_SURFACES.primary.color, label: 'Primary' },
-          { color: IMAGINARY_SURFACES.approach_departure.color, label: 'Approach/Departure' },
-          { color: IMAGINARY_SURFACES.transitional.color, label: 'Transitional' },
-          { color: IMAGINARY_SURFACES.inner_horizontal.color, label: 'Inner Horizontal' },
-          { color: IMAGINARY_SURFACES.conical.color, label: 'Conical' },
-          { color: IMAGINARY_SURFACES.outer_horizontal.color, label: 'Outer Horizontal' },
-        ].map((s) => (
-          <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        {LEGEND_ITEMS.map((item) => (
+          <div
+            key={item.toggleKey}
+            onClick={() => toggleLayer(item.toggleKey)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              cursor: 'pointer',
+              opacity: visibility[item.toggleKey] ? 1 : 0.4,
+              userSelect: 'none',
+            }}
+          >
             <span
               style={{
                 width: 8,
                 height: 8,
                 borderRadius: 2,
-                background: s.color,
+                background: visibility[item.toggleKey] ? item.color : 'transparent',
+                border: `1px solid ${item.color}`,
                 flexShrink: 0,
-                opacity: 0.8,
               }}
             />
-            <span style={{ color: '#CBD5E1' }}>{s.label}</span>
+            <span style={{ color: '#CBD5E1' }}>{item.label}</span>
           </div>
         ))}
       </div>

@@ -1,6 +1,7 @@
 // UFC 3-260-01 Obstruction Evaluation Engine
 // Evaluates an object against all 6 imaginary surfaces defined in
-// UFC 3-260-01, Chapter 3, using actual runway geometry.
+// UFC 3-260-01, Chapter 3, plus APZ I/II land-use zones per
+// DoD Instruction 4165.57, using actual runway geometry.
 
 import { INSTALLATION } from '@/lib/constants'
 import {
@@ -21,7 +22,7 @@ export const IMAGINARY_SURFACES = {
   clear_zone: {
     name: 'Runway Clear Zone',
     criteria: { halfWidth: 1500, length: 3000, maxHeight: 0 },
-    ufcRef: 'UFC 3-260-01, Chapter 3 & Appendix B, Section 13 (Runway Clear Zone)',
+    ufcRef: 'UFC 3-260-01, Chapter 3 & Appendix B, Section 13; DoD Instruction 4165.57, Table 1 (Runway Clear Zone)',
     ufcCriteria: 'The clear zone must remain essentially obstruction free. No fixed or non-frangible objects permitted within {length} ft x {width} ft from each runway end unless meeting B13 permissible deviation criteria.',
     description: 'Obstruction-free zone extending 3,000 ft from each runway threshold, 3,000 ft wide.',
     color: '#EC4899',
@@ -81,6 +82,22 @@ export const IMAGINARY_SURFACES = {
     ufcCriteria: 'No object may penetrate the 7:1 transitional surface extending from the primary surface and approach-departure surface edges to the inner horizontal surface height (150 ft).',
     description: '7:1 slope from primary/approach edges to inner horizontal height.',
     color: '#EAB308',
+  },
+  apz_i: {
+    name: 'APZ I (Accident Potential Zone I)',
+    criteria: { halfWidth: 1500, length: 5000, startOffset: 3000 },
+    ufcRef: 'DoD Instruction 4165.57, Table 1 (APZ I)',
+    ufcCriteria: 'APZ I — High accident risk zone. Only very low-density uses allowed: agriculture, grazing, open space, surface parking (no structures), roads with minimal traffic, and essential utility corridors. No residential, schools, hospitals, assembly uses, or high-occupancy facilities permitted.',
+    description: 'High accident risk zone extending 5,000 ft beyond the clear zone, 3,000 ft wide.',
+    color: '#D946EF',
+  },
+  apz_ii: {
+    name: 'APZ II (Accident Potential Zone II)',
+    criteria: { halfWidth: 1500, length: 7000, startOffset: 8000 },
+    ufcRef: 'DoD Instruction 4165.57, Table 1 (APZ II)',
+    ufcCriteria: 'APZ II — Moderate accident risk zone. Low-density commercial/industrial allowed: warehouses with low personnel density, open storage yards, and some limited community facilities (case-by-case). Residential strongly discouraged. High-density or high-occupancy uses prohibited.',
+    description: 'Moderate accident risk zone extending 7,000 ft beyond APZ I, 3,000 ft wide.',
+    color: '#A78BFA',
   },
 } as const
 
@@ -264,6 +281,50 @@ export function evaluateObstruction(
         .replace('{length}', String(c.length).replace(/\B(?=(\d{3})+(?!\d))/g, ','))
         .replace('{width}', String(c.halfWidth * 2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
       color: IMAGINARY_SURFACES.graded_area.color,
+    })
+  }
+
+  // --- APZ I (Accident Potential Zone I) ---
+  // Land-use zone, no height restriction. 3,000–8,000 ft from threshold, 3,000 ft wide.
+  {
+    const c = IMAGINARY_SURFACES.apz_i.criteria
+    const withinEnd1 = beyondEnd1 > c.startOffset && beyondEnd1 <= (c.startOffset + c.length) && relation.distanceFromCenterline <= c.halfWidth
+    const withinEnd2 = beyondEnd2 > c.startOffset && beyondEnd2 <= (c.startOffset + c.length) && relation.distanceFromCenterline <= c.halfWidth
+    const isWithin = withinEnd1 || withinEnd2
+    surfaces.push({
+      surfaceKey: 'apz_i',
+      surfaceName: IMAGINARY_SURFACES.apz_i.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: -1,
+      maxAllowableHeightMSL: -1,
+      obstructionTopMSL,
+      violated: false,
+      penetrationFt: 0,
+      ufcReference: IMAGINARY_SURFACES.apz_i.ufcRef,
+      ufcCriteria: IMAGINARY_SURFACES.apz_i.ufcCriteria,
+      color: IMAGINARY_SURFACES.apz_i.color,
+    })
+  }
+
+  // --- APZ II (Accident Potential Zone II) ---
+  // Land-use zone, no height restriction. 8,000–15,000 ft from threshold, 3,000 ft wide.
+  {
+    const c = IMAGINARY_SURFACES.apz_ii.criteria
+    const withinEnd1 = beyondEnd1 > c.startOffset && beyondEnd1 <= (c.startOffset + c.length) && relation.distanceFromCenterline <= c.halfWidth
+    const withinEnd2 = beyondEnd2 > c.startOffset && beyondEnd2 <= (c.startOffset + c.length) && relation.distanceFromCenterline <= c.halfWidth
+    const isWithin = withinEnd1 || withinEnd2
+    surfaces.push({
+      surfaceKey: 'apz_ii',
+      surfaceName: IMAGINARY_SURFACES.apz_ii.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: -1,
+      maxAllowableHeightMSL: -1,
+      obstructionTopMSL,
+      violated: false,
+      penetrationFt: 0,
+      ufcReference: IMAGINARY_SURFACES.apz_ii.ufcRef,
+      ufcCriteria: IMAGINARY_SURFACES.apz_ii.ufcCriteria,
+      color: IMAGINARY_SURFACES.apz_ii.color,
     })
   }
 
@@ -487,8 +548,9 @@ export function evaluateObstruction(
   const hasViolation = violatedSurfaces.length > 0
 
   // Controlling surface = the one with the lowest max allowable height
-  // among surfaces the point is within.
-  const applicableSurfaces = surfaces.filter((s) => s.isWithinBounds)
+  // among height-restricted surfaces the point is within.
+  // Land-use zones (APZ I/II, maxAllowableHeightMSL === -1) are excluded.
+  const applicableSurfaces = surfaces.filter((s) => s.isWithinBounds && s.maxAllowableHeightMSL !== -1)
   const controllingSurface = applicableSurfaces.length > 0
     ? applicableSurfaces.reduce((min, s) =>
         s.maxAllowableHeightMSL < min.maxAllowableHeightMSL ? s : min,
@@ -541,5 +603,9 @@ export function evaluateObstruction(
 export function identifySurface(point: LatLon, rwy?: RunwayGeometry): string {
   const runway = rwy || getDefaultRunwayGeometry()
   const analysis = evaluateObstruction(point, 0, null, runway)
-  return analysis.controllingSurface?.surfaceName ?? 'Outside all surfaces'
+  if (analysis.controllingSurface) return analysis.controllingSurface.surfaceName
+  // Fall back to land-use zones (APZ I/II) if no height-restricted surface applies
+  const landUseZone = analysis.surfaces.find((s) => s.isWithinBounds && s.maxAllowableHeightMSL === -1)
+  if (landUseZone) return landUseZone.surfaceName
+  return 'Outside all surfaces'
 }

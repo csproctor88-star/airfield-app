@@ -453,6 +453,48 @@ export function generateTransitionalPolygons(rwy: RunwayGeometry): {
   }
 }
 
+/** Generate APZ I and APZ II rectangles at each runway end.
+ *  APZ I: 3,000 ft wide, starts 3,000 ft from threshold (end of clear zone), extends 5,000 ft.
+ *  APZ II: 3,000 ft wide, starts 8,000 ft from threshold (end of APZ I), extends 7,000 ft.
+ *  Per DoD Instruction 4165.57, Table 1. */
+export function generateAPZPolygons(rwy: RunwayGeometry): {
+  apz_i_end1: [number, number][]
+  apz_i_end2: [number, number][]
+  apz_ii_end1: [number, number][]
+  apz_ii_end2: [number, number][]
+} {
+  const halfWidth = 1500
+  const perpL = normalizeBearing(rwy.bearingDeg - 90)
+  const perpR = normalizeBearing(rwy.bearingDeg + 90)
+  const revBearing = normalizeBearing(rwy.bearingDeg + 180)
+
+  function buildRect(
+    end: LatLon,
+    outwardBearing: number,
+    startOffset: number,
+    length: number,
+  ): [number, number][] {
+    const start = offsetPoint(end, outwardBearing, startOffset)
+    const far = offsetPoint(end, outwardBearing, startOffset + length)
+    const p1 = offsetPoint(start, perpL, halfWidth)
+    const p2 = offsetPoint(start, perpR, halfWidth)
+    const p3 = offsetPoint(far, perpR, halfWidth)
+    const p4 = offsetPoint(far, perpL, halfWidth)
+    return [
+      [p1.lon, p1.lat], [p2.lon, p2.lat],
+      [p3.lon, p3.lat], [p4.lon, p4.lat],
+      [p1.lon, p1.lat],
+    ]
+  }
+
+  return {
+    apz_i_end1: buildRect(rwy.end1, revBearing, 3000, 5000),
+    apz_i_end2: buildRect(rwy.end2, rwy.bearingDeg, 3000, 5000),
+    apz_ii_end1: buildRect(rwy.end1, revBearing, 8000, 7000),
+    apz_ii_end2: buildRect(rwy.end2, rwy.bearingDeg, 8000, 7000),
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Elevation API
 // ---------------------------------------------------------------------------

@@ -26,6 +26,10 @@ const SURFACE_COLORS: Record<string, string> = {
   inner_horizontal: '#22C55E',
   conical: '#3B82F6',
   outer_horizontal: '#8B5CF6',
+  clear_zone: '#EC4899',
+  graded_area: '#F43F5E',
+  apz_i: '#D946EF',
+  apz_ii: '#A78BFA',
 }
 
 export default function ObstructionDetailPage() {
@@ -266,62 +270,91 @@ export default function ObstructionDetailPage() {
       {/* Surface-by-surface results */}
       <div className="card" style={{ marginBottom: 10 }}>
         <span className="section-label">Surface Analysis</span>
-        {applicableResults.map((s) => (
-          <div
-            key={s.surfaceKey}
-            style={{
-              background: 'rgba(4,7,12,0.6)',
-              border: `1px solid ${s.violated ? 'rgba(239,68,68,0.3)' : 'rgba(56,189,248,0.06)'}`,
-              borderRadius: 8,
-              padding: 10,
-              marginBottom: 6,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 2,
-                  background: SURFACE_COLORS[s.surfaceKey] || '#94A3B8',
-                  flexShrink: 0,
-                }}
-              />
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#F1F5F9', flex: 1 }}>
-                {s.surfaceName}
-              </span>
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 800,
-                  padding: '2px 6px',
-                  borderRadius: 4,
-                  background: s.violated ? '#EF444422' : '#22C55E22',
-                  color: s.violated ? '#EF4444' : '#22C55E',
-                }}
-              >
-                {s.violated ? `VIOLATION (${s.penetrationFt.toFixed(1)} ft)` : 'CLEAR'}
-              </span>
-            </div>
-            <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.4 }}>
-              Max allowable: <strong style={{ color: '#CBD5E1' }}>
-                {s.maxAllowableHeightMSL.toFixed(0)} ft MSL
-              </strong>{' '}
-              ({s.maxAllowableHeightAGL.toFixed(0)} ft AGL)
-            </div>
-            {s.violated && (
-              <div style={{ fontSize: 11, color: '#EF4444', marginTop: 2 }}>
-                Penetration: {s.penetrationFt.toFixed(1)} ft above allowable height
+        {applicableResults.map((s) => {
+          const surfaceColor = SURFACE_COLORS[s.surfaceKey] || '#94A3B8'
+          const isLandUseZone = s.maxAllowableHeightMSL === -1
+          return (
+            <div
+              key={s.surfaceKey}
+              style={{
+                background: 'rgba(4,7,12,0.6)',
+                border: `1px solid ${s.violated ? 'rgba(239,68,68,0.3)' : isLandUseZone ? `${surfaceColor}33` : 'rgba(56,189,248,0.06)'}`,
+                borderRadius: 8,
+                padding: 10,
+                marginBottom: 6,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 2,
+                    background: surfaceColor,
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#F1F5F9', flex: 1 }}>
+                  {s.surfaceName}
+                </span>
+                {isLandUseZone ? (
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 800,
+                      padding: '2px 6px',
+                      borderRadius: 4,
+                      background: `${surfaceColor}22`,
+                      color: surfaceColor,
+                    }}
+                  >
+                    WITHIN ZONE
+                  </span>
+                ) : (
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 800,
+                      padding: '2px 6px',
+                      borderRadius: 4,
+                      background: s.violated ? '#EF444422' : '#22C55E22',
+                      color: s.violated ? '#EF4444' : '#22C55E',
+                    }}
+                  >
+                    {s.violated ? `VIOLATION (${s.penetrationFt.toFixed(1)} ft)` : 'CLEAR'}
+                  </span>
+                )}
               </div>
-            )}
-            <div style={{ fontSize: 10, color: '#64748B', marginTop: 4 }}>
-              {s.ufcReference}
+              {isLandUseZone ? (
+                <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.5 }}>
+                  {s.ufcCriteria}
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.4 }}>
+                    Max allowable: <strong style={{ color: '#CBD5E1' }}>
+                      {s.maxAllowableHeightMSL.toFixed(0)} ft MSL
+                    </strong>{' '}
+                    ({s.maxAllowableHeightAGL.toFixed(0)} ft AGL)
+                  </div>
+                  {s.violated && (
+                    <div style={{ fontSize: 11, color: '#EF4444', marginTop: 2 }}>
+                      Penetration: {s.penetrationFt.toFixed(1)} ft above allowable height
+                    </div>
+                  )}
+                </>
+              )}
+              <div style={{ fontSize: 10, color: '#64748B', marginTop: 4 }}>
+                {s.ufcReference}
+              </div>
+              {!isLandUseZone && (
+                <div style={{ fontSize: 10, color: '#475569', marginTop: 2, lineHeight: 1.3, fontStyle: 'italic' }}>
+                  {s.ufcCriteria}
+                </div>
+              )}
             </div>
-            <div style={{ fontSize: 10, color: '#475569', marginTop: 2, lineHeight: 1.3, fontStyle: 'italic' }}>
-              {s.ufcCriteria}
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Violated surfaces summary with guidance */}
