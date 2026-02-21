@@ -87,7 +87,7 @@ export default function RegulationsPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: '1px solid rgba(56,189,248,0.10)' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {([
           { key: 'regulations' as Tab, label: 'Regulations' },
           { key: 'my-docs' as Tab, label: 'My Documents' },
@@ -98,15 +98,19 @@ export default function RegulationsPage() {
             style={{
               flex: 1,
               padding: '8px 0',
-              background: 'none',
-              border: 'none',
-              borderBottom: tab === t.key ? '2px solid #0EA5E9' : '2px solid transparent',
-              color: tab === t.key ? '#F1F5F9' : '#64748B',
+              background: tab === t.key
+                ? 'linear-gradient(135deg, #0369A1, #0EA5E9)'
+                : 'rgba(14,165,233,0.08)',
+              border: tab === t.key
+                ? '1px solid #0EA5E9'
+                : '1px solid rgba(14,165,233,0.2)',
+              borderRadius: 8,
+              color: tab === t.key ? '#fff' : '#64748B',
               fontSize: 12,
               fontWeight: 700,
               fontFamily: 'inherit',
               cursor: 'pointer',
-              transition: 'color 0.15s, border-color 0.15s',
+              transition: 'all 0.15s',
             }}
           >
             {t.label}
