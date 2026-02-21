@@ -236,6 +236,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
   const marker = useRef<mapboxgl.Marker | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [visibility, setVisibility] = useState<Record<ToggleKey, boolean>>(getDefaultVisibility)
+  const [legendOpen, setLegendOpen] = useState(false)
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
@@ -469,7 +470,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
           border: '1px solid rgba(56, 189, 248, 0.1)',
         }}
       />
-      {/* Interactive surface legend with toggles */}
+      {/* Collapsible surface legend with toggles */}
       <div
         style={{
           position: 'absolute',
@@ -477,41 +478,63 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
           left: 8,
           background: 'rgba(4, 7, 12, 0.88)',
           borderRadius: 8,
-          padding: '8px 10px',
           fontSize: 12,
-          lineHeight: 1.7,
           maxWidth: 200,
-          maxHeight: 480,
-          overflowY: 'auto',
+          userSelect: 'none',
         }}
       >
-        {LEGEND_ITEMS.map((item) => (
+        <div
+          onClick={() => setLegendOpen((o) => !o)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            padding: '6px 10px',
+            cursor: 'pointer',
+            color: '#94A3B8',
+            fontWeight: 600,
+          }}
+        >
+          <span style={{ fontSize: 11 }}>Layers</span>
+          <span style={{ fontSize: 9, marginLeft: 'auto' }}>{legendOpen ? '▲' : '▼'}</span>
+        </div>
+        {legendOpen && (
           <div
-            key={item.toggleKey}
-            onClick={() => toggleLayer(item.toggleKey)}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              cursor: 'pointer',
-              padding: '1px 0',
-              opacity: visibility[item.toggleKey] ? 1 : 0.4,
-              userSelect: 'none',
+              padding: '0 10px 8px',
+              lineHeight: 1.7,
+              maxHeight: 420,
+              overflowY: 'auto',
             }}
           >
-            <span
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: 2,
-                background: visibility[item.toggleKey] ? item.color : 'transparent',
-                border: `1.5px solid ${item.color}`,
-                flexShrink: 0,
-              }}
-            />
-            <span style={{ color: '#CBD5E1' }}>{item.label}</span>
+            {LEGEND_ITEMS.map((item) => (
+              <div
+                key={item.toggleKey}
+                onClick={() => toggleLayer(item.toggleKey)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  cursor: 'pointer',
+                  padding: '1px 0',
+                  opacity: visibility[item.toggleKey] ? 1 : 0.4,
+                }}
+              >
+                <span
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 2,
+                    background: visibility[item.toggleKey] ? item.color : 'transparent',
+                    border: `1.5px solid ${item.color}`,
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ color: '#CBD5E1' }}>{item.label}</span>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
       {!selectedPoint && mapLoaded && (
         <div
