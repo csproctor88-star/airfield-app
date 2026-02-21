@@ -1,4 +1,4 @@
-// Airfield OPS Management Suite — App-wide Constants
+// Glidepath — App-wide Constants
 // Source: SRS Sections 6 & 14
 
 // === Selfridge ANGB Configuration (SRS Section 14) ===

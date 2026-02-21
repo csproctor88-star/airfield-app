@@ -243,7 +243,7 @@ export default function LoginPage() {
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: 24 }}>
           <div style={{ fontSize: 10, color: '#334155' }}>
-            Airfield OPS Management Suite v1.0
+            Glidepath v2.1
           </div>
         </div>
       </div>
