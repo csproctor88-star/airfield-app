@@ -165,6 +165,10 @@ function LazyPage({ pageNumber, scale, searchTerm, scrollRoot }: LazyPageProps) 
   )
 }
 
+function isImageFile(fileName: string): boolean {
+  return /\.(jpg|jpeg|png)$/i.test(fileName)
+}
+
 // ─── Main Component ──────────────────────────────────────────
 interface RegulationPDFViewerProps {
   regId: string
@@ -193,6 +197,8 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
   const [touchScale, setTouchScale] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const imageUrlRef = useRef<string | null>(null)
 
   // Search state
   const [searchOpen, setSearchOpen] = useState(false)
@@ -224,7 +230,10 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
     }
   }, [viewMode, masterBuffer])
 
-  // Load PDF from Supabase storage
+  // Determine mime type from file extension
+  const isImage = isImageFile(storedFileName || regId)
+
+  // Load file from Supabase storage
   useEffect(() => {
     let cancelled = false
     const fileName = storedFileName || `${sanitizeFileName(regId)}.pdf`
@@ -232,7 +241,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
     const bucketName = source === 'user' ? USER_BUCKET : REG_BUCKET
     const storagePath = source === 'user' && userId ? `${userId}/${fileName}` : fileName
 
-    async function loadPdf() {
+    async function loadFile() {
       setLoading(true)
       setError(null)
       setMasterBuffer(null)
@@ -240,8 +249,20 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
       setSearchTerm('')
       setMatches([])
       setPageTexts([])
+      setImageUrl(null)
 
-      // Helper: once we have an ArrayBuffer, set up viewer + text extraction
+      // Helper: present an image from its ArrayBuffer
+      function presentImage(arrayBuffer: ArrayBuffer) {
+        if (cancelled) return
+        if (imageUrlRef.current) URL.revokeObjectURL(imageUrlRef.current)
+        const ext = fileName.toLowerCase().split('.').pop()
+        const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg'
+        const imgUrl = URL.createObjectURL(new Blob([arrayBuffer], { type: mimeType }))
+        imageUrlRef.current = imgUrl
+        setImageUrl(imgUrl)
+      }
+
+      // Helper: once we have an ArrayBuffer, set up PDF viewer + text extraction
       function presentPdf(arrayBuffer: ArrayBuffer) {
         if (cancelled) return
         setMasterBuffer(arrayBuffer)
@@ -272,12 +293,14 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
           .finally(() => { if (!cancelled) setTextExtracting(false) })
       }
 
+      const present = isImage ? presentImage : presentPdf
+
       try {
         // 1. Try IndexedDB cache first (works offline)
         let cached = await idbGet<ArrayBuffer | Blob>(idbStore, fileName)
         if (cached) {
           const arrayBuffer = cached instanceof Blob ? await cached.arrayBuffer() : cached
-          presentPdf(arrayBuffer)
+          present(arrayBuffer)
           setLoading(false)
           return
         }
@@ -291,9 +314,9 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
             const arrayBuffer = await data.arrayBuffer()
             // Cache to IndexedDB for offline use
             idbSet(idbStore, fileName, arrayBuffer).catch((e) =>
-              console.warn('Failed to cache PDF to IndexedDB:', e)
+              console.warn('Failed to cache to IndexedDB:', e)
             )
-            presentPdf(arrayBuffer)
+            present(arrayBuffer)
             setLoading(false)
             return
           }
@@ -302,29 +325,33 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
         // 3. Nothing worked
         if (!cancelled) {
           if (!navigator.onLine) {
-            setError('You are offline and this PDF has not been cached yet. Connect to WiFi and view this document once, or use "Cache All" in the PDF Library to pre-download all regulations.')
+            setError('You are offline and this file has not been cached yet. Connect to WiFi and view it once to cache it.')
           } else if (url) {
-            setError('PDF not found in storage. Use "Open External" to view this document, or ask an admin to run the download script.')
+            setError('File not found in storage. Use "Open External" to view this document.')
           } else {
-            setError('PDF not available. This regulation has no external URL and is not yet in storage. Ask an admin to upload it.')
+            setError('File not available in storage.')
           }
         }
       } catch (e: unknown) {
         if (!cancelled) {
           const msg = e instanceof Error ? e.message : String(e)
-          setError(`Failed to load PDF: ${msg}`)
+          setError(`Failed to load file: ${msg}`)
         }
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
 
-    loadPdf()
+    loadFile()
     return () => {
       cancelled = true
       if (blobUrlRef.current) {
         URL.revokeObjectURL(blobUrlRef.current)
         blobUrlRef.current = null
+      }
+      if (imageUrlRef.current) {
+        URL.revokeObjectURL(imageUrlRef.current)
+        imageUrlRef.current = null
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -413,8 +440,8 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
             {title}
           </div>
         </div>
-        {blobUrl && (
-          <button onClick={() => window.open(blobUrl!, '_blank')} style={linkBtnStyle}>
+        {(blobUrl || imageUrl) && (
+          <button onClick={() => window.open((imageUrl || blobUrl)!, '_blank')} style={linkBtnStyle}>
             <ExternalLink size={10} /> New Tab
           </button>
         )}
@@ -425,8 +452,8 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
         )}
       </div>
 
-      {/* ── Controls bar ── */}
-      {masterBuffer && !error && (
+      {/* ── Controls bar (PDF only) ── */}
+      {masterBuffer && !error && !isImage && (
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           padding: '6px 12px', background: 'rgba(15,23,42,0.8)',
@@ -498,8 +525,8 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
         </div>
       )}
 
-      {/* ── Search panel ── */}
-      {searchOpen && viewMode === 'react-pdf' && (
+      {/* ── Search panel (PDF only) ── */}
+      {searchOpen && viewMode === 'react-pdf' && !isImage && (
         <div style={{ borderBottom: '1px solid rgba(56,189,248,0.06)', background: 'rgba(15,23,42,0.95)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px' }}>
             <Search size={12} style={{ color: '#64748B', flexShrink: 0 }} />
@@ -578,7 +605,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
       {loading && (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40, gap: 8 }}>
           <Spinner />
-          <span style={{ color: '#64748B', fontSize: 12 }}>Loading PDF...</span>
+          <span style={{ color: '#64748B', fontSize: 12 }}>Loading{isImage ? ' image' : ' PDF'}...</span>
         </div>
       )}
 
@@ -589,7 +616,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
             background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
             borderRadius: 10, color: '#CBD5E1', fontSize: 12, lineHeight: 1.6,
           }}>
-            <strong style={{ color: '#EF4444' }}>PDF Unavailable</strong>
+            <strong style={{ color: '#EF4444' }}>File Unavailable</strong>
             <p style={{ margin: '8px 0 0' }}>{error}</p>
           </div>
           {url && (
@@ -605,8 +632,39 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
         </div>
       )}
 
+      {/* Image viewer */}
+      {!loading && !error && isImage && imageUrl && (
+        <div style={{
+          flex: 1, overflow: 'auto', display: 'flex',
+          alignItems: 'flex-start', justifyContent: 'center',
+          padding: 16, background: '#0A101C', minHeight: 0,
+        }}>
+          <TransformWrapper
+            initialScale={1}
+            minScale={0.3}
+            maxScale={5}
+            centerOnInit={false}
+            limitToBounds={false}
+            doubleClick={{ mode: 'zoomIn', step: 0.7 }}
+            pinch={{ step: 5 }}
+          >
+            <TransformComponent
+              wrapperStyle={{ width: '100%', height: '100%' }}
+              contentStyle={{ width: '100%', display: 'flex', justifyContent: 'center' }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imageUrl}
+                alt={title}
+                style={{ maxWidth: '100%', height: 'auto', borderRadius: 4 }}
+              />
+            </TransformComponent>
+          </TransformWrapper>
+        </div>
+      )}
+
       {/* Native iframe viewer (desktop) */}
-      {!loading && viewMode === 'native' && blobUrl && !error && (
+      {!loading && viewMode === 'native' && blobUrl && !error && !isImage && (
         <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
           <iframe
             src={blobUrl}
@@ -617,7 +675,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
       )}
 
       {/* react-pdf scroll viewer (mobile/tablet/toggled) */}
-      {!loading && viewMode === 'react-pdf' && fileData && !error && (
+      {!loading && viewMode === 'react-pdf' && fileData && !error && !isImage && (
         <div
           ref={viewerRef}
           style={{
