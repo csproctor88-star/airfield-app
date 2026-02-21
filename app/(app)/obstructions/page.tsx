@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
 import { INSTALLATION } from '@/lib/constants'
 import type { LatLon, RunwayGeometry } from '@/lib/calculations/geometry'
-import { getRunwayGeometry } from '@/lib/calculations/geometry'
+import { getRunwayGeometry, pointToRunwayRelation, distanceFt } from '@/lib/calculations/geometry'
 import {
   evaluateObstruction,
   identifySurface,
@@ -30,6 +30,8 @@ type PointInfo = {
   point: LatLon
   groundElevMSL: number | null
   distFromCenterline: number
+  distFromThreshold: number
+  nearerEnd: 'end1' | 'end2'
   surfaceName: string
   loadingElev: boolean
 }
@@ -89,10 +91,15 @@ function ObstructionsContent() {
         const rwy = getRunwayGeometry(INSTALLATION.runways[0])
         const surfaceName = identifySurface(point, rwy)
         const groundElev = existing.object_elevation_msl ?? INSTALLATION.elevation_msl
+        const relation = pointToRunwayRelation(point, rwy)
+        const nearerThreshold = relation.nearerEnd === 'end1' ? rwy.end1 : rwy.end2
+        const distToThreshold = distanceFt(point, nearerThreshold)
         setPointInfo({
           point,
           groundElevMSL: groundElev,
           distFromCenterline: existing.distance_from_centerline_ft ?? 0,
+          distFromThreshold: distToThreshold,
+          nearerEnd: relation.nearerEnd,
           surfaceName,
           loadingElev: false,
         })
@@ -110,22 +117,20 @@ function ObstructionsContent() {
   const handlePointSelected = useCallback(async (point: LatLon) => {
     const rwy = getRunway()
     const surfaceName = identifySurface(point, rwy)
+    // Quick relation computation for distances
+    const relation = pointToRunwayRelation(point, rwy)
+    const nearerThreshold = relation.nearerEnd === 'end1' ? rwy.end1 : rwy.end2
+    const distToThreshold = distanceFt(point, nearerThreshold)
     setPointInfo({
       point,
       groundElevMSL: null,
-      distFromCenterline: 0,
+      distFromCenterline: relation.distanceFromCenterline,
+      distFromThreshold: distToThreshold,
+      nearerEnd: relation.nearerEnd,
       surfaceName,
       loadingElev: true,
     })
     setAnalysis(null)
-
-    // Quick pre-evaluation at 0 height to get centerline distance
-    const preEval = evaluateObstruction(point, 0, null, rwy)
-    setPointInfo((prev) =>
-      prev
-        ? { ...prev, distFromCenterline: preEval.distanceFromCenterline }
-        : prev,
-    )
 
     // Fetch real elevation
     const elev = await fetchElevation(point)
@@ -388,6 +393,12 @@ function ObstructionsContent() {
               <span style={{ color: '#64748B' }}>From Centerline</span>
               <div style={{ color: '#CBD5E1', fontFamily: 'monospace', fontSize: 11, marginTop: 2 }}>
                 {pointInfo.distFromCenterline.toFixed(0)} ft
+              </div>
+            </div>
+            <div>
+              <span style={{ color: '#64748B' }}>From Nearest Threshold</span>
+              <div style={{ color: '#CBD5E1', fontFamily: 'monospace', fontSize: 11, marginTop: 2 }}>
+                {pointInfo.distFromThreshold.toFixed(0)} ft (RWY {pointInfo.nearerEnd === 'end1' ? '01' : '19'})
               </div>
             </div>
             <div>
