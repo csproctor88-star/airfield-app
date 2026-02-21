@@ -7,7 +7,7 @@ import { ALL_REGULATIONS, type RegulationEntry } from '@/lib/regulations-data'
 import { REGULATION_CATEGORIES, REGULATION_PUB_TYPES } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { userDocService, type UserDocument } from '@/lib/userDocuments'
-import { idbGet, idbSet, idbGetAllKeys, STORE_BLOBS } from '@/lib/idb'
+import { idbGet, idbSet, idbGetAllKeys, idbDelete, STORE_BLOBS } from '@/lib/idb'
 
 const RegulationPDFViewer = dynamic(
   () => import('@/components/RegulationPDFViewer'),
@@ -240,6 +240,25 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
     setCacheProgress(null)
   }, [])
 
+  const [clearing, setClearing] = useState(false)
+
+  const handleClearCache = useCallback(async () => {
+    setClearing(true)
+    try {
+      const keys = await idbGetAllKeys(STORE_BLOBS)
+      const regFileNames = new Set(
+        ALL_REGULATIONS.map(r => `${sanitizeFileName(r.reg_id)}.pdf`)
+      )
+      for (const key of keys) {
+        if (regFileNames.has(String(key))) {
+          await idbDelete(STORE_BLOBS, String(key))
+        }
+      }
+      setCachedCount(0)
+    } catch { /* ignore */ }
+    setClearing(false)
+  }, [])
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
     return ALL_REGULATIONS.filter(r => {
@@ -461,6 +480,31 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                       <span style={{ color: '#F97316' }}>{cacheProgress.errors} unavailable</span>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Clear Cache */}
+              {(cachedCount ?? 0) > 0 && !cacheProgress && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(56,189,248,0.04)' }}>
+                  <span style={{ fontSize: 10, color: '#64748B' }}>
+                    Free up storage space
+                  </span>
+                  <button
+                    onClick={handleClearCache}
+                    disabled={clearing}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      background: 'transparent',
+                      border: '1px solid rgba(239,68,68,0.25)',
+                      borderRadius: 6, padding: '4px 10px', cursor: clearing ? 'not-allowed' : 'pointer',
+                      color: '#F87171', fontSize: 10, fontWeight: 700, fontFamily: 'inherit',
+                      whiteSpace: 'nowrap',
+                      opacity: clearing ? 0.5 : 1,
+                    }}
+                  >
+                    <Trash2 size={10} />
+                    {clearing ? 'Clearing...' : 'Clear Cache'}
+                  </button>
                 </div>
               )}
             </div>
