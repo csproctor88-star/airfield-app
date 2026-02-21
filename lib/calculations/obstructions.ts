@@ -27,7 +27,7 @@ export const IMAGINARY_SURFACES = {
     color: '#EC4899',
   },
   graded_area: {
-    name: 'Graded Area',
+    name: 'Graded Portion of Clear Zone',
     criteria: { halfWidth: 500, length: 1000, maxHeight: 0 },
     ufcRef: 'UFC 3-260-01, Chapter 3 & Appendix B, Section 13 (Graded Portion of Clear Zone)',
     ufcCriteria: 'The graded portion ({length} ft from runway end, {width} ft wide) must be rough graded and obstruction free. No above-ground fixed obstacles, structures, rigid poles, towers, or non-frangible equipment permitted.',
@@ -241,7 +241,7 @@ export function evaluateObstruction(
     })
   }
 
-  // --- Graded Area (both ends) ---
+  // --- Graded Portion of Clear Zone (both ends) ---
   {
     const c = IMAGINARY_SURFACES.graded_area.criteria
     const withinEnd1 = beyondEnd1 > 0 && beyondEnd1 <= c.length && relation.distanceFromCenterline <= c.halfWidth

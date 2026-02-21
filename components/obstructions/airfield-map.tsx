@@ -35,8 +35,8 @@ const SURFACE_LAYERS = [
   { id: 'clear-zone-end1', label: 'Clear Zone', color: IMAGINARY_SURFACES.clear_zone.color, opacity: 0.16 },
   { id: 'clear-zone-end2', label: 'Clear Zone', color: IMAGINARY_SURFACES.clear_zone.color, opacity: 0.16 },
   { id: 'primary-surface', label: 'Primary Surface', color: IMAGINARY_SURFACES.primary.color, opacity: 0.18 },
-  { id: 'graded-area-end1', label: 'Graded Area', color: IMAGINARY_SURFACES.graded_area.color, opacity: 0.2 },
-  { id: 'graded-area-end2', label: 'Graded Area', color: IMAGINARY_SURFACES.graded_area.color, opacity: 0.2 },
+  { id: 'graded-area-end1', label: 'Graded Portion of Clear Zone', color: IMAGINARY_SURFACES.graded_area.color, opacity: 0.2 },
+  { id: 'graded-area-end2', label: 'Graded Portion of Clear Zone', color: IMAGINARY_SURFACES.graded_area.color, opacity: 0.2 },
   { id: 'runway', label: 'Runway', color: '#FFFFFF', opacity: 0.5 },
 ]
 
@@ -372,7 +372,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
         }}
       >
         {[
-          { color: IMAGINARY_SURFACES.graded_area.color, label: 'Graded Area' },
+          { color: IMAGINARY_SURFACES.graded_area.color, label: 'Graded Portion of CZ' },
           { color: IMAGINARY_SURFACES.clear_zone.color, label: 'Clear Zone' },
           { color: IMAGINARY_SURFACES.primary.color, label: 'Primary' },
           { color: IMAGINARY_SURFACES.approach_departure.color, label: 'Approach/Departure' },
