@@ -19,6 +19,7 @@ export default function DiscrepancyDetailPage() {
   const params = useParams()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
   const [dbPhotos, setDbPhotos] = useState<PhotoRow[]>([])
   const [statusUpdates, setStatusUpdates] = useState<StatusUpdateRow[]>([])
   const [liveData, setLiveData] = useState<DiscrepancyRow | null>(null)
@@ -244,10 +245,14 @@ export default function DiscrepancyDetailPage() {
       )}
 
       <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
         <ActionButton color="#38BDF8" onClick={() => setActiveModal('edit')}>✏️ Edit</ActionButton>
         <ActionButton color="#38BDF8" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-          {uploading ? '⏳ Uploading...' : `📸 Photo${allPhotos.length > 0 ? ` (${allPhotos.length})` : ''}`}
+          {uploading ? '⏳ Uploading...' : `🖼️ Upload${allPhotos.length > 0 ? ` (${allPhotos.length})` : ''}`}
+        </ActionButton>
+        <ActionButton color="#38BDF8" onClick={() => cameraInputRef.current?.click()} disabled={uploading}>
+          📸 Take Photo
         </ActionButton>
         <ActionButton color="#FBBF24" onClick={() => setActiveModal('status')}>🔄 Status</ActionButton>
         <ActionButton color="#34D399" onClick={() => setActiveModal('workorder')}>📋 Work Order</ActionButton>

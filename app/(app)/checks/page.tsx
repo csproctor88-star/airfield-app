@@ -34,6 +34,7 @@ const CURRENT_USER = 'MSgt Proctor'
 export default function AirfieldChecksPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
   const [checkType, setCheckType] = useState<CheckType | ''>('')
   const [areas, setAreas] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
@@ -674,17 +675,31 @@ export default function AirfieldChecksPage() {
           )}
 
           <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              width: '100%', background: '#38BDF814', border: '1px solid #38BDF833', borderRadius: 8,
-              padding: 10, color: '#38BDF8', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              fontFamily: 'inherit', minHeight: 44,
-            }}
-          >
-            📸 Add Photo{photos.length > 0 ? ` (${photos.length})` : ''}
-          </button>
+          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                background: '#38BDF814', border: '1px solid #38BDF833', borderRadius: 8,
+                padding: 10, color: '#38BDF8', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                fontFamily: 'inherit', minHeight: 44,
+              }}
+            >
+              🖼️ Upload Photo
+            </button>
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              style={{
+                background: '#38BDF814', border: '1px solid #38BDF833', borderRadius: 8,
+                padding: 10, color: '#38BDF8', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                fontFamily: 'inherit', minHeight: 44,
+              }}
+            >
+              📸 Take Photo
+            </button>
+          </div>
         </div>
       )}
 

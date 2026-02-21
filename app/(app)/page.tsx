@@ -502,11 +502,11 @@ export default function HomePage() {
             ? '1px solid rgba(239,68,68,0.2)'
             : undefined,
       }}>
-        <div style={{ fontSize: 13, color: '#64748B', fontWeight: 600 }}>Active RWY</div>
+        <div style={{ fontSize: 14, color: '#64748B', fontWeight: 600 }}>Active RWY</div>
         <button
           onClick={() => setCurrentStatus((prev) => ({ ...prev, activeRunway: prev.activeRunway === '01' ? '19' : '01' }))}
           style={{
-            padding: '4px 20px', borderRadius: 6, fontSize: 16, fontWeight: 800, cursor: 'pointer',
+            padding: '6px 28px', borderRadius: 6, fontSize: 20, fontWeight: 800, cursor: 'pointer',
             border: '2px solid #475569',
             background: 'rgba(71,85,105,0.15)',
             color: '#E2E8F0',
@@ -516,7 +516,7 @@ export default function HomePage() {
           value={currentStatus.runwayStatus}
           onChange={(e) => setCurrentStatus((prev) => ({ ...prev, runwayStatus: e.target.value as 'open' | 'suspended' | 'closed' }))}
           style={{
-            padding: '2px 8px', borderRadius: 5, fontSize: 11, fontWeight: 700, cursor: 'pointer', textAlign: 'center',
+            padding: '3px 10px', borderRadius: 5, fontSize: 12, fontWeight: 700, cursor: 'pointer', textAlign: 'center',
             border: currentStatus.runwayStatus === 'suspended'
               ? '1px solid rgba(251,191,36,0.4)'
               : currentStatus.runwayStatus === 'closed'
@@ -532,19 +532,19 @@ export default function HomePage() {
           <option value="closed">Closed</option>
         </select>
       </div>
-      <div className="card" style={{ marginBottom: 12, padding: '12px 10px' }}>
+      <div className="card" style={{ marginBottom: 12, padding: '14px 12px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <div style={{ padding: 12, background: 'rgba(4,7,12,0.5)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ fontSize: 13, color: '#64748B', fontWeight: 600, marginBottom: 6 }}>RSC</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#38BDF8' }}>
+          <div style={{ padding: 14, background: 'rgba(4,7,12,0.5)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ fontSize: 14, color: '#64748B', fontWeight: 600, marginBottom: 6 }}>RSC</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#38BDF8' }}>
               {currentStatus.rscCondition
                 ? `${currentStatus.rscCondition}${currentStatus.rscTime ? ` @ ${currentStatus.rscTime}` : ''}`
                 : 'No Data'}
             </div>
           </div>
-          <div style={{ padding: 12, background: 'rgba(4,7,12,0.5)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ fontSize: 13, color: '#64748B', fontWeight: 600, marginBottom: 6 }}>BWC</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: currentStatus.bwc === 'SEV' || currentStatus.bwc === 'PROHIB' ? '#EF4444' : currentStatus.bwc === 'MOD' ? '#FBBF24' : '#34D399' }}>
+          <div style={{ padding: 14, background: 'rgba(4,7,12,0.5)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ fontSize: 14, color: '#64748B', fontWeight: 600, marginBottom: 6 }}>BWC</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: currentStatus.bwc === 'SEV' || currentStatus.bwc === 'PROHIB' ? '#EF4444' : currentStatus.bwc === 'MOD' ? '#FBBF24' : '#34D399' }}>
               {currentStatus.bwc || 'No Data'}
             </div>
           </div>
@@ -591,42 +591,12 @@ export default function HomePage() {
                 {NAVAID_LABELS[n.status] || 'G'}
               </button>
             </div>
-            {(n.status === 'yellow' || n.status === 'red') && (
-              <textarea
-                placeholder="Add note..."
-                value={navaidNotes[n.id] || ''}
-                onChange={(e) => setNavaidNotes((prev) => ({ ...prev, [n.id]: e.target.value }))}
-                onBlur={() => handleNavaidNotesSave(n)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) handleNavaidNotesSave(n) }}
-                rows={1}
-                style={{
-                  width: '100%', boxSizing: 'border-box',
-                  background: 'rgba(4,7,12,0.7)',
-                  border: `1px solid ${STATUS_COLORS[n.status]}40`,
-                  borderRadius: 6, padding: '6px 10px', fontSize: 14,
-                  color: '#E2E8F0', outline: 'none',
-                  resize: 'none', overflow: 'hidden',
-                  fontFamily: 'inherit',
-                  fieldSizing: 'content' as unknown as undefined,
-                  minHeight: 32,
-                }}
-                ref={(el) => {
-                  if (el) {
-                    el.style.height = 'auto'
-                    el.style.height = el.scrollHeight + 'px'
-                  }
-                }}
-                onInput={(e) => {
-                  const target = e.target as HTMLTextAreaElement
-                  target.style.height = 'auto'
-                  target.style.height = target.scrollHeight + 'px'
-                }}
-              />
-            )}
           </div>
         )
+        const allFlagged = navaids.filter(n => n.status === 'yellow' || n.status === 'red')
         return (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+          <>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: allFlagged.length > 0 ? 8 : 16 }}>
             <div className="card" style={{ padding: '10px 14px 4px' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#FBBF24', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 01</div>
               {rwy01.map(renderNavaidItem)}
@@ -636,6 +606,49 @@ export default function HomePage() {
               {rwy19.map(renderNavaidItem)}
             </div>
           </div>
+          {allFlagged.length > 0 && (
+            <div className="card" style={{ padding: '10px 14px', marginBottom: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#FBBF24', marginBottom: 6, letterSpacing: '0.04em' }}>NAVAID NOTES</div>
+              {allFlagged.map(n => (
+                <div key={n.id} style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: STATUS_COLORS[n.status], marginBottom: 2 }}>
+                    {n.navaid_name}
+                  </div>
+                  <textarea
+                    placeholder="Add note..."
+                    value={navaidNotes[n.id] || ''}
+                    onChange={(e) => setNavaidNotes((prev) => ({ ...prev, [n.id]: e.target.value }))}
+                    onBlur={() => handleNavaidNotesSave(n)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) handleNavaidNotesSave(n) }}
+                    rows={1}
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      background: 'rgba(4,7,12,0.7)',
+                      border: `1px solid ${STATUS_COLORS[n.status]}40`,
+                      borderRadius: 6, padding: '6px 10px', fontSize: 14,
+                      color: '#E2E8F0', outline: 'none',
+                      resize: 'none', overflow: 'hidden',
+                      fontFamily: 'inherit',
+                      fieldSizing: 'content' as unknown as undefined,
+                      minHeight: 32,
+                    }}
+                    ref={(el) => {
+                      if (el) {
+                        el.style.height = 'auto'
+                        el.style.height = el.scrollHeight + 'px'
+                      }
+                    }}
+                    onInput={(e) => {
+                      const target = e.target as HTMLTextAreaElement
+                      target.style.height = 'auto'
+                      target.style.height = target.scrollHeight + 'px'
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+          </>
         )
       })()}
 

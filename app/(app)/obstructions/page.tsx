@@ -46,6 +46,7 @@ function ObstructionsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
 
   // Edit mode
   const editId = searchParams.get('edit')
@@ -456,26 +457,53 @@ function ObstructionsContent() {
           onChange={handlePhoto}
           style={{ display: 'none' }}
         />
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handlePhoto}
+          style={{ display: 'none' }}
+        />
         <div style={{ marginBottom: 10 }}>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              width: '100%',
-              background: '#38BDF814',
-              border: '1px solid #38BDF833',
-              borderRadius: 8,
-              padding: 10,
-              color: '#38BDF8',
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              minHeight: 44,
-            }}
-          >
-            {photos.length > 0 ? `+ Add More Photos (${photos.length})` : 'Add Photos'}
-          </button>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                background: '#38BDF814',
+                border: '1px solid #38BDF833',
+                borderRadius: 8,
+                padding: 10,
+                color: '#38BDF8',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                minHeight: 44,
+              }}
+            >
+              🖼️ Upload Photo
+            </button>
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              style={{
+                background: '#38BDF814',
+                border: '1px solid #38BDF833',
+                borderRadius: 8,
+                padding: 10,
+                color: '#38BDF8',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                minHeight: 44,
+              }}
+            >
+              📸 Take Photo
+            </button>
+          </div>
           {photos.length > 0 && (
             <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
               {photos.map((p, i) => (
