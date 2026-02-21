@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import Image from 'next/image'
 import {
   Search, ChevronDown, ChevronUp, Star, Plane, Shield,
   ArrowUpDown, X, SlidersHorizontal, Layers,
@@ -289,11 +290,11 @@ function AircraftDetailCard({
           cursor: 'pointer',
         }}
       >
-        {/* Category Badge */}
+        {/* Aircraft Thumbnail */}
         <div
           style={{
-            width: 34,
-            height: 34,
+            width: 48,
+            height: 48,
             borderRadius: 8,
             background: isMilitary ? 'rgba(139,92,246,0.1)' : 'rgba(56,189,248,0.1)',
             border: `1px solid ${isMilitary ? 'rgba(139,92,246,0.2)' : 'rgba(56,189,248,0.2)'}`,
@@ -301,12 +302,45 @@ function AircraftDetailCard({
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
+            position: 'relative',
+            overflow: 'hidden',
           }}
         >
-          {isMilitary
-            ? <Shield size={16} color="#8B5CF6" />
-            : <Plane size={16} color="#38BDF8" />
-          }
+          {ac.image_url ? (
+            <Image
+              src={ac.image_url}
+              alt={ac.aircraft}
+              fill
+              sizes="48px"
+              style={{ objectFit: 'cover' }}
+            />
+          ) : (
+            isMilitary
+              ? <Shield size={20} color="#8B5CF6" />
+              : <Plane size={20} color="#38BDF8" />
+          )}
+          {/* Category indicator dot */}
+          {ac.image_url && (
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 2,
+                right: 2,
+                width: 14,
+                height: 14,
+                borderRadius: 4,
+                background: isMilitary ? 'rgba(139,92,246,0.85)' : 'rgba(56,189,248,0.85)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {isMilitary
+                ? <Shield size={8} color="#fff" />
+                : <Plane size={8} color="#fff" />
+              }
+            </div>
+          )}
         </div>
 
         {/* Name & Manufacturer */}
