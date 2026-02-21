@@ -5,11 +5,11 @@ import type { AircraftCharacteristics } from '../aircraft_database_schema'
 import commercialRaw from '../commercial_aircraft.json'
 import militaryRaw from '../military_aircraft.json'
 
-// Merge and tag both datasets
+// Merge and tag both datasets — military first, then commercial, each sorted A–Z
 const allAircraft: AircraftCharacteristics[] = [
-  ...(commercialRaw as AircraftCharacteristics[]).map(a => ({ ...a, category: 'commercial' })),
-  ...(militaryRaw as AircraftCharacteristics[]).map(a => ({ ...a, category: 'military' })),
-].sort((a, b) => a.aircraft.localeCompare(b.aircraft))
+  ...(militaryRaw as AircraftCharacteristics[]).map(a => ({ ...a, category: 'military' })).sort((a, b) => a.aircraft.localeCompare(b.aircraft)),
+  ...(commercialRaw as AircraftCharacteristics[]).map(a => ({ ...a, category: 'commercial' })).sort((a, b) => a.aircraft.localeCompare(b.aircraft)),
+]
 
 export { allAircraft }
 

@@ -326,14 +326,6 @@ function AircraftDetailCard({
           </div>
         </div>
 
-        {/* Quick Stats */}
-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div style={{ fontSize: 11, color: '#CBD5E1', fontWeight: 600 }}>
-            {fmtNum(ac.wing_span_ft)} ft
-          </div>
-          <div style={{ fontSize: 9, color: '#64748B' }}>wingspan</div>
-        </div>
-
         {/* Expand Arrow */}
         {expanded
           ? <ChevronUp size={16} color="#64748B" style={{ flexShrink: 0 }} />
@@ -348,9 +340,9 @@ function AircraftDetailCard({
         padding: '0 14px 10px',
       }}>
         {[
+          { label: 'Wingspan', value: fmtNum(ac.wing_span_ft, 'ft') },
           { label: 'Length', value: fmtNum(ac.length_ft, 'ft') },
           { label: 'Height', value: fmtNum(ac.height_ft, 'ft') },
-          { label: 'MTOW', value: fmtWeight(ac.max_to_wt_klbs) },
         ].map(({ label, value }) => (
           <div key={label} style={{
             flex: 1,
@@ -430,7 +422,6 @@ function AircraftDetailCard({
               { label: 'Wingspan', value: fmtNum(ac.wing_span_ft, 'ft') },
               { label: 'Length', value: fmtNum(ac.length_ft, 'ft') },
               { label: 'Height', value: fmtNum(ac.height_ft, 'ft') },
-              { label: 'Min Clearance', value: fmtNum(ac.vertical_clearance_in, 'in') },
             ]} />
           </DetailSection>
 
@@ -520,16 +511,6 @@ function AircraftDetailCard({
             )}
           </DetailSection>
 
-          {/* Metadata */}
-          {(ac.alc_manager || ac.notes || ac.source_page) && (
-            <DetailSection title="Metadata">
-              <DetailGrid items={[
-                ...(ac.alc_manager ? [{ label: 'ALC Manager', value: ac.alc_manager }] : []),
-                ...(ac.notes ? [{ label: 'Notes', value: ac.notes }] : []),
-                ...(ac.source_page ? [{ label: 'Source Page', value: String(ac.source_page) }] : []),
-              ]} />
-            </DetailSection>
-          )}
         </div>
       )}
     </div>
@@ -558,15 +539,15 @@ function DetailSection({ title, children }: { title: string; children: React.Rea
 
 function DetailGrid({ items }: { items: { label: string; value: string }[] }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4 }}>
       {items.map(({ label, value }) => (
         <div key={label} style={{
           padding: '5px 8px',
           background: 'rgba(4,7,12,0.4)',
           borderRadius: 5,
         }}>
-          <div style={{ fontSize: 10, color: '#CBD5E1', fontWeight: 600 }}>{value}</div>
-          <div style={{ fontSize: 8, color: '#64748B', fontWeight: 600 }}>{label}</div>
+          <div style={{ fontSize: 9, color: '#CBD5E1', fontWeight: 600 }}>{label}</div>
+          <div style={{ fontSize: 8, color: '#64748B', fontWeight: 600 }}>{value}</div>
         </div>
       ))}
     </div>
