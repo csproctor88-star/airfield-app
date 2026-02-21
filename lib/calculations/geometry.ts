@@ -269,12 +269,12 @@ export function generateClearZonePolygons(rwy: RunwayGeometry): {
   }
 }
 
-/** Generate graded area rectangles (1,000 ft x 3,000 ft wide) at each runway end. */
+/** Generate graded area rectangles (1,000 ft x 1,000 ft wide) at each runway end. */
 export function generateGradedAreaPolygons(rwy: RunwayGeometry): {
   end1: [number, number][]
   end2: [number, number][]
 } {
-  const halfWidth = 1500
+  const halfWidth = 500
   const length = 1000
   const perpL = normalizeBearing(rwy.bearingDeg - 90)
   const perpR = normalizeBearing(rwy.bearingDeg + 90)

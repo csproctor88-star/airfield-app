@@ -123,7 +123,7 @@ function buildSurfaceGeoJSON(rwy: RunwayGeometry) {
     geometry: { type: 'Polygon', coordinates: [primary] },
   })
 
-  // Graded areas (1,000 ft x 3,000 ft at each end)
+  // Graded areas (1,000 ft x 1,000 ft at each end)
   const gradedAreas = generateGradedAreaPolygons(rwy)
   features.push({
     type: 'Feature',
