@@ -4,11 +4,20 @@
 import type { AircraftCharacteristics } from '../aircraft_database_schema'
 import commercialRaw from '../commercial_aircraft.json'
 import militaryRaw from '../military_aircraft.json'
+import imageManifest from '../image_manifest.json'
+
+// Resolve image URL from manifest by aircraft name
+const manifest = imageManifest as Record<string, { filename: string }>
+
+function withImage(ac: AircraftCharacteristics): AircraftCharacteristics {
+  const entry = manifest[ac.aircraft]
+  return entry ? { ...ac, image_url: `/aircraft_images/${entry.filename}` } : ac
+}
 
 // Merge and tag both datasets — military first, then commercial, each sorted A–Z
 const allAircraft: AircraftCharacteristics[] = [
-  ...(militaryRaw as AircraftCharacteristics[]).map(a => ({ ...a, category: 'military' })).sort((a, b) => a.aircraft.localeCompare(b.aircraft)),
-  ...(commercialRaw as AircraftCharacteristics[]).map(a => ({ ...a, category: 'commercial' })).sort((a, b) => a.aircraft.localeCompare(b.aircraft)),
+  ...(militaryRaw as AircraftCharacteristics[]).map(a => withImage({ ...a, category: 'military' })).sort((a, b) => a.aircraft.localeCompare(b.aircraft)),
+  ...(commercialRaw as AircraftCharacteristics[]).map(a => withImage({ ...a, category: 'commercial' })).sort((a, b) => a.aircraft.localeCompare(b.aircraft)),
 ]
 
 export { allAircraft }
