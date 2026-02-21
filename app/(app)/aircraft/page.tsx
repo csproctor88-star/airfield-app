@@ -322,9 +322,11 @@ function AircraftDetailCard({
           }}>
             {ac.aircraft}
           </div>
-          <div style={{ fontSize: 11, color: '#64748B' }}>
-            {ac.manufacturer || 'Unknown'}{ac.group_index ? ` · Group ${ac.group_index}` : ''}
-          </div>
+          {ac.group_index && (
+            <div style={{ fontSize: 11, color: '#64748B' }}>
+              Group {ac.group_index}
+            </div>
+          )}
         </div>
 
         {/* Expand Arrow */}
@@ -334,36 +336,43 @@ function AircraftDetailCard({
         }
       </div>
 
-      {/* Quick Info Row (always visible) */}
-      <div style={{
-        display: 'flex',
-        gap: 1,
-        padding: '0 14px 10px',
-      }}>
-        {[
-          { label: 'Wingspan', value: fmtNum(ac.wing_span_ft, 'ft') },
-          { label: 'Length', value: fmtNum(ac.length_ft, 'ft') },
-          { label: 'Height', value: fmtNum(ac.height_ft, 'ft') },
-        ].map(({ label, value }) => (
-          <div key={label} style={{
-            flex: 1,
-            background: 'rgba(4,7,12,0.5)',
-            padding: '5px 6px',
-            borderRadius: 5,
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 12, color: '#CBD5E1', fontWeight: 600 }}>{value}</div>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>{label}</div>
-          </div>
-        ))}
-      </div>
-
       {/* Expanded Detail */}
       {expanded && (
         <div style={{
           borderTop: '1px solid rgba(148,163,184,0.06)',
           padding: '12px 14px',
         }}>
+          {/* Manufacturer */}
+          {ac.manufacturer && (
+            <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 10 }}>
+              {ac.manufacturer}
+            </div>
+          )}
+
+          {/* Dimensions */}
+          <div style={{
+            display: 'flex',
+            gap: 1,
+            marginBottom: 14,
+          }}>
+            {[
+              { label: 'Wingspan', value: fmtNum(ac.wing_span_ft, 'ft') },
+              { label: 'Length', value: fmtNum(ac.length_ft, 'ft') },
+              { label: 'Height', value: fmtNum(ac.height_ft, 'ft') },
+            ].map(({ label, value }) => (
+              <div key={label} style={{
+                flex: 1,
+                background: 'rgba(4,7,12,0.5)',
+                padding: '5px 6px',
+                borderRadius: 5,
+                textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 12, color: '#CBD5E1', fontWeight: 600 }}>{value}</div>
+                <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600 }}>{label}</div>
+              </div>
+            ))}
+          </div>
+
           {/* Aircraft Image */}
           {ac.image_url && (
             <div
@@ -439,15 +448,6 @@ function AircraftDetailCard({
               <AcnPcnPanel aircraft={ac} onClose={() => setShowAcn(false)} />
             </div>
           )}
-
-          {/* Dimensions Section */}
-          <DetailSection title="Dimensions">
-            <DetailGrid items={[
-              { label: 'Wingspan', value: fmtNum(ac.wing_span_ft, 'ft') },
-              { label: 'Length', value: fmtNum(ac.length_ft, 'ft') },
-              { label: 'Height', value: fmtNum(ac.height_ft, 'ft') },
-            ]} />
-          </DetailSection>
 
           {/* Turn Data */}
           <DetailSection title="Turn Data">
