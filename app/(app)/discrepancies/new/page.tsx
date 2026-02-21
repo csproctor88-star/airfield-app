@@ -95,9 +95,14 @@ export default function NewDiscrepancyPage() {
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
-      <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#22D3EE', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
-        ← Back
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#22D3EE', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+          ← Back
+        </button>
+        <button onClick={() => router.push('/discrepancies')} style={{ background: '#FBBF2414', border: '1px solid #FBBF2433', borderRadius: 8, padding: '6px 12px', color: '#FBBF24', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+          ⚠️ View All Discrepancies
+        </button>
+      </div>
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>New Discrepancy</div>
 
       <div className="card">

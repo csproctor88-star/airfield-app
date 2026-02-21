@@ -10,6 +10,7 @@ import type { UserRole } from '@/lib/supabase/types'
 // "More" menu — full module list with role-gated entries
 
 const modules = [
+  { name: 'Airfield Discrepancies', icon: '⚠️', color: '#FBBF24', badge: null, href: '/discrepancies', adminOnly: false },
   { name: 'Airfield Inspection History', icon: '📋', color: '#34D399', badge: null, href: '/inspections?view=history', adminOnly: false },
   { name: 'Airfield Check History', icon: '🛡️', color: '#22D3EE', badge: null, href: '/checks/history', adminOnly: false },
   { name: 'Obstruction Database', icon: '🗺️', color: '#F97316', badge: null, href: '/obstructions/history', adminOnly: false },
