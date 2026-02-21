@@ -753,6 +753,18 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
               </span>
             </div>
 
+            {/* Failure explanation */}
+            {doc.status === 'failed' && (
+              <div style={{
+                marginTop: 6, padding: '6px 8px', borderRadius: 6,
+                background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.12)',
+                fontSize: 10, color: '#F87171', lineHeight: 1.4,
+              }}>
+                Text extraction failed — the file may be scanned or image-based.
+                You can still view the document, but search won&apos;t be available.
+              </div>
+            )}
+
             {/* Action buttons */}
             <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
               <button
