@@ -1,0 +1,1566 @@
+{
+  "A330-200": {
+    "filename": "commercial/A330-200.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Bmi.a330-200.g-wwbb.arp.jpg/1280px-Bmi.a330-200.g-wwbb.arp.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Bmi.a330-200.g-wwbb.arp.jpg",
+    "license": "Public domain",
+    "category": "commercial"
+  },
+  "A330-300": {
+    "filename": "commercial/A330-300.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/4R-ALO-_SriLankan_Airlines_Airbus_A330-300.jpg/1280px-4R-ALO-_SriLankan_Airlines_Airbus_A330-300.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:4R-ALO-_SriLankan_Airlines_Airbus_A330-300.jpg",
+    "license": "CC BY 2.0",
+    "category": "commercial"
+  },
+  "A340-200": {
+    "filename": "commercial/A340-200.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/South_African_Airways_Airbus_A340-313_ZS-SXE_MUC_2015_02.jpg/1280px-South_African_Airways_Airbus_A340-313_ZS-SXE_MUC_2015_02.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:South_African_Airways_Airbus_A340-313_ZS-SXE_MUC_2015_02.jpg",
+    "license": "CC BY 4.0",
+    "category": "commercial"
+  },
+  "A340-300": {
+    "filename": "commercial/A340-300.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Lufthansa_Airbus_A340-300_D-AIGW_MD1.jpg/1280px-Lufthansa_Airbus_A340-300_D-AIGW_MD1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Lufthansa_Airbus_A340-300_D-AIGW_MD1.jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "commercial"
+  },
+  "A380-841, -861": {
+    "filename": "commercial/A380-841_-861.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Air_France_A380_F-HPJA.jpg/1280px-Air_France_A380_F-HPJA.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Air_France_A380_F-HPJA.jpg",
+    "license": "CC BY-SA 3.0",
+    "category": "commercial"
+  },
+  "A380-843F, -863F": {
+    "filename": "commercial/A380-843F_-863F.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Air_France_A380_F-HPJA.jpg/1280px-Air_France_A380_F-HPJA.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Air_France_A380_F-HPJA.jpg",
+    "license": "CC BY-SA 3.0",
+    "category": "commercial"
+  },
+  "DC-8-43": {
+    "filename": "commercial/DC-8-43.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Douglas_DC-3_of_BOAC_at_Gibraltar%2C_silhouetted_by_searchlights_on_the_Rock.jpg/1280px-Douglas_DC-3_of_BOAC_at_Gibraltar%2C_silhouetted_by_searchlights_on_the_Rock.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Douglas_DC-3_of_BOAC_at_Gibraltar,_silhouetted_by_searchlights_on_the_Rock.jpg",
+    "license": "Public domain",
+    "category": "commercial"
+  },
+  "DC-8-55": {
+    "filename": "commercial/DC-8-55.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Douglas_DC-3_of_BOAC_at_Gibraltar%2C_silhouetted_by_searchlights_on_the_Rock.jpg/1280px-Douglas_DC-3_of_BOAC_at_Gibraltar%2C_silhouetted_by_searchlights_on_the_Rock.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Douglas_DC-3_of_BOAC_at_Gibraltar,_silhouetted_by_searchlights_on_the_Rock.jpg",
+    "license": "Public domain",
+    "dedup_from": "DC-8-43",
+    "category": "commercial"
+  },
+  "DC-8-55F": {
+    "filename": "commercial/DC-8-55F.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Douglas_DC-3_of_BOAC_at_Gibraltar%2C_silhouetted_by_searchlights_on_the_Rock.jpg/1280px-Douglas_DC-3_of_BOAC_at_Gibraltar%2C_silhouetted_by_searchlights_on_the_Rock.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Douglas_DC-3_of_BOAC_at_Gibraltar,_silhouetted_by_searchlights_on_the_Rock.jpg",
+    "license": "Public domain",
+    "dedup_from": "DC-8-43",
+    "category": "commercial"
+  },
+  "DC-8-61, -71": {
+    "filename": "commercial/DC-8-61_-71.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/De_Haviland_Canada_DHC7%2C_Douglas_DC-8-61_and_Douglas_C9A_storage_area_%2849549988366%29.jpg/1280px-De_Haviland_Canada_DHC7%2C_Douglas_DC-8-61_and_Douglas_C9A_storage_area_%2849549988366%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:De_Haviland_Canada_DHC7,_Douglas_DC-8-61_and_Douglas_C9A_storage_area_(49549988366).jpg",
+    "license": "CC BY 2.0",
+    "category": "commercial"
+  },
+  "DC-8-61F, -71F": {
+    "filename": "commercial/DC-8-61F_-71F.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/De_Haviland_Canada_DHC7%2C_Douglas_DC-8-61_and_Douglas_C9A_storage_area_%2849549988366%29.jpg/1280px-De_Haviland_Canada_DHC7%2C_Douglas_DC-8-61_and_Douglas_C9A_storage_area_%2849549988366%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:De_Haviland_Canada_DHC7,_Douglas_DC-8-61_and_Douglas_C9A_storage_area_(49549988366).jpg",
+    "license": "CC BY 2.0",
+    "dedup_from": "DC-8-61, -71",
+    "category": "commercial"
+  },
+  "DC-8-62, -72": {
+    "filename": "commercial/DC-8-62_-72.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/De_Haviland_Canada_DHC7%2C_Douglas_DC-8-61_and_Douglas_C9A_storage_area_%2849549988366%29.jpg/1280px-De_Haviland_Canada_DHC7%2C_Douglas_DC-8-61_and_Douglas_C9A_storage_area_%2849549988366%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:De_Haviland_Canada_DHC7,_Douglas_DC-8-61_and_Douglas_C9A_storage_area_(49549988366).jpg",
+    "license": "CC BY 2.0",
+    "dedup_from": "DC-8-61, -71",
+    "category": "commercial"
+  },
+  "DC-8-62F, -72F": {
+    "filename": "commercial/DC-8-62F_-72F.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/De_Haviland_Canada_DHC7%2C_Douglas_DC-8-61_and_Douglas_C9A_storage_area_%2849549988366%29.jpg/1280px-De_Haviland_Canada_DHC7%2C_Douglas_DC-8-61_and_Douglas_C9A_storage_area_%2849549988366%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:De_Haviland_Canada_DHC7,_Douglas_DC-8-61_and_Douglas_C9A_storage_area_(49549988366).jpg",
+    "license": "CC BY 2.0",
+    "dedup_from": "DC-8-61, -71",
+    "category": "commercial"
+  },
+  "DC-8-63, -73": {
+    "filename": "commercial/DC-8-63_-73.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/De_Haviland_Canada_DHC7%2C_Douglas_DC-8-61_and_Douglas_C9A_storage_area_%2849549988366%29.jpg/1280px-De_Haviland_Canada_DHC7%2C_Douglas_DC-8-61_and_Douglas_C9A_storage_area_%2849549988366%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:De_Haviland_Canada_DHC7,_Douglas_DC-8-61_and_Douglas_C9A_storage_area_(49549988366).jpg",
+    "license": "CC BY 2.0",
+    "dedup_from": "DC-8-61, -71",
+    "category": "commercial"
+  },
+  "DC-8-63F, -73F": {
+    "filename": "commercial/DC-8-63F_-73F.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/De_Haviland_Canada_DHC7%2C_Douglas_DC-8-61_and_Douglas_C9A_storage_area_%2849549988366%29.jpg/1280px-De_Haviland_Canada_DHC7%2C_Douglas_DC-8-61_and_Douglas_C9A_storage_area_%2849549988366%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:De_Haviland_Canada_DHC7,_Douglas_DC-8-61_and_Douglas_C9A_storage_area_(49549988366).jpg",
+    "license": "CC BY 2.0",
+    "dedup_from": "DC-8-61, -71",
+    "category": "commercial"
+  },
+  "DC-9-15, -15F": {
+    "filename": "commercial/DC-9-15_-15F.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/MCDONNELL_DOUGLAS_DC-9_REFAN_AIRPLANE_-_NARA_-_17423748.jpg/1280px-MCDONNELL_DOUGLAS_DC-9_REFAN_AIRPLANE_-_NARA_-_17423748.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:MCDONNELL_DOUGLAS_DC-9_REFAN_AIRPLANE_-_NARA_-_17423748.jpg",
+    "license": "Public domain",
+    "category": "commercial"
+  },
+  "DC-9-21": {
+    "filename": "commercial/DC-9-21.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/MCDONNELL_DOUGLAS_DC-9_REFAN_AIRPLANE_-_NARA_-_17423748.jpg/1280px-MCDONNELL_DOUGLAS_DC-9_REFAN_AIRPLANE_-_NARA_-_17423748.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:MCDONNELL_DOUGLAS_DC-9_REFAN_AIRPLANE_-_NARA_-_17423748.jpg",
+    "license": "Public domain",
+    "dedup_from": "DC-9-15, -15F",
+    "category": "commercial"
+  },
+  "DC-9-32, -33F": {
+    "filename": "commercial/DC-9-32_-33F.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/MCDONNELL_DOUGLAS_DC-9_REFAN_AIRPLANE_-_NARA_-_17423748.jpg/1280px-MCDONNELL_DOUGLAS_DC-9_REFAN_AIRPLANE_-_NARA_-_17423748.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:MCDONNELL_DOUGLAS_DC-9_REFAN_AIRPLANE_-_NARA_-_17423748.jpg",
+    "license": "Public domain",
+    "dedup_from": "DC-9-15, -15F",
+    "category": "commercial"
+  },
+  "DC-9-41": {
+    "filename": "commercial/DC-9-41.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/MCDONNELL_DOUGLAS_DC-9_REFAN_AIRPLANE_-_NARA_-_17423748.jpg/1280px-MCDONNELL_DOUGLAS_DC-9_REFAN_AIRPLANE_-_NARA_-_17423748.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:MCDONNELL_DOUGLAS_DC-9_REFAN_AIRPLANE_-_NARA_-_17423748.jpg",
+    "license": "Public domain",
+    "dedup_from": "DC-9-15, -15F",
+    "category": "commercial"
+  },
+  "DC-9-51": {
+    "filename": "commercial/DC-9-51.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/MCDONNELL_DOUGLAS_DC-9_REFAN_AIRPLANE_-_NARA_-_17423748.jpg/1280px-MCDONNELL_DOUGLAS_DC-9_REFAN_AIRPLANE_-_NARA_-_17423748.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:MCDONNELL_DOUGLAS_DC-9_REFAN_AIRPLANE_-_NARA_-_17423748.jpg",
+    "license": "Public domain",
+    "dedup_from": "DC-9-15, -15F",
+    "category": "commercial"
+  },
+  "DC-10-10, -10CF": {
+    "filename": "commercial/DC-10-10_-10CF.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/N313FE_Fedex_1988_McDonnell_Douglas_DC-10-30%28F%29_CN-_48311-440_%22Bilal%22_%2813929394625%29.jpg/1280px-N313FE_Fedex_1988_McDonnell_Douglas_DC-10-30%28F%29_CN-_48311-440_%22Bilal%22_%2813929394625%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:N313FE_Fedex_1988_McDonnell_Douglas_DC-10-30(F)_CN-_48311-440_%22Bilal%22_(13929394625).jpg",
+    "license": "CC BY-SA 2.0",
+    "category": "commercial"
+  },
+  "DC-10-30, -30CF": {
+    "filename": "commercial/DC-10-30_-30CF.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/N313FE_Fedex_1988_McDonnell_Douglas_DC-10-30%28F%29_CN-_48311-440_%22Bilal%22_%2813929394625%29.jpg/1280px-N313FE_Fedex_1988_McDonnell_Douglas_DC-10-30%28F%29_CN-_48311-440_%22Bilal%22_%2813929394625%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:N313FE_Fedex_1988_McDonnell_Douglas_DC-10-30(F)_CN-_48311-440_%22Bilal%22_(13929394625).jpg",
+    "license": "CC BY-SA 2.0",
+    "dedup_from": "DC-10-10, -10CF",
+    "category": "commercial"
+  },
+  "DC-10-40, -40CF": {
+    "filename": "commercial/DC-10-40_-40CF.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/N313FE_Fedex_1988_McDonnell_Douglas_DC-10-30%28F%29_CN-_48311-440_%22Bilal%22_%2813929394625%29.jpg/1280px-N313FE_Fedex_1988_McDonnell_Douglas_DC-10-30%28F%29_CN-_48311-440_%22Bilal%22_%2813929394625%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:N313FE_Fedex_1988_McDonnell_Douglas_DC-10-30(F)_CN-_48311-440_%22Bilal%22_(13929394625).jpg",
+    "license": "CC BY-SA 2.0",
+    "dedup_from": "DC-10-10, -10CF",
+    "category": "commercial"
+  },
+  "MD 81": {
+    "filename": "commercial/MD_81.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/McDonnell_Douglas_MD-80_Laser_Airlines.jpg/1280px-McDonnell_Douglas_MD-80_Laser_Airlines.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:McDonnell_Douglas_MD-80_Laser_Airlines.jpg",
+    "license": "CC0",
+    "category": "commercial"
+  },
+  "MD-82, -88": {
+    "filename": "commercial/MD-82_-88.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/McDonnell_Douglas_MD-80_Laser_Airlines.jpg/1280px-McDonnell_Douglas_MD-80_Laser_Airlines.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:McDonnell_Douglas_MD-80_Laser_Airlines.jpg",
+    "license": "CC0",
+    "dedup_from": "MD 81",
+    "category": "commercial"
+  },
+  "MD-83": {
+    "filename": "commercial/MD-83.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/McDonnell_Douglas_MD-80_Laser_Airlines.jpg/1280px-McDonnell_Douglas_MD-80_Laser_Airlines.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:McDonnell_Douglas_MD-80_Laser_Airlines.jpg",
+    "license": "CC0",
+    "dedup_from": "MD 81",
+    "category": "commercial"
+  },
+  "MD-87": {
+    "filename": "commercial/MD-87.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/McDonnell_Douglas_MD-80_Laser_Airlines.jpg/1280px-McDonnell_Douglas_MD-80_Laser_Airlines.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:McDonnell_Douglas_MD-80_Laser_Airlines.jpg",
+    "license": "CC0",
+    "dedup_from": "MD 81",
+    "category": "commercial"
+  },
+  "MD 90-30": {
+    "filename": "commercial/MD_90-30.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/McDonnell_Douglas_MD-90_%28Japan_Airlines%29_d.jpg/1280px-McDonnell_Douglas_MD-90_%28Japan_Airlines%29_d.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:McDonnell_Douglas_MD-90_(Japan_Airlines)_d.jpg",
+    "license": "Public domain",
+    "category": "commercial"
+  },
+  "MD 90-30ER": {
+    "filename": "commercial/MD_90-30ER.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/McDonnell_Douglas_MD-90_%28Japan_Airlines%29_d.jpg/1280px-McDonnell_Douglas_MD-90_%28Japan_Airlines%29_d.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:McDonnell_Douglas_MD-90_(Japan_Airlines)_d.jpg",
+    "license": "Public domain",
+    "dedup_from": "MD 90-30",
+    "category": "commercial"
+  },
+  "MD-10-10F": {
+    "filename": "commercial/MD-10-10F.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Federal_Express_FEDEX_McDonnell_Douglas_MD-10-10%28F%29_N68059_%28cn_46907-78%29_%22Buck%22_%285844200092%29.jpg/1280px-Federal_Express_FEDEX_McDonnell_Douglas_MD-10-10%28F%29_N68059_%28cn_46907-78%29_%22Buck%22_%285844200092%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Federal_Express_FEDEX_McDonnell_Douglas_MD-10-10(F)_N68059_(cn_46907-78)_%22Buck%22_(5844200092).jpg",
+    "license": "CC BY-SA 2.0",
+    "category": "commercial"
+  },
+  "MD-11, -Combi, -Freighter": {
+    "filename": "commercial/MD-11_-Combi_-Freighter.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/FINNAIR_McDonnell_Douglas_MD-11_%28OH-LGB_48450_479%29_%286387867129%29.jpg/1280px-FINNAIR_McDonnell_Douglas_MD-11_%28OH-LGB_48450_479%29_%286387867129%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:FINNAIR_McDonnell_Douglas_MD-11_(OH-LGB_48450_479)_(6387867129).jpg",
+    "license": "CC BY-SA 2.0",
+    "category": "commercial"
+  },
+  "MD-11ER": {
+    "filename": "commercial/MD-11ER.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/FINNAIR_McDonnell_Douglas_MD-11_%28OH-LGB_48450_479%29_%286387867129%29.jpg/1280px-FINNAIR_McDonnell_Douglas_MD-11_%28OH-LGB_48450_479%29_%286387867129%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:FINNAIR_McDonnell_Douglas_MD-11_(OH-LGB_48450_479)_(6387867129).jpg",
+    "license": "CC BY-SA 2.0",
+    "dedup_from": "MD-11, -Combi, -Freighter",
+    "category": "commercial"
+  },
+  "707-120B": {
+    "filename": "commercial/707-120B.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/230307-F-WE075-1350_-_Aircraft_arrive_for_Red_Flag-Nellis_23-2%2C_7_Mar%2C_2023.jpg/1280px-230307-F-WE075-1350_-_Aircraft_arrive_for_Red_Flag-Nellis_23-2%2C_7_Mar%2C_2023.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:230307-F-WE075-1350_-_Aircraft_arrive_for_Red_Flag-Nellis_23-2,_7_Mar,_2023.jpg",
+    "license": "Public domain",
+    "category": "commercial"
+  },
+  "707-320/420": {
+    "filename": "commercial/707-320-420.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/230307-F-WE075-1350_-_Aircraft_arrive_for_Red_Flag-Nellis_23-2%2C_7_Mar%2C_2023.jpg/1280px-230307-F-WE075-1350_-_Aircraft_arrive_for_Red_Flag-Nellis_23-2%2C_7_Mar%2C_2023.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:230307-F-WE075-1350_-_Aircraft_arrive_for_Red_Flag-Nellis_23-2,_7_Mar,_2023.jpg",
+    "license": "Public domain",
+    "dedup_from": "707-120B",
+    "category": "commercial"
+  },
+  "707-320B": {
+    "filename": "commercial/707-320B.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/230307-F-WE075-1350_-_Aircraft_arrive_for_Red_Flag-Nellis_23-2%2C_7_Mar%2C_2023.jpg/1280px-230307-F-WE075-1350_-_Aircraft_arrive_for_Red_Flag-Nellis_23-2%2C_7_Mar%2C_2023.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:230307-F-WE075-1350_-_Aircraft_arrive_for_Red_Flag-Nellis_23-2,_7_Mar,_2023.jpg",
+    "license": "Public domain",
+    "dedup_from": "707-120B",
+    "category": "commercial"
+  },
+  "707-320C": {
+    "filename": "commercial/707-320C.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/230307-F-WE075-1350_-_Aircraft_arrive_for_Red_Flag-Nellis_23-2%2C_7_Mar%2C_2023.jpg/1280px-230307-F-WE075-1350_-_Aircraft_arrive_for_Red_Flag-Nellis_23-2%2C_7_Mar%2C_2023.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:230307-F-WE075-1350_-_Aircraft_arrive_for_Red_Flag-Nellis_23-2,_7_Mar,_2023.jpg",
+    "license": "Public domain",
+    "dedup_from": "707-120B",
+    "category": "commercial"
+  },
+  "717-200": {
+    "filename": "commercial/717-200.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Boeing_717_74_Sunbury_St_Geebung_IMGP3568.jpg/1280px-Boeing_717_74_Sunbury_St_Geebung_IMGP3568.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_717_74_Sunbury_St_Geebung_IMGP3568.jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "commercial"
+  },
+  "720": {
+    "filename": "commercial/720.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Boeing_720_C-FETB_NAFMC_1.jpg/1280px-Boeing_720_C-FETB_NAFMC_1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_720_C-FETB_NAFMC_1.jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "commercial"
+  },
+  "720B": {
+    "filename": "commercial/720B.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Boeing_720_C-FETB_NAFMC_1.jpg/1280px-Boeing_720_C-FETB_NAFMC_1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_720_C-FETB_NAFMC_1.jpg",
+    "license": "CC BY-SA 4.0",
+    "dedup_from": "720",
+    "category": "commercial"
+  },
+  "727-100/-100C": {
+    "filename": "commercial/727-100--100C.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Boeing_727_%28Muenchen-Riem%29.jpg/1280px-Boeing_727_%28Muenchen-Riem%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_727_(Muenchen-Riem).jpg",
+    "license": "Public domain",
+    "category": "commercial"
+  },
+  "727-200": {
+    "filename": "commercial/727-200.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/0/0c/Boeing_727_Syrian.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_727_Syrian.jpg",
+    "license": "Public domain",
+    "category": "commercial"
+  },
+  "737-100": {
+    "filename": "commercial/737-100.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/b/b8/Lufthansa_737-130_D-ABEL.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Lufthansa_737-130_D-ABEL.jpg",
+    "license": "CC BY-SA 3.0",
+    "category": "commercial"
+  },
+  "737-200": {
+    "filename": "commercial/737-200.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/b/b8/Lufthansa_737-130_D-ABEL.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Lufthansa_737-130_D-ABEL.jpg",
+    "license": "CC BY-SA 3.0",
+    "dedup_from": "737-100",
+    "category": "commercial"
+  },
+  "737-200ADV/-200C/-200QC": {
+    "filename": "commercial/737-200ADV--200C--200QC.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/b/b8/Lufthansa_737-130_D-ABEL.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Lufthansa_737-130_D-ABEL.jpg",
+    "license": "CC BY-SA 3.0",
+    "dedup_from": "737-100",
+    "category": "commercial"
+  },
+  "737-300": {
+    "filename": "commercial/737-300.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/2/24/Boeing_737-300_Aegean_SX-BGW.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_737-300_Aegean_SX-BGW.jpg",
+    "license": "CC BY-SA 3.0",
+    "category": "commercial"
+  },
+  "737-300 with Winglets": {
+    "filename": "commercial/737-300_with_Winglets.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/361as_-_Air_Plus_Comet_Boeing_737-300_%28winglets%29%3B_EC-IPS%40ZRH%3B02.07.2005_%288354012154%29.jpg/1280px-361as_-_Air_Plus_Comet_Boeing_737-300_%28winglets%29%3B_EC-IPS%40ZRH%3B02.07.2005_%288354012154%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:361as_-_Air_Plus_Comet_Boeing_737-300_(winglets);_EC-IPS@ZRH;02.07.2005_(8354012154).jpg",
+    "license": "CC BY-SA 2.0",
+    "category": "commercial"
+  },
+  "737-400": {
+    "filename": "commercial/737-400.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/2/24/Boeing_737-300_Aegean_SX-BGW.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_737-300_Aegean_SX-BGW.jpg",
+    "license": "CC BY-SA 3.0",
+    "dedup_from": "737-300",
+    "category": "commercial"
+  },
+  "737-500": {
+    "filename": "commercial/737-500.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/2/24/Boeing_737-300_Aegean_SX-BGW.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_737-300_Aegean_SX-BGW.jpg",
+    "license": "CC BY-SA 3.0",
+    "dedup_from": "737-300",
+    "category": "commercial"
+  },
+  "737-600": {
+    "filename": "commercial/737-600.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/BOEING_737_%289290123047%29.jpg/1280px-BOEING_737_%289290123047%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:BOEING_737_(9290123047).jpg",
+    "license": "CC BY-SA 2.0",
+    "category": "commercial"
+  },
+  "737-600 with Winglets": {
+    "filename": "commercial/737-600_with_Winglets.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/WestJet_737-600_C-GWSJ_Tail.jpeg/1280px-WestJet_737-600_C-GWSJ_Tail.jpeg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:WestJet_737-600_C-GWSJ_Tail.jpeg",
+    "license": "CC BY-SA 2.0",
+    "category": "commercial"
+  },
+  "737-700/700C": {
+    "filename": "commercial/737-700-700C.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/BOEING_737_%289290123047%29.jpg/1280px-BOEING_737_%289290123047%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:BOEING_737_(9290123047).jpg",
+    "license": "CC BY-SA 2.0",
+    "dedup_from": "737-600",
+    "category": "commercial"
+  },
+  "737-700/700C with Winglets": {
+    "filename": "commercial/737-700-700C_with_Winglets.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/WestJet_737-600_C-GWSJ_Tail.jpeg/1280px-WestJet_737-600_C-GWSJ_Tail.jpeg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:WestJet_737-600_C-GWSJ_Tail.jpeg",
+    "license": "CC BY-SA 2.0",
+    "dedup_from": "737-600 with Winglets",
+    "category": "commercial"
+  },
+  "737-800": {
+    "filename": "commercial/737-800.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/BOEING_737_%289290123047%29.jpg/1280px-BOEING_737_%289290123047%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:BOEING_737_(9290123047).jpg",
+    "license": "CC BY-SA 2.0",
+    "dedup_from": "737-600",
+    "category": "commercial"
+  },
+  "737-800 with Winglets": {
+    "filename": "commercial/737-800_with_Winglets.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/WestJet_737-600_C-GWSJ_Tail.jpeg/1280px-WestJet_737-600_C-GWSJ_Tail.jpeg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:WestJet_737-600_C-GWSJ_Tail.jpeg",
+    "license": "CC BY-SA 2.0",
+    "dedup_from": "737-600 with Winglets",
+    "category": "commercial"
+  },
+  "737-900": {
+    "filename": "commercial/737-900.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/BOEING_737_%289290123047%29.jpg/1280px-BOEING_737_%289290123047%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:BOEING_737_(9290123047).jpg",
+    "license": "CC BY-SA 2.0",
+    "dedup_from": "737-600",
+    "category": "commercial"
+  },
+  "737-900 with Winglets": {
+    "filename": "commercial/737-900_with_Winglets.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/WestJet_737-600_C-GWSJ_Tail.jpeg/1280px-WestJet_737-600_C-GWSJ_Tail.jpeg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:WestJet_737-600_C-GWSJ_Tail.jpeg",
+    "license": "CC BY-SA 2.0",
+    "dedup_from": "737-600 with Winglets",
+    "category": "commercial"
+  },
+  "737-900ER": {
+    "filename": "commercial/737-900ER.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/BOEING_737_%289290123047%29.jpg/1280px-BOEING_737_%289290123047%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:BOEING_737_(9290123047).jpg",
+    "license": "CC BY-SA 2.0",
+    "dedup_from": "737-600",
+    "category": "commercial"
+  },
+  "737-900ER with Winglets": {
+    "filename": "commercial/737-900ER_with_Winglets.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/WestJet_737-600_C-GWSJ_Tail.jpeg/1280px-WestJet_737-600_C-GWSJ_Tail.jpeg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:WestJet_737-600_C-GWSJ_Tail.jpeg",
+    "license": "CC BY-SA 2.0",
+    "dedup_from": "737-600 with Winglets",
+    "category": "commercial"
+  },
+  "737-BBJ": {
+    "filename": "commercial/737-BBJ.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/WestJet_737-600_C-GWSJ_Tail.jpeg/1280px-WestJet_737-600_C-GWSJ_Tail.jpeg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:WestJet_737-600_C-GWSJ_Tail.jpeg",
+    "license": "CC BY-SA 2.0",
+    "dedup_from": "737-600 with Winglets",
+    "category": "commercial"
+  },
+  "737-BBJ2": {
+    "filename": "commercial/737-BBJ2.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/WestJet_737-600_C-GWSJ_Tail.jpeg/1280px-WestJet_737-600_C-GWSJ_Tail.jpeg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:WestJet_737-600_C-GWSJ_Tail.jpeg",
+    "license": "CC BY-SA 2.0",
+    "dedup_from": "737-600 with Winglets",
+    "category": "commercial"
+  },
+  "747-100B/-300": {
+    "filename": "commercial/747-100B--300.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Qantas_Boeing_747-400_VH-OJU_over_Starbeyevo_Kustov.jpg/1280px-Qantas_Boeing_747-400_VH-OJU_over_Starbeyevo_Kustov.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Qantas_Boeing_747-400_VH-OJU_over_Starbeyevo_Kustov.jpg",
+    "license": "CC BY-SA 3.0",
+    "category": "commercial"
+  },
+  "747-200B/-200BCombi/-300": {
+    "filename": "commercial/747-200B--200BCombi--300.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Qantas_Boeing_747-400_VH-OJU_over_Starbeyevo_Kustov.jpg/1280px-Qantas_Boeing_747-400_VH-OJU_over_Starbeyevo_Kustov.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Qantas_Boeing_747-400_VH-OJU_over_Starbeyevo_Kustov.jpg",
+    "license": "CC BY-SA 3.0",
+    "dedup_from": "747-100B/-300",
+    "category": "commercial"
+  },
+  "747-200C/-200F": {
+    "filename": "commercial/747-200C--200F.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Qantas_Boeing_747-400_VH-OJU_over_Starbeyevo_Kustov.jpg/1280px-Qantas_Boeing_747-400_VH-OJU_over_Starbeyevo_Kustov.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Qantas_Boeing_747-400_VH-OJU_over_Starbeyevo_Kustov.jpg",
+    "license": "CC BY-SA 3.0",
+    "dedup_from": "747-100B/-300",
+    "category": "commercial"
+  },
+  "747-300Combi": {
+    "filename": "commercial/747-300Combi.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Qantas_Boeing_747-400_VH-OJU_over_Starbeyevo_Kustov.jpg/1280px-Qantas_Boeing_747-400_VH-OJU_over_Starbeyevo_Kustov.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Qantas_Boeing_747-400_VH-OJU_over_Starbeyevo_Kustov.jpg",
+    "license": "CC BY-SA 3.0",
+    "dedup_from": "747-100B/-300",
+    "category": "commercial"
+  },
+  "747-400": {
+    "filename": "commercial/747-400.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Atlas_Air_Boeing_747-400_N481MC_BWI_MD1.jpg/1280px-Atlas_Air_Boeing_747-400_N481MC_BWI_MD1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Atlas_Air_Boeing_747-400_N481MC_BWI_MD1.jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "commercial"
+  },
+  "747-400 COMBI": {
+    "filename": "commercial/747-400_COMBI.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Atlas_Air_Boeing_747-400_N481MC_BWI_MD1.jpg/1280px-Atlas_Air_Boeing_747-400_N481MC_BWI_MD1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Atlas_Air_Boeing_747-400_N481MC_BWI_MD1.jpg",
+    "license": "CC BY-SA 4.0",
+    "dedup_from": "747-400",
+    "category": "commercial"
+  },
+  "747-400 Domestic": {
+    "filename": "commercial/747-400_Domestic.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Atlas_Air_Boeing_747-400_N481MC_BWI_MD1.jpg/1280px-Atlas_Air_Boeing_747-400_N481MC_BWI_MD1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Atlas_Air_Boeing_747-400_N481MC_BWI_MD1.jpg",
+    "license": "CC BY-SA 4.0",
+    "dedup_from": "747-400",
+    "category": "commercial"
+  },
+  "747-400 Freighter": {
+    "filename": "commercial/747-400_Freighter.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Atlas_Air_Boeing_747-400_N481MC_BWI_MD1.jpg/1280px-Atlas_Air_Boeing_747-400_N481MC_BWI_MD1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Atlas_Air_Boeing_747-400_N481MC_BWI_MD1.jpg",
+    "license": "CC BY-SA 4.0",
+    "dedup_from": "747-400",
+    "category": "commercial"
+  },
+  "747-400ER": {
+    "filename": "commercial/747-400ER.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Atlas_Air_Boeing_747-400_N481MC_BWI_MD1.jpg/1280px-Atlas_Air_Boeing_747-400_N481MC_BWI_MD1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Atlas_Air_Boeing_747-400_N481MC_BWI_MD1.jpg",
+    "license": "CC BY-SA 4.0",
+    "dedup_from": "747-400",
+    "category": "commercial"
+  },
+  "747-400ER Freighter": {
+    "filename": "commercial/747-400ER_Freighter.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Atlas_Air_Boeing_747-400_N481MC_BWI_MD1.jpg/1280px-Atlas_Air_Boeing_747-400_N481MC_BWI_MD1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Atlas_Air_Boeing_747-400_N481MC_BWI_MD1.jpg",
+    "license": "CC BY-SA 4.0",
+    "dedup_from": "747-400",
+    "category": "commercial"
+  },
+  "747-8/-8F": {
+    "filename": "commercial/747-8--8F.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Lufthansa_Boeing_747-8_20180513_3719.jpg/1280px-Lufthansa_Boeing_747-8_20180513_3719.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Lufthansa_Boeing_747-8_20180513_3719.jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "commercial"
+  },
+  "747-SP": {
+    "filename": "commercial/747-SP.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/A4O-SO_Royal_Flight_of_Oman_Boeing_747SP-27_approach.jpg/1280px-A4O-SO_Royal_Flight_of_Oman_Boeing_747SP-27_approach.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:A4O-SO_Royal_Flight_of_Oman_Boeing_747SP-27_approach.jpg",
+    "license": "CC BY 2.0",
+    "category": "commercial"
+  },
+  "757-200/-200PF": {
+    "filename": "commercial/757-200--200PF.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Boeing_B-29A_Fifi_and_Boeing_757-200_DHL_HGR_MD1.jpg/1280px-Boeing_B-29A_Fifi_and_Boeing_757-200_DHL_HGR_MD1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_B-29A_Fifi_and_Boeing_757-200_DHL_HGR_MD1.jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "commercial"
+  },
+  "757-300": {
+    "filename": "commercial/757-300.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Delta_Air_Lines_B757-351_N586NW_LAX.jpg/1280px-Delta_Air_Lines_B757-351_N586NW_LAX.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Delta_Air_Lines_B757-351_N586NW_LAX.jpg",
+    "license": "CC BY 2.0",
+    "category": "commercial"
+  },
+  "767-200": {
+    "filename": "commercial/767-200.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/ATI_International_Boeing_767-200_N763CX_BWI_MD1.jpg/1280px-ATI_International_Boeing_767-200_N763CX_BWI_MD1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:ATI_International_Boeing_767-200_N763CX_BWI_MD1.jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "commercial"
+  },
+  "767-200ER": {
+    "filename": "commercial/767-200ER.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/ATI_International_Boeing_767-200_N763CX_BWI_MD1.jpg/1280px-ATI_International_Boeing_767-200_N763CX_BWI_MD1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:ATI_International_Boeing_767-200_N763CX_BWI_MD1.jpg",
+    "license": "CC BY-SA 4.0",
+    "dedup_from": "767-200",
+    "category": "commercial"
+  },
+  "767-300": {
+    "filename": "commercial/767-300.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/ATI_International_Boeing_767-200_N763CX_BWI_MD1.jpg/1280px-ATI_International_Boeing_767-200_N763CX_BWI_MD1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:ATI_International_Boeing_767-200_N763CX_BWI_MD1.jpg",
+    "license": "CC BY-SA 4.0",
+    "dedup_from": "767-200",
+    "category": "commercial"
+  },
+  "767-300 Freighter": {
+    "filename": "commercial/767-300_Freighter.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/ATI_International_Boeing_767-200_N763CX_BWI_MD1.jpg/1280px-ATI_International_Boeing_767-200_N763CX_BWI_MD1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:ATI_International_Boeing_767-200_N763CX_BWI_MD1.jpg",
+    "license": "CC BY-SA 4.0",
+    "dedup_from": "767-200",
+    "category": "commercial"
+  },
+  "767-300ER": {
+    "filename": "commercial/767-300ER.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/ATI_International_Boeing_767-200_N763CX_BWI_MD1.jpg/1280px-ATI_International_Boeing_767-200_N763CX_BWI_MD1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:ATI_International_Boeing_767-200_N763CX_BWI_MD1.jpg",
+    "license": "CC BY-SA 4.0",
+    "dedup_from": "767-200",
+    "category": "commercial"
+  },
+  "767-400ER": {
+    "filename": "commercial/767-400ER.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/4/46/Boeing_767-400ER_Uzbekistan.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_767-400ER_Uzbekistan.jpg",
+    "license": "CC BY-SA 2.0",
+    "category": "commercial"
+  },
+  "777-200": {
+    "filename": "commercial/777-200.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Boeing_777-200_N76010_IAD_VA1.jpg/1280px-Boeing_777-200_N76010_IAD_VA1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_777-200_N76010_IAD_VA1.jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "commercial"
+  },
+  "777-200LR": {
+    "filename": "commercial/777-200LR.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/b/bf/Air_India_777-200LR_VT-ALD.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Air_India_777-200LR_VT-ALD.jpg",
+    "license": "CC BY-SA 2.0",
+    "category": "commercial"
+  },
+  "777-300": {
+    "filename": "commercial/777-300.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Boeing_777-200_N76010_IAD_VA1.jpg/1280px-Boeing_777-200_N76010_IAD_VA1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_777-200_N76010_IAD_VA1.jpg",
+    "license": "CC BY-SA 4.0",
+    "dedup_from": "777-200",
+    "category": "commercial"
+  },
+  "777-300ER": {
+    "filename": "commercial/777-300ER.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Boeing_777-300ER%2C_Geneva_Airport%2C_Le_Grand-Saconnex_%28BL7C0540%29.jpg/1280px-Boeing_777-300ER%2C_Geneva_Airport%2C_Le_Grand-Saconnex_%28BL7C0540%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_777-300ER,_Geneva_Airport,_Le_Grand-Saconnex_(BL7C0540).jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "commercial"
+  },
+  "AO/A-10-A Thunderbolt II": {
+    "filename": "military/AO-A-10-A_Thunderbolt_II.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Fairchild_Republic_A-10_Thunderbolt_II_-_32156159151.jpg/1280px-Fairchild_Republic_A-10_Thunderbolt_II_-_32156159151.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Fairchild_Republic_A-10_Thunderbolt_II_-_32156159151.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "AC-130H Spectre Gunship": {
+    "filename": "military/AC-130H_Spectre_Gunship.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/AC-130H_Spectre_%282152189791%29.jpg/1280px-AC-130H_Spectre_%282152189791%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:AC-130H_Spectre_(2152189791).jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "AC-130U Spooky Gunship": {
+    "filename": "military/AC-130U_Spooky_Gunship.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/AC-130H_Spectre_%282152189791%29.jpg/1280px-AC-130H_Spectre_%282152189791%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:AC-130H_Spectre_(2152189791).jpg",
+    "license": "Public domain",
+    "dedup_from": "AC-130H Spectre Gunship",
+    "category": "military"
+  },
+  "AV-8 Harrier": {
+    "filename": "military/AV-8_Harrier.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/AV-8B_Harrier_II_of_VMA-214_launches_from_Prince_Sultan_Air_Base.jpg/1280px-AV-8B_Harrier_II_of_VMA-214_launches_from_Prince_Sultan_Air_Base.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:AV-8B_Harrier_II_of_VMA-214_launches_from_Prince_Sultan_Air_Base.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "B-1B Lancer": {
+    "filename": "military/B-1B_Lancer.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/A_B-1B_Lancer.jpg/1280px-A_B-1B_Lancer.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:A_B-1B_Lancer.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "B-2A Spirit": {
+    "filename": "military/B-2A_Spirit.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/2nd_Air_Refueling_Squadron_refuels_B-2%27s_161110-F-GV347-141.jpg/1280px-2nd_Air_Refueling_Squadron_refuels_B-2%27s_161110-F-GV347-141.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:2nd_Air_Refueling_Squadron_refuels_B-2%27s_161110-F-GV347-141.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "B-52H Stratofortress": {
+    "filename": "military/B-52H_Stratofortress.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/A_Boeing_B-52H_Stratofortress_in_flight_over_the_Persian_Gulf_%28190521-F-XN348-9173%29.jpg/1280px-A_Boeing_B-52H_Stratofortress_in_flight_over_the_Persian_Gulf_%28190521-F-XN348-9173%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:A_Boeing_B-52H_Stratofortress_in_flight_over_the_Persian_Gulf_(190521-F-XN348-9173).jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "C-2A Greyhound": {
+    "filename": "military/C-2A_Greyhound.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Grumman_C-2A_Greyhound_of_VR-24_in_flight_over_the_Mediterranean_Sea_on_1_July_1988_%286440873%29.jpg/1280px-Grumman_C-2A_Greyhound_of_VR-24_in_flight_over_the_Mediterranean_Sea_on_1_July_1988_%286440873%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Grumman_C-2A_Greyhound_of_VR-24_in_flight_over_the_Mediterranean_Sea_on_1_July_1988_(6440873).jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "C-5A/B/C Galaxy": {
+    "filename": "military/C-5A-B-C_Galaxy.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Firestorm_of_Star_Birth_in_Galaxy_Centaurus_A.jpg/1280px-Firestorm_of_Star_Birth_in_Galaxy_Centaurus_A.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Firestorm_of_Star_Birth_in_Galaxy_Centaurus_A.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "C-9A/C Nightingale": {
+    "filename": "military/C-9A-C_Nightingale.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/C-9A_Nightingale_aeromedical_airlift_transport_aircraft.JPEG/1280px-C-9A_Nightingale_aeromedical_airlift_transport_aircraft.JPEG",
+    "source_page": "https://commons.wikimedia.org/wiki/File:C-9A_Nightingale_aeromedical_airlift_transport_aircraft.JPEG",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "C-12 C/D Huron": {
+    "filename": "military/C-12_C-D_Huron.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/84-00165_Beechcraft_C_12_Huron_FFD_130785.jpg/1280px-84-00165_Beechcraft_C_12_Huron_FFD_130785.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:84-00165_Beechcraft_C_12_Huron_FFD_130785.jpg",
+    "license": "CC BY 2.0",
+    "category": "military"
+  },
+  "C-12F Huron": {
+    "filename": "military/C-12F_Huron.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/84-00165_Beechcraft_C_12_Huron_FFD_130785.jpg/1280px-84-00165_Beechcraft_C_12_Huron_FFD_130785.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:84-00165_Beechcraft_C_12_Huron_FFD_130785.jpg",
+    "license": "CC BY 2.0",
+    "dedup_from": "C-12 C/D Huron",
+    "category": "military"
+  },
+  "C-12J Huron": {
+    "filename": "military/C-12J_Huron.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/84-00165_Beechcraft_C_12_Huron_FFD_130785.jpg/1280px-84-00165_Beechcraft_C_12_Huron_FFD_130785.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:84-00165_Beechcraft_C_12_Huron_FFD_130785.jpg",
+    "license": "CC BY 2.0",
+    "dedup_from": "C-12 C/D Huron",
+    "category": "military"
+  },
+  "C-17A Globemaster III": {
+    "filename": "military/C-17A_Globemaster_III.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/C-17_aircraft_over_over_the_Blue_Ridge_Mountains_2005.jpg/1280px-C-17_aircraft_over_over_the_Blue_Ridge_Mountains_2005.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:C-17_aircraft_over_over_the_Blue_Ridge_Mountains_2005.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "C-20A/B/C/D Gulfstream III": {
+    "filename": "military/C-20A-B-C-D_Gulfstream_III.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Bufo_bufo_2015_G3.jpg/1280px-Bufo_bufo_2015_G3.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Bufo_bufo_2015_G3.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "C-20F/G/H Gulfstream IV": {
+    "filename": "military/C-20F-G-H_Gulfstream_IV.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/8/8d/Gulfstream_Aerospace_C-20F_Gulfstream_IV_%28G-IV%29%2C_USA_-_Army_AN0409457.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Gulfstream_Aerospace_C-20F_Gulfstream_IV_(G-IV),_USA_-_Army_AN0409457.jpg",
+    "license": "GFDL 1.2",
+    "category": "military"
+  },
+  "C-21A": {
+    "filename": "military/C-21A.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/C-21A_Learjet_before_its_last_flight_out_of_Al_Udeid_Air_Base%2C_Qatar.jpg/1280px-C-21A_Learjet_before_its_last_flight_out_of_Al_Udeid_Air_Base%2C_Qatar.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:C-21A_Learjet_before_its_last_flight_out_of_Al_Udeid_Air_Base,_Qatar.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "C-22B": {
+    "filename": "military/C-22B.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/US_Air_Force_C-22B_%28727-100%29.jpg/1280px-US_Air_Force_C-22B_%28727-100%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:US_Air_Force_C-22B_(727-100).jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "C-27J Spartan": {
+    "filename": "military/C-27J_Spartan.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Alenia_C-27J_Spartan_01_%284826924762%29.jpg/1280px-Alenia_C-27J_Spartan_01_%284826924762%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Alenia_C-27J_Spartan_01_(4826924762).jpg",
+    "license": "CC BY 2.0",
+    "category": "military"
+  },
+  "C-32A/B": {
+    "filename": "military/C-32A-B.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/00-9001_at_STR.jpg/1280px-00-9001_at_STR.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:00-9001_at_STR.jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "military"
+  },
+  "C-37A Gulfstream V": {
+    "filename": "military/C-37A_Gulfstream_V.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/a/a1/Gulfstream_V_%28C-37A%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Gulfstream_V_(C-37A).jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "military"
+  },
+  "C-38A Courier": {
+    "filename": "military/C-38A_Courier.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/c/c4/C-38A_Astra_SPX_DC_ANG_in_flight_2008.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:C-38A_Astra_SPX_DC_ANG_in_flight_2008.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "C-40A Clipper": {
+    "filename": "military/C-40A_Clipper.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Boeing_737-7AX%28C%29%28WL%29_C-40A-BN_Clipper_%28USMC_BuNo_170041%2C_msn_30184%2C_ln_925%29_%2811-19-2024%29.jpg/1280px-Boeing_737-7AX%28C%29%28WL%29_C-40A-BN_Clipper_%28USMC_BuNo_170041%2C_msn_30184%2C_ln_925%29_%2811-19-2024%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_737-7AX(C)(WL)_C-40A-BN_Clipper_(USMC_BuNo_170041,_msn_30184,_ln_925)_(11-19-2024).jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "military"
+  },
+  "C-40B/C": {
+    "filename": "military/C-40B-C.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/d/df/U.S._Air_Force%2C_02-0042%2C_Boeing_C-40B_%2849580115803%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:U.S._Air_Force,_02-0042,_Boeing_C-40B_(49580115803).jpg",
+    "license": "CC BY-SA 2.0",
+    "category": "military"
+  },
+  "C-41A CASA 212": {
+    "filename": "military/C-41A_CASA_212.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/CASA_C-212_Aviocar_A74170120240329.jpg/1280px-CASA_C-212_Aviocar_A74170120240329.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:CASA_C-212_Aviocar_A74170120240329.jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "military"
+  },
+  "C-130E/H Hercules": {
+    "filename": "military/C-130E-H_Hercules.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg/1280px-thumbnail.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "C-130J Hercules": {
+    "filename": "military/C-130J_Hercules.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg/1280px-thumbnail.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg",
+    "license": "Public domain",
+    "dedup_from": "C-130E/H Hercules",
+    "category": "military"
+  },
+  "C-130J-30 Hercules": {
+    "filename": "military/C-130J-30_Hercules.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/C-130J-30%28910thAirliftWing%29FlightTestAerialspraysystem.jpg/1280px-C-130J-30%28910thAirliftWing%29FlightTestAerialspraysystem.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:C-130J-30(910thAirliftWing)FlightTestAerialspraysystem.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "C-141C Starlifter": {
+    "filename": "military/C-141C_Starlifter.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/b/be/US_military_personnel_armed_with_M16A1_rifles_observe_a_C-141_Starlifter_aircraft_in_Grenada.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:US_military_personnel_armed_with_M16A1_rifles_observe_a_C-141_Starlifter_aircraft_in_Grenada.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "C-295 CASA": {
+    "filename": "military/C-295_CASA.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/CASA_C-295%2C_Polish_Air_Force_%28012%29%2C_Radom_Air_Show%2C_20230826_1438_9331.jpg/1280px-CASA_C-295%2C_Polish_Air_Force_%28012%29%2C_Radom_Air_Show%2C_20230826_1438_9331.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:CASA_C-295,_Polish_Air_Force_(012),_Radom_Air_Show,_20230826_1438_9331.jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "military"
+  },
+  "CH-46E Sea Knight": {
+    "filename": "military/CH-46E_Sea_Knight.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Boeing_-_Vertol_CH-46_Sea_Knight_%285902633826%29.jpg/1280px-Boeing_-_Vertol_CH-46_Sea_Knight_%285902633826%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_-_Vertol_CH-46_Sea_Knight_(5902633826).jpg",
+    "license": "CC BY-SA 2.0",
+    "category": "military"
+  },
+  "CH-47D/F Chinook": {
+    "filename": "military/CH-47D-F_Chinook.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/CH-47_Chinook_-_RIAT_2015_%2820820630144%29.jpg/1280px-CH-47_Chinook_-_RIAT_2015_%2820820630144%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:CH-47_Chinook_-_RIAT_2015_(20820630144).jpg",
+    "license": "CC BY-SA 2.0",
+    "category": "military"
+  },
+  "CH-53E Super Stallion": {
+    "filename": "military/CH-53E_Super_Stallion.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Sikorsky_CH-53E_Super_Stallion_USMC_165503_FDK_MD1.jpg/1280px-Sikorsky_CH-53E_Super_Stallion_USMC_165503_FDK_MD1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Sikorsky_CH-53E_Super_Stallion_USMC_165503_FDK_MD1.jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "military"
+  },
+  "CN-235 CASA, Ver 1 (Civ)": {
+    "filename": "military/CN-235_CASA_Ver_1_Civ.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/79/CASA_CN-235_in_flight_near_Tarbes.tif/lossy-page1-1280px-CASA_CN-235_in_flight_near_Tarbes.tif.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:CASA_CN-235_in_flight_near_Tarbes.tif",
+    "license": "CC BY-SA 4.0",
+    "category": "military"
+  },
+  "CN-235 CASA, Ver 2 (Mil)": {
+    "filename": "military/CN-235_CASA_Ver_2_Mil.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/79/CASA_CN-235_in_flight_near_Tarbes.tif/lossy-page1-1280px-CASA_CN-235_in_flight_near_Tarbes.tif.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:CASA_CN-235_in_flight_near_Tarbes.tif",
+    "license": "CC BY-SA 4.0",
+    "dedup_from": "CN-235 CASA, Ver 1 (Civ)",
+    "category": "military"
+  },
+  "CN-235 CASA, Ver 3 (Opt Tires)": {
+    "filename": "military/CN-235_CASA_Ver_3_Opt_Tires.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/79/CASA_CN-235_in_flight_near_Tarbes.tif/lossy-page1-1280px-CASA_CN-235_in_flight_near_Tarbes.tif.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:CASA_CN-235_in_flight_near_Tarbes.tif",
+    "license": "CC BY-SA 4.0",
+    "dedup_from": "CN-235 CASA, Ver 1 (Civ)",
+    "category": "military"
+  },
+  "CV-580 Conair/Convair": {
+    "filename": "military/CV-580_Conair-Convair.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Convair_CV-580_%28Air_Chathams%29_in_Auckland.jpg/1280px-Convair_CV-580_%28Air_Chathams%29_in_Auckland.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Convair_CV-580_(Air_Chathams)_in_Auckland.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "E-2C Hawkeye": {
+    "filename": "military/E-2C_Hawkeye.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Grumman_E-2C_Hawkeyes_of_VAW-115_fly_past_Mount_Fuji_on_15_February_2007_%28070215-N-2604L-024%29.jpg/1280px-Grumman_E-2C_Hawkeyes_of_VAW-115_fly_past_Mount_Fuji_on_15_February_2007_%28070215-N-2604L-024%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Grumman_E-2C_Hawkeyes_of_VAW-115_fly_past_Mount_Fuji_on_15_February_2007_(070215-N-2604L-024).jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "E-3B/C Sentry (AWACS)": {
+    "filename": "military/E-3B-C_Sentry_AWACS.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/AWACS%2C_ILA_2024%2C_Schoenefeld_%28ILA43889%29.jpg/1280px-AWACS%2C_ILA_2024%2C_Schoenefeld_%28ILA43889%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:AWACS,_ILA_2024,_Schoenefeld_(ILA43889).jpg",
+    "license": "CC BY-SA",
+    "category": "military"
+  },
+  "E-4B National Airborne Operations Center": {
+    "filename": "military/E-4B_National_Airborne_Operations_Center.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Aerial_refueling_testing_with_a_KC-46_Pegasus_and_an_E-4B_Nightwatch_in_the_skies_over_Southern_California%2C_April_4%2C_2022.jpg/1280px-Aerial_refueling_testing_with_a_KC-46_Pegasus_and_an_E-4B_Nightwatch_in_the_skies_over_Southern_California%2C_April_4%2C_2022.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Aerial_refueling_testing_with_a_KC-46_Pegasus_and_an_E-4B_Nightwatch_in_the_skies_over_Southern_California,_April_4,_2022.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "E-8C Joint STARS": {
+    "filename": "military/E-8C_Joint_STARS.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/6/6d/E-8_JSTARS_18061F484519-913.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:E-8_JSTARS_18061F484519-913.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "EC-130E Commando Solo": {
+    "filename": "military/EC-130E_Commando_Solo.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg/1280px-thumbnail.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg",
+    "license": "Public domain",
+    "dedup_from": "C-130E/H Hercules",
+    "category": "military"
+  },
+  "EC-130H Compass Call": {
+    "filename": "military/EC-130H_Compass_Call.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg/1280px-thumbnail.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg",
+    "license": "Public domain",
+    "dedup_from": "C-130E/H Hercules",
+    "category": "military"
+  },
+  "EC-130J Commando Solo": {
+    "filename": "military/EC-130J_Commando_Solo.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg/1280px-thumbnail.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg",
+    "license": "Public domain",
+    "dedup_from": "C-130E/H Hercules",
+    "category": "military"
+  },
+  "EC-130J Super J": {
+    "filename": "military/EC-130J_Super_J.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg/1280px-thumbnail.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg",
+    "license": "Public domain",
+    "dedup_from": "C-130E/H Hercules",
+    "category": "military"
+  },
+  "EC-135Y": {
+    "filename": "military/EC-135Y.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Boeing_EC-135H_61-0285_Mildenhall.JPEG/1280px-Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "OC-135B Open Skies": {
+    "filename": "military/OC-135B_Open_Skies.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Boeing_EC-135H_61-0285_Mildenhall.JPEG/1280px-Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "license": "Public domain",
+    "dedup_from": "EC-135Y",
+    "category": "military"
+  },
+  "RC-12N": {
+    "filename": "military/RC-12N.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/84-00165_Beechcraft_C_12_Huron_FFD_130785.jpg/1280px-84-00165_Beechcraft_C_12_Huron_FFD_130785.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:84-00165_Beechcraft_C_12_Huron_FFD_130785.jpg",
+    "license": "CC BY 2.0",
+    "dedup_from": "C-12 C/D Huron",
+    "category": "military"
+  },
+  "RC-26B": {
+    "filename": "military/RC-26B.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/147th_Fighter_Wing_RC-26B_Intelligence_Surveillance_Reconnaissance_aircraft.jpg/1280px-147th_Fighter_Wing_RC-26B_Intelligence_Surveillance_Reconnaissance_aircraft.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:147th_Fighter_Wing_RC-26B_Intelligence_Surveillance_Reconnaissance_aircraft.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "RC-135S Cobra Ball": {
+    "filename": "military/RC-135S_Cobra_Ball.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Boeing_EC-135H_61-0285_Mildenhall.JPEG/1280px-Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "license": "Public domain",
+    "dedup_from": "EC-135Y",
+    "category": "military"
+  },
+  "RC-135U Combat Sent": {
+    "filename": "military/RC-135U_Combat_Sent.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Boeing_EC-135H_61-0285_Mildenhall.JPEG/1280px-Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "license": "Public domain",
+    "dedup_from": "EC-135Y",
+    "category": "military"
+  },
+  "RC-135V Rivet Joint": {
+    "filename": "military/RC-135V_Rivet_Joint.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Boeing_EC-135H_61-0285_Mildenhall.JPEG/1280px-Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "license": "Public domain",
+    "dedup_from": "EC-135Y",
+    "category": "military"
+  },
+  "RC-135W Rivet Joint": {
+    "filename": "military/RC-135W_Rivet_Joint.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Boeing_EC-135H_61-0285_Mildenhall.JPEG/1280px-Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "license": "Public domain",
+    "dedup_from": "EC-135Y",
+    "category": "military"
+  },
+  "AT-38B Talon": {
+    "filename": "military/AT-38B_Talon.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Shockwave_pattern_around_a_T-38C_observed_with_Background-Oriented_Schlieren_photography_%281%29.jpg/1280px-Shockwave_pattern_around_a_T-38C_observed_with_Background-Oriented_Schlieren_photography_%281%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Shockwave_pattern_around_a_T-38C_observed_with_Background-Oriented_Schlieren_photography_(1).jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "F-4E Phantom II": {
+    "filename": "military/F-4E_Phantom_II.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/D%C3%BClmen%2C_Rolls-Royce_Phantom_II_--_2024_--_5841.jpg/1280px-D%C3%BClmen%2C_Rolls-Royce_Phantom_II_--_2024_--_5841.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:D%C3%BClmen,_Rolls-Royce_Phantom_II_--_2024_--_5841.jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "military"
+  },
+  "F-5E/F Tiger II": {
+    "filename": "military/F-5E-F_Tiger_II.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Northop_F-5_E_%27TIGER_II%27_-_A742459.jpg/1280px-Northop_F-5_E_%27TIGER_II%27_-_A742459.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Northop_F-5_E_%27TIGER_II%27_-_A742459.jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "military"
+  },
+  "F-14 Tomcat": {
+    "filename": "military/F-14_Tomcat.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/F-14A_Tomcat_over_Iraq_during_Southern_Watch.jpg/1280px-F-14A_Tomcat_over_Iraq_during_Southern_Watch.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:F-14A_Tomcat_over_Iraq_during_Southern_Watch.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "F-15A Eagle": {
+    "filename": "military/F-15A_Eagle.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/F-15EX_Eagle_II.jpg/1280px-F-15EX_Eagle_II.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:F-15EX_Eagle_II.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "F-15B Eagle": {
+    "filename": "military/F-15B_Eagle.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/F-15EX_Eagle_II.jpg/1280px-F-15EX_Eagle_II.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:F-15EX_Eagle_II.jpg",
+    "license": "Public domain",
+    "dedup_from": "F-15A Eagle",
+    "category": "military"
+  },
+  "F-15C Eagle": {
+    "filename": "military/F-15C_Eagle.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/F-15EX_Eagle_II.jpg/1280px-F-15EX_Eagle_II.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:F-15EX_Eagle_II.jpg",
+    "license": "Public domain",
+    "dedup_from": "F-15A Eagle",
+    "category": "military"
+  },
+  "F-15D Eagle": {
+    "filename": "military/F-15D_Eagle.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/F-15EX_Eagle_II.jpg/1280px-F-15EX_Eagle_II.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:F-15EX_Eagle_II.jpg",
+    "license": "Public domain",
+    "dedup_from": "F-15A Eagle",
+    "category": "military"
+  },
+  "F-15E Strike Eagle": {
+    "filename": "military/F-15E_Strike_Eagle.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/F-15EX_Eagle_II.jpg/1280px-F-15EX_Eagle_II.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:F-15EX_Eagle_II.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "F-16A Fighting Falcon": {
+    "filename": "military/F-16A_Fighting_Falcon.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/A_USAF_F-16_pilot_breaking_right_on_final_approach_over_northern_Las_Vegas.jpg/1280px-A_USAF_F-16_pilot_breaking_right_on_final_approach_over_northern_Las_Vegas.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:A_USAF_F-16_pilot_breaking_right_on_final_approach_over_northern_Las_Vegas.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "F-16B Fighting Falcon": {
+    "filename": "military/F-16B_Fighting_Falcon.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/A_USAF_F-16_pilot_breaking_right_on_final_approach_over_northern_Las_Vegas.jpg/1280px-A_USAF_F-16_pilot_breaking_right_on_final_approach_over_northern_Las_Vegas.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:A_USAF_F-16_pilot_breaking_right_on_final_approach_over_northern_Las_Vegas.jpg",
+    "license": "Public domain",
+    "dedup_from": "F-16A Fighting Falcon",
+    "category": "military"
+  },
+  "F-16C Fighting Falcon": {
+    "filename": "military/F-16C_Fighting_Falcon.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/A_USAF_F-16_pilot_breaking_right_on_final_approach_over_northern_Las_Vegas.jpg/1280px-A_USAF_F-16_pilot_breaking_right_on_final_approach_over_northern_Las_Vegas.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:A_USAF_F-16_pilot_breaking_right_on_final_approach_over_northern_Las_Vegas.jpg",
+    "license": "Public domain",
+    "dedup_from": "F-16A Fighting Falcon",
+    "category": "military"
+  },
+  "F-16D Fighting Falcon": {
+    "filename": "military/F-16D_Fighting_Falcon.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/A_USAF_F-16_pilot_breaking_right_on_final_approach_over_northern_Las_Vegas.jpg/1280px-A_USAF_F-16_pilot_breaking_right_on_final_approach_over_northern_Las_Vegas.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:A_USAF_F-16_pilot_breaking_right_on_final_approach_over_northern_Las_Vegas.jpg",
+    "license": "Public domain",
+    "dedup_from": "F-16A Fighting Falcon",
+    "category": "military"
+  },
+  "F-22 Raptor": {
+    "filename": "military/F-22_Raptor.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/F-22_Raptor_edit1.jpg/1280px-F-22_Raptor_edit1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:F-22_Raptor_edit1.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "F-35A Joint Strike Fighter CTOL": {
+    "filename": "military/F-35A_Joint_Strike_Fighter_CTOL.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/F-35_Heritage_Flight_Team_performs_in_Bell_Fort_Worth_Alliance_AirShow.jpg/1280px-F-35_Heritage_Flight_Team_performs_in_Bell_Fort_Worth_Alliance_AirShow.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:F-35_Heritage_Flight_Team_performs_in_Bell_Fort_Worth_Alliance_AirShow.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "F-35B Joint Strike Fighter STOVL": {
+    "filename": "military/F-35B_Joint_Strike_Fighter_STOVL.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/0/0a/Lockheed_Martin_F-35B_Lightning_II_cutaway_with_liftfan.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Lockheed_Martin_F-35B_Lightning_II_cutaway_with_liftfan.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "F-35C Joint Strike Fighter CV": {
+    "filename": "military/F-35C_Joint_Strike_Fighter_CV.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/F-35C_Lightning_II_Landing.jpg/1280px-F-35C_Lightning_II_Landing.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:F-35C_Lightning_II_Landing.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "F-117A Nighthawk": {
+    "filename": "military/F-117A_Nighthawk.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/A_U.S._Air_Force_F-117_Nighthawk_lands_during_Northern_Edge_23-1_at_Joint_Base_Elmendorf-Richardson%2C_Alaska%2C_May_10%2C_2023.jpg/1280px-A_U.S._Air_Force_F-117_Nighthawk_lands_during_Northern_Edge_23-1_at_Joint_Base_Elmendorf-Richardson%2C_Alaska%2C_May_10%2C_2023.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:A_U.S._Air_Force_F-117_Nighthawk_lands_during_Northern_Edge_23-1_at_Joint_Base_Elmendorf-Richardson,_Alaska,_May_10,_2023.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "F/A-18F Super Hornet": {
+    "filename": "military/F-A-18F_Super_Hornet.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/F-18F_after_launch_from_USS_Abraham_Lincoln_%28CVN-72%29.jpg/1280px-F-18F_after_launch_from_USS_Abraham_Lincoln_%28CVN-72%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:F-18F_after_launch_from_USS_Abraham_Lincoln_(CVN-72).jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "Tornado GR MK1": {
+    "filename": "military/Tornado_GR_MK1.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/1/1f/Panavia_Tornado_GR1%2C_UK_-_Air_Force_AN0857185.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Panavia_Tornado_GR1,_UK_-_Air_Force_AN0857185.jpg",
+    "license": "GFDL 1.2",
+    "category": "military"
+  },
+  "AH-1W/Z Super Cobra/Viper": {
+    "filename": "military/AH-1W-Z_Super_Cobra-Viper.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Bell_AH-1Z_168964_of_USMC_HMLA-773_FDK_MD5.jpg/1280px-Bell_AH-1Z_168964_of_USMC_HMLA-773_FDK_MD5.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Bell_AH-1Z_168964_of_USMC_HMLA-773_FDK_MD5.jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "military"
+  },
+  "AH-64 Apache Longbow": {
+    "filename": "military/AH-64_Apache_Longbow.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/9/9f/Boeing_AH-64_Apache_helicopter_with_rainbow_around_Oahu%2C_Hawaii.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_AH-64_Apache_helicopter_with_rainbow_around_Oahu,_Hawaii.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "HH-60G Pave Hawk": {
+    "filename": "military/HH-60G_Pave_Hawk.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/HH-60_Pave_Hawk_-_Arizona.jpg/1280px-HH-60_Pave_Hawk_-_Arizona.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:HH-60_Pave_Hawk_-_Arizona.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "MH-47E Chinook": {
+    "filename": "military/MH-47E_Chinook.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/A_U.S._Army_crew_chief_performs_preflight_operations_on_an_MH-47G_Chinook_helicopter_during_Emerald_Warrior_2013_at_Hurlburt_Field%2C_Fla.%2C_April_29%2C_2013_130429-F-MN146-175.jpg/1280px-thumbnail.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:A_U.S._Army_crew_chief_performs_preflight_operations_on_an_MH-47G_Chinook_helicopter_during_Emerald_Warrior_2013_at_Hurlburt_Field,_Fla.,_April_29,_2013_130429-F-MN146-175.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "MH-53J/M Pave Low (VH-53 is Similar)": {
+    "filename": "military/MH-53J-M_Pave_Low_VH-53_is_Similar.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Lockheed_HC-130P_Hercules_refuels_Sikorsky_HH-53_Super_Jolly_Green_Giant_over_Southeast_Asia%2C_in_September_1970_%28176246918%29.jpg/1280px-Lockheed_HC-130P_Hercules_refuels_Sikorsky_HH-53_Super_Jolly_Green_Giant_over_Southeast_Asia%2C_in_September_1970_%28176246918%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Lockheed_HC-130P_Hercules_refuels_Sikorsky_HH-53_Super_Jolly_Green_Giant_over_Southeast_Asia,_in_September_1970_(176246918).jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "MH-60K/L/R/S Black Hawk": {
+    "filename": "military/MH-60K-L-R-S_Black_Hawk.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/HH-60_Pave_Hawk_-_Arizona.jpg/1280px-HH-60_Pave_Hawk_-_Arizona.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:HH-60_Pave_Hawk_-_Arizona.jpg",
+    "license": "Public domain",
+    "dedup_from": "HH-60G Pave Hawk",
+    "category": "military"
+  },
+  "MH/AH-6M Little Bird": {
+    "filename": "military/MH-AH-6M_Little_Bird.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/230502-F-LD209-1490_-_Highway%2C_turned_runway_-_U.S._Air_Force_crews_land_on_Wyoming_highways.jpg/1280px-230502-F-LD209-1490_-_Highway%2C_turned_runway_-_U.S._Air_Force_crews_land_on_Wyoming_highways.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:230502-F-LD209-1490_-_Highway,_turned_runway_-_U.S._Air_Force_crews_land_on_Wyoming_highways.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "MV-22 Osprey VSTOL": {
+    "filename": "military/MV-22_Osprey_VSTOL.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/20080406165033%21V-22_Osprey_refueling_edit1.jpg/1280px-20080406165033%21V-22_Osprey_refueling_edit1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:20080406165033!V-22_Osprey_refueling_edit1.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "OH-58D Kiowa": {
+    "filename": "military/OH-58D_Kiowa.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Bell_OH-58D_Kiowa_Warrior.jpg/1280px-Bell_OH-58D_Kiowa_Warrior.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Bell_OH-58D_Kiowa_Warrior.jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "military"
+  },
+  "TH-57B/C JetRanger": {
+    "filename": "military/TH-57B-C_JetRanger.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/1/18/Bell_TH-57A.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Bell_TH-57A.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "TH-67A Creek": {
+    "filename": "military/TH-67A_Creek.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Bell_206_%289470389960%29.jpg/1280px-Bell_206_%289470389960%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Bell_206_(9470389960).jpg",
+    "license": "CC BY-SA 2.0",
+    "category": "military"
+  },
+  "UH-1H Iroquois": {
+    "filename": "military/UH-1H_Iroquois.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/0/07/Bell_UH-1B_Iroquois_Huey_LSideFront_Cavanaugh_Flight_Museum_7Oct2011.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Bell_UH-1B_Iroquois_Huey_LSideFront_Cavanaugh_Flight_Museum_7Oct2011.jpg",
+    "license": "CC BY 2.0",
+    "category": "military"
+  },
+  "UH-1N Twin Huey": {
+    "filename": "military/UH-1N_Twin_Huey.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/a/a4/2222b_Curatorial_Collection_Image_-_Model%2C_Bell_UH-1N_Twin_Huey%2C_medium_military_utility_helicopter%3B_Manufacturer-_Bell_Helicopter%3B_Markings-_U_S_Navy%2C_Rescue%2C_1874%2C_5%3B_Gray%2C_olive_green_%28top%29_and_black_%28tail%29_propeller_%2853898054470%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:2222b_Curatorial_Collection_Image_-_Model,_Bell_UH-1N_Twin_Huey,_medium_military_utility_helicopter;_Manufacturer-_Bell_Helicopter;_Markings-_U_S_Navy,_Rescue,_1874,_5;_Gray,_olive_green_(top)_and_black_(tail)_propeller_(53898054470).jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "UH-1V Huey": {
+    "filename": "military/UH-1V_Huey.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/0/07/Bell_UH-1B_Iroquois_Huey_LSideFront_Cavanaugh_Flight_Museum_7Oct2011.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Bell_UH-1B_Iroquois_Huey_LSideFront_Cavanaugh_Flight_Museum_7Oct2011.jpg",
+    "license": "CC BY 2.0",
+    "dedup_from": "UH-1H Iroquois",
+    "category": "military"
+  },
+  "UH-72A Lakota": {
+    "filename": "military/UH-72A_Lakota.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/UH-72_Lakota1.jpg/1280px-UH-72_Lakota1.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:UH-72_Lakota1.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "VH-3D Sea King": {
+    "filename": "military/VH-3D_Sea_King.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Jimmy_Carter_with_Marine_One_VH-3D_at_Andrews_AFB_1980.jpg/1280px-Jimmy_Carter_with_Marine_One_VH-3D_at_Andrews_AFB_1980.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Jimmy_Carter_with_Marine_One_VH-3D_at_Andrews_AFB_1980.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "HC-130P/N Combat Tanker/Combat Shadow": {
+    "filename": "military/HC-130P-N_Combat_Tanker-Combat_Shadow.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg/1280px-thumbnail.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg",
+    "license": "Public domain",
+    "dedup_from": "C-130E/H Hercules",
+    "category": "military"
+  },
+  "KC-10A Extender": {
+    "filename": "military/KC-10A_Extender.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/2nd_Air_Refueling_Squadron_refuels_B-2%27s_161110-F-GV347-141.jpg/1280px-2nd_Air_Refueling_Squadron_refuels_B-2%27s_161110-F-GV347-141.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:2nd_Air_Refueling_Squadron_refuels_B-2%27s_161110-F-GV347-141.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "KC-135E Stratotanker": {
+    "filename": "military/KC-135E_Stratotanker.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Boeing_EC-135H_61-0285_Mildenhall.JPEG/1280px-Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "license": "Public domain",
+    "dedup_from": "EC-135Y",
+    "category": "military"
+  },
+  "KC-135R/T Stratotanker": {
+    "filename": "military/KC-135R-T_Stratotanker.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Boeing_EC-135H_61-0285_Mildenhall.JPEG/1280px-Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "license": "Public domain",
+    "dedup_from": "EC-135Y",
+    "category": "military"
+  },
+  "KC-46 Pegasus": {
+    "filename": "military/KC-46_Pegasus.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/KC-46A_Pegasus_refuels_a_F-15_Strike_Eagle.jpg/1280px-KC-46A_Pegasus_refuels_a_F-15_Strike_Eagle.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:KC-46A_Pegasus_refuels_a_F-15_Strike_Eagle.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "LC-130H Hercules": {
+    "filename": "military/LC-130H_Hercules.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/LC-130_Hercules_aircraft_near_McMurdo_Station%2C_Antarctica%2C_during_Operation_Deep_Freeze.jpg/1280px-LC-130_Hercules_aircraft_near_McMurdo_Station%2C_Antarctica%2C_during_Operation_Deep_Freeze.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:LC-130_Hercules_aircraft_near_McMurdo_Station,_Antarctica,_during_Operation_Deep_Freeze.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "M-28A Skytruck": {
+    "filename": "military/M-28A_Skytruck.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/PZL_M-28-05_Skytruck%2C_SP-DOA%2C_Radom_Air_Show%2C_20230826_1048_8517.jpg/1280px-PZL_M-28-05_Skytruck%2C_SP-DOA%2C_Radom_Air_Show%2C_20230826_1048_8517.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:PZL_M-28-05_Skytruck,_SP-DOA,_Radom_Air_Show,_20230826_1048_8517.jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "military"
+  },
+  "MC-130E Combat Talon I": {
+    "filename": "military/MC-130E_Combat_Talon_I.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg/1280px-thumbnail.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg",
+    "license": "Public domain",
+    "dedup_from": "C-130E/H Hercules",
+    "category": "military"
+  },
+  "MC-130H Combat Talon II": {
+    "filename": "military/MC-130H_Combat_Talon_II.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg/1280px-thumbnail.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg",
+    "license": "Public domain",
+    "dedup_from": "C-130E/H Hercules",
+    "category": "military"
+  },
+  "MC-130P Combat Shadow": {
+    "filename": "military/MC-130P_Combat_Shadow.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg/1280px-thumbnail.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg",
+    "license": "Public domain",
+    "dedup_from": "C-130E/H Hercules",
+    "category": "military"
+  },
+  "SR-71A Blackbird": {
+    "filename": "military/SR-71A_Blackbird.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Lockheed_SR-71_Blackbird.jpg/1280px-Lockheed_SR-71_Blackbird.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Lockheed_SR-71_Blackbird.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "U-2S Dragon Lady": {
+    "filename": "military/U-2S_Dragon_Lady.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/5th_Reconnaissance_Squadron_-_U-2_Osan.jpg/1280px-5th_Reconnaissance_Squadron_-_U-2_Osan.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:5th_Reconnaissance_Squadron_-_U-2_Osan.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "U-28A": {
+    "filename": "military/U-28A.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Pilatus_PC-12-45_U-28A_Draco_%28USAF_sn_08-0822%2C_cn_822%29_%2811-16-2024%29.jpg/1280px-Pilatus_PC-12-45_U-28A_Draco_%28USAF_sn_08-0822%2C_cn_822%29_%2811-16-2024%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Pilatus_PC-12-45_U-28A_Draco_(USAF_sn_08-0822,_cn_822)_(11-16-2024).jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "military"
+  },
+  "WC-130H Hercules": {
+    "filename": "military/WC-130H_Hercules.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg/1280px-thumbnail.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg",
+    "license": "Public domain",
+    "dedup_from": "C-130E/H Hercules",
+    "category": "military"
+  },
+  "WC-130J Hercules": {
+    "filename": "military/WC-130J_Hercules.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg/1280px-thumbnail.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Defense.gov_News_Photo_120723-F-HA794-089_-_A_U.S._Air_Force_firefighter_sprays_water_at_the_fire_of_a_simulated_C-130_Hercules_plane_crash_during_operational_readiness_exercise_Beverly.jpg",
+    "license": "Public domain",
+    "dedup_from": "C-130E/H Hercules",
+    "category": "military"
+  },
+  "WC-135C Constant Phoenix": {
+    "filename": "military/WC-135C_Constant_Phoenix.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Boeing_EC-135H_61-0285_Mildenhall.JPEG/1280px-Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "license": "Public domain",
+    "dedup_from": "EC-135Y",
+    "category": "military"
+  },
+  "WC-135W Constant Phoenix": {
+    "filename": "military/WC-135W_Constant_Phoenix.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Boeing_EC-135H_61-0285_Mildenhall.JPEG/1280px-Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Boeing_EC-135H_61-0285_Mildenhall.JPEG",
+    "license": "Public domain",
+    "dedup_from": "EC-135Y",
+    "category": "military"
+  },
+  "T-1A Jayhawk": {
+    "filename": "military/T-1A_Jayhawk.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/T-1A_Jayhawk.jpg/1280px-T-1A_Jayhawk.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:T-1A_Jayhawk.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "T-6A Texan II": {
+    "filename": "military/T-6A_Texan_II.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/U.S._Navy_T-6B_Texans_in_a_4-ship_formation_over_a_military_operations_area_in_Southern_Texas.jpg/1280px-U.S._Navy_T-6B_Texans_in_a_4-ship_formation_over_a_military_operations_area_in_Southern_Texas.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:U.S._Navy_T-6B_Texans_in_a_4-ship_formation_over_a_military_operations_area_in_Southern_Texas.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "T-37B Tweet": {
+    "filename": "military/T-37B_Tweet.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/5/56/Cessna_T-37_Tweet_front_view.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Cessna_T-37_Tweet_front_view.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "T-38A/C Talon": {
+    "filename": "military/T-38A-C_Talon.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Shockwave_pattern_around_a_T-38C_observed_with_Background-Oriented_Schlieren_photography_%281%29.jpg/1280px-Shockwave_pattern_around_a_T-38C_observed_with_Background-Oriented_Schlieren_photography_%281%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Shockwave_pattern_around_a_T-38C_observed_with_Background-Oriented_Schlieren_photography_(1).jpg",
+    "license": "Public domain",
+    "dedup_from": "AT-38B Talon",
+    "category": "military"
+  },
+  "T-43A": {
+    "filename": "military/T-43A.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/71-1403_Boeing_737_%28_T-43A_%29_U.S._Air_Force_%288801157562%29.jpg/1280px-71-1403_Boeing_737_%28_T-43A_%29_U.S._Air_Force_%288801157562%29.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:71-1403_Boeing_737_(_T-43A_)_U.S._Air_Force_(8801157562).jpg",
+    "license": "CC BY-SA 3.0",
+    "category": "military"
+  },
+  "T-45A Goshawk": {
+    "filename": "military/T-45A_Goshawk.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/T-45A_Goshawk_03.jpg/1280px-T-45A_Goshawk_03.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:T-45A_Goshawk_03.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "VC-25A Air Force One": {
+    "filename": "military/VC-25A_Air_Force_One.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/Air_Force_One_over_Mt._Rushmore.jpg/1280px-Air_Force_One_over_Mt._Rushmore.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Air_Force_One_over_Mt._Rushmore.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "MQ-1B Predator": {
+    "filename": "military/MQ-1B_Predator.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/General_Atomics_MQ-1_Predator_08-0226.jpg/1280px-General_Atomics_MQ-1_Predator_08-0226.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:General_Atomics_MQ-1_Predator_08-0226.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "MQ-1C Gray Eagle": {
+    "filename": "military/MQ-1C_Gray_Eagle.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/Flickr_-_The_U.S._Army_-_MQ-1C_Sky_Warrior_aircraft_landing.jpg/1280px-Flickr_-_The_U.S._Army_-_MQ-1C_Sky_Warrior_aircraft_landing.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Flickr_-_The_U.S._Army_-_MQ-1C_Sky_Warrior_aircraft_landing.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "MQ-5B Hunter": {
+    "filename": "military/MQ-5B_Hunter.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/B-Hunter_Landing.jpg/1280px-B-Hunter_Landing.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:B-Hunter_Landing.jpg",
+    "license": "CC BY-SA 4.0",
+    "category": "military"
+  },
+  "MQ-8 Fire Scout": {
+    "filename": "military/MQ-8_Fire_Scout.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/MQ-8C_Fire_Scout_flying_over_Webster_Field_Annex.jpg/1280px-MQ-8C_Fire_Scout_flying_over_Webster_Field_Annex.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:MQ-8C_Fire_Scout_flying_over_Webster_Field_Annex.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "MQ-9A Reaper": {
+    "filename": "military/MQ-9A_Reaper.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/MQ-9_Reaper_UAV.jpg/1280px-MQ-9_Reaper_UAV.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:MQ-9_Reaper_UAV.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "RQ-4A Global Hawk Blk 10": {
+    "filename": "military/RQ-4A_Global_Hawk_Blk_10.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Northrop_Grumman_RQ-4A_Global_Hawk_USAF.jpg/1280px-Northrop_Grumman_RQ-4A_Global_Hawk_USAF.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Northrop_Grumman_RQ-4A_Global_Hawk_USAF.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "RQ-4B Global Hawk Blk 20+": {
+    "filename": "military/RQ-4B_Global_Hawk_Blk_20.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Northrop_Grumman_RQ-4A_Global_Hawk_USAF.jpg/1280px-Northrop_Grumman_RQ-4A_Global_Hawk_USAF.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Northrop_Grumman_RQ-4A_Global_Hawk_USAF.jpg",
+    "license": "Public domain",
+    "dedup_from": "RQ-4A Global Hawk Blk 10",
+    "category": "military"
+  },
+  "RQ-7A/B Shadow 200": {
+    "filename": "military/RQ-7A-B_Shadow_200.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Shadow_200_UAV.jpg/1280px-Shadow_200_UAV.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Shadow_200_UAV.jpg",
+    "license": "Public domain",
+    "category": "military"
+  },
+  "AN-124 Ruslan": {
+    "filename": "military/AN-124_Ruslan.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/An-124_RA-82028_in_formation_with_Su-27_09-May-2010.jpg/1280px-An-124_RA-82028_in_formation_with_Su-27_09-May-2010.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:An-124_RA-82028_in_formation_with_Su-27_09-May-2010.jpg",
+    "license": "CC BY-SA 3.0",
+    "category": "military"
+  },
+  "IL-76MD Candid B": {
+    "filename": "military/IL-76MD_Candid_B.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Ilyushin_Il-76_RA-76951.jpg/1280px-Ilyushin_Il-76_RA-76951.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Ilyushin_Il-76_RA-76951.jpg",
+    "license": "CC BY 2.0",
+    "category": "military"
+  },
+  "IL-76MF Candid (Stretched)": {
+    "filename": "military/IL-76MF_Candid_Stretched.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/6/60/Ilyushin_Il-76MF%2C_Ilyushin_Design_Bureau_AN0195017.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Ilyushin_Il-76MF,_Ilyushin_Design_Bureau_AN0195017.jpg",
+    "license": "GFDL 1.2",
+    "category": "military"
+  },
+  "IL-76T Candid A": {
+    "filename": "military/IL-76T_Candid_A.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Ilyushin_Il-76_RA-76951.jpg/1280px-Ilyushin_Il-76_RA-76951.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Ilyushin_Il-76_RA-76951.jpg",
+    "license": "CC BY 2.0",
+    "dedup_from": "IL-76MD Candid B",
+    "category": "military"
+  },
+  "IL-76TD Candid A": {
+    "filename": "military/IL-76TD_Candid_A.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Ilyushin_Il-76_RA-76951.jpg/1280px-Ilyushin_Il-76_RA-76951.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Ilyushin_Il-76_RA-76951.jpg",
+    "license": "CC BY 2.0",
+    "dedup_from": "IL-76MD Candid B",
+    "category": "military"
+  },
+  "Space Shuttle Orbiter": {
+    "filename": "military/Space_Shuttle_Orbiter.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/NASA_Shuttle_Transport.jpg/1280px-NASA_Shuttle_Transport.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:NASA_Shuttle_Transport.jpg",
+    "license": "Public domain",
+    "category": "military"
+  }
+}
