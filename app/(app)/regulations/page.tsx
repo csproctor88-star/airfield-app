@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Search, ExternalLink, ChevronDown, ChevronUp, X, FileText, Upload, Trash2, Download, HardDrive, Star, Settings } from 'lucide-react'
+import { Search, ExternalLink, ChevronDown, ChevronUp, X, FileText, Upload, Trash2, Download, HardDrive, Star, Settings, Database } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { ALL_REGULATIONS, type RegulationEntry } from '@/lib/regulations-data'
 import { REGULATION_CATEGORIES, REGULATION_PUB_TYPES } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { userDocService, type UserDocument } from '@/lib/userDocuments'
+import { idbGet, idbSet, idbGetAllKeys, STORE_BLOBS } from '@/lib/idb'
 
 const RegulationPDFViewer = dynamic(
   () => import('@/components/RegulationPDFViewer'),
@@ -16,6 +17,17 @@ const RegulationPDFViewer = dynamic(
 // --- Helpers ---
 function getCategoryConfig(categoryValue: string) {
   return REGULATION_CATEGORIES.find(c => c.value === categoryValue)
+}
+
+const REG_BUCKET = 'regulation-pdfs'
+
+function sanitizeFileName(regId: string): string {
+  return regId
+    .toLowerCase()
+    .replace(/,\s*/g, '-')
+    .replace(/\.\s+/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
 }
 
 // --- Favorites persistence (localStorage) ---
@@ -172,6 +184,62 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
     localStorage.setItem(FAVORITES_DEFAULT_KEY, next ? 'true' : 'false')
   }, [])
 
+  // --- Cache All state ---
+  const [cacheProgress, setCacheProgress] = useState<{ done: number; total: number; errors: number } | null>(null)
+  const [cachedCount, setCachedCount] = useState<number | null>(null)
+  const cacheAbortRef = useRef(false)
+
+  // Check how many are already cached on mount
+  useEffect(() => {
+    idbGetAllKeys(STORE_BLOBS).then(keys => {
+      const keySet = new Set(keys.map(String))
+      let count = 0
+      for (const reg of ALL_REGULATIONS) {
+        if (keySet.has(`${sanitizeFileName(reg.reg_id)}.pdf`)) count++
+      }
+      setCachedCount(count)
+    }).catch(() => {})
+  }, [cacheProgress])
+
+  const handleCacheAll = useCallback(async () => {
+    const supabase = createClient()
+    if (!supabase) return
+    cacheAbortRef.current = false
+
+    // figure out which files still need caching
+    const existingKeys = new Set((await idbGetAllKeys(STORE_BLOBS)).map(String))
+    const uncached = ALL_REGULATIONS.filter(r => !existingKeys.has(`${sanitizeFileName(r.reg_id)}.pdf`))
+
+    if (uncached.length === 0) {
+      setCachedCount(ALL_REGULATIONS.length)
+      return
+    }
+
+    const total = uncached.length
+    let done = 0
+    let errors = 0
+    setCacheProgress({ done: 0, total, errors: 0 })
+
+    for (const reg of uncached) {
+      if (cacheAbortRef.current) break
+      const fileName = `${sanitizeFileName(reg.reg_id)}.pdf`
+      try {
+        const { data, error } = await supabase.storage.from(REG_BUCKET).download(fileName)
+        if (error || !data) {
+          errors++
+        } else {
+          const buf = await data.arrayBuffer()
+          await idbSet(STORE_BLOBS, fileName, buf)
+        }
+      } catch {
+        errors++
+      }
+      done++
+      setCacheProgress({ done, total, errors })
+    }
+    setCacheProgress(null)
+  }, [])
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
     return ALL_REGULATIONS.filter(r => {
@@ -292,31 +360,110 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
           </button>
         </div>
 
-        {/* Favorites default setting */}
+        {/* Settings panel */}
         {showFavSettings && (
           <div style={{
-            marginTop: 8, padding: '8px 10px',
+            marginTop: 8, padding: '10px 10px',
             background: 'rgba(15,23,42,0.6)', borderRadius: 6,
             border: '1px solid rgba(56,189,248,0.06)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            display: 'flex', flexDirection: 'column', gap: 10,
           }}>
-            <span style={{ fontSize: 11, color: '#94A3B8', fontWeight: 600 }}>
-              Show favorites by default
-            </span>
-            <button
-              onClick={toggleFavDefault}
-              style={{
-                width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
-                background: loadFavoritesDefault() ? '#FACC15' : '#334155',
-                position: 'relative', transition: 'background 0.2s',
-              }}
-            >
-              <span style={{
-                position: 'absolute', top: 2, width: 16, height: 16,
-                borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
-                left: loadFavoritesDefault() ? 18 : 2,
-              }} />
-            </button>
+            {/* Favorites default toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 11, color: '#94A3B8', fontWeight: 600 }}>
+                Show favorites by default
+              </span>
+              <button
+                onClick={toggleFavDefault}
+                style={{
+                  width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
+                  background: loadFavoritesDefault() ? '#FACC15' : '#334155',
+                  position: 'relative', transition: 'background 0.2s',
+                }}
+              >
+                <span style={{
+                  position: 'absolute', top: 2, width: 16, height: 16,
+                  borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
+                  left: loadFavoritesDefault() ? 18 : 2,
+                }} />
+              </button>
+            </div>
+
+            {/* Cache All */}
+            <div style={{ borderTop: '1px solid rgba(56,189,248,0.06)', paddingTop: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: '#94A3B8', fontWeight: 600 }}>
+                    Cache all references
+                  </div>
+                  <div style={{ fontSize: 9, color: '#64748B', marginTop: 2 }}>
+                    {cachedCount !== null
+                      ? `${cachedCount} of ${ALL_REGULATIONS.length} cached for offline use`
+                      : 'Download all PDFs for offline use'}
+                  </div>
+                </div>
+                {cacheProgress ? (
+                  <button
+                    onClick={() => { cacheAbortRef.current = true }}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      background: 'transparent',
+                      border: '1px solid rgba(239,68,68,0.3)',
+                      borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
+                      color: '#F87171', fontSize: 10, fontWeight: 700, fontFamily: 'inherit',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <X size={10} />
+                    Stop
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleCacheAll}
+                    disabled={cachedCount === ALL_REGULATIONS.length}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      background: cachedCount === ALL_REGULATIONS.length
+                        ? 'transparent' : 'linear-gradient(135deg, #0369A1, #0EA5E9)',
+                      border: cachedCount === ALL_REGULATIONS.length
+                        ? '1px solid rgba(52,211,153,0.3)' : 'none',
+                      borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
+                      color: cachedCount === ALL_REGULATIONS.length ? '#34D399' : '#fff',
+                      fontSize: 10, fontWeight: 700, fontFamily: 'inherit',
+                      whiteSpace: 'nowrap',
+                      opacity: cachedCount === ALL_REGULATIONS.length ? 0.8 : 1,
+                    }}
+                  >
+                    <Database size={10} />
+                    {cachedCount === ALL_REGULATIONS.length ? 'All Cached' : 'Cache All'}
+                  </button>
+                )}
+              </div>
+
+              {/* Progress bar */}
+              {cacheProgress && (
+                <div style={{ marginTop: 8 }}>
+                  <div style={{
+                    height: 4, borderRadius: 2, background: '#1E293B', overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      height: '100%', borderRadius: 2,
+                      background: cacheProgress.errors > 0
+                        ? 'linear-gradient(90deg, #0EA5E9, #F97316)'
+                        : '#0EA5E9',
+                      width: `${Math.round((cacheProgress.done / cacheProgress.total) * 100)}%`,
+                      transition: 'width 0.3s',
+                    }} />
+                  </div>
+                  <div style={{ fontSize: 9, color: '#64748B', marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
+                    <span>{cacheProgress.done} of {cacheProgress.total} downloaded</span>
+                    {cacheProgress.errors > 0 && (
+                      <span style={{ color: '#F97316' }}>{cacheProgress.errors} unavailable</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
