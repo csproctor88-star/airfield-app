@@ -6,6 +6,14 @@ export const metadata: Metadata = {
   title: 'Glidepath | 127th Wing',
   description: 'Glidepath — Airfield Operations Suite — Selfridge ANGB (KMTC)',
   manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'AOMS',
+  },
+  icons: {
+    apple: '/icons/icon-192.png',
+  },
 }
 
 export const viewport: Viewport = {
