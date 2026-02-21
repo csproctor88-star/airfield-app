@@ -18,5 +18,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "docs", "scripts", "extract-pdf-text.ts"]
+  "exclude": ["node_modules", "docs", "scripts", "extract-pdf-text.ts", "supabase/functions"]
 }
