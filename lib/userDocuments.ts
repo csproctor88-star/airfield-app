@@ -107,6 +107,7 @@ export const userDocService = {
       onProgress?.('Extracting text...')
       try {
         const { pdfjs } = await import('react-pdf')
+        pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"
         const pdf = await pdfjs.getDocument({ data: new Uint8Array(arrayBuffer.slice(0)) }).promise
         totalPages = pdf.numPages
         for (let i = 1; i <= pdf.numPages; i++) {
