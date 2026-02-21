@@ -463,7 +463,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
         ref={mapContainer}
         style={{
           width: '100%',
-          height: 360,
+          height: 500,
           borderRadius: 10,
           overflow: 'hidden',
           border: '1px solid rgba(56, 189, 248, 0.1)',
@@ -477,11 +477,11 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
           left: 8,
           background: 'rgba(4, 7, 12, 0.88)',
           borderRadius: 8,
-          padding: '6px 8px',
-          fontSize: 10,
-          lineHeight: 1.6,
-          maxWidth: 175,
-          maxHeight: 340,
+          padding: '8px 10px',
+          fontSize: 12,
+          lineHeight: 1.7,
+          maxWidth: 200,
+          maxHeight: 480,
           overflowY: 'auto',
         }}
       >
@@ -492,19 +492,20 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 4,
+              gap: 6,
               cursor: 'pointer',
+              padding: '1px 0',
               opacity: visibility[item.toggleKey] ? 1 : 0.4,
               userSelect: 'none',
             }}
           >
             <span
               style={{
-                width: 8,
-                height: 8,
+                width: 10,
+                height: 10,
                 borderRadius: 2,
                 background: visibility[item.toggleKey] ? item.color : 'transparent',
-                border: `1px solid ${item.color}`,
+                border: `1.5px solid ${item.color}`,
                 flexShrink: 0,
               }}
             />
