@@ -7,12 +7,91 @@ All notable changes to the Airfield OPS Management Suite.
 ### Planned
 - Server-side email delivery for inspection reports (branded sender address)
 - Real Supabase project integration and auth testing
-- Offline PWA support with service worker caching
 - NASA DIP API integration for FAA NOTAM sync
 - METAR weather API integration (aviationweather.gov)
 - Role-based access control (re-enable RLS policies)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
+- Reports module (charts, analytics, export)
+- Waivers module (airfield waiver lifecycle)
+- Aircraft Database module (tail numbers, fleet management)
+- Users & Security module (profile management, roles)
+
+---
+
+## [2.0.0] — 2026-02-21
+
+### Regulations Database & Reference Library — Complete
+
+This release builds out the full References module, replacing the placeholder page with a comprehensive regulation database, in-app PDF viewer, user-uploaded personal documents, offline caching via IndexedDB, and admin CRUD for managing references.
+
+#### Regulations / References (`/regulations`)
+- **70-entry regulation database**: 3 Core + 27 Direct Refs + 27 Cross-Refs + 13 Scrubbed from Vols 1–3, sourced from AOMS Regulation Database v6
+- **Searchable and filterable**: Full-text search across reg IDs, titles, descriptions, and tags; filter by category (20 categories) and publication type (DAF, FAA, UFC, CFR, DoD, ICAO)
+- **Favorites system**: Star any reference, persist to localStorage, toggle "show favorites only" as default view
+- **In-app PDF viewer**: `RegulationPDFViewer` component with react-pdf rendering, pinch-to-zoom touch gestures, scroll navigation
+- **Offline PDF caching**: IndexedDB-backed blob storage; "Cache All" button to download all PDFs for offline access, "Clear Cache" to free storage
+- **Dynamic data source**: Fetches regulations from Supabase `regulations` table when connected, falls back to static `ALL_REGULATIONS` array in demo mode
+- **Admin controls**: sys_admin role can Add Reference (full form with PDF upload) and Delete Reference (with confirmation dialog, removes from DB + Storage + IDB cache)
+- **Open External**: Public-URL regulations open directly; private-bucket PDFs use Supabase signed URLs (1-hour expiry)
+- **Tab-based UI**: "References" and "My Documents" tabs with pill-style switcher
+
+#### My Documents (`/regulations` → My Documents tab)
+- **User-uploaded personal documents**: Upload PDF, JPG, and PNG files (50 MB max)
+- **Client-side text extraction**: PDF.js extracts text page-by-page for full-text search
+- **Per-document caching**: Cache/Uncache toggle for offline access via IndexedDB
+- **Document management**: View, Cache, Delete actions per document
+- **Status tracking**: uploaded → extracting → ready/failed pipeline with explanatory UI for failed extractions
+- **Supabase Storage integration**: Files stored in `user-uploads` bucket under `{userId}/{fileName}` path
+
+#### PDF Text Search System
+- **Offline full-text search**: IndexedDB text cache with `searchOffline()` — scans all cached text pages client-side
+- **Server-side search**: Postgres full-text search via `search_all_pdfs` RPC function with automatic offline fallback
+- **Text sync**: `syncAllFromServer()` downloads pre-extracted text to IndexedDB on app startup
+- **Background upload**: Client-extracted text auto-uploads to `pdf_text_pages` table for server-side indexing
+
+#### PDF Library (`/library`)
+- **Admin-only PDF Library page**: Role-gated page for bulk PDF management
+- **PDFLibrary component**: Self-contained JSX component for managing regulation PDFs in Supabase Storage
+- **Text extraction pipeline**: Extract text from all PDFs, with progress tracking and error handling
+
+#### IndexedDB Architecture (`lib/idb.ts`)
+- **Shared IndexedDB layer**: Version 4 schema with 6 object stores: `blobs`, `meta`, `text_pages`, `text_meta`, `user_blobs`, `user_text`
+- **Generic CRUD helpers**: `idbSet`, `idbGet`, `idbGetAll`, `idbGetAllKeys`, `idbDelete`, `idbClear`
+- **Singleton connection**: Single `openDB()` promise prevents multiple concurrent database connections
+
+#### PWA & Offline
+- **Service worker**: Full offline app access with PWA service worker caching
+- **Runtime caching**: PDF.js worker cached for 90 days, Mapbox tiles and Supabase API handled with appropriate strategies
+
+#### Database (13 new migrations)
+- `20260218_create_regulations.sql` — `regulations` table with 70 seed entries
+- `20260218_create_regulations_with_seed.sql` — Full seed data for all regulation entries
+- `20260218_add_regulation_storage_cols.sql` — Added `storage_path`, `file_size_bytes`, `last_verified_at`, `verified_date` columns
+- `20260219_pdf_text_search.sql` — `pdf_text_pages` and `pdf_extraction_status` tables with full-text search index and `search_all_pdfs` RPC function
+- `20260219_create_user_regulation_pdfs.sql` — `user_regulation_pdfs` table for uploaded PDFs
+- `20260219_regulation_pdfs_read_policy.sql` — Public read policy for `regulation-pdfs` storage bucket
+- `20260219_fix_ufc_pdf_urls.sql` — Corrected UFC PDF download URLs
+- `20260219_fix_epublishing_urls.sql` — Fixed e-Publishing.af.mil URLs
+- `20260219_fix_faa_and_milstd_urls.sql` — Fixed FAA and MIL-STD URLs
+- `20260219_remove_nfpa_ieee_dod.sql` — Removed 8 irrelevant entries (NFPA 780, NFPA 415, IEEE 142, etc.)
+- `20260219_delete_49cfr171_and_sync_urls.sql` — Cleaned up 49 CFR 171 and synced URLs
+- `20260219_clear_ecfr_icao_urls_set_storage.sql` — Cleared eCFR/ICAO URLs, set storage-only flag
+- `20260220_user_documents.sql` — `user_documents` and `user_document_pages` tables for personal uploads
+
+#### New Source Files
+- `lib/regulations-data.ts` — 70 regulation entries as static TypeScript data (1,165 lines)
+- `lib/supabase/regulations.ts` — Regulation CRUD: `fetchRegulations`, `fetchRegulation`, `searchRegulations`
+- `lib/idb.ts` — Shared IndexedDB helpers for PDF cache
+- `lib/pdfTextCache.ts` — PDF text search cache manager with offline/server hybrid
+- `lib/userDocuments.ts` — User document service: upload, delete, list, cache, text extraction
+- `components/RegulationPDFViewer.tsx` — In-app PDF viewer with zoom, touch gestures, offline support
+- `components/PDFLibrary.jsx` — Admin PDF library management component
+
+#### Constants Updates
+- **20 regulation categories**: airfield_ops, airfield_mgmt, atc, airfield_design, safety, emergency, pavement, lighting, driving, bash_wildlife, construction, fueling, security, notams, uas, personnel, publications, international, contingency, financial
+- **Publication types**: DAF, FAA, UFC, CFR, DoD, ICAO, NFPA (with display labels)
+- **Source sections**: Core, I through V, VI-A/B/C, VII-A/B/C
 
 ---
 
