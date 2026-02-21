@@ -582,7 +582,7 @@ function DetailGrid({ items }: { items: { label: string; value: string }[] }) {
 
 export default function AircraftPage() {
   const [search, setSearch] = useState('')
-  const [category, setCategory] = useState<'all' | 'military' | 'commercial'>('all')
+  const [category, setCategory] = useState<'all' | 'military' | 'commercial'>('military')
   const [sortField, setSortField] = useState<AircraftSortField>('name')
   const [sortDesc, setSortDesc] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
@@ -729,9 +729,9 @@ export default function AircraftPage() {
       {/* Category Tabs */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
         {[
-          { key: 'all' as const, label: 'All', count: AIRCRAFT_COUNT.total },
           { key: 'military' as const, label: 'Military', count: AIRCRAFT_COUNT.military },
           { key: 'commercial' as const, label: 'Commercial', count: AIRCRAFT_COUNT.commercial },
+          { key: 'all' as const, label: 'All', count: AIRCRAFT_COUNT.total },
         ].map(({ key, label, count }) => (
           <button
             key={key}
