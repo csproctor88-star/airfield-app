@@ -134,6 +134,10 @@ export interface AircraftCharacteristics {
   /** Aircraft Classification Numbers for pavement evaluation */
   acn?: AircraftClassificationNumbers;
 
+  // === IMAGE ===
+  /** Path to aircraft image relative to /public (e.g. "/aircraft_images/military/C-17A_Globemaster_III.jpg") */
+  image_url?: string;
+
   // === METADATA ===
   /** Source PDF page number */
   source_page?: number;

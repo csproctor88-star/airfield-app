@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import Image from 'next/image'
 import {
   Search, ChevronDown, ChevronUp, Star, Plane, Shield,
   ArrowUpDown, X, SlidersHorizontal, Layers,
@@ -363,6 +364,29 @@ function AircraftDetailCard({
           borderTop: '1px solid rgba(148,163,184,0.06)',
           padding: '12px 14px',
         }}>
+          {/* Aircraft Image */}
+          {ac.image_url && (
+            <div
+              style={{
+                position: 'relative',
+                width: '100%',
+                aspectRatio: '16 / 9',
+                borderRadius: 8,
+                overflow: 'hidden',
+                marginBottom: 14,
+                background: 'rgba(4,7,12,0.5)',
+              }}
+            >
+              <Image
+                src={ac.image_url}
+                alt={ac.aircraft}
+                fill
+                sizes="(max-width: 768px) 100vw, 400px"
+                style={{ objectFit: 'cover' }}
+              />
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
             <button
