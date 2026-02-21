@@ -290,11 +290,11 @@ function AircraftDetailCard({
           cursor: 'pointer',
         }}
       >
-        {/* Aircraft Thumbnail */}
+        {/* Category Badge */}
         <div
           style={{
-            width: 48,
-            height: 48,
+            width: 34,
+            height: 34,
             borderRadius: 8,
             background: isMilitary ? 'rgba(139,92,246,0.1)' : 'rgba(56,189,248,0.1)',
             border: `1px solid ${isMilitary ? 'rgba(139,92,246,0.2)' : 'rgba(56,189,248,0.2)'}`,
@@ -302,45 +302,12 @@ function AircraftDetailCard({
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
-            position: 'relative',
-            overflow: 'hidden',
           }}
         >
-          {ac.image_url ? (
-            <Image
-              src={ac.image_url}
-              alt={ac.aircraft}
-              fill
-              sizes="48px"
-              style={{ objectFit: 'cover' }}
-            />
-          ) : (
-            isMilitary
-              ? <Shield size={20} color="#8B5CF6" />
-              : <Plane size={20} color="#38BDF8" />
-          )}
-          {/* Category indicator dot */}
-          {ac.image_url && (
-            <div
-              style={{
-                position: 'absolute',
-                bottom: 2,
-                right: 2,
-                width: 14,
-                height: 14,
-                borderRadius: 4,
-                background: isMilitary ? 'rgba(139,92,246,0.85)' : 'rgba(56,189,248,0.85)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              {isMilitary
-                ? <Shield size={8} color="#fff" />
-                : <Plane size={8} color="#fff" />
-              }
-            </div>
-          )}
+          {isMilitary
+            ? <Shield size={16} color="#8B5CF6" />
+            : <Plane size={16} color="#38BDF8" />
+          }
         </div>
 
         {/* Name & Manufacturer */}
@@ -397,29 +364,6 @@ function AircraftDetailCard({
           borderTop: '1px solid rgba(148,163,184,0.06)',
           padding: '12px 14px',
         }}>
-          {/* Aircraft Image */}
-          {ac.image_url && (
-            <div
-              style={{
-                position: 'relative',
-                width: '100%',
-                aspectRatio: '16 / 9',
-                borderRadius: 8,
-                overflow: 'hidden',
-                marginBottom: 14,
-                background: 'rgba(4,7,12,0.5)',
-              }}
-            >
-              <Image
-                src={ac.image_url}
-                alt={ac.aircraft}
-                fill
-                sizes="(max-width: 768px) 100vw, 400px"
-                style={{ objectFit: 'cover' }}
-              />
-            </div>
-          )}
-
           {/* Action Buttons */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
             <button
@@ -567,6 +511,29 @@ function AircraftDetailCard({
               </>
             )}
           </DetailSection>
+
+          {/* Aircraft Image */}
+          {ac.image_url && (
+            <div
+              style={{
+                position: 'relative',
+                width: '100%',
+                aspectRatio: '16 / 9',
+                borderRadius: 8,
+                overflow: 'hidden',
+                marginTop: 14,
+                background: 'rgba(4,7,12,0.5)',
+              }}
+            >
+              <Image
+                src={ac.image_url}
+                alt={ac.aircraft}
+                fill
+                sizes="(max-width: 768px) 100vw, 400px"
+                style={{ objectFit: 'cover' }}
+              />
+            </div>
+          )}
 
         </div>
       )}
