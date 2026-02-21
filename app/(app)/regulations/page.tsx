@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Search, ExternalLink, ChevronDown, ChevronUp, X, FileText, Upload, Trash2, Download, HardDrive } from 'lucide-react'
+import { Search, ExternalLink, ChevronDown, ChevronUp, X, FileText, Upload, Trash2, Download, HardDrive, Star, Settings } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { ALL_REGULATIONS, type RegulationEntry } from '@/lib/regulations-data'
-import { REGULATION_CATEGORIES, REGULATION_PUB_TYPES, REGULATION_SOURCE_SECTIONS } from '@/lib/constants'
+import { REGULATION_CATEGORIES, REGULATION_PUB_TYPES } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { userDocService, type UserDocument } from '@/lib/userDocuments'
 
@@ -13,24 +13,32 @@ const RegulationPDFViewer = dynamic(
   { ssr: false },
 )
 
-// --- Badge color by entry type ---
-function entryTypeBadge(entry: RegulationEntry): { label: string; bg: string; color: string } {
-  if (entry.is_core) return { label: 'CORE', bg: 'rgba(52,211,153,0.15)', color: '#34D399' }
-  if (entry.is_scrubbed) return { label: 'SCRUBBED', bg: 'rgba(165,180,252,0.15)', color: '#A5B4FC' }
-  if (entry.is_cross_ref) return { label: 'CROSS-REF', bg: 'rgba(253,230,138,0.15)', color: '#FDE68A' }
-  return { label: 'DIRECT', bg: 'rgba(241,245,249,0.10)', color: '#CBD5E1' }
-}
-
+// --- Helpers ---
 function getCategoryConfig(categoryValue: string) {
   return REGULATION_CATEGORIES.find(c => c.value === categoryValue)
 }
 
-function getPubTypeLabel(pubType: string) {
-  return REGULATION_PUB_TYPES.find(p => p.value === pubType)?.label ?? pubType
+// --- Favorites persistence (localStorage) ---
+const FAVORITES_KEY = 'aoms_reg_favorites'
+const FAVORITES_DEFAULT_KEY = 'aoms_reg_favorites_default'
+
+function loadFavorites(): Set<string> {
+  try {
+    const raw = localStorage.getItem(FAVORITES_KEY)
+    if (raw) return new Set(JSON.parse(raw))
+  } catch { /* ignore */ }
+  return new Set()
 }
 
-function getSectionLabel(section: string) {
-  return REGULATION_SOURCE_SECTIONS.find(s => s.value === section)?.label ?? section
+function saveFavorites(favs: Set<string>) {
+  localStorage.setItem(FAVORITES_KEY, JSON.stringify(Array.from(favs)))
+}
+
+function loadFavoritesDefault(): boolean {
+  try {
+    return localStorage.getItem(FAVORITES_DEFAULT_KEY) === 'true'
+  } catch { /* ignore */ }
+  return false
 }
 
 function formatFileSize(bytes: number | null): string {
@@ -83,13 +91,13 @@ export default function RegulationsPage() {
     <div style={{ padding: 16, paddingBottom: 100 }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div style={{ fontSize: 16, fontWeight: 800 }}>Regulations</div>
+        <div style={{ fontSize: 16, fontWeight: 800 }}>References</div>
       </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {([
-          { key: 'regulations' as Tab, label: 'Regulations' },
+          { key: 'regulations' as Tab, label: 'References' },
           { key: 'my-docs' as Tab, label: 'My Documents' },
         ]).map(t => (
           <button
@@ -141,21 +149,35 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [pubTypeFilter, setPubTypeFilter] = useState<string>('all')
-  const [sourceFilter, setSourceFilter] = useState<string>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [favorites, setFavorites] = useState<Set<string>>(() => loadFavorites())
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(() => loadFavoritesDefault())
+  const [showFavSettings, setShowFavSettings] = useState(false)
 
-  const coreCount = ALL_REGULATIONS.filter(r => r.is_core).length
-  const directCount = ALL_REGULATIONS.filter(r => !r.is_core && !r.is_cross_ref && !r.is_scrubbed).length
-  const crossRefCount = ALL_REGULATIONS.filter(r => r.is_cross_ref).length
-  const scrubbedCount = ALL_REGULATIONS.filter(r => r.is_scrubbed).length
+  const toggleFavorite = useCallback((regId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setFavorites(prev => {
+      const next = new Set(prev)
+      if (next.has(regId)) next.delete(regId)
+      else next.add(regId)
+      saveFavorites(next)
+      return next
+    })
+  }, [])
+
+  const toggleFavDefault = useCallback(() => {
+    setShowFavSettings(false)
+    const next = !loadFavoritesDefault()
+    localStorage.setItem(FAVORITES_DEFAULT_KEY, next ? 'true' : 'false')
+  }, [])
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
     return ALL_REGULATIONS.filter(r => {
+      if (showFavoritesOnly && !favorites.has(r.reg_id)) return false
       if (categoryFilter !== 'all' && r.category !== categoryFilter) return false
       if (pubTypeFilter !== 'all' && r.pub_type !== pubTypeFilter) return false
-      if (sourceFilter !== 'all' && r.source_section !== sourceFilter) return false
       if (!q) return true
       return (
         r.reg_id.toLowerCase().includes(q) ||
@@ -164,177 +186,205 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
         r.tags.some(t => t.toLowerCase().includes(q))
       )
     })
-  }, [search, categoryFilter, pubTypeFilter, sourceFilter])
+  }, [search, categoryFilter, pubTypeFilter, showFavoritesOnly, favorites])
 
-  const hasActiveFilters = categoryFilter !== 'all' || pubTypeFilter !== 'all' || sourceFilter !== 'all'
+  const hasActiveFilters = categoryFilter !== 'all' || pubTypeFilter !== 'all'
 
   return (
     <>
-      {/* KPI badges */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
-        {[
-          { label: 'CORE', value: coreCount, color: '#34D399' },
-          { label: 'DIRECT', value: directCount, color: '#CBD5E1' },
-          { label: 'CROSS-REF', value: crossRefCount, color: '#FDE68A' },
-          { label: 'SCRUBBED', value: scrubbedCount, color: '#A5B4FC' },
-        ].map(k => (
-          <div
-            key={k.label}
+      {/* Search — prominent, takes former KPI space */}
+      <div style={{
+        background: 'rgba(10,16,28,0.92)',
+        border: '1px solid rgba(56,189,248,0.06)',
+        borderRadius: 10,
+        padding: 12,
+        marginBottom: 10,
+      }}>
+        <div style={{ position: 'relative', marginBottom: 10 }}>
+          <Search
+            size={16}
+            color="#64748B"
+            style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }}
+          />
+          <input
+            type="text"
+            placeholder="Search references, titles, tags..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
             style={{
-              background: 'rgba(10,16,28,0.92)',
-              border: '1px solid rgba(56,189,248,0.06)',
-              borderRadius: 10,
-              padding: '8px 4px',
-              textAlign: 'center',
+              width: '100%',
+              padding: '10px 14px 10px 38px',
+              background: 'rgba(15,23,42,0.6)',
+              border: '1px solid #1E293B',
+              borderRadius: 8,
+              color: '#E2E8F0',
+              fontSize: 14,
+              fontFamily: 'inherit',
+              outline: 'none',
+              boxSizing: 'border-box',
             }}
-          >
-            <div style={{ fontSize: 8, color: '#64748B', letterSpacing: '0.08em', fontWeight: 600 }}>{k.label}</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: k.color }}>{k.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Search */}
-      <div style={{ position: 'relative', marginBottom: 8 }}>
-        <Search
-          size={14}
-          color="#64748B"
-          style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }}
-        />
-        <input
-          type="text"
-          placeholder="Search regulations, titles, tags..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '8px 12px 8px 32px',
-            background: 'rgba(15,23,42,0.6)',
-            border: '1px solid #1E293B',
-            borderRadius: 8,
-            color: '#E2E8F0',
-            fontSize: 12,
-            fontFamily: 'inherit',
-            outline: 'none',
-            boxSizing: 'border-box',
-          }}
-        />
-        {search && (
-          <button
-            onClick={() => setSearch('')}
-            style={{
-              position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-              background: 'none', border: 'none', cursor: 'pointer', padding: 2,
-            }}
-          >
-            <X size={14} color="#64748B" />
-          </button>
-        )}
-      </div>
-
-      {/* Filter toggle */}
-      <button
-        onClick={() => setShowFilters(!showFilters)}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 4,
-          background: hasActiveFilters ? 'rgba(34,211,238,0.08)' : 'transparent',
-          border: `1px solid ${hasActiveFilters ? 'rgba(34,211,238,0.25)' : 'rgba(56,189,248,0.06)'}`,
-          borderRadius: 6, padding: '4px 10px', cursor: 'pointer',
-          color: hasActiveFilters ? '#22D3EE' : '#64748B',
-          fontSize: 10, fontWeight: 700, fontFamily: 'inherit', marginBottom: 8,
-        }}
-      >
-        {showFilters ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-        Filters {hasActiveFilters && `(active)`}
-        {hasActiveFilters && (
-          <span
-            onClick={e => { e.stopPropagation(); setCategoryFilter('all'); setPubTypeFilter('all'); setSourceFilter('all') }}
-            style={{ marginLeft: 4, color: '#EF4444', cursor: 'pointer' }}
-          >
-            Clear
-          </span>
-        )}
-      </button>
-
-      {/* Filter dropdowns */}
-      {showFilters && (
-        <div style={{
-          display: 'grid', gridTemplateColumns: '1fr', gap: 6, marginBottom: 12,
-          padding: 10, background: 'rgba(10,16,28,0.8)', borderRadius: 8,
-          border: '1px solid rgba(56,189,248,0.06)',
-        }}>
-          <div>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 4, letterSpacing: '0.06em' }}>CATEGORY</div>
-            <select
-              value={categoryFilter}
-              onChange={e => setCategoryFilter(e.target.value)}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
               style={{
-                width: '100%', padding: '6px 8px', background: 'rgba(15,23,42,0.8)',
-                border: '1px solid #1E293B', borderRadius: 6, color: '#E2E8F0',
-                fontSize: 11, fontFamily: 'inherit', outline: 'none',
+                position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer', padding: 2,
               }}
             >
-              <option value="all">All Categories</option>
-              {REGULATION_CATEGORIES.map(c => (
-                <option key={c.value} value={c.value}>{c.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 4, letterSpacing: '0.06em' }}>PUB TYPE</div>
-            <select
-              value={pubTypeFilter}
-              onChange={e => setPubTypeFilter(e.target.value)}
-              style={{
-                width: '100%', padding: '6px 8px', background: 'rgba(15,23,42,0.8)',
-                border: '1px solid #1E293B', borderRadius: 6, color: '#E2E8F0',
-                fontSize: 11, fontFamily: 'inherit', outline: 'none',
-              }}
-            >
-              <option value="all">All Types</option>
-              {REGULATION_PUB_TYPES.map(p => (
-                <option key={p.value} value={p.value}>{p.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 4, letterSpacing: '0.06em' }}>SOURCE SECTION</div>
-            <select
-              value={sourceFilter}
-              onChange={e => setSourceFilter(e.target.value)}
-              style={{
-                width: '100%', padding: '6px 8px', background: 'rgba(15,23,42,0.8)',
-                border: '1px solid #1E293B', borderRadius: 6, color: '#E2E8F0',
-                fontSize: 11, fontFamily: 'inherit', outline: 'none',
-              }}
-            >
-              <option value="all">All Sections</option>
-              {REGULATION_SOURCE_SECTIONS.map(s => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
-            </select>
-          </div>
+              <X size={16} color="#64748B" />
+            </button>
+          )}
         </div>
-      )}
+
+        {/* Filter row: toggle + favorites + settings */}
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              background: hasActiveFilters ? 'rgba(34,211,238,0.08)' : 'transparent',
+              border: `1px solid ${hasActiveFilters ? 'rgba(34,211,238,0.25)' : 'rgba(56,189,248,0.12)'}`,
+              borderRadius: 6, padding: '6px 10px', cursor: 'pointer',
+              color: hasActiveFilters ? '#22D3EE' : '#94A3B8',
+              fontSize: 11, fontWeight: 700, fontFamily: 'inherit',
+            }}
+          >
+            {showFilters ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            Filters {hasActiveFilters && '(active)'}
+            {hasActiveFilters && (
+              <span
+                onClick={e => { e.stopPropagation(); setCategoryFilter('all'); setPubTypeFilter('all') }}
+                style={{ marginLeft: 4, color: '#EF4444', cursor: 'pointer' }}
+              >
+                Clear
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              background: showFavoritesOnly ? 'rgba(250,204,21,0.10)' : 'transparent',
+              border: `1px solid ${showFavoritesOnly ? 'rgba(250,204,21,0.30)' : 'rgba(56,189,248,0.12)'}`,
+              borderRadius: 6, padding: '6px 10px', cursor: 'pointer',
+              color: showFavoritesOnly ? '#FACC15' : '#94A3B8',
+              fontSize: 11, fontWeight: 700, fontFamily: 'inherit',
+            }}
+          >
+            <Star size={12} fill={showFavoritesOnly ? '#FACC15' : 'none'} />
+            Favorites{favorites.size > 0 ? ` (${favorites.size})` : ''}
+          </button>
+
+          <button
+            onClick={() => setShowFavSettings(!showFavSettings)}
+            style={{
+              display: 'flex', alignItems: 'center',
+              background: 'transparent',
+              border: '1px solid rgba(56,189,248,0.12)',
+              borderRadius: 6, padding: '6px 8px', cursor: 'pointer',
+              color: '#64748B', fontFamily: 'inherit',
+            }}
+            title="Favorites settings"
+          >
+            <Settings size={12} />
+          </button>
+        </div>
+
+        {/* Favorites default setting */}
+        {showFavSettings && (
+          <div style={{
+            marginTop: 8, padding: '8px 10px',
+            background: 'rgba(15,23,42,0.6)', borderRadius: 6,
+            border: '1px solid rgba(56,189,248,0.06)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <span style={{ fontSize: 11, color: '#94A3B8', fontWeight: 600 }}>
+              Show favorites by default
+            </span>
+            <button
+              onClick={toggleFavDefault}
+              style={{
+                width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
+                background: loadFavoritesDefault() ? '#FACC15' : '#334155',
+                position: 'relative', transition: 'background 0.2s',
+              }}
+            >
+              <span style={{
+                position: 'absolute', top: 2, width: 16, height: 16,
+                borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
+                left: loadFavoritesDefault() ? 18 : 2,
+              }} />
+            </button>
+          </div>
+        )}
+
+        {/* Filter dropdowns */}
+        {showFilters && (
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10,
+          }}>
+            <div>
+              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 4, letterSpacing: '0.06em' }}>CATEGORY</div>
+              <select
+                value={categoryFilter}
+                onChange={e => setCategoryFilter(e.target.value)}
+                style={{
+                  width: '100%', padding: '6px 8px', background: 'rgba(15,23,42,0.8)',
+                  border: '1px solid #1E293B', borderRadius: 6, color: '#E2E8F0',
+                  fontSize: 11, fontFamily: 'inherit', outline: 'none',
+                }}
+              >
+                <option value="all">All Categories</option>
+                {REGULATION_CATEGORIES.map(c => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 4, letterSpacing: '0.06em' }}>PUB TYPE</div>
+              <select
+                value={pubTypeFilter}
+                onChange={e => setPubTypeFilter(e.target.value)}
+                style={{
+                  width: '100%', padding: '6px 8px', background: 'rgba(15,23,42,0.8)',
+                  border: '1px solid #1E293B', borderRadius: 6, color: '#E2E8F0',
+                  fontSize: 11, fontFamily: 'inherit', outline: 'none',
+                }}
+              >
+                <option value="all">All Types</option>
+                {REGULATION_PUB_TYPES.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Results count */}
       <div style={{ fontSize: 10, color: '#64748B', marginBottom: 8, fontWeight: 600 }}>
-        {filtered.length === ALL_REGULATIONS.length
-          ? `Showing all ${filtered.length} regulations`
-          : `${filtered.length} of ${ALL_REGULATIONS.length} regulations`
+        {showFavoritesOnly
+          ? `${filtered.length} favorite${filtered.length !== 1 ? 's' : ''}`
+          : filtered.length === ALL_REGULATIONS.length
+            ? `Showing all ${filtered.length} references`
+            : `${filtered.length} of ${ALL_REGULATIONS.length} references`
         }
       </div>
 
       {/* Regulation cards */}
       {filtered.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: 32, color: '#64748B', fontSize: 12 }}>
-          No regulations match your search.
+          {showFavoritesOnly
+            ? 'No favorites yet. Tap the star on any reference to add it.'
+            : 'No references match your search.'}
         </div>
       ) : (
         filtered.map(reg => {
-          const badge = entryTypeBadge(reg)
           const catConfig = getCategoryConfig(reg.category)
           const isExpanded = expandedId === reg.reg_id
+          const isFav = favorites.has(reg.reg_id)
 
           return (
             <div
@@ -360,15 +410,20 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                     {reg.title}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}>
-                  <div style={{
-                    fontSize: 8, fontWeight: 700, letterSpacing: '0.06em',
-                    background: badge.bg, color: badge.color,
-                    padding: '2px 6px', borderRadius: 4, whiteSpace: 'nowrap',
-                  }}>
-                    {badge.label}
-                  </div>
-                </div>
+                <button
+                  onClick={e => toggleFavorite(reg.reg_id, e)}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    padding: 4, flexShrink: 0,
+                  }}
+                  title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                >
+                  <Star
+                    size={18}
+                    color={isFav ? '#FACC15' : '#475569'}
+                    fill={isFav ? '#FACC15' : 'none'}
+                  />
+                </button>
               </div>
 
               <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
@@ -404,12 +459,8 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 10 }}>
                     <div>
-                      <div style={{ fontSize: 8, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em' }}>SOURCE SECTION</div>
-                      <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600 }}>{getSectionLabel(reg.source_section)}</div>
-                    </div>
-                    <div>
                       <div style={{ fontSize: 8, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em' }}>PUB TYPE</div>
-                      <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600 }}>{getPubTypeLabel(reg.pub_type)}</div>
+                      <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600 }}>{reg.pub_type}</div>
                     </div>
                     {reg.source_volume && (
                       <div>

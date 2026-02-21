@@ -15,7 +15,7 @@ import {
 const tabs = [
   { href: '/', label: 'HOME', icon: Home },
   { href: '/aircraft', label: 'AIRCRAFT', icon: Plane },
-  { href: '/regulations', label: 'REGS', icon: BookOpen },
+  { href: '/regulations', label: 'REFS', icon: BookOpen },
   { href: '/obstructions', label: 'OBS EVAL', icon: MapPin },
   { href: '/more', label: 'MORE', icon: Menu },
 ] as const
