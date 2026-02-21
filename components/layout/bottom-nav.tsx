@@ -67,7 +67,7 @@ export function BottomNav() {
             }}
           >
             <Icon size={20} />
-            <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.08em' }}>
+            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em' }}>
               {label}
             </span>
           </Link>

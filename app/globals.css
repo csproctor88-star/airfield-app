@@ -33,9 +33,9 @@
     padding: 14px;
   }
 
-  /* Section label — 9px uppercase tracking */
+  /* Section label — 10px uppercase tracking */
   .section-label {
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
     color: #64748B;
     letter-spacing: 0.12em;
@@ -51,7 +51,7 @@
     border-radius: 6px;
     padding: 8px 10px;
     color: #F1F5F9;
-    font-size: 12px;
+    font-size: 13px;
     width: 100%;
     font-family: inherit;
     box-sizing: border-box;
@@ -68,7 +68,7 @@
     border: none;
     border-radius: 8px;
     padding: 12px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     cursor: pointer;
     width: 100%;

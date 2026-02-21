@@ -74,7 +74,7 @@ export default function InspectionDetailPage() {
   if (allInspections.length === 0) {
     return (
       <div style={{ padding: 16, paddingBottom: 100 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#22D3EE', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#22D3EE', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
           &larr; Back
         </button>
         <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>Inspection not found</div>
@@ -146,10 +146,10 @@ export default function InspectionDetailPage() {
       return (
         <div key={`${inspection.id}-${sectionTitle}`} className="card" style={{ marginBottom: 6 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: allPass ? '#22C55E' : failCount > 0 ? '#FBBF24' : '#94A3B8' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: allPass ? '#22C55E' : failCount > 0 ? '#FBBF24' : '#94A3B8' }}>
               {sectionTitle}
             </div>
-            <div style={{ fontSize: 10, color: '#64748B' }}>
+            <div style={{ fontSize: 11, color: '#64748B' }}>
               {passCount}/{sectionItems.length}
             </div>
           </div>
@@ -174,14 +174,14 @@ export default function InspectionDetailPage() {
                 </span>
                 <div style={{ flex: 1 }}>
                   <div style={{
-                    fontSize: 11,
+                    fontSize: 12,
                     color: item.response === 'na' ? '#64748B' : '#CBD5E1',
                     textDecoration: item.response === 'na' ? 'line-through' : 'none',
                   }}>
                     {item.item}
                   </div>
                   {item.notes && item.response === 'fail' && (
-                    <div style={{ fontSize: 10, color: '#FBBF24', marginTop: 2, fontStyle: 'italic' }}>
+                    <div style={{ fontSize: 11, color: '#FBBF24', marginTop: 2, fontStyle: 'italic' }}>
                       {item.notes}
                     </div>
                   )}
@@ -198,12 +198,12 @@ export default function InspectionDetailPage() {
     <div style={{ padding: 16, paddingBottom: 100 }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#22D3EE', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#22D3EE', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
           &larr; Back
         </button>
         <Link
           href="/inspections?view=history"
-          style={{ color: '#22D3EE', fontSize: 11, fontWeight: 600, textDecoration: 'none' }}
+          style={{ color: '#22D3EE', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}
         >
           All Inspections
         </Link>
@@ -220,7 +220,7 @@ export default function InspectionDetailPage() {
 
         {/* Show display IDs for daily report */}
         {isDaily && (
-          <div style={{ display: 'flex', gap: 8, marginBottom: 10, fontSize: 11, fontFamily: 'monospace', color: '#94A3B8' }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10, fontSize: 12, fontFamily: 'monospace', color: '#94A3B8' }}>
             {allInspections.map((insp: { id: string; display_id: string }) => (
               <span key={insp.id}>{insp.display_id}</span>
             ))}
@@ -229,7 +229,7 @@ export default function InspectionDetailPage() {
 
         {/* Show display ID for special types */}
         {isSpecialType && (
-          <div style={{ marginBottom: 10, fontSize: 11, fontFamily: 'monospace', color: '#94A3B8' }}>
+          <div style={{ marginBottom: 10, fontSize: 12, fontFamily: 'monospace', color: '#94A3B8' }}>
             {primary.display_id}
           </div>
         )}
@@ -239,7 +239,7 @@ export default function InspectionDetailPage() {
           {isSpecialType ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <span style={{ fontSize: 16 }}>{primary.inspection_type === 'construction_meeting' ? '🏗️' : '📋'}</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#A78BFA' }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#A78BFA' }}>
                 {primary.inspection_type === 'construction_meeting' ? 'Construction Meeting' : 'Joint Monthly'}
               </span>
             </div>
@@ -248,13 +248,13 @@ export default function InspectionDetailPage() {
               {airfieldInsp && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span style={{ fontSize: 16 }}>📋</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#34D399' }}>Airfield</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#34D399' }}>Airfield</span>
                 </div>
               )}
               {lightingInsp && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span style={{ fontSize: 16 }}>💡</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#FBBF24' }}>Lighting</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#FBBF24' }}>Lighting</span>
                 </div>
               )}
             </>
@@ -262,13 +262,13 @@ export default function InspectionDetailPage() {
         </div>
 
         {/* Info Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 11, marginBottom: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12, marginBottom: 12 }}>
           <div>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Inspector</div>
+            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Inspector</div>
             <div style={{ fontWeight: 600, marginTop: 2, color: '#38BDF8' }}>{primary.inspector_name || 'Unknown'}</div>
           </div>
           <div>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Date</div>
+            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Date</div>
             <div style={{ fontWeight: 500, marginTop: 2 }}>
               {primary.completed_at
                 ? `${new Date(primary.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${new Date(primary.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
@@ -277,13 +277,13 @@ export default function InspectionDetailPage() {
           </div>
           {primary.weather_conditions && (
             <div>
-              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Weather</div>
+              <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Weather</div>
               <div style={{ fontWeight: 500, marginTop: 2 }}>{primary.weather_conditions}</div>
             </div>
           )}
           {primary.temperature_f != null && (
             <div>
-              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Temperature</div>
+              <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Temperature</div>
               <div style={{ fontWeight: 500, marginTop: 2 }}>{primary.temperature_f}°F</div>
             </div>
           )}
@@ -294,11 +294,11 @@ export default function InspectionDetailPage() {
           const bwc = airfieldInsp?.bwc_value || primary.bwc_value
           return (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
+              <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
                 Bird Watch Condition
               </div>
               <span style={{
-                padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700,
                 color: bwc === 'LOW' ? '#22C55E' : bwc === 'MOD' ? '#EAB308' : bwc === 'SEV' ? '#F97316' : '#EF4444',
                 background: bwc === 'LOW' ? 'rgba(34,197,94,0.1)' : bwc === 'MOD' ? 'rgba(234,179,8,0.1)' : bwc === 'SEV' ? 'rgba(249,115,22,0.1)' : 'rgba(239,68,68,0.1)',
               }}>
@@ -315,13 +315,13 @@ export default function InspectionDetailPage() {
           {/* Personnel */}
           {primary.personnel && primary.personnel.length > 0 && (
             <div className="card" style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+              <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
                 Personnel / Offices Present
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {primary.personnel.map((person: string) => (
                   <span key={person} style={{
-                    fontSize: 11, padding: '4px 10px', borderRadius: 6, fontWeight: 600,
+                    fontSize: 12, padding: '4px 10px', borderRadius: 6, fontWeight: 600,
                     background: 'rgba(167,139,250,0.1)', color: '#A78BFA',
                     border: '1px solid rgba(167,139,250,0.2)',
                   }}>
@@ -335,10 +335,10 @@ export default function InspectionDetailPage() {
           {/* Comments */}
           {primary.notes && (
             <div className="card" style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+              <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
                 Comments
               </div>
-              <div style={{ fontSize: 12, color: '#CBD5E1', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{primary.notes}</div>
+              <div style={{ fontSize: 13, color: '#CBD5E1', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{primary.notes}</div>
             </div>
           )}
         </>
@@ -346,13 +346,13 @@ export default function InspectionDetailPage() {
         <>
           {/* Combined Results Card */}
           <div className="card" style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
               {isDaily ? 'Combined Results' : 'Results'}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
               <div style={{ textAlign: 'center', padding: 8, background: 'rgba(34,197,94,0.08)', borderRadius: 8, border: '1px solid rgba(34,197,94,0.2)' }}>
                 <div style={{ fontSize: 20, fontWeight: 800, color: '#22C55E' }}>{totalPassed}</div>
-                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>PASS</div>
+                <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600 }}>PASS</div>
               </div>
               <button
                 onClick={() => totalFailed > 0 && setShowFailedItems((p) => !p)}
@@ -365,15 +365,15 @@ export default function InspectionDetailPage() {
                 }}
               >
                 <div style={{ fontSize: 20, fontWeight: 800, color: '#EF4444' }}>{totalFailed}</div>
-                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>FAIL {totalFailed > 0 ? (showFailedItems ? '▴' : '▾') : ''}</div>
+                <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600 }}>FAIL {totalFailed > 0 ? (showFailedItems ? '▴' : '▾') : ''}</div>
               </button>
               <div style={{ textAlign: 'center', padding: 8, background: 'rgba(100,116,139,0.08)', borderRadius: 8, border: '1px solid rgba(100,116,139,0.2)' }}>
                 <div style={{ fontSize: 20, fontWeight: 800, color: '#64748B' }}>{totalNa}</div>
-                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>N/A</div>
+                <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600 }}>N/A</div>
               </div>
               <div style={{ textAlign: 'center', padding: 8, background: 'rgba(56,189,248,0.08)', borderRadius: 8, border: '1px solid rgba(56,189,248,0.2)' }}>
                 <div style={{ fontSize: 20, fontWeight: 800, color: '#38BDF8' }}>{totalItems}</div>
-                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>TOTAL</div>
+                <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600 }}>TOTAL</div>
               </div>
             </div>
           </div>
@@ -381,19 +381,19 @@ export default function InspectionDetailPage() {
           {/* Combined Failed Items — toggled by Fail button */}
           {showFailedItems && allFailedItems.length > 0 && (
             <div className="card" style={{ marginBottom: 8, borderLeft: '3px solid #EF4444' }}>
-              <div style={{ fontSize: 9, color: '#EF4444', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+              <div style={{ fontSize: 10, color: '#EF4444', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
                 Failed Items ({allFailedItems.length})
               </div>
               {allFailedItems.map((item) => (
                 <div key={item.id} style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #1E293B' }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#F1F5F9' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#F1F5F9' }}>
                     {item.item}
                   </div>
-                  <div style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
                     {item.section}
                     {isDaily && (
                       <span style={{
-                        marginLeft: 6, fontSize: 9, fontWeight: 600, padding: '1px 4px', borderRadius: 3,
+                        marginLeft: 6, fontSize: 10, fontWeight: 600, padding: '1px 4px', borderRadius: 3,
                         color: item.fromType === 'airfield' ? '#34D399' : '#FBBF24',
                         background: item.fromType === 'airfield' ? 'rgba(52,211,153,0.1)' : 'rgba(251,191,36,0.1)',
                       }}>
@@ -402,7 +402,7 @@ export default function InspectionDetailPage() {
                     )}
                   </div>
                   {item.notes && (
-                    <div style={{ fontSize: 11, color: '#FBBF24', marginTop: 4, fontStyle: 'italic' }}>
+                    <div style={{ fontSize: 12, color: '#FBBF24', marginTop: 4, fontStyle: 'italic' }}>
                       {item.notes}
                     </div>
                   )}
@@ -440,19 +440,19 @@ export default function InspectionDetailPage() {
                   }}
                 >
                   <div style={{
-                    fontSize: 12, fontWeight: 800,
+                    fontSize: 13, fontWeight: 800,
                     color: insp.inspection_type === 'airfield' ? '#34D399' : '#FBBF24',
                     display: 'flex', alignItems: 'center', gap: 6,
                   }}>
                     <span>{insp.inspection_type === 'airfield' ? '📋' : '💡'}</span>
                     {insp.inspection_type === 'airfield' ? 'Airfield Inspection' : 'Lighting Inspection'}
-                    <span style={{ fontSize: 10, fontWeight: 600, color: '#64748B', marginLeft: 4 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginLeft: 4 }}>
                       {insp.passed_count}/{insp.total_items}
                       {insp.failed_count > 0 && <span style={{ color: '#EF4444', marginLeft: 4 }}>{insp.failed_count} fail</span>}
                     </span>
                   </div>
                   <span style={{
-                    fontSize: 14,
+                    fontSize: 15,
                     color: insp.inspection_type === 'airfield' ? '#34D399' : '#FBBF24',
                     transition: 'transform 0.2s',
                     transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
@@ -470,10 +470,10 @@ export default function InspectionDetailPage() {
                     {/* Notes for this half */}
                     {insp.notes && (
                       <div className="card" style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+                        <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
                           {isDaily ? `${insp.inspection_type === 'airfield' ? 'Airfield' : 'Lighting'} Notes` : 'Notes'}
                         </div>
-                        <div style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.5 }}>{insp.notes}</div>
+                        <div style={{ fontSize: 12, color: '#CBD5E1', lineHeight: 1.5 }}>{insp.notes}</div>
                       </div>
                     )}
                   </>
@@ -492,7 +492,7 @@ export default function InspectionDetailPage() {
           style={{
             flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
             background: '#A78BFA14', border: '1px solid #A78BFA33',
-            color: '#A78BFA', fontSize: 12, fontWeight: 700,
+            color: '#A78BFA', fontSize: 13, fontWeight: 700,
             fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
             opacity: generatingPdf ? 0.7 : 1,
           }}
@@ -504,7 +504,7 @@ export default function InspectionDetailPage() {
           style={{
             flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
             background: '#22C55E14', border: '1px solid #22C55E33',
-            color: '#22C55E', fontSize: 12, fontWeight: 700,
+            color: '#22C55E', fontSize: 13, fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',
           }}
         >

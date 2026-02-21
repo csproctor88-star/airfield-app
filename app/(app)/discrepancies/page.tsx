@@ -84,7 +84,7 @@ export default function DiscrepanciesPage() {
             borderRadius: 8,
             padding: '7px 12px',
             color: '#fff',
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 700,
             cursor: 'pointer',
             textDecoration: 'none',
@@ -113,7 +113,7 @@ export default function DiscrepanciesPage() {
               cursor: 'pointer',
             }}
           >
-            <div style={{ fontSize: 9, color: '#64748B', letterSpacing: '0.08em', fontWeight: 600 }}>
+            <div style={{ fontSize: 10, color: '#64748B', letterSpacing: '0.08em', fontWeight: 600 }}>
               {k.label}
             </div>
             <div style={{ fontSize: 22, fontWeight: 800, color: k.color }}>{k.value}</div>
@@ -132,7 +132,7 @@ export default function DiscrepanciesPage() {
               borderRadius: 5,
               padding: '4px 8px',
               color: filter === v ? '#22D3EE' : '#64748B',
-              fontSize: 9,
+              fontSize: 10,
               fontWeight: 700,
               cursor: 'pointer',
               fontFamily: 'inherit',
@@ -157,7 +157,7 @@ export default function DiscrepanciesPage() {
           border: '1px solid #1E293B',
           borderRadius: 8,
           color: '#E2E8F0',
-          fontSize: 12,
+          fontSize: 13,
           fontFamily: 'inherit',
           outline: 'none',
           boxSizing: 'border-box',
@@ -165,7 +165,7 @@ export default function DiscrepanciesPage() {
       />
 
       {loading ? (
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B', fontSize: 12 }}>
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B', fontSize: 13 }}>
           Loading...
         </div>
       ) : usingDemo ? (
@@ -207,7 +207,7 @@ export default function DiscrepanciesPage() {
       )}
 
       {!loading && (usingDemo ? demoFiltered : liveFiltered).length === 0 && (
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B', fontSize: 12 }}>
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B', fontSize: 13 }}>
           No discrepancies match this filter
         </div>
       )}

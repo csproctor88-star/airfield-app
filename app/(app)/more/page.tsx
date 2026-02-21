@@ -99,7 +99,7 @@ export default function MorePage() {
             {m.icon}
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700 }}>{m.name}</div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>{m.name}</div>
           </div>
           {m.badge && <Badge label={m.badge} color={m.color} />}
           <span style={{ color: '#334155', fontSize: 16 }}>›</span>
@@ -109,10 +109,10 @@ export default function MorePage() {
         className="card"
         style={{ marginTop: 8, textAlign: 'center', padding: 16 }}
       >
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8' }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#94A3B8' }}>
           Glidepath
         </div>
-        <div style={{ fontSize: 10, color: '#64748B' }}>
+        <div style={{ fontSize: 11, color: '#64748B' }}>
           v2.1.0 &bull; 127th Wing
         </div>
       </div>

@@ -118,7 +118,7 @@ export default function LoginPage() {
           >
             AIRFIELD OPS
           </div>
-          <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.12em' }}>
+          <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600, letterSpacing: '0.12em' }}>
             SELFRIDGE ANGB &bull; KMTC &bull; 127TH WING
           </div>
         </div>
@@ -127,7 +127,7 @@ export default function LoginPage() {
         <div className="card" style={{ padding: 20 }}>
           <div
             style={{
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: 700,
               marginBottom: 16,
               color: '#F1F5F9',
@@ -184,7 +184,7 @@ export default function LoginPage() {
                   borderRadius: 6,
                   padding: '8px 12px',
                   marginBottom: 12,
-                  fontSize: 11,
+                  fontSize: 12,
                   color: '#EF4444',
                 }}
               >
@@ -200,7 +200,7 @@ export default function LoginPage() {
                   borderRadius: 6,
                   padding: '8px 12px',
                   marginBottom: 12,
-                  fontSize: 11,
+                  fontSize: 12,
                   color: '#22C55E',
                 }}
               >
@@ -228,7 +228,7 @@ export default function LoginPage() {
                 background: 'none',
                 border: 'none',
                 color: '#38BDF8',
-                fontSize: 11,
+                fontSize: 12,
                 cursor: 'pointer',
                 padding: 0,
               }}
@@ -242,7 +242,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: 24 }}>
-          <div style={{ fontSize: 10, color: '#334155' }}>
+          <div style={{ fontSize: 11, color: '#334155' }}>
             Glidepath v2.1
           </div>
         </div>

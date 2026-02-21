@@ -45,7 +45,7 @@ export function Header() {
           <div>
             <div
               style={{
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: 800,
                 letterSpacing: '-0.02em',
                 background: 'linear-gradient(135deg, #F1F5F9, #38BDF8)',
@@ -55,7 +55,7 @@ export function Header() {
             >
               GLIDEPATH
             </div>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.12em' }}>
+            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.12em' }}>
               SELFRIDGE ANGB &bull; KMTC
             </div>
           </div>

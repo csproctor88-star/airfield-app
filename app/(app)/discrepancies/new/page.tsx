@@ -93,7 +93,7 @@ export default function NewDiscrepancyPage() {
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
-      <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#22D3EE', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
+      <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#22D3EE', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
         ← Back
       </button>
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>New Discrepancy</div>
@@ -123,7 +123,7 @@ export default function NewDiscrepancyPage() {
                     return t ? `${t.emoji} ${t.label}` : v
                   }).join(', ')}
             </span>
-            <span style={{ marginLeft: 8, fontSize: 10, color: '#64748B' }}>{typeDropdownOpen ? '▲' : '▼'}</span>
+            <span style={{ marginLeft: 8, fontSize: 11, color: '#64748B' }}>{typeDropdownOpen ? '▲' : '▼'}</span>
           </button>
           {typeDropdownOpen && (
             <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#1E293B', border: '1px solid #334155', borderRadius: 8, marginTop: 4, maxHeight: 240, overflowY: 'auto' }}>
@@ -137,10 +137,10 @@ export default function NewDiscrepancyPage() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px',
                       background: selected ? '#334155' : 'transparent', border: 'none', color: '#F1F5F9',
-                      fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                      fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
                     }}
                   >
-                    <span style={{ width: 20, height: 20, borderRadius: 4, border: `2px solid ${selected ? '#22D3EE' : '#475569'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0, background: selected ? '#22D3EE22' : 'transparent', color: '#22D3EE' }}>
+                    <span style={{ width: 20, height: 20, borderRadius: 4, border: `2px solid ${selected ? '#22D3EE' : '#475569'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0, background: selected ? '#22D3EE22' : 'transparent', color: '#22D3EE' }}>
                       {selected ? '✓' : ''}
                     </span>
                     <span>{t.emoji} {t.label}</span>
@@ -188,14 +188,14 @@ export default function NewDiscrepancyPage() {
             {photos.map((p, i) => (
               <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid #38BDF833' }}>
                 <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <button type="button" onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.7)', border: 'none', color: '#EF4444', fontSize: 12, width: 20, height: 20, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
+                <button type="button" onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.7)', border: 'none', color: '#EF4444', fontSize: 13, width: 20, height: 20, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
               </div>
             ))}
           </div>
         )}
 
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
-        <button type="button" onClick={() => fileInputRef.current?.click()} style={{ width: '100%', background: '#38BDF814', border: '1px solid #38BDF833', borderRadius: 8, padding: 10, color: '#38BDF8', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', minHeight: 44, marginBottom: 12 }}>
+        <button type="button" onClick={() => fileInputRef.current?.click()} style={{ width: '100%', background: '#38BDF814', border: '1px solid #38BDF833', borderRadius: 8, padding: 10, color: '#38BDF8', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', minHeight: 44, marginBottom: 12 }}>
           📸 Add Photo{photos.length > 0 ? ` (${photos.length})` : ''}
         </button>
 

@@ -44,15 +44,15 @@ export function DiscrepancyCard({
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: 11, fontWeight: 800, color: '#22D3EE', fontFamily: 'monospace' }}>
+        <span style={{ fontSize: 12, fontWeight: 800, color: '#22D3EE', fontFamily: 'monospace' }}>
           {workOrderNumber || 'Pending'}
         </span>
         <div style={{ display: 'flex', gap: 4 }}>
           <StatusBadge status={status} />
         </div>
       </div>
-      <div style={{ fontSize: 12, fontWeight: 700 }}>{title}</div>
-      <div style={{ fontSize: 10, color: '#64748B', display: 'flex', alignItems: 'center', gap: 4 }}>
+      <div style={{ fontSize: 13, fontWeight: 700 }}>{title}</div>
+      <div style={{ fontSize: 11, color: '#64748B', display: 'flex', alignItems: 'center', gap: 4 }}>
         <span>{locationText}</span>
         <span>&bull;</span>
         <span>{assignedShop || 'Unassigned'}</span>

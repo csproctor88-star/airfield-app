@@ -22,7 +22,7 @@ function ModalOverlay({ title, onClose, children }: { title: string; onClose: ()
         borderBottom: 'none',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <span style={{ fontSize: 14, fontWeight: 800 }}>{title}</span>
+          <span style={{ fontSize: 15, fontWeight: 800 }}>{title}</span>
           <button type="button" onClick={onClose} style={{
             background: 'none', border: 'none', color: '#64748B', fontSize: 18,
             cursor: 'pointer', padding: 0, lineHeight: 1,
@@ -240,7 +240,7 @@ export function StatusUpdateModal({
         <>
           <div style={{ marginBottom: 12 }}>
             <FieldLabel>Open / Closed</FieldLabel>
-            <div style={{ fontSize: 12, fontWeight: 600, color: STATUS_CONFIG[discrepancy.status as keyof typeof STATUS_CONFIG]?.color || '#94A3B8' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: STATUS_CONFIG[discrepancy.status as keyof typeof STATUS_CONFIG]?.color || '#94A3B8' }}>
               {STATUS_CONFIG[discrepancy.status as keyof typeof STATUS_CONFIG]?.label || discrepancy.status}
             </div>
           </div>
@@ -255,7 +255,7 @@ export function StatusUpdateModal({
                   <button key={s} type="button" onClick={() => setNewStatus(s)} style={{
                     background: active ? `${cfg?.color || '#64748B'}22` : 'transparent',
                     border: `1px solid ${active ? cfg?.color || '#64748B' : '#334155'}`,
-                    borderRadius: 6, padding: '6px 12px', fontSize: 11, fontWeight: 600,
+                    borderRadius: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600,
                     color: cfg?.color || '#94A3B8', cursor: 'pointer', fontFamily: 'inherit',
                   }}>
                     {cfg?.label || s}
@@ -332,7 +332,7 @@ export function WorkOrderModal({
           value={workOrder} onChange={(e) => setWorkOrder(e.target.value)} />
       </div>
 
-      <div style={{ fontSize: 10, color: '#64748B', marginBottom: 12 }}>
+      <div style={{ fontSize: 11, color: '#64748B', marginBottom: 12 }}>
         {discrepancy.work_order_number
           ? `Current: ${discrepancy.work_order_number}`
           : 'No work order assigned yet.'}
@@ -371,7 +371,7 @@ export function PhotoViewerModal({
         border: 'none', color: '#fff', fontSize: 24, cursor: 'pointer', zIndex: 10,
       }}>×</button>
 
-      <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 8, textAlign: 'center' }}>
+      <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 8, textAlign: 'center' }}>
         {photo.name} — {index + 1} of {photos.length}
       </div>
 
@@ -384,11 +384,11 @@ export function PhotoViewerModal({
       {photos.length > 1 && (
         <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>
           <button type="button" onClick={() => setIndex((i) => (i - 1 + photos.length) % photos.length)}
-            style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
             ← Prev
           </button>
           <button type="button" onClick={() => setIndex((i) => (i + 1) % photos.length)}
-            style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
             Next →
           </button>
         </div>
