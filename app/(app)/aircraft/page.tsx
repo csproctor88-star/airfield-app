@@ -611,17 +611,7 @@ export default function AircraftPage() {
   const filtered = useMemo(() => {
     let list = allAircraft
 
-    // Category filter
-    if (category !== 'all') {
-      list = list.filter(a => a.category === category)
-    }
-
-    // Favorites filter
-    if (showFavoritesOnly) {
-      list = list.filter(a => favorites.has(a.aircraft))
-    }
-
-    // Search
+    // Search across all categories
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       list = list.filter(a =>
@@ -629,6 +619,16 @@ export default function AircraftPage() {
         (a.manufacturer && a.manufacturer.toLowerCase().includes(q)) ||
         (a.gear_config && a.gear_config.toLowerCase().includes(q))
       )
+    } else {
+      // Category filter (only when not searching)
+      if (category !== 'all') {
+        list = list.filter(a => a.category === category)
+      }
+    }
+
+    // Favorites filter
+    if (showFavoritesOnly) {
+      list = list.filter(a => favorites.has(a.aircraft))
     }
 
     // Sort
