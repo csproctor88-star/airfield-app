@@ -712,19 +712,19 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}>
-                {/* Status badge */}
-                <div style={{
-                  fontSize: 8, fontWeight: 700, letterSpacing: '0.06em',
-                  background: doc.status === 'ready'
-                    ? 'rgba(52,211,153,0.15)' : doc.status === 'failed'
-                    ? 'rgba(239,68,68,0.15)' : 'rgba(253,230,138,0.15)',
-                  color: doc.status === 'ready'
-                    ? '#34D399' : doc.status === 'failed'
-                    ? '#F87171' : '#FDE68A',
-                  padding: '2px 6px', borderRadius: 4, whiteSpace: 'nowrap',
-                }}>
-                  {doc.status === 'ready' ? 'READY' : doc.status === 'failed' ? 'FAILED' : 'PROCESSING'}
-                </div>
+                {/* Status badge (only show for non-ready states) */}
+                {doc.status !== 'ready' && (
+                  <div style={{
+                    fontSize: 8, fontWeight: 700, letterSpacing: '0.06em',
+                    background: doc.status === 'failed'
+                      ? 'rgba(239,68,68,0.15)' : 'rgba(253,230,138,0.15)',
+                    color: doc.status === 'failed'
+                      ? '#F87171' : '#FDE68A',
+                    padding: '2px 6px', borderRadius: 4, whiteSpace: 'nowrap',
+                  }}>
+                    {doc.status === 'failed' ? 'FAILED' : 'PROCESSING'}
+                  </div>
+                )}
                 {/* Cache indicator */}
                 {isCached && (
                   <div style={{
