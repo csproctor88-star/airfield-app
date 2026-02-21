@@ -794,24 +794,33 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                       <FileText size={12} />
                       View in App
                     </button>
-                    {reg.url && (
-                      <a
-                        href={reg.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={e => e.stopPropagation()}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          background: 'transparent',
-                          border: '1px solid rgba(56,189,248,0.2)',
-                          color: '#94A3B8', fontSize: 11, fontWeight: 700,
-                          padding: '6px 14px', borderRadius: 6, textDecoration: 'none',
-                        }}
-                      >
-                        <ExternalLink size={12} />
-                        Open External
-                      </a>
-                    )}
+                    {(() => {
+                      const externalUrl = reg.url
+                        || (() => {
+                          const sb = createClient()
+                          if (!sb) return null
+                          const { data } = sb.storage.from(REG_BUCKET).getPublicUrl(`${sanitizeFileName(reg.reg_id)}.pdf`)
+                          return data?.publicUrl || null
+                        })()
+                      return externalUrl ? (
+                        <a
+                          href={externalUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            background: 'transparent',
+                            border: '1px solid rgba(56,189,248,0.2)',
+                            color: '#94A3B8', fontSize: 11, fontWeight: 700,
+                            padding: '6px 14px', borderRadius: 6, textDecoration: 'none',
+                          }}
+                        >
+                          <ExternalLink size={12} />
+                          Open External
+                        </a>
+                      ) : null
+                    })()}
                     {isSysAdmin && (
                       <button
                         onClick={e => { e.stopPropagation(); setConfirmDeleteId(reg.reg_id) }}
