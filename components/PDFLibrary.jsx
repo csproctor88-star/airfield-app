@@ -160,78 +160,8 @@ chain.upsert = async (rows, opts = {}) => {
 }
 
 const supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-// ─── IndexedDB ───────────────────────────────────────────────
-const DB_NAME = "aoms_pdf_cache";
-const DB_VERSION = 3;
-const STORE_BLOBS = "blobs";
-const STORE_META = "meta";
-const STORE_TEXT = "text_pages";
-const STORE_TEXT_META = "text_meta";
-
-function openDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(STORE_BLOBS)) db.createObjectStore(STORE_BLOBS);
-      if (!db.objectStoreNames.contains(STORE_META)) db.createObjectStore(STORE_META);
-      if (!db.objectStoreNames.contains(STORE_TEXT)) db.createObjectStore(STORE_TEXT);
-      if (!db.objectStoreNames.contains(STORE_TEXT_META)) db.createObjectStore(STORE_TEXT_META);
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function idbSet(store, key, value) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(store, "readwrite");
-    tx.objectStore(store).put(value, key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-async function idbGet(store, key) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(store, "readonly");
-    const req = tx.objectStore(store).get(key);
-    req.onsuccess = () => resolve(req.result ?? null);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function idbGetAllKeys(store) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(store, "readonly");
-    const req = tx.objectStore(store).getAllKeys();
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function idbGetAll(store) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(store, "readonly");
-    const req = tx.objectStore(store).getAll();
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function idbDelete(store, key) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(store, "readwrite");
-    tx.objectStore(store).delete(key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
+// ─── IndexedDB (shared with lib/idb.ts — single source of truth) ───
+import { idbSet, idbGet, idbGetAllKeys, idbGetAll, idbDelete, STORE_BLOBS, STORE_META, STORE_TEXT, STORE_TEXT_META } from '@/lib/idb';
 
 // ─── Text extraction with PDF.js ─────────────────────────────
 async function extractTextFromBuffer(arrayBuffer) {
