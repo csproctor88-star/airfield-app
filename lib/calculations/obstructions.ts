@@ -232,102 +232,6 @@ export function evaluateObstruction(
   const beyondEnd1 = Math.max(0, -(relation.alongTrackFromMidpoint + halfLength))
   const beyondEnd2 = Math.max(0, relation.alongTrackFromMidpoint - halfLength)
 
-  // --- Clear Zone (both ends) ---
-  {
-    const c = IMAGINARY_SURFACES.clear_zone.criteria
-    const withinEnd1 = beyondEnd1 > 0 && beyondEnd1 <= c.length && relation.distanceFromCenterline <= c.halfWidth
-    const withinEnd2 = beyondEnd2 > 0 && beyondEnd2 <= c.length && relation.distanceFromCenterline <= c.halfWidth
-    const isWithin = withinEnd1 || withinEnd2
-    const maxAGL = c.maxHeight // 0 ft
-    const maxMSL = airfieldElev + maxAGL
-    const violated = isWithin && obstructionTopMSL > maxMSL
-    surfaces.push({
-      surfaceKey: 'clear_zone',
-      surfaceName: IMAGINARY_SURFACES.clear_zone.name,
-      isWithinBounds: isWithin,
-      maxAllowableHeightAGL: maxAGL,
-      maxAllowableHeightMSL: maxMSL,
-      obstructionTopMSL,
-      violated,
-      penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
-      ufcReference: IMAGINARY_SURFACES.clear_zone.ufcRef,
-      ufcCriteria: IMAGINARY_SURFACES.clear_zone.ufcCriteria
-        .replace('{length}', String(c.length).replace(/\B(?=(\d{3})+(?!\d))/g, ','))
-        .replace('{width}', String(c.halfWidth * 2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
-      color: IMAGINARY_SURFACES.clear_zone.color,
-    })
-  }
-
-  // --- Graded Portion of Clear Zone (both ends) ---
-  {
-    const c = IMAGINARY_SURFACES.graded_area.criteria
-    const withinEnd1 = beyondEnd1 > 0 && beyondEnd1 <= c.length && relation.distanceFromCenterline <= c.halfWidth
-    const withinEnd2 = beyondEnd2 > 0 && beyondEnd2 <= c.length && relation.distanceFromCenterline <= c.halfWidth
-    const isWithin = withinEnd1 || withinEnd2
-    const maxAGL = c.maxHeight // 0 ft
-    const maxMSL = airfieldElev + maxAGL
-    const violated = isWithin && obstructionTopMSL > maxMSL
-    surfaces.push({
-      surfaceKey: 'graded_area',
-      surfaceName: IMAGINARY_SURFACES.graded_area.name,
-      isWithinBounds: isWithin,
-      maxAllowableHeightAGL: maxAGL,
-      maxAllowableHeightMSL: maxMSL,
-      obstructionTopMSL,
-      violated,
-      penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
-      ufcReference: IMAGINARY_SURFACES.graded_area.ufcRef,
-      ufcCriteria: IMAGINARY_SURFACES.graded_area.ufcCriteria
-        .replace('{length}', String(c.length).replace(/\B(?=(\d{3})+(?!\d))/g, ','))
-        .replace('{width}', String(c.halfWidth * 2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
-      color: IMAGINARY_SURFACES.graded_area.color,
-    })
-  }
-
-  // --- APZ I (Accident Potential Zone I) ---
-  // Land-use zone, no height restriction. 3,000–8,000 ft from threshold, 3,000 ft wide.
-  {
-    const c = IMAGINARY_SURFACES.apz_i.criteria
-    const withinEnd1 = beyondEnd1 > c.startOffset && beyondEnd1 <= (c.startOffset + c.length) && relation.distanceFromCenterline <= c.halfWidth
-    const withinEnd2 = beyondEnd2 > c.startOffset && beyondEnd2 <= (c.startOffset + c.length) && relation.distanceFromCenterline <= c.halfWidth
-    const isWithin = withinEnd1 || withinEnd2
-    surfaces.push({
-      surfaceKey: 'apz_i',
-      surfaceName: IMAGINARY_SURFACES.apz_i.name,
-      isWithinBounds: isWithin,
-      maxAllowableHeightAGL: -1,
-      maxAllowableHeightMSL: -1,
-      obstructionTopMSL,
-      violated: false,
-      penetrationFt: 0,
-      ufcReference: IMAGINARY_SURFACES.apz_i.ufcRef,
-      ufcCriteria: IMAGINARY_SURFACES.apz_i.ufcCriteria,
-      color: IMAGINARY_SURFACES.apz_i.color,
-    })
-  }
-
-  // --- APZ II (Accident Potential Zone II) ---
-  // Land-use zone, no height restriction. 8,000–15,000 ft from threshold, 3,000 ft wide.
-  {
-    const c = IMAGINARY_SURFACES.apz_ii.criteria
-    const withinEnd1 = beyondEnd1 > c.startOffset && beyondEnd1 <= (c.startOffset + c.length) && relation.distanceFromCenterline <= c.halfWidth
-    const withinEnd2 = beyondEnd2 > c.startOffset && beyondEnd2 <= (c.startOffset + c.length) && relation.distanceFromCenterline <= c.halfWidth
-    const isWithin = withinEnd1 || withinEnd2
-    surfaces.push({
-      surfaceKey: 'apz_ii',
-      surfaceName: IMAGINARY_SURFACES.apz_ii.name,
-      isWithinBounds: isWithin,
-      maxAllowableHeightAGL: -1,
-      maxAllowableHeightMSL: -1,
-      obstructionTopMSL,
-      violated: false,
-      penetrationFt: 0,
-      ufcReference: IMAGINARY_SURFACES.apz_ii.ufcRef,
-      ufcCriteria: IMAGINARY_SURFACES.apz_ii.ufcCriteria,
-      color: IMAGINARY_SURFACES.apz_ii.color,
-    })
-  }
-
   // --- 1. Primary Surface ---
   {
     const c = IMAGINARY_SURFACES.primary.criteria
@@ -540,6 +444,103 @@ export function evaluateObstruction(
       ufcCriteria: IMAGINARY_SURFACES.outer_horizontal.ufcCriteria
         .replace('{radius}', String(c.radius).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
       color: IMAGINARY_SURFACES.outer_horizontal.color,
+    })
+  }
+
+  // --- Clear Zone (both ends) ---
+  // Listed after height-restriction surfaces so it appears at the bottom of analysis results.
+  {
+    const c = IMAGINARY_SURFACES.clear_zone.criteria
+    const withinEnd1 = beyondEnd1 > 0 && beyondEnd1 <= c.length && relation.distanceFromCenterline <= c.halfWidth
+    const withinEnd2 = beyondEnd2 > 0 && beyondEnd2 <= c.length && relation.distanceFromCenterline <= c.halfWidth
+    const isWithin = withinEnd1 || withinEnd2
+    const maxAGL = c.maxHeight // 0 ft
+    const maxMSL = airfieldElev + maxAGL
+    const violated = isWithin && obstructionTopMSL > maxMSL
+    surfaces.push({
+      surfaceKey: 'clear_zone',
+      surfaceName: IMAGINARY_SURFACES.clear_zone.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: maxAGL,
+      maxAllowableHeightMSL: maxMSL,
+      obstructionTopMSL,
+      violated,
+      penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
+      ufcReference: IMAGINARY_SURFACES.clear_zone.ufcRef,
+      ufcCriteria: IMAGINARY_SURFACES.clear_zone.ufcCriteria
+        .replace('{length}', String(c.length).replace(/\B(?=(\d{3})+(?!\d))/g, ','))
+        .replace('{width}', String(c.halfWidth * 2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
+      color: IMAGINARY_SURFACES.clear_zone.color,
+    })
+  }
+
+  // --- Graded Portion of Clear Zone (both ends) ---
+  {
+    const c = IMAGINARY_SURFACES.graded_area.criteria
+    const withinEnd1 = beyondEnd1 > 0 && beyondEnd1 <= c.length && relation.distanceFromCenterline <= c.halfWidth
+    const withinEnd2 = beyondEnd2 > 0 && beyondEnd2 <= c.length && relation.distanceFromCenterline <= c.halfWidth
+    const isWithin = withinEnd1 || withinEnd2
+    const maxAGL = c.maxHeight // 0 ft
+    const maxMSL = airfieldElev + maxAGL
+    const violated = isWithin && obstructionTopMSL > maxMSL
+    surfaces.push({
+      surfaceKey: 'graded_area',
+      surfaceName: IMAGINARY_SURFACES.graded_area.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: maxAGL,
+      maxAllowableHeightMSL: maxMSL,
+      obstructionTopMSL,
+      violated,
+      penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
+      ufcReference: IMAGINARY_SURFACES.graded_area.ufcRef,
+      ufcCriteria: IMAGINARY_SURFACES.graded_area.ufcCriteria
+        .replace('{length}', String(c.length).replace(/\B(?=(\d{3})+(?!\d))/g, ','))
+        .replace('{width}', String(c.halfWidth * 2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
+      color: IMAGINARY_SURFACES.graded_area.color,
+    })
+  }
+
+  // --- APZ I (Accident Potential Zone I) ---
+  // Land-use zone, no height restriction. 3,000–8,000 ft from threshold, 3,000 ft wide.
+  {
+    const c = IMAGINARY_SURFACES.apz_i.criteria
+    const withinEnd1 = beyondEnd1 > c.startOffset && beyondEnd1 <= (c.startOffset + c.length) && relation.distanceFromCenterline <= c.halfWidth
+    const withinEnd2 = beyondEnd2 > c.startOffset && beyondEnd2 <= (c.startOffset + c.length) && relation.distanceFromCenterline <= c.halfWidth
+    const isWithin = withinEnd1 || withinEnd2
+    surfaces.push({
+      surfaceKey: 'apz_i',
+      surfaceName: IMAGINARY_SURFACES.apz_i.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: -1,
+      maxAllowableHeightMSL: -1,
+      obstructionTopMSL,
+      violated: false,
+      penetrationFt: 0,
+      ufcReference: IMAGINARY_SURFACES.apz_i.ufcRef,
+      ufcCriteria: IMAGINARY_SURFACES.apz_i.ufcCriteria,
+      color: IMAGINARY_SURFACES.apz_i.color,
+    })
+  }
+
+  // --- APZ II (Accident Potential Zone II) ---
+  // Land-use zone, no height restriction. 8,000–15,000 ft from threshold, 3,000 ft wide.
+  {
+    const c = IMAGINARY_SURFACES.apz_ii.criteria
+    const withinEnd1 = beyondEnd1 > c.startOffset && beyondEnd1 <= (c.startOffset + c.length) && relation.distanceFromCenterline <= c.halfWidth
+    const withinEnd2 = beyondEnd2 > c.startOffset && beyondEnd2 <= (c.startOffset + c.length) && relation.distanceFromCenterline <= c.halfWidth
+    const isWithin = withinEnd1 || withinEnd2
+    surfaces.push({
+      surfaceKey: 'apz_ii',
+      surfaceName: IMAGINARY_SURFACES.apz_ii.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: -1,
+      maxAllowableHeightMSL: -1,
+      obstructionTopMSL,
+      violated: false,
+      penetrationFt: 0,
+      ufcReference: IMAGINARY_SURFACES.apz_ii.ufcRef,
+      ufcCriteria: IMAGINARY_SURFACES.apz_ii.ufcCriteria,
+      color: IMAGINARY_SURFACES.apz_ii.color,
     })
   }
 
