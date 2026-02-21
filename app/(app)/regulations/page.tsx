@@ -170,16 +170,17 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
 
   // ── Admin state ───────────────────────────────────────────
   const [isSysAdmin, setIsSysAdmin] = useState(false)
-  const [addedRegs, setAddedRegs] = useState<RegulationEntry[]>([])
-  const [deletedRegIds, setDeletedRegIds] = useState<Set<string>>(new Set())
+  const [dbRegs, setDbRegs] = useState<RegulationEntry[] | null>(null) // null = not loaded yet
   const [showAddModal, setShowAddModal] = useState(false)
   const [deletingRegId, setDeletingRegId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   useEffect(() => {
-    async function checkAdmin() {
+    async function init() {
       const supabase = createClient()
-      if (!supabase) { setIsSysAdmin(true); return } // demo mode: show admin features
+      if (!supabase) { setIsSysAdmin(true); return } // demo mode
+
+      // Check admin role
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
@@ -191,15 +192,26 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
         const role = (profile?.role ?? 'observer') as UserRole
         setIsSysAdmin(role === 'sys_admin')
       } catch { /* ignore */ }
+
+      // Fetch regulations from Supabase to pick up any DB-managed entries
+      try {
+        const { data } = await supabase
+          .from('regulations')
+          .select('reg_id, title, description, publication_date, url, source_section, source_volume, category, pub_type, is_core, is_cross_ref, is_scrubbed, tags')
+          .order('reg_id', { ascending: true })
+        if (data && data.length > 0) {
+          setDbRegs(data as RegulationEntry[])
+        }
+      } catch { /* fallback to static */ }
     }
-    checkAdmin()
+    init()
   }, [])
 
-  // Combine static + added, minus deleted
+  // Use Supabase data when available, otherwise fall back to static
   const regulations = useMemo(() => {
-    const base = ALL_REGULATIONS.filter(r => !deletedRegIds.has(r.reg_id))
-    return [...base, ...addedRegs]
-  }, [addedRegs, deletedRegIds])
+    if (dbRegs !== null) return dbRegs
+    return ALL_REGULATIONS
+  }, [dbRegs])
 
   const toggleFavorite = useCallback((regId: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -323,9 +335,8 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
         // Delete from IDB cache
         try { await idbDelete(STORE_BLOBS, fileName) } catch { /* ignore */ }
       }
-      // Update local state
-      setDeletedRegIds(prev => new Set(prev).add(regId))
-      setAddedRegs(prev => prev.filter(r => r.reg_id !== regId))
+      // Remove from whichever list is active
+      setDbRegs(prev => prev ? prev.filter(r => r.reg_id !== regId) : prev)
       setConfirmDeleteId(null)
       setExpandedId(null)
     } catch (err) {
@@ -337,7 +348,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
 
   // ── Add reference callback (from modal) ───────────────────
   const handleAddRef = useCallback((entry: RegulationEntry) => {
-    setAddedRegs(prev => [...prev, entry])
+    setDbRegs(prev => prev ? [...prev, entry] : [entry])
     setShowAddModal(false)
   }, [])
 
