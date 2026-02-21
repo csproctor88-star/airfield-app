@@ -240,12 +240,12 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
     idbGetAllKeys(STORE_BLOBS).then(keys => {
       const keySet = new Set(keys.map(String))
       let count = 0
-      for (const reg of ALL_REGULATIONS) {
+      for (const reg of regulations) {
         if (keySet.has(`${sanitizeFileName(reg.reg_id)}.pdf`)) count++
       }
       setCachedCount(count)
     }).catch(() => {})
-  }, [cacheProgress])
+  }, [cacheProgress, regulations])
 
   const handleCacheAll = useCallback(async () => {
     const supabase = createClient()
@@ -254,10 +254,10 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
 
     // figure out which files still need caching
     const existingKeys = new Set((await idbGetAllKeys(STORE_BLOBS)).map(String))
-    const uncached = ALL_REGULATIONS.filter(r => !existingKeys.has(`${sanitizeFileName(r.reg_id)}.pdf`))
+    const uncached = regulations.filter(r => !existingKeys.has(`${sanitizeFileName(r.reg_id)}.pdf`))
 
     if (uncached.length === 0) {
-      setCachedCount(ALL_REGULATIONS.length)
+      setCachedCount(regulations.length)
       return
     }
 
@@ -293,7 +293,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
     try {
       const keys = await idbGetAllKeys(STORE_BLOBS)
       const regFileNames = new Set(
-        ALL_REGULATIONS.map(r => `${sanitizeFileName(r.reg_id)}.pdf`)
+        regulations.map(r => `${sanitizeFileName(r.reg_id)}.pdf`)
       )
       for (const key of keys) {
         if (regFileNames.has(String(key))) {
@@ -303,7 +303,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
       setCachedCount(0)
     } catch { /* ignore */ }
     setClearing(false)
-  }, [])
+  }, [regulations])
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
@@ -494,7 +494,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                   </div>
                   <div style={{ fontSize: 9, color: '#64748B', marginTop: 2 }}>
                     {cachedCount !== null
-                      ? `${cachedCount} of ${ALL_REGULATIONS.length} cached for offline use`
+                      ? `${cachedCount} of ${regulations.length} cached for offline use`
                       : 'Download all PDFs for offline use'}
                   </div>
                 </div>
@@ -516,22 +516,22 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                 ) : (
                   <button
                     onClick={handleCacheAll}
-                    disabled={cachedCount === ALL_REGULATIONS.length}
+                    disabled={cachedCount === regulations.length}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 4,
-                      background: cachedCount === ALL_REGULATIONS.length
+                      background: cachedCount === regulations.length
                         ? 'transparent' : 'linear-gradient(135deg, #0369A1, #0EA5E9)',
-                      border: cachedCount === ALL_REGULATIONS.length
+                      border: cachedCount === regulations.length
                         ? '1px solid rgba(52,211,153,0.3)' : 'none',
                       borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
-                      color: cachedCount === ALL_REGULATIONS.length ? '#34D399' : '#fff',
+                      color: cachedCount === regulations.length ? '#34D399' : '#fff',
                       fontSize: 10, fontWeight: 700, fontFamily: 'inherit',
                       whiteSpace: 'nowrap',
-                      opacity: cachedCount === ALL_REGULATIONS.length ? 0.8 : 1,
+                      opacity: cachedCount === regulations.length ? 0.8 : 1,
                     }}
                   >
                     <Database size={10} />
-                    {cachedCount === ALL_REGULATIONS.length ? 'All Cached' : 'Cache All'}
+                    {cachedCount === regulations.length ? 'All Cached' : 'Cache All'}
                   </button>
                 )}
               </div>
@@ -888,6 +888,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
       {/* Add Reference Modal */}
       {showAddModal && (
         <AddReferenceModal
+          existingRegIds={regulations.map(r => r.reg_id)}
           onClose={() => setShowAddModal(false)}
           onAdd={handleAddRef}
         />
@@ -933,7 +934,7 @@ function deriveFromSection(section: string): { source_volume: string | null; is_
   }
 }
 
-function AddReferenceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (entry: RegulationEntry) => void }) {
+function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds: string[]; onClose: () => void; onAdd: (entry: RegulationEntry) => void }) {
   const [form, setForm] = useState<RegulationEntry>({ ...EMPTY_FORM })
   const [tagsInput, setTagsInput] = useState('')
   const [pdfFile, setPdfFile] = useState<File | null>(null)
@@ -961,7 +962,7 @@ function AddReferenceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (en
     if (!form.description.trim()) { setError('Description is required'); return }
 
     // Check for duplicate
-    if (ALL_REGULATIONS.some(r => r.reg_id === form.reg_id.trim())) {
+    if (existingRegIds.includes(form.reg_id.trim())) {
       setError(`A reference with ID "${form.reg_id.trim()}" already exists`)
       return
     }
