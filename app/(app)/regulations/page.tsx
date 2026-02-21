@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Search, ExternalLink, ChevronDown, ChevronUp, X, FileText, Upload, Trash2, Download, HardDrive, Star, Settings, Database } from 'lucide-react'
+import { Search, ExternalLink, ChevronDown, ChevronUp, X, FileText, Upload, Trash2, Download, HardDrive, Star, Settings, Database, Plus, AlertTriangle } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { ALL_REGULATIONS, type RegulationEntry } from '@/lib/regulations-data'
-import { REGULATION_CATEGORIES, REGULATION_PUB_TYPES } from '@/lib/constants'
+import { REGULATION_CATEGORIES, REGULATION_PUB_TYPES, REGULATION_SOURCE_SECTIONS, USER_ROLES } from '@/lib/constants'
+import type { UserRole, RegulationPubType } from '@/lib/supabase/types'
 import { createClient } from '@/lib/supabase/client'
 import { userDocService, type UserDocument } from '@/lib/userDocuments'
 import { idbGet, idbSet, idbGetAllKeys, idbDelete, STORE_BLOBS } from '@/lib/idb'
@@ -167,6 +168,39 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(() => loadFavoritesDefault())
   const [showFavSettings, setShowFavSettings] = useState(false)
 
+  // ── Admin state ───────────────────────────────────────────
+  const [isSysAdmin, setIsSysAdmin] = useState(false)
+  const [addedRegs, setAddedRegs] = useState<RegulationEntry[]>([])
+  const [deletedRegIds, setDeletedRegIds] = useState<Set<string>>(new Set())
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [deletingRegId, setDeletingRegId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function checkAdmin() {
+      const supabase = createClient()
+      if (!supabase) { setIsSysAdmin(true); return } // demo mode: show admin features
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+        const role = (profile?.role ?? 'observer') as UserRole
+        setIsSysAdmin(role === 'sys_admin')
+      } catch { /* ignore */ }
+    }
+    checkAdmin()
+  }, [])
+
+  // Combine static + added, minus deleted
+  const regulations = useMemo(() => {
+    const base = ALL_REGULATIONS.filter(r => !deletedRegIds.has(r.reg_id))
+    return [...base, ...addedRegs]
+  }, [addedRegs, deletedRegIds])
+
   const toggleFavorite = useCallback((regId: string, e: React.MouseEvent) => {
     e.stopPropagation()
     setFavorites(prev => {
@@ -261,7 +295,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
-    return ALL_REGULATIONS.filter(r => {
+    return regulations.filter(r => {
       if (showFavoritesOnly && !favorites.has(r.reg_id)) return false
       if (categoryFilter !== 'all' && r.category !== categoryFilter) return false
       if (pubTypeFilter !== 'all' && r.pub_type !== pubTypeFilter) return false
@@ -273,7 +307,39 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
         r.tags.some(t => t.toLowerCase().includes(q))
       )
     })
-  }, [search, categoryFilter, pubTypeFilter, showFavoritesOnly, favorites])
+  }, [search, categoryFilter, pubTypeFilter, showFavoritesOnly, favorites, regulations])
+
+  // ── Delete reference (admin) ──────────────────────────────
+  const handleDeleteRef = useCallback(async (regId: string) => {
+    setDeletingRegId(regId)
+    try {
+      const supabase = createClient()
+      if (supabase) {
+        // Delete from Supabase regulations table
+        await supabase.from('regulations').delete().eq('reg_id', regId)
+        // Delete PDF from storage (best effort)
+        const fileName = `${sanitizeFileName(regId)}.pdf`
+        await supabase.storage.from(REG_BUCKET).remove([fileName])
+        // Delete from IDB cache
+        try { await idbDelete(STORE_BLOBS, fileName) } catch { /* ignore */ }
+      }
+      // Update local state
+      setDeletedRegIds(prev => new Set(prev).add(regId))
+      setAddedRegs(prev => prev.filter(r => r.reg_id !== regId))
+      setConfirmDeleteId(null)
+      setExpandedId(null)
+    } catch (err) {
+      console.error('Failed to delete regulation:', err)
+    } finally {
+      setDeletingRegId(null)
+    }
+  }, [])
+
+  // ── Add reference callback (from modal) ───────────────────
+  const handleAddRef = useCallback((entry: RegulationEntry) => {
+    setAddedRegs(prev => [...prev, entry])
+    setShowAddModal(false)
+  }, [])
 
   const hasActiveFilters = categoryFilter !== 'all' || pubTypeFilter !== 'all'
 
@@ -554,14 +620,31 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
         )}
       </div>
 
-      {/* Results count */}
-      <div style={{ fontSize: 10, color: '#64748B', marginBottom: 8, fontWeight: 600 }}>
-        {showFavoritesOnly
-          ? `${filtered.length} favorite${filtered.length !== 1 ? 's' : ''}`
-          : filtered.length === ALL_REGULATIONS.length
-            ? `Showing all ${filtered.length} references`
-            : `${filtered.length} of ${ALL_REGULATIONS.length} references`
-        }
+      {/* Results count + Add button */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600 }}>
+          {showFavoritesOnly
+            ? `${filtered.length} favorite${filtered.length !== 1 ? 's' : ''}`
+            : filtered.length === regulations.length
+              ? `Showing all ${filtered.length} references`
+              : `${filtered.length} of ${regulations.length} references`
+          }
+        </div>
+        {isSysAdmin && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              background: 'linear-gradient(135deg, #059669, #10B981)',
+              border: 'none', borderRadius: 6, padding: '5px 12px',
+              color: '#fff', fontSize: 10, fontWeight: 700,
+              fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap',
+            }}
+          >
+            <Plus size={12} />
+            Add Reference
+          </button>
+        )}
       </div>
 
       {/* Regulation cards */}
@@ -718,14 +801,461 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                         Open External
                       </a>
                     )}
+                    {isSysAdmin && (
+                      <button
+                        onClick={e => { e.stopPropagation(); setConfirmDeleteId(reg.reg_id) }}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          background: 'transparent',
+                          border: '1px solid rgba(239,68,68,0.25)',
+                          color: '#F87171', fontSize: 11, fontWeight: 700,
+                          padding: '6px 14px', borderRadius: 6,
+                          cursor: 'pointer', fontFamily: 'inherit',
+                          marginLeft: 'auto',
+                        }}
+                      >
+                        <Trash2 size={12} />
+                        Delete
+                      </button>
+                    )}
                   </div>
+
+                  {/* Delete confirmation */}
+                  {confirmDeleteId === reg.reg_id && (
+                    <div
+                      onClick={e => e.stopPropagation()}
+                      style={{
+                        marginTop: 10, padding: '10px 12px', borderRadius: 8,
+                        background: 'rgba(239,68,68,0.06)',
+                        border: '1px solid rgba(239,68,68,0.2)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 10 }}>
+                        <AlertTriangle size={14} color="#F87171" style={{ flexShrink: 0, marginTop: 1 }} />
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#F87171', marginBottom: 2 }}>
+                            Delete this reference?
+                          </div>
+                          <div style={{ fontSize: 10, color: '#94A3B8', lineHeight: 1.5 }}>
+                            This will remove <strong>{reg.reg_id}</strong> from the database, delete its cached PDF, and remove it from storage. This cannot be undone.
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                        <button
+                          onClick={e => { e.stopPropagation(); setConfirmDeleteId(null) }}
+                          style={{
+                            padding: '5px 14px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+                            background: 'transparent', border: '1px solid #334155',
+                            color: '#94A3B8', cursor: 'pointer', fontFamily: 'inherit',
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={e => { e.stopPropagation(); handleDeleteRef(reg.reg_id) }}
+                          disabled={deletingRegId === reg.reg_id}
+                          style={{
+                            padding: '5px 14px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+                            background: deletingRegId === reg.reg_id ? '#7F1D1D' : '#DC2626',
+                            border: 'none', color: '#fff', cursor: deletingRegId === reg.reg_id ? 'not-allowed' : 'pointer',
+                            fontFamily: 'inherit', opacity: deletingRegId === reg.reg_id ? 0.6 : 1,
+                          }}
+                        >
+                          {deletingRegId === reg.reg_id ? 'Deleting...' : 'Confirm Delete'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )
         })
       )}
+
+      {/* Add Reference Modal */}
+      {showAddModal && (
+        <AddReferenceModal
+          onClose={() => setShowAddModal(false)}
+          onAdd={handleAddRef}
+        />
+      )}
     </>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Add Reference Modal
+// ═══════════════════════════════════════════════════════════════
+
+const EMPTY_FORM: RegulationEntry = {
+  reg_id: '',
+  title: '',
+  description: '',
+  publication_date: null,
+  url: null,
+  source_section: 'I',
+  source_volume: 'Vol. 1',
+  category: 'airfield_ops',
+  pub_type: 'DAF',
+  is_core: false,
+  is_cross_ref: false,
+  is_scrubbed: false,
+  tags: [],
+}
+
+// Derive source_volume and boolean flags from source_section
+function deriveFromSection(section: string): { source_volume: string | null; is_core: boolean; is_cross_ref: boolean; is_scrubbed: boolean } {
+  const map: Record<string, string | null> = {
+    core: null,
+    I: 'Vol. 1', II: 'Vol. 2', III: 'Vol. 3',
+    IV: 'UFC 3-260-01', V: 'UFC 3-260-01',
+    'VI-A': 'Vol. 1', 'VI-B': 'Vol. 2', 'VI-C': 'Vol. 3',
+    'VII-A': 'Vol. 1', 'VII-B': 'Vol. 2', 'VII-C': 'Vol. 3',
+  }
+  return {
+    source_volume: map[section] ?? null,
+    is_core: section === 'core',
+    is_cross_ref: section.startsWith('VI'),
+    is_scrubbed: section.startsWith('VII'),
+  }
+}
+
+function AddReferenceModal({ onClose, onAdd }: { onClose: () => void; onAdd: (entry: RegulationEntry) => void }) {
+  const [form, setForm] = useState<RegulationEntry>({ ...EMPTY_FORM })
+  const [tagsInput, setTagsInput] = useState('')
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [uploadProgress, setUploadProgress] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const updateField = useCallback(<K extends keyof RegulationEntry>(key: K, value: RegulationEntry[K]) => {
+    setForm(prev => {
+      const next = { ...prev, [key]: value }
+      // Auto-derive fields when section changes
+      if (key === 'source_section') {
+        const derived = deriveFromSection(value as string)
+        Object.assign(next, derived)
+      }
+      return next
+    })
+  }, [])
+
+  const handleSubmit = useCallback(async () => {
+    // Validate required fields
+    if (!form.reg_id.trim()) { setError('Reg ID is required'); return }
+    if (!form.title.trim()) { setError('Title is required'); return }
+    if (!form.description.trim()) { setError('Description is required'); return }
+
+    // Check for duplicate
+    if (ALL_REGULATIONS.some(r => r.reg_id === form.reg_id.trim())) {
+      setError(`A reference with ID "${form.reg_id.trim()}" already exists`)
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+
+    const entry: RegulationEntry = {
+      ...form,
+      reg_id: form.reg_id.trim(),
+      title: form.title.trim(),
+      description: form.description.trim(),
+      tags: tagsInput.split(',').map(t => t.trim()).filter(Boolean),
+    }
+
+    try {
+      const supabase = createClient()
+
+      // Upload PDF to storage if provided
+      if (pdfFile && supabase) {
+        setUploadProgress('Uploading PDF...')
+        const fileName = `${sanitizeFileName(entry.reg_id)}.pdf`
+        const { error: uploadErr } = await supabase.storage
+          .from(REG_BUCKET)
+          .upload(fileName, pdfFile, { upsert: true, contentType: 'application/pdf' })
+        if (uploadErr) throw new Error(`PDF upload failed: ${uploadErr.message}`)
+      }
+
+      // Insert into Supabase regulations table
+      if (supabase) {
+        setUploadProgress('Saving to database...')
+        const { error: insertErr } = await supabase.from('regulations').insert({
+          reg_id: entry.reg_id,
+          title: entry.title,
+          description: entry.description,
+          publication_date: entry.publication_date,
+          url: entry.url,
+          source_section: entry.source_section,
+          source_volume: entry.source_volume,
+          category: entry.category,
+          pub_type: entry.pub_type as RegulationPubType,
+          is_core: entry.is_core,
+          is_cross_ref: entry.is_cross_ref,
+          is_scrubbed: entry.is_scrubbed,
+          tags: entry.tags,
+          storage_path: pdfFile ? `${sanitizeFileName(entry.reg_id)}.pdf` : null,
+          file_size_bytes: pdfFile ? pdfFile.size : null,
+          last_verified_at: null,
+          verified_date: null,
+        })
+        if (insertErr) throw new Error(`Database insert failed: ${insertErr.message}`)
+      }
+
+      onAdd(entry)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add reference')
+    } finally {
+      setSaving(false)
+      setUploadProgress('')
+    }
+  }, [form, tagsInput, pdfFile, onAdd])
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '8px 10px', background: 'rgba(15,23,42,0.8)',
+    border: '1px solid #1E293B', borderRadius: 6, color: '#E2E8F0',
+    fontSize: 12, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
+  }
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em',
+    marginBottom: 4, display: 'block',
+  }
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        padding: '40px 16px', overflowY: 'auto',
+      }}
+      onClick={onClose}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 500,
+          background: '#0B1120', borderRadius: 12,
+          border: '1px solid rgba(56,189,248,0.15)',
+          padding: 20, position: 'relative',
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: '#F1F5F9' }}>Add Reference</div>
+          <button
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+          >
+            <X size={18} color="#64748B" />
+          </button>
+        </div>
+
+        {error && (
+          <div style={{
+            padding: '8px 12px', marginBottom: 12, borderRadius: 6,
+            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+            color: '#F87171', fontSize: 11, fontWeight: 600,
+          }}>
+            {error}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Reg ID */}
+          <div>
+            <label style={labelStyle}>REG ID *</label>
+            <input
+              style={inputStyle}
+              placeholder="e.g., DAFI 91-204"
+              value={form.reg_id}
+              onChange={e => updateField('reg_id', e.target.value)}
+            />
+          </div>
+
+          {/* Title */}
+          <div>
+            <label style={labelStyle}>TITLE *</label>
+            <input
+              style={inputStyle}
+              placeholder="e.g., Safety Investigations and Reports"
+              value={form.title}
+              onChange={e => updateField('title', e.target.value)}
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label style={labelStyle}>DESCRIPTION *</label>
+            <textarea
+              style={{ ...inputStyle, minHeight: 70, resize: 'vertical' }}
+              placeholder="Brief description of what this regulation covers..."
+              value={form.description}
+              onChange={e => updateField('description', e.target.value)}
+            />
+          </div>
+
+          {/* Row: Section + Category */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label style={labelStyle}>SOURCE SECTION</label>
+              <select
+                style={inputStyle}
+                value={form.source_section}
+                onChange={e => updateField('source_section', e.target.value)}
+              >
+                {REGULATION_SOURCE_SECTIONS.map(s => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>CATEGORY</label>
+              <select
+                style={inputStyle}
+                value={form.category}
+                onChange={e => updateField('category', e.target.value)}
+              >
+                {REGULATION_CATEGORIES.map(c => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Row: Pub Type + Date */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label style={labelStyle}>PUB TYPE</label>
+              <select
+                style={inputStyle}
+                value={form.pub_type}
+                onChange={e => updateField('pub_type', e.target.value)}
+              >
+                {REGULATION_PUB_TYPES.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>PUBLICATION DATE</label>
+              <input
+                style={inputStyle}
+                placeholder="e.g., 10 Mar 2023"
+                value={form.publication_date ?? ''}
+                onChange={e => updateField('publication_date', e.target.value || null)}
+              />
+            </div>
+          </div>
+
+          {/* External URL */}
+          <div>
+            <label style={labelStyle}>EXTERNAL URL</label>
+            <input
+              style={inputStyle}
+              placeholder="https://..."
+              value={form.url ?? ''}
+              onChange={e => updateField('url', e.target.value || null)}
+            />
+          </div>
+
+          {/* Tags */}
+          <div>
+            <label style={labelStyle}>TAGS (comma-separated)</label>
+            <input
+              style={inputStyle}
+              placeholder="e.g., safety, mishap, aviation"
+              value={tagsInput}
+              onChange={e => setTagsInput(e.target.value)}
+            />
+          </div>
+
+          {/* PDF Upload */}
+          <div>
+            <label style={labelStyle}>PDF FILE (optional)</label>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  background: 'transparent',
+                  border: '1px solid rgba(56,189,248,0.2)',
+                  borderRadius: 6, padding: '6px 12px',
+                  color: '#94A3B8', fontSize: 11, fontWeight: 700,
+                  fontFamily: 'inherit', cursor: 'pointer',
+                }}
+              >
+                <Upload size={12} />
+                {pdfFile ? 'Change File' : 'Choose PDF'}
+              </button>
+              {pdfFile && (
+                <span style={{ fontSize: 10, color: '#38BDF8', fontWeight: 600 }}>
+                  {pdfFile.name} ({formatFileSize(pdfFile.size)})
+                </span>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,application/pdf"
+                style={{ display: 'none' }}
+                onChange={e => setPdfFile(e.target.files?.[0] ?? null)}
+              />
+            </div>
+          </div>
+
+          {/* Auto-derived info */}
+          <div style={{
+            padding: '8px 10px', borderRadius: 6,
+            background: 'rgba(56,189,248,0.04)',
+            border: '1px solid rgba(56,189,248,0.08)',
+            fontSize: 9, color: '#64748B', lineHeight: 1.6,
+          }}>
+            <strong style={{ color: '#94A3B8' }}>Auto-derived:</strong>{' '}
+            Source Volume: <span style={{ color: '#94A3B8' }}>{form.source_volume ?? 'None'}</span>{' | '}
+            Core: <span style={{ color: '#94A3B8' }}>{form.is_core ? 'Yes' : 'No'}</span>{' | '}
+            Cross-Ref: <span style={{ color: '#94A3B8' }}>{form.is_cross_ref ? 'Yes' : 'No'}</span>{' | '}
+            Scrubbed: <span style={{ color: '#94A3B8' }}>{form.is_scrubbed ? 'Yes' : 'No'}</span>
+            {form.reg_id && (
+              <>
+                <br />
+                Storage name: <span style={{ color: '#94A3B8' }}>{sanitizeFileName(form.reg_id || 'example')}.pdf</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '8px 20px', borderRadius: 6, fontSize: 12, fontWeight: 700,
+              background: 'transparent', border: '1px solid #334155',
+              color: '#94A3B8', cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={saving}
+            style={{
+              padding: '8px 20px', borderRadius: 6, fontSize: 12, fontWeight: 700,
+              background: saving ? '#064E3B' : 'linear-gradient(135deg, #059669, #10B981)',
+              border: 'none', color: '#fff',
+              cursor: saving ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit',
+              opacity: saving ? 0.7 : 1,
+            }}
+          >
+            {saving ? (uploadProgress || 'Saving...') : 'Add Reference'}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
