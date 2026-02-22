@@ -9,6 +9,7 @@ import type { UserRole, RegulationPubType } from '@/lib/supabase/types'
 import { createClient } from '@/lib/supabase/client'
 import { userDocService, type UserDocument } from '@/lib/userDocuments'
 import { idbGet, idbSet, idbGetAllKeys, idbDelete, STORE_BLOBS } from '@/lib/idb'
+import { sanitizeRegId as sanitizeFileName } from '@/lib/utils'
 
 const RegulationPDFViewer = dynamic(
   () => import('@/components/RegulationPDFViewer'),
@@ -21,15 +22,6 @@ function getCategoryConfig(categoryValue: string) {
 }
 
 const REG_BUCKET = 'regulation-pdfs'
-
-function sanitizeFileName(regId: string): string {
-  return regId
-    .toLowerCase()
-    .replace(/,\s*/g, '-')
-    .replace(/\.\s+/g, '-')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-}
 
 // --- Favorites persistence (localStorage) ---
 const FAVORITES_KEY = 'aoms_reg_favorites'
@@ -284,7 +276,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
       setCacheProgress({ done, total, errors })
     }
     setCacheProgress(null)
-  }, [])
+  }, [regulations])
 
   const [clearing, setClearing] = useState(false)
 

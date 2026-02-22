@@ -23,6 +23,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+import { sanitizeRegId as sanitizeFileName } from '../lib/utils'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -36,15 +37,6 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-
-function sanitizeFileName(regId: string): string {
-  return regId
-    .replace(/[/\\:*?"<>|]/g, '-')
-    .replace(/,\s*/g, '-')
-    .replace(/\s+/g, '_')
-    .replace(/-+/g, '-')
-    .toLowerCase()
-}
 
 async function downloadPdf(url: string): Promise<{ buffer: ArrayBuffer; size: number } | null> {
   try {

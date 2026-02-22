@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="29" fill="#0F172A"/>
+  <circle cx="96" cy="96" r="77" fill="none" stroke="#0EA5E9" stroke-width="6"/>
+  <line x1="49.800000000000004" y1="96" x2="142.2" y2="96" stroke="#0EA5E9" stroke-width="4" stroke-dasharray="8,4"/>
+  <polygon points="96,69.05 84.45,103.7 107.55,103.7" fill="#22D3EE"/>
+  <line x1="96" y1="103.7" x2="96" y2="122.95" stroke="#22D3EE" stroke-width="5"/>
+  <text x="96" y="153.75" text-anchor="middle" fill="#94A3B8" font-family="sans-serif" font-weight="700" font-size="19">GP</text>
+</svg>

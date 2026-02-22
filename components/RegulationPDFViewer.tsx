@@ -8,6 +8,7 @@ import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
 import { ExternalLink, ArrowLeft, ZoomIn, ZoomOut, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { idbGet, idbSet, STORE_BLOBS, STORE_USER_BLOBS } from '@/lib/idb'
+import { sanitizeRegId as sanitizeFileName } from '@/lib/utils'
 
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"
 
@@ -28,15 +29,6 @@ function isMobileDevice(): boolean {
   const ua = navigator.userAgent.toLowerCase()
   return /ipad|iphone|ipod|android/.test(ua) ||
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-}
-
-function sanitizeFileName(regId: string): string {
-  return regId
-    .toLowerCase()
-    .replace(/,\s*/g, '-')
-    .replace(/\.\s+/g, '-')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')       // collapse double hyphens
 }
 
 function escapeHtml(str: string): string {

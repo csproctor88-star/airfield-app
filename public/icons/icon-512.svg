@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="77" fill="#0F172A"/>
+  <circle cx="256" cy="256" r="205" fill="none" stroke="#0EA5E9" stroke-width="15"/>
+  <line x1="133" y1="256" x2="379" y2="256" stroke="#0EA5E9" stroke-width="10" stroke-dasharray="20,10"/>
+  <polygon points="256,184.25 225.25,276.5 286.75,276.5" fill="#22D3EE"/>
+  <line x1="256" y1="276.5" x2="256" y2="327.75" stroke="#22D3EE" stroke-width="13"/>
+  <text x="256" y="409.75" text-anchor="middle" fill="#94A3B8" font-family="sans-serif" font-weight="700" font-size="51">GP</text>
+</svg>

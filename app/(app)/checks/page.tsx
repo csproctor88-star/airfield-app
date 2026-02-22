@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
@@ -16,6 +16,7 @@ import {
 } from '@/lib/constants'
 import type { CheckType } from '@/lib/supabase/types'
 import { createCheck, uploadCheckPhoto } from '@/lib/supabase/checks'
+import { createClient } from '@/lib/supabase/client'
 
 const CheckLocationMap = dynamic(
   () => import('@/components/discrepancies/location-map'),
@@ -29,8 +30,6 @@ type LocalComment = {
   created_at: string
 }
 
-const CURRENT_USER = 'MSgt Proctor'
-
 export default function AirfieldChecksPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -38,6 +37,22 @@ export default function AirfieldChecksPage() {
   const [checkType, setCheckType] = useState<CheckType | ''>('')
   const [areas, setAreas] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
+  const [currentUser, setCurrentUser] = useState('Inspector')
+
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) {
+      setCurrentUser('Demo User')
+      return
+    }
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.user_metadata?.name) {
+        setCurrentUser(user.user_metadata.name)
+      } else if (user?.email) {
+        setCurrentUser(user.email.split('@')[0])
+      }
+    })
+  }, [])
 
   // Issue Found toggle
   const [issueFound, setIssueFound] = useState(false)
@@ -106,7 +121,7 @@ export default function AirfieldChecksPage() {
     const newRemark: LocalComment = {
       id: `local-${Date.now()}`,
       comment: remarkText.trim(),
-      user_name: CURRENT_USER,
+      user_name: currentUser,
       created_at: new Date().toISOString(),
     }
     setRemarks((prev) => [newRemark, ...prev])
@@ -167,7 +182,7 @@ export default function AirfieldChecksPage() {
       check_type: checkType,
       areas,
       data,
-      completed_by: CURRENT_USER,
+      completed_by: currentUser,
       comments,
       latitude: selectedLat,
       longitude: selectedLng,
@@ -779,7 +794,7 @@ export default function AirfieldChecksPage() {
 
       {checkType && (
         <div style={{ textAlign: 'center', marginTop: 8, fontSize: 11, color: '#64748B' }}>
-          Will be recorded as completed by <span style={{ color: '#38BDF8', fontWeight: 600 }}>{CURRENT_USER}</span>
+          Will be recorded as completed by <span style={{ color: '#38BDF8', fontWeight: 600 }}>{currentUser}</span>
         </div>
       )}
     </div>

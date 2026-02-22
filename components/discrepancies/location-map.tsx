@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { INSTALLATION } from '@/lib/constants'
+import { isMapboxConfigured } from '@/lib/utils'
 
 type Props = {
   onPointSelected: (lat: number, lng: number) => void
@@ -19,6 +20,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
   const [mapLoaded, setMapLoaded] = useState(false)
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+  const mapboxReady = isMapboxConfigured()
 
   const handleClick = useCallback(
     (e: mapboxgl.MapMouseEvent) => {
@@ -30,7 +32,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainer.current || !token || token === 'your-mapbox-token-here') return
+    if (!mapContainer.current || !mapboxReady || !token) return
     if (map.current) return
 
     mapboxgl.accessToken = token
@@ -101,7 +103,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
     }
   }, [selectedLat, selectedLng, mapLoaded])
 
-  if (!token || token === 'your-mapbox-token-here') {
+  if (!mapboxReady) {
     return (
       <div
         style={{

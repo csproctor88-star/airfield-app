@@ -470,7 +470,7 @@ export async function fetchDiscrepancyKPIs(): Promise<{
   const { data, error } = await (supabase as any)
     .from('discrepancies')
     .select('severity, status')
-    .not('status', 'in', '("closed")')
+    .not('status', 'in', '("completed","cancelled")')
 
   if (error) {
     console.error('Failed to fetch KPIs:', error.message)
@@ -479,8 +479,8 @@ export async function fetchDiscrepancyKPIs(): Promise<{
 
   const rows = (data ?? []) as { severity: string; status: string }[]
 
-  const open = rows.filter(r => !['resolved', 'closed'].includes(r.status)).length
-  const critical = rows.filter(r => r.severity === 'critical' && !['resolved', 'closed'].includes(r.status)).length
+  const open = rows.filter(r => !['completed', 'cancelled'].includes(r.status)).length
+  const critical = rows.filter(r => r.severity === 'critical' && !['completed', 'cancelled'].includes(r.status)).length
 
   return { open, critical }
 }

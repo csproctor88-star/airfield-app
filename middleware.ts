@@ -1,19 +1,19 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getSupabaseConfig } from '@/lib/utils'
 
 export async function middleware(request: NextRequest) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim().replace(/^["']|["']$/g, '')
+  const config = getSupabaseConfig()
 
   // Demo mode: skip auth entirely when Supabase is not configured
-  if (!url || !key || url.includes('your-project') || key === 'your-anon-key') {
+  if (!config) {
     return NextResponse.next()
   }
 
   try {
     let supabaseResponse = NextResponse.next({ request })
 
-    const supabase = createServerClient(url, key, {
+    const supabase = createServerClient(config.url, config.key, {
       cookies: {
         getAll() {
           return request.cookies.getAll()

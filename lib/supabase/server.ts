@@ -1,20 +1,17 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { Database } from './types'
+import { getSupabaseConfig } from '@/lib/utils'
 
 export function createClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim().replace(/^["']|["']$/g, '')
-
-  if (!url || !key || url.includes('your-project') || key === 'your-anon-key') {
-    return null
-  }
+  const config = getSupabaseConfig()
+  if (!config) return null
 
   const cookieStore = cookies()
 
   return createServerClient<Database>(
-    url,
-    key,
+    config.url,
+    config.key,
     {
       cookies: {
         getAll() {
