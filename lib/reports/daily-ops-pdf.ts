@@ -216,18 +216,16 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
     const time = fmtTime(r.created_at)
     const name = r.user_rank ? `${r.user_rank} ${r.user_name}` : (r.user_name || 'Unknown')
 
-    // Runway status change (always show — includes open/suspended/closed)
-    if (r.new_runway_status) {
-      const change = r.old_runway_status !== r.new_runway_status
-        ? `${(r.old_runway_status || '').toUpperCase()} → ${(r.new_runway_status || '').toUpperCase()}`
-        : `${(r.new_runway_status || '').toUpperCase()} (no change)`
-      statusHistoryRows.push([time, 'Runway Status', change, name, r.reason || '—'])
+    // Runway status change — only show if it actually changed
+    if (r.new_runway_status && r.old_runway_status !== r.new_runway_status) {
+      const change = `${(r.old_runway_status || '').toUpperCase()} -> ${(r.new_runway_status || '').toUpperCase()}`
+      statusHistoryRows.push([time, 'Runway Status', change, name, r.reason || ''])
     }
 
     // Active runway change
     if (r.old_active_runway !== r.new_active_runway) {
-      const change = `RWY ${r.old_active_runway} → RWY ${r.new_active_runway}`
-      statusHistoryRows.push([time, 'Active Runway', change, name, r.reason || '—'])
+      const change = `RWY ${r.old_active_runway} -> RWY ${r.new_active_runway}`
+      statusHistoryRows.push([time, 'Active Runway', change, name, r.reason || ''])
     }
 
     // Advisory change
@@ -235,9 +233,9 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
       const oldAdv = r.old_advisory_type ? `${r.old_advisory_type}` : 'None'
       const newAdv = r.new_advisory_type ? `${r.new_advisory_type}` : 'None'
       const change = oldAdv !== newAdv
-        ? `${oldAdv} → ${newAdv}`
+        ? `${oldAdv} -> ${newAdv}`
         : `${newAdv} (text updated)`
-      const detail = r.new_advisory_text || r.reason || '—'
+      const detail = r.new_advisory_text || r.reason || ''
       statusHistoryRows.push([time, 'Advisory', change, name, detail])
     }
   }
@@ -340,8 +338,8 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
   } else {
     const tableBody = data.statusUpdates.map((u) => {
       const statusChange = u.old_status && u.new_status
-        ? `${STATUS_LABELS[u.old_status] || u.old_status} → ${STATUS_LABELS[u.new_status] || u.new_status}`
-        : u.new_status ? STATUS_LABELS[u.new_status] || u.new_status : '—'
+        ? `${STATUS_LABELS[u.old_status] || u.old_status} -> ${STATUS_LABELS[u.new_status] || u.new_status}`
+        : u.new_status ? STATUS_LABELS[u.new_status] || u.new_status : ''
       const name = u.user_rank ? `${u.user_rank} ${u.user_name}` : u.user_name
       return [u.discrepancy_display_id, u.discrepancy_title, statusChange, u.notes || '—', name, fmtTime(u.created_at)]
     })
