@@ -15,10 +15,12 @@ const DiscrepancyLocationMap = dynamic(
 export default function NewDiscrepancyPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
   const [photos, setPhotos] = useState<{ file: File; url: string; name: string }[]>([])
   const [saving, setSaving] = useState(false)
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false)
+  const [locationDropdownOpen, setLocationDropdownOpen] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
     location_text: '',
@@ -93,18 +95,50 @@ export default function NewDiscrepancyPage() {
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
-      <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#22D3EE', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
-        ← Back
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#22D3EE', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+          ← Back
+        </button>
+        <button onClick={() => router.push('/discrepancies')} style={{ background: '#FBBF2414', border: '1px solid #FBBF2433', borderRadius: 8, padding: '6px 12px', color: '#FBBF24', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+          ⚠️ View All Discrepancies
+        </button>
+      </div>
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>New Discrepancy</div>
 
       <div className="card">
-        <div style={{ marginBottom: 12 }}>
+        <div style={{ marginBottom: 12, position: 'relative' }}>
           <span className="section-label">Location</span>
-          <select className="input-dark" value={formData.location_text} onChange={(e) => setFormData((p) => ({ ...p, location_text: e.target.value }))}>
-            <option value="">Select location...</option>
-            {LOCATION_OPTIONS.map((l) => <option key={l.value} value={l.value}>{l.emoji} {l.label}</option>)}
-          </select>
+          <button
+            type="button"
+            className="input-dark"
+            onClick={() => setLocationDropdownOpen((v) => !v)}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left', width: '100%' }}
+          >
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+              {formData.location_text
+                ? (() => { const loc = LOCATION_OPTIONS.find((l) => l.value === formData.location_text); return loc ? `${loc.emoji} ${loc.label}` : formData.location_text })()
+                : 'Select location...'}
+            </span>
+            <span style={{ marginLeft: 8, fontSize: 11, color: '#64748B' }}>{locationDropdownOpen ? '▲' : '▼'}</span>
+          </button>
+          {locationDropdownOpen && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#1E293B', border: '1px solid #334155', borderRadius: 8, marginTop: 4, maxHeight: 240, overflowY: 'auto' }}>
+              {LOCATION_OPTIONS.map((l) => (
+                <button
+                  key={l.value}
+                  type="button"
+                  onClick={() => { setFormData((p) => ({ ...p, location_text: l.value })); setLocationDropdownOpen(false) }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px',
+                    background: formData.location_text === l.value ? '#334155' : 'transparent', border: 'none', color: '#F1F5F9',
+                    fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                  }}
+                >
+                  <span>{l.emoji} {l.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: 12, position: 'relative' }}>
@@ -123,7 +157,7 @@ export default function NewDiscrepancyPage() {
                     return t ? `${t.emoji} ${t.label}` : v
                   }).join(', ')}
             </span>
-            <span style={{ marginLeft: 8, fontSize: 10, color: '#64748B' }}>{typeDropdownOpen ? '▲' : '▼'}</span>
+            <span style={{ marginLeft: 8, fontSize: 11, color: '#64748B' }}>{typeDropdownOpen ? '▲' : '▼'}</span>
           </button>
           {typeDropdownOpen && (
             <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#1E293B', border: '1px solid #334155', borderRadius: 8, marginTop: 4, maxHeight: 240, overflowY: 'auto' }}>
@@ -137,10 +171,10 @@ export default function NewDiscrepancyPage() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px',
                       background: selected ? '#334155' : 'transparent', border: 'none', color: '#F1F5F9',
-                      fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                      fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
                     }}
                   >
-                    <span style={{ width: 20, height: 20, borderRadius: 4, border: `2px solid ${selected ? '#22D3EE' : '#475569'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0, background: selected ? '#22D3EE22' : 'transparent', color: '#22D3EE' }}>
+                    <span style={{ width: 20, height: 20, borderRadius: 4, border: `2px solid ${selected ? '#22D3EE' : '#475569'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0, background: selected ? '#22D3EE22' : 'transparent', color: '#22D3EE' }}>
                       {selected ? '✓' : ''}
                     </span>
                     <span>{t.emoji} {t.label}</span>
@@ -188,16 +222,22 @@ export default function NewDiscrepancyPage() {
             {photos.map((p, i) => (
               <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid #38BDF833' }}>
                 <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <button type="button" onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.7)', border: 'none', color: '#EF4444', fontSize: 12, width: 20, height: 20, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
+                <button type="button" onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.7)', border: 'none', color: '#EF4444', fontSize: 13, width: 20, height: 20, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
               </div>
             ))}
           </div>
         )}
 
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
-        <button type="button" onClick={() => fileInputRef.current?.click()} style={{ width: '100%', background: '#38BDF814', border: '1px solid #38BDF833', borderRadius: 8, padding: 10, color: '#38BDF8', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', minHeight: 44, marginBottom: 12 }}>
-          📸 Add Photo{photos.length > 0 ? ` (${photos.length})` : ''}
-        </button>
+        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
+          <button type="button" onClick={() => fileInputRef.current?.click()} style={{ background: '#38BDF814', border: '1px solid #38BDF833', borderRadius: 8, padding: 10, color: '#38BDF8', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', minHeight: 44 }}>
+            🖼️ Upload Photo
+          </button>
+          <button type="button" onClick={() => cameraInputRef.current?.click()} style={{ background: '#38BDF814', border: '1px solid #38BDF833', borderRadius: 8, padding: 10, color: '#38BDF8', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', minHeight: 44 }}>
+            📸 Take Photo
+          </button>
+        </div>
 
         <button type="button" className="btn-primary" onClick={handleSubmit} disabled={saving} style={{ opacity: saving ? 0.7 : 1 }}>
           {saving ? 'Saving...' : 'Save Discrepancy'}

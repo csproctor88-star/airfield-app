@@ -25,7 +25,7 @@ function formatDate(iso: string) {
 }
 
 const infoLabelStyle: React.CSSProperties = {
-  fontSize: 10,
+  fontSize: 11,
   fontWeight: 600,
   color: '#64748B',
   textTransform: 'uppercase',
@@ -34,7 +34,7 @@ const infoLabelStyle: React.CSSProperties = {
 }
 
 const infoValueStyle: React.CSSProperties = {
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 600,
   color: '#CBD5E1',
 }
@@ -55,7 +55,7 @@ export default function NotamDetailPage() {
             background: 'none',
             border: 'none',
             color: '#22D3EE',
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: 600,
             cursor: 'pointer',
             padding: 0,
@@ -65,7 +65,7 @@ export default function NotamDetailPage() {
         >
           ← Back
         </button>
-        <div style={{ textAlign: 'center', padding: 24, color: '#64748B', fontSize: 12 }}>
+        <div style={{ textAlign: 'center', padding: 24, color: '#64748B', fontSize: 13 }}>
           NOTAM not found.
         </div>
       </div>
@@ -83,7 +83,7 @@ export default function NotamDetailPage() {
           background: 'none',
           border: 'none',
           color: '#22D3EE',
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: 600,
           cursor: 'pointer',
           padding: 0,
@@ -107,12 +107,12 @@ export default function NotamDetailPage() {
       </div>
 
       {/* NOTAM number */}
-      <div style={{ fontSize: 11, color: '#64748B', marginBottom: 4 }}>
+      <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>
         {notam.notam_number}
       </div>
 
       {/* Title */}
-      <div style={{ fontSize: 15, fontWeight: 800, color: '#F1F5F9', marginBottom: 14 }}>
+      <div style={{ fontSize: 16, fontWeight: 800, color: '#F1F5F9', marginBottom: 14 }}>
         {notam.title}
       </div>
 
@@ -125,7 +125,7 @@ export default function NotamDetailPage() {
           padding: 14,
           marginBottom: 16,
           fontFamily: "'Courier New', Courier, monospace",
-          fontSize: 12,
+          fontSize: 13,
           color: '#CBD5E1',
           lineHeight: '20px',
           whiteSpace: 'pre-wrap',
@@ -173,7 +173,7 @@ export default function NotamDetailPage() {
               border: 'none',
               background: 'linear-gradient(135deg, #0EA5E9, #22D3EE)',
               color: '#FFF',
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: 700,
               cursor: 'pointer',
               fontFamily: 'inherit',
@@ -190,7 +190,7 @@ export default function NotamDetailPage() {
               border: '1px solid #334155',
               background: 'transparent',
               color: '#94A3B8',
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: 700,
               cursor: 'pointer',
               fontFamily: 'inherit',

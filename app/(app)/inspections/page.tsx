@@ -56,6 +56,7 @@ export default function InspectionsPage() {
   // ── Action state ──
   const [saving, setSaving] = useState(false)
   const [filing, setFiling] = useState(false)
+  const [showLightingWarning, setShowLightingWarning] = useState(false)
 
   // ── Load draft from localStorage on mount ──
   useEffect(() => {
@@ -253,9 +254,11 @@ export default function InspectionsPage() {
     toast.success('New daily inspection started')
   }
 
-  // ── Save current tab (auto-captures weather + inspector) ──
-  const handleSave = async () => {
-    if (!draft || !currentHalf) return
+  // ── Complete current tab (auto-captures weather + inspector) ──
+  const handleComplete = async (tab?: TabType) => {
+    const targetTab = tab || activeTab
+    const half = draft?.[targetTab]
+    if (!draft || !half) return
     setSaving(true)
 
     // Auto-fetch weather
@@ -265,7 +268,7 @@ export default function InspectionsPage() {
     const inspector = await getInspectorName()
     const fallbackName = usingDemo ? 'Demo Inspector' : null
 
-    updateHalf(activeTab, (h) => ({
+    updateHalf(targetTab, (h) => ({
       ...h,
       inspectorName: inspector.name || fallbackName,
       inspectorId: inspector.id,
@@ -275,17 +278,52 @@ export default function InspectionsPage() {
     }))
 
     setSaving(false)
-    const label = activeTab === 'airfield' ? 'Airfield' : 'Lighting'
-    toast.success(`${label} inspection saved`, {
+    const label = targetTab === 'airfield' ? 'Airfield' : 'Lighting'
+    toast.success(`${label} inspection completed`, {
       description: weather
         ? `${weather.conditions}, ${weather.temperature_f}°F`
         : 'Weather data unavailable',
     })
+
+    // Auto-switch to lighting tab after completing airfield (only if lighting not started)
+    if (targetTab === 'airfield' && !draft.lighting.savedAt) {
+      setActiveTab('lighting')
+    }
   }
 
   // ── File the daily inspection (write to Supabase) ──
-  const handleFile = async () => {
+  // Auto-completes the current tab first, then files all completed halves.
+  const handleFile = async (skipLightingWarning = false) => {
     if (!draft) return
+
+    // Auto-complete the current tab if not already completed
+    const currentDraftHalf = draft[activeTab]
+    if (!currentDraftHalf.savedAt) {
+      // Auto-fetch weather + inspector for the current tab
+      const weather = await fetchCurrentWeather()
+      const inspector = await getInspectorName()
+      const fallbackName = usingDemo ? 'Demo Inspector' : null
+
+      updateHalf(activeTab, (h) => ({
+        ...h,
+        inspectorName: inspector.name || fallbackName,
+        inspectorId: inspector.id,
+        savedAt: new Date().toISOString(),
+        weatherConditions: weather?.conditions || h.weatherConditions || null,
+        temperatureF: weather?.temperature_f ?? h.temperatureF ?? null,
+      }))
+
+      // Need to use updated values since setState is async
+      draft[activeTab] = {
+        ...currentDraftHalf,
+        inspectorName: inspector.name || fallbackName,
+        inspectorId: inspector.id,
+        savedAt: new Date().toISOString(),
+        weatherConditions: weather?.conditions || currentDraftHalf.weatherConditions || null,
+        temperatureF: weather?.temperature_f ?? currentDraftHalf.temperatureF ?? null,
+      }
+    }
+
     const airfieldHalf = draft.airfield
     const lightingHalf = draft.lighting
     const airfieldSaved = !!airfieldHalf.savedAt
@@ -299,11 +337,23 @@ export default function InspectionsPage() {
       : null
 
     if (!airfieldSaved && !lightingSaved) {
-      toast.error('Save at least one inspection half before filing')
+      toast.error('Complete at least one inspection half before filing')
+      return
+    }
+
+    // Show warning if lighting is not completed (and not in special mode)
+    if (!lightingSaved && !airfieldSpecialMode && !skipLightingWarning) {
+      setShowLightingWarning(true)
       return
     }
 
     setFiling(true)
+
+    // Get the filer's identity (the person clicking File)
+    const filer = await getInspectorName()
+    const filerName = filer.name || (usingDemo ? 'Demo Inspector' : 'Unknown')
+    const filerId = filer.id
+
     const groupId = draft.id
     let filed = 0
     let filedId: string | null = null
@@ -330,6 +380,11 @@ export default function InspectionsPage() {
           weather_conditions: airfieldHalf.weatherConditions,
           temperature_f: airfieldHalf.temperatureF,
           notes: airfieldHalf.specialComment || null,
+          completed_by_name: airfieldHalf.inspectorName || 'Unknown',
+          completed_by_id: airfieldHalf.inspectorId,
+          completed_at: airfieldHalf.savedAt,
+          filed_by_name: filerName,
+          filed_by_id: filerId,
           // No daily_group_id — standalone record
         })
         if (error) {
@@ -385,6 +440,11 @@ export default function InspectionsPage() {
           temperature_f: airfieldHalf.temperatureF,
           notes: airfieldHalf.notes || null,
           daily_group_id: groupId,
+          completed_by_name: airfieldHalf.inspectorName || 'Unknown',
+          completed_by_id: airfieldHalf.inspectorId,
+          completed_at: airfieldHalf.savedAt,
+          filed_by_name: filerName,
+          filed_by_id: filerId,
         })
         if (error) {
           toast.error(`Failed to file airfield: ${error}`)
@@ -445,6 +505,11 @@ export default function InspectionsPage() {
         temperature_f: lightingHalf.temperatureF,
         notes: lightingHalf.notes || null,
         daily_group_id: lightingGroupId,
+        completed_by_name: lightingHalf.inspectorName || 'Unknown',
+        completed_by_id: lightingHalf.inspectorId,
+        completed_at: lightingHalf.savedAt,
+        filed_by_name: filerName,
+        filed_by_id: filerId,
       })
       if (error) {
         toast.error(`Failed to file lighting: ${error}`)
@@ -606,9 +671,6 @@ export default function InspectionsPage() {
   // ══  WORKSPACE VIEW (active draft exists)  ══
   // ══════════════════════════════════════════════
   if (draft && !showHistory) {
-    const airfieldSaved = !!draft.airfield.savedAt
-    const lightingSaved = !!draft.lighting.savedAt
-    const canFile = airfieldSaved || lightingSaved
 
     return (
       <div style={{ padding: 16, paddingBottom: 120 }}>
@@ -616,7 +678,7 @@ export default function InspectionsPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 800 }}>Daily Inspection</div>
-            <div style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
               Started {new Date(draft.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </div>
           </div>
@@ -625,7 +687,7 @@ export default function InspectionsPage() {
               onClick={() => toast.info('Airfield diagram coming soon')}
               style={{
                 background: '#A78BFA14', border: '1px solid #A78BFA33', borderRadius: 8,
-                padding: '8px 14px', color: '#A78BFA', fontSize: 11, fontWeight: 600,
+                padding: '8px 14px', color: '#A78BFA', fontSize: 12, fontWeight: 600,
                 fontFamily: 'inherit', cursor: 'pointer',
               }}
             >
@@ -635,7 +697,7 @@ export default function InspectionsPage() {
               onClick={() => setShowHistory(true)}
               style={{
                 background: '#0EA5E914', border: '1px solid #0EA5E933', borderRadius: 8,
-                padding: '8px 14px', color: '#0EA5E9', fontSize: 11, fontWeight: 600,
+                padding: '8px 14px', color: '#0EA5E9', fontSize: 12, fontWeight: 600,
                 fontFamily: 'inherit', cursor: 'pointer',
               }}
             >
@@ -661,7 +723,7 @@ export default function InspectionsPage() {
                   border: 'none',
                   background: active ? '#0EA5E9' : 'transparent',
                   color: active ? '#FFF' : '#94A3B8',
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: 700,
                   cursor: 'pointer',
                   fontFamily: 'inherit',
@@ -675,7 +737,7 @@ export default function InspectionsPage() {
                 {saved && (
                   <span style={{
                     width: 16, height: 16, borderRadius: '50%',
-                    background: '#22C55E', color: '#FFF', fontSize: 10,
+                    background: '#22C55E', color: '#FFF', fontSize: 11,
                     fontWeight: 800, display: 'inline-flex', alignItems: 'center',
                     justifyContent: 'center', lineHeight: 1,
                   }}>
@@ -689,35 +751,35 @@ export default function InspectionsPage() {
 
         {/* ── Status Bar ── */}
         <div className="card" style={{ marginBottom: 12, padding: 10 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 11 }}>
             <div>
-              <div style={{ color: '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 8, marginBottom: 2 }}>
+              <div style={{ color: '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 9, marginBottom: 2 }}>
                 Airfield
               </div>
               {draft.airfield.savedAt ? (
                 <>
                   <div style={{ color: '#22C55E', fontWeight: 600 }}>
-                    Saved {new Date(draft.airfield.savedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    Completed {new Date(draft.airfield.savedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                   </div>
-                  <div style={{ color: '#94A3B8', fontSize: 9 }}>{draft.airfield.inspectorName}</div>
+                  <div style={{ color: '#94A3B8', fontSize: 10 }}>{draft.airfield.inspectorName}</div>
                 </>
               ) : (
-                <div style={{ color: '#475569' }}>Not saved</div>
+                <div style={{ color: '#475569' }}>Not completed</div>
               )}
             </div>
             <div>
-              <div style={{ color: '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 8, marginBottom: 2 }}>
+              <div style={{ color: '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 9, marginBottom: 2 }}>
                 Lighting
               </div>
               {draft.lighting.savedAt ? (
                 <>
                   <div style={{ color: '#22C55E', fontWeight: 600 }}>
-                    Saved {new Date(draft.lighting.savedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    Completed {new Date(draft.lighting.savedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                   </div>
-                  <div style={{ color: '#94A3B8', fontSize: 9 }}>{draft.lighting.inspectorName}</div>
+                  <div style={{ color: '#94A3B8', fontSize: 10 }}>{draft.lighting.inspectorName}</div>
                 </>
               ) : (
-                <div style={{ color: '#475569' }}>Not saved</div>
+                <div style={{ color: '#475569' }}>Not completed</div>
               )}
             </div>
           </div>
@@ -726,7 +788,7 @@ export default function InspectionsPage() {
         {/* ── Conditional Section Toggles (airfield only) ── */}
         {conditionalSections.length > 0 && (
           <div style={{ marginBottom: 12, padding: 12, borderRadius: 8, background: 'rgba(10,16,28,0.92)', border: '1px solid rgba(56,189,248,0.06)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#64748B', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
               Optional Sections
             </div>
             {conditionalSections.map((s) => (
@@ -737,7 +799,7 @@ export default function InspectionsPage() {
                   onChange={() => toggleConditional(s.id)}
                   style={{ accentColor: '#0EA5E9', width: 16, height: 16 }}
                 />
-                <span style={{ fontSize: 12, color: '#CBD5E1' }}>{s.conditional}</span>
+                <span style={{ fontSize: 13, color: '#CBD5E1' }}>{s.conditional}</span>
               </label>
             ))}
           </div>
@@ -750,17 +812,17 @@ export default function InspectionsPage() {
           <>
             {/* Special mode header */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#38BDF8' }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#38BDF8' }}>
                 {specialModeLabel}
               </div>
-              <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
                 This form will be filed as a standalone record.
               </div>
             </div>
 
             {/* ── Personnel Multi-Select ── */}
             <div className="card" style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+              <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
                 Personnel / Offices Present
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -784,7 +846,7 @@ export default function InspectionsPage() {
                           onChange={() => togglePersonnel(person)}
                           style={{ accentColor: '#38BDF8', width: 14, height: 14 }}
                         />
-                        <span style={{ fontSize: 12, color: selected ? '#38BDF8' : '#94A3B8', fontWeight: selected ? 600 : 400 }}>
+                        <span style={{ fontSize: 13, color: selected ? '#38BDF8' : '#94A3B8', fontWeight: selected ? 600 : 400 }}>
                           {person}
                         </span>
                       </label>
@@ -802,7 +864,7 @@ export default function InspectionsPage() {
                             placeholder={`Representative name...`}
                             value={repName}
                             onChange={(e) => setPersonnelName(person, e.target.value)}
-                            style={{ fontSize: 11, padding: '6px 8px', width: '100%' }}
+                            style={{ fontSize: 12, padding: '6px 8px', width: '100%' }}
                           />
                         </div>
                       )}
@@ -814,7 +876,7 @@ export default function InspectionsPage() {
 
             {/* ── Comment Box ── */}
             <div className="card" style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+              <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
                 Comments
               </div>
               <textarea
@@ -823,7 +885,7 @@ export default function InspectionsPage() {
                 placeholder={`Enter ${specialModeLabel.toLowerCase()} comments...`}
                 value={currentHalf?.specialComment || ''}
                 onChange={(e) => setSpecialComment(e.target.value)}
-                style={{ resize: 'vertical', fontSize: 12 }}
+                style={{ resize: 'vertical', fontSize: 13 }}
               />
             </div>
           </>
@@ -836,10 +898,10 @@ export default function InspectionsPage() {
             {/* ── Progress + Mark All Pass ── */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 700 }}>
+                <div style={{ fontSize: 15, fontWeight: 700 }}>
                   {activeTab === 'airfield' ? 'Airfield Inspection' : 'Lighting Inspection'}
                 </div>
-                <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
+                <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
                   {answeredCount}/{totalItems} items
                 </div>
               </div>
@@ -854,7 +916,7 @@ export default function InspectionsPage() {
                   style={{
                     width: 36, height: 36, borderRadius: '50%', background: '#0F172A',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 11, fontWeight: 700, color: '#F1F5F9',
+                    fontSize: 12, fontWeight: 700, color: '#F1F5F9',
                   }}
                 >
                   {progress}%
@@ -867,7 +929,7 @@ export default function InspectionsPage() {
               style={{
                 width: '100%', padding: '10px 0', borderRadius: 8,
                 border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)',
-                color: '#22C55E', fontSize: 12, fontWeight: 700,
+                color: '#22C55E', fontSize: 13, fontWeight: 700,
                 cursor: 'pointer', fontFamily: 'inherit', marginBottom: 12,
               }}
             >
@@ -882,14 +944,14 @@ export default function InspectionsPage() {
               return (
                 <div key={section.id} style={{ marginBottom: 20 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: sectionComplete ? '#22C55E' : '#94A3B8' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: sectionComplete ? '#22C55E' : '#94A3B8' }}>
                       {section.title}
                     </div>
-                    <div style={{ fontSize: 10, color: '#64748B' }}>{done}/{section.items.length}</div>
+                    <div style={{ fontSize: 11, color: '#64748B' }}>{done}/{section.items.length}</div>
                   </div>
 
                   {section.guidance && (
-                    <div style={{ fontSize: 10, color: '#64748B', marginBottom: 8, lineHeight: '14px', fontStyle: 'italic' }}>
+                    <div style={{ fontSize: 11, color: '#64748B', marginBottom: 8, lineHeight: '14px', fontStyle: 'italic' }}>
                       {section.guidance}
                     </div>
                   )}
@@ -900,8 +962,8 @@ export default function InspectionsPage() {
                       return (
                         <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid #1E293B' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                            <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600, minWidth: 22 }}>{item.itemNumber}.</span>
-                            <span style={{ fontSize: 12, color: '#CBD5E1', lineHeight: '18px' }}>{item.item}</span>
+                            <span style={{ fontSize: 12, color: '#64748B', fontWeight: 600, minWidth: 22 }}>{item.itemNumber}.</span>
+                            <span style={{ fontSize: 13, color: '#CBD5E1', lineHeight: '18px' }}>{item.item}</span>
                           </div>
                           <div style={{ display: 'flex', gap: 6, paddingLeft: 30 }}>
                             {BWC_OPTIONS.map((opt) => {
@@ -917,7 +979,7 @@ export default function InspectionsPage() {
                                     border: `2px solid ${selected ? color : '#334155'}`,
                                     background: selected ? `${color}20` : 'transparent',
                                     color: selected ? color : '#94A3B8',
-                                    fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                                    fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                                   }}
                                 >
                                   {opt}
@@ -937,7 +999,7 @@ export default function InspectionsPage() {
                     return (
                       <div key={item.id} style={{ borderBottom: '1px solid #1E293B' }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 0' }}>
-                          <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600, minWidth: 22, paddingTop: 5 }}>
+                          <span style={{ fontSize: 12, color: '#64748B', fontWeight: 600, minWidth: 22, paddingTop: 5 }}>
                             {item.itemNumber}.
                           </span>
                           <button
@@ -956,7 +1018,7 @@ export default function InspectionsPage() {
                           </button>
                           <div
                             style={{
-                              fontSize: 12, color: state === 'na' ? '#64748B' : '#CBD5E1',
+                              fontSize: 13, color: state === 'na' ? '#64748B' : '#CBD5E1',
                               lineHeight: '18px', paddingTop: 4,
                               textDecoration: state === 'na' ? 'line-through' : 'none',
                             }}
@@ -975,7 +1037,7 @@ export default function InspectionsPage() {
                               style={{
                                 width: '100%', background: 'rgba(4,8,14,0.9)',
                                 border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6,
-                                padding: '8px 10px', color: '#F1F5F9', fontSize: 11,
+                                padding: '8px 10px', color: '#F1F5F9', fontSize: 12,
                                 fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box',
                               }}
                             />
@@ -990,7 +1052,7 @@ export default function InspectionsPage() {
 
             {/* ── Notes ── */}
             <div className="card" style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+              <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
                 General Notes (Optional)
               </div>
               <textarea
@@ -999,7 +1061,7 @@ export default function InspectionsPage() {
                 placeholder="Any additional notes..."
                 value={currentHalf?.notes || ''}
                 onChange={(e) => setNotes(e.target.value)}
-                style={{ resize: 'vertical', fontSize: 12 }}
+                style={{ resize: 'vertical', fontSize: 13 }}
               />
             </div>
           </>
@@ -1008,34 +1070,79 @@ export default function InspectionsPage() {
         {/* ── Action Buttons ── */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
           <button
-            onClick={handleSave}
+            onClick={() => handleComplete()}
             disabled={saving}
             style={{
               flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
               background: 'linear-gradient(135deg, #0EA5E9, #22D3EE)',
-              color: '#FFF', fontSize: 14, fontWeight: 700,
+              color: '#FFF', fontSize: 15, fontWeight: 700,
               cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
               opacity: saving ? 0.7 : 1,
             }}
           >
-            {saving ? 'Saving...' : 'Save'}
+            {saving ? 'Completing...' : 'Complete'}
           </button>
           <button
-            onClick={handleFile}
-            disabled={filing || !canFile}
+            onClick={() => handleFile()}
+            disabled={filing}
             style={{
               flex: 1, padding: '14px 0', borderRadius: 10,
-              border: canFile ? '1px solid rgba(34,197,94,0.4)' : '1px solid #334155',
-              background: canFile ? 'rgba(34,197,94,0.1)' : 'transparent',
-              color: canFile ? '#22C55E' : '#475569',
-              fontSize: 14, fontWeight: 700,
-              cursor: canFile && !filing ? 'pointer' : 'default', fontFamily: 'inherit',
+              border: '1px solid rgba(34,197,94,0.4)',
+              background: 'rgba(34,197,94,0.1)',
+              color: '#22C55E',
+              fontSize: 15, fontWeight: 700,
+              cursor: filing ? 'default' : 'pointer', fontFamily: 'inherit',
               opacity: filing ? 0.7 : 1,
             }}
           >
             {filing ? 'Filing...' : 'File'}
           </button>
         </div>
+
+        {/* ── Lighting Incomplete Confirmation Dialog ── */}
+        {showLightingWarning && (
+          <div
+            onClick={() => setShowLightingWarning(false)}
+            style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: '#0F172A', borderRadius: 14, padding: 20, width: '100%', maxWidth: 340,
+                border: '1px solid rgba(251,191,36,0.3)',
+              }}
+            >
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#FBBF24', marginBottom: 10 }}>Lighting Inspection Not Completed</div>
+              <div style={{ fontSize: 13, color: '#CBD5E1', lineHeight: 1.5, marginBottom: 16 }}>
+                Are you sure you want to file this inspection without the lighting inspection being completed?
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => {
+                    setShowLightingWarning(false)
+                    handleFile(true)
+                  }}
+                  style={{
+                    flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                    cursor: 'pointer', border: '1px solid rgba(251,191,36,0.4)',
+                    background: 'rgba(251,191,36,0.1)', color: '#FBBF24', fontFamily: 'inherit',
+                  }}
+                >File Without Lighting</button>
+                <button
+                  onClick={() => setShowLightingWarning(false)}
+                  style={{
+                    flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                    cursor: 'pointer', border: '1px solid rgba(56,189,248,0.12)',
+                    background: 'rgba(4,7,12,0.5)', color: '#94A3B8', fontFamily: 'inherit',
+                  }}
+                >Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -1049,7 +1156,7 @@ export default function InspectionsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
           <div style={{ fontSize: 16, fontWeight: 800 }}>Inspections</div>
-          <div style={{ fontSize: 10, color: '#64748B' }}>
+          <div style={{ fontSize: 11, color: '#64748B' }}>
             {dailyReports.length} filed report{dailyReports.length !== 1 ? 's' : ''}
           </div>
         </div>
@@ -1059,7 +1166,7 @@ export default function InspectionsPage() {
               onClick={() => setShowHistory(false)}
               style={{
                 background: '#0EA5E914', border: '1px solid #0EA5E933', borderRadius: 8,
-                padding: '8px 14px', color: '#0EA5E9', fontSize: 11, fontWeight: 600,
+                padding: '8px 14px', color: '#0EA5E9', fontSize: 12, fontWeight: 600,
                 fontFamily: 'inherit', cursor: 'pointer',
               }}
             >
@@ -1071,7 +1178,7 @@ export default function InspectionsPage() {
               onClick={handleBeginNew}
               style={{
                 background: '#22C55E14', border: '1px solid #22C55E33', borderRadius: 8,
-                padding: '8px 14px', color: '#22C55E', fontSize: 11, fontWeight: 600,
+                padding: '8px 14px', color: '#22C55E', fontSize: 12, fontWeight: 600,
                 fontFamily: 'inherit', cursor: 'pointer',
               }}
             >
@@ -1095,7 +1202,7 @@ export default function InspectionsPage() {
               type="button"
               onClick={() => setTypeFilter(active && chip.key !== 'all' ? 'all' : chip.key)}
               style={{
-                padding: '6px 12px', borderRadius: 16, fontSize: 10, fontWeight: 600,
+                padding: '6px 12px', borderRadius: 16, fontSize: 11, fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit', border: 'none', whiteSpace: 'nowrap',
                 background: active ? `${chip.color}22` : '#1E293B',
                 color: active ? chip.color : '#64748B',
@@ -1113,7 +1220,7 @@ export default function InspectionsPage() {
         placeholder="Search inspections..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        style={{ marginBottom: 10, fontSize: 12 }}
+        style={{ marginBottom: 10, fontSize: 13 }}
       />
 
       {/* Loading */}
@@ -1157,15 +1264,15 @@ export default function InspectionsPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <div>
                 {isSpecialType ? (
-                  <span style={{ fontSize: 12, fontWeight: 800, color: '#A78BFA' }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#A78BFA' }}>
                     {specialLabel}
                   </span>
                 ) : isDaily ? (
-                  <span style={{ fontSize: 12, fontWeight: 800, color: '#22D3EE' }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#22D3EE' }}>
                     Airfield Inspection Report
                   </span>
                 ) : (
-                  <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'monospace', color: '#22D3EE' }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, fontFamily: 'monospace', color: '#22D3EE' }}>
                     {displayIds[0]}
                   </span>
                 )}
@@ -1184,7 +1291,7 @@ export default function InspectionsPage() {
 
             {/* Show both display IDs for daily reports */}
             {isDaily && displayIds.length > 0 && (
-              <div style={{ display: 'flex', gap: 8, marginBottom: 6, fontSize: 10, fontFamily: 'monospace', color: '#94A3B8' }}>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 6, fontSize: 11, fontFamily: 'monospace', color: '#94A3B8' }}>
                 {displayIds.map((did) => (
                   <span key={did}>{did}</span>
                 ))}
@@ -1197,7 +1304,7 @@ export default function InspectionsPage() {
                 {report.personnel && report.personnel.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
                     {report.personnel.map((p) => (
-                      <span key={p} style={{ fontSize: 9, padding: '2px 6px', borderRadius: 4, background: 'rgba(167,139,250,0.1)', color: '#A78BFA', fontWeight: 600 }}>
+                      <span key={p} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'rgba(167,139,250,0.1)', color: '#A78BFA', fontWeight: 600 }}>
                         {p}
                       </span>
                     ))}
@@ -1206,7 +1313,7 @@ export default function InspectionsPage() {
               </>
             ) : (
               <>
-                <div style={{ display: 'flex', gap: 8, marginBottom: 6, fontSize: 11 }}>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 6, fontSize: 12 }}>
                   <span style={{ color: '#22C55E', fontWeight: 700 }}>{report.totalPassed} Pass</span>
                   {report.totalFailed > 0 && (
                     <span style={{ color: '#EF4444', fontWeight: 700 }}>{report.totalFailed} Fail</span>
@@ -1220,7 +1327,7 @@ export default function InspectionsPage() {
                 {report.bwcValue && (
                   <div style={{ marginBottom: 6 }}>
                     <span style={{
-                      fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                      fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
                       color: report.bwcValue === 'LOW' ? '#22C55E' : report.bwcValue === 'MOD' ? '#EAB308' : report.bwcValue === 'SEV' ? '#F97316' : '#EF4444',
                       background: report.bwcValue === 'LOW' ? 'rgba(34,197,94,0.1)' : report.bwcValue === 'MOD' ? 'rgba(234,179,8,0.1)' : report.bwcValue === 'SEV' ? 'rgba(249,115,22,0.1)' : 'rgba(239,68,68,0.1)',
                     }}>
@@ -1231,7 +1338,7 @@ export default function InspectionsPage() {
               </>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10, color: '#64748B' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#64748B' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span>{report.inspectorName}</span>
                 {report.weatherConditions && (

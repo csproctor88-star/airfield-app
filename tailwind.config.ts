@@ -40,8 +40,8 @@ const config: Config = {
         card: '10px',
       },
       fontSize: {
-        '2xs': ['0.5625rem', { lineHeight: '1' }],   // 9px — labels
-        '3xs': ['0.4375rem', { lineHeight: '1' }],    // 7px — tiny
+        '2xs': ['0.625rem', { lineHeight: '1' }],    // 10px — labels
+        '3xs': ['0.5rem', { lineHeight: '1' }],       // 8px — tiny
       },
     },
   },

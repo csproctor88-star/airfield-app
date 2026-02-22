@@ -13,13 +13,13 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 8,
   padding: '10px 12px',
   color: '#F1F5F9',
-  fontSize: 13,
+  fontSize: 14,
   fontFamily: 'inherit',
   outline: 'none',
 }
 
 const labelStyle: React.CSSProperties = {
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 600,
   color: '#94A3B8',
   marginBottom: 6,
@@ -54,7 +54,7 @@ export default function NewNotamPage() {
           background: 'none',
           border: 'none',
           color: '#22D3EE',
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: 600,
           cursor: 'pointer',
           padding: 0,
@@ -150,7 +150,7 @@ export default function NewNotamPage() {
           border: 'none',
           background: 'linear-gradient(135deg, #0EA5E9, #22D3EE)',
           color: '#FFF',
-          fontSize: 14,
+          fontSize: 15,
           fontWeight: 700,
           cursor: 'pointer',
           marginTop: 8,

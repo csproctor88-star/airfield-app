@@ -32,10 +32,10 @@ export default function WaiversPage() {
           <FileText size={28} color="#38BDF8" />
         </div>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#F1F5F9', marginBottom: 4 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#F1F5F9', marginBottom: 4 }}>
             Coming Soon
           </div>
-          <div style={{ fontSize: 11, color: '#64748B', lineHeight: 1.5 }}>
+          <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.5 }}>
             Waiver management will be available in a future update.
             This module will allow tracking and managing airfield waivers.
           </div>

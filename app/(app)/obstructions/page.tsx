@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
 import { INSTALLATION } from '@/lib/constants'
 import type { LatLon, RunwayGeometry } from '@/lib/calculations/geometry'
-import { getRunwayGeometry } from '@/lib/calculations/geometry'
+import { getRunwayGeometry, pointToRunwayRelation, distanceFt } from '@/lib/calculations/geometry'
 import {
   evaluateObstruction,
   identifySurface,
@@ -30,6 +30,8 @@ type PointInfo = {
   point: LatLon
   groundElevMSL: number | null
   distFromCenterline: number
+  distFromThreshold: number
+  nearerEnd: 'end1' | 'end2'
   surfaceName: string
   loadingElev: boolean
 }
@@ -46,6 +48,7 @@ function ObstructionsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
 
   // Edit mode
   const editId = searchParams.get('edit')
@@ -88,10 +91,15 @@ function ObstructionsContent() {
         const rwy = getRunwayGeometry(INSTALLATION.runways[0])
         const surfaceName = identifySurface(point, rwy)
         const groundElev = existing.object_elevation_msl ?? INSTALLATION.elevation_msl
+        const relation = pointToRunwayRelation(point, rwy)
+        const nearerThreshold = relation.nearerEnd === 'end1' ? rwy.end1 : rwy.end2
+        const distToThreshold = distanceFt(point, nearerThreshold)
         setPointInfo({
           point,
           groundElevMSL: groundElev,
           distFromCenterline: existing.distance_from_centerline_ft ?? 0,
+          distFromThreshold: distToThreshold,
+          nearerEnd: relation.nearerEnd,
           surfaceName,
           loadingElev: false,
         })
@@ -109,22 +117,20 @@ function ObstructionsContent() {
   const handlePointSelected = useCallback(async (point: LatLon) => {
     const rwy = getRunway()
     const surfaceName = identifySurface(point, rwy)
+    // Quick relation computation for distances
+    const relation = pointToRunwayRelation(point, rwy)
+    const nearerThreshold = relation.nearerEnd === 'end1' ? rwy.end1 : rwy.end2
+    const distToThreshold = distanceFt(point, nearerThreshold)
     setPointInfo({
       point,
       groundElevMSL: null,
-      distFromCenterline: 0,
+      distFromCenterline: relation.distanceFromCenterline,
+      distFromThreshold: distToThreshold,
+      nearerEnd: relation.nearerEnd,
       surfaceName,
       loadingElev: true,
     })
     setAnalysis(null)
-
-    // Quick pre-evaluation at 0 height to get centerline distance
-    const preEval = evaluateObstruction(point, 0, null, rwy)
-    setPointInfo((prev) =>
-      prev
-        ? { ...prev, distFromCenterline: preEval.distanceFromCenterline }
-        : prev,
-    )
 
     // Fetch real elevation
     const elev = await fetchElevation(point)
@@ -330,7 +336,7 @@ function ObstructionsContent() {
           background: 'none',
           border: 'none',
           color: '#22D3EE',
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: 600,
           cursor: 'pointer',
           padding: 0,
@@ -350,7 +356,7 @@ function ObstructionsContent() {
             background: 'none',
             border: 'none',
             color: '#38BDF8',
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             cursor: 'pointer',
             fontFamily: 'inherit',
@@ -361,7 +367,7 @@ function ObstructionsContent() {
           History →
         </button>
       </div>
-      <div style={{ fontSize: 10, color: '#64748B', marginBottom: 10 }}>
+      <div style={{ fontSize: 11, color: '#64748B', marginBottom: 10 }}>
         UFC 3-260-01, Chapter 3 — Imaginary Surface Analysis
       </div>
 
@@ -376,22 +382,28 @@ function ObstructionsContent() {
       {pointInfo && (
         <div className="card" style={{ marginTop: 10 }}>
           <span className="section-label">Selected Location</span>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, fontSize: 11 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, fontSize: 12 }}>
             <div>
               <span style={{ color: '#64748B' }}>Coordinates</span>
-              <div style={{ fontFamily: 'monospace', color: '#CBD5E1', fontSize: 10, marginTop: 2 }}>
+              <div style={{ fontFamily: 'monospace', color: '#CBD5E1', fontSize: 11, marginTop: 2 }}>
                 {pointInfo.point.lat.toFixed(5)}°N, {Math.abs(pointInfo.point.lon).toFixed(5)}°W
               </div>
             </div>
             <div>
               <span style={{ color: '#64748B' }}>From Centerline</span>
-              <div style={{ color: '#CBD5E1', fontFamily: 'monospace', fontSize: 10, marginTop: 2 }}>
+              <div style={{ color: '#CBD5E1', fontFamily: 'monospace', fontSize: 11, marginTop: 2 }}>
                 {pointInfo.distFromCenterline.toFixed(0)} ft
               </div>
             </div>
             <div>
+              <span style={{ color: '#64748B' }}>From Nearest Threshold</span>
+              <div style={{ color: '#CBD5E1', fontFamily: 'monospace', fontSize: 11, marginTop: 2 }}>
+                {pointInfo.distFromThreshold.toFixed(0)} ft (RWY {pointInfo.nearerEnd === 'end1' ? '01' : '19'})
+              </div>
+            </div>
+            <div>
               <span style={{ color: '#64748B' }}>Ground Elevation</span>
-              <div style={{ color: '#CBD5E1', fontFamily: 'monospace', fontSize: 10, marginTop: 2 }}>
+              <div style={{ color: '#CBD5E1', fontFamily: 'monospace', fontSize: 11, marginTop: 2 }}>
                 {pointInfo.loadingElev
                   ? 'Fetching...'
                   : `${(pointInfo.groundElevMSL ?? INSTALLATION.elevation_msl).toFixed(0)} ft MSL`}
@@ -402,7 +414,7 @@ function ObstructionsContent() {
               <div
                 style={{
                   color: '#CBD5E1',
-                  fontSize: 10,
+                  fontSize: 11,
                   marginTop: 2,
                   fontWeight: 600,
                 }}
@@ -419,7 +431,7 @@ function ObstructionsContent() {
         <span className="section-label">Obstruction Details</span>
 
         <div style={{ marginBottom: 10 }}>
-          <label style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+          <label style={{ fontSize: 11, color: '#94A3B8', fontWeight: 600, display: 'block', marginBottom: 4 }}>
             Obstruction Height (ft AGL) *
           </label>
           <input
@@ -434,7 +446,7 @@ function ObstructionsContent() {
         </div>
 
         <div style={{ marginBottom: 10 }}>
-          <label style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+          <label style={{ fontSize: 11, color: '#94A3B8', fontWeight: 600, display: 'block', marginBottom: 4 }}>
             Obstruction Description
           </label>
           <textarea
@@ -456,26 +468,53 @@ function ObstructionsContent() {
           onChange={handlePhoto}
           style={{ display: 'none' }}
         />
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handlePhoto}
+          style={{ display: 'none' }}
+        />
         <div style={{ marginBottom: 10 }}>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              width: '100%',
-              background: '#38BDF814',
-              border: '1px solid #38BDF833',
-              borderRadius: 8,
-              padding: 10,
-              color: '#38BDF8',
-              fontSize: 11,
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              minHeight: 44,
-            }}
-          >
-            {photos.length > 0 ? `+ Add More Photos (${photos.length})` : 'Add Photos'}
-          </button>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                background: '#38BDF814',
+                border: '1px solid #38BDF833',
+                borderRadius: 8,
+                padding: 10,
+                color: '#38BDF8',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                minHeight: 44,
+              }}
+            >
+              🖼️ Upload Photo
+            </button>
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              style={{
+                background: '#38BDF814',
+                border: '1px solid #38BDF833',
+                borderRadius: 8,
+                padding: 10,
+                color: '#38BDF8',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                minHeight: 44,
+              }}
+            >
+              📸 Take Photo
+            </button>
+          </div>
           {photos.length > 0 && (
             <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
               {photos.map((p, i) => (
@@ -505,7 +544,7 @@ function ObstructionsContent() {
                       background: 'rgba(0,0,0,0.7)',
                       border: '1px solid rgba(255,255,255,0.2)',
                       color: '#fff',
-                      fontSize: 10,
+                      fontSize: 11,
                       lineHeight: '16px',
                       textAlign: 'center',
                       cursor: 'pointer',
@@ -570,14 +609,14 @@ function ObstructionsContent() {
               <div>
                 <div
                   style={{
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: 800,
                     color: analysis.hasViolation ? '#EF4444' : '#22C55E',
                   }}
                 >
                   {analysis.hasViolation ? 'VIOLATION DETECTED' : 'NO VIOLATION'}
                 </div>
-                <div style={{ fontSize: 10, color: '#94A3B8' }}>
+                <div style={{ fontSize: 11, color: '#94A3B8' }}>
                   {analysis.controllingSurface
                     ? `Controlling surface: ${analysis.controllingSurface.surfaceName}`
                     : 'Outside all imaginary surfaces'}
@@ -591,7 +630,7 @@ function ObstructionsContent() {
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr 1fr',
                 gap: 6,
-                fontSize: 10,
+                fontSize: 11,
                 marginTop: 4,
               }}
             >
@@ -623,57 +662,81 @@ function ObstructionsContent() {
             <span className="section-label">Surface Analysis</span>
             {analysis.surfaces
               .filter((s) => s.isWithinBounds)
-              .map((s) => (
-                <div
-                  key={s.surfaceKey}
-                  style={{
-                    background: 'rgba(4,7,12,0.6)',
-                    border: `1px solid ${s.violated ? 'rgba(239,68,68,0.3)' : 'rgba(56,189,248,0.06)'}`,
-                    borderRadius: 8,
-                    padding: 10,
-                    marginBottom: 6,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: 2,
-                        background: s.color,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#F1F5F9', flex: 1 }}>
-                      {s.surfaceName}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 9,
-                        fontWeight: 800,
-                        padding: '2px 6px',
-                        borderRadius: 4,
-                        background: s.violated ? '#EF444422' : '#22C55E22',
-                        color: s.violated ? '#EF4444' : '#22C55E',
-                      }}
-                    >
-                      {s.violated ? `VIOLATION (${s.penetrationFt.toFixed(1)} ft)` : 'CLEAR'}
-                    </span>
+              .map((s) => {
+                const isLandUseZone = s.maxAllowableHeightMSL === -1
+                return (
+                  <div
+                    key={s.surfaceKey}
+                    style={{
+                      background: 'rgba(4,7,12,0.6)',
+                      border: `1px solid ${s.violated ? 'rgba(239,68,68,0.3)' : isLandUseZone ? `${s.color}33` : 'rgba(56,189,248,0.06)'}`,
+                      borderRadius: 8,
+                      padding: 10,
+                      marginBottom: 6,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 2,
+                          background: s.color,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#F1F5F9', flex: 1 }}>
+                        {s.surfaceName}
+                      </span>
+                      {isLandUseZone ? (
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 800,
+                            padding: '2px 6px',
+                            borderRadius: 4,
+                            background: `${s.color}22`,
+                            color: s.color,
+                          }}
+                        >
+                          WITHIN ZONE
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 800,
+                            padding: '2px 6px',
+                            borderRadius: 4,
+                            background: s.violated ? '#EF444422' : '#22C55E22',
+                            color: s.violated ? '#EF4444' : '#22C55E',
+                          }}
+                        >
+                          {s.violated ? `VIOLATION (${s.penetrationFt.toFixed(1)} ft)` : 'CLEAR'}
+                        </span>
+                      )}
+                    </div>
+                    {isLandUseZone ? (
+                      <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.5 }}>
+                        {s.ufcCriteria}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.4 }}>
+                        Max allowable: <strong style={{ color: '#CBD5E1' }}>{s.maxAllowableHeightMSL.toFixed(0)} ft MSL</strong>
+                        {' '}({s.maxAllowableHeightAGL.toFixed(0)} ft AGL)
+                      </div>
+                    )}
+                    <div style={{ fontSize: 10, color: '#64748B', marginTop: 4, fontStyle: 'italic' }}>
+                      {s.ufcReference}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 10, color: '#94A3B8', lineHeight: 1.4 }}>
-                    Max allowable: <strong style={{ color: '#CBD5E1' }}>{s.maxAllowableHeightMSL.toFixed(0)} ft MSL</strong>
-                    {' '}({s.maxAllowableHeightAGL.toFixed(0)} ft AGL)
-                  </div>
-                  <div style={{ fontSize: 9, color: '#64748B', marginTop: 4, fontStyle: 'italic' }}>
-                    {s.ufcReference}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
 
             {/* Surfaces the point is NOT within */}
             {analysis.surfaces.filter((s) => !s.isWithinBounds).length > 0 && (
               <div style={{ marginTop: 6 }}>
-                <div style={{ fontSize: 9, color: '#475569', fontWeight: 600, marginBottom: 4 }}>
+                <div style={{ fontSize: 10, color: '#475569', fontWeight: 600, marginBottom: 4 }}>
                   NOT APPLICABLE AT THIS LOCATION:
                 </div>
                 {analysis.surfaces
@@ -682,7 +745,7 @@ function ObstructionsContent() {
                     <div
                       key={s.surfaceKey}
                       style={{
-                        fontSize: 10,
+                        fontSize: 11,
                         color: '#475569',
                         display: 'flex',
                         alignItems: 'center',
@@ -723,13 +786,13 @@ function ObstructionsContent() {
                     marginBottom: 6,
                   }}
                 >
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#F1F5F9', marginBottom: 4 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#F1F5F9', marginBottom: 4 }}>
                     {vs.ufcReference}
                   </div>
-                  <div style={{ fontSize: 10, color: '#CBD5E1', lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.4 }}>
                     {vs.surfaceName} — {vs.penetrationFt.toFixed(1)} ft penetration
                   </div>
-                  <div style={{ fontSize: 9, color: '#94A3B8', marginTop: 4, fontStyle: 'italic', lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 4, fontStyle: 'italic', lineHeight: 1.4 }}>
                     {vs.ufcCriteria}
                   </div>
                 </div>

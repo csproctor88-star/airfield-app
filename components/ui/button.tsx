@@ -20,7 +20,7 @@ export const ActionButton = forwardRef<HTMLButtonElement, ActionButtonProps>(
           borderRadius: 8,
           padding: '10px',
           color,
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: 600,
           cursor: 'pointer',
           fontFamily: 'inherit',

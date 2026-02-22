@@ -17,7 +17,7 @@ export function Badge({ label, color, bg }: BadgeProps) {
         color,
         padding: '2px 7px',
         borderRadius: 4,
-        fontSize: 9,
+        fontSize: 10,
         fontWeight: 700,
         letterSpacing: '0.04em',
         whiteSpace: 'nowrap',
