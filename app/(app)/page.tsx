@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { fetchCurrentWeather, type WeatherResult } from '@/lib/weather'
 import { fetchNavaidStatuses, updateNavaidStatus, type NavaidStatus } from '@/lib/supabase/navaids'
+import { useDashboard } from '@/lib/dashboard-context'
 
 // --- Weather emoji mapping ---
 function weatherEmoji(conditions: string): string {
@@ -93,11 +94,10 @@ type CurrentStatusData = {
   inspectionCompletion: string | null
   rscCondition: string | null
   rscTime: string | null
-  activeRunway: '01' | '19'
-  runwayStatus: 'open' | 'suspended' | 'closed'
 }
 
 export default function HomePage() {
+  const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus } = useDashboard()
   const [time, setTime] = useState('')
   const [weather, setWeather] = useState<WeatherResult | null>(null)
   const [weatherLoaded, setWeatherLoaded] = useState(false)
@@ -107,9 +107,8 @@ export default function HomePage() {
   const [activity, setActivity] = useState<ActivityEntry[]>([])
   const [activityExpanded, setActivityExpanded] = useState(false)
   const [currentStatus, setCurrentStatus] = useState<CurrentStatusData>({
-    bwc: null, lastCheckType: null, lastCheckTime: null, inspectionCompletion: null, rscCondition: null, rscTime: null, activeRunway: '01', runwayStatus: 'open',
+    bwc: null, lastCheckType: null, lastCheckTime: null, inspectionCompletion: null, rscCondition: null, rscTime: null,
   })
-  const [advisory, setAdvisory] = useState<Advisory | null>(null)
   const [advisoryDialogOpen, setAdvisoryDialogOpen] = useState(false)
   const [advisoryDraftType, setAdvisoryDraftType] = useState<'INFO' | 'CAUTION' | 'WARNING'>('INFO')
   const [advisoryDraftText, setAdvisoryDraftText] = useState('')
@@ -491,39 +490,39 @@ export default function HomePage() {
       <div className="card" style={{
         marginBottom: 8, padding: '10px 12px',
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-        background: currentStatus.runwayStatus === 'suspended'
+        background: runwayStatus === 'suspended'
           ? 'rgba(251,191,36,0.08)'
-          : currentStatus.runwayStatus === 'closed'
+          : runwayStatus === 'closed'
             ? 'rgba(239,68,68,0.08)'
             : undefined,
-        border: currentStatus.runwayStatus === 'suspended'
+        border: runwayStatus === 'suspended'
           ? '1px solid rgba(251,191,36,0.2)'
-          : currentStatus.runwayStatus === 'closed'
+          : runwayStatus === 'closed'
             ? '1px solid rgba(239,68,68,0.2)'
             : undefined,
       }}>
         <div style={{ fontSize: 14, color: '#64748B', fontWeight: 600 }}>Active RWY</div>
         <button
-          onClick={() => setCurrentStatus((prev) => ({ ...prev, activeRunway: prev.activeRunway === '01' ? '19' : '01' }))}
+          onClick={() => setActiveRunway(activeRunway === '01' ? '19' : '01')}
           style={{
             padding: '6px 28px', borderRadius: 6, fontSize: 20, fontWeight: 800, cursor: 'pointer',
             border: '2px solid #475569',
             background: 'rgba(71,85,105,0.15)',
             color: '#E2E8F0',
           }}
-        >{currentStatus.activeRunway}</button>
+        >{activeRunway}</button>
         <select
-          value={currentStatus.runwayStatus}
-          onChange={(e) => setCurrentStatus((prev) => ({ ...prev, runwayStatus: e.target.value as 'open' | 'suspended' | 'closed' }))}
+          value={runwayStatus}
+          onChange={(e) => setRunwayStatus(e.target.value as 'open' | 'suspended' | 'closed')}
           style={{
             padding: '3px 10px', borderRadius: 5, fontSize: 12, fontWeight: 700, cursor: 'pointer', textAlign: 'center',
-            border: currentStatus.runwayStatus === 'suspended'
+            border: runwayStatus === 'suspended'
               ? '1px solid rgba(251,191,36,0.4)'
-              : currentStatus.runwayStatus === 'closed'
+              : runwayStatus === 'closed'
                 ? '1px solid rgba(239,68,68,0.4)'
                 : '1px solid rgba(52,211,153,0.3)',
             background: 'rgba(4,7,12,0.7)',
-            color: currentStatus.runwayStatus === 'suspended' ? '#FBBF24' : currentStatus.runwayStatus === 'closed' ? '#EF4444' : '#34D399',
+            color: runwayStatus === 'suspended' ? '#FBBF24' : runwayStatus === 'closed' ? '#EF4444' : '#34D399',
             fontFamily: 'inherit', outline: 'none',
           }}
         >
