@@ -4,14 +4,17 @@ import { createClient } from '@supabase/supabase-js'
 function getAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim().replace(/^["']|["']$/g, '')
-  if (!url || !key) return null
+  if (!url || !key) {
+    console.error('[airfield-status] Missing env:', { hasUrl: !!url, hasKey: !!key })
+    return null
+  }
   return createClient(url, key)
 }
 
 /** GET — return the single airfield_status row */
 export async function GET() {
   const supabase = getAdmin()
-  if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 500 })
+  if (!supabase) return NextResponse.json({ error: 'Server not configured — SUPABASE_SERVICE_ROLE_KEY missing' }, { status: 500 })
 
   const { data, error } = await supabase
     .from('airfield_status')
@@ -26,7 +29,7 @@ export async function GET() {
 /** PATCH — update airfield_status fields */
 export async function PATCH(request: Request) {
   const supabase = getAdmin()
-  if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 500 })
+  if (!supabase) return NextResponse.json({ error: 'Server not configured — SUPABASE_SERVICE_ROLE_KEY missing' }, { status: 500 })
 
   const updates = await request.json()
 
@@ -49,22 +52,7 @@ export async function PATCH(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Log to runway_status_log
-  try {
-    await supabase.from('runway_status_log').insert({
-      old_runway_status: existing.runway_status,
-      new_runway_status: updates.runway_status ?? existing.runway_status,
-      old_active_runway: existing.active_runway,
-      new_active_runway: updates.active_runway ?? existing.active_runway,
-      old_advisory_type: existing.advisory_type,
-      new_advisory_type: updates.advisory_type !== undefined ? updates.advisory_type : existing.advisory_type,
-      old_advisory_text: existing.advisory_text,
-      new_advisory_text: updates.advisory_text !== undefined ? updates.advisory_text : existing.advisory_text,
-      changed_by: updates.updated_by || null,
-    })
-  } catch {
-    // Audit log failure is non-fatal
-  }
+  // Audit logging is handled by the database trigger (trg_log_airfield_status)
 
   return NextResponse.json({ ok: true })
 }
