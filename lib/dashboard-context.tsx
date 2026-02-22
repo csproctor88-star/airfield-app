@@ -43,42 +43,24 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   // Persist advisory changes
   const setAdvisory = useCallback(async (a: Advisory | null) => {
-    const prev = advisory
     setAdvisoryLocal(a)
-    const ok = await updateAirfieldStatus({
+    await updateAirfieldStatus({
       advisory_type: a?.type ?? null,
       advisory_text: a?.text ?? null,
     })
-    if (!ok) {
-      setAdvisoryLocal(prev)
-      alert('Failed to save advisory. Check your connection and try again.')
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [advisory])
+  }, [])
 
   // Persist active runway changes
   const setActiveRunway = useCallback(async (r: '01' | '19') => {
-    const prev = activeRunway
     setActiveRunwayLocal(r)
-    const ok = await updateAirfieldStatus({ active_runway: r })
-    if (!ok) {
-      setActiveRunwayLocal(prev)
-      alert('Failed to save active runway. Check your connection and try again.')
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeRunway])
+    await updateAirfieldStatus({ active_runway: r })
+  }, [])
 
   // Persist runway status changes
   const setRunwayStatus = useCallback(async (s: 'open' | 'suspended' | 'closed') => {
-    const prev = runwayStatus
     setRunwayStatusLocal(s)
-    const ok = await updateAirfieldStatus({ runway_status: s })
-    if (!ok) {
-      setRunwayStatusLocal(prev)
-      alert('Failed to save runway status. Check your connection and try again.')
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runwayStatus])
+    await updateAirfieldStatus({ runway_status: s })
+  }, [])
 
   // Don't render children until initial load completes to avoid flash of defaults
   if (!loaded) return null

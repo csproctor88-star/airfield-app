@@ -29,40 +29,60 @@ export interface RunwayStatusLogRow {
 }
 
 export async function fetchAirfieldStatus(): Promise<AirfieldStatus | null> {
-  try {
-    const res = await fetch('/api/airfield-status')
-    if (!res.ok) return null
-    return await res.json() as AirfieldStatus
-  } catch (e) {
-    console.error('Failed to fetch airfield status:', e)
+  const supabase = createClient()
+  if (!supabase) return null
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('airfield_status')
+    .select('*')
+    .limit(1)
+    .single()
+
+  if (error) {
+    console.error('Failed to fetch airfield status:', error.message)
     return null
   }
+
+  return data as AirfieldStatus
 }
 
 export async function updateAirfieldStatus(
   updates: Partial<Pick<AirfieldStatus, 'advisory_type' | 'advisory_text' | 'active_runway' | 'runway_status'>>,
 ): Promise<boolean> {
   const supabase = createClient()
-  const userId = supabase
-    ? (await supabase.auth.getUser()).data.user?.id ?? null
-    : null
+  if (!supabase) return false
 
-  try {
-    const res = await fetch('/api/airfield-status', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...updates, updated_by: userId }),
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Get the current row ID
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: existing } = await (supabase as any)
+    .from('airfield_status')
+    .select('id')
+    .limit(1)
+    .single()
+
+  if (!existing) return false
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from('airfield_status')
+    .update({
+      ...updates,
+      updated_by: user?.id ?? null,
+      updated_at: new Date().toISOString(),
     })
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      console.error('Failed to update airfield status:', err.error)
-      return false
-    }
-    return true
-  } catch (e) {
-    console.error('Failed to update airfield status:', e)
+    .eq('id', existing.id)
+
+  if (error) {
+    console.error('Failed to update airfield status:', error.message)
     return false
   }
+
+  // Audit logging is handled by the database trigger (trg_log_airfield_status)
+
+  return true
 }
 
 /** Fetch runway status changes within a date range */
