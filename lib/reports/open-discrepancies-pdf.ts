@@ -200,7 +200,7 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
         y += descLines.length * 3 + 1
       }
 
-      // Notes history
+      // Notes history (as table — all data in a single row per note)
       if (opts.includeNotes && notes.length > 0) {
         doc.setFontSize(7)
         doc.setFont('helvetica', 'bold')
@@ -209,45 +209,30 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
         doc.setFont('helvetica', 'normal')
         y += 4
 
-        for (const note of notes) {
-          checkPageBreak(12)
-
+        const notesTableBody = notes.map((note) => {
           const name = note.user_rank ? `${note.user_rank} ${note.user_name}` : note.user_name
           const time = new Date(note.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+          const statusChange = note.old_status && note.new_status
+            ? `${STATUS_LABELS[note.old_status] || note.old_status} → ${STATUS_LABELS[note.new_status] || note.new_status}`
+            : '—'
+          return [time, name, statusChange, note.notes || '—']
+        })
 
-          // Field labels
-          doc.setFontSize(7)
-          doc.setTextColor(100)
-          doc.setFont('helvetica', 'bold')
-          doc.text('Date:', margin + 4, y)
-          doc.setFont('helvetica', 'normal')
-          doc.text(time, margin + 16, y)
-
-          doc.setFont('helvetica', 'bold')
-          doc.text('By:', margin + 55, y)
-          doc.setFont('helvetica', 'normal')
-          doc.text(name, margin + 63, y)
-          y += 3
-
-          if (note.old_status && note.new_status) {
-            doc.setFont('helvetica', 'bold')
-            doc.text('Status:', margin + 4, y)
-            doc.setFont('helvetica', 'normal')
-            doc.text(`${STATUS_LABELS[note.old_status] || note.old_status} → ${STATUS_LABELS[note.new_status] || note.new_status}`, margin + 19, y)
-            y += 3
-          }
-
-          if (note.notes) {
-            doc.setFont('helvetica', 'bold')
-            doc.text('Note:', margin + 4, y)
-            doc.setFont('helvetica', 'normal')
-            const noteLines = doc.splitTextToSize(note.notes, contentWidth - 22)
-            doc.setTextColor(40)
-            doc.text(noteLines, margin + 16, y)
-            y += noteLines.length * 3
-          }
-          y += 2
-        }
+        autoTable(doc, {
+          startY: y,
+          margin: { left: margin + 2, right: margin },
+          head: [['Date', 'By', 'Status Change', 'Note']],
+          body: notesTableBody,
+          styles: { fontSize: 6.5, cellPadding: 1.5, textColor: [0, 0, 0] },
+          headStyles: { fillColor: [51, 65, 85], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 6.5 },
+          alternateRowStyles: { fillColor: [248, 250, 252] },
+          columnStyles: {
+            0: { cellWidth: 30 },
+            1: { cellWidth: 35 },
+            2: { cellWidth: 45 },
+          },
+        })
+        y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 3
       }
 
       // Photos

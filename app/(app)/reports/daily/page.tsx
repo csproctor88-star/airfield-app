@@ -222,11 +222,30 @@ export default function DailyOpsPage() {
       color: '#0EA5E9',
     },
     {
-      label: 'Runway Status Changes',
-      count: data.runwayChanges.length,
-      detail: data.runwayChanges.length > 0
-        ? `${data.runwayChanges.length} change${data.runwayChanges.length !== 1 ? 's' : ''}`
-        : 'No runway status changes',
+      label: 'Status History',
+      count: (() => {
+        let count = 0
+        for (const r of data.runwayChanges) {
+          if (r.old_runway_status !== r.new_runway_status) count++
+          if (r.old_active_runway !== r.new_active_runway) count++
+          if (r.old_advisory_type !== r.new_advisory_type || r.old_advisory_text !== r.new_advisory_text) count++
+        }
+        count += data.inspections.filter((i) => i.bwc_value).length
+        count += data.checks.filter((c) => c.check_type === 'rsc').length
+        return count
+      })(),
+      detail: (() => {
+        const parts: string[] = []
+        const rwChanges = data.runwayChanges.filter((r) => r.old_runway_status !== r.new_runway_status || r.old_active_runway !== r.new_active_runway)
+        if (rwChanges.length > 0) parts.push(`${rwChanges.length} runway`)
+        const advChanges = data.runwayChanges.filter((r) => r.old_advisory_type !== r.new_advisory_type || r.old_advisory_text !== r.new_advisory_text)
+        if (advChanges.length > 0) parts.push(`${advChanges.length} advisory`)
+        const bwcEntries = data.inspections.filter((i) => i.bwc_value).length
+        if (bwcEntries > 0) parts.push(`${bwcEntries} BWC`)
+        const rscEntries = data.checks.filter((c) => c.check_type === 'rsc').length
+        if (rscEntries > 0) parts.push(`${rscEntries} RSC`)
+        return parts.length > 0 ? parts.join(', ') : 'No status changes'
+      })(),
       color: '#A78BFA',
     },
     {

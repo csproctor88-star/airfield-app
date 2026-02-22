@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import type { DailyReportData } from './daily-ops-data'
+import type { DailyReportData, PhotoForDailyReport } from './daily-ops-data'
 import { formatDiscrepancyType } from './open-discrepancies-data'
 
 interface Options {
@@ -171,8 +171,11 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
       c.completed_at ? fmtTime(c.completed_at) : '',
       c.completed_by || 'Unknown',
       (c.areas || []).join(', ') || '—',
-      c.photo_count > 0 ? `${c.photo_count} photo${c.photo_count !== 1 ? 's' : ''}` : '',
+      '', // Photos rendered via didDrawCell
     ])
+
+    // Build photo lookup for checks
+    const checkPhotos = data.checks.map((c) => data.photos[`check:${c.id}`] || [])
 
     autoTable(doc, {
       startY: y,
@@ -182,37 +185,102 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
       styles: { fontSize: 8, cellPadding: 2, textColor: [0, 0, 0] },
       headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
       alternateRowStyles: { fillColor: [245, 245, 245] },
+      columnStyles: { 4: { cellWidth: 40 } },
+      didParseCell: (hookData) => {
+        if (hookData.section === 'body' && hookData.column.index === 4) {
+          const photos = checkPhotos[hookData.row.index] || []
+          if (photos.length > 0) {
+            hookData.cell.styles.minCellHeight = PHOTO_THUMB_H + 4
+          }
+        }
+      },
+      didDrawCell: (hookData) => {
+        if (hookData.section === 'body' && hookData.column.index === 4) {
+          const photos = checkPhotos[hookData.row.index] || []
+          drawPhotosInCell(doc, photos, hookData.cell.x, hookData.cell.y, hookData.cell.width)
+        }
+      },
     })
     y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4
   }
 
-  // ── 3. RUNWAY STATUS CHANGES ──
-  sectionHeader('RUNWAY STATUS CHANGES & ADVISORIES')
+  // ── 3. CURRENT STATUS HISTORY ──
+  sectionHeader('CURRENT STATUS HISTORY')
 
-  if (data.runwayChanges.length === 0) {
-    emptyState('No runway status changes for this date.')
+  // Build unified status history rows: runway, advisory, BWC, RSC
+  type StatusHistoryRow = [string, string, string, string, string] // [Time, Category, Change, Changed By, Reason/Notes]
+  const statusHistoryRows: StatusHistoryRow[] = []
+
+  // Runway & Advisory changes from runway_status_log
+  for (const r of data.runwayChanges) {
+    const time = fmtTime(r.created_at)
+    const name = r.user_rank ? `${r.user_rank} ${r.user_name}` : (r.user_name || 'Unknown')
+
+    // Runway status change
+    if (r.old_runway_status !== r.new_runway_status) {
+      const change = `${(r.old_runway_status || '').toUpperCase()} → ${(r.new_runway_status || '').toUpperCase()}`
+      statusHistoryRows.push([time, 'Runway Status', change, name, r.reason || '—'])
+    }
+
+    // Active runway change
+    if (r.old_active_runway !== r.new_active_runway) {
+      const change = `RWY ${r.old_active_runway} → RWY ${r.new_active_runway}`
+      statusHistoryRows.push([time, 'Active Runway', change, name, r.reason || '—'])
+    }
+
+    // Advisory change
+    if (r.old_advisory_type !== r.new_advisory_type || r.old_advisory_text !== r.new_advisory_text) {
+      const oldAdv = r.old_advisory_type ? `${r.old_advisory_type}` : 'None'
+      const newAdv = r.new_advisory_type ? `${r.new_advisory_type}` : 'None'
+      const change = oldAdv !== newAdv
+        ? `${oldAdv} → ${newAdv}`
+        : `${newAdv} (text updated)`
+      const detail = r.new_advisory_text || r.reason || '—'
+      statusHistoryRows.push([time, 'Advisory', change, name, detail])
+    }
+  }
+
+  // BWC changes from inspections
+  for (const insp of data.inspections) {
+    if (insp.bwc_value) {
+      const time = insp.completed_at ? fmtTime(insp.completed_at) : ''
+      const name = insp.completed_by_name || insp.inspector_name || 'Unknown'
+      statusHistoryRows.push([time, 'BWC', insp.bwc_value, name, '—'])
+    }
+  }
+
+  // RSC changes from RSC checks
+  const rscChecks = data.checks.filter((c) => c.check_type === 'rsc')
+  for (const c of rscChecks) {
+    const time = c.completed_at ? fmtTime(c.completed_at) : ''
+    const d = c.data as Record<string, unknown>
+    const condition = (d?.condition as string) || (d?.runway_condition as string) || 'Reported'
+    const detail = [
+      d?.contaminant ? `Contaminant: ${d.contaminant}` : '',
+      d?.braking_action ? `Braking: ${d.braking_action}` : '',
+      d?.treatment ? `Treatment: ${d.treatment}` : '',
+    ].filter(Boolean).join(', ') || '—'
+    statusHistoryRows.push([time, 'RSC', condition, c.completed_by || 'Unknown', detail])
+  }
+
+  if (statusHistoryRows.length === 0) {
+    emptyState('No status changes recorded for this date.')
   } else {
-    const tableBody = data.runwayChanges.map((r) => {
-      const time = fmtTime(r.created_at)
-      const statusChange = r.old_runway_status !== r.new_runway_status
-        ? `${r.old_runway_status} → ${r.new_runway_status}`
-        : '—'
-      const runwayChange = r.old_active_runway !== r.new_active_runway
-        ? `RWY ${r.old_active_runway} → ${r.new_active_runway}`
-        : ''
-      const change = [statusChange, runwayChange].filter(Boolean).join('; ')
-      const name = r.user_rank ? `${r.user_rank} ${r.user_name}` : (r.user_name || 'Unknown')
-      return [time, change, name, r.reason || '—']
-    })
+    // Sort by time
+    statusHistoryRows.sort((a, b) => a[0].localeCompare(b[0]))
 
     autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
-      head: [['Time', 'Change', 'Changed By', 'Reason']],
-      body: tableBody,
+      head: [['Time', 'Category', 'Change', 'Changed By', 'Details']],
+      body: statusHistoryRows,
       styles: { fontSize: 8, cellPadding: 2, textColor: [0, 0, 0] },
       headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
       alternateRowStyles: { fillColor: [245, 245, 245] },
+      columnStyles: {
+        0: { cellWidth: 20 },
+        1: { cellWidth: 25 },
+      },
     })
     y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4
   }
@@ -225,20 +293,37 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
   } else {
     const tableBody = data.newDiscrepancies.map((d) => {
       const reporter = d.reporter_rank ? `${d.reporter_rank} ${d.reporter_name}` : d.reporter_name
-      return [d.display_id, d.title, formatDiscrepancyType(d.type), d.location_text, d.assigned_shop || '—', reporter]
+      return [d.display_id, d.title, formatDiscrepancyType(d.type), d.location_text, d.assigned_shop || '—', reporter, '']
     })
+
+    const discPhotos = data.newDiscrepancies.map((d) => data.photos[`discrepancy:${d.id}`] || [])
 
     autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
-      head: [['ID', 'Title', 'Type', 'Location', 'Shop', 'Reported By']],
+      head: [['ID', 'Title', 'Type', 'Location', 'Shop', 'Reported By', 'Photos']],
       body: tableBody,
       styles: { fontSize: 7, cellPadding: 1.5, textColor: [0, 0, 0] },
       headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
       alternateRowStyles: { fillColor: [245, 245, 245] },
       columnStyles: {
         0: { cellWidth: 22 },
-        1: { cellWidth: 40 },
+        1: { cellWidth: 32 },
+        6: { cellWidth: 35 },
+      },
+      didParseCell: (hookData) => {
+        if (hookData.section === 'body' && hookData.column.index === 6) {
+          const photos = discPhotos[hookData.row.index] || []
+          if (photos.length > 0) {
+            hookData.cell.styles.minCellHeight = PHOTO_THUMB_H + 4
+          }
+        }
+      },
+      didDrawCell: (hookData) => {
+        if (hookData.section === 'body' && hookData.column.index === 6) {
+          const photos = discPhotos[hookData.row.index] || []
+          drawPhotosInCell(doc, photos, hookData.cell.x, hookData.cell.y, hookData.cell.width)
+        }
       },
     })
     y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4
@@ -285,25 +370,44 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
       const result = e.has_violation ? 'VIOLATION' : 'CLEAR'
       const name = e.evaluator_rank ? `${e.evaluator_rank} ${e.evaluator_name}` : e.evaluator_name
       const surfaces = e.has_violation ? (e.violated_surfaces || []).length.toString() : '—'
-      return [e.display_id, e.description || '—', `${e.object_height_agl} ft AGL`, result, e.controlling_surface || '—', surfaces, name]
+      return [e.display_id, e.description || '—', `${e.object_height_agl} ft AGL`, result, e.controlling_surface || '—', surfaces, name, '']
     })
+
+    const obsPhotos = data.obstructionEvals.map((e) => data.photos[`obstruction:${e.id}`] || [])
 
     autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
-      head: [['ID', 'Description', 'Height', 'Result', 'Controlling Surface', 'Violations', 'Evaluated By']],
+      head: [['ID', 'Description', 'Height', 'Result', 'Ctrl Surface', 'Viol.', 'Evaluated By', 'Photos']],
       body: tableBody,
       styles: { fontSize: 7, cellPadding: 1.5, textColor: [0, 0, 0] },
       headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
       alternateRowStyles: { fillColor: [245, 245, 245] },
+      columnStyles: {
+        7: { cellWidth: 35 },
+      },
       didParseCell: (hookData) => {
+        if (hookData.section !== 'body') return
         // Highlight VIOLATION in red
-        if (hookData.section === 'body' && hookData.column.index === 3) {
+        if (hookData.column.index === 3) {
           const val = hookData.cell.raw as string
           if (val === 'VIOLATION') {
             hookData.cell.styles.textColor = [220, 38, 38]
             hookData.cell.styles.fontStyle = 'bold'
           }
+        }
+        // Set row height for photos
+        if (hookData.column.index === 7) {
+          const photos = obsPhotos[hookData.row.index] || []
+          if (photos.length > 0) {
+            hookData.cell.styles.minCellHeight = PHOTO_THUMB_H + 4
+          }
+        }
+      },
+      didDrawCell: (hookData) => {
+        if (hookData.section === 'body' && hookData.column.index === 7) {
+          const photos = obsPhotos[hookData.row.index] || []
+          drawPhotosInCell(doc, photos, hookData.cell.x, hookData.cell.y, hookData.cell.width)
         }
       },
     })
@@ -318,4 +422,57 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
     ? `${opts.startDate}_to_${opts.endDate}`
     : opts.startDate
   doc.save(`KMTC_Daily_Ops_${dateSuffix}.pdf`)
+}
+
+// ── Photo rendering helper ──
+
+const PHOTO_THUMB_W = 14 // mm
+const PHOTO_THUMB_H = 10.5 // mm (4:3 ratio)
+const PHOTO_GAP = 1.5 // mm
+
+function drawPhotosInCell(
+  doc: jsPDF,
+  photos: PhotoForDailyReport[],
+  cellX: number,
+  cellY: number,
+  cellWidth: number,
+) {
+  if (photos.length === 0) return
+
+  const padding = 2
+  const availableWidth = cellWidth - padding * 2
+  const thumbsPerRow = Math.max(1, Math.floor(availableWidth / (PHOTO_THUMB_W + PHOTO_GAP)))
+  let xOffset = cellX + padding
+  let yOffset = cellY + padding
+
+  for (let i = 0; i < photos.length; i++) {
+    if (i > 0 && i % thumbsPerRow === 0) {
+      yOffset += PHOTO_THUMB_H + PHOTO_GAP
+      xOffset = cellX + padding
+    }
+
+    const photo = photos[i]
+    if (photo.dataUrl) {
+      try {
+        const format = photo.dataUrl.includes('image/png') ? 'PNG' : 'JPEG'
+        doc.addImage(photo.dataUrl, format, xOffset, yOffset, PHOTO_THUMB_W, PHOTO_THUMB_H)
+      } catch {
+        // Draw placeholder on failure
+        doc.setDrawColor(180)
+        doc.rect(xOffset, yOffset, PHOTO_THUMB_W, PHOTO_THUMB_H)
+        doc.setFontSize(5)
+        doc.setTextColor(150)
+        doc.text('img', xOffset + 2, yOffset + PHOTO_THUMB_H / 2)
+      }
+    } else {
+      // No data URL — show placeholder
+      doc.setDrawColor(180)
+      doc.rect(xOffset, yOffset, PHOTO_THUMB_W, PHOTO_THUMB_H)
+      doc.setFontSize(5)
+      doc.setTextColor(150)
+      doc.text('img', xOffset + 2, yOffset + PHOTO_THUMB_H / 2)
+    }
+
+    xOffset += PHOTO_THUMB_W + PHOTO_GAP
+  }
 }

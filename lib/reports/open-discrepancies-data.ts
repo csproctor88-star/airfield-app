@@ -63,14 +63,19 @@ export interface OpenDiscrepanciesData {
 
 // ── Helpers ──
 
-/** Convert snake_case or underscore-separated type to Title Case (e.g. fod_hazard → FOD Hazard) */
+/** Convert snake_case or underscore-separated type to Title Case (e.g. fod_hazard → FOD Hazard).
+ *  Handles comma-separated multi-type values (e.g. "fod_hazard, pavement"). */
 export function formatDiscrepancyType(raw: string): string {
-  // Handle known acronyms
-  const acronyms = new Set(['fod', 'rsc', 'rcr', 'bash', 'ife', 'notam', 'bwc'])
-  return raw
-    .split('_')
-    .map((word) => acronyms.has(word.toLowerCase()) ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ')
+  const acronyms = new Set(['fod', 'rsc', 'rcr', 'bash', 'ife', 'notam', 'bwc', 'navaid'])
+  const formatSingle = (type: string) =>
+    type.trim()
+      .split('_')
+      .map((word) => acronyms.has(word.toLowerCase()) ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+  if (raw.includes(',')) {
+    return raw.split(',').map(formatSingle).join(', ')
+  }
+  return formatSingle(raw)
 }
 
 // ── Data Fetching ──
