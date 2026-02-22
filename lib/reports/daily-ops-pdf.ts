@@ -207,9 +207,40 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
   // ── 3. CURRENT STATUS HISTORY ──
   sectionHeader('CURRENT STATUS HISTORY')
 
-  // Build unified status history rows: BWC, RSC
+  // Build unified status history rows: runway, advisory, BWC, RSC
   type StatusHistoryRow = [string, string, string, string, string] // [Time, Category, Change, Changed By, Reason/Notes]
   const statusHistoryRows: StatusHistoryRow[] = []
+
+  // Runway, Advisory changes from runway_status_log
+  for (const r of data.runwayChanges) {
+    const time = fmtTime(r.created_at)
+    const name = r.user_rank ? `${r.user_rank} ${r.user_name}` : (r.user_name || 'Unknown')
+
+    // Runway status change (always show — includes open/suspended/closed)
+    if (r.new_runway_status) {
+      const change = r.old_runway_status !== r.new_runway_status
+        ? `${(r.old_runway_status || '').toUpperCase()} → ${(r.new_runway_status || '').toUpperCase()}`
+        : `${(r.new_runway_status || '').toUpperCase()} (no change)`
+      statusHistoryRows.push([time, 'Runway Status', change, name, r.reason || '—'])
+    }
+
+    // Active runway change
+    if (r.old_active_runway !== r.new_active_runway) {
+      const change = `RWY ${r.old_active_runway} → RWY ${r.new_active_runway}`
+      statusHistoryRows.push([time, 'Active Runway', change, name, r.reason || '—'])
+    }
+
+    // Advisory change
+    if (r.old_advisory_type !== r.new_advisory_type || r.old_advisory_text !== r.new_advisory_text) {
+      const oldAdv = r.old_advisory_type ? `${r.old_advisory_type}` : 'None'
+      const newAdv = r.new_advisory_type ? `${r.new_advisory_type}` : 'None'
+      const change = oldAdv !== newAdv
+        ? `${oldAdv} → ${newAdv}`
+        : `${newAdv} (text updated)`
+      const detail = r.new_advisory_text || r.reason || '—'
+      statusHistoryRows.push([time, 'Advisory', change, name, detail])
+    }
+  }
 
   // BWC changes from inspections
   for (const insp of data.inspections) {
