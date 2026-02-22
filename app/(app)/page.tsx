@@ -494,21 +494,29 @@ export default function HomePage() {
           ? 'rgba(251,191,36,0.08)'
           : runwayStatus === 'closed'
             ? 'rgba(239,68,68,0.08)'
-            : undefined,
+            : 'rgba(52,211,153,0.08)',
         border: runwayStatus === 'suspended'
           ? '1px solid rgba(251,191,36,0.2)'
           : runwayStatus === 'closed'
             ? '1px solid rgba(239,68,68,0.2)'
-            : undefined,
+            : '1px solid rgba(52,211,153,0.2)',
       }}>
         <div style={{ fontSize: 14, color: '#64748B', fontWeight: 600 }}>Active RWY</div>
         <button
           onClick={() => setActiveRunway(activeRunway === '01' ? '19' : '01')}
           style={{
             padding: '6px 28px', borderRadius: 6, fontSize: 20, fontWeight: 800, cursor: 'pointer',
-            border: '2px solid #475569',
-            background: 'rgba(71,85,105,0.15)',
-            color: '#E2E8F0',
+            border: runwayStatus === 'suspended'
+              ? '2px solid rgba(251,191,36,0.5)'
+              : runwayStatus === 'closed'
+                ? '2px solid rgba(239,68,68,0.5)'
+                : '2px solid rgba(52,211,153,0.5)',
+            background: runwayStatus === 'suspended'
+              ? 'rgba(251,191,36,0.12)'
+              : runwayStatus === 'closed'
+                ? 'rgba(239,68,68,0.12)'
+                : 'rgba(52,211,153,0.12)',
+            color: runwayStatus === 'suspended' ? '#FBBF24' : runwayStatus === 'closed' ? '#EF4444' : '#34D399',
           }}
         >{activeRunway}</button>
         <select
