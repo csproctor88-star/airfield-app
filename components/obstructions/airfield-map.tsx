@@ -434,6 +434,18 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
     setVisibility((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
+  const allVisible = LEGEND_ITEMS.every((item) => visibility[item.toggleKey])
+  const toggleAll = () => {
+    const nextVal = !allVisible
+    setVisibility((prev) => {
+      const next = { ...prev }
+      for (const item of LEGEND_ITEMS) {
+        next[item.toggleKey] = nextVal
+      }
+      return next
+    })
+  }
+
   if (!token || token === 'your-mapbox-token-here') {
     return (
       <div
@@ -496,7 +508,22 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
           }}
         >
           <span style={{ fontSize: 11 }}>Layers</span>
-          <span style={{ fontSize: 9, marginLeft: 'auto' }}>{legendOpen ? '▲' : '▼'}</span>
+          {legendOpen && (
+            <span
+              onClick={(e) => { e.stopPropagation(); toggleAll() }}
+              style={{
+                fontSize: 9,
+                marginLeft: 'auto',
+                marginRight: 6,
+                color: '#38BDF8',
+                cursor: 'pointer',
+                fontWeight: 500,
+              }}
+            >
+              {allVisible ? 'Hide All' : 'Show All'}
+            </span>
+          )}
+          <span style={{ fontSize: 9, marginLeft: legendOpen ? 0 : 'auto' }}>{legendOpen ? '▲' : '▼'}</span>
         </div>
         {legendOpen && (
           <div

@@ -399,7 +399,7 @@ export function generateCombinedInspectionPdf(inspections: InspectionData[]) {
   // ── Info Box ──
   doc.setDrawColor(180)
   doc.setLineWidth(0.3)
-  doc.rect(margin, y, contentWidth, 30)
+  doc.rect(margin, y, contentWidth, 24)
 
   doc.setFontSize(8)
   doc.setTextColor(100)
@@ -436,25 +436,39 @@ export function generateCombinedInspectionPdf(inspections: InspectionData[]) {
   doc.text((airfield?.bwc_value || primary.bwc_value) || 'N/A', col2, y + 21)
   doc.text('COMPLETED', col3, y + 21)
 
-  // Per-half completed by
-  doc.setFontSize(8)
-  doc.setTextColor(100)
+  y += 28
+
+  // ── Per-half completed-by rows (below the info box) ──
   if (airfield) {
     const afBy = airfield.completed_by_name || airfield.inspector_name || 'N/A'
     const afTime = airfield.completed_at
       ? new Date(airfield.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
       : ''
-    doc.text(`Airfield completed by: ${afBy}${afTime ? ` @ ${afTime}` : ''}`, col1, y + 27)
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(52, 211, 153)
+    doc.text('Airfield', col1, y)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(60)
+    doc.text(`Completed by ${afBy}${afTime ? ` at ${afTime}` : ''}`, col1 + 22, y)
+    y += 5
   }
   if (lighting) {
     const ltBy = lighting.completed_by_name || lighting.inspector_name || 'N/A'
     const ltTime = lighting.completed_at
       ? new Date(lighting.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
       : ''
-    doc.text(`Lighting completed by: ${ltBy}${ltTime ? ` @ ${ltTime}` : ''}`, col2, y + 27)
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(251, 191, 36)
+    doc.text('Lighting', col1, y)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(60)
+    doc.text(`Completed by ${ltBy}${ltTime ? ` at ${ltTime}` : ''}`, col1 + 22, y)
+    y += 5
   }
-
-  y += 36
+  doc.setFont('helvetica', 'normal')
+  y += 3
 
   // ── Combined Results Summary ──
   doc.setFontSize(10)
