@@ -487,58 +487,47 @@ export default function HomePage() {
 
       {/* ===== Current Status ===== */}
       <span className="section-label">Current Status</span>
-      <div className="card" style={{
-        marginBottom: 8, padding: '10px 12px',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-        background: runwayStatus === 'suspended'
-          ? 'rgba(251,191,36,0.08)'
-          : runwayStatus === 'closed'
-            ? 'rgba(239,68,68,0.08)'
-            : 'rgba(52,211,153,0.08)',
-        border: runwayStatus === 'suspended'
-          ? '1px solid rgba(251,191,36,0.2)'
-          : runwayStatus === 'closed'
-            ? '1px solid rgba(239,68,68,0.2)'
-            : '1px solid rgba(52,211,153,0.2)',
-      }}>
-        <div style={{ fontSize: 14, color: '#64748B', fontWeight: 600 }}>Active RWY</div>
-        <button
-          onClick={() => setActiveRunway(activeRunway === '01' ? '19' : '01')}
-          style={{
-            padding: '6px 28px', borderRadius: 6, fontSize: 20, fontWeight: 800, cursor: 'pointer',
-            border: runwayStatus === 'suspended'
-              ? '2px solid rgba(251,191,36,0.5)'
-              : runwayStatus === 'closed'
-                ? '2px solid rgba(239,68,68,0.5)'
-                : '2px solid rgba(52,211,153,0.5)',
-            background: runwayStatus === 'suspended'
-              ? 'rgba(251,191,36,0.12)'
-              : runwayStatus === 'closed'
-                ? 'rgba(239,68,68,0.12)'
-                : 'rgba(52,211,153,0.12)',
-            color: runwayStatus === 'suspended' ? '#FBBF24' : runwayStatus === 'closed' ? '#EF4444' : '#34D399',
-          }}
-        >{activeRunway}</button>
-        <select
-          value={runwayStatus}
-          onChange={(e) => setRunwayStatus(e.target.value as 'open' | 'suspended' | 'closed')}
-          style={{
-            padding: '3px 10px', borderRadius: 5, fontSize: 12, fontWeight: 700, cursor: 'pointer', textAlign: 'center',
-            border: runwayStatus === 'suspended'
-              ? '1px solid rgba(251,191,36,0.4)'
-              : runwayStatus === 'closed'
-                ? '1px solid rgba(239,68,68,0.4)'
-                : '1px solid rgba(52,211,153,0.3)',
-            background: 'rgba(4,7,12,0.7)',
-            color: runwayStatus === 'suspended' ? '#FBBF24' : runwayStatus === 'closed' ? '#EF4444' : '#34D399',
-            fontFamily: 'inherit', outline: 'none',
-          }}
-        >
-          <option value="open">Open</option>
-          <option value="suspended">Suspended</option>
-          <option value="closed">Closed</option>
-        </select>
-      </div>
+      {/* Active RWY card — color reflects runway status */}
+      {(() => {
+        const statusColor = runwayStatus === 'closed' ? '#EF4444'
+          : runwayStatus === 'suspended' ? '#FBBF24' : '#34D399'
+        const statusBg = runwayStatus === 'closed' ? 'rgba(239,68,68,0.08)'
+          : runwayStatus === 'suspended' ? 'rgba(251,191,36,0.08)' : 'rgba(52,211,153,0.08)'
+        const statusBorder = runwayStatus === 'closed' ? 'rgba(239,68,68,0.2)'
+          : runwayStatus === 'suspended' ? 'rgba(251,191,36,0.2)' : 'rgba(52,211,153,0.2)'
+        return (
+          <div className="card" style={{
+            marginBottom: 8, padding: '10px 12px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+            background: statusBg, border: `1px solid ${statusBorder}`,
+          }}>
+            <div style={{ fontSize: 14, color: '#64748B', fontWeight: 600 }}>Active RWY</div>
+            <button
+              onClick={() => setActiveRunway(activeRunway === '01' ? '19' : '01')}
+              style={{
+                padding: '6px 28px', borderRadius: 6, fontSize: 20, fontWeight: 800,
+                cursor: 'pointer', color: statusColor,
+                border: `2px solid ${statusColor}40`,
+                background: `${statusColor}1A`,
+              }}
+            >{activeRunway}</button>
+            <select
+              value={runwayStatus}
+              onChange={(e) => setRunwayStatus(e.target.value as 'open' | 'suspended' | 'closed')}
+              style={{
+                padding: '3px 10px', borderRadius: 5, fontSize: 12, fontWeight: 700,
+                cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', outline: 'none',
+                color: statusColor, background: 'rgba(4,7,12,0.7)',
+                border: `1px solid ${statusColor}66`,
+              }}
+            >
+              <option value="open">Open</option>
+              <option value="suspended">Suspended</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+        )
+      })()}
       <div className="card" style={{ marginBottom: 12, padding: '14px 12px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <div style={{ padding: 14, background: 'rgba(4,7,12,0.5)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
