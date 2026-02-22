@@ -226,7 +226,7 @@ export default function DailyOpsPage() {
       count: (() => {
         let count = 0
         for (const r of data.runwayChanges) {
-          if (r.old_runway_status !== r.new_runway_status) count++
+          if (r.new_runway_status) count++
           if (r.old_active_runway !== r.new_active_runway) count++
           if (r.old_advisory_type !== r.new_advisory_type || r.old_advisory_text !== r.new_advisory_text) count++
         }
@@ -236,8 +236,10 @@ export default function DailyOpsPage() {
       })(),
       detail: (() => {
         const parts: string[] = []
-        const rwChanges = data.runwayChanges.filter((r) => r.old_runway_status !== r.new_runway_status || r.old_active_runway !== r.new_active_runway)
-        if (rwChanges.length > 0) parts.push(`${rwChanges.length} runway`)
+        const rwEntries = data.runwayChanges.filter((r) => r.new_runway_status)
+        if (rwEntries.length > 0) parts.push(`${rwEntries.length} runway`)
+        const rwChanges = data.runwayChanges.filter((r) => r.old_active_runway !== r.new_active_runway)
+        if (rwChanges.length > 0) parts.push(`${rwChanges.length} active RWY`)
         const advChanges = data.runwayChanges.filter((r) => r.old_advisory_type !== r.new_advisory_type || r.old_advisory_text !== r.new_advisory_text)
         if (advChanges.length > 0) parts.push(`${advChanges.length} advisory`)
         const bwcEntries = data.inspections.filter((i) => i.bwc_value).length

@@ -185,7 +185,7 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
       styles: { fontSize: 8, cellPadding: 2, textColor: [0, 0, 0] },
       headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
       alternateRowStyles: { fillColor: [245, 245, 245] },
-      columnStyles: { 4: { cellWidth: 40 } },
+      columnStyles: { 4: { cellWidth: 48 } },
       didParseCell: (hookData) => {
         if (hookData.section === 'body' && hookData.column.index === 4) {
           const photos = checkPhotos[hookData.row.index] || []
@@ -211,14 +211,16 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
   type StatusHistoryRow = [string, string, string, string, string] // [Time, Category, Change, Changed By, Reason/Notes]
   const statusHistoryRows: StatusHistoryRow[] = []
 
-  // Runway & Advisory changes from runway_status_log
+  // Runway, Advisory changes from runway_status_log
   for (const r of data.runwayChanges) {
     const time = fmtTime(r.created_at)
     const name = r.user_rank ? `${r.user_rank} ${r.user_name}` : (r.user_name || 'Unknown')
 
-    // Runway status change
-    if (r.old_runway_status !== r.new_runway_status) {
-      const change = `${(r.old_runway_status || '').toUpperCase()} → ${(r.new_runway_status || '').toUpperCase()}`
+    // Runway status change (always show — includes open/suspended/closed)
+    if (r.new_runway_status) {
+      const change = r.old_runway_status !== r.new_runway_status
+        ? `${(r.old_runway_status || '').toUpperCase()} → ${(r.new_runway_status || '').toUpperCase()}`
+        : `${(r.new_runway_status || '').toUpperCase()} (no change)`
       statusHistoryRows.push([time, 'Runway Status', change, name, r.reason || '—'])
     }
 
@@ -309,7 +311,7 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
       columnStyles: {
         0: { cellWidth: 22 },
         1: { cellWidth: 32 },
-        6: { cellWidth: 35 },
+        6: { cellWidth: 48 },
       },
       didParseCell: (hookData) => {
         if (hookData.section === 'body' && hookData.column.index === 6) {
@@ -384,7 +386,7 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
       headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
       alternateRowStyles: { fillColor: [245, 245, 245] },
       columnStyles: {
-        7: { cellWidth: 35 },
+        7: { cellWidth: 48 },
       },
       didParseCell: (hookData) => {
         if (hookData.section !== 'body') return
@@ -426,8 +428,8 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
 
 // ── Photo rendering helper ──
 
-const PHOTO_THUMB_W = 14 // mm
-const PHOTO_THUMB_H = 10.5 // mm (4:3 ratio)
+const PHOTO_THUMB_W = 20 // mm
+const PHOTO_THUMB_H = 15 // mm (4:3 ratio)
 const PHOTO_GAP = 1.5 // mm
 
 function drawPhotosInCell(

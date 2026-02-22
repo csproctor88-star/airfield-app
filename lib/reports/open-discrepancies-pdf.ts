@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import type { OpenDiscrepanciesData } from './open-discrepancies-data'
+import type { OpenDiscrepanciesData, PhotoForReport } from './open-discrepancies-data'
 import { formatDiscrepancyType } from './open-discrepancies-data'
 
 interface Options {
@@ -115,7 +115,7 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
 
   sectionHeader('ALL OPEN DISCREPANCIES')
 
-  // Render each discrepancy as a table row + inline details
+  // Render each discrepancy as a table row with inline photo thumbnails
   const tableBody = sorted.map((d) => {
     const reporter = d.reporter_rank ? `${d.reporter_rank} ${d.reporter_name}` : d.reporter_name
     const lastUpdate = d.last_update_at
@@ -131,21 +131,25 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
       d.days_open.toString(),
       reporter,
       lastUpdate,
+      '', // Photos rendered via didDrawCell
     ]
   })
+
+  const discPhotos = sorted.map((d) => data.photos[d.id] || [])
 
   autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
-    head: [['ID', 'Title', 'Type', 'Location', 'W/O #', 'Status', 'Days', 'Reported By', 'Last Update']],
+    head: [['ID', 'Title', 'Type', 'Location', 'W/O #', 'Status', 'Days', 'Reported By', 'Last Update', 'Photos']],
     body: tableBody,
     styles: { fontSize: 7, cellPadding: 1.5, textColor: [0, 0, 0] },
     headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
     alternateRowStyles: { fillColor: [245, 245, 245] },
     columnStyles: {
-      0: { cellWidth: 22 },
-      1: { cellWidth: 40 },
-      6: { cellWidth: 12, halign: 'center' },
+      0: { cellWidth: 20 },
+      1: { cellWidth: 35 },
+      6: { cellWidth: 10, halign: 'center' },
+      9: { cellWidth: 40 },
     },
     didParseCell: (hookData) => {
       if (hookData.section !== 'body') return
@@ -158,18 +162,29 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
         hookData.cell.styles.textColor = [220, 38, 38]
         hookData.cell.styles.fontStyle = 'bold'
       }
+
+      // Set row height for photos
+      if (hookData.column.index === 9) {
+        const photos = discPhotos[rowIdx] || []
+        if (photos.length > 0) {
+          hookData.cell.styles.minCellHeight = OD_PHOTO_THUMB_H + 4
+        }
+      }
+    },
+    didDrawCell: (hookData) => {
+      if (hookData.section === 'body' && hookData.column.index === 9) {
+        const photos = discPhotos[hookData.row.index] || []
+        drawPhotosInCell(doc, photos, hookData.cell.x, hookData.cell.y, hookData.cell.width)
+      }
     },
   })
   y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6
 
-  // ── INLINE DETAILS PER DISCREPANCY (notes + photos) ──
-  if (opts.includeNotes || hasAnyPhotos(data)) {
+  // ── INLINE DETAILS PER DISCREPANCY (notes only — photos are now in the table) ──
+  if (opts.includeNotes) {
     for (const disc of sorted) {
       const notes = data.notesHistory[disc.id] || []
-      const photos = data.photos[disc.id] || []
-      const hasContent = (opts.includeNotes && notes.length > 0) || photos.length > 0
-
-      if (!hasContent) continue
+      if (notes.length === 0) continue
 
       checkPageBreak(20)
 
@@ -201,96 +216,37 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
       }
 
       // Notes history (as table — all data in a single row per note)
-      if (opts.includeNotes && notes.length > 0) {
-        doc.setFontSize(7)
-        doc.setFont('helvetica', 'bold')
-        doc.setTextColor(60)
-        doc.text('Notes History:', margin + 2, y)
-        doc.setFont('helvetica', 'normal')
-        y += 4
+      doc.setFontSize(7)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(60)
+      doc.text('Notes History:', margin + 2, y)
+      doc.setFont('helvetica', 'normal')
+      y += 4
 
-        const notesTableBody = notes.map((note) => {
-          const name = note.user_rank ? `${note.user_rank} ${note.user_name}` : note.user_name
-          const time = new Date(note.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-          const statusChange = note.old_status && note.new_status
-            ? `${STATUS_LABELS[note.old_status] || note.old_status} → ${STATUS_LABELS[note.new_status] || note.new_status}`
-            : '—'
-          return [time, name, statusChange, note.notes || '—']
-        })
+      const notesTableBody = notes.map((note) => {
+        const name = note.user_rank ? `${note.user_rank} ${note.user_name}` : note.user_name
+        const time = new Date(note.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        const statusChange = note.old_status && note.new_status
+          ? `${STATUS_LABELS[note.old_status] || note.old_status} → ${STATUS_LABELS[note.new_status] || note.new_status}`
+          : '—'
+        return [time, name, statusChange, note.notes || '—']
+      })
 
-        autoTable(doc, {
-          startY: y,
-          margin: { left: margin + 2, right: margin },
-          head: [['Date', 'By', 'Status Change', 'Note']],
-          body: notesTableBody,
-          styles: { fontSize: 6.5, cellPadding: 1.5, textColor: [0, 0, 0] },
-          headStyles: { fillColor: [51, 65, 85], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 6.5 },
-          alternateRowStyles: { fillColor: [248, 250, 252] },
-          columnStyles: {
-            0: { cellWidth: 30 },
-            1: { cellWidth: 35 },
-            2: { cellWidth: 45 },
-          },
-        })
-        y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 3
-      }
-
-      // Photos
-      if (photos.length > 0) {
-        doc.setFontSize(7)
-        doc.setFont('helvetica', 'bold')
-        doc.setTextColor(60)
-        doc.text(`Photos (${photos.length}):`, margin + 2, y)
-        doc.setFont('helvetica', 'normal')
-        y += 4
-
-        const photoWidth = 50 // mm
-        const photoHeight = 38 // mm
-        const photosPerRow = Math.floor(contentWidth / (photoWidth + 4))
-        let xOffset = margin + 2
-
-        for (let i = 0; i < photos.length; i++) {
-          const photo = photos[i]
-
-          // Check if we need a new row
-          if (i > 0 && i % photosPerRow === 0) {
-            y += photoHeight + 6
-            xOffset = margin + 2
-            checkPageBreak(photoHeight + 10)
-          }
-
-          if (photo.dataUrl) {
-            try {
-              // Determine image format from data URL
-              const format = photo.dataUrl.includes('image/png') ? 'PNG' : 'JPEG'
-              doc.addImage(photo.dataUrl, format, xOffset, y, photoWidth, photoHeight)
-            } catch {
-              // If image fails, show placeholder
-              doc.setDrawColor(180)
-              doc.rect(xOffset, y, photoWidth, photoHeight)
-              doc.setFontSize(6)
-              doc.setTextColor(150)
-              doc.text(photo.file_name, xOffset + 2, y + photoHeight / 2)
-            }
-          } else {
-            // No data URL available — show placeholder
-            doc.setDrawColor(180)
-            doc.rect(xOffset, y, photoWidth, photoHeight)
-            doc.setFontSize(6)
-            doc.setTextColor(150)
-            doc.text(photo.file_name, xOffset + 2, y + photoHeight / 2)
-          }
-
-          // Photo label
-          doc.setFontSize(6)
-          doc.setTextColor(120)
-          doc.text(photo.file_name, xOffset, y + photoHeight + 3)
-
-          xOffset += photoWidth + 4
-        }
-
-        y += photoHeight + 8
-      }
+      autoTable(doc, {
+        startY: y,
+        margin: { left: margin + 2, right: margin },
+        head: [['Date', 'By', 'Status Change', 'Note']],
+        body: notesTableBody,
+        styles: { fontSize: 6.5, cellPadding: 1.5, textColor: [0, 0, 0] },
+        headStyles: { fillColor: [51, 65, 85], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 6.5 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: {
+          0: { cellWidth: 30 },
+          1: { cellWidth: 35 },
+          2: { cellWidth: 45 },
+        },
+      })
+      y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 3
 
       // Divider between discrepancies
       doc.setDrawColor(220)
@@ -308,6 +264,53 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
   doc.save(`KMTC_Open_Discrepancies_${dateStr}.pdf`)
 }
 
-function hasAnyPhotos(data: OpenDiscrepanciesData): boolean {
-  return Object.values(data.photos).some((arr) => arr.length > 0)
+// ── Photo rendering helper ──
+
+const OD_PHOTO_THUMB_W = 20 // mm
+const OD_PHOTO_THUMB_H = 15 // mm (4:3 ratio)
+const OD_PHOTO_GAP = 1.5 // mm
+
+function drawPhotosInCell(
+  doc: jsPDF,
+  photos: PhotoForReport[],
+  cellX: number,
+  cellY: number,
+  cellWidth: number,
+) {
+  if (photos.length === 0) return
+
+  const padding = 2
+  const availableWidth = cellWidth - padding * 2
+  const thumbsPerRow = Math.max(1, Math.floor(availableWidth / (OD_PHOTO_THUMB_W + OD_PHOTO_GAP)))
+  let xOffset = cellX + padding
+  let yOffset = cellY + padding
+
+  for (let i = 0; i < photos.length; i++) {
+    if (i > 0 && i % thumbsPerRow === 0) {
+      yOffset += OD_PHOTO_THUMB_H + OD_PHOTO_GAP
+      xOffset = cellX + padding
+    }
+
+    const photo = photos[i]
+    if (photo.dataUrl) {
+      try {
+        const format = photo.dataUrl.includes('image/png') ? 'PNG' : 'JPEG'
+        doc.addImage(photo.dataUrl, format, xOffset, yOffset, OD_PHOTO_THUMB_W, OD_PHOTO_THUMB_H)
+      } catch {
+        doc.setDrawColor(180)
+        doc.rect(xOffset, yOffset, OD_PHOTO_THUMB_W, OD_PHOTO_THUMB_H)
+        doc.setFontSize(5)
+        doc.setTextColor(150)
+        doc.text('img', xOffset + 2, yOffset + OD_PHOTO_THUMB_H / 2)
+      }
+    } else {
+      doc.setDrawColor(180)
+      doc.rect(xOffset, yOffset, OD_PHOTO_THUMB_W, OD_PHOTO_THUMB_H)
+      doc.setFontSize(5)
+      doc.setTextColor(150)
+      doc.text('img', xOffset + 2, yOffset + OD_PHOTO_THUMB_H / 2)
+    }
+
+    xOffset += OD_PHOTO_THUMB_W + OD_PHOTO_GAP
+  }
 }
