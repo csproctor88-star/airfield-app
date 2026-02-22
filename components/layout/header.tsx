@@ -27,17 +27,15 @@ export function Header() {
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
           <Image
-            src="/icons/icon-192.png"
-            alt="AOMS"
-            width={36}
-            height={36}
-            style={{ borderRadius: 9 }}
+            src="/glidepath-logo.png"
+            alt="GLIDEPATH"
+            width={180}
+            height={40}
+            style={{ objectFit: 'contain' }}
+            priority
           />
-          <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.12em' }}>
-            SELFRIDGE ANGB &bull; KMTC
-          </div>
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <button
