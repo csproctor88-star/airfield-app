@@ -5,7 +5,6 @@ import { formatDiscrepancyType } from './open-discrepancies-data'
 
 interface Options {
   generatedBy: string
-  includeNotes: boolean
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -115,22 +114,39 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
 
   sectionHeader('ALL OPEN DISCREPANCIES')
 
+  // Build comment history strings per discrepancy (last 3 notes, newest first)
+  const commentsById: Record<string, string> = {}
+  for (const disc of sorted) {
+    const notes = data.notesHistory[disc.id] || []
+    if (notes.length > 0) {
+      commentsById[disc.id] = notes.map((n) => {
+        const date = new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        const name = n.user_rank ? `${n.user_rank} ${n.user_name}` : n.user_name
+        const text = n.notes || '(status change)'
+        return `${date} - ${name}: ${text}`
+      }).join('\n')
+    } else {
+      commentsById[disc.id] = ''
+    }
+  }
+
   // Render each discrepancy as a table row with inline photo thumbnails
   const tableBody = sorted.map((d) => {
     const reporter = d.reporter_rank ? `${d.reporter_rank} ${d.reporter_name}` : d.reporter_name
     const lastUpdate = d.last_update_at
       ? new Date(d.last_update_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-      : '—'
+      : ''
     return [
       d.display_id,
       d.title,
       formatDiscrepancyType(d.type),
       d.location_text,
-      d.work_order_number || '—',
+      d.work_order_number || '',
       STATUS_LABELS[d.current_status] || d.current_status,
       d.days_open.toString(),
       reporter,
       lastUpdate,
+      commentsById[d.id] || '',
       '', // Photos rendered via didDrawCell
     ]
   })
@@ -140,16 +156,17 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
   autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
-    head: [['ID', 'Title', 'Type', 'Location', 'W/O #', 'Status', 'Days', 'Reported By', 'Last Update', 'Photos']],
+    head: [['ID', 'Title', 'Type', 'Location', 'W/O #', 'Status', 'Days', 'Reported By', 'Last Update', 'Comments', 'Photos']],
     body: tableBody,
     styles: { fontSize: 7, cellPadding: 1.5, textColor: [0, 0, 0] },
     headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
     alternateRowStyles: { fillColor: [245, 245, 245] },
     columnStyles: {
-      0: { cellWidth: 20 },
-      1: { cellWidth: 35 },
+      0: { cellWidth: 18 },
+      1: { cellWidth: 28 },
       6: { cellWidth: 10, halign: 'center' },
-      9: { cellWidth: 40 },
+      9: { cellWidth: 40, fontSize: 6 },
+      10: { cellWidth: 36 },
     },
     didParseCell: (hookData) => {
       if (hookData.section !== 'body') return
@@ -166,93 +183,17 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
       // Set row height for photos (applied to ALL cells so the entire row expands)
       const photos = discPhotos[rowIdx] || []
       if (photos.length > 0) {
-        hookData.cell.styles.minCellHeight = photoCellHeight(photos.length, 40)
+        hookData.cell.styles.minCellHeight = photoCellHeight(photos.length, 36)
       }
     },
     didDrawCell: (hookData) => {
-      if (hookData.section === 'body' && hookData.column.index === 9) {
+      if (hookData.section === 'body' && hookData.column.index === 10) {
         const photos = discPhotos[hookData.row.index] || []
         drawPhotosInCell(doc, photos, hookData.cell.x, hookData.cell.y, hookData.cell.width)
       }
     },
   })
   y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6
-
-  // ── INLINE DETAILS PER DISCREPANCY (notes only — photos are now in the table) ──
-  if (opts.includeNotes) {
-    for (const disc of sorted) {
-      const notes = data.notesHistory[disc.id] || []
-      if (notes.length === 0) continue
-
-      checkPageBreak(20)
-
-      // Discrepancy header
-      doc.setFontSize(9)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(0)
-      doc.text(`${disc.display_id} — ${disc.title}`, margin, y)
-      doc.setFont('helvetica', 'normal')
-      y += 4
-
-      // Metadata line
-      doc.setFontSize(7)
-      doc.setTextColor(80)
-      doc.text(`Type: ${formatDiscrepancyType(disc.type)}  |  Location: ${disc.location_text}  |  NOTAM: ${disc.notam_reference || 'None'}`, margin + 2, y)
-      y += 4
-
-      // Description
-      if (disc.description) {
-        doc.setFontSize(7)
-        doc.setFont('helvetica', 'bold')
-        doc.setTextColor(60)
-        doc.text('Description:', margin + 2, y)
-        doc.setFont('helvetica', 'normal')
-        y += 3
-        const descLines = doc.splitTextToSize(disc.description, contentWidth - 6)
-        doc.text(descLines, margin + 4, y)
-        y += descLines.length * 3 + 1
-      }
-
-      // Notes history (as table — all data in a single row per note)
-      doc.setFontSize(7)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(60)
-      doc.text('Notes History:', margin + 2, y)
-      doc.setFont('helvetica', 'normal')
-      y += 4
-
-      const notesTableBody = notes.map((note) => {
-        const name = note.user_rank ? `${note.user_rank} ${note.user_name}` : note.user_name
-        const time = new Date(note.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-        const statusChange = note.old_status && note.new_status
-          ? `${STATUS_LABELS[note.old_status] || note.old_status} → ${STATUS_LABELS[note.new_status] || note.new_status}`
-          : '—'
-        return [time, name, statusChange, note.notes || '—']
-      })
-
-      autoTable(doc, {
-        startY: y,
-        margin: { left: margin + 2, right: margin },
-        head: [['Date', 'By', 'Status Change', 'Note']],
-        body: notesTableBody,
-        styles: { fontSize: 6.5, cellPadding: 1.5, textColor: [0, 0, 0] },
-        headStyles: { fillColor: [51, 65, 85], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 6.5 },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
-        columnStyles: {
-          0: { cellWidth: 30 },
-          1: { cellWidth: 35 },
-          2: { cellWidth: 45 },
-        },
-      })
-      y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 3
-
-      // Divider between discrepancies
-      doc.setDrawColor(220)
-      doc.setLineWidth(0.2)
-      doc.line(margin, y, margin + contentWidth, y)
-      y += 4
-    }
-  }
 
   // Footer
   addPageNumber()
