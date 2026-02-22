@@ -187,7 +187,7 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
       alternateRowStyles: { fillColor: [245, 245, 245] },
       columnStyles: { 4: { cellWidth: 48 } },
       didParseCell: (hookData) => {
-        if (hookData.section === 'body' && hookData.column.index === 4) {
+        if (hookData.section === 'body') {
           const photos = checkPhotos[hookData.row.index] || []
           if (photos.length > 0) {
             hookData.cell.styles.minCellHeight = PHOTO_THUMB_H + 4
@@ -314,7 +314,7 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
         6: { cellWidth: 48 },
       },
       didParseCell: (hookData) => {
-        if (hookData.section === 'body' && hookData.column.index === 6) {
+        if (hookData.section === 'body') {
           const photos = discPhotos[hookData.row.index] || []
           if (photos.length > 0) {
             hookData.cell.styles.minCellHeight = PHOTO_THUMB_H + 4
@@ -398,12 +398,10 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
             hookData.cell.styles.fontStyle = 'bold'
           }
         }
-        // Set row height for photos
-        if (hookData.column.index === 7) {
-          const photos = obsPhotos[hookData.row.index] || []
-          if (photos.length > 0) {
-            hookData.cell.styles.minCellHeight = PHOTO_THUMB_H + 4
-          }
+        // Set row height for photos (applied to ALL cells so the entire row expands)
+        const photos = obsPhotos[hookData.row.index] || []
+        if (photos.length > 0) {
+          hookData.cell.styles.minCellHeight = PHOTO_THUMB_H + 4
         }
       },
       didDrawCell: (hookData) => {

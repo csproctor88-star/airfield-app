@@ -97,7 +97,10 @@ export async function updateAirfieldStatus(
     if (user?.id) logEntry.changed_by = user.id
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('runway_status_log').insert(logEntry)
+    const { error: logError } = await (supabase as any).from('runway_status_log').insert(logEntry)
+    if (logError) {
+      console.error('Failed to log runway status change:', logError.message)
+    }
   } catch (e) {
     console.error('Failed to log runway status change:', e)
   }

@@ -163,12 +163,10 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
         hookData.cell.styles.fontStyle = 'bold'
       }
 
-      // Set row height for photos
-      if (hookData.column.index === 9) {
-        const photos = discPhotos[rowIdx] || []
-        if (photos.length > 0) {
-          hookData.cell.styles.minCellHeight = OD_PHOTO_THUMB_H + 4
-        }
+      // Set row height for photos (applied to ALL cells so the entire row expands)
+      const photos = discPhotos[rowIdx] || []
+      if (photos.length > 0) {
+        hookData.cell.styles.minCellHeight = OD_PHOTO_THUMB_H + 4
       }
     },
     didDrawCell: (hookData) => {
