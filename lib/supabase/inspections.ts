@@ -24,7 +24,12 @@ export type InspectionRow = {
   temperature_f: number | null
   notes: string | null
   daily_group_id: string | null
+  completed_by_name: string | null
+  completed_by_id: string | null
   completed_at: string | null
+  filed_by_name: string | null
+  filed_by_id: string | null
+  filed_at: string | null
   created_at: string
   updated_at: string
 }
@@ -102,6 +107,11 @@ export async function createInspection(input: {
   temperature_f: number | null
   notes: string | null
   daily_group_id?: string | null
+  completed_by_name?: string | null
+  completed_by_id?: string | null
+  completed_at?: string | null
+  filed_by_name?: string | null
+  filed_by_id?: string | null
 }): Promise<{ data: InspectionRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -152,7 +162,12 @@ export async function createInspection(input: {
     temperature_f: input.temperature_f,
     notes: input.notes,
     daily_group_id: input.daily_group_id || null,
-    completed_at: now.toISOString(),
+    completed_by_name: input.completed_by_name || input.inspector_name,
+    completed_by_id: input.completed_by_id || inspector_id || null,
+    completed_at: input.completed_at || now.toISOString(),
+    filed_by_name: input.filed_by_name || null,
+    filed_by_id: input.filed_by_id || null,
+    filed_at: now.toISOString(),
   }
   if (inspector_id) row.inspector_id = inspector_id
 

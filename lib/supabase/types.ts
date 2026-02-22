@@ -141,7 +141,12 @@ export type Database = {
           temperature_f: number | null
           notes: string | null
           daily_group_id: string | null
+          completed_by_name: string | null
+          completed_by_id: string | null
           completed_at: string | null
+          filed_by_name: string | null
+          filed_by_id: string | null
+          filed_at: string | null
           created_at: string
           updated_at: string
         }

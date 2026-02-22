@@ -19,6 +19,9 @@ interface InspectionData {
   failed_count: number
   na_count: number
   notes: string | null
+  completed_by_name?: string | null
+  filed_by_name?: string | null
+  filed_at?: string | null
 }
 
 export function generateInspectionPdf(inspection: InspectionData) {
@@ -61,7 +64,7 @@ export function generateInspectionPdf(inspection: InspectionData) {
   // ── Info Box ──
   doc.setDrawColor(180)
   doc.setLineWidth(0.3)
-  doc.rect(margin, y, contentWidth, 24)
+  doc.rect(margin, y, contentWidth, 30)
 
   doc.setFontSize(8)
   doc.setTextColor(100)
@@ -69,13 +72,17 @@ export function generateInspectionPdf(inspection: InspectionData) {
   const col2 = margin + contentWidth / 3
   const col3 = margin + (contentWidth * 2) / 3
 
-  doc.text('Inspector:', col1, y + 5)
+  doc.text('Completed By:', col1, y + 5)
   doc.text('Date:', col2, y + 5)
   doc.text('Weather:', col3, y + 5)
 
   doc.setFontSize(9)
   doc.setTextColor(0)
-  doc.text(inspection.inspector_name || 'N/A', col1, y + 10)
+  const completedBy = inspection.completed_by_name || inspection.inspector_name || 'N/A'
+  const completedTime = inspection.completed_at
+    ? new Date(inspection.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    : ''
+  doc.text(`${completedBy}${completedTime ? ` @ ${completedTime}` : ''}`, col1, y + 10)
   const dateStr = inspection.completed_at
     ? new Date(inspection.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : inspection.inspection_date
@@ -86,15 +93,19 @@ export function generateInspectionPdf(inspection: InspectionData) {
   doc.setTextColor(100)
   doc.text('Temperature:', col1, y + 16)
   doc.text('BWC:', col2, y + 16)
-  doc.text('Status:', col3, y + 16)
+  doc.text('Filed By:', col3, y + 16)
 
   doc.setFontSize(9)
   doc.setTextColor(0)
   doc.text(inspection.temperature_f != null ? `${inspection.temperature_f}°F` : 'N/A', col1, y + 21)
   doc.text(inspection.bwc_value || 'N/A', col2, y + 21)
-  doc.text('COMPLETED', col3, y + 21)
+  const filedBy = inspection.filed_by_name || inspection.inspector_name || 'N/A'
+  const filedTime = inspection.filed_at
+    ? new Date(inspection.filed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    : ''
+  doc.text(`${filedBy}${filedTime ? ` @ ${filedTime}` : ''}`, col3, y + 21)
 
-  y += 30
+  y += 36
 
   // ── Results Summary ──
   doc.setFontSize(10)
@@ -388,7 +399,7 @@ export function generateCombinedInspectionPdf(inspections: InspectionData[]) {
   // ── Info Box ──
   doc.setDrawColor(180)
   doc.setLineWidth(0.3)
-  doc.rect(margin, y, contentWidth, 24)
+  doc.rect(margin, y, contentWidth, 30)
 
   doc.setFontSize(8)
   doc.setTextColor(100)
@@ -396,13 +407,17 @@ export function generateCombinedInspectionPdf(inspections: InspectionData[]) {
   const col2 = margin + contentWidth / 3
   const col3 = margin + (contentWidth * 2) / 3
 
-  doc.text('Inspector:', col1, y + 5)
+  doc.text('Filed By:', col1, y + 5)
   doc.text('Date:', col2, y + 5)
   doc.text('Weather:', col3, y + 5)
 
   doc.setFontSize(9)
   doc.setTextColor(0)
-  doc.text(primary.inspector_name || 'N/A', col1, y + 10)
+  const filedBy = primary.filed_by_name || primary.inspector_name || 'N/A'
+  const filedTime = primary.filed_at
+    ? new Date(primary.filed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    : ''
+  doc.text(`${filedBy}${filedTime ? ` @ ${filedTime}` : ''}`, col1, y + 10)
   const dateStr = primary.completed_at
     ? new Date(primary.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : primary.inspection_date
@@ -421,7 +436,25 @@ export function generateCombinedInspectionPdf(inspections: InspectionData[]) {
   doc.text((airfield?.bwc_value || primary.bwc_value) || 'N/A', col2, y + 21)
   doc.text('COMPLETED', col3, y + 21)
 
-  y += 30
+  // Per-half completed by
+  doc.setFontSize(8)
+  doc.setTextColor(100)
+  if (airfield) {
+    const afBy = airfield.completed_by_name || airfield.inspector_name || 'N/A'
+    const afTime = airfield.completed_at
+      ? new Date(airfield.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      : ''
+    doc.text(`Airfield completed by: ${afBy}${afTime ? ` @ ${afTime}` : ''}`, col1, y + 27)
+  }
+  if (lighting) {
+    const ltBy = lighting.completed_by_name || lighting.inspector_name || 'N/A'
+    const ltTime = lighting.completed_at
+      ? new Date(lighting.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      : ''
+    doc.text(`Lighting completed by: ${ltBy}${ltTime ? ` @ ${ltTime}` : ''}`, col2, y + 27)
+  }
+
+  y += 36
 
   // ── Combined Results Summary ──
   doc.setFontSize(10)
@@ -485,6 +518,16 @@ export function generateCombinedInspectionPdf(inspections: InspectionData[]) {
     doc.line(margin, y, margin + contentWidth, y)
     y += 5
     doc.setFont('helvetica', 'normal')
+
+    // Per-half completed by line
+    const inspCompletedBy = insp.completed_by_name || insp.inspector_name || 'N/A'
+    const inspCompletedTime = insp.completed_at
+      ? new Date(insp.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      : ''
+    doc.setFontSize(8)
+    doc.setTextColor(80)
+    doc.text(`Completed by: ${inspCompletedBy}${inspCompletedTime ? ` @ ${inspCompletedTime}` : ''}`, margin, y)
+    y += 5
 
     y = renderInspectionSections(doc, insp, y, margin, contentWidth)
 

@@ -264,8 +264,13 @@ export default function InspectionDetailPage() {
         {/* Info Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12, marginBottom: 12 }}>
           <div>
-            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Inspector</div>
-            <div style={{ fontWeight: 600, marginTop: 2, color: '#38BDF8' }}>{primary.inspector_name || 'Unknown'}</div>
+            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Filed By</div>
+            <div style={{ fontWeight: 600, marginTop: 2, color: '#38BDF8' }}>{primary.filed_by_name || primary.inspector_name || 'Unknown'}</div>
+            {primary.filed_at && (
+              <div style={{ fontSize: 10, color: '#64748B', marginTop: 1 }}>
+                {new Date(primary.filed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
           </div>
           <div>
             <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Date</div>
@@ -412,10 +417,14 @@ export default function InspectionDetailPage() {
           )}
 
           {/* Section-by-Section Detail — grouped by inspection type */}
-          {allInspections.map((insp: { id: string; inspection_type: string; items: InspectionItem[]; notes: string | null; passed_count: number; failed_count: number; na_count: number; total_items: number }) => {
+          {allInspections.map((insp: { id: string; inspection_type: string; items: InspectionItem[]; notes: string | null; passed_count: number; failed_count: number; na_count: number; total_items: number; completed_by_name?: string | null; completed_at?: string | null; filed_by_name?: string | null; filed_at?: string | null; inspector_name?: string | null }) => {
             const items: InspectionItem[] = insp.items || []
             if (items.length === 0 && !insp.notes) return null
             const isExpanded = expandedSections[insp.inspection_type] !== false
+            const completedBy = insp.completed_by_name || insp.inspector_name || 'Unknown'
+            const completedTime = insp.completed_at
+              ? new Date(insp.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+              : null
 
             return (
               <div key={insp.id}>
@@ -461,6 +470,14 @@ export default function InspectionDetailPage() {
                     ▾
                   </span>
                 </button>
+
+                {/* Completed by info */}
+                {isExpanded && (
+                  <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 6, paddingLeft: 4 }}>
+                    Completed by <span style={{ color: '#38BDF8', fontWeight: 600 }}>{completedBy}</span>
+                    {completedTime && <span> at {completedTime}</span>}
+                  </div>
+                )}
 
                 {/* Collapsible content */}
                 {isExpanded && (
