@@ -1,11 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { RefreshCw } from 'lucide-react'
 
-// Header: gradient bg, logo image, sync + status dot
+// Header: gradient bg, logo, "GLIDEPATH" gradient text, sync + status dot
 
 export function Header() {
   const [syncing, setSyncing] = useState(false)
@@ -27,15 +26,39 @@ export function Header() {
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-          <Image
-            src="/glidepath-logo.png"
-            alt="GLIDEPATH"
-            width={180}
-            height={40}
-            style={{ objectFit: 'contain' }}
-            priority
-          />
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 9,
+              background: 'linear-gradient(135deg, #0C4A6E, #38BDF8)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 17,
+              boxShadow: '0 0 16px rgba(56,189,248,0.15)',
+            }}
+          >
+            ✈️
+          </div>
+          <div>
+            <div
+              style={{
+                fontSize: 16,
+                fontWeight: 800,
+                letterSpacing: '-0.02em',
+                background: 'linear-gradient(135deg, #F1F5F9, #38BDF8)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              GLIDEPATH
+            </div>
+            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.12em' }}>
+              SELFRIDGE ANGB &bull; KMTC
+            </div>
+          </div>
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <button
