@@ -55,6 +55,19 @@ export async function updateAirfieldStatus(
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Fetch the single row's ID first
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: existing } = await (supabase as any)
+    .from('airfield_status')
+    .select('id')
+    .limit(1)
+    .single()
+
+  if (!existing?.id) {
+    console.error('Failed to update airfield status: no existing row found')
+    return false
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)
     .from('airfield_status')
@@ -63,7 +76,7 @@ export async function updateAirfieldStatus(
       updated_by: user?.id ?? null,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', (await (supabase as any).from('airfield_status').select('id').limit(1).single()).data?.id)
+    .eq('id', existing.id)
 
   if (error) {
     console.error('Failed to update airfield status:', error.message)
