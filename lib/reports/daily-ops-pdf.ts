@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type { DailyReportData } from './daily-ops-data'
+import { formatDiscrepancyType } from './open-discrepancies-data'
 
 interface Options {
   startDate: string
@@ -224,21 +225,20 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
   } else {
     const tableBody = data.newDiscrepancies.map((d) => {
       const reporter = d.reporter_rank ? `${d.reporter_rank} ${d.reporter_name}` : d.reporter_name
-      return [d.display_id, d.title, d.type, d.location_text, d.severity, d.assigned_shop || '—', reporter]
+      return [d.display_id, d.title, formatDiscrepancyType(d.type), d.location_text, d.assigned_shop || '—', reporter]
     })
 
     autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
-      head: [['ID', 'Title', 'Type', 'Location', 'Severity', 'Shop', 'Reported By']],
+      head: [['ID', 'Title', 'Type', 'Location', 'Shop', 'Reported By']],
       body: tableBody,
       styles: { fontSize: 7, cellPadding: 1.5, textColor: [0, 0, 0] },
       headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
       alternateRowStyles: { fillColor: [245, 245, 245] },
       columnStyles: {
         0: { cellWidth: 22 },
-        1: { cellWidth: 35 },
-        4: { cellWidth: 16 },
+        1: { cellWidth: 40 },
       },
     })
     y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4

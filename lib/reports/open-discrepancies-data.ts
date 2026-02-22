@@ -39,17 +39,38 @@ export interface StatusNote {
   user_rank: string | null
 }
 
+export interface PhotoForReport {
+  id: string
+  storage_path: string
+  file_name: string
+  // Resolved data URL for embedding in PDF
+  dataUrl: string | null
+}
+
 export interface OpenDiscrepanciesData {
   discrepancies: OpenDiscrepancy[]
   summary: {
     total: number
-    bySeverity: Record<string, number>
-    byShop: Record<string, number>
+    byArea: Record<string, number>
     byType: Record<string, number>
     agingOver30: number
   }
   // Keyed by discrepancy ID, last 3 notes
   notesHistory: Record<string, StatusNote[]>
+  // Keyed by discrepancy ID, photos with data URLs
+  photos: Record<string, PhotoForReport[]>
+}
+
+// ── Helpers ──
+
+/** Convert snake_case or underscore-separated type to Title Case (e.g. fod_hazard → FOD Hazard) */
+export function formatDiscrepancyType(raw: string): string {
+  // Handle known acronyms
+  const acronyms = new Set(['fod', 'rsc', 'rcr', 'bash', 'ife', 'notam', 'bwc'])
+  return raw
+    .split('_')
+    .map((word) => acronyms.has(word.toLowerCase()) ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
 }
 
 // ── Data Fetching ──
@@ -59,7 +80,7 @@ export async function fetchOpenDiscrepanciesData(
 ): Promise<OpenDiscrepanciesData> {
   const supabase = createClient()
   if (!supabase) {
-    return { discrepancies: [], summary: { total: 0, bySeverity: {}, byShop: {}, byType: {}, agingOver30: 0 }, notesHistory: {} }
+    return { discrepancies: [], summary: { total: 0, byArea: {}, byType: {}, agingOver30: 0 }, notesHistory: {}, photos: {} }
   }
 
   const now = new Date()
@@ -168,16 +189,66 @@ export async function fetchOpenDiscrepanciesData(
     }
   }
 
+  // Fetch photos for all discrepancies
+  const photos: Record<string, PhotoForReport[]> = {}
+  if (discIds.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: photoRows } = await (supabase as any)
+      .from('photos')
+      .select('id, discrepancy_id, storage_path, file_name')
+      .in('discrepancy_id', discIds)
+      .order('created_at', { ascending: true })
+
+    if (photoRows) {
+      for (const row of photoRows as { id: string; discrepancy_id: string; storage_path: string; file_name: string }[]) {
+        if (!photos[row.discrepancy_id]) photos[row.discrepancy_id] = []
+
+        let dataUrl: string | null = null
+        if (row.storage_path.startsWith('data:')) {
+          // Already a data URL
+          dataUrl = row.storage_path
+        } else {
+          // Try to get public URL from storage
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data: urlData } = (supabase as any).storage
+              .from('photos')
+              .getPublicUrl(row.storage_path)
+            if (urlData?.publicUrl) {
+              // Fetch the image and convert to data URL for PDF embedding
+              try {
+                const response = await fetch(urlData.publicUrl)
+                if (response.ok) {
+                  const blob = await response.blob()
+                  dataUrl = await blobToDataUrl(blob)
+                }
+              } catch {
+                // Network error fetching image
+              }
+            }
+          } catch {
+            // Storage not available
+          }
+        }
+
+        photos[row.discrepancy_id].push({
+          id: row.id,
+          storage_path: row.storage_path,
+          file_name: row.file_name,
+          dataUrl,
+        })
+      }
+    }
+  }
+
   // Compute summary stats
-  const bySeverity: Record<string, number> = {}
-  const byShop: Record<string, number> = {}
+  const byArea: Record<string, number> = {}
   const byType: Record<string, number> = {}
   let agingOver30 = 0
 
   for (const d of discrepancies) {
-    bySeverity[d.severity] = (bySeverity[d.severity] || 0) + 1
-    const shop = d.assigned_shop || 'Unassigned'
-    byShop[shop] = (byShop[shop] || 0) + 1
+    const area = d.location_text || 'Unknown'
+    byArea[area] = (byArea[area] || 0) + 1
     byType[d.type] = (byType[d.type] || 0) + 1
     if (d.days_open > 30) agingOver30++
   }
@@ -186,11 +257,20 @@ export async function fetchOpenDiscrepanciesData(
     discrepancies,
     summary: {
       total: discrepancies.length,
-      bySeverity,
-      byShop,
+      byArea,
       byType,
       agingOver30,
     },
     notesHistory,
+    photos,
   }
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
 }
