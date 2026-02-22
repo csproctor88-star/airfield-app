@@ -216,11 +216,9 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
     const time = fmtTime(r.created_at)
     const name = r.user_rank ? `${r.user_rank} ${r.user_name}` : (r.user_name || 'Unknown')
 
-    // Runway status change (always show — includes open/suspended/closed)
-    if (r.new_runway_status) {
-      const change = r.old_runway_status !== r.new_runway_status
-        ? `${(r.old_runway_status || '').toUpperCase()} → ${(r.new_runway_status || '').toUpperCase()}`
-        : `${(r.new_runway_status || '').toUpperCase()} (no change)`
+    // Runway status change (open/suspended/closed)
+    if (r.old_runway_status !== r.new_runway_status) {
+      const change = `${(r.old_runway_status || '').toUpperCase()} → ${(r.new_runway_status || '').toUpperCase()}`
       statusHistoryRows.push([time, 'Runway Status', change, name, r.reason || '—'])
     }
 

@@ -93,13 +93,23 @@ export async function updateAirfieldStatus(
       old_advisory_text: existing.advisory_text,
       new_advisory_text: updates.advisory_text !== undefined ? updates.advisory_text : existing.advisory_text,
       reason: reason || null,
+      created_at: new Date().toISOString(),
     }
     if (user?.id) logEntry.changed_by = user.id
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: logError } = await (supabase as any).from('runway_status_log').insert(logEntry)
+    let { error: logError } = await (supabase as any).from('runway_status_log').insert(logEntry)
+
+    // Retry without changed_by if FK constraint fails (profile may not exist yet)
+    if (logError && user?.id) {
+      console.warn('Runway log insert failed, retrying without changed_by:', logError.message)
+      delete logEntry.changed_by
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;({ error: logError } = await (supabase as any).from('runway_status_log').insert(logEntry))
+    }
+
     if (logError) {
-      console.error('Failed to log runway status change:', logError.message)
+      console.error('Failed to log runway status change:', logError.message, logError)
     }
   } catch (e) {
     console.error('Failed to log runway status change:', e)
