@@ -166,7 +166,7 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
       // Set row height for photos (applied to ALL cells so the entire row expands)
       const photos = discPhotos[rowIdx] || []
       if (photos.length > 0) {
-        hookData.cell.styles.minCellHeight = OD_PHOTO_THUMB_H + 4
+        hookData.cell.styles.minCellHeight = photoCellHeight(photos.length, 40)
       }
     },
     didDrawCell: (hookData) => {
@@ -267,6 +267,16 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
 const OD_PHOTO_THUMB_W = 20 // mm
 const OD_PHOTO_THUMB_H = 15 // mm (4:3 ratio)
 const OD_PHOTO_GAP = 1.5 // mm
+const OD_PHOTO_PADDING = 2 // mm
+
+/** Compute the minimum cell height needed to display N photos in a cell of given width. */
+function photoCellHeight(numPhotos: number, cellWidth: number): number {
+  if (numPhotos === 0) return 0
+  const available = cellWidth - OD_PHOTO_PADDING * 2
+  const thumbsPerRow = Math.max(1, Math.floor(available / (OD_PHOTO_THUMB_W + OD_PHOTO_GAP)))
+  const rows = Math.ceil(numPhotos / thumbsPerRow)
+  return OD_PHOTO_PADDING * 2 + rows * OD_PHOTO_THUMB_H + Math.max(0, rows - 1) * OD_PHOTO_GAP
+}
 
 function drawPhotosInCell(
   doc: jsPDF,

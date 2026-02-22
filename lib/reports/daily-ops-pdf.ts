@@ -190,7 +190,7 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
         if (hookData.section === 'body') {
           const photos = checkPhotos[hookData.row.index] || []
           if (photos.length > 0) {
-            hookData.cell.styles.minCellHeight = PHOTO_THUMB_H + 4
+            hookData.cell.styles.minCellHeight = photoCellHeight(photos.length, 48)
           }
         }
       },
@@ -317,7 +317,7 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
         if (hookData.section === 'body') {
           const photos = discPhotos[hookData.row.index] || []
           if (photos.length > 0) {
-            hookData.cell.styles.minCellHeight = PHOTO_THUMB_H + 4
+            hookData.cell.styles.minCellHeight = photoCellHeight(photos.length, 48)
           }
         }
       },
@@ -401,7 +401,7 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
         // Set row height for photos (applied to ALL cells so the entire row expands)
         const photos = obsPhotos[hookData.row.index] || []
         if (photos.length > 0) {
-          hookData.cell.styles.minCellHeight = PHOTO_THUMB_H + 4
+          hookData.cell.styles.minCellHeight = photoCellHeight(photos.length, 48)
         }
       },
       didDrawCell: (hookData) => {
@@ -429,6 +429,16 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
 const PHOTO_THUMB_W = 20 // mm
 const PHOTO_THUMB_H = 15 // mm (4:3 ratio)
 const PHOTO_GAP = 1.5 // mm
+const PHOTO_PADDING = 2 // mm
+
+/** Compute the minimum cell height needed to display N photos in a cell of given width. */
+function photoCellHeight(numPhotos: number, cellWidth: number): number {
+  if (numPhotos === 0) return 0
+  const available = cellWidth - PHOTO_PADDING * 2
+  const thumbsPerRow = Math.max(1, Math.floor(available / (PHOTO_THUMB_W + PHOTO_GAP)))
+  const rows = Math.ceil(numPhotos / thumbsPerRow)
+  return PHOTO_PADDING * 2 + rows * PHOTO_THUMB_H + Math.max(0, rows - 1) * PHOTO_GAP
+}
 
 function drawPhotosInCell(
   doc: jsPDF,
