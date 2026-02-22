@@ -42,24 +42,24 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // Persist advisory changes
-  const setAdvisory = useCallback(async (a: Advisory | null) => {
+  const setAdvisory = useCallback((a: Advisory | null) => {
     setAdvisoryLocal(a)
-    await updateAirfieldStatus({
+    updateAirfieldStatus({
       advisory_type: a?.type ?? null,
       advisory_text: a?.text ?? null,
     })
   }, [])
 
   // Persist active runway changes
-  const setActiveRunway = useCallback(async (r: '01' | '19') => {
+  const setActiveRunway = useCallback((r: '01' | '19') => {
     setActiveRunwayLocal(r)
-    await updateAirfieldStatus({ active_runway: r })
+    updateAirfieldStatus({ active_runway: r })
   }, [])
 
   // Persist runway status changes
-  const setRunwayStatus = useCallback(async (s: 'open' | 'suspended' | 'closed') => {
+  const setRunwayStatus = useCallback((s: 'open' | 'suspended' | 'closed') => {
     setRunwayStatusLocal(s)
-    await updateAirfieldStatus({ runway_status: s })
+    updateAirfieldStatus({ runway_status: s })
   }, [])
 
   // Don't render children until initial load completes to avoid flash of defaults

@@ -1,4 +1,5 @@
 import { createClient } from './client'
+import { logActivity } from './activity'
 
 export interface AirfieldStatus {
   id: string
@@ -49,24 +50,22 @@ export async function fetchAirfieldStatus(): Promise<AirfieldStatus | null> {
 
 export async function updateAirfieldStatus(
   updates: Partial<Pick<AirfieldStatus, 'advisory_type' | 'advisory_text' | 'active_runway' | 'runway_status'>>,
+  reason?: string
 ): Promise<boolean> {
   const supabase = createClient()
   if (!supabase) return false
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Fetch the single row's ID first
+  // Get the current row before updating (for audit log)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: existing } = await (supabase as any)
     .from('airfield_status')
-    .select('id')
+    .select('*')
     .limit(1)
     .single()
 
-  if (!existing?.id) {
-    console.error('Failed to update airfield status: no existing row found')
-    return false
-  }
+  if (!existing) return false
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)
@@ -83,8 +82,51 @@ export async function updateAirfieldStatus(
     return false
   }
 
-  // Audit log entry is created automatically by the
-  // trg_log_airfield_status database trigger (see migrations).
+  // Log to activity_log so changes appear in Recent Activity on the dashboard
+  try {
+    if (updates.runway_status && updates.runway_status !== existing.runway_status) {
+      logActivity('updated', 'runway_status', existing.id,
+        `${existing.runway_status.toUpperCase()} → ${updates.runway_status.toUpperCase()}`)
+    }
+    if (updates.active_runway && updates.active_runway !== existing.active_runway) {
+      logActivity('updated', 'active_runway', existing.id,
+        `RWY ${existing.active_runway} → RWY ${updates.active_runway}`)
+    }
+    if (updates.advisory_type !== undefined &&
+        (updates.advisory_type !== existing.advisory_type || updates.advisory_text !== existing.advisory_text)) {
+      const oldAdv = existing.advisory_type || 'None'
+      const newAdv = updates.advisory_type || 'None'
+      logActivity('updated', 'advisory', existing.id,
+        oldAdv !== newAdv ? `${oldAdv} → ${newAdv}` : `${newAdv} (text updated)`)
+    }
+  } catch {
+    // Activity logging is non-critical
+  }
+
+  // Insert audit log entry
+  try {
+    const logEntry: Record<string, unknown> = {
+      old_runway_status: existing.runway_status,
+      new_runway_status: updates.runway_status ?? existing.runway_status,
+      old_active_runway: existing.active_runway,
+      new_active_runway: updates.active_runway ?? existing.active_runway,
+      old_advisory_type: existing.advisory_type,
+      new_advisory_type: updates.advisory_type !== undefined ? updates.advisory_type : existing.advisory_type,
+      old_advisory_text: existing.advisory_text,
+      new_advisory_text: updates.advisory_text !== undefined ? updates.advisory_text : existing.advisory_text,
+      reason: reason || null,
+    }
+    if (user?.id) logEntry.changed_by = user.id
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: logError } = await (supabase as any).from('runway_status_log').insert(logEntry)
+    if (logError) {
+      console.error('Failed to log runway status change:', logError.message)
+    }
+  } catch (e) {
+    console.error('Failed to log runway status change:', e)
+  }
+
   return true
 }
 
