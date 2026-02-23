@@ -173,31 +173,25 @@ export async function addInstallationMember(
 }
 
 // ── Create a new installation (via API route to bypass RLS) ──
-export async function createInstallation(name: string, icao?: string, userId?: string): Promise<Installation | null> {
-  try {
-    const res = await fetch('/api/installations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, icao, userId }),
-    })
+// Throws with a descriptive message on failure so the UI can display it.
+export async function createInstallation(name: string, icao?: string, userId?: string): Promise<Installation> {
+  const res = await fetch('/api/installations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, icao, userId }),
+  })
 
-    const json = await res.json().catch(() => null)
+  const json = await res.json().catch(() => null)
 
-    if (!res.ok) {
-      console.error('Failed to create installation:', res.status, json?.error ?? json)
-      return null
-    }
-
-    if (!json || !json.id) {
-      console.error('Installation API returned unexpected response:', json)
-      return null
-    }
-
-    return json as Installation
-  } catch (err) {
-    console.error('Failed to create installation (network error):', err)
-    return null
+  if (!res.ok) {
+    throw new Error(json?.error ?? `Server error ${res.status}`)
   }
+
+  if (!json || !json.id) {
+    throw new Error('Server returned an unexpected response')
+  }
+
+  return json as Installation
 }
 
 // ── Get user's primary installation ID (from profile or first membership) ──

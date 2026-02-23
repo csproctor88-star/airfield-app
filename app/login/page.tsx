@@ -91,12 +91,6 @@ export default function LoginPage() {
           addingNewInstallation ? (newInstallationIcao.trim() || undefined) : undefined,
         )
 
-        if (!inst) {
-          setError('Failed to set up installation. Check browser console for details.')
-          setLoading(false)
-          return
-        }
-
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
