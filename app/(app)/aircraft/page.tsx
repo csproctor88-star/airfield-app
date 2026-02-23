@@ -68,7 +68,7 @@ function AcnPcnPanel({
   const acnWeight = weightMode === 'max' ? acn.max_wt : acn.min_wt
 
   return (
-    <div style={{ padding: 16, background: 'rgba(4,7,12,0.6)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.08)' }}>
+    <div style={{ padding: 16, background: 'var(--color-detail-box-bg)', borderRadius: 10, border: '1px solid var(--color-border-mid)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
         <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--color-text-1)' }}>ACN/PCN Comparison</div>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
@@ -78,7 +78,7 @@ function AcnPcnPanel({
 
       {/* Weight Mode Toggle */}
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 14, color: 'var(--color-text-3)', marginBottom: 4, fontWeight: 600 }}>WEIGHT CONDITION</div>
+        <div style={{ fontSize: 14, color: 'var(--color-detail-box-label)', marginBottom: 4, fontWeight: 700 }}>WEIGHT CONDITION</div>
         <div style={{ display: 'flex', gap: 6 }}>
           {(['max', 'min'] as const).map(m => (
             <button
@@ -88,7 +88,7 @@ function AcnPcnPanel({
                 flex: 1,
                 padding: '6px 0',
                 borderRadius: 6,
-                border: weightMode === m ? '1px solid rgba(56,189,248,0.4)' : '1px solid rgba(148,163,184,0.15)',
+                border: weightMode === m ? '1px solid rgba(56,189,248,0.4)' : '1px solid var(--color-border-mid)',
                 background: weightMode === m ? 'rgba(56,189,248,0.1)' : 'transparent',
                 color: weightMode === m ? 'var(--color-accent)' : 'var(--color-text-2)',
                 fontSize: 15,
@@ -105,7 +105,7 @@ function AcnPcnPanel({
 
       {/* Pavement Type */}
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 14, color: 'var(--color-text-3)', marginBottom: 4, fontWeight: 600 }}>PAVEMENT TYPE</div>
+        <div style={{ fontSize: 14, color: 'var(--color-detail-box-label)', marginBottom: 4, fontWeight: 700 }}>PAVEMENT TYPE</div>
         <div style={{ display: 'flex', gap: 6 }}>
           {(['rigid', 'flexible'] as const).map(t => (
             <button
@@ -115,7 +115,7 @@ function AcnPcnPanel({
                 flex: 1,
                 padding: '6px 0',
                 borderRadius: 6,
-                border: pavementType === t ? '1px solid rgba(56,189,248,0.4)' : '1px solid rgba(148,163,184,0.15)',
+                border: pavementType === t ? '1px solid rgba(56,189,248,0.4)' : '1px solid var(--color-border-mid)',
                 background: pavementType === t ? 'rgba(56,189,248,0.1)' : 'transparent',
                 color: pavementType === t ? 'var(--color-accent)' : 'var(--color-text-2)',
                 fontSize: 15,
@@ -131,7 +131,7 @@ function AcnPcnPanel({
 
       {/* Subgrade */}
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 14, color: 'var(--color-text-3)', marginBottom: 4, fontWeight: 600 }}>
+        <div style={{ fontSize: 14, color: 'var(--color-detail-box-label)', marginBottom: 4, fontWeight: 700 }}>
           SUBGRADE STRENGTH
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
@@ -147,7 +147,7 @@ function AcnPcnPanel({
                   flex: 1,
                   padding: '6px 2px',
                   borderRadius: 6,
-                  border: subgrade === s ? '1px solid rgba(56,189,248,0.4)' : '1px solid rgba(148,163,184,0.15)',
+                  border: subgrade === s ? '1px solid rgba(56,189,248,0.4)' : '1px solid var(--color-border-mid)',
                   background: subgrade === s ? 'rgba(56,189,248,0.1)' : 'transparent',
                   color: subgrade === s ? 'var(--color-accent)' : 'var(--color-text-2)',
                   fontSize: 13,
@@ -165,7 +165,7 @@ function AcnPcnPanel({
 
       {/* PCN Input */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 14, color: 'var(--color-text-3)', marginBottom: 4, fontWeight: 600 }}>YOUR AIRFIELD PCN</div>
+        <div style={{ fontSize: 14, color: 'var(--color-detail-box-label)', marginBottom: 4, fontWeight: 700 }}>YOUR AIRFIELD PCN</div>
         <input
           type="number"
           value={pcnValue}
@@ -175,8 +175,8 @@ function AcnPcnPanel({
             width: '100%',
             padding: '8px 10px',
             borderRadius: 6,
-            border: '1px solid rgba(148,163,184,0.15)',
-            background: 'rgba(15,23,42,0.6)',
+            border: '1px solid var(--color-border-mid)',
+            background: 'var(--color-bg-inset)',
             color: 'var(--color-text-1)',
             fontSize: 17,
             outline: 'none',
@@ -196,18 +196,18 @@ function AcnPcnPanel({
         <div style={{ fontSize: 15, fontWeight: 700, color: resultColor, marginBottom: 2 }}>
           {resultText}
         </div>
-        <div style={{ fontSize: 14, color: 'var(--color-text-3)' }}>
+        <div style={{ fontSize: 14, color: 'var(--color-detail-box-value)' }}>
           ACN = {acnValue.toFixed(1)} ({weightMode} wt, {pavementType}, subgrade {subgrade})
         </div>
       </div>
 
       {/* Full ACN Table */}
       <div style={{ marginTop: 12 }}>
-        <div style={{ fontSize: 14, color: 'var(--color-text-3)', marginBottom: 6, fontWeight: 600 }}>ALL ACN VALUES</div>
+        <div style={{ fontSize: 14, color: 'var(--color-detail-box-label)', marginBottom: 6, fontWeight: 700 }}>ALL ACN VALUES</div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', fontSize: 14, borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ color: 'var(--color-text-3)' }}>
+              <tr style={{ color: 'var(--color-detail-box-label)' }}>
                 <th style={{ textAlign: 'left', padding: '3px 4px', fontWeight: 600 }}>Cond.</th>
                 <th style={{ textAlign: 'center', padding: '3px 4px', fontWeight: 600 }}>A</th>
                 <th style={{ textAlign: 'center', padding: '3px 4px', fontWeight: 600 }}>B</th>
@@ -220,8 +220,8 @@ function AcnPcnPanel({
                 ['rigid', 'flex'].map(p => {
                   const label = `${w === 'max' ? 'Max' : 'Min'} ${p === 'rigid' ? 'Rigid' : 'Flex'}`
                   return (
-                    <tr key={`${w}_${p}`} style={{ borderTop: '1px solid rgba(148,163,184,0.06)' }}>
-                      <td style={{ padding: '3px 4px', color: 'var(--color-text-2)', fontWeight: 600 }}>{label}</td>
+                    <tr key={`${w}_${p}`} style={{ borderTop: '1px solid var(--color-border)' }}>
+                      <td style={{ padding: '3px 4px', color: 'var(--color-detail-box-label)', fontWeight: 600 }}>{label}</td>
                       {(['A', 'B', 'C', 'D'] as const).map(s => {
                         const k = `${w}_${p}_${s}` as keyof typeof acn
                         const v = acn[k]
@@ -232,7 +232,7 @@ function AcnPcnPanel({
                             style={{
                               textAlign: 'center',
                               padding: '3px 4px',
-                              color: isSelected ? 'var(--color-accent)' : 'var(--color-text-4)',
+                              color: isSelected ? 'var(--color-accent)' : 'var(--color-detail-box-value)',
                               fontWeight: isSelected ? 700 : 400,
                               background: isSelected ? 'var(--color-border)' : 'transparent',
                               borderRadius: 3,
@@ -403,7 +403,7 @@ function AircraftDetailCard({
                 gap: 5,
                 padding: '7px 0',
                 borderRadius: 6,
-                border: isFavorite ? '1px solid rgba(250,204,21,0.3)' : '1px solid rgba(148,163,184,0.15)',
+                border: isFavorite ? '1px solid rgba(250,204,21,0.3)' : '1px solid var(--color-border-mid)',
                 background: isFavorite ? 'rgba(250,204,21,0.08)' : 'transparent',
                 color: isFavorite ? 'var(--color-warning)' : 'var(--color-text-2)',
                 fontSize: 15,
@@ -424,7 +424,7 @@ function AircraftDetailCard({
                 gap: 5,
                 padding: '7px 0',
                 borderRadius: 6,
-                border: showAcn ? '1px solid rgba(34,211,153,0.3)' : '1px solid rgba(148,163,184,0.15)',
+                border: showAcn ? '1px solid rgba(34,211,153,0.3)' : '1px solid var(--color-border-mid)',
                 background: showAcn ? 'rgba(34,211,153,0.08)' : 'transparent',
                 color: showAcn ? 'var(--color-success)' : 'var(--color-text-2)',
                 fontSize: 15,
@@ -655,7 +655,7 @@ export default function AircraftPage() {
               onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
               style={{
                 background: showFavoritesOnly ? 'rgba(250,204,21,0.1)' : 'none',
-                border: showFavoritesOnly ? '1px solid rgba(250,204,21,0.3)' : '1px solid rgba(148,163,184,0.15)',
+                border: showFavoritesOnly ? '1px solid rgba(250,204,21,0.3)' : '1px solid var(--color-border-mid)',
                 borderRadius: 8,
                 padding: '6px 8px',
                 cursor: 'pointer',
@@ -674,7 +674,7 @@ export default function AircraftPage() {
             onClick={() => setShowFilters(!showFilters)}
             style={{
               background: showFilters ? 'rgba(56,189,248,0.1)' : 'none',
-              border: showFilters ? '1px solid rgba(56,189,248,0.3)' : '1px solid rgba(148,163,184,0.15)',
+              border: showFilters ? '1px solid rgba(56,189,248,0.3)' : '1px solid var(--color-border-mid)',
               borderRadius: 8,
               padding: '6px 8px',
               cursor: 'pointer',
