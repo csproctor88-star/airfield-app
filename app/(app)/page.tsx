@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchCurrentWeather, type WeatherResult } from '@/lib/weather'
 import { fetchNavaidStatuses, updateNavaidStatus, type NavaidStatus } from '@/lib/supabase/navaids'
 import { useDashboard } from '@/lib/dashboard-context'
+import { useInstallation } from '@/lib/installation-context'
 
 // --- Weather emoji mapping ---
 function weatherEmoji(conditions: string): string {
@@ -98,6 +99,7 @@ type CurrentStatusData = {
 
 export default function HomePage() {
   const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus } = useDashboard()
+  const { installationId } = useInstallation()
   const [time, setTime] = useState('')
   const [weather, setWeather] = useState<WeatherResult | null>(null)
   const [weatherLoaded, setWeatherLoaded] = useState(false)
@@ -168,12 +170,12 @@ export default function HomePage() {
     const supabase = createClient()
     if (!supabase) return
 
-    const data = await fetchNavaidStatuses()
+    const data = await fetchNavaidStatuses(installationId)
     setNavaids(data)
     const notes: Record<string, string> = {}
     data.forEach((n) => { notes[n.id] = n.notes || '' })
     setNavaidNotes(notes)
-  }, [])
+  }, [installationId])
 
   useEffect(() => { loadNavaids() }, [loadNavaids])
 
@@ -185,38 +187,46 @@ export default function HomePage() {
 
       // Latest inspection with BWC
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: insp } = await (supabase as any)
+      let inspQuery = (supabase as any)
         .from('inspections')
         .select('bwc_value, completed_at')
         .not('bwc_value', 'is', null)
         .order('completed_at', { ascending: false })
         .limit(1)
+      if (installationId) inspQuery = inspQuery.eq('base_id', installationId)
+      const { data: insp } = await inspQuery
 
       // Latest completed inspection
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: latestInsp } = await (supabase as any)
+      let latestInspQuery = (supabase as any)
         .from('inspections')
         .select('completed_at')
         .eq('status', 'completed')
         .order('completed_at', { ascending: false })
         .limit(1)
+      if (installationId) latestInspQuery = latestInspQuery.eq('base_id', installationId)
+      const { data: latestInsp } = await latestInspQuery
 
       // Latest check of any type
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: lastCheck } = await (supabase as any)
+      let lastCheckQuery = (supabase as any)
         .from('airfield_checks')
         .select('check_type, completed_at')
         .order('completed_at', { ascending: false })
         .limit(1)
+      if (installationId) lastCheckQuery = lastCheckQuery.eq('base_id', installationId)
+      const { data: lastCheck } = await lastCheckQuery
 
       // Latest RSC check
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: rscCheck } = await (supabase as any)
+      let rscQuery = (supabase as any)
         .from('airfield_checks')
         .select('data, completed_at')
         .eq('check_type', 'rsc')
         .order('completed_at', { ascending: false })
         .limit(1)
+      if (installationId) rscQuery = rscQuery.eq('base_id', installationId)
+      const { data: rscCheck } = await rscQuery
 
       const bwc = insp?.[0]?.bwc_value || null
       const checkType = lastCheck?.[0]?.check_type?.toUpperCase() || null
@@ -243,7 +253,7 @@ export default function HomePage() {
       }))
     }
     loadCurrentStatus()
-  }, [])
+  }, [installationId])
 
   // --- Load Activity Feed ---
   useEffect(() => {
@@ -252,20 +262,24 @@ export default function HomePage() {
       if (!supabase) return
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      let activityQuery = (supabase as any)
         .from('activity_log')
         .select('id, action, entity_type, entity_display_id, created_at, user_id, profiles:user_id(name, rank)')
         .order('created_at', { ascending: false })
         .limit(20)
+      if (installationId) activityQuery = activityQuery.eq('base_id', installationId)
+      const { data, error } = await activityQuery
 
       if (error) {
         // Try without join
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: fallback } = await (supabase as any)
+        let fallbackQuery = (supabase as any)
           .from('activity_log')
           .select('*')
           .order('created_at', { ascending: false })
           .limit(20)
+        if (installationId) fallbackQuery = fallbackQuery.eq('base_id', installationId)
+        const { data: fallback } = await fallbackQuery
 
         if (fallback) {
           setActivity(fallback.map((r: Record<string, unknown>) => ({
@@ -286,7 +300,7 @@ export default function HomePage() {
       }
     }
     loadActivity()
-  }, [])
+  }, [installationId])
 
   // --- NAVAID status toggle handler ---
   async function handleNavaidToggle(navaid: NavaidStatus, newStatus: 'green' | 'yellow' | 'red') {

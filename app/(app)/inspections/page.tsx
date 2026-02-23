@@ -89,10 +89,10 @@ export default function InspectionsPage() {
       setLoading(false)
       return
     }
-    const data = await fetchInspections()
+    const data = await fetchInspections(installationId)
     setLiveInspections(data)
     setLoading(false)
-  }, [])
+  }, [installationId])
 
   useEffect(() => {
     loadHistory()

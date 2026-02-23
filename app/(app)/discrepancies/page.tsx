@@ -6,6 +6,7 @@ import { DiscrepancyCard } from '@/components/discrepancies/discrepancy-card'
 import { fetchDiscrepancies, type DiscrepancyRow } from '@/lib/supabase/discrepancies'
 import { DEMO_DISCREPANCIES } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
+import { useInstallation } from '@/lib/installation-context'
 
 const FILTERS = ['open', 'completed', 'cancelled', 'all'] as const
 const FILTER_LABELS: Record<string, string> = {
@@ -16,6 +17,7 @@ const FILTER_LABELS: Record<string, string> = {
 }
 
 export default function DiscrepanciesPage() {
+  const { installationId } = useInstallation()
   const [filter, setFilter] = useState<string>('open')
   const [over30Only, setOver30Only] = useState(false)
   const [search, setSearch] = useState('')
@@ -32,7 +34,7 @@ export default function DiscrepanciesPage() {
         return
       }
 
-      const data = await fetchDiscrepancies()
+      const data = await fetchDiscrepancies(installationId)
       if (data.length === 0) {
         // Could be empty table or fetch error — check if Supabase is reachable
         setDiscrepancies([])
@@ -42,7 +44,7 @@ export default function DiscrepanciesPage() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [installationId])
 
   // Compute days_open for live data
   const daysOpen = (createdAt: string) => {
