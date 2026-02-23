@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
-import type { Installation, InstallationRunway } from '@/lib/supabase/types'
+import type { Installation, InstallationRunway, UserRole } from '@/lib/supabase/types'
 import { fetchInstallation, fetchInstallationRunways, fetchInstallationAreas, getUserPrimaryInstallationId, fetchInstallations } from '@/lib/supabase/installations'
 import { createClient } from '@/lib/supabase/client'
 
@@ -23,6 +23,8 @@ export interface InstallationContextValue {
   ceShops: string[]
   /** Switch to a different installation */
   switchInstallation: (installationId: string) => Promise<void>
+  /** Current user's role */
+  userRole: UserRole | null
   /** Whether the context has finished initial loading */
   loaded: boolean
 }
@@ -36,6 +38,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
   const [runways, setRunways] = useState<InstallationRunway[]>([])
   const [areas, setAreas] = useState<string[]>([])
   const [ceShops, setCeShops] = useState<string[]>([])
+  const [userRole, setUserRole] = useState<UserRole | null>(null)
   const [loaded, setLoaded] = useState(false)
 
   // Load a specific installation's configuration
@@ -77,18 +80,44 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
     }
   }, [loadInstallationConfig])
 
+  // Roles that can switch between installations
+  const MULTI_INSTALL_ROLES: UserRole[] = ['airfield_manager', 'sys_admin']
+
   // Initial load
   useEffect(() => {
     async function init() {
-      // Fetch all available installations
-      const installations = await fetchInstallations()
-      setAllInstallations(installations)
+      // Load user role from profile
+      let role: UserRole | null = null
+      const supabase = createClient()
+      if (supabase) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', user.id)
+              .single()
+            if (profile?.role) role = profile.role as UserRole
+          }
+        } catch {
+          // No auth — keep null
+        }
+      }
+      setUserRole(role)
+
+      // Only fetch all installations for privileged roles
+      if (role && MULTI_INSTALL_ROLES.includes(role)) {
+        const installations = await fetchInstallations()
+        setAllInstallations(installations)
+      }
 
       // Determine which installation to load
       let primaryId = await getUserPrimaryInstallationId()
 
       // Fallback: use Selfridge if no primary set, or first available installation
       if (!primaryId) {
+        const installations = await fetchInstallations()
         primaryId = installations.length > 0 ? installations[0].id : SELFRIDGE_INSTALLATION_ID
       }
 
@@ -98,6 +127,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
     }
 
     init()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadInstallationConfig])
 
   // Don't render children until initial load completes
@@ -105,7 +135,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
 
   return (
     <InstallationContext.Provider
-      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, switchInstallation, loaded }}
+      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, switchInstallation, userRole, loaded }}
     >
       {children}
     </InstallationContext.Provider>

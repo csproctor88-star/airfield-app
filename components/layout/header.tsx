@@ -10,7 +10,7 @@ import { useInstallation } from '@/lib/installation-context'
 export function Header() {
   const [syncing, setSyncing] = useState(false)
   const [showSwitcher, setShowSwitcher] = useState(false)
-  const { currentInstallation, allInstallations, switchInstallation } = useInstallation()
+  const { currentInstallation, allInstallations, switchInstallation, userRole } = useInstallation()
 
   const handleSync = () => {
     setSyncing(true)
@@ -18,10 +18,9 @@ export function Header() {
   }
 
   const icao = currentInstallation?.icao || ''
-  const displayName = currentInstallation
-    ? currentInstallation.name.replace(/ Air National Guard Base| Air Force Base| Air Reserve Base/i, '').trim()
-    : ''
-  const hasMultipleInstallations = allInstallations.length > 1
+  const displayName = currentInstallation?.name || ''
+  const canSwitchInstallation = allInstallations.length > 1
+    && (userRole === 'airfield_manager' || userRole === 'sys_admin')
 
   return (
     <div
@@ -66,9 +65,9 @@ export function Header() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.12em' }}>
-                {displayName ? `${displayName.toUpperCase()} \u2022 ${icao}` : 'AIRFIELD OPS'}
+                {displayName ? `${displayName.toUpperCase()}${icao ? ` \u2022 ${icao}` : ''}` : 'AIRFIELD OPS'}
               </div>
-              {hasMultipleInstallations && (
+              {canSwitchInstallation && (
                 <button
                   onClick={(e) => {
                     e.preventDefault()
@@ -123,7 +122,7 @@ export function Header() {
       </div>
 
       {/* Installation switcher dropdown */}
-      {showSwitcher && hasMultipleInstallations && (
+      {showSwitcher && canSwitchInstallation && (
         <div
           style={{
             marginTop: 8,
