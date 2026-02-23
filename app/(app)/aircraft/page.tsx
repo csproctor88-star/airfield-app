@@ -310,7 +310,7 @@ function AircraftDetailCard({
           }
         </div>
 
-        {/* Name & Manufacturer */}
+        {/* Name */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             fontSize: 17,
@@ -322,11 +322,6 @@ function AircraftDetailCard({
           }}>
             {ac.aircraft}
           </div>
-          {ac.group_index && (
-            <div style={{ fontSize: 14, color: 'var(--color-text-3)' }}>
-              Group {ac.group_index}
-            </div>
-          )}
         </div>
 
         {/* Expand Arrow */}
@@ -342,10 +337,10 @@ function AircraftDetailCard({
           borderTop: '1px solid rgba(148,163,184,0.06)',
           padding: '12px 14px',
         }}>
-          {/* Manufacturer */}
-          {ac.manufacturer && (
+          {/* Manufacturer & Group */}
+          {(ac.manufacturer || ac.group_index) && (
             <div style={{ fontSize: 15, color: 'var(--color-text-2)', marginBottom: 10 }}>
-              {ac.manufacturer}
+              {ac.manufacturer}{ac.manufacturer && ac.group_index ? ' · ' : ''}{ac.group_index ? `Group ${ac.group_index}` : ''}
             </div>
           )}
 
@@ -362,13 +357,13 @@ function AircraftDetailCard({
             ].map(({ label, value }) => (
               <div key={label} style={{
                 flex: 1,
-                background: 'rgba(4,7,12,0.5)',
+                background: 'var(--color-detail-box-bg)',
                 padding: '5px 6px',
                 borderRadius: 5,
                 textAlign: 'center',
               }}>
-                <div style={{ fontSize: 15, color: 'var(--color-text-4)', fontWeight: 600 }}>{value}</div>
-                <div style={{ fontSize: 13, color: 'var(--color-text-3)', fontWeight: 600 }}>{label}</div>
+                <div style={{ fontSize: 15, color: 'var(--color-detail-box-value)', fontWeight: 600 }}>{value}</div>
+                <div style={{ fontSize: 13, color: 'var(--color-detail-box-label)', fontWeight: 700 }}>{label}</div>
               </div>
             ))}
           </div>
@@ -383,7 +378,7 @@ function AircraftDetailCard({
                 borderRadius: 8,
                 overflow: 'hidden',
                 marginBottom: 14,
-                background: 'rgba(4,7,12,0.5)',
+                background: 'var(--color-bg-inset)',
               }}
             >
               <Image
@@ -485,10 +480,10 @@ function AircraftDetailCard({
             {ac.gear_config && (
               <div style={{
                 fontSize: 14,
-                color: 'var(--color-text-2)',
+                color: 'var(--color-detail-box-value)',
                 marginBottom: 8,
                 padding: '6px 8px',
-                background: 'rgba(4,7,12,0.4)',
+                background: 'var(--color-detail-box-bg)',
                 borderRadius: 5,
                 lineHeight: 1.5,
               }}>
@@ -567,11 +562,11 @@ function DetailGrid({ items }: { items: { label: string; value: string }[] }) {
       {items.map(({ label, value }) => (
         <div key={label} style={{
           padding: '5px 8px',
-          background: 'rgba(4,7,12,0.4)',
+          background: 'var(--color-detail-box-bg)',
           borderRadius: 5,
         }}>
-          <div style={{ fontSize: 13, color: 'var(--color-text-4)', fontWeight: 600 }}>{label}</div>
-          <div style={{ fontSize: 13, color: 'var(--color-text-3)', fontWeight: 600 }}>{value}</div>
+          <div style={{ fontSize: 13, color: 'var(--color-detail-box-label)', fontWeight: 700 }}>{label}</div>
+          <div style={{ fontSize: 13, color: 'var(--color-detail-box-value)', fontWeight: 600 }}>{value}</div>
         </div>
       ))}
     </div>
