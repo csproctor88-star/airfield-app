@@ -3,25 +3,25 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { RefreshCw, ChevronDown } from 'lucide-react'
-import { useBase } from '@/lib/base-context'
+import { useInstallation } from '@/lib/installation-context'
 
-// Header: gradient bg, logo, base name + ICAO, sync + status dot
+// Header: gradient bg, logo, installation name + ICAO, sync + status dot
 
 export function Header() {
   const [syncing, setSyncing] = useState(false)
   const [showSwitcher, setShowSwitcher] = useState(false)
-  const { currentBase, allBases, switchBase } = useBase()
+  const { currentInstallation, allInstallations, switchInstallation } = useInstallation()
 
   const handleSync = () => {
     setSyncing(true)
     setTimeout(() => setSyncing(false), 1500)
   }
 
-  const icao = currentBase?.icao || ''
-  const displayName = currentBase
-    ? currentBase.name.replace(/ Air National Guard Base| Air Force Base| Air Reserve Base/i, '').trim()
+  const icao = currentInstallation?.icao || ''
+  const displayName = currentInstallation
+    ? currentInstallation.name.replace(/ Air National Guard Base| Air Force Base| Air Reserve Base/i, '').trim()
     : ''
-  const hasMultipleBases = allBases.length > 1
+  const hasMultipleInstallations = allInstallations.length > 1
 
   return (
     <div
@@ -68,7 +68,7 @@ export function Header() {
               <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.12em' }}>
                 {displayName ? `${displayName.toUpperCase()} \u2022 ${icao}` : 'AIRFIELD OPS'}
               </div>
-              {hasMultipleBases && (
+              {hasMultipleInstallations && (
                 <button
                   onClick={(e) => {
                     e.preventDefault()
@@ -122,8 +122,8 @@ export function Header() {
         </div>
       </div>
 
-      {/* Base switcher dropdown */}
-      {showSwitcher && hasMultipleBases && (
+      {/* Installation switcher dropdown */}
+      {showSwitcher && hasMultipleInstallations && (
         <div
           style={{
             marginTop: 8,
@@ -133,29 +133,29 @@ export function Header() {
             overflow: 'hidden',
           }}
         >
-          {allBases.map((base) => (
+          {allInstallations.map((inst) => (
             <button
-              key={base.id}
+              key={inst.id}
               onClick={() => {
-                switchBase(base.id)
+                switchInstallation(inst.id)
                 setShowSwitcher(false)
               }}
               style={{
                 display: 'block',
                 width: '100%',
                 padding: '10px 14px',
-                background: base.id === currentBase?.id ? 'rgba(56,189,248,0.08)' : 'transparent',
+                background: inst.id === currentInstallation?.id ? 'rgba(56,189,248,0.08)' : 'transparent',
                 border: 'none',
                 borderBottom: '1px solid rgba(56,189,248,0.05)',
                 cursor: 'pointer',
                 textAlign: 'left',
-                color: base.id === currentBase?.id ? '#38BDF8' : '#94A3B8',
+                color: inst.id === currentInstallation?.id ? '#38BDF8' : '#94A3B8',
                 fontSize: 13,
-                fontWeight: base.id === currentBase?.id ? 700 : 500,
+                fontWeight: inst.id === currentInstallation?.id ? 700 : 500,
               }}
             >
-              {base.name}
-              <span style={{ fontSize: 10, marginLeft: 8, opacity: 0.6 }}>{base.icao}</span>
+              {inst.name}
+              <span style={{ fontSize: 10, marginLeft: 8, opacity: 0.6 }}>{inst.icao}</span>
             </button>
           ))}
         </div>

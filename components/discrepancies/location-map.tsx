@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
-import { useBase } from '@/lib/base-context'
+import { useInstallation } from '@/lib/installation-context'
 import { isMapboxConfigured } from '@/lib/utils'
 
 type Props = {
@@ -18,7 +18,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
   const map = useRef<mapboxgl.Map | null>(null)
   const marker = useRef<mapboxgl.Marker | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
-  const { runways } = useBase()
+  const { runways } = useInstallation()
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const mapboxReady = isMapboxConfigured()

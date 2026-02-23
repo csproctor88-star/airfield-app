@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/lib/supabase/client'
 import { USER_ROLES } from '@/lib/constants'
-import { useBase } from '@/lib/base-context'
+import { useInstallation } from '@/lib/installation-context'
 import type { UserRole } from '@/lib/supabase/types'
 
 // "More" menu — full module list with role-gated entries
@@ -25,7 +25,7 @@ const modules = [
 ]
 
 export default function MorePage() {
-  const { currentBase } = useBase()
+  const { currentInstallation } = useInstallation()
   const [canManageUsers, setCanManageUsers] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
@@ -54,7 +54,7 @@ export default function MorePage() {
         .eq('id', user.id)
         .single()
 
-      const role = (profile?.role ?? 'observer') as UserRole
+      const role = (profile?.role ?? 'read_only') as UserRole
       const config = USER_ROLES[role]
       setCanManageUsers(config?.canManageUsers ?? false)
       setLoaded(true)
@@ -116,7 +116,7 @@ export default function MorePage() {
           Glidepath
         </div>
         <div style={{ fontSize: 11, color: '#64748B' }}>
-          v2.1.0 &bull; {currentBase?.unit || 'Airfield Ops'}
+          v2.1.0 &bull; {currentInstallation?.unit || 'Airfield Ops'}
         </div>
       </div>
     </div>

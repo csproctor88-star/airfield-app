@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from 'react'
 import type { DiscrepancyRow } from '@/lib/supabase/discrepancies'
 import { DISCREPANCY_TYPES, ALLOWED_TRANSITIONS, STATUS_CONFIG, CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS } from '@/lib/constants'
-import { useBase } from '@/lib/base-context'
+import { useInstallation } from '@/lib/installation-context'
 
 // ─── Generic overlay ────────────────────────────────────────────────
 
@@ -152,7 +152,7 @@ export function StatusUpdateModal({
   onSaved: (updated: DiscrepancyRow) => void
   onDeleted?: () => void
 }) {
-  const { ceShops } = useBase()
+  const { ceShops } = useInstallation()
   const allowed = ALLOWED_TRANSITIONS[discrepancy.status] || []
   const [saving, setSaving] = useState(false)
   const [newStatus, setNewStatus] = useState('')

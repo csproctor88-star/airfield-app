@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
-import { useBase } from '@/lib/base-context'
+import { useInstallation } from '@/lib/installation-context'
 import { isMapboxConfigured } from '@/lib/utils'
 import {
   type LatLon,
@@ -234,14 +234,14 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
   const [mapLoaded, setMapLoaded] = useState(false)
   const [visibility, setVisibility] = useState<Record<ToggleKey, boolean>>(getDefaultVisibility)
   const [legendOpen, setLegendOpen] = useState(false)
-  const { runways: baseRunways } = useBase()
+  const { runways: installationRunways } = useInstallation()
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const mapboxReady = isMapboxConfigured()
 
   const getRwy = useCallback((): RunwayGeometry => {
-    if (baseRunways.length > 0) {
-      const rwy = baseRunways[0]
+    if (installationRunways.length > 0) {
+      const rwy = installationRunways[0]
       return getRunwayGeometry({
         end1: { latitude: rwy.end1_latitude ?? 0, longitude: rwy.end1_longitude ?? 0 },
         end2: { latitude: rwy.end2_latitude ?? 0, longitude: rwy.end2_longitude ?? 0 },
@@ -256,7 +256,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
       length_ft: 9000,
       width_ft: 150,
     })
-  }, [baseRunways])
+  }, [installationRunways])
 
   const handleClick = useCallback(
     (e: mapboxgl.MapMouseEvent) => {

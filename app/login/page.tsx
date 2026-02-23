@@ -1,31 +1,68 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { fetchBases } from '@/lib/supabase/bases'
-import type { Base } from '@/lib/supabase/types'
-import { Plane } from 'lucide-react'
+import { fetchInstallations } from '@/lib/supabase/installations'
+import { USER_ROLES } from '@/lib/constants'
+import type { Installation } from '@/lib/supabase/types'
+import type { UserRole } from '@/lib/supabase/types'
+import { Plane, ChevronDown } from 'lucide-react'
+
+// Military ranks: A1C through Lt Col
+const RANK_OPTIONS = [
+  'A1C', 'SrA', 'SSgt', 'TSgt', 'MSgt', 'SMSgt', 'CMSgt',
+  '2d Lt', '1st Lt', 'Capt', 'Maj', 'Lt Col',
+] as const
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [rank, setRank] = useState('')
+  const [role, setRole] = useState<UserRole>('read_only')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
-  const [bases, setBases] = useState<Base[]>([])
-  const [selectedBaseId, setSelectedBaseId] = useState<string>('')
+  const [installations, setInstallations] = useState<Installation[]>([])
+  const [selectedInstallationId, setSelectedInstallationId] = useState<string>('')
+  const [installationSearch, setInstallationSearch] = useState('')
+  const [showInstallationDropdown, setShowInstallationDropdown] = useState(false)
+  const installationRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
-  // Load available bases for signup base selection
+  // Load available installations for signup selection
   useEffect(() => {
-    fetchBases().then((b) => {
-      setBases(b)
-      if (b.length > 0) setSelectedBaseId(b[0].id)
+    fetchInstallations().then((b) => {
+      setInstallations(b)
+      if (b.length > 0) setSelectedInstallationId(b[0].id)
     })
   }, [])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (installationRef.current && !installationRef.current.contains(e.target as Node)) {
+        setShowInstallationDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const filteredInstallations = useMemo(() => {
+    if (!installationSearch.trim()) return installations
+    const q = installationSearch.toLowerCase()
+    return installations.filter(i =>
+      i.name.toLowerCase().includes(q) ||
+      i.icao.toLowerCase().includes(q) ||
+      (i.location || '').toLowerCase().includes(q)
+    )
+  }, [installations, installationSearch])
+
+  const selectedInstallation = installations.find(i => i.id === selectedInstallationId)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,13 +81,23 @@ export default function LoginPage() {
       }
 
       if (mode === 'signup') {
+        if (!firstName.trim() || !lastName.trim()) {
+          setError('First name and last name are required')
+          setLoading(false)
+          return
+        }
+
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
-              name: name || undefined,
-              primary_base_id: selectedBaseId || undefined,
+              first_name: firstName.trim(),
+              last_name: lastName.trim(),
+              name: `${firstName.trim()} ${lastName.trim()}`,
+              rank: rank || undefined,
+              role: role,
+              primary_base_id: selectedInstallationId || undefined,
             },
           },
         })
@@ -91,11 +138,17 @@ export default function LoginPage() {
     setSuccess(null)
   }
 
-  // Dynamic header from first base or fallback
-  const displayBase = bases.length > 0 ? bases[0] : null
-  const headerText = displayBase
-    ? `${displayBase.name.replace(/ Air National Guard Base| Air Force Base| Air Reserve Base/i, '').toUpperCase()} \u2022 ${displayBase.icao} \u2022 ${(displayBase.unit || '').toUpperCase()}`
+  // Dynamic header from first installation or fallback
+  const displayInstallation = installations.length > 0 ? installations[0] : null
+  const headerText = displayInstallation
+    ? `${displayInstallation.name.replace(/ Air National Guard Base| Air Force Base| Air Reserve Base/i, '').toUpperCase()} \u2022 ${displayInstallation.icao} \u2022 ${(displayInstallation.unit || '').toUpperCase()}`
     : 'AIRFIELD OPS'
+
+  // Role options from USER_ROLES
+  const roleOptions = Object.entries(USER_ROLES).map(([key, cfg]) => ({
+    value: key as UserRole,
+    label: cfg.label,
+  }))
 
   return (
     <div
@@ -160,34 +213,148 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit}>
             {mode === 'signup' && (
               <>
+                {/* Rank */}
                 <div style={{ marginBottom: 12 }}>
-                  <span className="section-label">Name</span>
-                  <input
-                    type="text"
+                  <span className="section-label">Rank</span>
+                  <select
                     className="input-dark"
-                    placeholder="Full name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    autoComplete="name"
-                  />
+                    value={rank}
+                    onChange={(e) => setRank(e.target.value)}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">Select rank...</option>
+                    {RANK_OPTIONS.map(r => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
                 </div>
-                {bases.length > 1 && (
-                  <div style={{ marginBottom: 12 }}>
-                    <span className="section-label">Installation</span>
-                    <select
+
+                {/* First Name & Last Name */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                  <div>
+                    <span className="section-label">First Name</span>
+                    <input
+                      type="text"
                       className="input-dark"
-                      value={selectedBaseId}
-                      onChange={(e) => setSelectedBaseId(e.target.value)}
-                      style={{ width: '100%' }}
-                    >
-                      {bases.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name} ({b.icao})
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="First name"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      required
+                      autoComplete="given-name"
+                      style={{ width: '100%', boxSizing: 'border-box' }}
+                    />
                   </div>
-                )}
+                  <div>
+                    <span className="section-label">Last Name</span>
+                    <input
+                      type="text"
+                      className="input-dark"
+                      placeholder="Last name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      required
+                      autoComplete="family-name"
+                      style={{ width: '100%', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Installation (searchable dropdown) */}
+                <div style={{ marginBottom: 12 }} ref={installationRef}>
+                  <span className="section-label">Installation</span>
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowInstallationDropdown(!showInstallationDropdown)}
+                      className="input-dark"
+                      style={{
+                        width: '100%', boxSizing: 'border-box',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        cursor: 'pointer', textAlign: 'left',
+                      }}
+                    >
+                      <span style={{ color: selectedInstallation ? '#F1F5F9' : '#64748B' }}>
+                        {selectedInstallation
+                          ? `${selectedInstallation.name.replace(/ Air National Guard Base| Air Force Base| Air Reserve Base/i, '')} (${selectedInstallation.icao})`
+                          : 'Select installation...'}
+                      </span>
+                      <ChevronDown size={14} color="#64748B" />
+                    </button>
+
+                    {showInstallationDropdown && (
+                      <div style={{
+                        position: 'absolute', top: '100%', left: 0, right: 0,
+                        zIndex: 100, marginTop: 4,
+                        background: '#0F1729',
+                        border: '1px solid rgba(56,189,248,0.15)',
+                        borderRadius: 8,
+                        maxHeight: 200, overflowY: 'auto',
+                      }}>
+                        {/* Search input */}
+                        <div style={{ padding: 8, borderBottom: '1px solid rgba(56,189,248,0.06)' }}>
+                          <input
+                            type="text"
+                            placeholder="Search installations..."
+                            value={installationSearch}
+                            onChange={(e) => setInstallationSearch(e.target.value)}
+                            className="input-dark"
+                            style={{ width: '100%', boxSizing: 'border-box', fontSize: 12 }}
+                            autoFocus
+                          />
+                        </div>
+                        {filteredInstallations.length === 0 ? (
+                          <div style={{ padding: '12px 14px', fontSize: 12, color: '#64748B' }}>
+                            No installations found
+                          </div>
+                        ) : (
+                          filteredInstallations.map(inst => {
+                            const shortName = inst.name.replace(/ Air National Guard Base| Air Force Base| Air Reserve Base/i, '').trim()
+                            const stateAbbr = inst.location?.split(',').pop()?.trim() || ''
+                            return (
+                              <button
+                                key={inst.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedInstallationId(inst.id)
+                                  setShowInstallationDropdown(false)
+                                  setInstallationSearch('')
+                                }}
+                                style={{
+                                  display: 'block', width: '100%', padding: '10px 14px',
+                                  background: inst.id === selectedInstallationId ? 'rgba(56,189,248,0.08)' : 'transparent',
+                                  border: 'none',
+                                  borderBottom: '1px solid rgba(56,189,248,0.04)',
+                                  cursor: 'pointer', textAlign: 'left',
+                                  color: inst.id === selectedInstallationId ? '#38BDF8' : '#E2E8F0',
+                                  fontSize: 13, fontFamily: 'inherit',
+                                  fontWeight: inst.id === selectedInstallationId ? 700 : 500,
+                                }}
+                              >
+                                {shortName}{stateAbbr ? `, ${stateAbbr}` : ''}
+                                <span style={{ fontSize: 10, marginLeft: 8, opacity: 0.5 }}>{inst.icao}</span>
+                              </button>
+                            )
+                          })
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Role */}
+                <div style={{ marginBottom: 12 }}>
+                  <span className="section-label">Role</span>
+                  <select
+                    className="input-dark"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value as UserRole)}
+                    style={{ width: '100%' }}
+                  >
+                    {roleOptions.map(r => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                </div>
               </>
             )}
             <div style={{ marginBottom: 12 }}>

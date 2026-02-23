@@ -7,7 +7,7 @@ import { fetchDiscrepancyTrendsData, type DiscrepancyTrendsData, type TrendPerio
 import { generateDiscrepancyTrendsPdf } from '@/lib/reports/discrepancy-trends-pdf'
 import { formatDiscrepancyType } from '@/lib/reports/open-discrepancies-data'
 import { getInspectorName } from '@/lib/supabase/inspections'
-import { useBase } from '@/lib/base-context'
+import { useInstallation } from '@/lib/installation-context'
 
 type ViewState = 'picker' | 'loading' | 'preview'
 
@@ -20,7 +20,7 @@ const PERIODS: { value: TrendPeriod; label: string }[] = [
 
 export default function DiscrepancyTrendsPage() {
   const router = useRouter()
-  const { baseId } = useBase()
+  const { installationId } = useInstallation()
 
   const [period, setPeriod] = useState<TrendPeriod>('30d')
   const [viewState, setViewState] = useState<ViewState>('picker')
@@ -32,7 +32,7 @@ export default function DiscrepancyTrendsPage() {
     setViewState('loading')
 
     const [reportData, inspector] = await Promise.all([
-      fetchDiscrepancyTrendsData(period, baseId),
+      fetchDiscrepancyTrendsData(period, installationId),
       getInspectorName(),
     ])
 

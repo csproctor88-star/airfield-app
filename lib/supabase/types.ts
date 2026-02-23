@@ -89,6 +89,8 @@ export type Database = {
           id: string
           email: string
           name: string
+          first_name: string | null
+          last_name: string | null
           rank: string | null
           role: UserRole
           organization: string | null
@@ -373,12 +375,12 @@ export type Database = {
 // Convenience type aliases
 export type UserRole =
   | 'airfield_manager'
-  | 'am_ncoic'
-  | 'am_tech'
-  | 'ce_shop'
-  | 'wing_safety'
+  | 'namo'
+  | 'amops'
+  | 'ces'
+  | 'safety'
   | 'atc'
-  | 'observer'
+  | 'read_only'
   | 'sys_admin'
 
 export type Severity = 'critical' | 'high' | 'medium' | 'low'
@@ -400,11 +402,11 @@ export type InspectionItem = {
 }
 
 // Table row shorthand types
-export type Base = Database['public']['Tables']['bases']['Row']
-export type BaseRunway = Database['public']['Tables']['base_runways']['Row']
-export type BaseNavaid = Database['public']['Tables']['base_navaids']['Row']
-export type BaseArea = Database['public']['Tables']['base_areas']['Row']
-export type BaseMember = Database['public']['Tables']['base_members']['Row']
+export type Installation = Database['public']['Tables']['bases']['Row']
+export type InstallationRunway = Database['public']['Tables']['base_runways']['Row']
+export type InstallationNavaid = Database['public']['Tables']['base_navaids']['Row']
+export type InstallationArea = Database['public']['Tables']['base_areas']['Row']
+export type InstallationMember = Database['public']['Tables']['base_members']['Row']
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type Discrepancy = Database['public']['Tables']['discrepancies']['Row']
 export type Photo = Database['public']['Tables']['photos']['Row']

@@ -6,7 +6,7 @@ import { ArrowLeft, FileText, Download, Calendar, Loader2 } from 'lucide-react'
 import { fetchDailyReportData, type DailyReportData } from '@/lib/reports/daily-ops-data'
 import { generateDailyOpsPdf } from '@/lib/reports/daily-ops-pdf'
 import { getInspectorName } from '@/lib/supabase/inspections'
-import { useBase } from '@/lib/base-context'
+import { useInstallation } from '@/lib/installation-context'
 
 type DateMode = 'single' | 'range'
 type ViewState = 'picker' | 'loading' | 'preview'
@@ -39,7 +39,7 @@ function formatDate(dateStr: string) {
 
 export default function DailyOpsPage() {
   const router = useRouter()
-  const { baseId } = useBase()
+  const { installationId } = useInstallation()
   const today = new Date().toISOString().split('T')[0]
 
   const [dateMode, setDateMode] = useState<DateMode>('single')
@@ -62,7 +62,7 @@ export default function DailyOpsPage() {
     const endUTC = end.toISOString()
 
     const [reportData, inspector] = await Promise.all([
-      fetchDailyReportData(startUTC, endUTC, baseId),
+      fetchDailyReportData(startUTC, endUTC, installationId),
       getInspectorName(),
     ])
 

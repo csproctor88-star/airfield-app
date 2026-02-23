@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { useBase } from '@/lib/base-context'
+import { useInstallation } from '@/lib/installation-context'
 import { fetchObstructionEvaluation, deleteObstructionEvaluation, parsePhotoPaths, type ObstructionRow } from '@/lib/supabase/obstructions'
 import { PhotoViewerModal } from '@/components/discrepancies/modals'
 
@@ -35,7 +35,7 @@ const SURFACE_COLORS: Record<string, string> = {
 export default function ObstructionDetailPage() {
   const router = useRouter()
   const params = useParams()
-  const { currentBase } = useBase()
+  const { currentInstallation } = useInstallation()
   const id = params.id as string
   const [evaluation, setEvaluation] = useState<ObstructionRow | null>(null)
   const [loading, setLoading] = useState(true)
@@ -225,7 +225,7 @@ export default function ObstructionDetailPage() {
           <div>
             <span style={{ color: '#64748B', fontSize: 11 }}>Ground Elevation MSL</span>
             <div style={{ color: '#F1F5F9', fontWeight: 700, fontFamily: 'monospace' }}>
-              {evaluation.object_elevation_msl?.toFixed(0) ?? (currentBase?.elevation_msl ?? 580)} ft
+              {evaluation.object_elevation_msl?.toFixed(0) ?? (currentInstallation?.elevation_msl ?? 580)} ft
             </div>
           </div>
           <div>

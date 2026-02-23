@@ -446,11 +446,11 @@ export const REGULATION_SOURCE_SECTIONS = [
 
 export const USER_ROLES = {
   airfield_manager: { label: 'Airfield Manager', canCreate: true, canManageUsers: true },
-  am_ncoic:         { label: 'AM NCOIC', canCreate: true, canManageUsers: false },
-  am_tech:          { label: 'AM Technician', canCreate: true, canManageUsers: false },
-  ce_shop:          { label: 'CE Shop', canCreate: false, canManageUsers: false },
-  wing_safety:      { label: 'Wing Safety', canCreate: false, canManageUsers: false },
-  atc:              { label: 'ATC / RAPCON', canCreate: false, canManageUsers: false },
-  observer:         { label: 'Observer', canCreate: false, canManageUsers: false },
+  namo:             { label: 'NAMO', canCreate: true, canManageUsers: true },
+  amops:            { label: 'AMOPS', canCreate: true, canManageUsers: false },
+  ces:              { label: 'CES', canCreate: false, canManageUsers: false },
+  safety:           { label: 'Safety', canCreate: false, canManageUsers: false },
+  atc:              { label: 'ATC', canCreate: false, canManageUsers: false },
+  read_only:        { label: 'Read Only', canCreate: false, canManageUsers: false },
   sys_admin:        { label: 'System Admin', canCreate: true, canManageUsers: true },
 } as const

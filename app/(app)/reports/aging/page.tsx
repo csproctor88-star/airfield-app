@@ -6,7 +6,7 @@ import { ArrowLeft, Clock, Download, Loader2 } from 'lucide-react'
 import { fetchAgingDiscrepanciesData, type AgingDiscrepanciesData } from '@/lib/reports/aging-discrepancies-data'
 import { generateAgingDiscrepanciesPdf } from '@/lib/reports/aging-discrepancies-pdf'
 import { getInspectorName } from '@/lib/supabase/inspections'
-import { useBase } from '@/lib/base-context'
+import { useInstallation } from '@/lib/installation-context'
 
 const SEVERITY_LABELS: Record<string, string> = {
   critical: 'Critical',
@@ -18,7 +18,7 @@ const SEVERITY_LABELS: Record<string, string> = {
 
 export default function AgingDiscrepanciesPage() {
   const router = useRouter()
-  const { baseId } = useBase()
+  const { installationId } = useInstallation()
 
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<AgingDiscrepanciesData | null>(null)
@@ -29,7 +29,7 @@ export default function AgingDiscrepanciesPage() {
     let cancelled = false
     async function generate() {
       const [reportData, inspector] = await Promise.all([
-        fetchAgingDiscrepanciesData(baseId),
+        fetchAgingDiscrepanciesData(installationId),
         getInspectorName(),
       ])
       if (cancelled) return

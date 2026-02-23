@@ -4,7 +4,7 @@ import { Suspense, useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
-import { useBase } from '@/lib/base-context'
+import { useInstallation } from '@/lib/installation-context'
 import type { LatLon, RunwayGeometry } from '@/lib/calculations/geometry'
 import { getRunwayGeometry, pointToRunwayRelation, distanceFt } from '@/lib/calculations/geometry'
 import {
@@ -49,10 +49,10 @@ function ObstructionsContent() {
   const searchParams = useSearchParams()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
-  const { baseId, currentBase, runways } = useBase()
+  const { installationId, currentInstallation, runways } = useInstallation()
 
   // Airfield elevation from base config (fallback to 580 for Selfridge)
-  const airfieldElevMSL = currentBase?.elevation_msl ?? 580
+  const airfieldElevMSL = currentInstallation?.elevation_msl ?? 580
 
   // Edit mode
   const editId = searchParams.get('edit')
@@ -328,7 +328,7 @@ function ObstructionsContent() {
       ({ data, error } = await createObstructionEvaluation({
         runway_class: 'B',
         ...evaluationPayload,
-        base_id: baseId,
+        base_id: installationId,
       }))
     }
 

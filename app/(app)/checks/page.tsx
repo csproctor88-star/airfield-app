@@ -16,7 +16,7 @@ import {
 import type { CheckType } from '@/lib/supabase/types'
 import { createCheck, uploadCheckPhoto } from '@/lib/supabase/checks'
 import { createClient } from '@/lib/supabase/client'
-import { useBase } from '@/lib/base-context'
+import { useInstallation } from '@/lib/installation-context'
 
 const CheckLocationMap = dynamic(
   () => import('@/components/discrepancies/location-map'),
@@ -32,7 +32,7 @@ type LocalComment = {
 
 export default function AirfieldChecksPage() {
   const router = useRouter()
-  const { baseId, areas: baseAreas } = useBase()
+  const { installationId, areas: installationAreas } = useInstallation()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const [checkType, setCheckType] = useState<CheckType | ''>('')
@@ -187,7 +187,7 @@ export default function AirfieldChecksPage() {
       comments,
       latitude: selectedLat,
       longitude: selectedLng,
-      base_id: baseId,
+      base_id: installationId,
     })
 
     if (error || !created) {
@@ -569,7 +569,7 @@ export default function AirfieldChecksPage() {
             Areas Checked
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {baseAreas.map((area) => {
+            {installationAreas.map((area) => {
               const selected = areas.includes(area)
               return (
                 <button

@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS base_members (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   base_id     UUID NOT NULL REFERENCES bases(id) ON DELETE CASCADE,
   user_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  role        TEXT NOT NULL DEFAULT 'observer',
+  role        TEXT NOT NULL DEFAULT 'read_only',
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE(base_id, user_id)
 );
