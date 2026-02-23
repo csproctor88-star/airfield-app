@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { fetchInstallations } from '@/lib/supabase/installations'
+import { fetchInstallations, createInstallation } from '@/lib/supabase/installations'
 import { USER_ROLES } from '@/lib/constants'
 import type { Installation } from '@/lib/supabase/types'
 import type { UserRole } from '@/lib/supabase/types'
@@ -30,6 +30,9 @@ export default function LoginPage() {
   const [selectedInstallationId, setSelectedInstallationId] = useState<string>('')
   const [installationSearch, setInstallationSearch] = useState('')
   const [showInstallationDropdown, setShowInstallationDropdown] = useState(false)
+  const [addingNewInstallation, setAddingNewInstallation] = useState(false)
+  const [newInstallationName, setNewInstallationName] = useState('')
+  const [newInstallationIcao, setNewInstallationIcao] = useState('')
   const installationRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
@@ -87,6 +90,28 @@ export default function LoginPage() {
           return
         }
 
+        // If adding a new installation, create it first
+        let installationId = selectedInstallationId
+        if (addingNewInstallation && newInstallationName.trim()) {
+          const newInst = await createInstallation(
+            newInstallationName.trim(),
+            newInstallationIcao.trim() || undefined,
+          )
+          if (newInst) {
+            installationId = newInst.id
+            // Add to local list so it appears in dropdown for session
+            setInstallations(prev => [...prev, newInst])
+            setSelectedInstallationId(newInst.id)
+            setAddingNewInstallation(false)
+            setNewInstallationName('')
+            setNewInstallationIcao('')
+          } else {
+            setError('Failed to create installation. Please try again.')
+            setLoading(false)
+            return
+          }
+        }
+
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -97,7 +122,7 @@ export default function LoginPage() {
               name: `${firstName.trim()} ${lastName.trim()}`,
               rank: rank || undefined,
               role: role,
-              primary_base_id: selectedInstallationId || undefined,
+              primary_base_id: installationId || undefined,
             },
           },
         })
@@ -259,86 +284,144 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {/* Installation (searchable dropdown) */}
+                {/* Installation (searchable dropdown or add new) */}
                 <div style={{ marginBottom: 12 }} ref={installationRef}>
                   <span className="section-label">Installation</span>
-                  <div style={{ position: 'relative' }}>
-                    <button
-                      type="button"
-                      onClick={() => setShowInstallationDropdown(!showInstallationDropdown)}
-                      className="input-dark"
-                      style={{
-                        width: '100%', boxSizing: 'border-box',
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        cursor: 'pointer', textAlign: 'left',
-                      }}
-                    >
-                      <span style={{ color: selectedInstallation ? '#F1F5F9' : '#64748B' }}>
-                        {selectedInstallation
-                          ? `${selectedInstallation.name.replace(/ Air National Guard Base| Air Force Base| Air Reserve Base/i, '')} (${selectedInstallation.icao})`
-                          : 'Select installation...'}
-                      </span>
-                      <ChevronDown size={14} color="#64748B" />
-                    </button>
+                  {!addingNewInstallation ? (
+                    <div style={{ position: 'relative' }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowInstallationDropdown(!showInstallationDropdown)}
+                        className="input-dark"
+                        style={{
+                          width: '100%', boxSizing: 'border-box',
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          cursor: 'pointer', textAlign: 'left',
+                        }}
+                      >
+                        <span style={{ color: selectedInstallation ? '#F1F5F9' : '#64748B' }}>
+                          {selectedInstallation
+                            ? `${selectedInstallation.name.replace(/ Air National Guard Base| Air Force Base| Air Reserve Base/i, '')} (${selectedInstallation.icao})`
+                            : 'Select installation...'}
+                        </span>
+                        <ChevronDown size={14} color="#64748B" />
+                      </button>
 
-                    {showInstallationDropdown && (
-                      <div style={{
-                        position: 'absolute', top: '100%', left: 0, right: 0,
-                        zIndex: 100, marginTop: 4,
-                        background: '#0F1729',
-                        border: '1px solid rgba(56,189,248,0.15)',
-                        borderRadius: 8,
-                        maxHeight: 200, overflowY: 'auto',
-                      }}>
-                        {/* Search input */}
-                        <div style={{ padding: 8, borderBottom: '1px solid rgba(56,189,248,0.06)' }}>
-                          <input
-                            type="text"
-                            placeholder="Search installations..."
-                            value={installationSearch}
-                            onChange={(e) => setInstallationSearch(e.target.value)}
-                            className="input-dark"
-                            style={{ width: '100%', boxSizing: 'border-box', fontSize: 12 }}
-                            autoFocus
-                          />
-                        </div>
-                        {filteredInstallations.length === 0 ? (
-                          <div style={{ padding: '12px 14px', fontSize: 12, color: '#64748B' }}>
-                            No installations found
+                      {showInstallationDropdown && (
+                        <div style={{
+                          position: 'absolute', top: '100%', left: 0, right: 0,
+                          zIndex: 100, marginTop: 4,
+                          background: '#0F1729',
+                          border: '1px solid rgba(56,189,248,0.15)',
+                          borderRadius: 8,
+                          maxHeight: 200, overflowY: 'auto',
+                        }}>
+                          {/* Search input */}
+                          <div style={{ padding: 8, borderBottom: '1px solid rgba(56,189,248,0.06)' }}>
+                            <input
+                              type="text"
+                              placeholder="Search installations..."
+                              value={installationSearch}
+                              onChange={(e) => setInstallationSearch(e.target.value)}
+                              className="input-dark"
+                              style={{ width: '100%', boxSizing: 'border-box', fontSize: 12 }}
+                              autoFocus
+                            />
                           </div>
-                        ) : (
-                          filteredInstallations.map(inst => {
-                            const shortName = inst.name.replace(/ Air National Guard Base| Air Force Base| Air Reserve Base/i, '').trim()
-                            const stateAbbr = inst.location?.split(',').pop()?.trim() || ''
-                            return (
-                              <button
-                                key={inst.id}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedInstallationId(inst.id)
-                                  setShowInstallationDropdown(false)
-                                  setInstallationSearch('')
-                                }}
-                                style={{
-                                  display: 'block', width: '100%', padding: '10px 14px',
-                                  background: inst.id === selectedInstallationId ? 'rgba(56,189,248,0.08)' : 'transparent',
-                                  border: 'none',
-                                  borderBottom: '1px solid rgba(56,189,248,0.04)',
-                                  cursor: 'pointer', textAlign: 'left',
-                                  color: inst.id === selectedInstallationId ? '#38BDF8' : '#E2E8F0',
-                                  fontSize: 13, fontFamily: 'inherit',
-                                  fontWeight: inst.id === selectedInstallationId ? 700 : 500,
-                                }}
-                              >
-                                {shortName}{stateAbbr ? `, ${stateAbbr}` : ''}
-                                <span style={{ fontSize: 10, marginLeft: 8, opacity: 0.5 }}>{inst.icao}</span>
-                              </button>
-                            )
-                          })
-                        )}
-                      </div>
-                    )}
-                  </div>
+                          {filteredInstallations.length === 0 ? (
+                            <div style={{ padding: '12px 14px', fontSize: 12, color: '#64748B' }}>
+                              No installations found
+                            </div>
+                          ) : (
+                            filteredInstallations.map(inst => {
+                              const shortName = inst.name.replace(/ Air National Guard Base| Air Force Base| Air Reserve Base/i, '').trim()
+                              const stateAbbr = inst.location?.split(',').pop()?.trim() || ''
+                              return (
+                                <button
+                                  key={inst.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedInstallationId(inst.id)
+                                    setShowInstallationDropdown(false)
+                                    setInstallationSearch('')
+                                  }}
+                                  style={{
+                                    display: 'block', width: '100%', padding: '10px 14px',
+                                    background: inst.id === selectedInstallationId ? 'rgba(56,189,248,0.08)' : 'transparent',
+                                    border: 'none',
+                                    borderBottom: '1px solid rgba(56,189,248,0.04)',
+                                    cursor: 'pointer', textAlign: 'left',
+                                    color: inst.id === selectedInstallationId ? '#38BDF8' : '#E2E8F0',
+                                    fontSize: 13, fontFamily: 'inherit',
+                                    fontWeight: inst.id === selectedInstallationId ? 700 : 500,
+                                  }}
+                                >
+                                  {shortName}{stateAbbr ? `, ${stateAbbr}` : ''}
+                                  <span style={{ fontSize: 10, marginLeft: 8, opacity: 0.5 }}>{inst.icao}</span>
+                                </button>
+                              )
+                            })
+                          )}
+                          {/* Add new option */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAddingNewInstallation(true)
+                              setShowInstallationDropdown(false)
+                              setInstallationSearch('')
+                            }}
+                            style={{
+                              display: 'block', width: '100%', padding: '10px 14px',
+                              background: 'transparent',
+                              border: 'none',
+                              borderTop: '1px solid rgba(56,189,248,0.1)',
+                              cursor: 'pointer', textAlign: 'left',
+                              color: '#38BDF8',
+                              fontSize: 13, fontFamily: 'inherit',
+                              fontWeight: 600,
+                            }}
+                          >
+                            + Add New Installation
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <input
+                        type="text"
+                        className="input-dark"
+                        placeholder="Installation name"
+                        value={newInstallationName}
+                        onChange={(e) => setNewInstallationName(e.target.value)}
+                        style={{ width: '100%', boxSizing: 'border-box', marginBottom: 8 }}
+                        autoFocus
+                      />
+                      <input
+                        type="text"
+                        className="input-dark"
+                        placeholder="ICAO code (optional)"
+                        value={newInstallationIcao}
+                        onChange={(e) => setNewInstallationIcao(e.target.value.toUpperCase())}
+                        style={{ width: '100%', boxSizing: 'border-box', marginBottom: 6 }}
+                        maxLength={4}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAddingNewInstallation(false)
+                          setNewInstallationName('')
+                          setNewInstallationIcao('')
+                        }}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          color: '#64748B', fontSize: 11, padding: 0,
+                        }}
+                      >
+                        Cancel — select existing installation
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Role */}

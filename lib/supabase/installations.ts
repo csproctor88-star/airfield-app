@@ -172,6 +172,34 @@ export async function addInstallationMember(
   return { error: null }
 }
 
+// ── Create a new installation ──
+export async function createInstallation(name: string, icao?: string): Promise<Installation | null> {
+  const supabase = createClient()
+  if (!supabase) return null
+
+  const { data, error } = await supabase
+    .from('bases')
+    .insert({
+      name,
+      icao: icao || '',
+      unit: '',
+      majcom: null,
+      location: null,
+      elevation_msl: null,
+      timezone: 'America/New_York',
+      ce_shops: [],
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Failed to create installation:', error.message)
+    return null
+  }
+
+  return data as Installation
+}
+
 // ── Get user's primary installation ID (from profile or first membership) ──
 export async function getUserPrimaryInstallationId(): Promise<string | null> {
   const supabase = createClient()
