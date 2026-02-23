@@ -3,9 +3,9 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { fetchInstallations, createInstallation } from '@/lib/supabase/installations'
+import { createInstallation } from '@/lib/supabase/installations'
 import { USER_ROLES } from '@/lib/constants'
-import type { Installation } from '@/lib/supabase/types'
+import { BASE_DIRECTORY } from '@/lib/base-directory'
 import type { UserRole } from '@/lib/supabase/types'
 import { Plane, ChevronDown } from 'lucide-react'
 
@@ -26,8 +26,7 @@ export default function LoginPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
-  const [installations, setInstallations] = useState<Installation[]>([])
-  const [selectedInstallationId, setSelectedInstallationId] = useState<string>('')
+  const [selectedBaseName, setSelectedBaseName] = useState<string>(BASE_DIRECTORY[0])
   const [installationSearch, setInstallationSearch] = useState('')
   const [showInstallationDropdown, setShowInstallationDropdown] = useState(false)
   const [addingNewInstallation, setAddingNewInstallation] = useState(false)
@@ -35,14 +34,6 @@ export default function LoginPage() {
   const [newInstallationIcao, setNewInstallationIcao] = useState('')
   const installationRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
-
-  // Load available installations for signup selection
-  useEffect(() => {
-    fetchInstallations().then((b) => {
-      setInstallations(b)
-      if (b.length > 0) setSelectedInstallationId(b[0].id)
-    })
-  }, [])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -55,17 +46,11 @@ export default function LoginPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const filteredInstallations = useMemo(() => {
-    if (!installationSearch.trim()) return installations
+  const filteredBases = useMemo(() => {
+    if (!installationSearch.trim()) return [...BASE_DIRECTORY]
     const q = installationSearch.toLowerCase()
-    return installations.filter(i =>
-      i.name.toLowerCase().includes(q) ||
-      i.icao.toLowerCase().includes(q) ||
-      (i.location || '').toLowerCase().includes(q)
-    )
-  }, [installations, installationSearch])
-
-  const selectedInstallation = installations.find(i => i.id === selectedInstallationId)
+    return BASE_DIRECTORY.filter(name => name.toLowerCase().includes(q))
+  }, [installationSearch])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -90,26 +75,26 @@ export default function LoginPage() {
           return
         }
 
-        // If adding a new installation, create it first
-        let installationId = selectedInstallationId
-        if (addingNewInstallation && newInstallationName.trim()) {
-          const newInst = await createInstallation(
-            newInstallationName.trim(),
-            newInstallationIcao.trim() || undefined,
-          )
-          if (newInst) {
-            installationId = newInst.id
-            // Add to local list so it appears in dropdown for session
-            setInstallations(prev => [...prev, newInst])
-            setSelectedInstallationId(newInst.id)
-            setAddingNewInstallation(false)
-            setNewInstallationName('')
-            setNewInstallationIcao('')
-          } else {
-            setError('Failed to create installation. Please try again.')
-            setLoading(false)
-            return
-          }
+        // Determine installation name and find-or-create in DB
+        const installationName = addingNewInstallation
+          ? newInstallationName.trim()
+          : selectedBaseName
+
+        if (!installationName) {
+          setError('Please select or enter an installation')
+          setLoading(false)
+          return
+        }
+
+        const inst = await createInstallation(
+          installationName,
+          addingNewInstallation ? (newInstallationIcao.trim() || undefined) : undefined,
+        )
+
+        if (!inst) {
+          setError('Failed to set up installation. Please try again.')
+          setLoading(false)
+          return
         }
 
         const { error: signUpError } = await supabase.auth.signUp({
@@ -122,7 +107,7 @@ export default function LoginPage() {
               name: `${firstName.trim()} ${lastName.trim()}`,
               rank: rank || undefined,
               role: role,
-              primary_base_id: installationId || undefined,
+              primary_base_id: inst.id,
             },
           },
         })
@@ -162,12 +147,6 @@ export default function LoginPage() {
     setError(null)
     setSuccess(null)
   }
-
-  // Dynamic header from first installation or fallback
-  const displayInstallation = installations.length > 0 ? installations[0] : null
-  const headerText = displayInstallation
-    ? `${displayInstallation.name.replace(/ Air National Guard Base| Air Force Base| Air Reserve Base/i, '').toUpperCase()} \u2022 ${displayInstallation.icao} \u2022 ${(displayInstallation.unit || '').toUpperCase()}`
-    : 'AIRFIELD OPS'
 
   // Role options from USER_ROLES
   const roleOptions = Object.entries(USER_ROLES).map(([key, cfg]) => ({
@@ -217,8 +196,8 @@ export default function LoginPage() {
           >
             GLIDEPATH
           </div>
-          <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600, letterSpacing: '0.12em' }}>
-            {headerText}
+          <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em' }}>
+            AIRFIELD OPERATIONS MANAGEMENT
           </div>
         </div>
 
@@ -299,10 +278,8 @@ export default function LoginPage() {
                           cursor: 'pointer', textAlign: 'left',
                         }}
                       >
-                        <span style={{ color: selectedInstallation ? '#F1F5F9' : '#64748B' }}>
-                          {selectedInstallation
-                            ? `${selectedInstallation.name.replace(/ Air National Guard Base| Air Force Base| Air Reserve Base/i, '')} (${selectedInstallation.icao})`
-                            : 'Select installation...'}
+                        <span style={{ color: selectedBaseName ? '#F1F5F9' : '#64748B' }}>
+                          {selectedBaseName || 'Select installation...'}
                         </span>
                         <ChevronDown size={14} color="#64748B" />
                       </button>
@@ -328,39 +305,34 @@ export default function LoginPage() {
                               autoFocus
                             />
                           </div>
-                          {filteredInstallations.length === 0 ? (
+                          {filteredBases.length === 0 ? (
                             <div style={{ padding: '12px 14px', fontSize: 12, color: '#64748B' }}>
                               No installations found
                             </div>
                           ) : (
-                            filteredInstallations.map(inst => {
-                              const shortName = inst.name.replace(/ Air National Guard Base| Air Force Base| Air Reserve Base/i, '').trim()
-                              const stateAbbr = inst.location?.split(',').pop()?.trim() || ''
-                              return (
-                                <button
-                                  key={inst.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedInstallationId(inst.id)
-                                    setShowInstallationDropdown(false)
-                                    setInstallationSearch('')
-                                  }}
-                                  style={{
-                                    display: 'block', width: '100%', padding: '10px 14px',
-                                    background: inst.id === selectedInstallationId ? 'rgba(56,189,248,0.08)' : 'transparent',
-                                    border: 'none',
-                                    borderBottom: '1px solid rgba(56,189,248,0.04)',
-                                    cursor: 'pointer', textAlign: 'left',
-                                    color: inst.id === selectedInstallationId ? '#38BDF8' : '#E2E8F0',
-                                    fontSize: 13, fontFamily: 'inherit',
-                                    fontWeight: inst.id === selectedInstallationId ? 700 : 500,
-                                  }}
-                                >
-                                  {shortName}{stateAbbr ? `, ${stateAbbr}` : ''}
-                                  <span style={{ fontSize: 10, marginLeft: 8, opacity: 0.5 }}>{inst.icao}</span>
-                                </button>
-                              )
-                            })
+                            filteredBases.map(name => (
+                              <button
+                                key={name}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedBaseName(name)
+                                  setShowInstallationDropdown(false)
+                                  setInstallationSearch('')
+                                }}
+                                style={{
+                                  display: 'block', width: '100%', padding: '10px 14px',
+                                  background: name === selectedBaseName ? 'rgba(56,189,248,0.08)' : 'transparent',
+                                  border: 'none',
+                                  borderBottom: '1px solid rgba(56,189,248,0.04)',
+                                  cursor: 'pointer', textAlign: 'left',
+                                  color: name === selectedBaseName ? '#38BDF8' : '#E2E8F0',
+                                  fontSize: 13, fontFamily: 'inherit',
+                                  fontWeight: name === selectedBaseName ? 700 : 500,
+                                }}
+                              >
+                                {name}
+                              </button>
+                            ))
                           )}
                           {/* Add new option */}
                           <button
@@ -418,7 +390,7 @@ export default function LoginPage() {
                           color: '#64748B', fontSize: 11, padding: 0,
                         }}
                       >
-                        Cancel — select existing installation
+                        Cancel — select from list
                       </button>
                     </div>
                   )}

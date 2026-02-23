@@ -7,8 +7,8 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { USER_ROLES } from '@/lib/constants'
-import { fetchInstallations, createInstallation } from '@/lib/supabase/installations'
-import type { Installation } from '@/lib/supabase/types'
+import { createInstallation } from '@/lib/supabase/installations'
+import { BASE_DIRECTORY } from '@/lib/base-directory'
 import { ALL_REGULATIONS } from '@/lib/regulations-data'
 import { idbGetAllKeys, idbGetAll, idbSet, idbDelete, idbClear, STORE_BLOBS, STORE_USER_BLOBS } from '@/lib/idb'
 import { sanitizeRegId as sanitizeFileName } from '@/lib/utils'
@@ -165,8 +165,7 @@ function ProfileSection() {
 // ═══════════════════════════════════════════════════════════════
 
 function InstallationSection() {
-  const { currentInstallation, allInstallations, switchInstallation } = useInstallation()
-  const [installations, setInstallations] = useState<Installation[]>([])
+  const { currentInstallation, switchInstallation } = useInstallation()
   const [showDropdown, setShowDropdown] = useState(false)
   const [search, setSearch] = useState('')
   const [addingNew, setAddingNew] = useState(false)
@@ -174,16 +173,6 @@ function InstallationSection() {
   const [newIcao, setNewIcao] = useState('')
   const [saving, setSaving] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    fetchInstallations().then(setInstallations)
-  }, [])
-
-  useEffect(() => {
-    if (allInstallations.length > 0 && installations.length === 0) {
-      setInstallations(allInstallations)
-    }
-  }, [allInstallations, installations.length])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -196,17 +185,21 @@ function InstallationSection() {
   }, [])
 
   const filtered = search.trim()
-    ? installations.filter(i =>
-        i.name.toLowerCase().includes(search.toLowerCase()) ||
-        i.icao.toLowerCase().includes(search.toLowerCase())
-      )
-    : installations
+    ? BASE_DIRECTORY.filter(name => name.toLowerCase().includes(search.toLowerCase()))
+    : [...BASE_DIRECTORY]
 
-  const handleSwitch = async (id: string) => {
+  const handleSelect = async (name: string) => {
     setShowDropdown(false)
     setSearch('')
-    await switchInstallation(id)
-    toast.success('Installation updated')
+    setSaving(true)
+    const inst = await createInstallation(name)
+    if (inst) {
+      await switchInstallation(inst.id)
+      toast.success('Installation updated')
+    } else {
+      toast.error('Failed to switch installation')
+    }
+    setSaving(false)
   }
 
   const handleAddNew = async () => {
@@ -214,7 +207,6 @@ function InstallationSection() {
     setSaving(true)
     const inst = await createInstallation(newName.trim(), newIcao.trim() || undefined)
     if (inst) {
-      setInstallations(prev => [...prev, inst])
       await switchInstallation(inst.id)
       setAddingNew(false)
       setNewName('')
@@ -238,7 +230,7 @@ function InstallationSection() {
           <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>CURRENT INSTALLATION</div>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#F1F5F9' }}>
             {currentInstallation
-              ? `${shortName(currentInstallation.name)} (${currentInstallation.icao})`
+              ? `${shortName(currentInstallation.name)}${currentInstallation.icao ? ` (${currentInstallation.icao})` : ''}`
               : 'Not set'}
           </div>
         </div>
@@ -253,13 +245,17 @@ function InstallationSection() {
               type="button"
               onClick={() => setShowDropdown(!showDropdown)}
               className="input-dark"
+              disabled={saving}
               style={{
                 width: '100%', boxSizing: 'border-box',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 cursor: 'pointer', textAlign: 'left',
+                opacity: saving ? 0.6 : 1,
               }}
             >
-              <span style={{ color: '#94A3B8', fontSize: 13 }}>Select a different installation...</span>
+              <span style={{ color: '#94A3B8', fontSize: 13 }}>
+                {saving ? 'Switching...' : 'Select a different installation...'}
+              </span>
               <ChevronDown size={14} color="#64748B" />
             </button>
 
@@ -288,24 +284,23 @@ function InstallationSection() {
                     No installations found
                   </div>
                 ) : (
-                  filtered.map(inst => (
+                  filtered.map(name => (
                     <button
-                      key={inst.id}
+                      key={name}
                       type="button"
-                      onClick={() => handleSwitch(inst.id)}
+                      onClick={() => handleSelect(name)}
                       style={{
                         display: 'block', width: '100%', padding: '10px 14px',
-                        background: inst.id === currentInstallation?.id ? 'rgba(56,189,248,0.08)' : 'transparent',
+                        background: name === currentInstallation?.name ? 'rgba(56,189,248,0.08)' : 'transparent',
                         border: 'none',
                         borderBottom: '1px solid rgba(56,189,248,0.04)',
                         cursor: 'pointer', textAlign: 'left',
-                        color: inst.id === currentInstallation?.id ? '#38BDF8' : '#E2E8F0',
+                        color: name === currentInstallation?.name ? '#38BDF8' : '#E2E8F0',
                         fontSize: 13, fontFamily: 'inherit',
-                        fontWeight: inst.id === currentInstallation?.id ? 700 : 500,
+                        fontWeight: name === currentInstallation?.name ? 700 : 500,
                       }}
                     >
-                      {shortName(inst.name)}
-                      <span style={{ fontSize: 10, marginLeft: 8, opacity: 0.5 }}>{inst.icao}</span>
+                      {name}
                     </button>
                   ))
                 )}

@@ -8,7 +8,7 @@ function getAdmin() {
   return createClient(url, key)
 }
 
-/** POST — create a new installation */
+/** POST — find or create an installation by name */
 export async function POST(request: Request) {
   const supabase = getAdmin()
   if (!supabase) {
@@ -25,10 +25,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Installation name is required' }, { status: 400 })
   }
 
+  const trimmedName = name.trim()
+
+  // Check if an installation with this name already exists
+  const { data: existing } = await supabase
+    .from('bases')
+    .select('*')
+    .ilike('name', trimmedName)
+    .limit(1)
+    .single()
+
+  if (existing) {
+    return NextResponse.json(existing)
+  }
+
+  // Create new
   const { data, error } = await supabase
     .from('bases')
     .insert({
-      name: name.trim(),
+      name: trimmedName,
       icao: (icao || '').trim().toUpperCase(),
       unit: '',
       majcom: null,
