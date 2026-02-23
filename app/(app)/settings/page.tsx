@@ -251,14 +251,14 @@ function InstallationSection() {
   }, [])
 
   const filtered = search.trim()
-    ? BASE_DIRECTORY.filter(name => name.toLowerCase().includes(search.toLowerCase()))
+    ? BASE_DIRECTORY.filter(entry => entry.name.toLowerCase().includes(search.toLowerCase()) || entry.icao.toLowerCase().includes(search.toLowerCase()))
     : [...BASE_DIRECTORY]
 
-  const handleSelect = async (name: string) => {
+  const handleSelect = async (entry: { name: string; icao: string }) => {
     setShowDropdown(false)
     setSearch('')
     setSaving(true)
-    const inst = await createInstallation(name, undefined, userId)
+    const inst = await createInstallation(entry.name, entry.icao || undefined, userId)
     if (inst) {
       await switchInstallation(inst.id)
       toast.success('Installation updated')
@@ -284,9 +284,6 @@ function InstallationSection() {
     setSaving(false)
   }
 
-  const shortName = (name: string) =>
-    name.replace(/ Air National Guard Base| Air Force Base| Air Reserve Base/i, '').trim()
-
   return (
     <>
       <SectionHeader label="INSTALLATION" icon={MapPin} />
@@ -296,7 +293,7 @@ function InstallationSection() {
           <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>CURRENT INSTALLATION</div>
           <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-1)' }}>
             {currentInstallation
-              ? `${shortName(currentInstallation.name)}${currentInstallation.icao ? ` (${currentInstallation.icao})` : ''}`
+              ? `${currentInstallation.name}${currentInstallation.icao ? ` (${currentInstallation.icao})` : ''}`
               : 'Not set'}
           </div>
         </div>
@@ -350,23 +347,24 @@ function InstallationSection() {
                     No installations found
                   </div>
                 ) : (
-                  filtered.map(name => (
+                  filtered.map(entry => (
                     <button
-                      key={name}
+                      key={entry.name}
                       type="button"
-                      onClick={() => handleSelect(name)}
+                      onClick={() => handleSelect(entry)}
                       style={{
                         display: 'block', width: '100%', padding: '10px 14px',
-                        background: name === currentInstallation?.name ? 'rgba(56,189,248,0.08)' : 'transparent',
+                        background: entry.name === currentInstallation?.name ? 'rgba(56,189,248,0.08)' : 'transparent',
                         border: 'none',
                         borderBottom: '1px solid rgba(56,189,248,0.04)',
                         cursor: 'pointer', textAlign: 'left',
-                        color: name === currentInstallation?.name ? 'var(--color-accent)' : 'var(--color-text-1)',
+                        color: entry.name === currentInstallation?.name ? 'var(--color-accent)' : 'var(--color-text-1)',
                         fontSize: 13, fontFamily: 'inherit',
-                        fontWeight: name === currentInstallation?.name ? 700 : 500,
+                        fontWeight: entry.name === currentInstallation?.name ? 700 : 500,
                       }}
                     >
-                      {name}
+                      {entry.name}
+                      {entry.icao && <span style={{ fontSize: 10, marginLeft: 8, opacity: 0.5 }}>{entry.icao}</span>}
                     </button>
                   ))
                 )}

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { createInstallation } from '@/lib/supabase/installations'
 import { USER_ROLES } from '@/lib/constants'
-import { BASE_DIRECTORY } from '@/lib/base-directory'
+import { BASE_DIRECTORY, type BaseDirectoryEntry } from '@/lib/base-directory'
 import type { UserRole } from '@/lib/supabase/types'
 import { Plane, ChevronDown } from 'lucide-react'
 
@@ -26,7 +26,7 @@ export default function LoginPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
-  const [selectedBaseName, setSelectedBaseName] = useState<string>(BASE_DIRECTORY[0])
+  const [selectedBase, setSelectedBase] = useState<BaseDirectoryEntry>(BASE_DIRECTORY[0])
   const [installationSearch, setInstallationSearch] = useState('')
   const [showInstallationDropdown, setShowInstallationDropdown] = useState(false)
   const [addingNewInstallation, setAddingNewInstallation] = useState(false)
@@ -49,7 +49,7 @@ export default function LoginPage() {
   const filteredBases = useMemo(() => {
     if (!installationSearch.trim()) return [...BASE_DIRECTORY]
     const q = installationSearch.toLowerCase()
-    return BASE_DIRECTORY.filter(name => name.toLowerCase().includes(q))
+    return BASE_DIRECTORY.filter(entry => entry.name.toLowerCase().includes(q) || entry.icao.toLowerCase().includes(q))
   }, [installationSearch])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,10 +75,13 @@ export default function LoginPage() {
           return
         }
 
-        // Determine installation name and find-or-create in DB
+        // Determine installation name and ICAO, then find-or-create in DB
         const installationName = addingNewInstallation
           ? newInstallationName.trim()
-          : selectedBaseName
+          : selectedBase.name
+        const installationIcao = addingNewInstallation
+          ? (newInstallationIcao.trim() || undefined)
+          : (selectedBase.icao || undefined)
 
         if (!installationName) {
           setError('Please select or enter an installation')
@@ -88,7 +91,7 @@ export default function LoginPage() {
 
         const inst = await createInstallation(
           installationName,
-          addingNewInstallation ? (newInstallationIcao.trim() || undefined) : undefined,
+          installationIcao,
         )
 
         const { error: signUpError } = await supabase.auth.signUp({
@@ -272,8 +275,8 @@ export default function LoginPage() {
                           cursor: 'pointer', textAlign: 'left',
                         }}
                       >
-                        <span style={{ color: selectedBaseName ? 'var(--color-text-1)' : 'var(--color-text-3)' }}>
-                          {selectedBaseName || 'Select installation...'}
+                        <span style={{ color: selectedBase ? 'var(--color-text-1)' : 'var(--color-text-3)' }}>
+                          {selectedBase ? `${selectedBase.name}${selectedBase.icao ? ` (${selectedBase.icao})` : ''}` : 'Select installation...'}
                         </span>
                         <ChevronDown size={14} color="var(--color-text-3)" />
                       </button>
@@ -304,27 +307,28 @@ export default function LoginPage() {
                               No installations found
                             </div>
                           ) : (
-                            filteredBases.map(name => (
+                            filteredBases.map(entry => (
                               <button
-                                key={name}
+                                key={entry.name}
                                 type="button"
                                 onClick={() => {
-                                  setSelectedBaseName(name)
+                                  setSelectedBase(entry)
                                   setShowInstallationDropdown(false)
                                   setInstallationSearch('')
                                 }}
                                 style={{
                                   display: 'block', width: '100%', padding: '10px 14px',
-                                  background: name === selectedBaseName ? 'rgba(56,189,248,0.08)' : 'transparent',
+                                  background: entry.name === selectedBase.name ? 'rgba(56,189,248,0.08)' : 'transparent',
                                   border: 'none',
                                   borderBottom: '1px solid var(--color-border)',
                                   cursor: 'pointer', textAlign: 'left',
-                                  color: name === selectedBaseName ? 'var(--color-accent)' : 'var(--color-text-1)',
+                                  color: entry.name === selectedBase.name ? 'var(--color-accent)' : 'var(--color-text-1)',
                                   fontSize: 13, fontFamily: 'inherit',
-                                  fontWeight: name === selectedBaseName ? 700 : 500,
+                                  fontWeight: entry.name === selectedBase.name ? 700 : 500,
                                 }}
                               >
-                                {name}
+                                {entry.name}
+                                {entry.icao && <span style={{ fontSize: 10, marginLeft: 8, opacity: 0.5 }}>{entry.icao}</span>}
                               </button>
                             ))
                           )}
