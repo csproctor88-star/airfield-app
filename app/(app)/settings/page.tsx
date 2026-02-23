@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, MapPin, BookOpen, HardDrive, Info, LogOut, Save, Trash2, Download, X, ExternalLink } from 'lucide-react'
+import { User, MapPin, BookOpen, HardDrive, Info, LogOut, Save, Trash2, Download, X, ExternalLink, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
-import { getInstallation, saveInstallation } from '@/lib/installation'
 import { USER_ROLES } from '@/lib/constants'
+import { fetchInstallations, createInstallation } from '@/lib/supabase/installations'
+import type { Installation } from '@/lib/supabase/types'
 import { ALL_REGULATIONS } from '@/lib/regulations-data'
 import { idbGetAllKeys, idbGetAll, idbSet, idbDelete, idbClear, STORE_BLOBS, STORE_USER_BLOBS } from '@/lib/idb'
 import { sanitizeRegId as sanitizeFileName } from '@/lib/utils'
@@ -164,52 +165,226 @@ function ProfileSection() {
 // ═══════════════════════════════════════════════════════════════
 
 function InstallationSection() {
-  const defaults = getInstallation()
-  const [name, setName] = useState(defaults.name)
-  const [icao, setIcao] = useState(defaults.icao)
+  const { currentInstallation, allInstallations, switchInstallation } = useInstallation()
+  const [installations, setInstallations] = useState<Installation[]>([])
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [search, setSearch] = useState('')
+  const [addingNew, setAddingNew] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newIcao, setNewIcao] = useState('')
+  const [saving, setSaving] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const handleSave = () => {
-    saveInstallation(name.trim(), icao.trim().toUpperCase())
-    toast.success('Installation config saved')
+  useEffect(() => {
+    fetchInstallations().then(setInstallations)
+  }, [])
+
+  useEffect(() => {
+    if (allInstallations.length > 0 && installations.length === 0) {
+      setInstallations(allInstallations)
+    }
+  }, [allInstallations, installations.length])
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const filtered = search.trim()
+    ? installations.filter(i =>
+        i.name.toLowerCase().includes(search.toLowerCase()) ||
+        i.icao.toLowerCase().includes(search.toLowerCase())
+      )
+    : installations
+
+  const handleSwitch = async (id: string) => {
+    setShowDropdown(false)
+    setSearch('')
+    await switchInstallation(id)
+    toast.success('Installation updated')
   }
+
+  const handleAddNew = async () => {
+    if (!newName.trim()) return
+    setSaving(true)
+    const inst = await createInstallation(newName.trim(), newIcao.trim() || undefined)
+    if (inst) {
+      setInstallations(prev => [...prev, inst])
+      await switchInstallation(inst.id)
+      setAddingNew(false)
+      setNewName('')
+      setNewIcao('')
+      toast.success('Installation created')
+    } else {
+      toast.error('Failed to create installation')
+    }
+    setSaving(false)
+  }
+
+  const shortName = (name: string) =>
+    name.replace(/ Air National Guard Base| Air Force Base| Air Reserve Base/i, '').trim()
 
   return (
     <>
       <SectionHeader label="INSTALLATION" icon={MapPin} />
       <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* Current installation display */}
         <div>
-          <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>INSTALLATION NAME</div>
-          <input
-            type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            className="input-dark"
-            style={{ width: '100%', boxSizing: 'border-box' }}
-          />
+          <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>CURRENT INSTALLATION</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#F1F5F9' }}>
+            {currentInstallation
+              ? `${shortName(currentInstallation.name)} (${currentInstallation.icao})`
+              : 'Not set'}
+          </div>
         </div>
-        <div>
-          <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>ICAO IDENTIFIER</div>
-          <input
-            type="text"
-            value={icao}
-            onChange={e => setIcao(e.target.value)}
-            className="input-dark"
-            style={{ width: '100%', boxSizing: 'border-box', textTransform: 'uppercase' }}
-          />
-        </div>
-        <button
-          onClick={handleSave}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
-            border: 'none', borderRadius: 8, padding: '10px 16px',
-            color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-            fontFamily: 'inherit',
-          }}
-        >
-          <Save size={14} />
-          Save
-        </button>
+
+        <div style={{ borderTop: '1px solid rgba(56,189,248,0.06)' }} />
+
+        {/* Switch installation dropdown */}
+        {!addingNew ? (
+          <div ref={dropdownRef} style={{ position: 'relative' }}>
+            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>CHANGE INSTALLATION</div>
+            <button
+              type="button"
+              onClick={() => setShowDropdown(!showDropdown)}
+              className="input-dark"
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                cursor: 'pointer', textAlign: 'left',
+              }}
+            >
+              <span style={{ color: '#94A3B8', fontSize: 13 }}>Select a different installation...</span>
+              <ChevronDown size={14} color="#64748B" />
+            </button>
+
+            {showDropdown && (
+              <div style={{
+                position: 'absolute', top: '100%', left: 0, right: 0,
+                zIndex: 100, marginTop: 4,
+                background: '#0F1729',
+                border: '1px solid rgba(56,189,248,0.15)',
+                borderRadius: 8,
+                maxHeight: 200, overflowY: 'auto',
+              }}>
+                <div style={{ padding: 8, borderBottom: '1px solid rgba(56,189,248,0.06)' }}>
+                  <input
+                    type="text"
+                    placeholder="Search installations..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="input-dark"
+                    style={{ width: '100%', boxSizing: 'border-box', fontSize: 12 }}
+                    autoFocus
+                  />
+                </div>
+                {filtered.length === 0 ? (
+                  <div style={{ padding: '12px 14px', fontSize: 12, color: '#64748B' }}>
+                    No installations found
+                  </div>
+                ) : (
+                  filtered.map(inst => (
+                    <button
+                      key={inst.id}
+                      type="button"
+                      onClick={() => handleSwitch(inst.id)}
+                      style={{
+                        display: 'block', width: '100%', padding: '10px 14px',
+                        background: inst.id === currentInstallation?.id ? 'rgba(56,189,248,0.08)' : 'transparent',
+                        border: 'none',
+                        borderBottom: '1px solid rgba(56,189,248,0.04)',
+                        cursor: 'pointer', textAlign: 'left',
+                        color: inst.id === currentInstallation?.id ? '#38BDF8' : '#E2E8F0',
+                        fontSize: 13, fontFamily: 'inherit',
+                        fontWeight: inst.id === currentInstallation?.id ? 700 : 500,
+                      }}
+                    >
+                      {shortName(inst.name)}
+                      <span style={{ fontSize: 10, marginLeft: 8, opacity: 0.5 }}>{inst.icao}</span>
+                    </button>
+                  ))
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddingNew(true)
+                    setShowDropdown(false)
+                    setSearch('')
+                  }}
+                  style={{
+                    display: 'block', width: '100%', padding: '10px 14px',
+                    background: 'transparent',
+                    border: 'none',
+                    borderTop: '1px solid rgba(56,189,248,0.1)',
+                    cursor: 'pointer', textAlign: 'left',
+                    color: '#38BDF8',
+                    fontSize: 13, fontFamily: 'inherit',
+                    fontWeight: 600,
+                  }}
+                >
+                  + Add New Installation
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div>
+            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>ADD NEW INSTALLATION</div>
+            <input
+              type="text"
+              className="input-dark"
+              placeholder="Installation name"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              style={{ width: '100%', boxSizing: 'border-box', marginBottom: 8 }}
+              autoFocus
+            />
+            <input
+              type="text"
+              className="input-dark"
+              placeholder="ICAO code (optional)"
+              value={newIcao}
+              onChange={(e) => setNewIcao(e.target.value.toUpperCase())}
+              style={{ width: '100%', boxSizing: 'border-box', marginBottom: 8 }}
+              maxLength={4}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={handleAddNew}
+                disabled={saving || !newName.trim()}
+                style={{
+                  flex: 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
+                  border: 'none', borderRadius: 8, padding: '10px 16px',
+                  color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  opacity: saving || !newName.trim() ? 0.5 : 1,
+                }}
+              >
+                <Save size={14} />
+                {saving ? 'Creating...' : 'Create & Switch'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAddingNew(false); setNewName(''); setNewIcao('') }}
+                style={{
+                  padding: '10px 16px',
+                  background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.12)',
+                  borderRadius: 8, color: '#94A3B8', fontSize: 13, fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )

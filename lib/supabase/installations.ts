@@ -172,32 +172,26 @@ export async function addInstallationMember(
   return { error: null }
 }
 
-// ── Create a new installation ──
+// ── Create a new installation (via API route to bypass RLS) ──
 export async function createInstallation(name: string, icao?: string): Promise<Installation | null> {
-  const supabase = createClient()
-  if (!supabase) return null
-
-  const { data, error } = await supabase
-    .from('bases')
-    .insert({
-      name,
-      icao: icao || '',
-      unit: '',
-      majcom: null,
-      location: null,
-      elevation_msl: null,
-      timezone: 'America/New_York',
-      ce_shops: [],
+  try {
+    const res = await fetch('/api/installations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, icao }),
     })
-    .select()
-    .single()
 
-  if (error) {
-    console.error('Failed to create installation:', error.message)
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Unknown error' }))
+      console.error('Failed to create installation:', err.error)
+      return null
+    }
+
+    return (await res.json()) as Installation
+  } catch (err) {
+    console.error('Failed to create installation:', err)
     return null
   }
-
-  return data as Installation
 }
 
 // ── Get user's primary installation ID (from profile or first membership) ──
