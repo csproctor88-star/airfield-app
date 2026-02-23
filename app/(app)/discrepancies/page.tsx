@@ -79,7 +79,7 @@ export default function DiscrepanciesPage() {
         <Link
           href="/discrepancies/new"
           style={{
-            background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
+            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
             border: 'none',
             borderRadius: 8,
             padding: '7px 12px',
