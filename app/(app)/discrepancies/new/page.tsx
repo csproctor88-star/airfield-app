@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { DISCREPANCY_TYPES, LOCATION_OPTIONS, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
+import { useBase } from '@/lib/base-context'
 import { toast } from 'sonner'
 
 const DiscrepancyLocationMap = dynamic(
@@ -14,6 +15,7 @@ const DiscrepancyLocationMap = dynamic(
 
 export default function NewDiscrepancyPage() {
   const router = useRouter()
+  const { baseId } = useBase()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const [photos, setPhotos] = useState<{ file: File; url: string; name: string }[]>([])
@@ -69,6 +71,7 @@ export default function NewDiscrepancyPage() {
       current_status: formData.current_status,
       latitude: formData.latitude,
       longitude: formData.longitude,
+      base_id: baseId,
     })
 
     if (error || !created) {

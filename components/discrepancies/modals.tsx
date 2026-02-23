@@ -2,7 +2,8 @@
 
 import { useState, type ReactNode } from 'react'
 import type { DiscrepancyRow } from '@/lib/supabase/discrepancies'
-import { DISCREPANCY_TYPES, INSTALLATION, ALLOWED_TRANSITIONS, STATUS_CONFIG, CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS } from '@/lib/constants'
+import { DISCREPANCY_TYPES, ALLOWED_TRANSITIONS, STATUS_CONFIG, CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS } from '@/lib/constants'
+import { useBase } from '@/lib/base-context'
 
 // ─── Generic overlay ────────────────────────────────────────────────
 
@@ -151,6 +152,7 @@ export function StatusUpdateModal({
   onSaved: (updated: DiscrepancyRow) => void
   onDeleted?: () => void
 }) {
+  const { ceShops } = useBase()
   const allowed = ALLOWED_TRANSITIONS[discrepancy.status] || []
   const [saving, setSaving] = useState(false)
   const [newStatus, setNewStatus] = useState('')
@@ -280,7 +282,7 @@ export function StatusUpdateModal({
         <select className="input-dark" value={assignedShop}
           onChange={(e) => setAssignedShop(e.target.value)}>
           <option value="">Unassigned</option>
-          {INSTALLATION.ce_shops.map(s => <option key={s} value={s}>{s}</option>)}
+          {ceShops.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
 

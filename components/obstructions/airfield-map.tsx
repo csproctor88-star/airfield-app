@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
-import { INSTALLATION } from '@/lib/constants'
+import { useBase } from '@/lib/base-context'
 import { isMapboxConfigured } from '@/lib/utils'
 import {
   type LatLon,
@@ -86,10 +86,6 @@ const SURFACE_LAYERS = [
   { id: 'graded-area-end2', label: 'Graded Portion of Clear Zone', color: IMAGINARY_SURFACES.graded_area.color, opacity: 0.2 },
   { id: 'runway', label: 'Runway', color: '#FFFFFF', opacity: 0.5 },
 ]
-
-function getRwy(): RunwayGeometry {
-  return getRunwayGeometry(INSTALLATION.runways[0])
-}
 
 function buildSurfaceGeoJSON(rwy: RunwayGeometry) {
   const features: GeoJSON.Feature[] = []
@@ -238,9 +234,29 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
   const [mapLoaded, setMapLoaded] = useState(false)
   const [visibility, setVisibility] = useState<Record<ToggleKey, boolean>>(getDefaultVisibility)
   const [legendOpen, setLegendOpen] = useState(false)
+  const { runways: baseRunways } = useBase()
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const mapboxReady = isMapboxConfigured()
+
+  const getRwy = useCallback((): RunwayGeometry => {
+    if (baseRunways.length > 0) {
+      const rwy = baseRunways[0]
+      return getRunwayGeometry({
+        end1: { latitude: rwy.end1_latitude ?? 0, longitude: rwy.end1_longitude ?? 0 },
+        end2: { latitude: rwy.end2_latitude ?? 0, longitude: rwy.end2_longitude ?? 0 },
+        length_ft: rwy.length_ft ?? 9000,
+        width_ft: rwy.width_ft ?? 150,
+        true_heading: rwy.true_heading ?? undefined,
+      })
+    }
+    return getRunwayGeometry({
+      end1: { latitude: 42.601550, longitude: -82.837339 },
+      end2: { latitude: 42.626239, longitude: -82.836481 },
+      length_ft: 9000,
+      width_ft: 150,
+    })
+  }, [baseRunways])
 
   const handleClick = useCallback(
     (e: mapboxgl.MapMouseEvent) => {
@@ -326,9 +342,6 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
       }
 
       // Add runway end labels
-      const rwy01 = INSTALLATION.runways[0].end1
-      const rwy19 = INSTALLATION.runways[0].end2
-
       m.addSource('rwy-labels', {
         type: 'geojson',
         data: {
@@ -337,12 +350,12 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
             {
               type: 'Feature',
               properties: { label: '01' },
-              geometry: { type: 'Point', coordinates: [rwy01.longitude, rwy01.latitude] },
+              geometry: { type: 'Point', coordinates: [rwy.end1.lon, rwy.end1.lat] },
             },
             {
               type: 'Feature',
               properties: { label: '19' },
-              geometry: { type: 'Point', coordinates: [rwy19.longitude, rwy19.latitude] },
+              geometry: { type: 'Point', coordinates: [rwy.end2.lon, rwy.end2.lat] },
             },
           ],
         },

@@ -7,7 +7,6 @@ import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
 import {
   CHECK_TYPE_CONFIG,
-  AIRFIELD_AREAS,
   RSC_CONDITIONS,
   RCR_CONDITION_TYPES,
   BASH_CONDITION_CODES,
@@ -17,6 +16,7 @@ import {
 import type { CheckType } from '@/lib/supabase/types'
 import { createCheck, uploadCheckPhoto } from '@/lib/supabase/checks'
 import { createClient } from '@/lib/supabase/client'
+import { useBase } from '@/lib/base-context'
 
 const CheckLocationMap = dynamic(
   () => import('@/components/discrepancies/location-map'),
@@ -32,6 +32,7 @@ type LocalComment = {
 
 export default function AirfieldChecksPage() {
   const router = useRouter()
+  const { baseId, areas: baseAreas } = useBase()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const [checkType, setCheckType] = useState<CheckType | ''>('')
@@ -186,6 +187,7 @@ export default function AirfieldChecksPage() {
       comments,
       latitude: selectedLat,
       longitude: selectedLng,
+      base_id: baseId,
     })
 
     if (error || !created) {
@@ -567,7 +569,7 @@ export default function AirfieldChecksPage() {
             Areas Checked
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {AIRFIELD_AREAS.map((area) => {
+            {baseAreas.map((area) => {
               const selected = areas.includes(area)
               return (
                 <button

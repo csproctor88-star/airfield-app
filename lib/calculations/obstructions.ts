@@ -3,7 +3,6 @@
 // UFC 3-260-01, Chapter 3, plus APZ I/II land-use zones per
 // DoD Instruction 4165.57, using actual runway geometry.
 
-import { INSTALLATION } from '@/lib/constants'
 import {
   type LatLon,
   type RunwayGeometry,
@@ -146,11 +145,6 @@ export type ObstructionAnalysis = {
 // Evaluation engine
 // ---------------------------------------------------------------------------
 
-function getDefaultRunwayGeometry(): RunwayGeometry {
-  const rwy = INSTALLATION.runways[0]
-  return getRunwayGeometry(rwy)
-}
-
 /**
  * Determine the distance from the nearest primary-surface end center
  * along the extended centerline axis. This is used for approach-departure
@@ -214,10 +208,11 @@ export function evaluateObstruction(
   point: LatLon,
   obstructionHeightAGL: number,
   groundElevationMSL: number | null,
-  rwy?: RunwayGeometry,
+  rwy: RunwayGeometry,
+  airfieldElevMSL = 580,
 ): ObstructionAnalysis {
-  const runway = rwy || getDefaultRunwayGeometry()
-  const airfieldElev = INSTALLATION.elevation_msl
+  const runway = rwy
+  const airfieldElev = airfieldElevMSL
   const groundElev = groundElevationMSL ?? airfieldElev
   const obstructionTopMSL = groundElev + obstructionHeightAGL
   const heightAboveField = obstructionTopMSL - airfieldElev
@@ -601,9 +596,8 @@ export function evaluateObstruction(
  * Quick surface identification — which surface zone does this point fall in?
  * Returns the name of the controlling (most restrictive) surface.
  */
-export function identifySurface(point: LatLon, rwy?: RunwayGeometry): string {
-  const runway = rwy || getDefaultRunwayGeometry()
-  const analysis = evaluateObstruction(point, 0, null, runway)
+export function identifySurface(point: LatLon, rwy: RunwayGeometry, airfieldElevMSL = 580): string {
+  const analysis = evaluateObstruction(point, 0, null, rwy, airfieldElevMSL)
   if (analysis.controllingSurface) return analysis.controllingSurface.surfaceName
   // Fall back to land-use zones (APZ I/II) if no height-restricted surface applies
   const landUseZone = analysis.surfaces.find((s) => s.isWithinBounds && s.maxAllowableHeightMSL === -1)

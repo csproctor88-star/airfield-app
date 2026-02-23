@@ -4,7 +4,7 @@ import { Suspense, useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
-import { INSTALLATION } from '@/lib/constants'
+import { useBase } from '@/lib/base-context'
 import type { LatLon, RunwayGeometry } from '@/lib/calculations/geometry'
 import { getRunwayGeometry, pointToRunwayRelation, distanceFt } from '@/lib/calculations/geometry'
 import {
@@ -49,14 +49,34 @@ function ObstructionsContent() {
   const searchParams = useSearchParams()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
+  const { baseId, currentBase, runways } = useBase()
+
+  // Airfield elevation from base config (fallback to 580 for Selfridge)
+  const airfieldElevMSL = currentBase?.elevation_msl ?? 580
 
   // Edit mode
   const editId = searchParams.get('edit')
 
-  // Build runway geometry
+  // Build runway geometry from base runways
   const getRunway = useCallback((): RunwayGeometry => {
-    return getRunwayGeometry(INSTALLATION.runways[0])
-  }, [])
+    if (runways.length > 0) {
+      const rwy = runways[0]
+      return getRunwayGeometry({
+        end1: { latitude: rwy.end1_latitude ?? 0, longitude: rwy.end1_longitude ?? 0 },
+        end2: { latitude: rwy.end2_latitude ?? 0, longitude: rwy.end2_longitude ?? 0 },
+        length_ft: rwy.length_ft ?? 9000,
+        width_ft: rwy.width_ft ?? 150,
+        true_heading: rwy.true_heading ?? undefined,
+      })
+    }
+    // Fallback: Selfridge 01/19
+    return getRunwayGeometry({
+      end1: { latitude: 42.601550, longitude: -82.837339 },
+      end2: { latitude: 42.626239, longitude: -82.836481 },
+      length_ft: 9000,
+      width_ft: 150,
+    })
+  }, [runways])
 
   // Map / point state
   const [pointInfo, setPointInfo] = useState<PointInfo | null>(null)
@@ -88,9 +108,9 @@ function ObstructionsContent() {
       }
       if (existing.latitude && existing.longitude) {
         const point: LatLon = { lat: existing.latitude, lon: existing.longitude }
-        const rwy = getRunwayGeometry(INSTALLATION.runways[0])
-        const surfaceName = identifySurface(point, rwy)
-        const groundElev = existing.object_elevation_msl ?? INSTALLATION.elevation_msl
+        const rwy = getRunway()
+        const surfaceName = identifySurface(point, rwy, airfieldElevMSL)
+        const groundElev = existing.object_elevation_msl ?? airfieldElevMSL
         const relation = pointToRunwayRelation(point, rwy)
         const nearerThreshold = relation.nearerEnd === 'end1' ? rwy.end1 : rwy.end2
         const distToThreshold = distanceFt(point, nearerThreshold)
@@ -105,7 +125,7 @@ function ObstructionsContent() {
         })
         // Auto-run evaluation so results + save button appear immediately
         if (h > 0) {
-          const result = evaluateObstruction(point, h, groundElev, rwy)
+          const result = evaluateObstruction(point, h, groundElev, rwy, airfieldElevMSL)
           setAnalysis(result)
         }
       }
@@ -116,7 +136,7 @@ function ObstructionsContent() {
   // Handle map click
   const handlePointSelected = useCallback(async (point: LatLon) => {
     const rwy = getRunway()
-    const surfaceName = identifySurface(point, rwy)
+    const surfaceName = identifySurface(point, rwy, airfieldElevMSL)
     // Quick relation computation for distances
     const relation = pointToRunwayRelation(point, rwy)
     const nearerThreshold = relation.nearerEnd === 'end1' ? rwy.end1 : rwy.end2
@@ -138,7 +158,7 @@ function ObstructionsContent() {
       prev
         ? {
             ...prev,
-            groundElevMSL: elev ?? INSTALLATION.elevation_msl,
+            groundElevMSL: elev ?? airfieldElevMSL,
             loadingElev: false,
           }
         : prev,
@@ -147,7 +167,7 @@ function ObstructionsContent() {
     if (elev) {
       toast.success(`Elevation: ${elev.toFixed(0)} ft MSL`)
     } else {
-      toast(`Using airfield elevation (${INSTALLATION.elevation_msl} ft MSL)`, { description: 'Open-Elevation API unavailable' })
+      toast(`Using airfield elevation (${airfieldElevMSL} ft MSL)`, { description: 'Open-Elevation API unavailable' })
     }
   }, [getRunway])
 
@@ -168,6 +188,7 @@ function ObstructionsContent() {
       h,
       pointInfo.groundElevMSL,
       getRunway(),
+      airfieldElevMSL,
     )
     setAnalysis(result)
 
@@ -307,6 +328,7 @@ function ObstructionsContent() {
       ({ data, error } = await createObstructionEvaluation({
         runway_class: 'B',
         ...evaluationPayload,
+        base_id: baseId,
       }))
     }
 
@@ -406,7 +428,7 @@ function ObstructionsContent() {
               <div style={{ color: '#CBD5E1', fontFamily: 'monospace', fontSize: 11, marginTop: 2 }}>
                 {pointInfo.loadingElev
                   ? 'Fetching...'
-                  : `${(pointInfo.groundElevMSL ?? INSTALLATION.elevation_msl).toFixed(0)} ft MSL`}
+                  : `${(pointInfo.groundElevMSL ?? airfieldElevMSL).toFixed(0)} ft MSL`}
               </div>
             </div>
             <div>

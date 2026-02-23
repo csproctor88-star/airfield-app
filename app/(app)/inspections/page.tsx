@@ -14,6 +14,7 @@ import {
 } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { fetchInspections, createInspection, getInspectorName, type InspectionRow } from '@/lib/supabase/inspections'
+import { useBase } from '@/lib/base-context'
 import { fetchCurrentWeather } from '@/lib/weather'
 import {
   loadDraft,
@@ -31,6 +32,7 @@ type TabType = 'airfield' | 'lighting'
 
 export default function InspectionsPage() {
   const router = useRouter()
+  const { baseId } = useBase()
 
   // ── Core state ──
   const [draft, setDraft] = useState<DailyInspectionDraft | null>(null)
@@ -385,6 +387,7 @@ export default function InspectionsPage() {
           completed_at: airfieldHalf.savedAt,
           filed_by_name: filerName,
           filed_by_id: filerId,
+          base_id: baseId,
           // No daily_group_id — standalone record
         })
         if (error) {
@@ -445,6 +448,7 @@ export default function InspectionsPage() {
           completed_at: airfieldHalf.savedAt,
           filed_by_name: filerName,
           filed_by_id: filerId,
+          base_id: baseId,
         })
         if (error) {
           toast.error(`Failed to file airfield: ${error}`)
@@ -510,6 +514,7 @@ export default function InspectionsPage() {
         completed_at: lightingHalf.savedAt,
         filed_by_name: filerName,
         filed_by_id: filerId,
+        base_id: baseId,
       })
       if (error) {
         toast.error(`Failed to file lighting: ${error}`)

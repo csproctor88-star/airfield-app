@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
-import { INSTALLATION } from '@/lib/constants'
+import { useBase } from '@/lib/base-context'
 import { isMapboxConfigured } from '@/lib/utils'
 
 type Props = {
@@ -18,6 +18,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
   const map = useRef<mapboxgl.Map | null>(null)
   const marker = useRef<mapboxgl.Marker | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const { runways } = useBase()
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const mapboxReady = isMapboxConfigured()
@@ -37,9 +38,13 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
 
     mapboxgl.accessToken = token
 
-    const rwy = INSTALLATION.runways[0]
-    const centerLat = (rwy.end1.latitude + rwy.end2.latitude) / 2
-    const centerLng = (rwy.end1.longitude + rwy.end2.longitude) / 2
+    const rwy = runways[0]
+    const centerLat = rwy
+      ? ((rwy.end1_latitude ?? 0) + (rwy.end2_latitude ?? 0)) / 2
+      : 42.6139
+    const centerLng = rwy
+      ? ((rwy.end1_longitude ?? 0) + (rwy.end2_longitude ?? 0)) / 2
+      : -82.8369
 
     const m = new mapboxgl.Map({
       container: mapContainer.current,
