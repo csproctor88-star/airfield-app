@@ -77,17 +77,18 @@ export interface DailyReportData {
 
 export async function fetchDailyReportData(
   startUTC: string,
-  endUTC: string
+  endUTC: string,
+  baseId?: string | null
 ): Promise<DailyReportData> {
   const supabase = createClient()
 
   const results = await Promise.all([
-    fetchInspectionsForDate(supabase, startUTC, endUTC),
-    fetchChecksForDate(supabase, startUTC, endUTC),
-    fetchRunwayChangesForDate(supabase, startUTC, endUTC),
-    fetchNewDiscrepanciesForDate(supabase, startUTC, endUTC),
-    fetchStatusUpdatesForDate(supabase, startUTC, endUTC),
-    fetchObstructionEvalsForDate(supabase, startUTC, endUTC),
+    fetchInspectionsForDate(supabase, startUTC, endUTC, baseId),
+    fetchChecksForDate(supabase, startUTC, endUTC, baseId),
+    fetchRunwayChangesForDate(supabase, startUTC, endUTC, baseId),
+    fetchNewDiscrepanciesForDate(supabase, startUTC, endUTC, baseId),
+    fetchStatusUpdatesForDate(supabase, startUTC, endUTC, baseId),
+    fetchObstructionEvalsForDate(supabase, startUTC, endUTC, baseId),
   ])
 
   const checks = results[1] as CheckRow[]
@@ -114,15 +115,19 @@ export async function fetchDailyReportData(
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchInspectionsForDate(supabase: any, startUTC: string, endUTC: string) {
+async function fetchInspectionsForDate(supabase: any, startUTC: string, endUTC: string, baseId?: string | null) {
   if (!supabase) return []
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('inspections')
     .select('*')
     .gte('created_at', startUTC)
     .lte('created_at', endUTC)
     .order('created_at', { ascending: true })
+
+  if (baseId) query = query.eq('base_id', baseId)
+
+  const { data, error } = await query
 
   if (error) {
     console.error('Report: failed to fetch inspections:', error.message)
@@ -136,15 +141,19 @@ async function fetchInspectionsForDate(supabase: any, startUTC: string, endUTC: 
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchChecksForDate(supabase: any, startUTC: string, endUTC: string) {
+async function fetchChecksForDate(supabase: any, startUTC: string, endUTC: string, baseId?: string | null) {
   if (!supabase) return []
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('airfield_checks')
     .select('*')
     .gte('created_at', startUTC)
     .lte('created_at', endUTC)
     .order('created_at', { ascending: true })
+
+  if (baseId) query = query.eq('base_id', baseId)
+
+  const { data, error } = await query
 
   if (error) {
     console.error('Report: failed to fetch checks:', error.message)
@@ -155,16 +164,20 @@ async function fetchChecksForDate(supabase: any, startUTC: string, endUTC: strin
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchRunwayChangesForDate(supabase: any, startUTC: string, endUTC: string) {
+async function fetchRunwayChangesForDate(supabase: any, startUTC: string, endUTC: string, baseId?: string | null) {
   if (!supabase) return []
 
   // Try with profile join
-  const { data, error } = await supabase
+  let query = supabase
     .from('runway_status_log')
     .select('*, profiles:changed_by(name, rank)')
     .gte('created_at', startUTC)
     .lte('created_at', endUTC)
     .order('created_at', { ascending: true })
+
+  if (baseId) query = query.eq('base_id', baseId)
+
+  const { data, error } = await query
 
   if (!error && data) {
     return (data ?? []).map((row: Record<string, unknown>) => ({
@@ -175,12 +188,16 @@ async function fetchRunwayChangesForDate(supabase: any, startUTC: string, endUTC
   }
 
   // Fallback
-  const { data: fb, error: fbErr } = await supabase
+  let fbQuery = supabase
     .from('runway_status_log')
     .select('*')
     .gte('created_at', startUTC)
     .lte('created_at', endUTC)
     .order('created_at', { ascending: true })
+
+  if (baseId) fbQuery = fbQuery.eq('base_id', baseId)
+
+  const { data: fb, error: fbErr } = await fbQuery
 
   if (fbErr) {
     console.error('Report: failed to fetch runway status log:', fbErr.message)
@@ -191,16 +208,20 @@ async function fetchRunwayChangesForDate(supabase: any, startUTC: string, endUTC
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchNewDiscrepanciesForDate(supabase: any, startUTC: string, endUTC: string) {
+async function fetchNewDiscrepanciesForDate(supabase: any, startUTC: string, endUTC: string, baseId?: string | null) {
   if (!supabase) return []
 
   // Try with profile join
-  const { data, error } = await supabase
+  let query = supabase
     .from('discrepancies')
     .select('id, display_id, title, type, severity, location_text, assigned_shop, reported_by, created_at, profiles:reported_by(name, rank)')
     .gte('created_at', startUTC)
     .lte('created_at', endUTC)
     .order('created_at', { ascending: true })
+
+  if (baseId) query = query.eq('base_id', baseId)
+
+  const { data, error } = await query
 
   if (!error && data) {
     return (data ?? []).map((row: Record<string, unknown>) => ({
@@ -211,12 +232,16 @@ async function fetchNewDiscrepanciesForDate(supabase: any, startUTC: string, end
   }
 
   // Fallback
-  const { data: fb, error: fbErr } = await supabase
+  let fbQuery = supabase
     .from('discrepancies')
     .select('id, display_id, title, type, severity, location_text, assigned_shop, reported_by, created_at')
     .gte('created_at', startUTC)
     .lte('created_at', endUTC)
     .order('created_at', { ascending: true })
+
+  if (baseId) fbQuery = fbQuery.eq('base_id', baseId)
+
+  const { data: fb, error: fbErr } = await fbQuery
 
   if (fbErr) {
     console.error('Report: failed to fetch discrepancies:', fbErr.message)
@@ -231,16 +256,20 @@ async function fetchNewDiscrepanciesForDate(supabase: any, startUTC: string, end
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchStatusUpdatesForDate(supabase: any, startUTC: string, endUTC: string) {
+async function fetchStatusUpdatesForDate(supabase: any, startUTC: string, endUTC: string, baseId?: string | null) {
   if (!supabase) return []
 
   // Try with profile + discrepancy join
-  const { data, error } = await supabase
+  let query = supabase
     .from('status_updates')
     .select('*, profiles:updated_by(name, rank), discrepancies:discrepancy_id(display_id, title)')
     .gte('created_at', startUTC)
     .lte('created_at', endUTC)
     .order('created_at', { ascending: true })
+
+  if (baseId) query = query.eq('base_id', baseId)
+
+  const { data, error } = await query
 
   if (!error && data) {
     return (data ?? []).map((row: Record<string, unknown>) => ({
@@ -253,12 +282,16 @@ async function fetchStatusUpdatesForDate(supabase: any, startUTC: string, endUTC
   }
 
   // Fallback without joins
-  const { data: fb, error: fbErr } = await supabase
+  let fbQuery = supabase
     .from('status_updates')
     .select('*')
     .gte('created_at', startUTC)
     .lte('created_at', endUTC)
     .order('created_at', { ascending: true })
+
+  if (baseId) fbQuery = fbQuery.eq('base_id', baseId)
+
+  const { data: fb, error: fbErr } = await fbQuery
 
   if (fbErr) {
     console.error('Report: failed to fetch status updates:', fbErr.message)
@@ -275,16 +308,20 @@ async function fetchStatusUpdatesForDate(supabase: any, startUTC: string, endUTC
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchObstructionEvalsForDate(supabase: any, startUTC: string, endUTC: string) {
+async function fetchObstructionEvalsForDate(supabase: any, startUTC: string, endUTC: string, baseId?: string | null) {
   if (!supabase) return []
 
   // Try with profile join
-  const { data, error } = await supabase
+  let query = supabase
     .from('obstruction_evaluations')
     .select('id, display_id, description, object_height_agl, latitude, longitude, has_violation, controlling_surface, violated_surfaces, photo_storage_path, evaluated_by, created_at, profiles:evaluated_by(name, rank)')
     .gte('created_at', startUTC)
     .lte('created_at', endUTC)
     .order('created_at', { ascending: true })
+
+  if (baseId) query = query.eq('base_id', baseId)
+
+  const { data, error } = await query
 
   if (!error && data) {
     return (data ?? []).map((row: Record<string, unknown>) => ({
@@ -295,12 +332,16 @@ async function fetchObstructionEvalsForDate(supabase: any, startUTC: string, end
   }
 
   // Fallback
-  const { data: fb, error: fbErr } = await supabase
+  let fbQuery = supabase
     .from('obstruction_evaluations')
     .select('id, display_id, description, object_height_agl, latitude, longitude, has_violation, controlling_surface, violated_surfaces, photo_storage_path, evaluated_by, created_at')
     .gte('created_at', startUTC)
     .lte('created_at', endUTC)
     .order('created_at', { ascending: true })
+
+  if (baseId) fbQuery = fbQuery.eq('base_id', baseId)
+
+  const { data: fb, error: fbErr } = await fbQuery
 
   if (fbErr) {
     console.error('Report: failed to fetch obstruction evals:', fbErr.message)

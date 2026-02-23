@@ -1,6 +1,7 @@
 import { Header } from '@/components/layout/header'
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { DashboardProvider } from '@/lib/dashboard-context'
+import { BaseProvider } from '@/lib/base-context'
 
 // Authenticated app shell with header + bottom nav
 // All pages inside (app)/ get this layout (home, discrepancies, checks, etc.)
@@ -17,11 +18,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         margin: '0 auto',
       }}
     >
-      <Header />
-      <DashboardProvider>
-        {children}
-      </DashboardProvider>
-      <BottomNav />
+      <BaseProvider>
+        <Header />
+        <DashboardProvider>
+          {children}
+        </DashboardProvider>
+        <BottomNav />
+      </BaseProvider>
     </div>
   )
 }

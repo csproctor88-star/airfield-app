@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/lib/supabase/client'
 import { USER_ROLES } from '@/lib/constants'
+import { useBase } from '@/lib/base-context'
 import type { UserRole } from '@/lib/supabase/types'
 
 // "More" menu — full module list with role-gated entries
@@ -24,6 +25,7 @@ const modules = [
 ]
 
 export default function MorePage() {
+  const { currentBase } = useBase()
   const [canManageUsers, setCanManageUsers] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
@@ -114,7 +116,7 @@ export default function MorePage() {
           Glidepath
         </div>
         <div style={{ fontSize: 11, color: '#64748B' }}>
-          v2.1.0 &bull; 127th Wing
+          v2.1.0 &bull; {currentBase?.unit || 'Airfield Ops'}
         </div>
       </div>
     </div>

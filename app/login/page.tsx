@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { fetchBases } from '@/lib/supabase/bases'
+import type { Base } from '@/lib/supabase/types'
 import { Plane } from 'lucide-react'
 
 export default function LoginPage() {
@@ -13,7 +15,17 @@ export default function LoginPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
+  const [bases, setBases] = useState<Base[]>([])
+  const [selectedBaseId, setSelectedBaseId] = useState<string>('')
   const router = useRouter()
+
+  // Load available bases for signup base selection
+  useEffect(() => {
+    fetchBases().then((b) => {
+      setBases(b)
+      if (b.length > 0) setSelectedBaseId(b[0].id)
+    })
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,7 +48,10 @@ export default function LoginPage() {
           email,
           password,
           options: {
-            data: { name: name || undefined },
+            data: {
+              name: name || undefined,
+              primary_base_id: selectedBaseId || undefined,
+            },
           },
         })
 
@@ -75,6 +90,12 @@ export default function LoginPage() {
     setError(null)
     setSuccess(null)
   }
+
+  // Dynamic header from first base or fallback
+  const displayBase = bases.length > 0 ? bases[0] : null
+  const headerText = displayBase
+    ? `${displayBase.name.replace(/ Air National Guard Base| Air Force Base| Air Reserve Base/i, '').toUpperCase()} \u2022 ${displayBase.icao} \u2022 ${(displayBase.unit || '').toUpperCase()}`
+    : 'AIRFIELD OPS'
 
   return (
     <div
@@ -116,10 +137,10 @@ export default function LoginPage() {
               marginBottom: 4,
             }}
           >
-            AIRFIELD OPS
+            GLIDEPATH
           </div>
           <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600, letterSpacing: '0.12em' }}>
-            SELFRIDGE ANGB &bull; KMTC &bull; 127TH WING
+            {headerText}
           </div>
         </div>
 
@@ -138,17 +159,36 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit}>
             {mode === 'signup' && (
-              <div style={{ marginBottom: 12 }}>
-                <span className="section-label">Name</span>
-                <input
-                  type="text"
-                  className="input-dark"
-                  placeholder="Full name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  autoComplete="name"
-                />
-              </div>
+              <>
+                <div style={{ marginBottom: 12 }}>
+                  <span className="section-label">Name</span>
+                  <input
+                    type="text"
+                    className="input-dark"
+                    placeholder="Full name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    autoComplete="name"
+                  />
+                </div>
+                {bases.length > 1 && (
+                  <div style={{ marginBottom: 12 }}>
+                    <span className="section-label">Installation</span>
+                    <select
+                      className="input-dark"
+                      value={selectedBaseId}
+                      onChange={(e) => setSelectedBaseId(e.target.value)}
+                      style={{ width: '100%' }}
+                    >
+                      {bases.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name} ({b.icao})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </>
             )}
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">Email</span>

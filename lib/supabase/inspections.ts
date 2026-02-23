@@ -5,6 +5,7 @@ import type { InspectionType, InspectionItem } from './types'
 export type InspectionRow = {
   id: string
   display_id: string
+  base_id: string | null
   inspection_type: InspectionType
   inspector_id: string
   inspector_name: string | null
@@ -34,15 +35,21 @@ export type InspectionRow = {
   updated_at: string
 }
 
-export async function fetchInspections(): Promise<InspectionRow[]> {
+export async function fetchInspections(baseId?: string | null): Promise<InspectionRow[]> {
   const supabase = createClient()
   if (!supabase) return []
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  let query = (supabase as any)
     .from('inspections')
     .select('*')
     .order('created_at', { ascending: false })
+
+  if (baseId) {
+    query = query.eq('base_id', baseId)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error('Failed to fetch inspections:', error.message)
@@ -112,11 +119,11 @@ export async function createInspection(input: {
   completed_at?: string | null
   filed_by_name?: string | null
   filed_by_id?: string | null
+  base_id?: string | null
 }): Promise<{ data: InspectionRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
 
-  // Get authenticated user for inspector_id
   let inspector_id: string | undefined
   try {
     const { data: { user } } = await supabase.auth.getUser()
@@ -125,7 +132,6 @@ export async function createInspection(input: {
     // No authenticated user
   }
 
-  // Generate display ID
   const now = new Date()
   const year = now.getFullYear()
   const ts = now.getTime().toString(36).slice(-4).toUpperCase()
@@ -170,6 +176,7 @@ export async function createInspection(input: {
     filed_at: now.toISOString(),
   }
   if (inspector_id) row.inspector_id = inspector_id
+  if (input.base_id) row.base_id = input.base_id
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
@@ -184,7 +191,7 @@ export async function createInspection(input: {
   }
 
   const created = data as InspectionRow
-  logActivity('completed', 'inspection', created.id, created.display_id, { inspection_type: input.inspection_type })
+  logActivity('completed', 'inspection', created.id, created.display_id, { inspection_type: input.inspection_type }, input.base_id)
 
   return { data: created, error: null }
 }
@@ -212,7 +219,6 @@ export async function getInspectorName(): Promise<{ name: string | null; id: str
       return { name: displayName, id: user.id }
     }
 
-    // Fall back to email if no profile
     return { name: user.email || null, id: user.id }
   } catch {
     return { name: null, id: null }
@@ -223,9 +229,8 @@ export async function deleteInspection(id: string): Promise<{ error: string | nu
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // Capture display info before deletion for activity log
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase as any).from('inspections').select('display_id, inspection_type').eq('id', id).single()
+  const { data: existing } = await (supabase as any).from('inspections').select('display_id, inspection_type, base_id').eq('id', id).single()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)
@@ -238,7 +243,7 @@ export async function deleteInspection(id: string): Promise<{ error: string | nu
     return { error: error.message }
   }
 
-  logActivity('deleted', 'inspection', id, existing?.display_id, { inspection_type: existing?.inspection_type })
+  logActivity('deleted', 'inspection', id, existing?.display_id, { inspection_type: existing?.inspection_type }, existing?.base_id)
 
   return { error: null }
 }

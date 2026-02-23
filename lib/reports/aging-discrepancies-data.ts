@@ -54,7 +54,7 @@ const TIER_DEFS: { label: string; min: number; max: number | null; color: string
 
 // ── Data Fetching ──
 
-export async function fetchAgingDiscrepanciesData(): Promise<AgingDiscrepanciesData> {
+export async function fetchAgingDiscrepanciesData(baseId?: string | null): Promise<AgingDiscrepanciesData> {
   const empty: AgingDiscrepanciesData = {
     tiers: TIER_DEFS.map((t) => ({ ...t, discrepancies: [] })),
     summary: { total: 0, bySeverity: {}, byShop: [], avgDaysOpen: null, oldest: null },
@@ -67,11 +67,15 @@ export async function fetchAgingDiscrepanciesData(): Promise<AgingDiscrepanciesD
 
   // Fetch open discrepancies with profile join
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  let query = (supabase as any)
     .from('discrepancies')
     .select('*, profiles:reported_by(name, rank)')
     .eq('status', 'open')
     .order('created_at', { ascending: true })
+
+  if (baseId) query = query.eq('base_id', baseId)
+
+  const { data, error } = await query
 
   let rows: AgingDiscrepancy[] = []
 
@@ -100,11 +104,15 @@ export async function fetchAgingDiscrepanciesData(): Promise<AgingDiscrepanciesD
   } else {
     // Fallback without join
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: fb } = await (supabase as any)
+    let fbQuery = (supabase as any)
       .from('discrepancies')
       .select('*')
       .eq('status', 'open')
       .order('created_at', { ascending: true })
+
+    if (baseId) fbQuery = fbQuery.eq('base_id', baseId)
+
+    const { data: fb } = await fbQuery
 
     rows = ((fb ?? []) as Record<string, unknown>[]).map((row) => {
       const createdAt = new Date(row.created_at as string)

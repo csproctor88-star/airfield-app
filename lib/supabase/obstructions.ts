@@ -15,15 +15,21 @@ export function parsePhotoPaths(raw: string | null | undefined): string[] {
   return [trimmed]
 }
 
-export async function fetchObstructionEvaluations(): Promise<ObstructionRow[]> {
+export async function fetchObstructionEvaluations(baseId?: string | null): Promise<ObstructionRow[]> {
   const supabase = createClient()
   if (!supabase) return []
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  let query = (supabase as any)
     .from('obstruction_evaluations')
     .select('*')
     .order('created_at', { ascending: false })
+
+  if (baseId) {
+    query = query.eq('base_id', baseId)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error('Failed to fetch obstruction evaluations:', error.message)
@@ -68,6 +74,7 @@ export async function createObstructionEvaluation(input: {
   violated_surfaces: string[]
   has_violation: boolean
   notes: string | null
+  base_id?: string | null
 }): Promise<{ data: ObstructionRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -80,19 +87,19 @@ export async function createObstructionEvaluation(input: {
     // No authenticated user
   }
 
-  // Generate display ID
   const now = new Date()
   const year = now.getFullYear()
   const ts = now.getTime().toString(36).slice(-4).toUpperCase()
   const display_id = `OBS-${year}-${ts}`
 
-  const { photo_storage_paths, ...rest } = input
+  const { photo_storage_paths, base_id, ...rest } = input
   const row: Record<string, unknown> = {
     display_id,
     ...rest,
     photo_storage_path: photo_storage_paths.length > 0 ? JSON.stringify(photo_storage_paths) : null,
   }
   if (evaluated_by) row.evaluated_by = evaluated_by
+  if (base_id) row.base_id = base_id
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
@@ -107,7 +114,7 @@ export async function createObstructionEvaluation(input: {
   }
 
   const created = data as ObstructionRow
-  logActivity('created', 'obstruction_evaluation', created.id, created.display_id ?? undefined, { has_violation: input.has_violation })
+  logActivity('created', 'obstruction_evaluation', created.id, created.display_id ?? undefined, { has_violation: input.has_violation }, base_id)
 
   return { data: created, error: null }
 }
@@ -202,13 +209,12 @@ export async function updateObstructionEvaluation(
     return { data: null, error: updateError.message }
   }
 
-  // If no rows were updated (RLS blocked), report a clear error
   if (!updateData || updateData.length === 0) {
     return { data: null, error: 'Update failed — you may not have permission to edit this evaluation.' }
   }
 
   const updated = updateData[0] as ObstructionRow
-  logActivity('updated', 'obstruction_evaluation', updated.id, updated.display_id ?? undefined, { has_violation: input.has_violation })
+  logActivity('updated', 'obstruction_evaluation', updated.id, updated.display_id ?? undefined, { has_violation: input.has_violation }, updated.base_id)
 
   return { data: updated, error: null }
 }
@@ -219,9 +225,8 @@ export async function deleteObstructionEvaluation(
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // Capture display info before deletion for activity log
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase as any).from('obstruction_evaluations').select('display_id').eq('id', id).single()
+  const { data: existing } = await (supabase as any).from('obstruction_evaluations').select('display_id, base_id').eq('id', id).single()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)
@@ -234,7 +239,6 @@ export async function deleteObstructionEvaluation(
     return { error: error.message }
   }
 
-  // Verify the row was actually deleted (RLS can silently block deletes)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: remaining } = await (supabase as any)
     .from('obstruction_evaluations')
@@ -246,7 +250,7 @@ export async function deleteObstructionEvaluation(
     return { error: 'Delete was blocked. You may not have permission to delete this evaluation.' }
   }
 
-  logActivity('deleted', 'obstruction_evaluation', id, existing?.display_id)
+  logActivity('deleted', 'obstruction_evaluation', id, existing?.display_id, undefined, existing?.base_id)
 
   return { error: null }
 }

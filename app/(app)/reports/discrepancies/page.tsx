@@ -6,9 +6,11 @@ import { ArrowLeft, AlertTriangle, Download, Loader2 } from 'lucide-react'
 import { fetchOpenDiscrepanciesData, formatDiscrepancyType, type OpenDiscrepanciesData } from '@/lib/reports/open-discrepancies-data'
 import { generateOpenDiscrepanciesPdf } from '@/lib/reports/open-discrepancies-pdf'
 import { getInspectorName } from '@/lib/supabase/inspections'
+import { useBase } from '@/lib/base-context'
 
 export default function OpenDiscrepanciesPage() {
   const router = useRouter()
+  const { baseId } = useBase()
 
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<OpenDiscrepanciesData | null>(null)
@@ -19,7 +21,7 @@ export default function OpenDiscrepanciesPage() {
     let cancelled = false
     async function generate() {
       const [reportData, inspector] = await Promise.all([
-        fetchOpenDiscrepanciesData(true),
+        fetchOpenDiscrepanciesData(true, baseId),
         getInspectorName(),
       ])
       if (cancelled) return

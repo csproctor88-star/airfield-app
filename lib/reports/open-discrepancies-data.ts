@@ -81,7 +81,8 @@ export function formatDiscrepancyType(raw: string): string {
 // ── Data Fetching ──
 
 export async function fetchOpenDiscrepanciesData(
-  includeNotes = false
+  includeNotes = false,
+  baseId?: string | null
 ): Promise<OpenDiscrepanciesData> {
   const supabase = createClient()
   if (!supabase) {
@@ -94,11 +95,15 @@ export async function fetchOpenDiscrepanciesData(
   let discrepancies: OpenDiscrepancy[] = []
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  let query = (supabase as any)
     .from('discrepancies')
     .select('*, profiles:reported_by(name, rank)')
     .eq('status', 'open')
     .order('created_at', { ascending: true })
+
+  if (baseId) query = query.eq('base_id', baseId)
+
+  const { data, error } = await query
 
   if (!error && data) {
     discrepancies = (data ?? []).map((row: Record<string, unknown>) => {
@@ -116,11 +121,15 @@ export async function fetchOpenDiscrepanciesData(
   } else {
     // Fallback
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: fb } = await (supabase as any)
+    let fbQuery = (supabase as any)
       .from('discrepancies')
       .select('*')
       .eq('status', 'open')
       .order('created_at', { ascending: true })
+
+    if (baseId) fbQuery = fbQuery.eq('base_id', baseId)
+
+    const { data: fb } = await fbQuery
 
     discrepancies = ((fb ?? []) as Record<string, unknown>[]).map((row) => {
       const createdAt = new Date(row.created_at as string)

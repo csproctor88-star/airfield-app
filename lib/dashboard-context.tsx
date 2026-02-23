@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import { fetchAirfieldStatus, updateAirfieldStatus } from '@/lib/supabase/airfield-status'
+import { useBase } from '@/lib/base-context'
 
 type Advisory = {
   type: 'INFO' | 'CAUTION' | 'WARNING'
@@ -20,18 +21,22 @@ type DashboardState = {
 const DashboardContext = createContext<DashboardState | null>(null)
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
+  const { baseId } = useBase()
   const [advisory, setAdvisoryLocal] = useState<Advisory | null>(null)
   const [activeRunway, setActiveRunwayLocal] = useState<'01' | '19'>('01')
   const [runwayStatus, setRunwayStatusLocal] = useState<'open' | 'suspended' | 'closed'>('open')
   const [loaded, setLoaded] = useState(false)
 
-  // Load from Supabase on mount
+  // Load from Supabase on mount or when base changes
   useEffect(() => {
     async function load() {
-      const status = await fetchAirfieldStatus()
+      setLoaded(false)
+      const status = await fetchAirfieldStatus(baseId)
       if (status) {
         if (status.advisory_type && status.advisory_text) {
           setAdvisoryLocal({ type: status.advisory_type, text: status.advisory_text })
+        } else {
+          setAdvisoryLocal(null)
         }
         setActiveRunwayLocal(status.active_runway)
         setRunwayStatusLocal(status.runway_status)
@@ -39,7 +44,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setLoaded(true)
     }
     load()
-  }, [])
+  }, [baseId])
 
   // Persist advisory changes
   const setAdvisory = useCallback(async (a: Advisory | null) => {
@@ -47,20 +52,20 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     await updateAirfieldStatus({
       advisory_type: a?.type ?? null,
       advisory_text: a?.text ?? null,
-    })
-  }, [])
+    }, baseId)
+  }, [baseId])
 
   // Persist active runway changes
   const setActiveRunway = useCallback(async (r: '01' | '19') => {
     setActiveRunwayLocal(r)
-    await updateAirfieldStatus({ active_runway: r })
-  }, [])
+    await updateAirfieldStatus({ active_runway: r }, baseId)
+  }, [baseId])
 
   // Persist runway status changes
   const setRunwayStatus = useCallback(async (s: 'open' | 'suspended' | 'closed') => {
     setRunwayStatusLocal(s)
-    await updateAirfieldStatus({ runway_status: s })
-  }, [])
+    await updateAirfieldStatus({ runway_status: s }, baseId)
+  }, [baseId])
 
   // Don't render children until initial load completes to avoid flash of defaults
   if (!loaded) return null

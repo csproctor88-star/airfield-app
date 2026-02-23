@@ -2,6 +2,7 @@ import { createClient } from './client'
 
 export interface AirfieldStatus {
   id: string
+  base_id: string | null
   advisory_type: 'INFO' | 'CAUTION' | 'WARNING' | null
   advisory_text: string | null
   active_runway: '01' | '19'
@@ -28,16 +29,20 @@ export interface RunwayStatusLogRow {
   user_rank?: string
 }
 
-export async function fetchAirfieldStatus(): Promise<AirfieldStatus | null> {
+export async function fetchAirfieldStatus(baseId?: string | null): Promise<AirfieldStatus | null> {
   const supabase = createClient()
   if (!supabase) return null
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  let query = (supabase as any)
     .from('airfield_status')
     .select('*')
-    .limit(1)
-    .single()
+
+  if (baseId) {
+    query = query.eq('base_id', baseId)
+  }
+
+  const { data, error } = await query.limit(1).single()
 
   if (error) {
     console.error('Failed to fetch airfield status:', error.message)
@@ -49,19 +54,24 @@ export async function fetchAirfieldStatus(): Promise<AirfieldStatus | null> {
 
 export async function updateAirfieldStatus(
   updates: Partial<Pick<AirfieldStatus, 'advisory_type' | 'advisory_text' | 'active_runway' | 'runway_status'>>,
+  baseId?: string | null,
 ): Promise<boolean> {
   const supabase = createClient()
   if (!supabase) return false
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Get the current row ID
+  // Get the current row ID scoped to base
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase as any)
+  let existingQuery = (supabase as any)
     .from('airfield_status')
     .select('id')
-    .limit(1)
-    .single()
+
+  if (baseId) {
+    existingQuery = existingQuery.eq('base_id', baseId)
+  }
+
+  const { data: existing } = await existingQuery.limit(1).single()
 
   if (!existing) return false
 
@@ -80,27 +90,32 @@ export async function updateAirfieldStatus(
     return false
   }
 
-  // Audit logging is handled by the database trigger (trg_log_airfield_status)
-
   return true
 }
 
 /** Fetch runway status changes within a date range */
 export async function fetchRunwayStatusLog(
   startUTC: string,
-  endUTC: string
+  endUTC: string,
+  baseId?: string | null
 ): Promise<RunwayStatusLogRow[]> {
   const supabase = createClient()
   if (!supabase) return []
 
   // Try with profile join
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  let query = (supabase as any)
     .from('runway_status_log')
     .select('*, profiles:changed_by(name, rank)')
     .gte('created_at', startUTC)
     .lte('created_at', endUTC)
     .order('created_at', { ascending: true })
+
+  if (baseId) {
+    query = query.eq('base_id', baseId)
+  }
+
+  const { data, error } = await query
 
   if (!error && data) {
     return (data ?? []).map((row: Record<string, unknown>) => ({
@@ -112,12 +127,18 @@ export async function fetchRunwayStatusLog(
 
   // Fallback without join
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: fallback, error: fbError } = await (supabase as any)
+  let fallbackQuery = (supabase as any)
     .from('runway_status_log')
     .select('*')
     .gte('created_at', startUTC)
     .lte('created_at', endUTC)
     .order('created_at', { ascending: true })
+
+  if (baseId) {
+    fallbackQuery = fallbackQuery.eq('base_id', baseId)
+  }
+
+  const { data: fallback, error: fbError } = await fallbackQuery
 
   if (fbError) {
     console.error('Failed to fetch runway status log:', fbError.message)

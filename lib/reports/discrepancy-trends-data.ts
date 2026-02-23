@@ -81,7 +81,7 @@ function buildBuckets(startDate: Date, endDate: Date, type: 'week' | 'month'): T
 
 // ── Data Fetching ──
 
-export async function fetchDiscrepancyTrendsData(period: TrendPeriod): Promise<DiscrepancyTrendsData> {
+export async function fetchDiscrepancyTrendsData(period: TrendPeriod, baseId?: string | null): Promise<DiscrepancyTrendsData> {
   const config = getPeriodConfig(period)
   const now = new Date()
   const startDate = new Date(now)
@@ -102,20 +102,28 @@ export async function fetchDiscrepancyTrendsData(period: TrendPeriod): Promise<D
 
   // Fetch all discrepancies created in the period (opened)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: opened } = await (supabase as any)
+  let openedQuery = (supabase as any)
     .from('discrepancies')
     .select('id, created_at, location_text, type')
     .gte('created_at', startISO)
     .order('created_at', { ascending: true })
 
+  if (baseId) openedQuery = openedQuery.eq('base_id', baseId)
+
+  const { data: opened } = await openedQuery
+
   // Fetch all discrepancies closed/cancelled in the period
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: closed } = await (supabase as any)
+  let closedQuery = (supabase as any)
     .from('discrepancies')
     .select('id, created_at, updated_at, status, resolution_date')
     .in('status', ['completed', 'cancelled'])
     .gte('updated_at', startISO)
     .order('updated_at', { ascending: true })
+
+  if (baseId) closedQuery = closedQuery.eq('base_id', baseId)
+
+  const { data: closed } = await closedQuery
 
   const openedRows = (opened ?? []) as { id: string; created_at: string; location_text: string; type: string }[]
   const closedRows = (closed ?? []) as { id: string; created_at: string; updated_at: string; status: string; resolution_date: string | null }[]
