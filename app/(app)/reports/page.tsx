@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { FileText, AlertTriangle } from 'lucide-react'
+import { FileText, AlertTriangle, TrendingUp, Clock } from 'lucide-react'
 
 const REPORT_CARDS = [
   {
@@ -17,6 +17,20 @@ const REPORT_CARDS = [
     href: '/reports/discrepancies',
     icon: AlertTriangle,
     color: '#FBBF24',
+  },
+  {
+    title: 'Discrepancy Trends',
+    description: 'Opened vs closed over time — track whether the backlog is growing or shrinking, with top areas and types.',
+    href: '/reports/trends',
+    icon: TrendingUp,
+    color: '#8B5CF6',
+  },
+  {
+    title: 'Aging Discrepancies',
+    description: 'Open discrepancies grouped by aging tier — 0-7, 8-14, 15-30, 31-60, 61-90, and 90+ days with severity and shop breakdown.',
+    href: '/reports/aging',
+    icon: Clock,
+    color: '#EF4444',
   },
 ]
 
