@@ -1,34 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, AlertTriangle, Download, Loader2 } from 'lucide-react'
 import { fetchOpenDiscrepanciesData, formatDiscrepancyType, type OpenDiscrepanciesData } from '@/lib/reports/open-discrepancies-data'
 import { generateOpenDiscrepanciesPdf } from '@/lib/reports/open-discrepancies-pdf'
 import { getInspectorName } from '@/lib/supabase/inspections'
 
-type ViewState = 'options' | 'loading' | 'preview'
-
 export default function OpenDiscrepanciesPage() {
   const router = useRouter()
 
-  const [viewState, setViewState] = useState<ViewState>('options')
+  const [loading, setLoading] = useState(true)
   const [data, setData] = useState<OpenDiscrepanciesData | null>(null)
   const [generatorName, setGeneratorName] = useState<string>('Unknown')
   const [exporting, setExporting] = useState(false)
 
-  const handleGenerate = async () => {
-    setViewState('loading')
-
-    const [reportData, inspector] = await Promise.all([
-      fetchOpenDiscrepanciesData(true),
-      getInspectorName(),
-    ])
-
-    setData(reportData)
-    setGeneratorName(inspector.name || 'Unknown')
-    setViewState('preview')
-  }
+  useEffect(() => {
+    let cancelled = false
+    async function generate() {
+      const [reportData, inspector] = await Promise.all([
+        fetchOpenDiscrepanciesData(true),
+        getInspectorName(),
+      ])
+      if (cancelled) return
+      setData(reportData)
+      setGeneratorName(inspector.name || 'Unknown')
+      setLoading(false)
+    }
+    generate()
+    return () => { cancelled = true }
+  }, [])
 
   const handleExport = async () => {
     if (!data) return
@@ -41,49 +42,15 @@ export default function OpenDiscrepanciesPage() {
     setExporting(false)
   }
 
-  // ── Options View ──
-  if (viewState === 'options') {
+  // ── Loading View ──
+  if (loading) {
     return (
       <div style={{ padding: 16, paddingBottom: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <button onClick={() => router.push('/reports')} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: 4 }}>
             <ArrowLeft size={20} />
           </button>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 800 }}>Open Discrepancies Report</div>
-            <div style={{ fontSize: 11, color: '#64748B' }}>Point-in-time snapshot of all open discrepancies</div>
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: 14, marginBottom: 14 }}>
-          <div style={{ fontSize: 11, color: '#64748B' }}>
-            As of: {new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-          </div>
-        </div>
-
-        <button
-          onClick={handleGenerate}
-          style={{
-            width: '100%', padding: '14px 0', borderRadius: 10, border: 'none',
-            background: 'linear-gradient(135deg, #FBBF24, #F97316)',
-            color: '#FFF', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-          }}
-        >
-          Generate Report
-        </button>
-      </div>
-    )
-  }
-
-  // ── Loading View ──
-  if (viewState === 'loading') {
-    return (
-      <div style={{ padding: 16, paddingBottom: 100 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <button onClick={() => setViewState('options')} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: 4 }}>
-            <ArrowLeft size={20} />
-          </button>
-          <div style={{ fontSize: 16, fontWeight: 800 }}>Open Discrepancies Report</div>
+          <div style={{ fontSize: 16, fontWeight: 800 }}>Discrepancy Report</div>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
           <Loader2 size={32} color="#FBBF24" style={{ animation: 'spin 1s linear infinite' }} />
@@ -105,11 +72,11 @@ export default function OpenDiscrepanciesPage() {
     <div style={{ padding: 16, paddingBottom: 100 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-        <button onClick={() => setViewState('options')} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: 4 }}>
+        <button onClick={() => router.push('/reports')} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: 4 }}>
           <ArrowLeft size={20} />
         </button>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 800 }}>Open Discrepancies Report</div>
+          <div style={{ fontSize: 16, fontWeight: 800 }}>Discrepancy Report</div>
           <div style={{ fontSize: 11, color: '#64748B' }}>As of {new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
         </div>
       </div>

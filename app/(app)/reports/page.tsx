@@ -12,7 +12,7 @@ const REPORT_CARDS = [
     color: '#0EA5E9',
   },
   {
-    title: 'Open Discrepancies Report',
+    title: 'Generate Discrepancy Report',
     description: 'Point-in-time snapshot of every open discrepancy — severity breakdown, aging analysis, and assigned shop summary.',
     href: '/reports/discrepancies',
     icon: AlertTriangle,
