@@ -47,7 +47,10 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   } catch {
     // If auth check fails, redirect to login as a safety fallback
-    if (!request.nextUrl.pathname.startsWith('/login')) {
+    if (
+      !request.nextUrl.pathname.startsWith('/login')
+      && !request.nextUrl.pathname.startsWith('/api/installations')
+    ) {
       const redirectUrl = request.nextUrl.clone()
       redirectUrl.pathname = '/login'
       return NextResponse.redirect(redirectUrl)
