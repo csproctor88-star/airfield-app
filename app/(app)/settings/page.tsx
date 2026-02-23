@@ -228,6 +228,7 @@ function InstallationSection() {
   const [newName, setNewName] = useState('')
   const [newIcao, setNewIcao] = useState('')
   const [saving, setSaving] = useState(false)
+  const [userId, setUserId] = useState<string | undefined>()
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -240,6 +241,15 @@ function InstallationSection() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Fetch user ID once for membership creation
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) return
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setUserId(data.user.id)
+    })
+  }, [])
+
   const filtered = search.trim()
     ? BASE_DIRECTORY.filter(name => name.toLowerCase().includes(search.toLowerCase()))
     : [...BASE_DIRECTORY]
@@ -248,7 +258,7 @@ function InstallationSection() {
     setShowDropdown(false)
     setSearch('')
     setSaving(true)
-    const inst = await createInstallation(name)
+    const inst = await createInstallation(name, undefined, userId)
     if (inst) {
       await switchInstallation(inst.id)
       toast.success('Installation updated')
@@ -261,7 +271,7 @@ function InstallationSection() {
   const handleAddNew = async () => {
     if (!newName.trim()) return
     setSaving(true)
-    const inst = await createInstallation(newName.trim(), newIcao.trim() || undefined)
+    const inst = await createInstallation(newName.trim(), newIcao.trim() || undefined, userId)
     if (inst) {
       await switchInstallation(inst.id)
       setAddingNew(false)

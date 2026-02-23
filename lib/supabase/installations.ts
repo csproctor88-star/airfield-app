@@ -173,12 +173,12 @@ export async function addInstallationMember(
 }
 
 // ── Create a new installation (via API route to bypass RLS) ──
-export async function createInstallation(name: string, icao?: string): Promise<Installation | null> {
+export async function createInstallation(name: string, icao?: string, userId?: string): Promise<Installation | null> {
   try {
     const res = await fetch('/api/installations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, icao }),
+      body: JSON.stringify({ name, icao, userId }),
     })
 
     if (!res.ok) {
