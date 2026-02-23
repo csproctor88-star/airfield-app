@@ -86,7 +86,7 @@
   --color-progress-track: #E2E8F0;
   --color-detail-box-bg: #DBEAFE;
   --color-detail-box-label: #0F172A;
-  --color-detail-box-value: #334155;
+  --color-detail-box-value: #64748B;
 }
 
 @layer base {
