@@ -92,7 +92,7 @@ export default function LoginPage() {
         )
 
         if (!inst) {
-          setError('Failed to set up installation. Please try again.')
+          setError('Failed to set up installation. Check browser console for details.')
           setLoading(false)
           return
         }

@@ -181,15 +181,21 @@ export async function createInstallation(name: string, icao?: string, userId?: s
       body: JSON.stringify({ name, icao, userId }),
     })
 
+    const json = await res.json().catch(() => null)
+
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: 'Unknown error' }))
-      console.error('Failed to create installation:', err.error)
+      console.error('Failed to create installation:', res.status, json?.error ?? json)
       return null
     }
 
-    return (await res.json()) as Installation
+    if (!json || !json.id) {
+      console.error('Installation API returned unexpected response:', json)
+      return null
+    }
+
+    return json as Installation
   } catch (err) {
-    console.error('Failed to create installation:', err)
+    console.error('Failed to create installation (network error):', err)
     return null
   }
 }
