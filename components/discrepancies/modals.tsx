@@ -13,19 +13,19 @@ function ModalOverlay({ title, onClose, children }: { title: string; onClose: ()
       style={{
         position: 'fixed', inset: 0, zIndex: 1000, display: 'flex',
         alignItems: 'flex-end', justifyContent: 'center',
-        background: 'rgba(0,0,0,0.6)', padding: 0,
+        background: 'var(--color-overlay)', padding: 0,
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{
-        background: '#0F172A', borderRadius: '16px 16px 0 0', width: '100%', maxWidth: 480,
-        maxHeight: '85vh', overflow: 'auto', padding: 20, border: '1px solid #1E293B',
+        background: 'var(--color-bg-surface-solid)', borderRadius: '16px 16px 0 0', width: '100%', maxWidth: 480,
+        maxHeight: '85vh', overflow: 'auto', padding: 20, border: '1px solid var(--color-border-mid)',
         borderBottom: 'none',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <span style={{ fontSize: 15, fontWeight: 800 }}>{title}</span>
           <button type="button" onClick={onClose} style={{
-            background: 'none', border: 'none', color: '#64748B', fontSize: 18,
+            background: 'none', border: 'none', color: 'var(--color-text-3)', fontSize: 18,
             cursor: 'pointer', padding: 0, lineHeight: 1,
           }}>×</button>
         </div>
@@ -256,7 +256,7 @@ export function StatusUpdateModal({
                 return (
                   <button key={s} type="button" onClick={() => setNewStatus(s)} style={{
                     background: active ? `${cfg?.color || '#64748B'}22` : 'transparent',
-                    border: `1px solid ${active ? cfg?.color || '#64748B' : '#334155'}`,
+                    border: `1px solid ${active ? cfg?.color || 'var(--color-text-3)' : 'var(--color-text-4)'}`,
                     borderRadius: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600,
                     color: cfg?.color || '#94A3B8', cursor: 'pointer', fontFamily: 'inherit',
                   }}>
@@ -334,7 +334,7 @@ export function WorkOrderModal({
           value={workOrder} onChange={(e) => setWorkOrder(e.target.value)} />
       </div>
 
-      <div style={{ fontSize: 11, color: '#64748B', marginBottom: 12 }}>
+      <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 12 }}>
         {discrepancy.work_order_number
           ? `Current: ${discrepancy.work_order_number}`
           : 'No work order assigned yet.'}
@@ -373,7 +373,7 @@ export function PhotoViewerModal({
         border: 'none', color: '#fff', fontSize: 24, cursor: 'pointer', zIndex: 10,
       }}>×</button>
 
-      <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 8, textAlign: 'center' }}>
+      <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 8, textAlign: 'center' }}>
         {photo.name} — {index + 1} of {photos.length}
       </div>
 
@@ -386,11 +386,11 @@ export function PhotoViewerModal({
       {photos.length > 1 && (
         <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>
           <button type="button" onClick={() => setIndex((i) => (i - 1 + photos.length) % photos.length)}
-            style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-mid)', borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
             ← Prev
           </button>
           <button type="button" onClick={() => setIndex((i) => (i + 1) % photos.length)}
-            style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-mid)', borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
             Next →
           </button>
         </div>

@@ -465,21 +465,21 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
     return (
       <div
         style={{
-          background: 'rgba(10, 16, 28, 0.92)',
-          border: '1px solid rgba(56, 189, 248, 0.1)',
+          background: 'var(--color-bg-surface)',
+          border: '1px solid var(--color-border-mid)',
           borderRadius: 10,
           padding: 24,
           textAlign: 'center',
         }}
       >
         <div style={{ fontSize: 24, marginBottom: 8 }}>🗺️</div>
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#94A3B8', marginBottom: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 8 }}>
           Mapbox Token Required
         </div>
-        <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.5 }}>
-          Add your Mapbox access token to <code style={{ color: '#38BDF8' }}>.env.local</code>
+        <div style={{ fontSize: 12, color: 'var(--color-text-3)', lineHeight: 1.5 }}>
+          Add your Mapbox access token to <code style={{ color: 'var(--color-accent)' }}>.env.local</code>
           <br />
-          <code style={{ color: '#38BDF8', fontSize: 11 }}>NEXT_PUBLIC_MAPBOX_TOKEN=pk.xxx</code>
+          <code style={{ color: 'var(--color-accent)', fontSize: 11 }}>NEXT_PUBLIC_MAPBOX_TOKEN=pk.xxx</code>
         </div>
       </div>
     )
@@ -494,7 +494,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
           height: 500,
           borderRadius: 10,
           overflow: 'hidden',
-          border: '1px solid rgba(56, 189, 248, 0.1)',
+          border: '1px solid var(--color-border-mid)',
         }}
       />
       {/* Collapsible surface legend with toggles */}

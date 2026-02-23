@@ -49,7 +49,7 @@ if (typeof document !== 'undefined') {
 const Spinner = () => (
   <span style={{
     display: 'inline-block', width: 16, height: 16,
-    border: '2px solid #334155', borderTopColor: '#38BDF8',
+    border: '2px solid var(--color-text-4)', borderTopColor: 'var(--color-accent)',
     borderRadius: '50%', animation: 'spin 0.6s linear infinite',
   }} />
 )
@@ -125,8 +125,8 @@ function LazyPage({ pageNumber, scale, searchTerm, scrollRoot }: LazyPageProps) 
     <div ref={ref} style={{ marginBottom: 12, position: 'relative' }} id={`pdf-page-${pageNumber}`}>
       <div style={{
         position: 'absolute', top: 6, right: 10, zIndex: 10,
-        fontSize: 11, fontWeight: 700, color: '#64748B',
-        background: 'rgba(15,23,42,0.85)', padding: '2px 8px',
+        fontSize: 11, fontWeight: 700, color: 'var(--color-text-3)',
+        background: 'var(--color-bg-surface)', padding: '2px 8px',
         borderRadius: 4, fontFamily: "'JetBrains Mono', monospace",
       }}>
         {pageNumber}
@@ -142,12 +142,12 @@ function LazyPage({ pageNumber, scale, searchTerm, scrollRoot }: LazyPageProps) 
       ) : (
         <div style={{
           height: Math.round(1056 * scale),
-          background: '#1E293B',
+          background: 'var(--color-bg-elevated)',
           borderRadius: 4,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#475569',
+          color: 'var(--color-text-3)',
           fontSize: 13,
         }}>
           Page {pageNumber}
@@ -414,21 +414,21 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
   }, [numPages, onClose, searchOpen, goToMatch, viewMode])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0A101C' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--color-bg)' }}>
       {/* ── Header ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px',
-        background: 'rgba(15,23,42,0.95)', borderBottom: '1px solid rgba(56,189,248,0.1)',
+        background: 'var(--color-bg-surface)', borderBottom: '1px solid var(--color-border-mid)',
         flexWrap: 'wrap',
       }}>
         <button onClick={onClose} style={btnStyle}>
           <ArrowLeft size={12} /> Back
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: '#38BDF8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--color-accent)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {regId}
           </div>
-          <div style={{ fontSize: 11, color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 11, color: 'var(--color-text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {title}
           </div>
         </div>
@@ -448,8 +448,8 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
       {masterBuffer && !error && !isImage && (
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          padding: '6px 12px', background: 'rgba(15,23,42,0.8)',
-          borderBottom: '1px solid rgba(56,189,248,0.06)',
+          padding: '6px 12px', background: 'var(--color-bg-surface)',
+          borderBottom: '1px solid var(--color-border)',
         }}>
           {/* Mode toggle — desktop only */}
           {!isMobileDevice() && (
@@ -467,7 +467,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
                 onClick={() => { setSearchOpen(o => !o); setTimeout(() => searchInputRef.current?.focus(), 50) }}
                 style={{
                   ...ctrlBtnStyle,
-                  ...(searchOpen ? { background: 'rgba(56,189,248,0.15)', borderColor: 'rgba(56,189,248,0.3)', color: '#38BDF8' } : {}),
+                  ...(searchOpen ? { background: 'rgba(56,189,248,0.15)', borderColor: 'rgba(56,189,248,0.3)', color: 'var(--color-accent)' } : {}),
                 }}
                 title="Search (Ctrl+F)"
               >
@@ -486,7 +486,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
               }} style={ctrlBtnStyle}>
                 <ZoomOut size={12} />
               </button>
-              <span style={{ fontSize: 11, color: '#64748B', minWidth: 36, textAlign: 'center', fontFamily: 'monospace' }}>
+              <span style={{ fontSize: 11, color: 'var(--color-text-3)', minWidth: 36, textAlign: 'center', fontFamily: 'monospace' }}>
                 {Math.round(scale * touchScale * 100)}%
               </span>
               <button onClick={() => {
@@ -509,7 +509,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
           {numPages && viewMode === 'react-pdf' && (
             <>
               <div style={dividerStyle} />
-              <span style={{ fontSize: 11, color: '#64748B', fontFamily: 'monospace' }}>
+              <span style={{ fontSize: 11, color: 'var(--color-text-3)', fontFamily: 'monospace' }}>
                 {numPages} pages
               </span>
             </>
@@ -519,9 +519,9 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
 
       {/* ── Search panel (PDF only) ── */}
       {searchOpen && viewMode === 'react-pdf' && !isImage && (
-        <div style={{ borderBottom: '1px solid rgba(56,189,248,0.06)', background: 'rgba(15,23,42,0.95)' }}>
+        <div style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg-surface)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px' }}>
-            <Search size={12} style={{ color: '#64748B', flexShrink: 0 }} />
+            <Search size={12} style={{ color: 'var(--color-text-3)', flexShrink: 0 }} />
             <input
               ref={searchInputRef}
               type="text"
@@ -530,13 +530,13 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
               onChange={(e) => setSearchTerm(e.target.value)}
               disabled={textExtracting}
               style={{
-                flex: 1, padding: '6px 8px', background: '#1E293B', border: '1px solid #334155',
-                borderRadius: 6, color: '#E2E8F0', fontSize: 13, fontFamily: 'inherit', outline: 'none',
+                flex: 1, padding: '6px 8px', background: 'var(--color-bg-elevated)', border: '1px solid var(--color-text-4)',
+                borderRadius: 6, color: 'var(--color-text-1)', fontSize: 13, fontFamily: 'inherit', outline: 'none',
                 minWidth: 100,
               }}
             />
             {matches.length > 0 && (
-              <span style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: 12, color: 'var(--color-text-2)', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                 {matchIdx + 1} of {matches.length}
               </span>
             )}
@@ -554,7 +554,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
 
           {/* Match results list */}
           {matches.length > 0 && searchTerm.length >= 2 && (
-            <div style={{ maxHeight: 180, overflowY: 'auto', borderTop: '1px solid #1E293B' }}>
+            <div style={{ maxHeight: 180, overflowY: 'auto', borderTop: '1px solid var(--color-bg-elevated)' }}>
               {matches.slice(0, 60).map((m, i) => (
                 <button
                   key={`${m.page}-${m.position}`}
@@ -566,25 +566,25 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
                   style={{
                     display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 12px',
                     background: i === matchIdx ? 'rgba(56,189,248,0.08)' : 'none',
-                    border: 'none', borderBottom: '1px solid #1E293B', color: '#CBD5E1',
+                    border: 'none', borderBottom: '1px solid var(--color-bg-elevated)', color: 'var(--color-text-1)',
                     fontSize: 12, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
                     width: '100%', boxSizing: 'border-box' as const,
                   }}
                 >
                   <span style={{
                     flexShrink: 0, fontSize: 10, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
-                    color: '#38BDF8', background: 'rgba(56,189,248,0.12)', padding: '2px 6px',
+                    color: 'var(--color-accent)', background: 'rgba(56,189,248,0.12)', padding: '2px 6px',
                     borderRadius: 4, marginTop: 1,
                   }}>
                     p.{m.page}
                   </span>
-                  <span style={{ fontSize: 12, lineHeight: 1.4, color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <span style={{ fontSize: 12, lineHeight: 1.4, color: 'var(--color-text-2)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {m.snippet}
                   </span>
                 </button>
               ))}
               {matches.length > 60 && (
-                <div style={{ padding: '6px 12px', fontSize: 11, color: '#64748B', textAlign: 'center' }}>
+                <div style={{ padding: '6px 12px', fontSize: 11, color: 'var(--color-text-3)', textAlign: 'center' }}>
                   Showing 60 of {matches.length}
                 </div>
               )}
@@ -597,7 +597,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
       {loading && (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40, gap: 8 }}>
           <Spinner />
-          <span style={{ color: '#64748B', fontSize: 13 }}>Loading{isImage ? ' image' : ' PDF'}...</span>
+          <span style={{ color: 'var(--color-text-3)', fontSize: 13 }}>Loading{isImage ? ' image' : ' PDF'}...</span>
         </div>
       )}
 
@@ -606,7 +606,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
           <div style={{
             maxWidth: 360, padding: 16,
             background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
-            borderRadius: 10, color: '#CBD5E1', fontSize: 13, lineHeight: 1.6,
+            borderRadius: 10, color: 'var(--color-text-1)', fontSize: 13, lineHeight: 1.6,
           }}>
             <strong style={{ color: '#EF4444' }}>File Unavailable</strong>
             <p style={{ margin: '8px 0 0' }}>{error}</p>
@@ -629,7 +629,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
         <div style={{
           flex: 1, overflow: 'auto', display: 'flex',
           alignItems: 'flex-start', justifyContent: 'center',
-          padding: 16, background: '#0A101C', minHeight: 0,
+          padding: 16, background: 'var(--color-bg)', minHeight: 0,
         }}>
           <TransformWrapper
             initialScale={1}
@@ -672,7 +672,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
           ref={viewerRef}
           style={{
             flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column',
-            alignItems: 'center', padding: 12, background: '#0A101C', minHeight: 0,
+            alignItems: 'center', padding: 12, background: 'var(--color-bg)', minHeight: 0,
           }}
         >
           <TransformWrapper
@@ -724,33 +724,33 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
 const btnStyle: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 4,
   padding: '6px 10px', borderRadius: 6,
-  background: 'rgba(241,245,249,0.05)', border: '1px solid #334155',
-  color: '#94A3B8', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+  background: 'var(--color-bg-inset)', border: '1px solid var(--color-text-4)',
+  color: 'var(--color-text-2)', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
   cursor: 'pointer', whiteSpace: 'nowrap',
 }
 
 const linkBtnStyle: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 4,
   padding: '6px 10px', borderRadius: 6,
-  background: 'transparent', border: '1px solid rgba(56,189,248,0.2)',
-  color: '#94A3B8', fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+  background: 'transparent', border: '1px solid var(--color-border-active)',
+  color: 'var(--color-text-2)', fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
   cursor: 'pointer', whiteSpace: 'nowrap',
 }
 
 const ctrlBtnStyle: React.CSSProperties = {
   width: 28, height: 28, borderRadius: 6,
-  background: 'rgba(241,245,249,0.05)', border: '1px solid #334155',
-  color: '#94A3B8', cursor: 'pointer', display: 'flex',
+  background: 'var(--color-bg-inset)', border: '1px solid var(--color-text-4)',
+  color: 'var(--color-text-2)', cursor: 'pointer', display: 'flex',
   alignItems: 'center', justifyContent: 'center', fontSize: 15,
 }
 
 const smallBtnStyle: React.CSSProperties = {
   width: 24, height: 24, borderRadius: 5,
-  background: 'rgba(241,245,249,0.05)', border: '1px solid #334155',
-  color: '#94A3B8', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+  background: 'var(--color-bg-inset)', border: '1px solid var(--color-text-4)',
+  color: 'var(--color-text-2)', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
 }
 
 const dividerStyle: React.CSSProperties = {
-  width: 1, height: 18, background: '#334155', margin: '0 4px',
+  width: 1, height: 18, background: 'var(--color-text-4)', margin: '0 4px',
 }

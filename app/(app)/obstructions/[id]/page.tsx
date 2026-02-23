@@ -67,7 +67,7 @@ export default function ObstructionDetailPage() {
   if (loading) {
     return (
       <div style={{ padding: 16, textAlign: 'center', paddingTop: 60 }}>
-        <div style={{ fontSize: 13, color: '#64748B' }}>Loading evaluation...</div>
+        <div style={{ fontSize: 13, color: 'var(--color-text-3)' }}>Loading evaluation...</div>
       </div>
     )
   }
@@ -75,12 +75,12 @@ export default function ObstructionDetailPage() {
   if (!evaluation) {
     return (
       <div style={{ padding: 16 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#22D3EE', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
           ← Back
         </button>
         <div style={{ textAlign: 'center', paddingTop: 40 }}>
           <div style={{ fontSize: 24, marginBottom: 8 }}>🔍</div>
-          <div style={{ fontSize: 13, color: '#64748B' }}>Evaluation not found</div>
+          <div style={{ fontSize: 13, color: 'var(--color-text-3)' }}>Evaluation not found</div>
         </div>
       </div>
     )
@@ -100,7 +100,7 @@ export default function ObstructionDetailPage() {
         style={{
           background: 'none',
           border: 'none',
-          color: '#22D3EE',
+          color: 'var(--color-cyan)',
           fontSize: 13,
           fontWeight: 600,
           cursor: 'pointer',
@@ -113,7 +113,7 @@ export default function ObstructionDetailPage() {
       </button>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#64748B' }}>
+        <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--color-text-3)' }}>
           {evaluation.display_id}
         </span>
         <span
@@ -132,11 +132,11 @@ export default function ObstructionDetailPage() {
         <button
           onClick={() => router.push(`/obstructions?edit=${evaluation.id}`)}
           style={{
-            background: 'rgba(56,189,248,0.1)',
-            border: '1px solid rgba(56,189,248,0.2)',
+            background: 'var(--color-border-mid)',
+            border: '1px solid var(--color-border-active)',
             borderRadius: 6,
             padding: '4px 12px',
-            color: '#38BDF8',
+            color: 'var(--color-accent)',
             fontSize: 12,
             fontWeight: 600,
             cursor: 'pointer',
@@ -149,7 +149,7 @@ export default function ObstructionDetailPage() {
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>
         Obstruction Evaluation
       </div>
-      <div style={{ fontSize: 11, color: '#64748B', marginBottom: 14 }}>
+      <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 14 }}>
         {createdAt.toLocaleDateString('en-US', {
           weekday: 'short',
           year: 'numeric',
@@ -168,7 +168,7 @@ export default function ObstructionDetailPage() {
         <div style={{ marginBottom: 10 }}>
           {/* Hero image (first photo) */}
           <div
-            style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(56,189,248,0.1)', cursor: 'pointer' }}
+            style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--color-border-mid)', cursor: 'pointer' }}
             onClick={() => setViewerIndex(0)}
           >
             <img
@@ -188,7 +188,7 @@ export default function ObstructionDetailPage() {
                     height: 64,
                     borderRadius: 8,
                     overflow: 'hidden',
-                    border: '1px solid rgba(56,189,248,0.15)',
+                    border: '1px solid var(--color-border-mid)',
                     flexShrink: 0,
                     cursor: 'pointer',
                   }}
@@ -211,47 +211,47 @@ export default function ObstructionDetailPage() {
         <span className="section-label">Obstruction Details</span>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
           <div>
-            <span style={{ color: '#64748B', fontSize: 11 }}>Height AGL</span>
-            <div style={{ color: '#F1F5F9', fontWeight: 700, fontFamily: 'monospace' }}>
+            <span style={{ color: 'var(--color-text-3)', fontSize: 11 }}>Height AGL</span>
+            <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
               {evaluation.object_height_agl} ft
             </div>
           </div>
           <div>
-            <span style={{ color: '#64748B', fontSize: 11 }}>Top Elevation MSL</span>
-            <div style={{ color: '#F1F5F9', fontWeight: 700, fontFamily: 'monospace' }}>
+            <span style={{ color: 'var(--color-text-3)', fontSize: 11 }}>Top Elevation MSL</span>
+            <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
               {evaluation.obstruction_top_msl?.toFixed(0) ?? '—'} ft
             </div>
           </div>
           <div>
-            <span style={{ color: '#64748B', fontSize: 11 }}>Ground Elevation MSL</span>
-            <div style={{ color: '#F1F5F9', fontWeight: 700, fontFamily: 'monospace' }}>
+            <span style={{ color: 'var(--color-text-3)', fontSize: 11 }}>Ground Elevation MSL</span>
+            <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
               {evaluation.object_elevation_msl?.toFixed(0) ?? (currentInstallation?.elevation_msl ?? 580)} ft
             </div>
           </div>
           <div>
-            <span style={{ color: '#64748B', fontSize: 11 }}>From Centerline</span>
-            <div style={{ color: '#F1F5F9', fontWeight: 700, fontFamily: 'monospace' }}>
+            <span style={{ color: 'var(--color-text-3)', fontSize: 11 }}>From Centerline</span>
+            <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
               {evaluation.distance_from_centerline_ft?.toFixed(0) ?? '—'} ft
             </div>
           </div>
           <div>
-            <span style={{ color: '#64748B', fontSize: 11 }}>Coordinates</span>
-            <div style={{ color: '#CBD5E1', fontFamily: 'monospace', fontSize: 11 }}>
+            <span style={{ color: 'var(--color-text-3)', fontSize: 11 }}>Coordinates</span>
+            <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 11 }}>
               {evaluation.latitude?.toFixed(5)}°N, {evaluation.longitude ? Math.abs(evaluation.longitude).toFixed(5) : '—'}°W
             </div>
           </div>
           <div>
-            <span style={{ color: '#64748B', fontSize: 11 }}>Runway</span>
-            <div style={{ color: '#F1F5F9', fontWeight: 700 }}>
+            <span style={{ color: 'var(--color-text-3)', fontSize: 11 }}>Runway</span>
+            <div style={{ color: 'var(--color-text-1)', fontWeight: 700 }}>
               01/19 (Class B)
             </div>
           </div>
         </div>
 
         {evaluation.notes && (
-          <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(56,189,248,0.06)' }}>
-            <span style={{ color: '#64748B', fontSize: 11 }}>Description</span>
-            <div style={{ color: '#CBD5E1', fontSize: 12, marginTop: 2 }}>
+          <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--color-border)' }}>
+            <span style={{ color: 'var(--color-text-3)', fontSize: 11 }}>Description</span>
+            <div style={{ color: 'var(--color-text-1)', fontSize: 12, marginTop: 2 }}>
               {evaluation.notes}
             </div>
           </div>
@@ -262,7 +262,7 @@ export default function ObstructionDetailPage() {
       {evaluation.controlling_surface && (
         <div className="card" style={{ marginBottom: 10 }}>
           <span className="section-label">Controlling Surface</span>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#F1F5F9' }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-1)' }}>
             {evaluation.controlling_surface}
           </div>
         </div>
@@ -272,14 +272,14 @@ export default function ObstructionDetailPage() {
       <div className="card" style={{ marginBottom: 10 }}>
         <span className="section-label">Surface Analysis</span>
         {applicableResults.map((s) => {
-          const surfaceColor = SURFACE_COLORS[s.surfaceKey] || '#94A3B8'
+          const surfaceColor = SURFACE_COLORS[s.surfaceKey] || 'var(--color-text-2)'
           const isLandUseZone = s.maxAllowableHeightMSL === -1
           return (
             <div
               key={s.surfaceKey}
               style={{
-                background: 'rgba(4,7,12,0.6)',
-                border: `1px solid ${s.violated ? 'rgba(239,68,68,0.3)' : isLandUseZone ? `${surfaceColor}33` : 'rgba(56,189,248,0.06)'}`,
+                background: 'var(--color-bg-inset)',
+                border: `1px solid ${s.violated ? 'rgba(239,68,68,0.3)' : isLandUseZone ? `${surfaceColor}33` : 'var(--color-border)'}`,
                 borderRadius: 8,
                 padding: 10,
                 marginBottom: 6,
@@ -295,7 +295,7 @@ export default function ObstructionDetailPage() {
                     flexShrink: 0,
                   }}
                 />
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#F1F5F9', flex: 1 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)', flex: 1 }}>
                   {s.surfaceName}
                 </span>
                 {isLandUseZone ? (
@@ -327,13 +327,13 @@ export default function ObstructionDetailPage() {
                 )}
               </div>
               {isLandUseZone ? (
-                <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.5 }}>
+                <div style={{ fontSize: 11, color: 'var(--color-text-2)', lineHeight: 1.5 }}>
                   {s.ufcCriteria}
                 </div>
               ) : (
                 <>
-                  <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.4 }}>
-                    Max allowable: <strong style={{ color: '#CBD5E1' }}>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-2)', lineHeight: 1.4 }}>
+                    Max allowable: <strong style={{ color: 'var(--color-text-1)' }}>
                       {s.maxAllowableHeightMSL.toFixed(0)} ft MSL
                     </strong>{' '}
                     ({s.maxAllowableHeightAGL.toFixed(0)} ft AGL)
@@ -345,11 +345,11 @@ export default function ObstructionDetailPage() {
                   )}
                 </>
               )}
-              <div style={{ fontSize: 10, color: '#64748B', marginTop: 4 }}>
+              <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 4 }}>
                 {s.ufcReference}
               </div>
               {!isLandUseZone && (
-                <div style={{ fontSize: 10, color: '#475569', marginTop: 2, lineHeight: 1.3, fontStyle: 'italic' }}>
+                <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 2, lineHeight: 1.3, fontStyle: 'italic' }}>
                   {s.ufcCriteria}
                 </div>
               )}
@@ -373,20 +373,20 @@ export default function ObstructionDetailPage() {
           <div style={{ fontSize: 12, color: '#EF4444', fontWeight: 700, marginBottom: 8 }}>
             OBSTRUCTION VIOLATION DETECTED — The following actions are required:
           </div>
-          <div style={{ fontSize: 12, color: '#CBD5E1', lineHeight: 1.6, paddingLeft: 8 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-1)', lineHeight: 1.6, paddingLeft: 8 }}>
             1. Submit Work Order to CES (Civil Engineering Squadron) for evaluation and corrective action.
           </div>
-          <div style={{ fontSize: 12, color: '#CBD5E1', lineHeight: 1.6, paddingLeft: 8 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-1)', lineHeight: 1.6, paddingLeft: 8 }}>
             2. Per DAFI 13-213, Para 3.5 — Document all known airfield obstructions and coordinate waivers.
           </div>
-          <div style={{ fontSize: 12, color: '#CBD5E1', lineHeight: 1.6, paddingLeft: 8 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-1)', lineHeight: 1.6, paddingLeft: 8 }}>
             3. Per DAFMAN 13-204, Para 1.14 — Coordinate with ATC/RAPCON regarding obstruction impact on flying operations.
           </div>
-          <div style={{ fontSize: 12, color: '#CBD5E1', lineHeight: 1.6, paddingLeft: 8 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-1)', lineHeight: 1.6, paddingLeft: 8 }}>
             4. Submit a work order to CES and coordinate with the BCE to request a Permanent or Temporary Airspace Criteria Waiver.
           </div>
           {violatedResults.map((v, i) => (
-            <div key={i} style={{ fontSize: 12, color: '#CBD5E1', lineHeight: 1.6, paddingLeft: 8, marginTop: 2 }}>
+            <div key={i} style={{ fontSize: 12, color: 'var(--color-text-1)', lineHeight: 1.6, paddingLeft: 8, marginTop: 2 }}>
               5. {v.surfaceName} violation ({v.penetrationFt.toFixed(1)} ft) — {v.ufcReference}
             </div>
           ))}
@@ -429,7 +429,7 @@ export default function ObstructionDetailPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.6)',
+            background: 'var(--color-overlay)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -440,8 +440,8 @@ export default function ObstructionDetailPage() {
         >
           <div
             style={{
-              background: '#0F172A',
-              border: '1px solid rgba(56,189,248,0.15)',
+              background: 'var(--color-bg-surface-solid)',
+              border: '1px solid var(--color-border-mid)',
               borderRadius: 12,
               padding: 24,
               maxWidth: 320,
@@ -449,10 +449,10 @@ export default function ObstructionDetailPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#F1F5F9', marginBottom: 8 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
               Delete this Evaluation?
             </div>
-            <div style={{ fontSize: 13, color: '#94A3B8', marginBottom: 20 }}>
+            <div style={{ fontSize: 13, color: 'var(--color-text-2)', marginBottom: 20 }}>
               This cannot be undone.
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -462,9 +462,9 @@ export default function ObstructionDetailPage() {
                   flex: 1,
                   padding: '10px 16px',
                   borderRadius: 8,
-                  border: '1px solid rgba(56,189,248,0.15)',
+                  border: '1px solid var(--color-border-mid)',
                   background: 'transparent',
-                  color: '#94A3B8',
+                  color: 'var(--color-text-2)',
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: 'pointer',

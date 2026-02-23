@@ -96,25 +96,25 @@ export default function DailyOpsPage() {
       <div style={{ padding: 16, paddingBottom: 100 }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <button onClick={() => router.push('/reports')} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: 4 }}>
+          <button onClick={() => router.push('/reports')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>
             <ArrowLeft size={20} />
           </button>
           <div>
             <div style={{ fontSize: 16, fontWeight: 800 }}>Daily Operations Summary</div>
-            <div style={{ fontSize: 11, color: '#64748B' }}>Select a date to generate the report</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>Select a date to generate the report</div>
           </div>
         </div>
 
         {/* Date Mode Toggle */}
-        <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid #334155', marginBottom: 14 }}>
+        <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-text-4)', marginBottom: 14 }}>
           {(['single', 'range'] as DateMode[]).map((mode) => (
             <button
               key={mode}
               onClick={() => setDateMode(mode)}
               style={{
                 flex: 1, padding: '10px 0', border: 'none',
-                background: dateMode === mode ? '#0EA5E9' : 'transparent',
-                color: dateMode === mode ? '#FFF' : '#94A3B8',
+                background: dateMode === mode ? 'var(--color-accent-secondary)' : 'transparent',
+                color: dateMode === mode ? '#FFF' : 'var(--color-text-2)',
                 fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
@@ -126,8 +126,8 @@ export default function DailyOpsPage() {
         {/* Date Inputs */}
         <div className="card" style={{ marginBottom: 14, padding: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <Calendar size={16} color="#0EA5E9" />
-            <span style={{ fontSize: 12, fontWeight: 600, color: '#94A3B8' }}>
+            <Calendar size={16} color="var(--color-accent-secondary)" />
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-2)' }}>
               {dateMode === 'single' ? 'Date' : 'Start Date'}
             </span>
           </div>
@@ -141,7 +141,7 @@ export default function DailyOpsPage() {
             }}
             style={{
               width: '100%', padding: '10px 12px', borderRadius: 8,
-              border: '1px solid #334155', background: '#0F172A', color: '#F1F5F9',
+              border: '1px solid var(--color-text-4)', background: 'var(--color-bg-surface-solid)', color: 'var(--color-text-1)',
               fontSize: 14, fontFamily: 'inherit',
             }}
           />
@@ -149,8 +149,8 @@ export default function DailyOpsPage() {
           {dateMode === 'range' && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, marginTop: 14 }}>
-                <Calendar size={16} color="#0EA5E9" />
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#94A3B8' }}>End Date</span>
+                <Calendar size={16} color="var(--color-accent-secondary)" />
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-2)' }}>End Date</span>
               </div>
               <input
                 type="date"
@@ -160,7 +160,7 @@ export default function DailyOpsPage() {
                 onChange={(e) => setEndDate(e.target.value)}
                 style={{
                   width: '100%', padding: '10px 12px', borderRadius: 8,
-                  border: '1px solid #334155', background: '#0F172A', color: '#F1F5F9',
+                  border: '1px solid var(--color-text-4)', background: 'var(--color-bg-surface-solid)', color: 'var(--color-text-1)',
                   fontSize: 14, fontFamily: 'inherit',
                 }}
               />
@@ -188,14 +188,14 @@ export default function DailyOpsPage() {
     return (
       <div style={{ padding: 16, paddingBottom: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <button onClick={() => setViewState('picker')} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: 4 }}>
+          <button onClick={() => setViewState('picker')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>
             <ArrowLeft size={20} />
           </button>
           <div style={{ fontSize: 16, fontWeight: 800 }}>Daily Operations Summary</div>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
-          <Loader2 size={32} color="#0EA5E9" style={{ animation: 'spin 1s linear infinite' }} />
-          <div style={{ fontSize: 13, color: '#94A3B8', marginTop: 12 }}>Fetching report data for {dateLabel}...</div>
+          <Loader2 size={32} color="var(--color-accent-secondary)" style={{ animation: 'spin 1s linear infinite' }} />
+          <div style={{ fontSize: 13, color: 'var(--color-text-2)', marginTop: 12 }}>Fetching report data for {dateLabel}...</div>
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       </div>
@@ -290,20 +290,20 @@ export default function DailyOpsPage() {
     <div style={{ padding: 16, paddingBottom: 100 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-        <button onClick={() => setViewState('picker')} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: 4 }}>
+        <button onClick={() => setViewState('picker')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>
           <ArrowLeft size={20} />
         </button>
         <div>
           <div style={{ fontSize: 16, fontWeight: 800 }}>Daily Operations Summary</div>
-          <div style={{ fontSize: 11, color: '#64748B' }}>{dateLabel}</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>{dateLabel}</div>
         </div>
       </div>
 
       {/* Report Icon */}
       <div className="card" style={{ textAlign: 'center', padding: '16px 20px', marginBottom: 12 }}>
-        <FileText size={28} color="#0EA5E9" style={{ marginBottom: 8 }} />
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#F1F5F9' }}>Report Preview</div>
-        <div style={{ fontSize: 11, color: '#64748B' }}>Generated by {generatorName}</div>
+        <FileText size={28} color="var(--color-accent-secondary)" style={{ marginBottom: 8 }} />
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-1)' }}>Report Preview</div>
+        <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>Generated by {generatorName}</div>
       </div>
 
       {/* Section Summary Cards */}
@@ -323,8 +323,8 @@ export default function DailyOpsPage() {
               {s.count}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#F1F5F9' }}>{s.label}</div>
-              <div style={{ fontSize: 10, color: '#64748B' }}>{s.detail}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)' }}>{s.label}</div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-3)' }}>{s.detail}</div>
             </div>
           </div>
         ))}

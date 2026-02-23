@@ -11,8 +11,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div
       style={{
         fontFamily: "'Outfit', -apple-system, sans-serif",
-        background: '#04070C',
-        color: '#F1F5F9',
+        background: 'var(--color-bg)',
+        color: 'var(--color-text-1)',
         minHeight: '100vh',
         maxWidth: 480,
         margin: '0 auto',

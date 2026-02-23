@@ -53,14 +53,14 @@ export default function AgingDiscrepanciesPage() {
     return (
       <div style={{ padding: 16, paddingBottom: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <button onClick={() => router.push('/reports')} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: 4 }}>
+          <button onClick={() => router.push('/reports')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>
             <ArrowLeft size={20} />
           </button>
           <div style={{ fontSize: 16, fontWeight: 800 }}>Aging Discrepancies</div>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
-          <Loader2 size={32} color="#EF4444" style={{ animation: 'spin 1s linear infinite' }} />
-          <div style={{ fontSize: 13, color: '#94A3B8', marginTop: 12 }}>Analyzing aging discrepancies...</div>
+          <Loader2 size={32} color="var(--color-danger)" style={{ animation: 'spin 1s linear infinite' }} />
+          <div style={{ fontSize: 13, color: 'var(--color-text-2)', marginTop: 12 }}>Analyzing aging discrepancies...</div>
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       </div>
@@ -78,38 +78,38 @@ export default function AgingDiscrepanciesPage() {
     <div style={{ padding: 16, paddingBottom: 100 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-        <button onClick={() => router.push('/reports')} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: 4 }}>
+        <button onClick={() => router.push('/reports')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>
           <ArrowLeft size={20} />
         </button>
         <div>
           <div style={{ fontSize: 16, fontWeight: 800 }}>Aging Discrepancies</div>
-          <div style={{ fontSize: 11, color: '#64748B' }}>As of {new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>As of {new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
         </div>
       </div>
 
       {/* KPI Row */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         <div className="card" style={{ flex: 1, textAlign: 'center', padding: '12px 8px' }}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#F1F5F9' }}>{summary.total}</div>
-          <div style={{ fontSize: 9, color: '#94A3B8', fontWeight: 600 }}>Total Open</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-text-1)' }}>{summary.total}</div>
+          <div style={{ fontSize: 9, color: 'var(--color-text-2)', fontWeight: 600 }}>Total Open</div>
         </div>
         {summary.avgDaysOpen !== null && (
           <div className="card" style={{ flex: 1, textAlign: 'center', padding: '12px 8px' }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: '#FBBF24' }}>{summary.avgDaysOpen}</div>
-            <div style={{ fontSize: 9, color: '#94A3B8', fontWeight: 600 }}>Avg Days</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-warning)' }}>{summary.avgDaysOpen}</div>
+            <div style={{ fontSize: 9, color: 'var(--color-text-2)', fontWeight: 600 }}>Avg Days</div>
           </div>
         )}
         {summary.oldest && (
           <div className="card" style={{ flex: 1, textAlign: 'center', padding: '12px 8px' }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: '#EF4444' }}>{summary.oldest.days_open}</div>
-            <div style={{ fontSize: 9, color: '#94A3B8', fontWeight: 600 }}>Oldest</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-danger)' }}>{summary.oldest.days_open}</div>
+            <div style={{ fontSize: 9, color: 'var(--color-text-2)', fontWeight: 600 }}>Oldest</div>
           </div>
         )}
       </div>
 
       {/* Aging Tier Badges */}
       <div className="card" style={{ padding: 14, marginBottom: 8 }}>
-        <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+        <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
           By Aging Tier
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -121,7 +121,7 @@ export default function AgingDiscrepanciesPage() {
               minWidth: 64, opacity: tier.discrepancies.length === 0 ? 0.4 : 1,
             }}>
               <div style={{ fontSize: 20, fontWeight: 800, color: tier.color }}>{tier.discrepancies.length}</div>
-              <div style={{ fontSize: 9, color: '#94A3B8', fontWeight: 600, textAlign: 'center', marginTop: 2 }}>{tier.label}</div>
+              <div style={{ fontSize: 9, color: 'var(--color-text-2)', fontWeight: 600, textAlign: 'center', marginTop: 2 }}>{tier.label}</div>
             </div>
           ))}
         </div>
@@ -130,7 +130,7 @@ export default function AgingDiscrepanciesPage() {
       {/* By Severity */}
       {sevEntries.length > 0 && (
         <div className="card" style={{ padding: 14, marginBottom: 8 }}>
-          <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
             By Severity
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -144,7 +144,7 @@ export default function AgingDiscrepanciesPage() {
                   minWidth: 64,
                 }}>
                   <div style={{ fontSize: 20, fontWeight: 800, color: sevColor }}>{count}</div>
-                  <div style={{ fontSize: 9, color: '#94A3B8', fontWeight: 600, textAlign: 'center', marginTop: 2 }}>{SEVERITY_LABELS[sev] || sev}</div>
+                  <div style={{ fontSize: 9, color: 'var(--color-text-2)', fontWeight: 600, textAlign: 'center', marginTop: 2 }}>{SEVERITY_LABELS[sev] || sev}</div>
                 </div>
               )
             })}
@@ -155,7 +155,7 @@ export default function AgingDiscrepanciesPage() {
       {/* By Shop */}
       {summary.byShop.length > 0 && (
         <div className="card" style={{ padding: 14, marginBottom: 14 }}>
-          <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
             By Shop
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -163,11 +163,11 @@ export default function AgingDiscrepanciesPage() {
               <div key={s.shop} style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 padding: '8px 14px', borderRadius: 10,
-                background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)',
+                background: 'var(--color-border)', border: '1px solid rgba(56,189,248,0.15)',
                 minWidth: 64,
               }}>
-                <div style={{ fontSize: 20, fontWeight: 800, color: '#38BDF8' }}>{s.count}</div>
-                <div style={{ fontSize: 9, color: '#94A3B8', fontWeight: 600, textAlign: 'center', marginTop: 2 }}>{s.shop}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--color-accent)' }}>{s.count}</div>
+                <div style={{ fontSize: 9, color: 'var(--color-text-2)', fontWeight: 600, textAlign: 'center', marginTop: 2 }}>{s.shop}</div>
               </div>
             ))}
           </div>
@@ -187,10 +187,10 @@ export default function AgingDiscrepanciesPage() {
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#F1F5F9' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-1)' }}>
                   {d.display_id} — {d.title}
                 </div>
-                <div style={{ fontSize: 9, color: '#64748B' }}>
+                <div style={{ fontSize: 9, color: 'var(--color-text-3)' }}>
                   {d.location_text} · {d.assigned_shop || 'Unassigned'}
                 </div>
               </div>
@@ -206,7 +206,7 @@ export default function AgingDiscrepanciesPage() {
       ))}
 
       {/* Generated By */}
-      <div style={{ textAlign: 'center', fontSize: 11, color: '#64748B', marginBottom: 12 }}>
+      <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--color-text-3)', marginBottom: 12 }}>
         Generated by {generatorName}
       </div>
 

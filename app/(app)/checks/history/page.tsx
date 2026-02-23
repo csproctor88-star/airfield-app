@@ -63,7 +63,7 @@ export default function CheckHistoryPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
           <div style={{ fontSize: 16, fontWeight: 800 }}>Check History</div>
-          <div style={{ fontSize: 11, color: '#64748B' }}>{checks.length} completed check{checks.length !== 1 ? 's' : ''}</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>{checks.length} completed check{checks.length !== 1 ? 's' : ''}</div>
         </div>
         <Link
           href="/checks"
@@ -85,8 +85,8 @@ export default function CheckHistoryPage() {
           style={{
             padding: '6px 12px', borderRadius: 16, fontSize: 11, fontWeight: 600,
             cursor: 'pointer', fontFamily: 'inherit', border: 'none', whiteSpace: 'nowrap',
-            background: typeFilter === 'all' ? '#22D3EE22' : '#1E293B',
-            color: typeFilter === 'all' ? '#22D3EE' : '#64748B',
+            background: typeFilter === 'all' ? '#22D3EE22' : 'var(--color-bg-elevated)',
+            color: typeFilter === 'all' ? 'var(--color-cyan)' : 'var(--color-text-3)',
           }}
         >
           All ({checks.length})
@@ -102,8 +102,8 @@ export default function CheckHistoryPage() {
               style={{
                 padding: '6px 12px', borderRadius: 16, fontSize: 11, fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit', border: 'none', whiteSpace: 'nowrap',
-                background: active ? `${cfg.color}22` : '#1E293B',
-                color: active ? cfg.color : '#64748B',
+                background: active ? `${cfg.color}22` : 'var(--color-bg-elevated)',
+                color: active ? cfg.color : 'var(--color-text-3)',
               }}
             >
               {cfg.icon} {cfg.label.replace(' Check', '').replace(' Reading', '')} ({count})
@@ -123,14 +123,14 @@ export default function CheckHistoryPage() {
 
       {/* Loading */}
       {loading && (
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>
           Loading...
         </div>
       )}
 
       {/* Check Cards */}
       {!loading && filtered.length === 0 && (
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>
           {search || typeFilter !== 'all' ? 'No checks match your filter.' : 'No checks completed yet.'}
         </div>
       )}
@@ -155,18 +155,18 @@ export default function CheckHistoryPage() {
             style={{
               display: 'block', marginBottom: 6, cursor: 'pointer',
               textDecoration: 'none', color: 'inherit',
-              borderLeft: `3px solid ${cfg?.color || '#64748B'}`,
+              borderLeft: `3px solid ${cfg?.color || 'var(--color-text-3)'}`,
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <span style={{ fontSize: 13, fontWeight: 800, fontFamily: 'monospace', color: '#22D3EE' }}>
+              <span style={{ fontSize: 13, fontWeight: 800, fontFamily: 'monospace', color: 'var(--color-cyan)' }}>
                 {check.display_id}
               </span>
-              <Badge label={cfg?.label || check.check_type} color={cfg?.color || '#64748B'} />
+              <Badge label={cfg?.label || check.check_type} color={cfg?.color || 'var(--color-text-3)'} />
             </div>
 
             {summary && (
-              <div style={{ fontSize: 12, color: '#CBD5E1', marginBottom: 6, lineHeight: 1.4 }}>
+              <div style={{ fontSize: 12, color: 'var(--color-text-1)', marginBottom: 6, lineHeight: 1.4 }}>
                 {summary}
               </div>
             )}
@@ -174,14 +174,14 @@ export default function CheckHistoryPage() {
             {/* Areas */}
             <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 6 }}>
               {(check.areas || []).map((area: string) => (
-                <span key={area} style={{ fontSize: 10, color: '#64748B', background: '#1E293B', padding: '2px 6px', borderRadius: 4 }}>
+                <span key={area} style={{ fontSize: 10, color: 'var(--color-text-3)', background: 'var(--color-bg-elevated)', padding: '2px 6px', borderRadius: 4 }}>
                   {area}
                 </span>
               ))}
             </div>
 
             {/* Footer */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#64748B' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'var(--color-text-3)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span>{check.completed_by || 'Unknown'}</span>
                 {check.photo_count > 0 && (

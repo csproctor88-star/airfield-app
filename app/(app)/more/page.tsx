@@ -110,20 +110,20 @@ export default function MorePage() {
             <div style={{ fontSize: 14, fontWeight: 700 }}>{m.name}</div>
           </div>
           {m.badge && <Badge label={m.badge} color={m.color} />}
-          <span style={{ color: '#334155', fontSize: 16 }}>›</span>
+          <span style={{ color: 'var(--color-text-4)', fontSize: 16 }}>›</span>
         </Link>
       ))}
       <div
         className="card"
         style={{ marginTop: 8, textAlign: 'center', padding: 20 }}
       >
-        <div style={{ fontSize: 14, fontWeight: 800, color: '#F1F5F9', letterSpacing: '-0.01em' }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--color-text-1)', letterSpacing: '-0.01em' }}>
           Glidepath
         </div>
-        <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>
+        <div style={{ fontSize: 11, color: 'var(--color-text-2)', marginTop: 2 }}>
           Guiding You to Mission Success
         </div>
-        <div style={{ fontSize: 10, color: '#475569', marginTop: 6 }}>
+        <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 6 }}>
           v2.1.0
         </div>
       </div>

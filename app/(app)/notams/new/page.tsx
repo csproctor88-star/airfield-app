@@ -8,11 +8,11 @@ import { NOTAM_TYPES } from '@/lib/constants'
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  background: '#0F172A',
-  border: '1px solid #334155',
+  background: 'var(--color-bg-surface-solid)',
+  border: '1px solid var(--color-text-4)',
   borderRadius: 8,
   padding: '10px 12px',
-  color: '#F1F5F9',
+  color: 'var(--color-text-1)',
   fontSize: 14,
   fontFamily: 'inherit',
   outline: 'none',
@@ -21,7 +21,7 @@ const inputStyle: React.CSSProperties = {
 const labelStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 600,
-  color: '#94A3B8',
+  color: 'var(--color-text-2)',
   marginBottom: 6,
   display: 'block',
 }
@@ -53,7 +53,7 @@ export default function NewNotamPage() {
         style={{
           background: 'none',
           border: 'none',
-          color: '#22D3EE',
+          color: 'var(--color-cyan)',
           fontSize: 13,
           fontWeight: 600,
           cursor: 'pointer',
@@ -148,7 +148,7 @@ export default function NewNotamPage() {
           padding: '14px 0',
           borderRadius: 10,
           border: 'none',
-          background: 'linear-gradient(135deg, #0EA5E9, #22D3EE)',
+          background: 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-cyan))',
           color: '#FFF',
           fontSize: 15,
           fontWeight: 700,

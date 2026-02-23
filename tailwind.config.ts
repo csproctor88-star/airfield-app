@@ -9,26 +9,25 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Matched to Airfield_OPS_Unified_Prototype.jsx color system
-        background: '#04070C',
-        card: 'rgba(10,16,28,0.92)',
-        'card-hover': 'rgba(10,16,28,1)',
-        border: 'rgba(56,189,248,0.06)',
-        'border-active': 'rgba(56,189,248,0.2)',
-        accent: '#38BDF8',       // sky-400 — primary accent
-        'accent-bg': '#0EA5E9',  // sky-500 — button gradient end
-        'accent-dark': '#0369A1', // sky-800 — button gradient start
+        background: 'var(--color-bg)',
+        card: 'var(--color-bg-surface)',
+        'card-hover': 'var(--color-bg-surface-solid)',
+        border: 'var(--color-border)',
+        'border-active': 'var(--color-border-active)',
+        accent: 'var(--color-accent)',
+        'accent-bg': 'var(--color-accent-secondary)',
+        'accent-dark': 'var(--color-accent-dark)',
         muted: {
-          DEFAULT: '#94A3B8',    // t2 — secondary text
-          dark: '#64748B',       // t3 — tertiary text
-          darker: '#334155',     // t4 — borders, inactive
+          DEFAULT: 'var(--color-text-2)',
+          dark: 'var(--color-text-3)',
+          darker: 'var(--color-text-4)',
         },
-        success: '#34D399',      // emerald-400
-        danger: '#EF4444',       // red-500
-        warning: '#FBBF24',      // amber-400
-        orange: '#F97316',       // orange-500
-        purple: '#A78BFA',       // violet-400
-        cyan: '#22D3EE',         // cyan-400
+        success: 'var(--color-success)',
+        danger: 'var(--color-danger)',
+        warning: 'var(--color-warning)',
+        orange: 'var(--color-orange)',
+        purple: 'var(--color-purple)',
+        cyan: 'var(--color-cyan)',
       },
       fontFamily: {
         sans: [

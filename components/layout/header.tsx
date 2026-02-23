@@ -26,8 +26,8 @@ export function Header() {
   return (
     <div
       style={{
-        background: 'linear-gradient(180deg, #0A1220, #070D18)',
-        borderBottom: '1px solid rgba(56,189,248,0.06)',
+        background: 'linear-gradient(180deg, var(--color-bg-header-start), var(--color-bg-header-end))',
+        borderBottom: '1px solid var(--color-border)',
         padding: '12px 16px 10px',
         position: 'sticky',
         top: 0,
@@ -46,7 +46,7 @@ export function Header() {
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: 17,
-              boxShadow: '0 0 16px rgba(56,189,248,0.15)',
+              boxShadow: '0 0 16px var(--color-accent-glow)',
             }}
           >
             ✈️
@@ -57,7 +57,7 @@ export function Header() {
                 fontSize: 16,
                 fontWeight: 800,
                 letterSpacing: '-0.02em',
-                background: 'linear-gradient(135deg, #F1F5F9, #38BDF8)',
+                background: 'linear-gradient(135deg, var(--color-logo-start), var(--color-logo-end))',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
@@ -65,7 +65,7 @@ export function Header() {
               GLIDEPATH
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.12em' }}>
+              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.12em' }}>
                 {displayName ? `${displayName.toUpperCase()} \u2022 ${icao}` : 'AIRFIELD OPS'}
               </div>
               {hasMultipleInstallations && (
@@ -84,7 +84,7 @@ export function Header() {
                     alignItems: 'center',
                   }}
                 >
-                  <ChevronDown size={10} color="#64748B" />
+                  <ChevronDown size={10} color="var(--color-text-3)" />
                 </button>
               )}
             </div>
@@ -104,7 +104,7 @@ export function Header() {
           >
             <RefreshCw
               size={16}
-              color="#94A3B8"
+              color="var(--color-text-2)"
               style={{
                 transition: 'transform 0.3s',
                 transform: syncing ? 'rotate(360deg)' : 'none',
@@ -116,7 +116,7 @@ export function Header() {
               width: 6,
               height: 6,
               borderRadius: '50%',
-              background: '#34D399',
+              background: 'var(--color-success)',
             }}
           />
         </div>
@@ -127,9 +127,9 @@ export function Header() {
         <div
           style={{
             marginTop: 8,
-            background: '#0F1729',
+            background: 'var(--color-bg-elevated)',
             borderRadius: 8,
-            border: '1px solid rgba(56,189,248,0.1)',
+            border: '1px solid var(--color-border-mid)',
             overflow: 'hidden',
           }}
         >
@@ -146,10 +146,10 @@ export function Header() {
                 padding: '10px 14px',
                 background: inst.id === currentInstallation?.id ? 'rgba(56,189,248,0.08)' : 'transparent',
                 border: 'none',
-                borderBottom: '1px solid rgba(56,189,248,0.05)',
+                borderBottom: '1px solid var(--color-border)',
                 cursor: 'pointer',
                 textAlign: 'left',
-                color: inst.id === currentInstallation?.id ? '#38BDF8' : '#94A3B8',
+                color: inst.id === currentInstallation?.id ? 'var(--color-accent)' : 'var(--color-text-2)',
                 fontSize: 13,
                 fontWeight: inst.id === currentInstallation?.id ? 700 : 500,
               }}

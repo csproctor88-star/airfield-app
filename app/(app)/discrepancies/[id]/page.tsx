@@ -91,7 +91,7 @@ export default function DiscrepancyDetailPage() {
   if (loading) {
     return (
       <div style={{ padding: 16, paddingBottom: 100 }}>
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>
           Loading...
         </div>
       </div>
@@ -105,10 +105,10 @@ export default function DiscrepancyDetailPage() {
   if (!d) {
     return (
       <div style={{ padding: 16, paddingBottom: 100 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#22D3EE', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
           ← Back
         </button>
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>
           Discrepancy not found
         </div>
       </div>
@@ -145,13 +145,13 @@ export default function DiscrepancyDetailPage() {
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
-      <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#22D3EE', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
+      <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
         ← Back
       </button>
 
       <div className="card" style={{ marginBottom: 8 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span style={{ fontSize: 16, fontWeight: 800, color: '#22D3EE', fontFamily: 'monospace' }}>{d.work_order_number || 'Pending'}</span>
+          <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{d.work_order_number || 'Pending'}</span>
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
             <StatusBadge status={d.status} />
           </div>
@@ -159,7 +159,7 @@ export default function DiscrepancyDetailPage() {
 
         <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>{d.title}</div>
 
-        <div style={{ fontSize: 12, color: '#94A3B8', lineHeight: 1.6, marginBottom: 12 }}>{d.description}</div>
+        <div style={{ fontSize: 12, color: 'var(--color-text-2)', lineHeight: 1.6, marginBottom: 12 }}>{d.description}</div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
           {([
@@ -172,7 +172,7 @@ export default function DiscrepancyDetailPage() {
             ['Photos', `${d.photo_count}`],
           ] as const).map(([label, value], i) => (
             <div key={i}>
-              <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{label}</div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{label}</div>
               <div style={{ fontWeight: 500, marginTop: 2 }}>{value}</div>
             </div>
           ))}
@@ -181,30 +181,30 @@ export default function DiscrepancyDetailPage() {
         {'resolution_notes' in d && d.resolution_notes && (
           <div style={{ marginTop: 12, padding: '8px 10px', background: '#22C55E11', border: '1px solid #22C55E33', borderRadius: 8 }}>
             <div style={{ fontSize: 10, color: '#22C55E', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Resolution Notes</div>
-            <div style={{ fontSize: 12, color: '#94A3B8', lineHeight: 1.5 }}>{d.resolution_notes as string}</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-2)', lineHeight: 1.5 }}>{d.resolution_notes as string}</div>
           </div>
         )}
 
         {/* ── Notes History ── */}
         {statusUpdates.length > 0 && (
-          <div style={{ marginTop: 12, borderTop: '1px solid #1E293B', paddingTop: 12 }}>
-            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Notes History</div>
+          <div style={{ marginTop: 12, borderTop: '1px solid var(--color-bg-elevated)', paddingTop: 12 }}>
+            <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Notes History</div>
             {statusUpdates.map((update) => (
-              <div key={update.id} style={{ borderLeft: '2px solid #334155', paddingLeft: 10, marginBottom: 10 }}>
-                <div style={{ fontSize: 11, color: '#64748B', marginBottom: 2 }}>
-                  <span style={{ fontWeight: 600, color: '#38BDF8' }}>{update.user_rank ? `${update.user_rank} ` : ''}{update.user_name || 'Unknown'}</span>
+              <div key={update.id} style={{ borderLeft: '2px solid var(--color-text-4)', paddingLeft: 10, marginBottom: 10 }}>
+                <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 2 }}>
+                  <span style={{ fontWeight: 600, color: 'var(--color-accent)' }}>{update.user_rank ? `${update.user_rank} ` : ''}{update.user_name || 'Unknown'}</span>
                   {' — '}
                   {new Date(update.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   {' '}
                   {new Date(update.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                 </div>
                 {update.old_status && (
-                  <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 2 }}>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-2)', marginBottom: 2 }}>
                     Status: {update.old_status} → {update.new_status}
                   </div>
                 )}
                 {update.notes && (
-                  <div style={{ fontSize: 12, color: '#CBD5E1', lineHeight: 1.4 }}>{update.notes}</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-1)', lineHeight: 1.4 }}>{update.notes}</div>
                 )}
               </div>
             ))}
@@ -215,7 +215,7 @@ export default function DiscrepancyDetailPage() {
       {/* Pinned location map */}
       {staticMapUrl && (
         <div className="card" style={{ marginBottom: 8, padding: 0, overflow: 'hidden' }}>
-          <div style={{ padding: '8px 12px 4px', fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          <div style={{ padding: '8px 12px 4px', fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             Pinned Location
           </div>
           <img
@@ -235,7 +235,7 @@ export default function DiscrepancyDetailPage() {
           {allPhotos.map((p, i) => (
             <div
               key={i}
-              style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid #38BDF833', cursor: 'pointer' }}
+              style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border-active)', cursor: 'pointer' }}
               onClick={() => setViewerIndex(i)}
             >
               <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -262,12 +262,12 @@ export default function DiscrepancyDetailPage() {
         <Link
           href={`/notams/${linkedNotam.id}`}
           className="card"
-          style={{ marginTop: 8, cursor: 'pointer', borderLeft: '3px solid #A78BFA', display: 'block', textDecoration: 'none', color: 'inherit' }}
+          style={{ marginTop: 8, cursor: 'pointer', borderLeft: '3px solid var(--color-purple)', display: 'block', textDecoration: 'none', color: 'inherit' }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <span className="section-label">Linked NOTAM</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#A78BFA' }}>{linkedNotam.notam_number}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-purple)' }}>{linkedNotam.notam_number}</span>
             </div>
             <Badge label="VIEW →" color="#22D3EE" />
           </div>

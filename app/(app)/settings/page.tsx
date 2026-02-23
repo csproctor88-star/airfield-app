@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, MapPin, BookOpen, HardDrive, Info, LogOut, Save, Trash2, Download, X, ExternalLink, ChevronDown } from 'lucide-react'
+import { User, MapPin, BookOpen, HardDrive, Info, LogOut, Save, Trash2, Download, X, ExternalLink, ChevronDown, Sun, Moon, Monitor } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
+import { useTheme, type ThemePreference } from '@/lib/theme-context'
 import { USER_ROLES } from '@/lib/constants'
 import { createInstallation } from '@/lib/supabase/installations'
 import { BASE_DIRECTORY } from '@/lib/base-directory'
@@ -23,6 +24,7 @@ export default function SettingsPage() {
     <div style={{ padding: 16, paddingBottom: 100 }}>
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Settings</div>
       <ProfileSection />
+      <ThemeSection />
       <InstallationSection />
       <RegulationsSection />
       <StorageSection />
@@ -42,7 +44,7 @@ function SectionHeader({ label, icon: Icon }: { label: string; icon: React.Compo
       display: 'flex', alignItems: 'center', gap: 6,
       marginBottom: 8, marginTop: 24,
     }}>
-      <Icon size={12} color="#64748B" />
+      <Icon size={12} color="var(--color-text-3)" />
       <div className="section-label" style={{ marginBottom: 0 }}>{label}</div>
     </div>
   )
@@ -108,7 +110,7 @@ function ProfileSection() {
     return (
       <>
         <SectionHeader label="PROFILE" icon={User} />
-        <div className="card" style={{ padding: 16, color: '#64748B', fontSize: 13 }}>Loading...</div>
+        <div className="card" style={{ padding: 16, color: 'var(--color-text-3)', fontSize: 13 }}>Loading...</div>
       </>
     )
   }
@@ -122,30 +124,30 @@ function ProfileSection() {
       <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* Name */}
         <div>
-          <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 2 }}>NAME</div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#F1F5F9' }}>{displayName || 'Not set'}</div>
+          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 2 }}>NAME</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-1)' }}>{displayName || 'Not set'}</div>
         </div>
 
         {/* Email */}
         <div>
-          <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 2 }}>EMAIL</div>
-          <div style={{ fontSize: 13, color: '#94A3B8' }}>{profile.email}</div>
+          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 2 }}>EMAIL</div>
+          <div style={{ fontSize: 13, color: 'var(--color-text-2)' }}>{profile.email}</div>
         </div>
 
         {/* Installation */}
         {profile.installationName && (
           <div>
-            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 2 }}>INSTALLATION</div>
-            <div style={{ fontSize: 13, color: '#94A3B8' }}>{profile.installationName}</div>
+            <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 2 }}>INSTALLATION</div>
+            <div style={{ fontSize: 13, color: 'var(--color-text-2)' }}>{profile.installationName}</div>
           </div>
         )}
 
         {/* Role */}
         <div>
-          <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>ROLE</div>
+          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>ROLE</div>
           <span style={{
             background: 'rgba(56,189,248,0.1)',
-            color: '#38BDF8',
+            color: 'var(--color-accent)',
             padding: '3px 8px',
             borderRadius: 4,
             fontSize: 11,
@@ -154,6 +156,60 @@ function ProfileSection() {
           }}>
             {roleConfig?.label || profile.role}
           </span>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Section: Appearance / Theme
+// ═══════════════════════════════════════════════════════════════
+
+function ThemeSection() {
+  const { theme, setTheme } = useTheme()
+
+  const options: { value: ThemePreference; label: string; icon: React.ComponentType<{ size: number }> }[] = [
+    { value: 'light', label: 'Day', icon: Sun },
+    { value: 'dark', label: 'Night', icon: Moon },
+    { value: 'auto', label: 'Auto', icon: Monitor },
+  ]
+
+  return (
+    <>
+      <SectionHeader label="APPEARANCE" icon={Sun} />
+      <div className="card" style={{ padding: 14 }}>
+        <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 8 }}>THEME</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {options.map(({ value, label, icon: Icon }) => (
+            <button
+              key={value}
+              onClick={() => setTheme(value)}
+              style={{
+                flex: 1,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                padding: '12px 8px',
+                borderRadius: 10,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                border: theme === value
+                  ? '2px solid var(--color-accent)'
+                  : '1px solid var(--color-border)',
+                background: theme === value
+                  ? 'rgba(56,189,248,0.08)'
+                  : 'transparent',
+                color: theme === value ? 'var(--color-accent)' : 'var(--color-text-2)',
+                fontWeight: theme === value ? 700 : 500,
+                fontSize: 12,
+              }}
+            >
+              <Icon size={20} />
+              {label}
+            </button>
+          ))}
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 8 }}>
+          {theme === 'auto' ? 'Follows your device settings' : theme === 'light' ? 'Light theme active' : 'Dark theme active'}
         </div>
       </div>
     </>
@@ -227,20 +283,20 @@ function InstallationSection() {
       <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* Current installation display */}
         <div>
-          <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>CURRENT INSTALLATION</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#F1F5F9' }}>
+          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>CURRENT INSTALLATION</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-1)' }}>
             {currentInstallation
               ? `${shortName(currentInstallation.name)}${currentInstallation.icao ? ` (${currentInstallation.icao})` : ''}`
               : 'Not set'}
           </div>
         </div>
 
-        <div style={{ borderTop: '1px solid rgba(56,189,248,0.06)' }} />
+        <div style={{ borderTop: '1px solid var(--color-border)' }} />
 
         {/* Switch installation dropdown */}
         {!addingNew ? (
           <div ref={dropdownRef} style={{ position: 'relative' }}>
-            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>CHANGE INSTALLATION</div>
+            <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>CHANGE INSTALLATION</div>
             <button
               type="button"
               onClick={() => setShowDropdown(!showDropdown)}
@@ -253,22 +309,22 @@ function InstallationSection() {
                 opacity: saving ? 0.6 : 1,
               }}
             >
-              <span style={{ color: '#94A3B8', fontSize: 13 }}>
+              <span style={{ color: 'var(--color-text-2)', fontSize: 13 }}>
                 {saving ? 'Switching...' : 'Select a different installation...'}
               </span>
-              <ChevronDown size={14} color="#64748B" />
+              <ChevronDown size={14} color="var(--color-text-3)" />
             </button>
 
             {showDropdown && (
               <div style={{
                 position: 'absolute', top: '100%', left: 0, right: 0,
                 zIndex: 100, marginTop: 4,
-                background: '#0F1729',
+                background: 'var(--color-bg-elevated)',
                 border: '1px solid rgba(56,189,248,0.15)',
                 borderRadius: 8,
                 maxHeight: 200, overflowY: 'auto',
               }}>
-                <div style={{ padding: 8, borderBottom: '1px solid rgba(56,189,248,0.06)' }}>
+                <div style={{ padding: 8, borderBottom: '1px solid var(--color-border)' }}>
                   <input
                     type="text"
                     placeholder="Search installations..."
@@ -280,7 +336,7 @@ function InstallationSection() {
                   />
                 </div>
                 {filtered.length === 0 ? (
-                  <div style={{ padding: '12px 14px', fontSize: 12, color: '#64748B' }}>
+                  <div style={{ padding: '12px 14px', fontSize: 12, color: 'var(--color-text-3)' }}>
                     No installations found
                   </div>
                 ) : (
@@ -295,7 +351,7 @@ function InstallationSection() {
                         border: 'none',
                         borderBottom: '1px solid rgba(56,189,248,0.04)',
                         cursor: 'pointer', textAlign: 'left',
-                        color: name === currentInstallation?.name ? '#38BDF8' : '#E2E8F0',
+                        color: name === currentInstallation?.name ? 'var(--color-accent)' : 'var(--color-text-1)',
                         fontSize: 13, fontFamily: 'inherit',
                         fontWeight: name === currentInstallation?.name ? 700 : 500,
                       }}
@@ -317,7 +373,7 @@ function InstallationSection() {
                     border: 'none',
                     borderTop: '1px solid rgba(56,189,248,0.1)',
                     cursor: 'pointer', textAlign: 'left',
-                    color: '#38BDF8',
+                    color: 'var(--color-accent)',
                     fontSize: 13, fontFamily: 'inherit',
                     fontWeight: 600,
                   }}
@@ -329,7 +385,7 @@ function InstallationSection() {
           </div>
         ) : (
           <div>
-            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>ADD NEW INSTALLATION</div>
+            <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>ADD NEW INSTALLATION</div>
             <input
               type="text"
               className="input-dark"
@@ -355,7 +411,7 @@ function InstallationSection() {
                 style={{
                   flex: 1,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
+                  background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
                   border: 'none', borderRadius: 8, padding: '10px 16px',
                   color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
                   fontFamily: 'inherit',
@@ -370,8 +426,8 @@ function InstallationSection() {
                 onClick={() => { setAddingNew(false); setNewName(''); setNewIcao('') }}
                 style={{
                   padding: '10px 16px',
-                  background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.12)',
-                  borderRadius: 8, color: '#94A3B8', fontSize: 13, fontWeight: 700,
+                  background: 'var(--color-border)', border: '1px solid var(--color-border-mid)',
+                  borderRadius: 8, color: 'var(--color-text-2)', fontSize: 13, fontWeight: 700,
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
@@ -521,14 +577,14 @@ function RegulationsSection() {
         {/* Favorites toggle */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#E2E8F0' }}>Show favorites by default</div>
-            <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>Open References tab filtered to favorites</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-1)' }}>Show favorites by default</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 2 }}>Open References tab filtered to favorites</div>
           </div>
           <button
             onClick={toggleFavDefault}
             style={{
               width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer',
-              background: favDefault ? '#22D3EE' : '#334155',
+              background: favDefault ? 'var(--color-cyan)' : 'var(--color-progress-track)',
               position: 'relative', transition: 'background 0.2s',
               flexShrink: 0,
             }}
@@ -541,14 +597,14 @@ function RegulationsSection() {
           </button>
         </div>
 
-        <div style={{ borderTop: '1px solid rgba(56,189,248,0.06)' }} />
+        <div style={{ borderTop: '1px solid var(--color-border)' }} />
 
         {/* Cache status */}
         <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#E2E8F0', marginBottom: 4 }}>Cached for offline use</div>
-          <div style={{ fontSize: 12, color: '#94A3B8' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>Cached for offline use</div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-2)' }}>
             {cachedCount !== null
-              ? <><span style={{ color: '#F1F5F9', fontWeight: 600 }}>{cachedCount}</span> of {totalCount || regulations.length} cached for offline use</>
+              ? <><span style={{ color: 'var(--color-text-1)', fontWeight: 600 }}>{cachedCount}</span> of {totalCount || regulations.length} cached for offline use</>
               : 'Checking cache...'}
           </div>
         </div>
@@ -557,18 +613,18 @@ function RegulationsSection() {
         {cacheProgress ? (
           <div>
             {/* Progress bar */}
-            <div style={{ height: 4, borderRadius: 2, background: '#1E293B', overflow: 'hidden', marginBottom: 6 }}>
+            <div style={{ height: 4, borderRadius: 2, background: 'var(--color-progress-track)', overflow: 'hidden', marginBottom: 6 }}>
               <div style={{
                 height: '100%', borderRadius: 2,
                 background: cacheProgress.errors > 0
-                  ? 'linear-gradient(90deg, #0EA5E9, #F97316)'
-                  : '#0EA5E9',
+                  ? 'linear-gradient(90deg, var(--color-accent-secondary), #F97316)'
+                  : 'var(--color-accent-secondary)',
                 width: `${Math.round((cacheProgress.done / cacheProgress.total) * 100)}%`,
                 transition: 'width 0.3s',
               }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: 11, color: '#64748B' }}>
+              <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
                 {cacheProgress.done} of {cacheProgress.total} downloaded
                 {cacheProgress.errors > 0 && <span style={{ color: '#F97316', marginLeft: 8 }}>{cacheProgress.errors} unavailable</span>}
               </div>
@@ -596,7 +652,7 @@ function RegulationsSection() {
                 flex: 1,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 background: (cachedCount === totalCount && totalCount > 0)
-                  ? 'transparent' : 'linear-gradient(135deg, #0369A1, #0EA5E9)',
+                  ? 'transparent' : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
                 border: (cachedCount === totalCount && totalCount > 0)
                   ? '1px solid rgba(52,211,153,0.3)' : 'none',
                 borderRadius: 8, padding: '10px 16px', cursor: 'pointer',
@@ -715,22 +771,22 @@ function StorageSection() {
       <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* Overall storage */}
         <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#E2E8F0', marginBottom: 2 }}>Estimated Storage Used</div>
-          <div style={{ fontSize: 12, color: '#94A3B8' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 2 }}>Estimated Storage Used</div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-2)' }}>
             {storageSupported && storageEstimate
-              ? <>Using <span style={{ color: '#F1F5F9', fontWeight: 600 }}>{storageEstimate.usageMB} MB</span> of {storageEstimate.quotaMB} MB available</>
+              ? <>Using <span style={{ color: 'var(--color-text-1)', fontWeight: 600 }}>{storageEstimate.usageMB} MB</span> of {storageEstimate.quotaMB} MB available</>
               : 'Storage estimate unavailable'}
           </div>
         </div>
 
-        <div style={{ borderTop: '1px solid rgba(56,189,248,0.06)' }} />
+        <div style={{ borderTop: '1px solid var(--color-border)' }} />
 
         {/* Regulation PDFs */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 12, color: '#94A3B8' }}>Regulation PDFs</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-2)' }}>Regulation PDFs</div>
           </div>
-          <div style={{ fontSize: 12, color: '#F1F5F9', fontWeight: 600 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-1)', fontWeight: 600 }}>
             {regCount} cached{regSizeMB ? ` (~${regSizeMB} MB)` : ''}
           </div>
         </div>
@@ -738,14 +794,14 @@ function StorageSection() {
         {/* Personal Documents */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 12, color: '#94A3B8' }}>Personal Documents</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-2)' }}>Personal Documents</div>
           </div>
-          <div style={{ fontSize: 12, color: '#F1F5F9', fontWeight: 600 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-1)', fontWeight: 600 }}>
             {userDocCount} cached{userDocSizeMB ? ` (~${userDocSizeMB} MB)` : ''}
           </div>
         </div>
 
-        <div style={{ borderTop: '1px solid rgba(56,189,248,0.06)' }} />
+        <div style={{ borderTop: '1px solid var(--color-border)' }} />
 
         {/* Clear All */}
         <button
@@ -792,33 +848,33 @@ function AboutSection() {
         <div style={{ textAlign: 'center', padding: '8px 0' }}>
           <div style={{
             fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em',
-            background: 'linear-gradient(135deg, #F1F5F9, #38BDF8)',
+            background: 'linear-gradient(135deg, var(--color-logo-start), var(--color-logo-end))',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}>
             Glidepath
           </div>
-          <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>Guiding You to Mission Success</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 2 }}>Guiding You to Mission Success</div>
         </div>
 
-        <div style={{ borderTop: '1px solid rgba(56,189,248,0.06)' }} />
+        <div style={{ borderTop: '1px solid var(--color-border)' }} />
 
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 12, color: '#64748B' }}>Version</span>
-          <span style={{ fontSize: 12, color: '#F1F5F9', fontWeight: 600 }}>2.1.0-beta</span>
+          <span style={{ fontSize: 12, color: 'var(--color-text-3)' }}>Version</span>
+          <span style={{ fontSize: 12, color: 'var(--color-text-1)', fontWeight: 600 }}>2.1.0-beta</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 12, color: '#64748B' }}>Environment</span>
-          <span style={{ fontSize: 12, color: '#F1F5F9', fontWeight: 600 }}>{env}</span>
+          <span style={{ fontSize: 12, color: 'var(--color-text-3)' }}>Environment</span>
+          <span style={{ fontSize: 12, color: 'var(--color-text-1)', fontWeight: 600 }}>{env}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 12, color: '#64748B' }}>Website</span>
+          <span style={{ fontSize: 12, color: 'var(--color-text-3)' }}>Website</span>
           <a
             href="https://glidepathops.com"
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              fontSize: 12, color: '#38BDF8', fontWeight: 600,
+              fontSize: 12, color: 'var(--color-accent)', fontWeight: 600,
               textDecoration: 'none',
               display: 'flex', alignItems: 'center', gap: 4,
             }}
@@ -899,7 +955,7 @@ function ConfirmDialog({
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 9999,
-        background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+        background: 'var(--color-overlay)', backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '16px',
       }}
@@ -915,16 +971,16 @@ function ConfirmDialog({
         onClick={e => e.stopPropagation()}
       >
         <div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#F1F5F9', marginBottom: 6 }}>{title}</div>
-          <div style={{ fontSize: 13, color: '#94A3B8', lineHeight: 1.5 }}>{message}</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 6 }}>{title}</div>
+          <div style={{ fontSize: 13, color: 'var(--color-text-2)', lineHeight: 1.5 }}>{message}</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             onClick={onCancel}
             style={{
               flex: 1, padding: '10px 16px',
-              background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.12)',
-              borderRadius: 8, color: '#94A3B8', fontSize: 13, fontWeight: 700,
+              background: 'var(--color-border)', border: '1px solid var(--color-border-mid)',
+              borderRadius: 8, color: 'var(--color-text-2)', fontSize: 13, fontWeight: 700,
               cursor: 'pointer', fontFamily: 'inherit',
             }}
           >

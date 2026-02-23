@@ -44,7 +44,7 @@ export function DiscrepancyCard({
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: 12, fontWeight: 800, color: '#22D3EE', fontFamily: 'monospace' }}>
+        <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>
           {workOrderNumber || 'Pending'}
         </span>
         <div style={{ display: 'flex', gap: 4 }}>
@@ -52,7 +52,7 @@ export function DiscrepancyCard({
         </div>
       </div>
       <div style={{ fontSize: 13, fontWeight: 700 }}>{title}</div>
-      <div style={{ fontSize: 11, color: '#64748B', display: 'flex', alignItems: 'center', gap: 4 }}>
+      <div style={{ fontSize: 11, color: 'var(--color-text-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
         <span>{locationText}</span>
         <span>&bull;</span>
         <span>{assignedShop || 'Unassigned'}</span>

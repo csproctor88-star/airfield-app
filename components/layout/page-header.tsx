@@ -22,7 +22,7 @@ export function PageHeader({ title, backHref, action }: PageHeaderProps) {
           style={{
             background: 'none',
             border: 'none',
-            color: '#22D3EE',
+            color: 'var(--color-cyan)',
             fontSize: 13,
             fontWeight: 600,
             cursor: 'pointer',

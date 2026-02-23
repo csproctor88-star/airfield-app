@@ -22,20 +22,20 @@ export default function WaiversPage() {
             width: 56,
             height: 56,
             borderRadius: 14,
-            background: 'rgba(56,189,248,0.08)',
+            background: 'var(--color-border)',
             border: '1px solid rgba(56,189,248,0.15)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <FileText size={28} color="#38BDF8" />
+          <FileText size={28} color="var(--color-accent)" />
         </div>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#F1F5F9', marginBottom: 4 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
             Coming Soon
           </div>
-          <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.5 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-3)', lineHeight: 1.5 }}>
             Waiver management will be available in a future update.
             This module will allow tracking and managing airfield waivers.
           </div>

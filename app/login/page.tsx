@@ -162,7 +162,7 @@ export default function LoginPage() {
         alignItems: 'center',
         justifyContent: 'center',
         padding: 16,
-        background: '#04070C',
+        background: 'var(--color-bg)',
       }}
     >
       <div style={{ width: '100%', maxWidth: 360 }}>
@@ -178,7 +178,7 @@ export default function LoginPage() {
               alignItems: 'center',
               justifyContent: 'center',
               marginBottom: 16,
-              boxShadow: '0 0 32px rgba(56,189,248,0.2)',
+              boxShadow: '0 0 32px var(--color-accent-glow)',
             }}
           >
             <Plane size={28} color="#fff" />
@@ -188,7 +188,7 @@ export default function LoginPage() {
               fontSize: 20,
               fontWeight: 800,
               letterSpacing: '-0.02em',
-              background: 'linear-gradient(135deg, #F1F5F9, #38BDF8)',
+              background: 'linear-gradient(135deg, var(--color-logo-start), var(--color-logo-end))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               marginBottom: 4,
@@ -196,7 +196,7 @@ export default function LoginPage() {
           >
             GLIDEPATH
           </div>
-          <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em' }}>
+          <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em' }}>
             AIRFIELD OPERATIONS MANAGEMENT
           </div>
         </div>
@@ -208,7 +208,7 @@ export default function LoginPage() {
               fontSize: 15,
               fontWeight: 700,
               marginBottom: 16,
-              color: '#F1F5F9',
+              color: 'var(--color-text-1)',
             }}
           >
             {mode === 'signin' ? 'Sign In' : 'Create Account'}
@@ -278,23 +278,23 @@ export default function LoginPage() {
                           cursor: 'pointer', textAlign: 'left',
                         }}
                       >
-                        <span style={{ color: selectedBaseName ? '#F1F5F9' : '#64748B' }}>
+                        <span style={{ color: selectedBaseName ? 'var(--color-text-1)' : 'var(--color-text-3)' }}>
                           {selectedBaseName || 'Select installation...'}
                         </span>
-                        <ChevronDown size={14} color="#64748B" />
+                        <ChevronDown size={14} color="var(--color-text-3)" />
                       </button>
 
                       {showInstallationDropdown && (
                         <div style={{
                           position: 'absolute', top: '100%', left: 0, right: 0,
                           zIndex: 100, marginTop: 4,
-                          background: '#0F1729',
-                          border: '1px solid rgba(56,189,248,0.15)',
+                          background: 'var(--color-bg-elevated)',
+                          border: '1px solid var(--color-border-mid)',
                           borderRadius: 8,
                           maxHeight: 200, overflowY: 'auto',
                         }}>
                           {/* Search input */}
-                          <div style={{ padding: 8, borderBottom: '1px solid rgba(56,189,248,0.06)' }}>
+                          <div style={{ padding: 8, borderBottom: '1px solid var(--color-border)' }}>
                             <input
                               type="text"
                               placeholder="Search installations..."
@@ -306,7 +306,7 @@ export default function LoginPage() {
                             />
                           </div>
                           {filteredBases.length === 0 ? (
-                            <div style={{ padding: '12px 14px', fontSize: 12, color: '#64748B' }}>
+                            <div style={{ padding: '12px 14px', fontSize: 12, color: 'var(--color-text-3)' }}>
                               No installations found
                             </div>
                           ) : (
@@ -323,9 +323,9 @@ export default function LoginPage() {
                                   display: 'block', width: '100%', padding: '10px 14px',
                                   background: name === selectedBaseName ? 'rgba(56,189,248,0.08)' : 'transparent',
                                   border: 'none',
-                                  borderBottom: '1px solid rgba(56,189,248,0.04)',
+                                  borderBottom: '1px solid var(--color-border)',
                                   cursor: 'pointer', textAlign: 'left',
-                                  color: name === selectedBaseName ? '#38BDF8' : '#E2E8F0',
+                                  color: name === selectedBaseName ? 'var(--color-accent)' : 'var(--color-text-1)',
                                   fontSize: 13, fontFamily: 'inherit',
                                   fontWeight: name === selectedBaseName ? 700 : 500,
                                 }}
@@ -346,9 +346,9 @@ export default function LoginPage() {
                               display: 'block', width: '100%', padding: '10px 14px',
                               background: 'transparent',
                               border: 'none',
-                              borderTop: '1px solid rgba(56,189,248,0.1)',
+                              borderTop: '1px solid var(--color-border-mid)',
                               cursor: 'pointer', textAlign: 'left',
-                              color: '#38BDF8',
+                              color: 'var(--color-accent)',
                               fontSize: 13, fontFamily: 'inherit',
                               fontWeight: 600,
                             }}
@@ -387,7 +387,7 @@ export default function LoginPage() {
                         }}
                         style={{
                           background: 'none', border: 'none', cursor: 'pointer',
-                          color: '#64748B', fontSize: 11, padding: 0,
+                          color: 'var(--color-text-3)', fontSize: 11, padding: 0,
                         }}
                       >
                         Cancel — select from list
@@ -447,7 +447,7 @@ export default function LoginPage() {
                   padding: '8px 12px',
                   marginBottom: 12,
                   fontSize: 12,
-                  color: '#EF4444',
+                  color: 'var(--color-danger)',
                 }}
               >
                 {error}
@@ -489,7 +489,7 @@ export default function LoginPage() {
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#38BDF8',
+                color: 'var(--color-accent)',
                 fontSize: 12,
                 cursor: 'pointer',
                 padding: 0,
@@ -504,7 +504,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: 24 }}>
-          <div style={{ fontSize: 11, color: '#334155' }}>
+          <div style={{ fontSize: 11, color: 'var(--color-text-4)' }}>
             Glidepath v2.1
           </div>
         </div>
