@@ -386,8 +386,8 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
             style={{
               width: '100%',
               padding: '10px 14px 10px 38px',
-              background: 'rgba(15,23,42,0.6)',
-              border: '1px solid var(--color-bg-elevated)',
+              background: 'var(--color-search-bg)',
+              border: '1px solid var(--color-search-border)',
               borderRadius: 8,
               color: 'var(--color-text-1)',
               fontSize: 15,

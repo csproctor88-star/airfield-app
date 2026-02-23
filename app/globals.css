@@ -47,6 +47,8 @@
   --color-detail-box-bg: rgba(56, 189, 248, 0.06);
   --color-detail-box-label: #CBD5E1;
   --color-detail-box-value: #94A3B8;
+  --color-search-bg: rgba(15, 23, 42, 0.6);
+  --color-search-border: rgba(148, 163, 184, 0.1);
 }
 
 [data-theme="light"] {
@@ -87,6 +89,8 @@
   --color-detail-box-bg: #DBEAFE;
   --color-detail-box-label: #0F172A;
   --color-detail-box-value: #64748B;
+  --color-search-bg: #FFFFFF;
+  --color-search-border: #1E293B;
 }
 
 @layer base {

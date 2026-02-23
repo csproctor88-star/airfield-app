@@ -690,10 +690,10 @@ export default function AircraftPage() {
         display: 'flex',
         alignItems: 'center',
         gap: 8,
-        background: 'rgba(15,23,42,0.6)',
+        background: 'var(--color-search-bg)',
         borderRadius: 10,
         padding: '8px 12px',
-        border: '1px solid rgba(148,163,184,0.1)',
+        border: '1px solid var(--color-search-border)',
         marginBottom: 10,
       }}>
         <Search size={16} color="var(--color-text-3)" />
