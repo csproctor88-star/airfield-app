@@ -7,9 +7,12 @@
 -- ═══════════════════════════════════════════════════════════════
 -- 1. Base record
 -- ═══════════════════════════════════════════════════════════════
--- Delete any existing PGUA row (regardless of ID) then re-insert with the
--- canonical deterministic UUID. CASCADE on base_runways, base_navaids, and
--- base_areas cleans up child rows so the INSERTs below recreate them cleanly.
+-- Temporarily nullify profile references so we can delete and re-insert.
+-- The profiles.primary_base_id FK lacks ON DELETE CASCADE, so we must
+-- detach profiles first, then reattach after the INSERT.
+UPDATE profiles SET primary_base_id = NULL
+WHERE primary_base_id IN (SELECT id FROM bases WHERE icao = 'PGUA');
+
 DELETE FROM bases WHERE icao = 'PGUA';
 
 INSERT INTO bases (id, name, icao, unit, majcom, location, elevation_msl, timezone, ce_shops)
@@ -32,6 +35,14 @@ VALUES (
     'Airfield Management'
   ]
 );
+
+-- Restore profile references for any users whose primary_base_id was nulled
+UPDATE profiles SET primary_base_id = '00000000-0000-0000-0000-000000000002'
+WHERE primary_base_id IS NULL
+  AND id IN (
+    SELECT user_id FROM base_members
+    WHERE base_id = '00000000-0000-0000-0000-000000000002'
+  );
 
 -- ═══════════════════════════════════════════════════════════════
 -- 2. Runways
