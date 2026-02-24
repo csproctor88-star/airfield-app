@@ -7,11 +7,10 @@
 -- ═══════════════════════════════════════════════════════════════
 -- 1. Base record
 -- ═══════════════════════════════════════════════════════════════
--- Delete any stale PGUA row (from earlier manual runs with a different UUID)
--- then insert with the canonical deterministic ID. The CASCADE on base_runways,
--- base_navaids, and base_areas will clean up child rows so the INSERTs below
--- re-create them cleanly.
-DELETE FROM bases WHERE icao = 'PGUA' AND id != '00000000-0000-0000-0000-000000000002';
+-- Delete any existing PGUA row (regardless of ID) then re-insert with the
+-- canonical deterministic UUID. CASCADE on base_runways, base_navaids, and
+-- base_areas cleans up child rows so the INSERTs below recreate them cleanly.
+DELETE FROM bases WHERE icao = 'PGUA';
 
 INSERT INTO bases (id, name, icao, unit, majcom, location, elevation_msl, timezone, ce_shops)
 VALUES (
@@ -32,8 +31,7 @@ VALUES (
     'CES Engineering',
     'Airfield Management'
   ]
-)
-ON CONFLICT (id) DO NOTHING;
+);
 
 -- ═══════════════════════════════════════════════════════════════
 -- 2. Runways
