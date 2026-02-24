@@ -51,8 +51,13 @@ function ObstructionsContent() {
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const { installationId, currentInstallation, runways } = useInstallation()
 
-  // Airfield elevation from base config (fallback to 580 for Selfridge)
+  // Airfield elevation from base config
   const airfieldElevMSL = currentInstallation?.elevation_msl ?? 580
+
+  // Runway class from base runway config
+  const runwayClass: 'B' | 'Army_B' = runways.length > 0
+    ? ((runways[0].runway_class === 'Army_B' ? 'Army_B' : 'B') as 'B' | 'Army_B')
+    : 'B'
 
   // Edit mode
   const editId = searchParams.get('edit')
@@ -69,10 +74,10 @@ function ObstructionsContent() {
         true_heading: rwy.true_heading ?? undefined,
       })
     }
-    // Fallback: Selfridge 01/19
+    // Fallback: default geometry (should not happen with configured base)
     return getRunwayGeometry({
-      end1: { latitude: 42.601550, longitude: -82.837339 },
-      end2: { latitude: 42.626239, longitude: -82.836481 },
+      end1: { latitude: 0, longitude: 0 },
+      end2: { latitude: 0, longitude: 0 },
       length_ft: 9000,
       width_ft: 150,
     })
@@ -109,7 +114,7 @@ function ObstructionsContent() {
       if (existing.latitude && existing.longitude) {
         const point: LatLon = { lat: existing.latitude, lon: existing.longitude }
         const rwy = getRunway()
-        const surfaceName = identifySurface(point, rwy, airfieldElevMSL)
+        const surfaceName = identifySurface(point, rwy, airfieldElevMSL, runwayClass)
         const groundElev = existing.object_elevation_msl ?? airfieldElevMSL
         const relation = pointToRunwayRelation(point, rwy)
         const nearerThreshold = relation.nearerEnd === 'end1' ? rwy.end1 : rwy.end2
@@ -125,7 +130,7 @@ function ObstructionsContent() {
         })
         // Auto-run evaluation so results + save button appear immediately
         if (h > 0) {
-          const result = evaluateObstruction(point, h, groundElev, rwy, airfieldElevMSL)
+          const result = evaluateObstruction(point, h, groundElev, rwy, airfieldElevMSL, runwayClass)
           setAnalysis(result)
         }
       }
@@ -136,7 +141,7 @@ function ObstructionsContent() {
   // Handle map click
   const handlePointSelected = useCallback(async (point: LatLon) => {
     const rwy = getRunway()
-    const surfaceName = identifySurface(point, rwy, airfieldElevMSL)
+    const surfaceName = identifySurface(point, rwy, airfieldElevMSL, runwayClass)
     // Quick relation computation for distances
     const relation = pointToRunwayRelation(point, rwy)
     const nearerThreshold = relation.nearerEnd === 'end1' ? rwy.end1 : rwy.end2
@@ -189,6 +194,7 @@ function ObstructionsContent() {
       pointInfo.groundElevMSL,
       getRunway(),
       airfieldElevMSL,
+      runwayClass,
     )
     setAnalysis(result)
 
@@ -326,7 +332,7 @@ function ObstructionsContent() {
       ({ data, error } = await updateObstructionEvaluation(editId, evaluationPayload))
     } else {
       ({ data, error } = await createObstructionEvaluation({
-        runway_class: 'B',
+        runway_class: runwayClass,
         ...evaluationPayload,
         base_id: installationId,
       }))

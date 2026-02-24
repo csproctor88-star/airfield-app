@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, MapPin, BookOpen, HardDrive, Info, LogOut, Save, Trash2, Download, X, ExternalLink, ChevronDown, Sun, Moon, Monitor } from 'lucide-react'
+import { User, MapPin, BookOpen, HardDrive, Info, LogOut, Save, Trash2, Download, X, ExternalLink, ChevronDown, Sun, Moon, Monitor, Wrench } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
@@ -26,6 +26,7 @@ export default function SettingsPage() {
       <ProfileSection />
       <ThemeSection />
       <InstallationSection />
+      <BaseConfigSection />
       <RegulationsSection />
       <StorageSection />
       <AboutSection />
@@ -55,6 +56,7 @@ function SectionHeader({ label, icon: Icon }: { label: string; icon: React.Compo
 // ═══════════════════════════════════════════════════════════════
 
 function ProfileSection() {
+  const { currentInstallation } = useInstallation()
   const [profile, setProfile] = useState<{
     name: string
     rank: string | null
@@ -67,7 +69,7 @@ function ProfileSection() {
     async function load() {
       const supabase = createClient()
       if (!supabase) {
-        setProfile({ name: 'Demo User', rank: 'MSgt', email: 'demo@glidepath.app', role: 'sys_admin', installationName: 'Selfridge ANGB' })
+        setProfile({ name: 'Demo User', rank: 'MSgt', email: 'demo@glidepath.app', role: 'sys_admin', installationName: currentInstallation?.name ?? 'Demo Base' })
         return
       }
 
@@ -527,6 +529,59 @@ function InstallationSection() {
           onCancel={() => setConfirmRemove(null)}
         />
       )}
+    </>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Section: Base Configuration (templates, areas, navaids, etc.)
+// ═══════════════════════════════════════════════════════════════
+
+function BaseConfigSection() {
+  const { userRole } = useInstallation()
+  const canManage = userRole === 'airfield_manager' || userRole === 'sys_admin'
+  if (!canManage) return null
+
+  return (
+    <>
+      <SectionHeader label="BASE CONFIGURATION" icon={Wrench} />
+      <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-1)' }}>Runways, Areas & NAVAIDs</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 2 }}>Configure base infrastructure and CE shops</div>
+        </div>
+        <a
+          href="/settings/base-setup"
+          style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            padding: '10px 16px', borderRadius: 8,
+            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+            color: '#fff', fontSize: 13, fontWeight: 700,
+            textDecoration: 'none', fontFamily: 'inherit',
+          }}
+        >
+          Base Setup
+        </a>
+
+        <div style={{ borderTop: '1px solid var(--color-border)' }} />
+
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-1)' }}>Inspection Templates</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 2 }}>Customize checklist items for airfield and lighting inspections</div>
+        </div>
+        <a
+          href="/settings/templates"
+          style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            padding: '10px 16px', borderRadius: 8,
+            background: 'linear-gradient(135deg, #7C3AED, #8B5CF6)',
+            color: '#fff', fontSize: 13, fontWeight: 700,
+            textDecoration: 'none', fontFamily: 'inherit',
+          }}
+        >
+          Manage Templates
+        </a>
+      </div>
     </>
   )
 }

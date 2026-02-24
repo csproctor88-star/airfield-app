@@ -5,6 +5,8 @@ import { formatDiscrepancyType } from './open-discrepancies-data'
 
 interface Options {
   generatedBy: string
+  baseName?: string
+  baseIcao?: string
 }
 
 export function generateDiscrepancyTrendsPdf(data: DiscrepancyTrendsData, opts: Options) {
@@ -55,7 +57,7 @@ export function generateDiscrepancyTrendsPdf(data: DiscrepancyTrendsData, opts: 
 
   doc.setFontSize(10)
   doc.setFont('helvetica', 'normal')
-  doc.text('Selfridge ANGB (KMTC)', margin, y)
+  doc.text(opts.baseName && opts.baseIcao ? `${opts.baseName} (${opts.baseIcao})` : 'Airfield Operations', margin, y)
   y += 5
 
   doc.setFontSize(9)
@@ -152,5 +154,5 @@ export function generateDiscrepancyTrendsPdf(data: DiscrepancyTrendsData, opts: 
   addPageNumber()
 
   const dateStr = now.toISOString().split('T')[0]
-  doc.save(`KMTC_Discrepancy_Trends_${dateStr}.pdf`)
+  doc.save(`${opts.baseIcao ?? 'AIRFIELD'}_Discrepancy_Trends_${dateStr}.pdf`)
 }

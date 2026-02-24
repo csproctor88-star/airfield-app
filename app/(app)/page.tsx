@@ -52,15 +52,8 @@ const STATUS_HEX: Record<string, string> = {
   red: '#EF4444',
 }
 
-// --- Default NAVAID fallback (Selfridge ANGB KMTC) ---
-const DEFAULT_NAVAIDS: NavaidStatus[] = [
-  { id: 'default-01-loc', navaid_name: '01 Localizer', base_id: null, status: 'green', notes: null, updated_by: null, updated_at: new Date().toISOString() },
-  { id: 'default-01-gs', navaid_name: '01 Glideslope', base_id: null, status: 'green', notes: null, updated_by: null, updated_at: new Date().toISOString() },
-  { id: 'default-01-ils', navaid_name: '01 ILS', base_id: null, status: 'green', notes: null, updated_by: null, updated_at: new Date().toISOString() },
-  { id: 'default-19-loc', navaid_name: '19 Localizer', base_id: null, status: 'green', notes: null, updated_by: null, updated_at: new Date().toISOString() },
-  { id: 'default-19-gs', navaid_name: '19 Glideslope', base_id: null, status: 'green', notes: null, updated_by: null, updated_at: new Date().toISOString() },
-  { id: 'default-19-ils', navaid_name: '19 ILS', base_id: null, status: 'green', notes: null, updated_by: null, updated_at: new Date().toISOString() },
-]
+// --- Empty NAVAID default (NAVAIDs are fetched per-base from DB) ---
+const DEFAULT_NAVAIDS: NavaidStatus[] = []
 
 // --- Activity action formatting ---
 function formatAction(action: string, entityType: string, displayId?: string): string {
@@ -114,7 +107,7 @@ type CurrentStatusData = {
 
 export default function HomePage() {
   const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus } = useDashboard()
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation, runways } = useInstallation()
   const [time, setTime] = useState('')
   const [weather, setWeather] = useState<WeatherResult | null>(null)
   const [weatherLoaded, setWeatherLoaded] = useState(false)
@@ -173,7 +166,10 @@ export default function HomePage() {
   // --- Load weather ---
   useEffect(() => {
     async function loadWeather() {
-      const result = await fetchCurrentWeather()
+      const rwy = runways[0]
+      const baseLat = rwy ? ((rwy.end1_latitude ?? 0) + (rwy.end2_latitude ?? 0)) / 2 : undefined
+      const baseLon = rwy ? ((rwy.end1_longitude ?? 0) + (rwy.end2_longitude ?? 0)) / 2 : undefined
+      const result = await fetchCurrentWeather(baseLat, baseLon)
       setWeather(result)
       setWeatherLoaded(true)
     }

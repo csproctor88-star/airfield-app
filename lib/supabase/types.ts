@@ -42,6 +42,7 @@ export type Database = {
           end2_longitude: number | null
           end2_heading: number | null
           end2_approach_lighting: string | null
+          runway_class: string
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['base_runways']['Row'], 'id' | 'created_at'>
@@ -271,7 +272,7 @@ export type Database = {
           id: string
           display_id: string
           base_id: string | null
-          runway_class: 'A' | 'B'
+          runway_class: 'B' | 'Army_B'
           object_height_agl: number
           object_distance_ft: number | null
           distance_from_centerline_ft: number | null

@@ -8,6 +8,8 @@ interface Options {
   endDate: string
   isRange: boolean
   generatedBy: string
+  baseName?: string
+  baseIcao?: string
 }
 
 const CHECK_TYPE_LABELS: Record<string, string> = {
@@ -97,7 +99,7 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
 
   doc.setFontSize(10)
   doc.setFont('helvetica', 'normal')
-  doc.text('Selfridge ANGB (KMTC)', margin, y)
+  doc.text(opts.baseName && opts.baseIcao ? `${opts.baseName} (${opts.baseIcao})` : 'Airfield Operations', margin, y)
   y += 5
 
   doc.setFontSize(9)
@@ -419,7 +421,7 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
   const dateSuffix = opts.isRange
     ? `${opts.startDate}_to_${opts.endDate}`
     : opts.startDate
-  doc.save(`KMTC_Daily_Ops_${dateSuffix}.pdf`)
+  doc.save(`${opts.baseIcao ?? 'AIRFIELD'}_Daily_Ops_${dateSuffix}.pdf`)
 }
 
 // ── Photo rendering helper ──

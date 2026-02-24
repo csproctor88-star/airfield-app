@@ -18,7 +18,7 @@ const SEVERITY_LABELS: Record<string, string> = {
 
 export default function AgingDiscrepanciesPage() {
   const router = useRouter()
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
 
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<AgingDiscrepanciesData | null>(null)
@@ -44,7 +44,7 @@ export default function AgingDiscrepanciesPage() {
   const handleExport = async () => {
     if (!data) return
     setExporting(true)
-    generateAgingDiscrepanciesPdf(data, { generatedBy: generatorName })
+    generateAgingDiscrepanciesPdf(data, { generatedBy: generatorName, baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao })
     setExporting(false)
   }
 

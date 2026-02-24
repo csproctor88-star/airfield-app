@@ -4,10 +4,6 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import type { Installation, InstallationRunway, UserRole } from '@/lib/supabase/types'
 import { fetchInstallation, fetchInstallationRunways, fetchInstallationAreas, getUserPrimaryInstallationId, fetchInstallations, fetchUserInstallations } from '@/lib/supabase/installations'
 import { createClient } from '@/lib/supabase/client'
-import { AIRFIELD_AREAS } from '@/lib/constants'
-
-// Selfridge fallback ID (used when DB not available / demo mode)
-const SELFRIDGE_INSTALLATION_ID = '00000000-0000-0000-0000-000000000001'
 
 export interface InstallationContextValue {
   /** Current active installation (null while loading) */
@@ -58,9 +54,8 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
       setCeShops(installation.ce_shops || [])
     }
     setRunways(installationRunways)
-    // Fall back to hardcoded AIRFIELD_AREAS when DB returns empty
     const areaNames = installationAreas.map(a => a.area_name)
-    setAreas(areaNames.length > 0 ? areaNames : [...AIRFIELD_AREAS])
+    setAreas(areaNames)
   }, [])
 
   // Switch to a different installation and persist the choice
@@ -145,14 +140,16 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
       // Determine which installation to load
       let primaryId = await getUserPrimaryInstallationId()
 
-      // Fallback: use Selfridge if no primary set, or first available installation
+      // Fallback: use first available installation
       if (!primaryId) {
         const installations = await fetchInstallations()
-        primaryId = installations.length > 0 ? installations[0].id : SELFRIDGE_INSTALLATION_ID
+        if (installations.length > 0) primaryId = installations[0].id
       }
 
-      setInstallationId(primaryId)
-      await loadInstallationConfig(primaryId)
+      if (primaryId) {
+        setInstallationId(primaryId)
+        await loadInstallationConfig(primaryId)
+      }
       setLoaded(true)
     }
 

@@ -1,49 +1,6 @@
 // Glidepath — App-wide Constants
-// Source: SRS Sections 6 & 14
-
-// === Selfridge ANGB Configuration (SRS Section 14) ===
-
-export const INSTALLATION = {
-  name: 'Selfridge ANG Base',
-  icao: 'KMTC',
-  unit: '127th Wing',
-  majcom: 'Michigan Air National Guard',
-  location: 'Harrison Township, Michigan',
-  elevation_msl: 580,
-  timezone: 'America/Detroit',
-  runways: [
-    {
-      id: '01/19',
-      length_ft: 9000,
-      width_ft: 150,
-      surface: 'Asphalt',
-      true_heading: 2, // FAA true heading (end1 → end2)
-      end1: {
-        designator: '01',
-        latitude: 42.601550,
-        longitude: -82.837339,
-        heading: 8,
-        approach_lighting: 'SALS',
-      },
-      end2: {
-        designator: '19',
-        latitude: 42.626239,
-        longitude: -82.836481,
-        heading: 188,
-        approach_lighting: 'ALSF-1',
-      },
-    },
-  ],
-  ce_shops: [
-    'CE Pavements',
-    'CE Electrical',
-    'CE Grounds',
-    'CE Structures',
-    'CE HVAC',
-    'CES Engineering',
-    'Airfield Management',
-  ],
-} as const
+// Base-specific configuration (name, ICAO, runways, areas, etc.) is
+// stored in the database and loaded via InstallationContext.
 
 // === Discrepancy Types (SRS Section 6.1) ===
 
@@ -332,28 +289,6 @@ export const CHECK_TYPE_CONFIG = {
   heavy_aircraft:   { label: 'Heavy Aircraft Check', color: '#8B5CF6', icon: '✈️' },
   bash:             { label: 'BASH Check', color: '#A78BFA', icon: '🦅' },
 } as const
-
-// === Airfield Areas (Multi-select for checks) ===
-
-export const AIRFIELD_AREAS = [
-  'Entire Airfield',
-  'RWY 01/19',
-  'West Ramp',
-  'East Ramp',
-  'HAZ Cargo Pad',
-  'USCG Apron',
-  'DHS Apron',
-  'Army Apron',
-  'TWY A',
-  'TWY G',
-  'TWY K',
-  'TWY E',
-  'TWY B',
-  'TWY L',
-  'TWY H',
-  'TWY J',
-  'Access Road',
-] as const
 
 // === RSC Conditions ===
 

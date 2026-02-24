@@ -1,4 +1,5 @@
-import { INSTALLATION } from './constants'
+// Legacy helper — superseded by useInstallation() context.
+// Kept for backwards compatibility; no longer references hardcoded constants.
 
 export function getInstallation(): { name: string; icao: string } {
   if (typeof window !== 'undefined') {
@@ -7,7 +8,7 @@ export function getInstallation(): { name: string; icao: string } {
       try { return JSON.parse(saved) } catch { /* ignore */ }
     }
   }
-  return { name: INSTALLATION.name, icao: INSTALLATION.icao }
+  return { name: 'Airfield', icao: '' }
 }
 
 export function saveInstallation(name: string, icao: string): void {

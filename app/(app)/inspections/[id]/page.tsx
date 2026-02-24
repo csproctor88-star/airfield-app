@@ -8,10 +8,13 @@ import { DEMO_INSPECTIONS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { fetchInspection, fetchDailyGroup, type InspectionRow } from '@/lib/supabase/inspections'
 import type { InspectionItem } from '@/lib/supabase/types'
+import { useInstallation } from '@/lib/installation-context'
+import type { PdfBaseInfo } from '@/lib/pdf-export'
 
 export default function InspectionDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const { currentInstallation } = useInstallation()
   const [inspections, setInspections] = useState<InspectionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
@@ -109,16 +112,19 @@ export default function InspectionDetailPage() {
 
   const handleExportPdf = async () => {
     setGeneratingPdf(true)
+    const bi: PdfBaseInfo | undefined = currentInstallation
+      ? { name: currentInstallation.name, icao: currentInstallation.icao, unit: currentInstallation.unit ?? '' }
+      : undefined
     try {
       if (isSpecialType) {
         const { generateSpecialInspectionPdf } = await import('@/lib/pdf-export')
-        generateSpecialInspectionPdf(allInspections[0])
+        generateSpecialInspectionPdf(allInspections[0], bi)
       } else if (isDaily) {
         const { generateCombinedInspectionPdf } = await import('@/lib/pdf-export')
-        generateCombinedInspectionPdf(allInspections)
+        generateCombinedInspectionPdf(allInspections, bi)
       } else {
         const { generateInspectionPdf } = await import('@/lib/pdf-export')
-        generateInspectionPdf(allInspections[0])
+        generateInspectionPdf(allInspections[0], bi)
       }
     } catch (e) {
       console.error('PDF export failed:', e)

@@ -1,9 +1,7 @@
 // Auto-capture weather from Open-Meteo (free, no API key required)
-// Falls back to Selfridge ANGB coordinates if browser geolocation unavailable
+// Falls back to base coordinates if browser geolocation unavailable
 
 const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast'
-const SELFRIDGE_LAT = 42.6108
-const SELFRIDGE_LON = -82.8371
 
 const WEATHER_CODES: Record<number, string> = {
   0: 'Clear',
@@ -43,10 +41,10 @@ export interface WeatherResult {
   visibility_miles: number
 }
 
-export async function fetchCurrentWeather(): Promise<WeatherResult | null> {
+export async function fetchCurrentWeather(baseLat?: number, baseLon?: number): Promise<WeatherResult | null> {
   try {
-    let lat = SELFRIDGE_LAT
-    let lon = SELFRIDGE_LON
+    let lat = baseLat ?? 0
+    let lon = baseLon ?? 0
 
     // Try browser geolocation, fall back to base coordinates
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
@@ -60,7 +58,7 @@ export async function fetchCurrentWeather(): Promise<WeatherResult | null> {
         lat = pos.coords.latitude
         lon = pos.coords.longitude
       } catch {
-        // Use Selfridge coordinates
+        // Use base coordinates (passed as params)
       }
     }
 

@@ -59,7 +59,7 @@ export async function fetchObstructionEvaluation(id: string): Promise<Obstructio
 }
 
 export async function createObstructionEvaluation(input: {
-  runway_class: 'A' | 'B'
+  runway_class: 'B' | 'Army_B'
   object_height_agl: number
   object_distance_ft: number | null
   distance_from_centerline_ft: number | null

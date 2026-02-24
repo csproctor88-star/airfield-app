@@ -1,6 +1,22 @@
 import jsPDF from 'jspdf'
 import type { InspectionItem } from '@/lib/supabase/types'
 
+export interface PdfBaseInfo {
+  name: string       // e.g. "Selfridge ANG Base"
+  icao: string       // e.g. "KMTC"
+  unit: string       // e.g. "127th Wing"
+}
+
+function pdfHeader(info?: PdfBaseInfo): string {
+  if (info) return `${info.name.toUpperCase()} (${info.icao}) — ${info.unit.toUpperCase()}`
+  return 'AIRFIELD OPERATIONS'
+}
+
+function pdfFooter(info?: PdfBaseInfo): string {
+  if (info) return `${info.name} (${info.icao}) — AIRFIELD OPS`
+  return 'AIRFIELD OPS'
+}
+
 interface InspectionData {
   display_id: string
   inspection_type: 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
@@ -24,7 +40,7 @@ interface InspectionData {
   filed_at?: string | null
 }
 
-export function generateInspectionPdf(inspection: InspectionData) {
+export function generateInspectionPdf(inspection: InspectionData, baseInfo?: PdfBaseInfo) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 15
@@ -41,7 +57,7 @@ export function generateInspectionPdf(inspection: InspectionData) {
   // ── Header ──
   doc.setFontSize(8)
   doc.setTextColor(100)
-  doc.text('SELFRIDGE AIR NATIONAL GUARD BASE (KMTC) — 127TH WING', margin, y)
+  doc.text(pdfHeader(baseInfo), margin, y)
   y += 4
   doc.text('AIRFIELD MANAGEMENT SECTION', margin, y)
   y += 8
@@ -229,7 +245,7 @@ export function generateInspectionPdf(inspection: InspectionData) {
       margin,
       footerY,
     )
-    doc.text('SELFRIDGE ANGB (KMTC) — AIRFIELD OPS', pageWidth - margin, footerY, { align: 'right' })
+    doc.text(pdfFooter(baseInfo), pageWidth - margin, footerY, { align: 'right' })
   }
 
   // Download
@@ -342,7 +358,7 @@ function renderInspectionSections(
  * Generate a single combined PDF for a daily airfield inspection report
  * containing both airfield and lighting inspection halves.
  */
-export function generateCombinedInspectionPdf(inspections: InspectionData[]) {
+export function generateCombinedInspectionPdf(inspections: InspectionData[], baseInfo?: PdfBaseInfo) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 15
@@ -370,7 +386,7 @@ export function generateCombinedInspectionPdf(inspections: InspectionData[]) {
   // ── Header ──
   doc.setFontSize(8)
   doc.setTextColor(100)
-  doc.text('SELFRIDGE AIR NATIONAL GUARD BASE (KMTC) — 127TH WING', margin, y)
+  doc.text(pdfHeader(baseInfo), margin, y)
   y += 4
   doc.text('AIRFIELD MANAGEMENT SECTION', margin, y)
   y += 8
@@ -560,7 +576,7 @@ export function generateCombinedInspectionPdf(inspections: InspectionData[]) {
       margin,
       footerY,
     )
-    doc.text('SELFRIDGE ANGB (KMTC) — AIRFIELD OPS', pageWidth - margin, footerY, { align: 'right' })
+    doc.text(pdfFooter(baseInfo), pageWidth - margin, footerY, { align: 'right' })
   }
 
   // Download
@@ -575,7 +591,7 @@ export function generateCombinedInspectionPdf(inspections: InspectionData[]) {
  * Generate a PDF for a Construction Meeting or Joint Monthly Airfield Inspection.
  * These are standalone records with a comment and personnel list (no checklist items).
  */
-export function generateSpecialInspectionPdf(inspection: InspectionData) {
+export function generateSpecialInspectionPdf(inspection: InspectionData, baseInfo?: PdfBaseInfo) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 15
@@ -590,7 +606,7 @@ export function generateSpecialInspectionPdf(inspection: InspectionData) {
   // ── Header ──
   doc.setFontSize(8)
   doc.setTextColor(100)
-  doc.text('SELFRIDGE AIR NATIONAL GUARD BASE (KMTC) — 127TH WING', margin, y)
+  doc.text(pdfHeader(baseInfo), margin, y)
   y += 4
   doc.text('AIRFIELD MANAGEMENT SECTION', margin, y)
   y += 8
@@ -684,7 +700,7 @@ export function generateSpecialInspectionPdf(inspection: InspectionData) {
       margin,
       footerY,
     )
-    doc.text('SELFRIDGE ANGB (KMTC) — AIRFIELD OPS', pageWidth - margin, footerY, { align: 'right' })
+    doc.text(pdfFooter(baseInfo), pageWidth - margin, footerY, { align: 'right' })
   }
 
   // Download

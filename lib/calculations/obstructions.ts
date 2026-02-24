@@ -1,7 +1,8 @@
 // UFC 3-260-01 Obstruction Evaluation Engine
-// Evaluates an object against all 6 imaginary surfaces defined in
+// Evaluates an object against all imaginary surfaces defined in
 // UFC 3-260-01, Chapter 3, plus APZ I/II land-use zones per
 // DoD Instruction 4165.57, using actual runway geometry.
+// Supports multiple runway classes (B, Army_B) via surface-criteria lookup.
 
 import {
   type LatLon,
@@ -12,9 +13,11 @@ import {
   offsetPoint,
   normalizeBearing,
 } from './geometry'
+import { getSurfaceCriteria, type SurfaceCriteria } from './surface-criteria'
 
 // ---------------------------------------------------------------------------
-// Surface criteria — UFC 3-260-01, Sec 3-15 & Table 3-7 (Class B)
+// Surface display metadata — UFC references, names, colors, descriptions
+// Numeric criteria are looked up dynamically by runway class.
 // ---------------------------------------------------------------------------
 
 export const IMAGINARY_SURFACES = {
@@ -202,7 +205,8 @@ function distanceFromStadiumCenter(
 }
 
 /**
- * Full obstruction evaluation against all 6 UFC 3-260-01 imaginary surfaces.
+ * Full obstruction evaluation against all UFC 3-260-01 imaginary surfaces.
+ * Surface dimensions are determined by `runwayClass` (defaults to 'B').
  */
 export function evaluateObstruction(
   point: LatLon,
@@ -210,9 +214,11 @@ export function evaluateObstruction(
   groundElevationMSL: number | null,
   rwy: RunwayGeometry,
   airfieldElevMSL = 580,
+  runwayClass = 'B',
 ): ObstructionAnalysis {
   const runway = rwy
   const airfieldElev = airfieldElevMSL
+  const criteria = getSurfaceCriteria(runwayClass)
   const groundElev = groundElevationMSL ?? airfieldElev
   const obstructionTopMSL = groundElev + obstructionHeightAGL
   const heightAboveField = obstructionTopMSL - airfieldElev
@@ -229,7 +235,7 @@ export function evaluateObstruction(
 
   // --- 1. Primary Surface ---
   {
-    const c = IMAGINARY_SURFACES.primary.criteria
+    const c = criteria.primary
     const isWithin = relation.withinPrimary
     const maxAGL = c.maxHeight // 0 ft
     const maxMSL = airfieldElev + maxAGL
@@ -253,7 +259,7 @@ export function evaluateObstruction(
 
   // --- 2. Approach-Departure Clearance Surface ---
   {
-    const c = IMAGINARY_SURFACES.approach_departure.criteria
+    const c = criteria.approach_departure
     // Distance from nearest primary surface end along extended centerline
     const primaryEndInfo = distanceFromNearestPrimaryEndCenter(point, runway)
     const distAlongApproach = relation.distanceFromNearestPrimaryEnd
@@ -295,8 +301,8 @@ export function evaluateObstruction(
   // of both the primary surface AND the approach-departure clearance surface,
   // outward and upward at 7:1 to the inner horizontal surface height (150 ft).
   {
-    const c = IMAGINARY_SURFACES.transitional.criteria
-    const ac = IMAGINARY_SURFACES.approach_departure.criteria
+    const c = criteria.transitional
+    const ac = criteria.approach_departure
     const primaryHalfWidth = c.primaryHalfWidth
     const maxTransitionalExtent = 150 * c.slope // 1050 ft
 
@@ -364,7 +370,7 @@ export function evaluateObstruction(
   // --- 4. Inner Horizontal Surface ---
   // Excludes areas already governed by primary, approach-departure, or transitional.
   {
-    const c = IMAGINARY_SURFACES.inner_horizontal.criteria
+    const c = criteria.inner_horizontal
     const inMoreSpecificSurface = surfaces.some(
       (s) => s.isWithinBounds && (s.surfaceKey === 'primary' || s.surfaceKey === 'approach_departure' || s.surfaceKey === 'transitional'),
     )
@@ -391,8 +397,8 @@ export function evaluateObstruction(
 
   // --- 5. Conical Surface ---
   {
-    const c = IMAGINARY_SURFACES.conical.criteria
-    const innerR = IMAGINARY_SURFACES.inner_horizontal.criteria.radius
+    const c = criteria.conical
+    const innerR = criteria.inner_horizontal.radius
     const distFromInnerH = Math.max(0, stadiumDist - innerR)
     const isWithin = stadiumDist > innerR && distFromInnerH <= c.horizontalExtent
     const maxHeightAboveField = c.baseHeight + distFromInnerH / c.slope
@@ -417,9 +423,9 @@ export function evaluateObstruction(
 
   // --- 6. Outer Horizontal Surface ---
   {
-    const c = IMAGINARY_SURFACES.outer_horizontal.criteria
-    const innerR = IMAGINARY_SURFACES.inner_horizontal.criteria.radius
-    const conicalExtent = IMAGINARY_SURFACES.conical.criteria.horizontalExtent
+    const c = criteria.outer_horizontal
+    const innerR = criteria.inner_horizontal.radius
+    const conicalExtent = criteria.conical.horizontalExtent
     const conicalOuterR = innerR + conicalExtent
     const isWithin = stadiumDist > conicalOuterR && stadiumDist <= c.radius
     const maxMSL = airfieldElev + c.height
@@ -445,7 +451,7 @@ export function evaluateObstruction(
   // --- Clear Zone (both ends) ---
   // Listed after height-restriction surfaces so it appears at the bottom of analysis results.
   {
-    const c = IMAGINARY_SURFACES.clear_zone.criteria
+    const c = criteria.clear_zone
     const withinEnd1 = beyondEnd1 > 0 && beyondEnd1 <= c.length && relation.distanceFromCenterline <= c.halfWidth
     const withinEnd2 = beyondEnd2 > 0 && beyondEnd2 <= c.length && relation.distanceFromCenterline <= c.halfWidth
     const isWithin = withinEnd1 || withinEnd2
@@ -471,7 +477,7 @@ export function evaluateObstruction(
 
   // --- Graded Portion of Clear Zone (both ends) ---
   {
-    const c = IMAGINARY_SURFACES.graded_area.criteria
+    const c = criteria.graded_area
     const withinEnd1 = beyondEnd1 > 0 && beyondEnd1 <= c.length && relation.distanceFromCenterline <= c.halfWidth
     const withinEnd2 = beyondEnd2 > 0 && beyondEnd2 <= c.length && relation.distanceFromCenterline <= c.halfWidth
     const isWithin = withinEnd1 || withinEnd2
@@ -498,7 +504,7 @@ export function evaluateObstruction(
   // --- APZ I (Accident Potential Zone I) ---
   // Land-use zone, no height restriction. 3,000–8,000 ft from threshold, 3,000 ft wide.
   {
-    const c = IMAGINARY_SURFACES.apz_i.criteria
+    const c = criteria.apz_i
     const withinEnd1 = beyondEnd1 > c.startOffset && beyondEnd1 <= (c.startOffset + c.length) && relation.distanceFromCenterline <= c.halfWidth
     const withinEnd2 = beyondEnd2 > c.startOffset && beyondEnd2 <= (c.startOffset + c.length) && relation.distanceFromCenterline <= c.halfWidth
     const isWithin = withinEnd1 || withinEnd2
@@ -520,7 +526,7 @@ export function evaluateObstruction(
   // --- APZ II (Accident Potential Zone II) ---
   // Land-use zone, no height restriction. 8,000–15,000 ft from threshold, 3,000 ft wide.
   {
-    const c = IMAGINARY_SURFACES.apz_ii.criteria
+    const c = criteria.apz_ii
     const withinEnd1 = beyondEnd1 > c.startOffset && beyondEnd1 <= (c.startOffset + c.length) && relation.distanceFromCenterline <= c.halfWidth
     const withinEnd2 = beyondEnd2 > c.startOffset && beyondEnd2 <= (c.startOffset + c.length) && relation.distanceFromCenterline <= c.halfWidth
     const isWithin = withinEnd1 || withinEnd2
@@ -596,8 +602,8 @@ export function evaluateObstruction(
  * Quick surface identification — which surface zone does this point fall in?
  * Returns the name of the controlling (most restrictive) surface.
  */
-export function identifySurface(point: LatLon, rwy: RunwayGeometry, airfieldElevMSL = 580): string {
-  const analysis = evaluateObstruction(point, 0, null, rwy, airfieldElevMSL)
+export function identifySurface(point: LatLon, rwy: RunwayGeometry, airfieldElevMSL = 580, runwayClass = 'B'): string {
+  const analysis = evaluateObstruction(point, 0, null, rwy, airfieldElevMSL, runwayClass)
   if (analysis.controllingSurface) return analysis.controllingSurface.surfaceName
   // Fall back to land-use zones (APZ I/II) if no height-restricted surface applies
   const landUseZone = analysis.surfaces.find((s) => s.isWithinBounds && s.maxAllowableHeightMSL === -1)

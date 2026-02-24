@@ -243,7 +243,7 @@ export default function ObstructionDetailPage() {
           <div>
             <span style={{ color: 'var(--color-text-3)', fontSize: 11 }}>Runway</span>
             <div style={{ color: 'var(--color-text-1)', fontWeight: 700 }}>
-              01/19 (Class B)
+              {evaluation.runway_class === 'Army_B' ? 'Army Class B' : `Class ${evaluation.runway_class}`}
             </div>
           </div>
         </div>

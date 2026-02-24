@@ -10,7 +10,7 @@ import { useInstallation } from '@/lib/installation-context'
 
 export default function OpenDiscrepanciesPage() {
   const router = useRouter()
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
 
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<OpenDiscrepanciesData | null>(null)
@@ -39,6 +39,8 @@ export default function OpenDiscrepanciesPage() {
 
     generateOpenDiscrepanciesPdf(data, {
       generatedBy: generatorName,
+      baseName: currentInstallation?.name,
+      baseIcao: currentInstallation?.icao,
     })
 
     setExporting(false)

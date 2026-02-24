@@ -4,8 +4,8 @@ import { ThemeProvider } from '@/lib/theme-context'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Glidepath | 127th Wing',
-  description: 'Glidepath — Airfield Operations Suite — Selfridge ANGB (KMTC)',
+  title: 'Glidepath',
+  description: 'Glidepath — Airfield Operations Suite',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,

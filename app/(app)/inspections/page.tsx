@@ -16,6 +16,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchInspections, createInspection, getInspectorName, type InspectionRow } from '@/lib/supabase/inspections'
 import { useInstallation } from '@/lib/installation-context'
 import { fetchCurrentWeather } from '@/lib/weather'
+import { fetchInspectionTemplate, toInspectionSections } from '@/lib/supabase/inspection-templates'
 import {
   loadDraft,
   saveDraftToStorage,
@@ -32,7 +33,29 @@ type TabType = 'airfield' | 'lighting'
 
 export default function InspectionsPage() {
   const router = useRouter()
-  const { installationId } = useInstallation()
+  const { installationId, runways } = useInstallation()
+
+  // Base coordinates for weather (midpoint of first runway)
+  const rwy0 = runways[0]
+  const baseLat = rwy0 ? ((rwy0.end1_latitude ?? 0) + (rwy0.end2_latitude ?? 0)) / 2 : undefined
+  const baseLon = rwy0 ? ((rwy0.end1_longitude ?? 0) + (rwy0.end2_longitude ?? 0)) / 2 : undefined
+
+  // ── DB-driven templates (fall back to constants if not in DB) ──
+  const [dbAirfieldSections, setDbAirfieldSections] = useState<InspectionSection[] | null>(null)
+  const [dbLightingSections, setDbLightingSections] = useState<InspectionSection[] | null>(null)
+
+  useEffect(() => {
+    if (!installationId) return
+    async function loadTemplates() {
+      const [af, lt] = await Promise.all([
+        fetchInspectionTemplate(installationId!, 'airfield'),
+        fetchInspectionTemplate(installationId!, 'lighting'),
+      ])
+      if (af.length > 0) setDbAirfieldSections(toInspectionSections(af))
+      if (lt.length > 0) setDbLightingSections(toInspectionSections(lt))
+    }
+    loadTemplates()
+  }, [installationId])
 
   // ── Core state ──
   const [draft, setDraft] = useState<DailyInspectionDraft | null>(null)
@@ -105,7 +128,9 @@ export default function InspectionsPage() {
 
   // ── Current half helpers ──
   const currentHalf: InspectionHalfDraft | null = draft ? draft[activeTab] : null
-  const sections = activeTab === 'airfield' ? AIRFIELD_INSPECTION_SECTIONS : LIGHTING_INSPECTION_SECTIONS
+  const sections = activeTab === 'airfield'
+    ? (dbAirfieldSections ?? AIRFIELD_INSPECTION_SECTIONS)
+    : (dbLightingSections ?? LIGHTING_INSPECTION_SECTIONS)
 
   const visibleSections = useMemo(() => {
     if (!currentHalf) return []
@@ -264,7 +289,7 @@ export default function InspectionsPage() {
     setSaving(true)
 
     // Auto-fetch weather
-    const weather = await fetchCurrentWeather()
+    const weather = await fetchCurrentWeather(baseLat, baseLon)
 
     // Auto-fetch inspector name from auth
     const inspector = await getInspectorName()
@@ -302,7 +327,7 @@ export default function InspectionsPage() {
     const currentDraftHalf = draft[activeTab]
     if (!currentDraftHalf.savedAt) {
       // Auto-fetch weather + inspector for the current tab
-      const weather = await fetchCurrentWeather()
+      const weather = await fetchCurrentWeather(baseLat, baseLon)
       const inspector = await getInspectorName()
       const fallbackName = usingDemo ? 'Demo Inspector' : null
 
@@ -398,7 +423,7 @@ export default function InspectionsPage() {
         }
       } else {
         // ── Normal airfield inspection ──
-        const secs = AIRFIELD_INSPECTION_SECTIONS
+        const secs = dbAirfieldSections ?? AIRFIELD_INSPECTION_SECTIONS
         const visSecs = secs.filter((s) => !s.conditional || airfieldHalf.enabledConditionals[s.id])
         const visItems = visSecs.flatMap((s) => s.items)
 
@@ -461,7 +486,7 @@ export default function InspectionsPage() {
 
     // File lighting half (always normal)
     if (lightingSaved) {
-      const secs = LIGHTING_INSPECTION_SECTIONS
+      const secs = dbLightingSections ?? LIGHTING_INSPECTION_SECTIONS
       const visSecs = secs.filter((s) => !s.conditional || lightingHalf.enabledConditionals[s.id])
       const visItems = visSecs.flatMap((s) => s.items)
 

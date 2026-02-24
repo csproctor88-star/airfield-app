@@ -5,6 +5,8 @@ import { formatDiscrepancyType } from './open-discrepancies-data'
 
 interface Options {
   generatedBy: string
+  baseName?: string
+  baseIcao?: string
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -75,7 +77,7 @@ export function generateAgingDiscrepanciesPdf(data: AgingDiscrepanciesData, opts
 
   doc.setFontSize(10)
   doc.setFont('helvetica', 'normal')
-  doc.text('Selfridge ANGB (KMTC)', margin, y)
+  doc.text(opts.baseName && opts.baseIcao ? `${opts.baseName} (${opts.baseIcao})` : 'Airfield Operations', margin, y)
   y += 5
 
   doc.setFontSize(9)
@@ -210,5 +212,5 @@ export function generateAgingDiscrepanciesPdf(data: AgingDiscrepanciesData, opts
   addPageNumber()
 
   const dateStr = now.toISOString().split('T')[0]
-  doc.save(`KMTC_Aging_Discrepancies_${dateStr}.pdf`)
+  doc.save(`${opts.baseIcao ?? 'AIRFIELD'}_Aging_Discrepancies_${dateStr}.pdf`)
 }

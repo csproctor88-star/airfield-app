@@ -39,7 +39,7 @@ function formatDate(dateStr: string) {
 
 export default function DailyOpsPage() {
   const router = useRouter()
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
   const today = new Date().toISOString().split('T')[0]
 
   const [dateMode, setDateMode] = useState<DateMode>('single')
@@ -81,6 +81,8 @@ export default function DailyOpsPage() {
       endDate: effectiveEnd,
       isRange: dateMode === 'range',
       generatedBy: generatorName,
+      baseName: currentInstallation?.name,
+      baseIcao: currentInstallation?.icao,
     })
 
     setExporting(false)

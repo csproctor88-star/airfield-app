@@ -20,7 +20,7 @@ const PERIODS: { value: TrendPeriod; label: string }[] = [
 
 export default function DiscrepancyTrendsPage() {
   const router = useRouter()
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
 
   const [period, setPeriod] = useState<TrendPeriod>('30d')
   const [viewState, setViewState] = useState<ViewState>('picker')
@@ -44,7 +44,7 @@ export default function DiscrepancyTrendsPage() {
   const handleExport = async () => {
     if (!data) return
     setExporting(true)
-    generateDiscrepancyTrendsPdf(data, { generatedBy: generatorName })
+    generateDiscrepancyTrendsPdf(data, { generatedBy: generatorName, baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao })
     setExporting(false)
   }
 
