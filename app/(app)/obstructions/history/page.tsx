@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { fetchObstructionEvaluations, deleteObstructionEvaluation, parsePhotoPaths, type ObstructionRow } from '@/lib/supabase/obstructions'
+import { useInstallation } from '@/lib/installation-context'
 import { formatDistanceToNow } from 'date-fns'
 
 function matchesSearch(ev: ObstructionRow, query: string): boolean {
@@ -28,6 +29,7 @@ function matchesSearch(ev: ObstructionRow, query: string): boolean {
 
 export default function ObstructionHistoryPage() {
   const router = useRouter()
+  const { installationId } = useInstallation()
   const [evaluations, setEvaluations] = useState<ObstructionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -36,12 +38,12 @@ export default function ObstructionHistoryPage() {
 
   useEffect(() => {
     async function load() {
-      const data = await fetchObstructionEvaluations()
+      const data = await fetchObstructionEvaluations(installationId)
       setEvaluations(data)
       setLoading(false)
     }
     load()
-  }, [])
+  }, [installationId])
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
