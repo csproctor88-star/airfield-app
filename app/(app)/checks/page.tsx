@@ -580,7 +580,7 @@ export default function AirfieldChecksPage() {
                   style={{
                     padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
                     cursor: 'pointer', fontFamily: 'inherit',
-                    border: selected ? '1.5px solid var(--color-cyan)' : '1px solid var(--color-border-mid)',
+                    border: selected ? '1.5px solid var(--color-cyan)' : '1.5px solid var(--color-border-mid)',
                     background: selected ? 'rgba(34,211,238,0.09)' : 'var(--color-bg-elevated)',
                     color: selected ? 'var(--color-cyan)' : 'var(--color-text-3)',
                   }}
