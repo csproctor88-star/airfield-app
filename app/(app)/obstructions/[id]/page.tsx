@@ -17,6 +17,9 @@ type SurfaceResult = {
   penetrationFt: number
   ufcReference: string
   ufcCriteria: string
+  baselineElevation?: number
+  baselineLabel?: string
+  calculationBreakdown?: string
 }
 
 const SURFACE_COLORS: Record<string, string> = {
@@ -42,6 +45,7 @@ export default function ObstructionDetailPage() {
   const [deleting, setDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
+  const [showVerify, setShowVerify] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -270,7 +274,27 @@ export default function ObstructionDetailPage() {
 
       {/* Surface-by-surface results */}
       <div className="card" style={{ marginBottom: 10 }}>
-        <span className="section-label">Surface Analysis</span>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+          <span className="section-label" style={{ margin: 0, flex: 1 }}>Surface Analysis</span>
+          <button
+            type="button"
+            onClick={() => setShowVerify((v) => !v)}
+            style={{
+              background: showVerify ? 'var(--color-accent)' : 'var(--color-border)',
+              border: `1px solid ${showVerify ? 'var(--color-accent)' : 'var(--color-border-active)'}`,
+              borderRadius: 6,
+              padding: '3px 8px',
+              color: showVerify ? '#fff' : 'var(--color-text-2)',
+              fontSize: 10,
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {showVerify ? 'Hide math' : 'Verify the numbers'}
+          </button>
+        </div>
         {applicableResults.map((s) => {
           const surfaceColor = SURFACE_COLORS[s.surfaceKey] || 'var(--color-text-2)'
           const isLandUseZone = s.maxAllowableHeightMSL === -1
@@ -338,9 +362,38 @@ export default function ObstructionDetailPage() {
                     </strong>{' '}
                     ({s.maxAllowableHeightAGL.toFixed(0)} ft AGL)
                   </div>
+                  {s.baselineLabel && (
+                    <div style={{ fontSize: 10, color: 'var(--color-text-2)', marginTop: 2 }}>
+                      Baseline: {s.baselineLabel}{s.baselineElevation != null ? ` (${s.baselineElevation.toLocaleString('en-US', { maximumFractionDigits: 1 })} ft MSL)` : ''}
+                    </div>
+                  )}
                   {s.violated && (
                     <div style={{ fontSize: 11, color: '#EF4444', marginTop: 2 }}>
                       Penetration: {s.penetrationFt.toFixed(1)} ft above allowable height
+                    </div>
+                  )}
+                  {showVerify && s.calculationBreakdown && (
+                    <div
+                      style={{
+                        marginTop: 6,
+                        padding: '6px 8px',
+                        background: 'var(--color-bg-surface)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: 6,
+                      }}
+                    >
+                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 3 }}>
+                        Verify the numbers
+                      </div>
+                      <div style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--color-text-1)', lineHeight: 1.5 }}>
+                        {s.calculationBreakdown}
+                      </div>
+                      <div style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--color-text-2)', marginTop: 2 }}>
+                        Obstruction top: {s.obstructionTopMSL.toFixed(1)} ft MSL
+                        {s.violated
+                          ? ` — exceeds by ${s.penetrationFt.toFixed(1)} ft`
+                          : ` — ${(s.maxAllowableHeightMSL - s.obstructionTopMSL).toFixed(1)} ft clear`}
+                      </div>
                     </div>
                   )}
                 </>
@@ -348,7 +401,7 @@ export default function ObstructionDetailPage() {
               <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 4 }}>
                 {s.ufcReference}
               </div>
-              {!isLandUseZone && (
+              {!isLandUseZone && !showVerify && (
                 <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 2, lineHeight: 1.3, fontStyle: 'italic' }}>
                   {s.ufcCriteria}
                 </div>

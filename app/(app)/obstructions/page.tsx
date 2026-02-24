@@ -79,6 +79,8 @@ function ObstructionsContent() {
           true_heading: rwy.true_heading ?? undefined,
           end1_elevation_msl: rwy.end1_elevation_msl,
           end2_elevation_msl: rwy.end2_elevation_msl,
+          end1_designator: rwy.end1_designator,
+          end2_designator: rwy.end2_designator,
         }),
       }))
     }
@@ -109,6 +111,7 @@ function ObstructionsContent() {
   // Convenience: first runway's full analysis (for save payload backward compat)
   const analysis: ObstructionAnalysis | null = multiAnalysis?.perRunway[0]?.analysis ?? null
   const [saving, setSaving] = useState(false)
+  const [showVerify, setShowVerify] = useState(false)
 
   // Helper: find the closest runway to a point
   const findClosestRunway = useCallback((point: LatLon) => {
@@ -351,6 +354,9 @@ function ObstructionsContent() {
         penetrationFt: s.penetrationFt,
         ufcReference: s.ufcReference,
         ufcCriteria: s.ufcCriteria,
+        baselineElevation: s.baselineElevation,
+        baselineLabel: s.baselineLabel,
+        calculationBreakdown: s.calculationBreakdown,
       })),
     )
 
@@ -738,11 +744,31 @@ function ObstructionsContent() {
           {/* Per-runway surface analysis */}
           {multiAnalysis.perRunway.map(({ runwayLabel, analysis: rwyAnalysis }) => (
             <div className="card" style={{ marginTop: 10 }} key={runwayLabel}>
-              <span className="section-label">
-                {multiAnalysis.perRunway.length > 1
-                  ? `Surface Analysis — RWY ${runwayLabel}`
-                  : 'Surface Analysis'}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+                <span className="section-label" style={{ margin: 0, flex: 1 }}>
+                  {multiAnalysis.perRunway.length > 1
+                    ? `Surface Analysis — RWY ${runwayLabel}`
+                    : 'Surface Analysis'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowVerify((v) => !v)}
+                  style={{
+                    background: showVerify ? 'var(--color-accent)' : 'var(--color-border)',
+                    border: `1px solid ${showVerify ? 'var(--color-accent)' : 'var(--color-border-active)'}`,
+                    borderRadius: 6,
+                    padding: '3px 8px',
+                    color: showVerify ? '#fff' : 'var(--color-text-2)',
+                    fontSize: 10,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {showVerify ? 'Hide math' : 'Verify the numbers'}
+                </button>
+              </div>
               {rwyAnalysis.surfaces
                 .filter((s) => s.isWithinBounds)
                 .map((s) => {
@@ -804,10 +830,41 @@ function ObstructionsContent() {
                           {s.ufcCriteria}
                         </div>
                       ) : (
-                        <div style={{ fontSize: 11, color: 'var(--color-text-2)', lineHeight: 1.4 }}>
-                          Max allowable: <strong style={{ color: 'var(--color-text-1)' }}>{s.maxAllowableHeightMSL.toFixed(0)} ft MSL</strong>
-                          {' '}({s.maxAllowableHeightAGL.toFixed(0)} ft AGL)
-                        </div>
+                        <>
+                          <div style={{ fontSize: 11, color: 'var(--color-text-2)', lineHeight: 1.4 }}>
+                            Max allowable: <strong style={{ color: 'var(--color-text-1)' }}>{s.maxAllowableHeightMSL.toFixed(0)} ft MSL</strong>
+                            {' '}({s.maxAllowableHeightAGL.toFixed(0)} ft AGL)
+                          </div>
+                          {s.baselineLabel && (
+                            <div style={{ fontSize: 10, color: 'var(--color-text-2)', marginTop: 2 }}>
+                              Baseline: {s.baselineLabel}{s.baselineElevation != null ? ` (${s.baselineElevation.toLocaleString('en-US', { maximumFractionDigits: 1 })} ft MSL)` : ''}
+                            </div>
+                          )}
+                          {showVerify && s.calculationBreakdown && (
+                            <div
+                              style={{
+                                marginTop: 6,
+                                padding: '6px 8px',
+                                background: 'var(--color-bg-surface)',
+                                border: '1px solid var(--color-border)',
+                                borderRadius: 6,
+                              }}
+                            >
+                              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 3 }}>
+                                Verify the numbers
+                              </div>
+                              <div style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--color-text-1)', lineHeight: 1.5 }}>
+                                {s.calculationBreakdown}
+                              </div>
+                              <div style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--color-text-2)', marginTop: 2 }}>
+                                Obstruction top: {s.obstructionTopMSL.toFixed(1)} ft MSL
+                                {s.violated
+                                  ? ` — exceeds by ${s.penetrationFt.toFixed(1)} ft`
+                                  : ` — ${(s.maxAllowableHeightMSL - s.obstructionTopMSL).toFixed(1)} ft clear`}
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
                       <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 4, fontStyle: 'italic' }}>
                         {s.ufcReference}
