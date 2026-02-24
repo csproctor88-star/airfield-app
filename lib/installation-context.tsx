@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import type { Installation, InstallationRunway, UserRole } from '@/lib/supabase/types'
 import { fetchInstallation, fetchInstallationRunways, fetchInstallationAreas, getUserPrimaryInstallationId, fetchInstallations } from '@/lib/supabase/installations'
 import { createClient } from '@/lib/supabase/client'
+import { AIRFIELD_AREAS } from '@/lib/constants'
 
 // Selfridge fallback ID (used when DB not available / demo mode)
 const SELFRIDGE_INSTALLATION_ID = '00000000-0000-0000-0000-000000000001'
@@ -55,7 +56,9 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
       setCeShops(installation.ce_shops || [])
     }
     setRunways(installationRunways)
-    setAreas(installationAreas.map(a => a.area_name))
+    // Fall back to hardcoded AIRFIELD_AREAS when DB returns empty
+    const areaNames = installationAreas.map(a => a.area_name)
+    setAreas(areaNames.length > 0 ? areaNames : [...AIRFIELD_AREAS])
   }, [])
 
   // Switch to a different installation and persist the choice

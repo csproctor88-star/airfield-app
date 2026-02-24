@@ -47,6 +47,16 @@ const STATUS_COLORS: Record<string, string> = {
   red: '#EF4444',
 }
 
+// --- Default NAVAID fallback (Selfridge ANGB KMTC) ---
+const DEFAULT_NAVAIDS: NavaidStatus[] = [
+  { id: 'default-01-loc', navaid_name: '01 Localizer', base_id: null, status: 'green', notes: null, updated_by: null, updated_at: new Date().toISOString() },
+  { id: 'default-01-gs', navaid_name: '01 Glideslope', base_id: null, status: 'green', notes: null, updated_by: null, updated_at: new Date().toISOString() },
+  { id: 'default-01-ils', navaid_name: '01 ILS', base_id: null, status: 'green', notes: null, updated_by: null, updated_at: new Date().toISOString() },
+  { id: 'default-19-loc', navaid_name: '19 Localizer', base_id: null, status: 'green', notes: null, updated_by: null, updated_at: new Date().toISOString() },
+  { id: 'default-19-gs', navaid_name: '19 Glideslope', base_id: null, status: 'green', notes: null, updated_by: null, updated_at: new Date().toISOString() },
+  { id: 'default-19-ils', navaid_name: '19 ILS', base_id: null, status: 'green', notes: null, updated_by: null, updated_at: new Date().toISOString() },
+]
+
 // --- Activity action formatting ---
 function formatAction(action: string, entityType: string, displayId?: string): string {
   const typeLabel: Record<string, string> = {
@@ -168,12 +178,17 @@ export default function HomePage() {
   // --- Load NAVAIDs ---
   const loadNavaids = useCallback(async () => {
     const supabase = createClient()
-    if (!supabase) return
+    if (!supabase) {
+      // No Supabase — use defaults so NAVAIDs still render
+      setNavaids(DEFAULT_NAVAIDS)
+      return
+    }
 
     const data = await fetchNavaidStatuses(installationId)
-    setNavaids(data)
+    const resolved = data.length > 0 ? data : DEFAULT_NAVAIDS
+    setNavaids(resolved)
     const notes: Record<string, string> = {}
-    data.forEach((n) => { notes[n.id] = n.notes || '' })
+    resolved.forEach((n) => { notes[n.id] = n.notes || '' })
     setNavaidNotes(notes)
   }, [installationId])
 
@@ -566,7 +581,7 @@ export default function HomePage() {
       {navaids.length === 0 ? (
         <div className="card" style={{ marginBottom: 16, padding: 12 }}>
           <div style={{ fontSize: 12, color: 'var(--color-text-3)', textAlign: 'center' }}>
-            Connect to Supabase to manage NAVAID statuses
+            Loading NAVAID statuses...
           </div>
         </div>
       ) : (() => {
@@ -574,7 +589,7 @@ export default function HomePage() {
           .filter((n) => n.navaid_name.startsWith('01'))
           .sort((a, b) => (a.navaid_name.includes('ILS') ? -1 : b.navaid_name.includes('ILS') ? 1 : 0))
         const rwy19 = navaids
-          .filter((n) => n.navaid_name.startsWith('19') && !n.navaid_name.includes('Localizer'))
+          .filter((n) => n.navaid_name.startsWith('19'))
           .sort((a, b) => (a.navaid_name.includes('ILS') ? -1 : b.navaid_name.includes('ILS') ? 1 : 0))
         const NAVAID_CYCLE: ('green' | 'yellow' | 'red')[] = ['green', 'yellow', 'red']
         const NAVAID_LABELS: Record<string, string> = { green: 'G', yellow: 'Y', red: 'R' }
