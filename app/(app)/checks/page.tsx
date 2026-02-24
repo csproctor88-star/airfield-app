@@ -302,14 +302,16 @@ export default function AirfieldChecksPage() {
                     onClick={() => setRscCondition(c)}
                     style={{
                       flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 14, fontWeight: 700,
-                      cursor: 'pointer', fontFamily: 'inherit', border: 'none',
+                      cursor: 'pointer', fontFamily: 'inherit',
+                      border: rscCondition === c
+                        ? `1.5px solid ${c === 'Dry' ? 'var(--color-success)' : 'var(--color-accent)'}`
+                        : '1.5px solid var(--color-border-mid)',
                       background: rscCondition === c
                         ? c === 'Dry' ? 'rgba(34,197,94,0.13)' : 'rgba(59,130,246,0.13)'
                         : 'var(--color-bg-elevated)',
                       color: rscCondition === c
                         ? c === 'Dry' ? 'var(--color-success)' : 'var(--color-accent)'
                         : 'var(--color-text-3)',
-                      outline: rscCondition === c ? `2px solid ${c === 'Dry' ? 'var(--color-success)' : 'var(--color-accent)'}` : 'none',
                     }}
                   >
                     {c === 'Dry' ? '☀️' : '💧'} {c}
@@ -366,10 +368,10 @@ export default function AirfieldChecksPage() {
                         onClick={() => setBashCondition(code)}
                         style={{
                           flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 700,
-                          cursor: 'pointer', fontFamily: 'inherit', border: 'none',
+                          cursor: 'pointer', fontFamily: 'inherit',
+                          border: active ? `1.5px solid ${colors[code]}` : '1.5px solid var(--color-border-mid)',
                           background: active ? bgColors[code] : 'var(--color-bg-elevated)',
                           color: active ? colors[code] : 'var(--color-text-3)',
-                          outline: active ? `2px solid ${colors[code]}` : 'none',
                         }}
                       >
                         {code}
@@ -424,7 +426,8 @@ export default function AirfieldChecksPage() {
                         onClick={() => toggleAction(action)}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
-                          borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                          borderRadius: 6, border: checked ? '1.5px solid var(--color-success)' : '1.5px solid var(--color-border-mid)',
+                          cursor: 'pointer', fontFamily: 'inherit',
                           fontSize: 12, textAlign: 'left',
                           background: checked ? 'rgba(34,197,94,0.07)' : 'var(--color-bg-elevated)',
                           color: checked ? 'var(--color-success)' : 'var(--color-text-2)',
@@ -457,10 +460,10 @@ export default function AirfieldChecksPage() {
                         onClick={() => toggleAgency(agency)}
                         style={{
                           padding: '6px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600,
-                          cursor: 'pointer', fontFamily: 'inherit', border: 'none',
+                          cursor: 'pointer', fontFamily: 'inherit',
+                          border: active ? '1.5px solid var(--color-accent)' : '1.5px solid var(--color-border-mid)',
                           background: active ? 'rgba(56,189,248,0.13)' : 'var(--color-bg-elevated)',
                           color: active ? 'var(--color-accent)' : 'var(--color-text-3)',
-                          outline: active ? '1px solid var(--color-accent)' : 'none',
                         }}
                       >
                         {active ? '✓ ' : ''}{agency}
@@ -497,7 +500,8 @@ export default function AirfieldChecksPage() {
                         onClick={() => toggleAction(action)}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
-                          borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                          borderRadius: 6, border: checked ? '1.5px solid var(--color-success)' : '1.5px solid var(--color-border-mid)',
+                          cursor: 'pointer', fontFamily: 'inherit',
                           fontSize: 12, textAlign: 'left',
                           background: checked ? 'rgba(34,197,94,0.07)' : 'var(--color-bg-elevated)',
                           color: checked ? 'var(--color-success)' : 'var(--color-text-2)',
@@ -530,10 +534,10 @@ export default function AirfieldChecksPage() {
                         onClick={() => toggleAgency(agency)}
                         style={{
                           padding: '6px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600,
-                          cursor: 'pointer', fontFamily: 'inherit', border: 'none',
+                          cursor: 'pointer', fontFamily: 'inherit',
+                          border: active ? '1.5px solid var(--color-accent)' : '1.5px solid var(--color-border-mid)',
                           background: active ? 'rgba(56,189,248,0.13)' : 'var(--color-bg-elevated)',
                           color: active ? 'var(--color-accent)' : 'var(--color-text-3)',
-                          outline: active ? '1px solid var(--color-accent)' : 'none',
                         }}
                       >
                         {active ? '✓ ' : ''}{agency}
