@@ -24,6 +24,8 @@ type Props = {
   onPointSelected: (point: LatLon) => void
   selectedPoint: LatLon | null
   surfaceAtPoint: string | null
+  /** When set, the map will fly to this point. Used for GPS "Use My Location". */
+  flyToPoint?: LatLon | null
 }
 
 // Toggle group keys used for visibility state
@@ -244,7 +246,7 @@ function getDefaultVisibility(): Record<ToggleKey, boolean> {
   return state
 }
 
-export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtPoint }: Props) {
+export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtPoint, flyToPoint }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const marker = useRef<mapboxgl.Marker | null>(null)
@@ -515,6 +517,12 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
         .addTo(map.current)
     }
   }, [selectedPoint, mapLoaded, surfaceAtPoint])
+
+  // Fly to a point when flyToPoint changes (GPS location)
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !flyToPoint) return
+    map.current.flyTo({ center: [flyToPoint.lon, flyToPoint.lat], zoom: 16, duration: 1500 })
+  }, [flyToPoint, mapLoaded])
 
   const toggleLayer = (key: ToggleKey) => {
     setVisibility((prev) => ({ ...prev, [key]: !prev[key] }))

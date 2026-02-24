@@ -107,6 +107,10 @@ function ObstructionsContent() {
   const [description, setDescription] = useState('')
   const [photos, setPhotos] = useState<{ file?: File; url: string }[]>([])
 
+  // GPS location state
+  const [gpsLoading, setGpsLoading] = useState(false)
+  const [flyToPoint, setFlyToPoint] = useState<LatLon | null>(null)
+
   // Evaluation result — supports multi-runway
   const [multiAnalysis, setMultiAnalysis] = useState<MultiRunwayAnalysis | null>(null)
   // Convenience: first runway's full analysis (for save payload backward compat)
@@ -227,6 +231,41 @@ function ObstructionsContent() {
       toast(`Using airfield elevation (${airfieldElevMSL} ft MSL)`, { description: 'Open-Elevation API unavailable' })
     }
   }, [getAllRunways, findClosestRunway, airfieldElevMSL, runwayClass])
+
+  // Use device GPS to select location
+  const useMyLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser')
+      return
+    }
+    setGpsLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const point: LatLon = { lat: position.coords.latitude, lon: position.coords.longitude }
+        setFlyToPoint(point)
+        handlePointSelected(point)
+        setGpsLoading(false)
+        toast.success('Location acquired')
+      },
+      (error) => {
+        setGpsLoading(false)
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            toast.error('Location access denied. Enable location permissions and try again.')
+            break
+          case error.POSITION_UNAVAILABLE:
+            toast.error('Location unavailable. Make sure GPS is enabled.')
+            break
+          case error.TIMEOUT:
+            toast.error('Location request timed out. Try again.')
+            break
+          default:
+            toast.error('Unable to get your location')
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    )
+  }, [handlePointSelected])
 
   // Run the evaluation against all runways
   const runEvaluation = () => {
@@ -469,7 +508,39 @@ function ObstructionsContent() {
         onPointSelected={handlePointSelected}
         selectedPoint={pointInfo?.point ?? null}
         surfaceAtPoint={surfaceAtPoint}
+        flyToPoint={flyToPoint}
       />
+
+      {/* Use My Location */}
+      <button
+        type="button"
+        onClick={useMyLocation}
+        disabled={gpsLoading}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          width: '100%',
+          marginTop: 8,
+          padding: '10px 16px',
+          borderRadius: 8,
+          border: '1px solid var(--color-border-active)',
+          background: 'var(--color-border)',
+          color: 'var(--color-accent)',
+          fontSize: 13,
+          fontWeight: 600,
+          cursor: gpsLoading ? 'wait' : 'pointer',
+          fontFamily: 'inherit',
+          opacity: gpsLoading ? 0.6 : 1,
+        }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+        </svg>
+        {gpsLoading ? 'Getting Location...' : 'Use My Location'}
+      </button>
 
       {/* Point Info Card */}
       {pointInfo && (
