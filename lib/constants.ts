@@ -4,7 +4,7 @@
 // === Selfridge ANGB Configuration (SRS Section 14) ===
 
 export const INSTALLATION = {
-  name: 'Selfridge Air National Guard Base',
+  name: 'Selfridge ANG Base',
   icao: 'KMTC',
   unit: '127th Wing',
   majcom: 'Michigan Air National Guard',

@@ -32,8 +32,8 @@ export async function POST(request: Request) {
     const trimmedName = name.trim()
     const trimmedIcao = icao?.trim().toUpperCase() || null
 
-    // Check if an installation with this name already exists (maybeSingle handles 0 rows without error)
-    const { data: existing, error: lookupError } = await supabase
+    // Check if an installation already exists by name OR ICAO code
+    const { data: byName, error: lookupError } = await supabase
       .from('bases')
       .select('*')
       .ilike('name', trimmedName)
@@ -44,7 +44,19 @@ export async function POST(request: Request) {
       console.error('[installations] Lookup failed:', lookupError.message, lookupError.code)
     }
 
-    let installation = existing
+    let installation = byName
+
+    // Fallback: match by ICAO code to prevent duplicates with different names
+    if (!installation && trimmedIcao) {
+      const { data: byIcao } = await supabase
+        .from('bases')
+        .select('*')
+        .ilike('icao', trimmedIcao)
+        .limit(1)
+        .maybeSingle()
+
+      installation = byIcao
+    }
 
     if (!installation) {
       const { data, error: insertError } = await supabase
