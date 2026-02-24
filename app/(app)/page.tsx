@@ -212,6 +212,17 @@ export default function HomePage() {
       if (installationId) inspQuery = inspQuery.eq('base_id', installationId)
       const { data: insp } = await inspQuery
 
+      // Latest BASH check (condition_code stored in data JSON)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let bashQuery = (supabase as any)
+        .from('airfield_checks')
+        .select('data, completed_at')
+        .eq('check_type', 'bash')
+        .order('completed_at', { ascending: false })
+        .limit(1)
+      if (installationId) bashQuery = bashQuery.eq('base_id', installationId)
+      const { data: bashCheck } = await bashQuery
+
       // Latest completed inspection
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let latestInspQuery = (supabase as any)
@@ -244,7 +255,23 @@ export default function HomePage() {
       if (installationId) rscQuery = rscQuery.eq('base_id', installationId)
       const { data: rscCheck } = await rscQuery
 
-      const bwc = insp?.[0]?.bwc_value || null
+      // Determine BWC: use whichever source (inspection or BASH check) is more recent
+      const inspBwc = insp?.[0]?.bwc_value || null
+      const inspBwcTime = insp?.[0]?.completed_at ? new Date(insp[0].completed_at).getTime() : 0
+      const bashData = bashCheck?.[0]?.data as Record<string, unknown> | undefined
+      const bashConditionRaw = (bashData?.condition_code as string) || null
+      const bashBwcTime = bashCheck?.[0]?.completed_at ? new Date(bashCheck[0].completed_at).getTime() : 0
+      // Normalize BASH condition codes (LOW/MODERATE/SEVERE) to BWC format (LOW/MOD/SEV)
+      const bashConditionMap: Record<string, string> = { LOW: 'LOW', MODERATE: 'MOD', SEVERE: 'SEV' }
+      const bashBwc = bashConditionRaw ? (bashConditionMap[bashConditionRaw] || bashConditionRaw) : null
+
+      let bwc: string | null
+      if (inspBwc && bashBwc) {
+        bwc = bashBwcTime > inspBwcTime ? bashBwc : inspBwc
+      } else {
+        bwc = inspBwc || bashBwc
+      }
+
       const checkType = lastCheck?.[0]?.check_type?.toUpperCase() || null
       const checkTime = lastCheck?.[0]?.completed_at
         ? new Date(lastCheck[0].completed_at).toTimeString().slice(0, 5)
