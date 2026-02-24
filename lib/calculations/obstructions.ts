@@ -119,6 +119,7 @@ export type SurfaceEvaluation = {
   ufcReference: string
   ufcCriteria: string
   color: string
+  runwayLabel?: string
 }
 
 export type ObstructionAnalysis = {
@@ -141,6 +142,24 @@ export type ObstructionAnalysis = {
   violatedSurfaces: SurfaceEvaluation[]
 
   // Waiver guidance
+  waiverGuidance: string[]
+
+  // Multi-runway: label for which runway this analysis applies to
+  runwayLabel?: string
+}
+
+export type MultiRunwayAnalysis = {
+  // Per-runway results
+  perRunway: { runwayLabel: string; analysis: ObstructionAnalysis }[]
+
+  // Merged summary
+  point: LatLon
+  groundElevationMSL: number
+  obstructionHeightAGL: number
+  obstructionTopMSL: number
+  hasViolation: boolean
+  controllingSurface: SurfaceEvaluation | null
+  violatedSurfaces: SurfaceEvaluation[]
   waiverGuidance: string[]
 }
 
@@ -599,14 +618,120 @@ export function evaluateObstruction(
 }
 
 /**
+ * Evaluate an obstruction against ALL runways at an airfield.
+ * Returns per-runway results plus a merged summary with the most restrictive
+ * controlling surface across all runways.
+ */
+export function evaluateObstructionAllRunways(
+  point: LatLon,
+  obstructionHeightAGL: number,
+  groundElevationMSL: number | null,
+  runwayGeometries: { label: string; geometry: RunwayGeometry }[],
+  airfieldElevMSL = 580,
+  runwayClass = 'B',
+): MultiRunwayAnalysis {
+  const perRunway = runwayGeometries.map(({ label, geometry }) => {
+    const analysis = evaluateObstruction(
+      point,
+      obstructionHeightAGL,
+      groundElevationMSL,
+      geometry,
+      airfieldElevMSL,
+      runwayClass,
+    )
+    // Tag each surface evaluation with the runway label
+    for (const s of analysis.surfaces) {
+      s.runwayLabel = label
+    }
+    analysis.runwayLabel = label
+    return { runwayLabel: label, analysis }
+  })
+
+  const groundElev = groundElevationMSL ?? airfieldElevMSL
+  const obstructionTopMSL = groundElev + obstructionHeightAGL
+
+  // Merge: any violation across any runway
+  const hasViolation = perRunway.some((r) => r.analysis.hasViolation)
+
+  // Collect all violated surfaces across all runways
+  const violatedSurfaces = perRunway.flatMap((r) => r.analysis.violatedSurfaces)
+
+  // Controlling surface = the most restrictive (lowest max allowable height)
+  // across all runways
+  const allApplicable = perRunway.flatMap((r) =>
+    r.analysis.surfaces.filter((s) => s.isWithinBounds && s.maxAllowableHeightMSL !== -1),
+  )
+  const controllingSurface = allApplicable.length > 0
+    ? allApplicable.reduce((min, s) =>
+        s.maxAllowableHeightMSL < min.maxAllowableHeightMSL ? s : min,
+      )
+    : null
+
+  // Merge waiver guidance
+  const waiverGuidance: string[] = []
+  if (hasViolation) {
+    waiverGuidance.push(
+      'OBSTRUCTION VIOLATION DETECTED — The following actions are required:',
+    )
+    waiverGuidance.push(
+      '1. Submit Work Order to CES (Civil Engineering Squadron) for evaluation and corrective action.',
+    )
+    waiverGuidance.push(
+      '2. Per DAFMAN 13-204, Para 1.14 — Coordinate with ATC/RAPCON regarding any obstruction that may affect flying operations, approach/departure procedures, or instrument procedures.',
+    )
+    waiverGuidance.push(
+      '3. Submit a work order to CES and coordinate with the BCE to request a Permanent or Temporary Airspace Criteria Waiver.',
+    )
+    for (const vs of violatedSurfaces) {
+      waiverGuidance.push(
+        `4. ${vs.surfaceName} violation on RWY ${vs.runwayLabel} (${vs.penetrationFt.toFixed(1)} ft penetration) — Reference: ${vs.ufcReference}`,
+      )
+    }
+  }
+
+  return {
+    perRunway,
+    point,
+    groundElevationMSL: groundElev,
+    obstructionHeightAGL,
+    obstructionTopMSL,
+    hasViolation,
+    controllingSurface,
+    violatedSurfaces,
+    waiverGuidance,
+  }
+}
+
+/**
  * Quick surface identification — which surface zone does this point fall in?
  * Returns the name of the controlling (most restrictive) surface.
+ * Supports single or multiple runways.
  */
-export function identifySurface(point: LatLon, rwy: RunwayGeometry, airfieldElevMSL = 580, runwayClass = 'B'): string {
-  const analysis = evaluateObstruction(point, 0, null, rwy, airfieldElevMSL, runwayClass)
-  if (analysis.controllingSurface) return analysis.controllingSurface.surfaceName
-  // Fall back to land-use zones (APZ I/II) if no height-restricted surface applies
-  const landUseZone = analysis.surfaces.find((s) => s.isWithinBounds && s.maxAllowableHeightMSL === -1)
-  if (landUseZone) return landUseZone.surfaceName
+export function identifySurface(
+  point: LatLon,
+  rwy: RunwayGeometry | RunwayGeometry[],
+  airfieldElevMSL = 580,
+  runwayClass = 'B',
+): string {
+  const runways = Array.isArray(rwy) ? rwy : [rwy]
+  // Evaluate against each runway, find the most restrictive surface
+  let bestSurface: SurfaceEvaluation | null = null
+  let bestLandUse: SurfaceEvaluation | null = null
+
+  for (const runway of runways) {
+    const analysis = evaluateObstruction(point, 0, null, runway, airfieldElevMSL, runwayClass)
+    if (analysis.controllingSurface) {
+      if (!bestSurface || analysis.controllingSurface.maxAllowableHeightMSL < bestSurface.maxAllowableHeightMSL) {
+        bestSurface = analysis.controllingSurface
+      }
+    }
+    if (!bestLandUse) {
+      const landUseZone = analysis.surfaces.find((s) => s.isWithinBounds && s.maxAllowableHeightMSL === -1)
+      if (landUseZone) bestLandUse = landUseZone
+    }
+  }
+
+  if (bestSurface) return bestSurface.surfaceName
+  if (bestLandUse) return bestLandUse.surfaceName
   return 'Outside all surfaces'
 }

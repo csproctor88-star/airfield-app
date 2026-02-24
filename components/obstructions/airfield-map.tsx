@@ -87,130 +87,130 @@ const SURFACE_LAYERS = [
   { id: 'runway', label: 'Runway', color: '#FFFFFF', opacity: 0.5 },
 ]
 
-function buildSurfaceGeoJSON(rwy: RunwayGeometry) {
+/**
+ * Build GeoJSON for all imaginary surfaces across one or more runways.
+ * Airfield-wide surfaces (outer horizontal, conical, inner horizontal) use the
+ * first runway only — for parallel runways the radii are large enough that the
+ * difference is negligible. Runway-specific surfaces generate features for every
+ * runway with the same `id` property so existing layers render them all.
+ */
+function buildSurfaceGeoJSON(runways: RunwayGeometry[]) {
   const features: GeoJSON.Feature[] = []
+  const primaryRwy = runways[0]
 
   // Derive radii from UFC constants
   const innerHRadius = IMAGINARY_SURFACES.inner_horizontal.criteria.radius
   const conicalExtent = IMAGINARY_SURFACES.conical.criteria.horizontalExtent
   const outerHRadius = IMAGINARY_SURFACES.outer_horizontal.criteria.radius
 
-  // Outer horizontal stadium
-  const outerH = generateStadiumPolygon(rwy, outerHRadius, 64)
+  // Airfield-wide surfaces — use first runway (negligible difference for parallel runways)
+  const outerH = generateStadiumPolygon(primaryRwy, outerHRadius, 64)
   features.push({
     type: 'Feature',
     properties: { id: 'outer-horizontal' },
     geometry: { type: 'Polygon', coordinates: [outerH] },
   })
 
-  // Conical ring — draw full stadium; inner horizontal visually overlaps
-  const conical = generateStadiumPolygon(rwy, innerHRadius + conicalExtent, 64)
+  const conical = generateStadiumPolygon(primaryRwy, innerHRadius + conicalExtent, 64)
   features.push({
     type: 'Feature',
     properties: { id: 'conical' },
     geometry: { type: 'Polygon', coordinates: [conical] },
   })
 
-  // Inner horizontal stadium
-  const innerH = generateStadiumPolygon(rwy, innerHRadius, 64)
+  const innerH = generateStadiumPolygon(primaryRwy, innerHRadius, 64)
   features.push({
     type: 'Feature',
     properties: { id: 'inner-horizontal' },
     geometry: { type: 'Polygon', coordinates: [innerH] },
   })
 
-  // Transitional surfaces (left and right)
-  const transitional = generateTransitionalPolygons(rwy)
-  features.push({
-    type: 'Feature',
-    properties: { id: 'transitional-left' },
-    geometry: { type: 'Polygon', coordinates: [transitional.left] },
-  })
-  features.push({
-    type: 'Feature',
-    properties: { id: 'transitional-right' },
-    geometry: { type: 'Polygon', coordinates: [transitional.right] },
-  })
+  // Runway-specific surfaces — generate for every runway
+  for (const rwy of runways) {
+    const transitional = generateTransitionalPolygons(rwy)
+    features.push({
+      type: 'Feature',
+      properties: { id: 'transitional-left' },
+      geometry: { type: 'Polygon', coordinates: [transitional.left] },
+    })
+    features.push({
+      type: 'Feature',
+      properties: { id: 'transitional-right' },
+      geometry: { type: 'Polygon', coordinates: [transitional.right] },
+    })
 
-  // Approach-departure trapezoids
-  const approach = generateApproachDeparturePolygons(rwy)
-  features.push({
-    type: 'Feature',
-    properties: { id: 'approach-end1' },
-    geometry: { type: 'Polygon', coordinates: [approach.end1] },
-  })
-  features.push({
-    type: 'Feature',
-    properties: { id: 'approach-end2' },
-    geometry: { type: 'Polygon', coordinates: [approach.end2] },
-  })
+    const approach = generateApproachDeparturePolygons(rwy)
+    features.push({
+      type: 'Feature',
+      properties: { id: 'approach-end1' },
+      geometry: { type: 'Polygon', coordinates: [approach.end1] },
+    })
+    features.push({
+      type: 'Feature',
+      properties: { id: 'approach-end2' },
+      geometry: { type: 'Polygon', coordinates: [approach.end2] },
+    })
 
-  // APZ II (behind APZ I for correct z-ordering)
-  const apz = generateAPZPolygons(rwy)
-  features.push({
-    type: 'Feature',
-    properties: { id: 'apz-ii-end1' },
-    geometry: { type: 'Polygon', coordinates: [apz.apz_ii_end1] },
-  })
-  features.push({
-    type: 'Feature',
-    properties: { id: 'apz-ii-end2' },
-    geometry: { type: 'Polygon', coordinates: [apz.apz_ii_end2] },
-  })
+    const apz = generateAPZPolygons(rwy)
+    features.push({
+      type: 'Feature',
+      properties: { id: 'apz-ii-end1' },
+      geometry: { type: 'Polygon', coordinates: [apz.apz_ii_end1] },
+    })
+    features.push({
+      type: 'Feature',
+      properties: { id: 'apz-ii-end2' },
+      geometry: { type: 'Polygon', coordinates: [apz.apz_ii_end2] },
+    })
+    features.push({
+      type: 'Feature',
+      properties: { id: 'apz-i-end1' },
+      geometry: { type: 'Polygon', coordinates: [apz.apz_i_end1] },
+    })
+    features.push({
+      type: 'Feature',
+      properties: { id: 'apz-i-end2' },
+      geometry: { type: 'Polygon', coordinates: [apz.apz_i_end2] },
+    })
 
-  // APZ I
-  features.push({
-    type: 'Feature',
-    properties: { id: 'apz-i-end1' },
-    geometry: { type: 'Polygon', coordinates: [apz.apz_i_end1] },
-  })
-  features.push({
-    type: 'Feature',
-    properties: { id: 'apz-i-end2' },
-    geometry: { type: 'Polygon', coordinates: [apz.apz_i_end2] },
-  })
+    const clearZones = generateClearZonePolygons(rwy)
+    features.push({
+      type: 'Feature',
+      properties: { id: 'clear-zone-end1' },
+      geometry: { type: 'Polygon', coordinates: [clearZones.end1] },
+    })
+    features.push({
+      type: 'Feature',
+      properties: { id: 'clear-zone-end2' },
+      geometry: { type: 'Polygon', coordinates: [clearZones.end2] },
+    })
 
-  // Clear zones (3,000 ft x 3,000 ft at each end)
-  const clearZones = generateClearZonePolygons(rwy)
-  features.push({
-    type: 'Feature',
-    properties: { id: 'clear-zone-end1' },
-    geometry: { type: 'Polygon', coordinates: [clearZones.end1] },
-  })
-  features.push({
-    type: 'Feature',
-    properties: { id: 'clear-zone-end2' },
-    geometry: { type: 'Polygon', coordinates: [clearZones.end2] },
-  })
+    const primary = generatePrimarySurfacePolygon(rwy)
+    features.push({
+      type: 'Feature',
+      properties: { id: 'primary-surface' },
+      geometry: { type: 'Polygon', coordinates: [primary] },
+    })
 
-  // Primary surface
-  const primary = generatePrimarySurfacePolygon(rwy)
-  features.push({
-    type: 'Feature',
-    properties: { id: 'primary-surface' },
-    geometry: { type: 'Polygon', coordinates: [primary] },
-  })
+    const gradedAreas = generateGradedAreaPolygons(rwy)
+    features.push({
+      type: 'Feature',
+      properties: { id: 'graded-area-end1' },
+      geometry: { type: 'Polygon', coordinates: [gradedAreas.end1] },
+    })
+    features.push({
+      type: 'Feature',
+      properties: { id: 'graded-area-end2' },
+      geometry: { type: 'Polygon', coordinates: [gradedAreas.end2] },
+    })
 
-  // Graded areas (1,000 ft x 1,000 ft at each end)
-  const gradedAreas = generateGradedAreaPolygons(rwy)
-  features.push({
-    type: 'Feature',
-    properties: { id: 'graded-area-end1' },
-    geometry: { type: 'Polygon', coordinates: [gradedAreas.end1] },
-  })
-  features.push({
-    type: 'Feature',
-    properties: { id: 'graded-area-end2' },
-    geometry: { type: 'Polygon', coordinates: [gradedAreas.end2] },
-  })
-
-  // Runway pavement
-  const runway = generateRunwayPolygon(rwy)
-  features.push({
-    type: 'Feature',
-    properties: { id: 'runway' },
-    geometry: { type: 'Polygon', coordinates: [runway] },
-  })
+    const runway = generateRunwayPolygon(rwy)
+    features.push({
+      type: 'Feature',
+      properties: { id: 'runway' },
+      geometry: { type: 'Polygon', coordinates: [runway] },
+    })
+  }
 
   return {
     type: 'FeatureCollection' as const,
@@ -239,23 +239,24 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const mapboxReady = isMapboxConfigured()
 
-  const getRwy = useCallback((): RunwayGeometry => {
+  const getAllRunways = useCallback((): RunwayGeometry[] => {
     if (installationRunways.length > 0) {
-      const rwy = installationRunways[0]
-      return getRunwayGeometry({
-        end1: { latitude: rwy.end1_latitude ?? 0, longitude: rwy.end1_longitude ?? 0 },
-        end2: { latitude: rwy.end2_latitude ?? 0, longitude: rwy.end2_longitude ?? 0 },
-        length_ft: rwy.length_ft ?? 9000,
-        width_ft: rwy.width_ft ?? 150,
-        true_heading: rwy.true_heading ?? undefined,
-      })
+      return installationRunways.map((rwy) =>
+        getRunwayGeometry({
+          end1: { latitude: rwy.end1_latitude ?? 0, longitude: rwy.end1_longitude ?? 0 },
+          end2: { latitude: rwy.end2_latitude ?? 0, longitude: rwy.end2_longitude ?? 0 },
+          length_ft: rwy.length_ft ?? 9000,
+          width_ft: rwy.width_ft ?? 150,
+          true_heading: rwy.true_heading ?? undefined,
+        }),
+      )
     }
-    return getRunwayGeometry({
+    return [getRunwayGeometry({
       end1: { latitude: 42.601550, longitude: -82.837339 },
       end2: { latitude: 42.626239, longitude: -82.836481 },
       length_ft: 9000,
       width_ft: 150,
-    })
+    })]
   }, [installationRunways])
 
   const handleClick = useCallback(
@@ -273,12 +274,13 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
 
     mapboxgl.accessToken = token
 
-    const rwy = getRwy()
+    const allRwys = getAllRunways()
+    const primaryRwy = allRwys[0]
 
     const m = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-v9',
-      center: [rwy.midpoint.lon, rwy.midpoint.lat],
+      center: [primaryRwy.midpoint.lon, primaryRwy.midpoint.lat],
       zoom: 13,
       pitch: 0,
       bearing: 0,
@@ -287,21 +289,21 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
     m.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-right')
 
     m.on('load', () => {
-      const geojson = buildSurfaceGeoJSON(rwy)
+      const geojson = buildSurfaceGeoJSON(allRwys)
 
       // Add each surface as a separate layer for individual styling
       for (const layer of SURFACE_LAYERS) {
-        const featureForLayer = geojson.features.find(
+        const featuresForLayer = geojson.features.filter(
           (f) => f.properties?.id === layer.id,
         )
-        if (!featureForLayer) continue
+        if (featuresForLayer.length === 0) continue
 
         const sourceId = `source-${layer.id}`
         m.addSource(sourceId, {
           type: 'geojson',
           data: {
             type: 'FeatureCollection',
-            features: [featureForLayer],
+            features: featuresForLayer,
           },
         })
 
@@ -341,23 +343,27 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
         })
       }
 
-      // Add runway end labels
+      // Add runway end labels for all runways
+      const labelFeatures: GeoJSON.Feature[] = []
+      for (let i = 0; i < allRwys.length; i++) {
+        const rwy = allRwys[i]
+        const instRwy = installationRunways[i]
+        labelFeatures.push({
+          type: 'Feature',
+          properties: { label: instRwy?.end1_designator ?? '01' },
+          geometry: { type: 'Point', coordinates: [rwy.end1.lon, rwy.end1.lat] },
+        })
+        labelFeatures.push({
+          type: 'Feature',
+          properties: { label: instRwy?.end2_designator ?? '19' },
+          geometry: { type: 'Point', coordinates: [rwy.end2.lon, rwy.end2.lat] },
+        })
+      }
       m.addSource('rwy-labels', {
         type: 'geojson',
         data: {
           type: 'FeatureCollection',
-          features: [
-            {
-              type: 'Feature',
-              properties: { label: installationRunways[0]?.end1_designator ?? '01' },
-              geometry: { type: 'Point', coordinates: [rwy.end1.lon, rwy.end1.lat] },
-            },
-            {
-              type: 'Feature',
-              properties: { label: installationRunways[0]?.end2_designator ?? '19' },
-              geometry: { type: 'Point', coordinates: [rwy.end2.lon, rwy.end2.lat] },
-            },
-          ],
+          features: labelFeatures,
         },
       })
 

@@ -41,10 +41,11 @@ VALUES (
 --    end1 = low-numbered (06) end; end2 = high-numbered (24) end.
 -- ═══════════════════════════════════════════════════════════════
 
--- Runway 06L/24R — primary (longer) runway: 12,014 ft
--- 06L: 1,000 ft displaced threshold (LDA 11,014 ft). BAK-12 arresting gear.
--- 24R: full-length threshold. ALSF-1 approach lighting (verify vs. current AIP).
+-- Runway 06L/24R — 10,528 ft × 200 ft, PCN 98 R/A/W/T
+-- 06L: threshold elev 539.1 ft. BAK-12 arresting gear.
+-- 24R: threshold elev 617.4 ft. ALSF-1 approach lighting (verify vs. current AIP).
 --      Hazardous turbulence on final. 47 ft TACAN antenna 1,300 ft SE of threshold.
+-- NOTE: Coordinates are for PGUA (Andersen AFB, ~13°35'N), NOT PGUM (Won Pat, ~13°28'N).
 INSERT INTO base_runways (
   base_id, runway_id, length_ft, width_ft, surface, true_heading,
   end1_designator, end1_latitude, end1_longitude, end1_heading, end1_approach_lighting,
@@ -52,19 +53,20 @@ INSERT INTO base_runways (
 )
 VALUES (
   '00000000-0000-0000-0000-000000000002',
-  '06L/24R', 12014, 150, 'Asphalt', 65,
-  '06L', 13.477740, 144.781431, 63, 'MALSR',
-  '24R', 13.491751, 144.812071, 243, 'ALSF-1'
+  '06L/24R', 10528, 200, 'Asphalt', 65,
+  '06L', 13.580356, 144.915644, 63, 'MALSR',
+  '24R', 13.592203, 144.942706, 243, 'ALSF-1'
 )
 ON CONFLICT (base_id, runway_id) DO NOTHING;
 
--- Runway 06R/24L — secondary runway: 10,014 ft
--- 06R: full-length threshold. BAK-12 arresting gear.
--- 24L: ~1,004 ft displaced threshold (LDA 8,710 ft per declared distances).
+-- Runway 06R/24L — 11,200 ft × 200 ft, PCN 98 R/A/W/T
+-- 06R: threshold elev 556.8 ft. BAK-12 arresting gear.
+-- 24L: threshold elev 607.2 ft. ~1,004 ft displaced threshold (LDA 8,710 ft).
 --      Hazardous turbulence on final. 47 ft TACAN antenna 1,300 ft NE of threshold.
 --      Rising terrain 75 ft from threshold, 140 ft east of extended centerline, +8 ft.
 --      First 500 ft of left shoulder not visible from tower.
 --      Approach lighting for 24L not confirmed in public sources — admin should verify.
+-- NOTE: Coordinates are for PGUA (Andersen AFB, ~13°35'N), NOT PGUM (Won Pat, ~13°28'N).
 INSERT INTO base_runways (
   base_id, runway_id, length_ft, width_ft, surface, true_heading,
   end1_designator, end1_latitude, end1_longitude, end1_heading, end1_approach_lighting,
@@ -72,9 +74,9 @@ INSERT INTO base_runways (
 )
 VALUES (
   '00000000-0000-0000-0000-000000000002',
-  '06R/24L', 10014, 150, 'Asphalt', 65,
-  '06R', 13.477159, 144.784814, 63, 'MALSR',
-  '24L', 13.488839, 144.810354, 243, NULL
+  '06R/24L', 11200, 200, 'Asphalt', 65,
+  '06R', 13.575328, 144.916494, 63, 'MALSR',
+  '24L', 13.587942, 144.945278, 243, NULL
 )
 ON CONFLICT (base_id, runway_id) DO NOTHING;
 
@@ -160,4 +162,9 @@ ON CONFLICT (base_id, area_name) DO NOTHING;
 --   8. Complete taxiway inventory — TWY D, H, and others not in public sources
 --   9. Exact displaced threshold offset for RWY 24L
 --      (LDA 8,710 ft vs. TORA 9,714 ft per declared distances)
+--
+-- DATA SOURCE: Runway dimensions and threshold coordinates are from FAA AIP and
+-- FlightAware/iFlightPlanner data specifically for PGUA (Andersen AFB), verified
+-- by latitude (~13°34-35'N = northern Guam). PGUM (Won Pat International) is
+-- at ~13°28'N in southern Guam — do NOT confuse the two airports.
 -- ═══════════════════════════════════════════════════════════════
