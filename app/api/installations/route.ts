@@ -112,3 +112,60 @@ export async function POST(request: Request) {
     )
   }
 }
+
+/** DELETE — remove a user's membership from an installation */
+export async function DELETE(request: Request) {
+  try {
+    const supabase = getAdmin()
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Server not configured — SUPABASE_SERVICE_ROLE_KEY missing' },
+        { status: 500 },
+      )
+    }
+
+    const body = await request.json()
+    const { baseId, userId } = body as { baseId?: string; userId?: string }
+
+    if (!baseId || !userId) {
+      return NextResponse.json({ error: 'baseId and userId are required' }, { status: 400 })
+    }
+
+    // Don't allow removing if this is the user's primary base
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('primary_base_id')
+      .eq('id', userId)
+      .single()
+
+    if (profile?.primary_base_id === baseId) {
+      return NextResponse.json(
+        { error: 'Cannot remove your current primary installation. Switch to another first.' },
+        { status: 400 },
+      )
+    }
+
+    // Remove base_members entry
+    const { error: deleteError } = await supabase
+      .from('base_members')
+      .delete()
+      .eq('base_id', baseId)
+      .eq('user_id', userId)
+
+    if (deleteError) {
+      console.error('[installations] Delete member failed:', deleteError.message)
+      return NextResponse.json(
+        { error: `Failed to remove installation: ${deleteError.message}` },
+        { status: 500 },
+      )
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    console.error('[installations] Unexpected error:', err)
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Unexpected server error' },
+      { status: 500 },
+    )
+  }
+}

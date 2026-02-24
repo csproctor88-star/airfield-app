@@ -221,15 +221,18 @@ function ThemeSection() {
 // ═══════════════════════════════════════════════════════════════
 
 function InstallationSection() {
-  const { currentInstallation, switchInstallation } = useInstallation()
+  const { currentInstallation, allInstallations, switchInstallation, removeInstallation, userRole } = useInstallation()
   const [showDropdown, setShowDropdown] = useState(false)
   const [search, setSearch] = useState('')
   const [addingNew, setAddingNew] = useState(false)
   const [newName, setNewName] = useState('')
   const [newIcao, setNewIcao] = useState('')
   const [saving, setSaving] = useState(false)
+  const [removing, setRemoving] = useState<string | null>(null)
+  const [confirmRemove, setConfirmRemove] = useState<{ id: string; name: string } | null>(null)
   const [userId, setUserId] = useState<string | undefined>()
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const canManageInstallations = (userRole === 'sys_admin' || userRole === 'airfield_manager') && allInstallations.length > 1
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -444,7 +447,86 @@ function InstallationSection() {
             </div>
           </div>
         )}
+
+        {/* Manage installations — only for privileged roles with multiple bases */}
+        {canManageInstallations && (
+          <>
+            <div style={{ borderTop: '1px solid var(--color-border)' }} />
+            <div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 8 }}>YOUR INSTALLATIONS</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {allInstallations.map(inst => {
+                  const isCurrent = inst.id === currentInstallation?.id
+                  const isRemoving = removing === inst.id
+                  return (
+                    <div
+                      key={inst.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '8px 10px',
+                        borderRadius: 6,
+                        background: isCurrent ? 'rgba(56,189,248,0.06)' : 'transparent',
+                        border: isCurrent ? '1px solid rgba(56,189,248,0.15)' : '1px solid transparent',
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: 13,
+                          fontWeight: isCurrent ? 700 : 500,
+                          color: isCurrent ? 'var(--color-accent)' : 'var(--color-text-1)',
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {inst.name}
+                          {inst.icao && <span style={{ fontSize: 10, marginLeft: 6, opacity: 0.5 }}>{inst.icao}</span>}
+                        </div>
+                        {isCurrent && (
+                          <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 1 }}>Current</div>
+                        )}
+                      </div>
+                      {!isCurrent && (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmRemove({ id: inst.id, name: inst.name })}
+                          disabled={isRemoving}
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            padding: 4, display: 'flex', alignItems: 'center',
+                            opacity: isRemoving ? 0.4 : 0.6,
+                          }}
+                        >
+                          <X size={14} color="#F87171" />
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Remove installation confirmation */}
+      {confirmRemove && (
+        <ConfirmDialog
+          title="Remove Installation?"
+          message={`Remove "${confirmRemove.name}" from your installation list? You can re-add it later from the directory.`}
+          confirmLabel="Remove"
+          onConfirm={async () => {
+            const baseId = confirmRemove.id
+            setConfirmRemove(null)
+            setRemoving(baseId)
+            const ok = await removeInstallation(baseId)
+            setRemoving(null)
+            if (ok) {
+              toast.success('Installation removed')
+            } else {
+              toast.error('Failed to remove installation')
+            }
+          }}
+          onCancel={() => setConfirmRemove(null)}
+        />
+      )}
     </>
   )
 }

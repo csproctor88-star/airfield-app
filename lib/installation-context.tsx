@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import type { Installation, InstallationRunway, UserRole } from '@/lib/supabase/types'
-import { fetchInstallation, fetchInstallationRunways, fetchInstallationAreas, getUserPrimaryInstallationId, fetchInstallations } from '@/lib/supabase/installations'
+import { fetchInstallation, fetchInstallationRunways, fetchInstallationAreas, getUserPrimaryInstallationId, fetchInstallations, fetchUserInstallations } from '@/lib/supabase/installations'
 import { createClient } from '@/lib/supabase/client'
 import { AIRFIELD_AREAS } from '@/lib/constants'
 
@@ -24,6 +24,8 @@ export interface InstallationContextValue {
   ceShops: string[]
   /** Switch to a different installation */
   switchInstallation: (installationId: string) => Promise<void>
+  /** Remove an installation from the user's list */
+  removeInstallation: (baseId: string) => Promise<boolean>
   /** Current user's role */
   userRole: UserRole | null
   /** Whether the context has finished initial loading */
@@ -86,6 +88,31 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
   // Roles that can switch between installations
   const MULTI_INSTALL_ROLES: UserRole[] = ['airfield_manager', 'sys_admin']
 
+  // Remove an installation from the user's list (delete base_members entry)
+  const removeInstallation = useCallback(async (baseId: string): Promise<boolean> => {
+    const supabase = createClient()
+    if (!supabase) return false
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return false
+
+      const res = await fetch('/api/installations', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseId, userId: user.id }),
+      })
+
+      if (!res.ok) return false
+
+      // Update local state
+      setAllInstallations(prev => prev.filter(inst => inst.id !== baseId))
+      return true
+    } catch {
+      return false
+    }
+  }, [])
+
   // Initial load
   useEffect(() => {
     async function init() {
@@ -109,10 +136,10 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
       }
       setUserRole(role)
 
-      // Only fetch all installations for privileged roles
+      // Fetch installations the user is a member of (for privileged roles)
       if (role && MULTI_INSTALL_ROLES.includes(role)) {
-        const installations = await fetchInstallations()
-        setAllInstallations(installations)
+        const userInstallations = await fetchUserInstallations()
+        setAllInstallations(userInstallations)
       }
 
       // Determine which installation to load
@@ -138,7 +165,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
 
   return (
     <InstallationContext.Provider
-      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, switchInstallation, userRole, loaded }}
+      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, switchInstallation, removeInstallation, userRole, loaded }}
     >
       {children}
     </InstallationContext.Provider>
