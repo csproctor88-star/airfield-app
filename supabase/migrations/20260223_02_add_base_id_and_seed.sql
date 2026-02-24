@@ -20,13 +20,13 @@ ON CONFLICT (icao) DO NOTHING;
 
 -- Runway 01/19
 INSERT INTO base_runways (base_id, runway_id, length_ft, width_ft, surface, true_heading,
-  end1_designator, end1_latitude, end1_longitude, end1_heading, end1_approach_lighting,
-  end2_designator, end2_latitude, end2_longitude, end2_heading, end2_approach_lighting)
+  end1_designator, end1_latitude, end1_longitude, end1_heading, end1_approach_lighting, end1_elevation_msl,
+  end2_designator, end2_latitude, end2_longitude, end2_heading, end2_approach_lighting, end2_elevation_msl)
 VALUES (
   '00000000-0000-0000-0000-000000000001',
   '01/19', 9000, 150, 'Asphalt', 2,
-  '01', 42.601550, -82.837339, 8, 'SALS',
-  '19', 42.626239, -82.836481, 188, 'ALSF-1'
+  '01', 42.601550, -82.837339, 8, 'SALS', 580,
+  '19', 42.626239, -82.836481, 188, 'ALSF-1', 580
 )
 ON CONFLICT (base_id, runway_id) DO NOTHING;
 
