@@ -36,7 +36,7 @@ export async function PATCH(request: Request) {
   // Get the current row ID
   const { data: existing } = await supabase
     .from('airfield_status')
-    .select('id, runway_status, active_runway, advisory_type, advisory_text')
+    .select('id, runway_status, active_runway, advisory_type, advisory_text, runway_statuses')
     .limit(1)
     .single()
 

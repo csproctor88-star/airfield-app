@@ -8,8 +8,10 @@ import { CHECK_TYPE_CONFIG } from '@/lib/constants'
 import { DEMO_CHECKS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { fetchChecks, type CheckRow } from '@/lib/supabase/checks'
+import { useInstallation } from '@/lib/installation-context'
 
 export default function CheckHistoryPage() {
+  const { installationId } = useInstallation()
   const [liveChecks, setLiveChecks] = useState<CheckRow[]>([])
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
@@ -24,7 +26,7 @@ export default function CheckHistoryPage() {
         setLoading(false)
         return
       }
-      const { data, error } = await fetchChecks()
+      const { data, error } = await fetchChecks(installationId)
       if (error) {
         toast.error(`DB error: ${error}`)
         setUsingDemo(true)
@@ -34,7 +36,7 @@ export default function CheckHistoryPage() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [installationId])
 
   const checks = usingDemo ? DEMO_CHECKS : liveChecks
 

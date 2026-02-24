@@ -1,7 +1,7 @@
 // Glidepath — Aircraft Characteristics Database
 // Sources: USACE TSC 13-2 (Military) & TSC 13-3 (Commercial)
 
-import type { AircraftCharacteristics } from '../aircraft_database_schema'
+import type { AircraftCharacteristics } from './aircraft_database_schema'
 import commercialRaw from '../commercial_aircraft.json'
 import militaryRaw from '../military_aircraft.json'
 import imageManifest from '../image_manifest.json'

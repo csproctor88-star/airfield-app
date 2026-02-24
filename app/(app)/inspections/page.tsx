@@ -83,12 +83,12 @@ export default function InspectionsPage() {
   const [filing, setFiling] = useState(false)
   const [showLightingWarning, setShowLightingWarning] = useState(false)
 
-  // ── Load draft from localStorage on mount ──
+  // ── Load draft from localStorage on mount (scoped to current base) ──
   useEffect(() => {
-    const stored = loadDraft()
+    const stored = loadDraft(installationId)
     if (stored) setDraft(stored)
     setDraftLoaded(true)
-  }, [])
+  }, [installationId])
 
   // ── Auto-begin: if ?action=begin and no draft, create one ──
   useEffect(() => {
@@ -99,7 +99,7 @@ export default function InspectionsPage() {
       const newDraft = createNewDraft()
       setDraft(newDraft)
       setActiveTab('airfield')
-      saveDraftToStorage(newDraft)
+      saveDraftToStorage(newDraft, installationId)
       toast.success('New daily inspection started')
     }
   }, [draftLoaded, draft])
@@ -123,7 +123,7 @@ export default function InspectionsPage() {
 
   // ── Save draft to localStorage whenever it changes ──
   useEffect(() => {
-    if (draft && draftLoaded) saveDraftToStorage(draft)
+    if (draft && draftLoaded) saveDraftToStorage(draft, installationId)
   }, [draft, draftLoaded])
 
   // ── Current half helpers ──
@@ -277,7 +277,7 @@ export default function InspectionsPage() {
     const newDraft = createNewDraft()
     setDraft(newDraft)
     setActiveTab('airfield')
-    saveDraftToStorage(newDraft)
+    saveDraftToStorage(newDraft, installationId)
     toast.success('New daily inspection started')
   }
 
@@ -550,7 +550,7 @@ export default function InspectionsPage() {
     }
 
     if (filed > 0 || usingDemo) {
-      clearDraft()
+      clearDraft(installationId)
       setDraft(null)
       toast.success(`Inspection${filed !== 1 ? 's' : ''} filed`, {
         description: `${filed} record${filed !== 1 ? 's' : ''} saved to history`,
@@ -1065,9 +1065,9 @@ export default function InspectionsPage() {
                               onChange={(e) => setComment(item.id, e.target.value)}
                               rows={2}
                               style={{
-                                width: '100%', background: 'rgba(4,8,14,0.9)',
+                                width: '100%', background: '#fff',
                                 border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6,
-                                padding: '8px 10px', color: 'var(--color-text-1)', fontSize: 12,
+                                padding: '8px 10px', color: '#111', fontSize: 12,
                                 fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box',
                               }}
                             />

@@ -61,14 +61,14 @@ DELETE FROM base_areas   WHERE base_id = '00000000-0000-0000-0000-000000000002';
 -- NOTE: Coordinates are for PGUA (Andersen AFB, ~13°35'N), NOT PGUM (Won Pat, ~13°28'N).
 INSERT INTO base_runways (
   base_id, runway_id, length_ft, width_ft, surface, true_heading,
-  end1_designator, end1_latitude, end1_longitude, end1_heading, end1_approach_lighting,
-  end2_designator, end2_latitude, end2_longitude, end2_heading, end2_approach_lighting
+  end1_designator, end1_latitude, end1_longitude, end1_heading, end1_approach_lighting, end1_elevation_msl,
+  end2_designator, end2_latitude, end2_longitude, end2_heading, end2_approach_lighting, end2_elevation_msl
 )
 VALUES (
   '00000000-0000-0000-0000-000000000002',
   '06L/24R', 10528, 200, 'Asphalt', 65,
-  '06L', 13.580356, 144.915644, 63, 'MALSR',
-  '24R', 13.592203, 144.942706, 243, 'ALSF-1'
+  '06L', 13.580356, 144.915644, 63, 'MALSR', 539.1,
+  '24R', 13.592203, 144.942706, 243, 'ALSF-1', 617.4
 );
 
 -- Runway 06R/24L — 11,200 ft × 200 ft, PCN 98 R/A/W/T
@@ -81,14 +81,14 @@ VALUES (
 -- NOTE: Coordinates are for PGUA (Andersen AFB, ~13°35'N), NOT PGUM (Won Pat, ~13°28'N).
 INSERT INTO base_runways (
   base_id, runway_id, length_ft, width_ft, surface, true_heading,
-  end1_designator, end1_latitude, end1_longitude, end1_heading, end1_approach_lighting,
-  end2_designator, end2_latitude, end2_longitude, end2_heading, end2_approach_lighting
+  end1_designator, end1_latitude, end1_longitude, end1_heading, end1_approach_lighting, end1_elevation_msl,
+  end2_designator, end2_latitude, end2_longitude, end2_heading, end2_approach_lighting, end2_elevation_msl
 )
 VALUES (
   '00000000-0000-0000-0000-000000000002',
   '06R/24L', 11200, 200, 'Asphalt', 65,
-  '06R', 13.575328, 144.916494, 63, 'MALSR',
-  '24L', 13.587942, 144.945278, 243, NULL
+  '06R', 13.575328, 144.916494, 63, 'MALSR', 556.8,
+  '24L', 13.587942, 144.945278, 243, NULL, 607.2
 );
 
 -- ═══════════════════════════════════════════════════════════════

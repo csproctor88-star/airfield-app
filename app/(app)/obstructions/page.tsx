@@ -38,6 +38,7 @@ type PointInfo = {
   closestRunwayIndex: number
   surfaceName: string
   loadingElev: boolean
+  withinApproachDeparture: boolean
 }
 
 export default function ObstructionsPage() {
@@ -77,6 +78,10 @@ function ObstructionsContent() {
           length_ft: rwy.length_ft ?? 9000,
           width_ft: rwy.width_ft ?? 150,
           true_heading: rwy.true_heading ?? undefined,
+          end1_elevation_msl: rwy.end1_elevation_msl,
+          end2_elevation_msl: rwy.end2_elevation_msl,
+          end1_designator: rwy.end1_designator,
+          end2_designator: rwy.end2_designator,
         }),
       }))
     }
@@ -102,11 +107,16 @@ function ObstructionsContent() {
   const [description, setDescription] = useState('')
   const [photos, setPhotos] = useState<{ file?: File; url: string }[]>([])
 
+  // GPS location state
+  const [gpsLoading, setGpsLoading] = useState(false)
+  const [flyToPoint, setFlyToPoint] = useState<LatLon | null>(null)
+
   // Evaluation result — supports multi-runway
   const [multiAnalysis, setMultiAnalysis] = useState<MultiRunwayAnalysis | null>(null)
   // Convenience: first runway's full analysis (for save payload backward compat)
   const analysis: ObstructionAnalysis | null = multiAnalysis?.perRunway[0]?.analysis ?? null
   const [saving, setSaving] = useState(false)
+  const [showVerify, setShowVerify] = useState(false)
 
   // Helper: find the closest runway to a point
   const findClosestRunway = useCallback((point: LatLon) => {
@@ -149,6 +159,10 @@ function ObstructionsContent() {
         const relation = pointToRunwayRelation(point, closest.geometry)
         const nearerThreshold = relation.nearerEnd === 'end1' ? closest.geometry.end1 : closest.geometry.end2
         const distToThreshold = distanceFt(point, nearerThreshold)
+        const withinAD = allRwys.some(({ geometry }) => {
+          const a = evaluateObstruction(point, 0, null, geometry, airfieldElevMSL, runwayClass)
+          return a.surfaces.some((s) => s.surfaceKey === 'approach_departure' && s.isWithinBounds)
+        })
         setPointInfo({
           point,
           groundElevMSL: groundElev,
@@ -159,6 +173,7 @@ function ObstructionsContent() {
           closestRunwayIndex: closest.index,
           surfaceName,
           loadingElev: false,
+          withinApproachDeparture: withinAD,
         })
         // Auto-run evaluation against all runways
         if (h > 0) {
@@ -180,6 +195,10 @@ function ObstructionsContent() {
     const relation = pointToRunwayRelation(point, closest.geometry)
     const nearerThreshold = relation.nearerEnd === 'end1' ? closest.geometry.end1 : closest.geometry.end2
     const distToThreshold = distanceFt(point, nearerThreshold)
+    const withinAD = allRwys.some(({ geometry }) => {
+      const a = evaluateObstruction(point, 0, null, geometry, airfieldElevMSL, runwayClass)
+      return a.surfaces.some((s) => s.surfaceKey === 'approach_departure' && s.isWithinBounds)
+    })
     setPointInfo({
       point,
       groundElevMSL: null,
@@ -190,6 +209,7 @@ function ObstructionsContent() {
       closestRunwayIndex: closest.index,
       surfaceName,
       loadingElev: true,
+      withinApproachDeparture: withinAD,
     })
     setMultiAnalysis(null)
 
@@ -211,6 +231,41 @@ function ObstructionsContent() {
       toast(`Using airfield elevation (${airfieldElevMSL} ft MSL)`, { description: 'Open-Elevation API unavailable' })
     }
   }, [getAllRunways, findClosestRunway, airfieldElevMSL, runwayClass])
+
+  // Use device GPS to select location
+  const useMyLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser')
+      return
+    }
+    setGpsLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const point: LatLon = { lat: position.coords.latitude, lon: position.coords.longitude }
+        setFlyToPoint(point)
+        handlePointSelected(point)
+        setGpsLoading(false)
+        toast.success('Location acquired')
+      },
+      (error) => {
+        setGpsLoading(false)
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            toast.error('Location access denied. Enable location permissions and try again.')
+            break
+          case error.POSITION_UNAVAILABLE:
+            toast.error('Location unavailable. Make sure GPS is enabled.')
+            break
+          case error.TIMEOUT:
+            toast.error('Location request timed out. Try again.')
+            break
+          default:
+            toast.error('Unable to get your location')
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    )
+  }, [handlePointSelected])
 
   // Run the evaluation against all runways
   const runEvaluation = () => {
@@ -349,6 +404,9 @@ function ObstructionsContent() {
         penetrationFt: s.penetrationFt,
         ufcReference: s.ufcReference,
         ufcCriteria: s.ufcCriteria,
+        baselineElevation: s.baselineElevation,
+        baselineLabel: s.baselineLabel,
+        calculationBreakdown: s.calculationBreakdown,
       })),
     )
 
@@ -450,7 +508,39 @@ function ObstructionsContent() {
         onPointSelected={handlePointSelected}
         selectedPoint={pointInfo?.point ?? null}
         surfaceAtPoint={surfaceAtPoint}
+        flyToPoint={flyToPoint}
       />
+
+      {/* Use My Location */}
+      <button
+        type="button"
+        onClick={useMyLocation}
+        disabled={gpsLoading}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          width: '100%',
+          marginTop: 8,
+          padding: '10px 16px',
+          borderRadius: 8,
+          border: '1px solid var(--color-border-active)',
+          background: 'var(--color-border)',
+          color: 'var(--color-accent)',
+          fontSize: 13,
+          fontWeight: 600,
+          cursor: gpsLoading ? 'wait' : 'pointer',
+          fontFamily: 'inherit',
+          opacity: gpsLoading ? 0.6 : 1,
+        }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+        </svg>
+        {gpsLoading ? 'Getting Location...' : 'Use My Location'}
+      </button>
 
       {/* Point Info Card */}
       {pointInfo && (
@@ -498,6 +588,25 @@ function ObstructionsContent() {
                 {pointInfo.surfaceName}
               </div>
             </div>
+            {pointInfo.withinApproachDeparture && (() => {
+              const rwy = runways[pointInfo.closestRunwayIndex]
+              const thresholdElev = pointInfo.nearerEnd === 'end1'
+                ? rwy?.end1_elevation_msl
+                : rwy?.end2_elevation_msl
+              const designator = pointInfo.nearerEnd === 'end1'
+                ? (rwy?.end1_designator ?? 'End 1')
+                : (rwy?.end2_designator ?? 'End 2')
+              return (
+                <div>
+                  <span style={{ color: 'var(--color-text-3)' }}>Nearest Threshold Elev</span>
+                  <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 11, marginTop: 2 }}>
+                    {thresholdElev != null
+                      ? `${thresholdElev.toLocaleString('en-US', { maximumFractionDigits: 1 })} ft MSL (RWY ${designator})`
+                      : `Not set (using ${airfieldElevMSL} ft airfield elev)`}
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}
@@ -736,11 +845,31 @@ function ObstructionsContent() {
           {/* Per-runway surface analysis */}
           {multiAnalysis.perRunway.map(({ runwayLabel, analysis: rwyAnalysis }) => (
             <div className="card" style={{ marginTop: 10 }} key={runwayLabel}>
-              <span className="section-label">
-                {multiAnalysis.perRunway.length > 1
-                  ? `Surface Analysis — RWY ${runwayLabel}`
-                  : 'Surface Analysis'}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+                <span className="section-label" style={{ margin: 0, flex: 1 }}>
+                  {multiAnalysis.perRunway.length > 1
+                    ? `Surface Analysis — RWY ${runwayLabel}`
+                    : 'Surface Analysis'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowVerify((v) => !v)}
+                  style={{
+                    background: showVerify ? 'var(--color-accent)' : 'var(--color-border)',
+                    border: `1px solid ${showVerify ? 'var(--color-accent)' : 'var(--color-border-active)'}`,
+                    borderRadius: 6,
+                    padding: '3px 8px',
+                    color: showVerify ? '#fff' : 'var(--color-text-2)',
+                    fontSize: 10,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {showVerify ? 'Hide math' : 'Verify the numbers'}
+                </button>
+              </div>
               {rwyAnalysis.surfaces
                 .filter((s) => s.isWithinBounds)
                 .map((s) => {
@@ -802,10 +931,41 @@ function ObstructionsContent() {
                           {s.ufcCriteria}
                         </div>
                       ) : (
-                        <div style={{ fontSize: 11, color: 'var(--color-text-2)', lineHeight: 1.4 }}>
-                          Max allowable: <strong style={{ color: 'var(--color-text-1)' }}>{s.maxAllowableHeightMSL.toFixed(0)} ft MSL</strong>
-                          {' '}({s.maxAllowableHeightAGL.toFixed(0)} ft AGL)
-                        </div>
+                        <>
+                          <div style={{ fontSize: 11, color: 'var(--color-text-2)', lineHeight: 1.4 }}>
+                            Max allowable: <strong style={{ color: 'var(--color-text-1)' }}>{s.maxAllowableHeightMSL.toFixed(0)} ft MSL</strong>
+                            {' '}({s.maxAllowableHeightAGL.toFixed(0)} ft AGL)
+                          </div>
+                          {s.baselineLabel && (
+                            <div style={{ fontSize: 10, color: 'var(--color-text-2)', marginTop: 2 }}>
+                              Baseline: {s.baselineLabel}{s.baselineElevation != null ? ` (${s.baselineElevation.toLocaleString('en-US', { maximumFractionDigits: 1 })} ft MSL)` : ''}
+                            </div>
+                          )}
+                          {showVerify && s.calculationBreakdown && (
+                            <div
+                              style={{
+                                marginTop: 6,
+                                padding: '6px 8px',
+                                background: 'var(--color-bg-surface)',
+                                border: '1px solid var(--color-border)',
+                                borderRadius: 6,
+                              }}
+                            >
+                              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 3 }}>
+                                Verify the numbers
+                              </div>
+                              <div style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--color-text-1)', lineHeight: 1.5 }}>
+                                {s.calculationBreakdown}
+                              </div>
+                              <div style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--color-text-2)', marginTop: 2 }}>
+                                Obstruction top: {s.obstructionTopMSL.toFixed(1)} ft MSL
+                                {s.violated
+                                  ? ` — exceeds by ${s.penetrationFt.toFixed(1)} ft`
+                                  : ` — ${(s.maxAllowableHeightMSL - s.obstructionTopMSL).toFixed(1)} ft clear`}
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
                       <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 4, fontStyle: 'italic' }}>
                         {s.ufcReference}

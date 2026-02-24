@@ -1,5 +1,12 @@
 import { createClient } from './client'
 
+export interface RunwayStatusEntry {
+  status: 'open' | 'suspended' | 'closed'
+  active_end: string
+}
+
+export type RunwayStatuses = Record<string, RunwayStatusEntry>
+
 export interface AirfieldStatus {
   id: string
   base_id: string | null
@@ -7,6 +14,7 @@ export interface AirfieldStatus {
   advisory_text: string | null
   active_runway: string
   runway_status: 'open' | 'suspended' | 'closed'
+  runway_statuses: RunwayStatuses
   updated_by: string | null
   updated_at: string
 }
@@ -53,7 +61,7 @@ export async function fetchAirfieldStatus(baseId?: string | null): Promise<Airfi
 }
 
 export async function updateAirfieldStatus(
-  updates: Partial<Pick<AirfieldStatus, 'advisory_type' | 'advisory_text' | 'active_runway' | 'runway_status'>>,
+  updates: Partial<Pick<AirfieldStatus, 'advisory_type' | 'advisory_text' | 'active_runway' | 'runway_status' | 'runway_statuses'>>,
   baseId?: string | null,
 ): Promise<boolean> {
   const supabase = createClient()

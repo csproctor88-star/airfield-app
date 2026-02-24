@@ -1,6 +1,6 @@
 // Geodesic coordinate math for obstruction evaluation
 // Used to compute distances, bearings, and surface polygon coordinates
-// relative to runway geometry at Selfridge ANGB (KMTC).
+// relative to runway geometry for any configured installation.
 
 const EARTH_RADIUS_M = 6371000
 const FT_TO_M = 0.3048
@@ -74,6 +74,10 @@ export type RunwayGeometry = {
   bearingDeg: number // true bearing from end1 → end2
   lengthFt: number
   widthFt: number
+  end1ElevationMSL?: number  // threshold elevation (ft MSL) for approach surface baseline
+  end2ElevationMSL?: number  // threshold elevation (ft MSL) for approach surface baseline
+  end1Designator?: string    // e.g. '06L' — used for labeling thresholds in results
+  end2Designator?: string    // e.g. '24R'
 }
 
 /** Derive runway geometry from the INSTALLATION constants. */
@@ -83,6 +87,10 @@ export function getRunwayGeometry(runway: {
   length_ft: number
   width_ft: number
   true_heading?: number
+  end1_elevation_msl?: number | null
+  end2_elevation_msl?: number | null
+  end1_designator?: string | null
+  end2_designator?: string | null
 }): RunwayGeometry {
   const end1: LatLon = { lat: runway.end1.latitude, lon: runway.end1.longitude }
   const end2: LatLon = { lat: runway.end2.latitude, lon: runway.end2.longitude }
@@ -99,6 +107,10 @@ export function getRunwayGeometry(runway: {
     bearingDeg: brg,
     lengthFt: runway.length_ft,
     widthFt: runway.width_ft,
+    end1ElevationMSL: runway.end1_elevation_msl ?? undefined,
+    end2ElevationMSL: runway.end2_elevation_msl ?? undefined,
+    end1Designator: runway.end1_designator ?? undefined,
+    end2Designator: runway.end2_designator ?? undefined,
   }
 }
 

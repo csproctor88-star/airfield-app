@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { fetchCurrentWeather, type WeatherResult } from '@/lib/weather'
 import { fetchNavaidStatuses, updateNavaidStatus, type NavaidStatus } from '@/lib/supabase/navaids'
+import { fetchInstallationNavaids } from '@/lib/supabase/installations'
 import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
 
@@ -106,7 +107,7 @@ type CurrentStatusData = {
 }
 
 export default function HomePage() {
-  const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus } = useDashboard()
+  const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway } = useDashboard()
   const { installationId, currentInstallation, runways } = useInstallation()
   const [time, setTime] = useState('')
   const [weather, setWeather] = useState<WeatherResult | null>(null)
@@ -186,7 +187,17 @@ export default function HomePage() {
     }
 
     const data = await fetchNavaidStatuses(installationId)
-    const resolved = data.length > 0 ? data : DEFAULT_NAVAIDS
+
+    // Filter to only show navaids that still exist in the base_navaids config.
+    // This prevents deleted navaids from lingering on the dashboard.
+    let resolved: NavaidStatus[] = data
+    if (installationId && data.length > 0) {
+      const configuredNavaids = await fetchInstallationNavaids(installationId)
+      const configuredNames = new Set(configuredNavaids.map((n) => n.navaid_name))
+      resolved = data.filter((n) => configuredNames.has(n.navaid_name))
+    }
+    resolved = resolved.length > 0 ? resolved : DEFAULT_NAVAIDS
+
     setNavaids(resolved)
     const notes: Record<string, string> = {}
     resolved.forEach((n) => { notes[n.id] = n.notes || '' })
@@ -211,6 +222,17 @@ export default function HomePage() {
         .limit(1)
       if (installationId) inspQuery = inspQuery.eq('base_id', installationId)
       const { data: insp } = await inspQuery
+
+      // Latest BASH check (condition_code stored in data JSON)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let bashQuery = (supabase as any)
+        .from('airfield_checks')
+        .select('data, completed_at')
+        .eq('check_type', 'bash')
+        .order('completed_at', { ascending: false })
+        .limit(1)
+      if (installationId) bashQuery = bashQuery.eq('base_id', installationId)
+      const { data: bashCheck } = await bashQuery
 
       // Latest completed inspection
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -244,7 +266,23 @@ export default function HomePage() {
       if (installationId) rscQuery = rscQuery.eq('base_id', installationId)
       const { data: rscCheck } = await rscQuery
 
-      const bwc = insp?.[0]?.bwc_value || null
+      // Determine BWC: use whichever source (inspection or BASH check) is more recent
+      const inspBwc = insp?.[0]?.bwc_value || null
+      const inspBwcTime = insp?.[0]?.completed_at ? new Date(insp[0].completed_at).getTime() : 0
+      const bashData = bashCheck?.[0]?.data as Record<string, unknown> | undefined
+      const bashConditionRaw = (bashData?.condition_code as string) || null
+      const bashBwcTime = bashCheck?.[0]?.completed_at ? new Date(bashCheck[0].completed_at).getTime() : 0
+      // Normalize BASH condition codes (LOW/MODERATE/SEVERE) to BWC format (LOW/MOD/SEV)
+      const bashConditionMap: Record<string, string> = { LOW: 'LOW', MODERATE: 'MOD', SEVERE: 'SEV' }
+      const bashBwc = bashConditionRaw ? (bashConditionMap[bashConditionRaw] || bashConditionRaw) : null
+
+      let bwc: string | null
+      if (inspBwc && bashBwc) {
+        bwc = bashBwcTime > inspBwcTime ? bashBwc : inspBwc
+      } else {
+        bwc = inspBwc || bashBwc
+      }
+
       const checkType = lastCheck?.[0]?.check_type?.toUpperCase() || null
       const checkTime = lastCheck?.[0]?.completed_at
         ? new Date(lastCheck[0].completed_at).toTimeString().slice(0, 5)
@@ -517,55 +555,90 @@ export default function HomePage() {
 
       {/* ===== Current Status ===== */}
       <span className="section-label">Current Status</span>
-      {/* Active RWY card — color reflects runway status */}
+      {/* Active RWY cards — one per runway, side-by-side for multi-runway bases */}
       {(() => {
-        const statusColor = runwayStatus === 'closed' ? 'var(--color-danger)'
-          : runwayStatus === 'suspended' ? 'var(--color-warning)' : 'var(--color-success)'
-        const statusBg = runwayStatus === 'closed' ? 'rgba(239,68,68,0.08)'
-          : runwayStatus === 'suspended' ? 'rgba(251,191,36,0.08)' : 'rgba(52,211,153,0.08)'
-        const statusBorder = runwayStatus === 'closed' ? 'rgba(239,68,68,0.2)'
-          : runwayStatus === 'suspended' ? 'rgba(251,191,36,0.2)' : 'rgba(52,211,153,0.2)'
-        const statusBtnBorder = runwayStatus === 'closed' ? 'rgba(239,68,68,0.25)'
-          : runwayStatus === 'suspended' ? 'rgba(251,191,36,0.25)' : 'rgba(52,211,153,0.25)'
-        const statusBtnBg = runwayStatus === 'closed' ? 'rgba(239,68,68,0.1)'
-          : runwayStatus === 'suspended' ? 'rgba(251,191,36,0.1)' : 'rgba(52,211,153,0.1)'
-        const statusSelectBorder = runwayStatus === 'closed' ? 'rgba(239,68,68,0.4)'
-          : runwayStatus === 'suspended' ? 'rgba(251,191,36,0.4)' : 'rgba(52,211,153,0.4)'
+        // Build runway entries from installation runways
+        const rwyEntries = runways.map(r => {
+          const label = `${r.end1_designator}/${r.end2_designator}`
+          const entry = runwayStatuses[label] ?? { status: 'open' as const, active_end: r.end1_designator }
+          return { label, end1: r.end1_designator, end2: r.end2_designator, ...entry }
+        })
+
+        // Fallback for bases with no configured runways
+        if (rwyEntries.length === 0) {
+          rwyEntries.push({ label: `${activeRunway}`, end1: activeRunway, end2: activeRunway, status: runwayStatus, active_end: activeRunway })
+        }
+
+        const getColors = (s: 'open' | 'suspended' | 'closed') => ({
+          color: s === 'closed' ? 'var(--color-danger)' : s === 'suspended' ? 'var(--color-warning)' : 'var(--color-success)',
+          bg: s === 'closed' ? 'rgba(239,68,68,0.08)' : s === 'suspended' ? 'rgba(251,191,36,0.08)' : 'rgba(52,211,153,0.08)',
+          border: s === 'closed' ? 'rgba(239,68,68,0.2)' : s === 'suspended' ? 'rgba(251,191,36,0.2)' : 'rgba(52,211,153,0.2)',
+          btnBorder: s === 'closed' ? 'rgba(239,68,68,0.25)' : s === 'suspended' ? 'rgba(251,191,36,0.25)' : 'rgba(52,211,153,0.25)',
+          btnBg: s === 'closed' ? 'rgba(239,68,68,0.1)' : s === 'suspended' ? 'rgba(251,191,36,0.1)' : 'rgba(52,211,153,0.1)',
+          selectBorder: s === 'closed' ? 'rgba(239,68,68,0.4)' : s === 'suspended' ? 'rgba(251,191,36,0.4)' : 'rgba(52,211,153,0.4)',
+        })
+
         return (
-          <div className="card" style={{
-            marginBottom: 8, padding: '10px 12px',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-            background: statusBg, border: `1px solid ${statusBorder}`,
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: rwyEntries.length > 1 ? `repeat(${rwyEntries.length}, 1fr)` : '1fr',
+            gap: 8,
+            marginBottom: 8,
           }}>
-            <div style={{ fontSize: 14, color: 'var(--color-text-3)', fontWeight: 600 }}>Active RWY</div>
-            <button
-              onClick={() => {
-                const designators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
-                if (designators.length === 0) return
-                const idx = designators.indexOf(activeRunway)
-                setActiveRunway(designators[(idx + 1) % designators.length])
-              }}
-              style={{
-                padding: '6px 28px', borderRadius: 6, fontSize: 20, fontWeight: 800,
-                cursor: 'pointer', color: statusColor,
-                border: `2px solid ${statusBtnBorder}`,
-                background: statusBtnBg,
-              }}
-            >{activeRunway}</button>
-            <select
-              value={runwayStatus}
-              onChange={(e) => setRunwayStatus(e.target.value as 'open' | 'suspended' | 'closed')}
-              style={{
-                padding: '3px 10px', borderRadius: 5, fontSize: 12, fontWeight: 700,
-                cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', outline: 'none',
-                color: statusColor, background: 'var(--color-bg-inset)',
-                border: `1px solid ${statusSelectBorder}`,
-              }}
-            >
-              <option value="open">Open</option>
-              <option value="suspended">Suspended</option>
-              <option value="closed">Closed</option>
-            </select>
+            {rwyEntries.map((rwy) => {
+              const c = getColors(rwy.status)
+              return (
+                <div key={rwy.label} className="card" style={{
+                  padding: '10px 12px',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                  background: c.bg, border: `1px solid ${c.border}`,
+                }}>
+                  <div style={{ fontSize: 14, color: 'var(--color-text-3)', fontWeight: 600 }}>Active RWY</div>
+                  <button
+                    onClick={() => {
+                      // Toggle between the two ends of this runway
+                      const newEnd = rwy.active_end === rwy.end1 ? rwy.end2 : rwy.end1
+                      if (runways.length > 0) {
+                        setRunwayActiveEnd(rwy.label, newEnd)
+                      } else {
+                        // No configured runways: use legacy setter for backward compat
+                        const designators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
+                        if (designators.length === 0) return
+                        const idx = designators.indexOf(activeRunway)
+                        setActiveRunway(designators[(idx + 1) % designators.length])
+                      }
+                    }}
+                    style={{
+                      padding: '6px 28px', borderRadius: 6, fontSize: 20, fontWeight: 800,
+                      cursor: 'pointer', color: c.color,
+                      border: `2px solid ${c.btnBorder}`,
+                      background: c.btnBg,
+                    }}
+                  >{runways.length > 0 ? rwy.active_end : activeRunway}</button>
+                  <select
+                    value={runways.length > 0 ? rwy.status : runwayStatus}
+                    onChange={(e) => {
+                      const val = e.target.value as 'open' | 'suspended' | 'closed'
+                      if (runways.length > 0) {
+                        setRunwayStatusForRunway(rwy.label, val)
+                      } else {
+                        setRunwayStatus(val)
+                      }
+                    }}
+                    style={{
+                      padding: '3px 10px', borderRadius: 5, fontSize: 12, fontWeight: 700,
+                      cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', outline: 'none',
+                      color: c.color, background: 'var(--color-bg-inset)',
+                      border: `1px solid ${c.selectBorder}`,
+                    }}
+                  >
+                    <option value="open">Open</option>
+                    <option value="suspended">Suspended</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </div>
+              )
+            })}
           </div>
         )
       })()}

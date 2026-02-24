@@ -95,18 +95,33 @@ export function toInspectionSections(templateSections: TemplateSection[]): Inspe
   }))
 }
 
-// ── Create default template for a new base (clone from Selfridge) ──
+// ── Create default template for a new base (clone from any existing template) ──
 
 export async function createDefaultTemplate(
   baseId: string,
   templateType: 'airfield' | 'lighting',
-  sourceBaseId: string = '00000000-0000-0000-0000-000000000001'
+  sourceBaseId?: string
 ): Promise<boolean> {
   const supabase = createClient()
   if (!supabase) return false
 
+  // If no source specified, find any base that has this template type
+  let resolvedSourceId = sourceBaseId
+  if (!resolvedSourceId) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: existing } = await (supabase as any)
+      .from('base_inspection_templates')
+      .select('base_id')
+      .eq('template_type', templateType)
+      .neq('base_id', baseId)
+      .limit(1)
+      .single()
+    if (!existing) return false
+    resolvedSourceId = existing.base_id as string
+  }
+
   // Fetch source template
-  const sourceSections = await fetchInspectionTemplate(sourceBaseId, templateType)
+  const sourceSections = await fetchInspectionTemplate(resolvedSourceId, templateType)
   if (sourceSections.length === 0) return false
 
   // Create new template
@@ -273,10 +288,10 @@ export async function updateTemplateSection(
   return !error
 }
 
-// ── Reorder items within a section ──
+// ── Reorder items within a section (also renumbers item_number sequentially) ──
 
 export async function reorderTemplateItems(
-  items: { id: string; sort_order: number }[]
+  items: { id: string; sort_order: number; item_number: number }[]
 ): Promise<boolean> {
   const supabase = createClient()
   if (!supabase) return false
@@ -285,8 +300,28 @@ export async function reorderTemplateItems(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any)
       .from('base_inspection_items')
-      .update({ sort_order: item.sort_order })
+      .update({ sort_order: item.sort_order, item_number: item.item_number })
       .eq('id', item.id)
+    if (error) return false
+  }
+
+  return true
+}
+
+// ── Reorder sections within a template ──
+
+export async function reorderTemplateSections(
+  sections: { id: string; sort_order: number }[]
+): Promise<boolean> {
+  const supabase = createClient()
+  if (!supabase) return false
+
+  for (const section of sections) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from('base_inspection_sections')
+      .update({ sort_order: section.sort_order })
+      .eq('id', section.id)
     if (error) return false
   }
 

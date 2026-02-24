@@ -24,6 +24,8 @@ type Props = {
   onPointSelected: (point: LatLon) => void
   selectedPoint: LatLon | null
   surfaceAtPoint: string | null
+  /** When set, the map will fly to this point. Used for GPS "Use My Location". */
+  flyToPoint?: LatLon | null
 }
 
 // Toggle group keys used for visibility state
@@ -244,7 +246,7 @@ function getDefaultVisibility(): Record<ToggleKey, boolean> {
   return state
 }
 
-export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtPoint }: Props) {
+export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtPoint, flyToPoint }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const marker = useRef<mapboxgl.Marker | null>(null)
@@ -273,15 +275,13 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
           length_ft: rwy.length_ft ?? 9000,
           width_ft: rwy.width_ft ?? 150,
           true_heading: rwy.true_heading ?? undefined,
+          end1_elevation_msl: rwy.end1_elevation_msl,
+          end2_elevation_msl: rwy.end2_elevation_msl,
         }),
       )
     }
-    return [getRunwayGeometry({
-      end1: { latitude: 42.601550, longitude: -82.837339 },
-      end2: { latitude: 42.626239, longitude: -82.836481 },
-      length_ft: 9000,
-      width_ft: 150,
-    })]
+    // No runways configured — return empty; map will show base center or default view
+    return []
   }, [installationRunways])
 
   const handleClick = useCallback(
@@ -303,10 +303,18 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
     const primaryRwy = allRwys[0]
     numRunwaysRef.current = allRwys.length
 
+    // Default center: first runway midpoint, or first installation runway midpoint, or 0,0
+    const defaultCenter: [number, number] = primaryRwy
+      ? [primaryRwy.midpoint.lon, primaryRwy.midpoint.lat]
+      : installationRunways.length > 0
+        ? [((installationRunways[0].end1_longitude ?? 0) + (installationRunways[0].end2_longitude ?? 0)) / 2,
+           ((installationRunways[0].end1_latitude ?? 0) + (installationRunways[0].end2_latitude ?? 0)) / 2]
+        : [0, 0]
+
     const m = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-v9',
-      center: [primaryRwy.midpoint.lon, primaryRwy.midpoint.lat],
+      center: defaultCenter,
       zoom: 13,
       pitch: 0,
       bearing: 0,
@@ -509,6 +517,12 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
         .addTo(map.current)
     }
   }, [selectedPoint, mapLoaded, surfaceAtPoint])
+
+  // Fly to a point when flyToPoint changes (GPS location)
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !flyToPoint) return
+    map.current.flyTo({ center: [flyToPoint.lon, flyToPoint.lat], zoom: 16, duration: 1500 })
+  }, [flyToPoint, mapLoaded])
 
   const toggleLayer = (key: ToggleKey) => {
     setVisibility((prev) => ({ ...prev, [key]: !prev[key] }))

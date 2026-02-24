@@ -120,6 +120,10 @@ export type SurfaceEvaluation = {
   ufcCriteria: string
   color: string
   runwayLabel?: string
+  // Calculation transparency fields
+  baselineElevation?: number   // The elevation used as the surface baseline (threshold or airfield)
+  baselineLabel?: string       // Human label, e.g. "RWY 06L threshold" or "Airfield elevation"
+  calculationBreakdown?: string // Step-by-step formula, e.g. "539.1 ft + 12,500 ft / 50 = 789.1 ft MSL"
 }
 
 export type ObstructionAnalysis = {
@@ -245,6 +249,12 @@ export function evaluateObstruction(
   const relation = pointToRunwayRelation(point, runway)
   const stadiumDist = distanceFromStadiumCenter(point, runway)
 
+  // Helper: format a number with commas
+  const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 1 })
+
+  // Airfield baseline label
+  const airfieldBaselineLabel = 'Airfield elevation'
+
   const surfaces: SurfaceEvaluation[] = []
 
   // Helper: along-track distances from each threshold (positive = beyond threshold, away from runway)
@@ -273,10 +283,17 @@ export function evaluateObstruction(
         .replace('{halfWidth}', String(c.halfWidth))
         .replace('{extension}', String(c.extension)),
       color: IMAGINARY_SURFACES.primary.color,
+      baselineElevation: airfieldElev,
+      baselineLabel: airfieldBaselineLabel,
+      calculationBreakdown: `${fmt(airfieldElev)} ft (airfield elev) + ${maxAGL} ft (max height) = ${fmt(maxMSL)} ft MSL`,
     })
   }
 
   // --- 2. Approach-Departure Clearance Surface ---
+  // Per UFC 3-260-01, the approach-departure surface rises at 50:1 from the
+  // threshold (primary surface end) elevation. When per-threshold elevations
+  // are provided via RunwayGeometry, use the nearer threshold's elevation as
+  // the baseline; otherwise fall back to the airfield-wide elevation.
   {
     const c = criteria.approach_departure
     // Distance from nearest primary surface end along extended centerline
@@ -295,8 +312,28 @@ export function evaluateObstruction(
     const withinWidth = relation.distanceFromCenterline <= widthAtDistance
 
     const isWithin = beyondPrimary && withinLength && withinWidth
-    const maxHeightAboveField = distAlongApproach / c.slope
-    const maxMSL = airfieldElev + maxHeightAboveField
+
+    // Use the threshold elevation of the nearer runway end as the surface baseline
+    const thresholdElev = primaryEndInfo.end === 'end1'
+      ? (runway.end1ElevationMSL ?? airfieldElev)
+      : (runway.end2ElevationMSL ?? airfieldElev)
+
+    const nearerDesignator = primaryEndInfo.end === 'end1'
+      ? runway.end1Designator
+      : runway.end2Designator
+
+    const usedThreshold = primaryEndInfo.end === 'end1'
+      ? runway.end1ElevationMSL !== undefined
+      : runway.end2ElevationMSL !== undefined
+
+    const thresholdLabel = nearerDesignator
+      ? `RWY ${nearerDesignator} threshold`
+      : usedThreshold
+        ? `Nearest threshold (${primaryEndInfo.end})`
+        : 'Airfield elevation (threshold not set)'
+
+    const maxHeightAboveThreshold = distAlongApproach / c.slope
+    const maxMSL = thresholdElev + maxHeightAboveThreshold
     const maxAGL = maxMSL - groundElev
     const violated = isWithin && obstructionTopMSL > maxMSL
     surfaces.push({
@@ -312,6 +349,9 @@ export function evaluateObstruction(
       ufcCriteria: IMAGINARY_SURFACES.approach_departure.ufcCriteria
         .replace('{length}', String(c.length).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
       color: IMAGINARY_SURFACES.approach_departure.color,
+      baselineElevation: thresholdElev,
+      baselineLabel: thresholdLabel,
+      calculationBreakdown: `${fmt(thresholdElev)} ft (${thresholdLabel}) + ${fmt(distAlongApproach)} ft / ${c.slope} (slope) = ${fmt(maxMSL)} ft MSL`,
     })
   }
 
@@ -383,6 +423,11 @@ export function evaluateObstruction(
       ufcReference: IMAGINARY_SURFACES.transitional.ufcRef,
       ufcCriteria: IMAGINARY_SURFACES.transitional.ufcCriteria,
       color: IMAGINARY_SURFACES.transitional.color,
+      baselineElevation: airfieldElev,
+      baselineLabel: airfieldBaselineLabel,
+      calculationBreakdown: isWithin
+        ? `${fmt(airfieldElev)} ft (airfield elev) + ${fmt(distFromEdge)} ft / ${criteria.transitional.slope} (slope) = ${fmt(maxMSL)} ft MSL`
+        : undefined,
     })
   }
 
@@ -411,6 +456,9 @@ export function evaluateObstruction(
       ufcCriteria: IMAGINARY_SURFACES.inner_horizontal.ufcCriteria
         .replace('{radius}', String(c.radius).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
       color: IMAGINARY_SURFACES.inner_horizontal.color,
+      baselineElevation: airfieldElev,
+      baselineLabel: airfieldBaselineLabel,
+      calculationBreakdown: `${fmt(airfieldElev)} ft (airfield elev) + ${c.height} ft (fixed height) = ${fmt(maxMSL)} ft MSL`,
     })
   }
 
@@ -437,6 +485,9 @@ export function evaluateObstruction(
       ufcReference: IMAGINARY_SURFACES.conical.ufcRef,
       ufcCriteria: IMAGINARY_SURFACES.conical.ufcCriteria,
       color: IMAGINARY_SURFACES.conical.color,
+      baselineElevation: airfieldElev,
+      baselineLabel: airfieldBaselineLabel,
+      calculationBreakdown: `${fmt(airfieldElev)} ft (airfield elev) + ${c.baseHeight} ft (base) + ${fmt(distFromInnerH)} ft / ${c.slope} (slope) = ${fmt(maxMSL)} ft MSL`,
     })
   }
 
@@ -464,6 +515,9 @@ export function evaluateObstruction(
       ufcCriteria: IMAGINARY_SURFACES.outer_horizontal.ufcCriteria
         .replace('{radius}', String(c.radius).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
       color: IMAGINARY_SURFACES.outer_horizontal.color,
+      baselineElevation: airfieldElev,
+      baselineLabel: airfieldBaselineLabel,
+      calculationBreakdown: `${fmt(airfieldElev)} ft (airfield elev) + ${c.height} ft (fixed height) = ${fmt(maxMSL)} ft MSL`,
     })
   }
 
@@ -491,6 +545,9 @@ export function evaluateObstruction(
         .replace('{length}', String(c.length).replace(/\B(?=(\d{3})+(?!\d))/g, ','))
         .replace('{width}', String(c.halfWidth * 2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
       color: IMAGINARY_SURFACES.clear_zone.color,
+      baselineElevation: airfieldElev,
+      baselineLabel: airfieldBaselineLabel,
+      calculationBreakdown: `${fmt(airfieldElev)} ft (airfield elev) + ${maxAGL} ft (max height) = ${fmt(maxMSL)} ft MSL`,
     })
   }
 
@@ -517,6 +574,9 @@ export function evaluateObstruction(
         .replace('{length}', String(c.length).replace(/\B(?=(\d{3})+(?!\d))/g, ','))
         .replace('{width}', String(c.halfWidth * 2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
       color: IMAGINARY_SURFACES.graded_area.color,
+      baselineElevation: airfieldElev,
+      baselineLabel: airfieldBaselineLabel,
+      calculationBreakdown: `${fmt(airfieldElev)} ft (airfield elev) + ${maxAGL} ft (max height) = ${fmt(maxMSL)} ft MSL`,
     })
   }
 

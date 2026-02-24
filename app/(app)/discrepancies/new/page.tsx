@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { DISCREPANCY_TYPES, LOCATION_OPTIONS, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
+import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
@@ -15,7 +15,7 @@ const DiscrepancyLocationMap = dynamic(
 
 export default function NewDiscrepancyPage() {
   const router = useRouter()
-  const { installationId } = useInstallation()
+  const { installationId, areas: installationAreas } = useInstallation()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const [photos, setPhotos] = useState<{ file: File; url: string; name: string }[]>([])
@@ -118,26 +118,24 @@ export default function NewDiscrepancyPage() {
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left', width: '100%' }}
           >
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-              {formData.location_text
-                ? (() => { const loc = LOCATION_OPTIONS.find((l) => l.value === formData.location_text); return loc ? `${loc.emoji} ${loc.label}` : formData.location_text })()
-                : 'Select location...'}
+              {formData.location_text || 'Select location...'}
             </span>
             <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--color-text-3)' }}>{locationDropdownOpen ? '▲' : '▼'}</span>
           </button>
           {locationDropdownOpen && (
             <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-text-4)', borderRadius: 8, marginTop: 4, maxHeight: 240, overflowY: 'auto' }}>
-              {LOCATION_OPTIONS.map((l) => (
+              {installationAreas.map((area) => (
                 <button
-                  key={l.value}
+                  key={area}
                   type="button"
-                  onClick={() => { setFormData((p) => ({ ...p, location_text: l.value })); setLocationDropdownOpen(false) }}
+                  onClick={() => { setFormData((p) => ({ ...p, location_text: area })); setLocationDropdownOpen(false) }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px',
-                    background: formData.location_text === l.value ? 'var(--color-text-4)' : 'transparent', border: 'none', color: 'var(--color-text-1)',
+                    background: formData.location_text === area ? 'var(--color-text-4)' : 'transparent', border: 'none', color: 'var(--color-text-1)',
                     fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
                   }}
                 >
-                  <span>{l.emoji} {l.label}</span>
+                  <span>{area}</span>
                 </button>
               ))}
             </div>
