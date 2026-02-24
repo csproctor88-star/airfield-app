@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
 import {
   fetchInspectionTemplate,
+  createDefaultTemplate,
   updateTemplateItem,
   addTemplateItem,
   deleteTemplateItem,
@@ -188,34 +189,37 @@ export default function TemplateManagementPage() {
       </p>
 
       {/* Template type toggle */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-        {(['airfield', 'lighting'] as const).map(type => (
-          <button
-            key={type}
-            onClick={() => setActiveType(type)}
-            style={{
-              padding: '8px 16px',
-              borderRadius: 8,
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: 13,
-              fontWeight: 600,
-              background: activeType === type ? 'var(--color-primary)' : 'var(--color-surface-2)',
-              color: activeType === type ? '#fff' : 'var(--color-text-2)',
-            }}
-          >
-            {type === 'airfield' ? 'Airfield' : 'Lighting'}
-          </button>
-        ))}
+      <div style={{ display: 'flex', gap: 6, marginTop: 16 }}>
+        {(['airfield', 'lighting'] as const).map(type => {
+          const isActive = activeType === type
+          return (
+            <button
+              key={type}
+              onClick={() => setActiveType(type)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 8,
+                border: isActive ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 700,
+                fontFamily: 'inherit',
+                background: isActive ? 'rgba(56,189,248,0.12)' : 'var(--color-surface-2)',
+                color: isActive ? 'var(--color-accent)' : 'var(--color-text-2)',
+                transition: 'all 0.15s',
+              }}
+            >
+              {type === 'airfield' ? 'Airfield' : 'Lighting'}
+            </button>
+          )
+        })}
       </div>
 
       {/* Content */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-3)' }}>Loading template...</div>
       ) : sections.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-3)' }}>
-          No template configured for this base. Contact your administrator.
-        </div>
+        <EmptyTemplateState installationId={installationId} activeType={activeType} onCreated={loadTemplate} />
       ) : (
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
           {sections.map(section => (
@@ -499,6 +503,76 @@ export default function TemplateManagementPage() {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Empty Template State — offers to initialize from default
+// ═══════════════════════════════════════════════════════════════
+
+function EmptyTemplateState({
+  installationId,
+  activeType,
+  onCreated,
+}: {
+  installationId: string | null
+  activeType: 'airfield' | 'lighting'
+  onCreated: () => void
+}) {
+  const [creating, setCreating] = useState(false)
+
+  const handleCreate = async () => {
+    if (!installationId) return
+    setCreating(true)
+    const ok = await createDefaultTemplate(installationId, activeType)
+    if (ok) {
+      toast.success(`${activeType === 'airfield' ? 'Airfield' : 'Lighting'} template created from default`)
+      onCreated()
+    } else {
+      toast.error('Failed to create template — does a source template exist?')
+    }
+    setCreating(false)
+  }
+
+  return (
+    <div style={{
+      textAlign: 'center',
+      padding: 40,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: 16,
+    }}>
+      <div style={{ fontSize: 32 }}>
+        {activeType === 'airfield' ? '📋' : '💡'}
+      </div>
+      <div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
+          No {activeType} template configured
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--color-text-3)' }}>
+          Initialize from the default template to get started, then customize as needed.
+        </div>
+      </div>
+      <button
+        onClick={handleCreate}
+        disabled={creating}
+        style={{
+          padding: '10px 20px',
+          borderRadius: 8,
+          border: 'none',
+          background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+          color: '#fff',
+          fontSize: 14,
+          fontWeight: 700,
+          cursor: creating ? 'wait' : 'pointer',
+          fontFamily: 'inherit',
+          opacity: creating ? 0.5 : 1,
+        }}
+      >
+        {creating ? 'Creating...' : 'Initialize from Default Template'}
+      </button>
     </div>
   )
 }
