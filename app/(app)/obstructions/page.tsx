@@ -38,6 +38,7 @@ type PointInfo = {
   closestRunwayIndex: number
   surfaceName: string
   loadingElev: boolean
+  withinApproachDeparture: boolean
 }
 
 export default function ObstructionsPage() {
@@ -154,6 +155,10 @@ function ObstructionsContent() {
         const relation = pointToRunwayRelation(point, closest.geometry)
         const nearerThreshold = relation.nearerEnd === 'end1' ? closest.geometry.end1 : closest.geometry.end2
         const distToThreshold = distanceFt(point, nearerThreshold)
+        const withinAD = allRwys.some(({ geometry }) => {
+          const a = evaluateObstruction(point, 0, null, geometry, airfieldElevMSL, runwayClass)
+          return a.surfaces.some((s) => s.surfaceKey === 'approach_departure' && s.isWithinBounds)
+        })
         setPointInfo({
           point,
           groundElevMSL: groundElev,
@@ -164,6 +169,7 @@ function ObstructionsContent() {
           closestRunwayIndex: closest.index,
           surfaceName,
           loadingElev: false,
+          withinApproachDeparture: withinAD,
         })
         // Auto-run evaluation against all runways
         if (h > 0) {
@@ -185,6 +191,10 @@ function ObstructionsContent() {
     const relation = pointToRunwayRelation(point, closest.geometry)
     const nearerThreshold = relation.nearerEnd === 'end1' ? closest.geometry.end1 : closest.geometry.end2
     const distToThreshold = distanceFt(point, nearerThreshold)
+    const withinAD = allRwys.some(({ geometry }) => {
+      const a = evaluateObstruction(point, 0, null, geometry, airfieldElevMSL, runwayClass)
+      return a.surfaces.some((s) => s.surfaceKey === 'approach_departure' && s.isWithinBounds)
+    })
     setPointInfo({
       point,
       groundElevMSL: null,
@@ -195,6 +205,7 @@ function ObstructionsContent() {
       closestRunwayIndex: closest.index,
       surfaceName,
       loadingElev: true,
+      withinApproachDeparture: withinAD,
     })
     setMultiAnalysis(null)
 
@@ -506,7 +517,7 @@ function ObstructionsContent() {
                 {pointInfo.surfaceName}
               </div>
             </div>
-            {pointInfo.surfaceName.includes('Approach-Departure') && (() => {
+            {pointInfo.withinApproachDeparture && (() => {
               const rwy = runways[pointInfo.closestRunwayIndex]
               const thresholdElev = pointInfo.nearerEnd === 'end1'
                 ? rwy?.end1_elevation_msl
