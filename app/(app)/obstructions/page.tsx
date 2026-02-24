@@ -506,6 +506,25 @@ function ObstructionsContent() {
                 {pointInfo.surfaceName}
               </div>
             </div>
+            {pointInfo.surfaceName.includes('Approach-Departure') && (() => {
+              const rwy = runways[pointInfo.closestRunwayIndex]
+              const thresholdElev = pointInfo.nearerEnd === 'end1'
+                ? rwy?.end1_elevation_msl
+                : rwy?.end2_elevation_msl
+              const designator = pointInfo.nearerEnd === 'end1'
+                ? (rwy?.end1_designator ?? 'End 1')
+                : (rwy?.end2_designator ?? 'End 2')
+              return (
+                <div>
+                  <span style={{ color: 'var(--color-text-3)' }}>Nearest Threshold Elev</span>
+                  <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 11, marginTop: 2 }}>
+                    {thresholdElev != null
+                      ? `${thresholdElev.toLocaleString('en-US', { maximumFractionDigits: 1 })} ft MSL (RWY ${designator})`
+                      : `Not set (using ${airfieldElevMSL} ft airfield elev)`}
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}
