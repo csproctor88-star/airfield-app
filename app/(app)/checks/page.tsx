@@ -579,10 +579,10 @@ export default function AirfieldChecksPage() {
                   onClick={() => toggleArea(area)}
                   style={{
                     padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                    cursor: 'pointer', fontFamily: 'inherit', border: 'none',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    border: selected ? '1.5px solid var(--color-cyan)' : '1px solid var(--color-border-mid)',
                     background: selected ? 'rgba(34,211,238,0.09)' : 'var(--color-bg-elevated)',
                     color: selected ? 'var(--color-cyan)' : 'var(--color-text-3)',
-                    outline: selected ? '1.5px solid var(--color-cyan)' : 'none',
                   }}
                 >
                   {selected ? '✓ ' : ''}{area}
