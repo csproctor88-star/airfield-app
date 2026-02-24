@@ -27,7 +27,7 @@ VALUES (
     'Airfield Management'
   ]
 )
-ON CONFLICT (icao) DO NOTHING;
+ON CONFLICT (id) DO NOTHING;
 
 -- ═══════════════════════════════════════════════════════════════
 -- 2. Runways
