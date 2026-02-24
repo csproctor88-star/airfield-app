@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { fetchCurrentWeather, type WeatherResult } from '@/lib/weather'
 import { fetchNavaidStatuses, updateNavaidStatus, type NavaidStatus } from '@/lib/supabase/navaids'
+import { fetchInstallationNavaids } from '@/lib/supabase/installations'
 import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
 
@@ -186,7 +187,17 @@ export default function HomePage() {
     }
 
     const data = await fetchNavaidStatuses(installationId)
-    const resolved = data.length > 0 ? data : DEFAULT_NAVAIDS
+
+    // Filter to only show navaids that still exist in the base_navaids config.
+    // This prevents deleted navaids from lingering on the dashboard.
+    let resolved: NavaidStatus[] = data
+    if (installationId && data.length > 0) {
+      const configuredNavaids = await fetchInstallationNavaids(installationId)
+      const configuredNames = new Set(configuredNavaids.map((n) => n.navaid_name))
+      resolved = data.filter((n) => configuredNames.has(n.navaid_name))
+    }
+    resolved = resolved.length > 0 ? resolved : DEFAULT_NAVAIDS
+
     setNavaids(resolved)
     const notes: Record<string, string> = {}
     resolved.forEach((n) => { notes[n.id] = n.notes || '' })
