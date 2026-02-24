@@ -5,7 +5,7 @@ export interface AirfieldStatus {
   base_id: string | null
   advisory_type: 'INFO' | 'CAUTION' | 'WARNING' | null
   advisory_text: string | null
-  active_runway: '01' | '19'
+  active_runway: string
   runway_status: 'open' | 'suspended' | 'closed'
   updated_by: string | null
   updated_at: string

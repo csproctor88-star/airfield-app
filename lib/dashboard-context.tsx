@@ -12,8 +12,8 @@ type Advisory = {
 type DashboardState = {
   advisory: Advisory | null
   setAdvisory: (a: Advisory | null) => void
-  activeRunway: '01' | '19'
-  setActiveRunway: (r: '01' | '19') => void
+  activeRunway: string
+  setActiveRunway: (r: string) => void
   runwayStatus: 'open' | 'suspended' | 'closed'
   setRunwayStatus: (s: 'open' | 'suspended' | 'closed') => void
 }
@@ -23,7 +23,7 @@ const DashboardContext = createContext<DashboardState | null>(null)
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const { installationId } = useInstallation()
   const [advisory, setAdvisoryLocal] = useState<Advisory | null>(null)
-  const [activeRunway, setActiveRunwayLocal] = useState<'01' | '19'>('01')
+  const [activeRunway, setActiveRunwayLocal] = useState('01')
   const [runwayStatus, setRunwayStatusLocal] = useState<'open' | 'suspended' | 'closed'>('open')
   const [loaded, setLoaded] = useState(false)
 
@@ -56,7 +56,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   }, [installationId])
 
   // Persist active runway changes
-  const setActiveRunway = useCallback(async (r: '01' | '19') => {
+  const setActiveRunway = useCallback(async (r: string) => {
     setActiveRunwayLocal(r)
     await updateAirfieldStatus({ active_runway: r }, installationId)
   }, [installationId])

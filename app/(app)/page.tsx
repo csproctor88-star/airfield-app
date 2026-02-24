@@ -539,7 +539,12 @@ export default function HomePage() {
           }}>
             <div style={{ fontSize: 14, color: 'var(--color-text-3)', fontWeight: 600 }}>Active RWY</div>
             <button
-              onClick={() => setActiveRunway(activeRunway === '01' ? '19' : '01')}
+              onClick={() => {
+                const designators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
+                if (designators.length === 0) return
+                const idx = designators.indexOf(activeRunway)
+                setActiveRunway(designators[(idx + 1) % designators.length])
+              }}
               style={{
                 padding: '6px 28px', borderRadius: 6, fontSize: 20, fontWeight: 800,
                 cursor: 'pointer', color: statusColor,
@@ -592,19 +597,29 @@ export default function HomePage() {
           </div>
         </div>
       ) : (() => {
-        const rwy01 = navaids
-          .filter((n) => n.navaid_name.startsWith('01'))
-          .sort((a, b) => (a.navaid_name.includes('ILS') ? -1 : b.navaid_name.includes('ILS') ? 1 : 0))
-        const rwy19 = navaids
-          .filter((n) => n.navaid_name.startsWith('19'))
-          .sort((a, b) => (a.navaid_name.includes('ILS') ? -1 : b.navaid_name.includes('ILS') ? 1 : 0))
+        const allEndDesignators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
+        const endGroups = allEndDesignators.map(des => ({
+          designator: des,
+          items: navaids
+            .filter(n => n.navaid_name === des || n.navaid_name.startsWith(des + ' '))
+            .sort((a, b) => (a.navaid_name.includes('ILS') ? -1 : b.navaid_name.includes('ILS') ? 1 : 0)),
+        }))
+        const otherNavaids = navaids
+          .filter(n => !allEndDesignators.some(des => n.navaid_name === des || n.navaid_name.startsWith(des + ' ')))
+          .sort((a, b) => a.navaid_name.localeCompare(b.navaid_name))
+        const getNavaidDisplayName = (name: string) => {
+          for (const des of allEndDesignators) {
+            if (name.startsWith(des + ' ')) return name.slice(des.length).trim()
+          }
+          return name
+        }
         const NAVAID_CYCLE: ('green' | 'yellow' | 'red')[] = ['green', 'yellow', 'red']
         const NAVAID_LABELS: Record<string, string> = { green: 'G', yellow: 'Y', red: 'R' }
         const renderNavaidItem = (n: NavaidStatus) => (
           <div key={n.id} style={{ marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
               <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-1)' }}>
-                {n.navaid_name.replace(/^(01|19)\s*/, '')}
+                {getNavaidDisplayName(n.navaid_name)}
               </span>
               <button
                 onClick={() => {
@@ -629,14 +644,18 @@ export default function HomePage() {
         return (
           <>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: allFlagged.length > 0 ? 8 : 16 }}>
-            <div className="card" style={{ padding: '10px 14px 4px' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 01</div>
-              {rwy01.map(renderNavaidItem)}
-            </div>
-            <div className="card" style={{ padding: '10px 14px 4px' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 19</div>
-              {rwy19.map(renderNavaidItem)}
-            </div>
+            {endGroups.map(group => (
+              <div key={group.designator} className="card" style={{ padding: '10px 14px 4px' }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY {group.designator}</div>
+                {group.items.map(renderNavaidItem)}
+              </div>
+            ))}
+            {otherNavaids.length > 0 && (
+              <div className="card" style={{ padding: '10px 14px 4px' }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>OTHER</div>
+                {otherNavaids.map(renderNavaidItem)}
+              </div>
+            )}
           </div>
           {allFlagged.length > 0 && (
             <div className="card" style={{ padding: '10px 14px', marginBottom: 16 }}>

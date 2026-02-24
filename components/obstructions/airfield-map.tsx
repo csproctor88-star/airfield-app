@@ -349,12 +349,12 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
           features: [
             {
               type: 'Feature',
-              properties: { label: '01' },
+              properties: { label: installationRunways[0]?.end1_designator ?? '01' },
               geometry: { type: 'Point', coordinates: [rwy.end1.lon, rwy.end1.lat] },
             },
             {
               type: 'Feature',
-              properties: { label: '19' },
+              properties: { label: installationRunways[0]?.end2_designator ?? '19' },
               geometry: { type: 'Point', coordinates: [rwy.end2.lon, rwy.end2.lat] },
             },
           ],

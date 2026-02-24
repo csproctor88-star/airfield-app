@@ -426,7 +426,7 @@ function ObstructionsContent() {
             <div>
               <span style={{ color: 'var(--color-text-3)' }}>From Nearest Threshold</span>
               <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 11, marginTop: 2 }}>
-                {pointInfo.distFromThreshold.toFixed(0)} ft (RWY {pointInfo.nearerEnd === 'end1' ? '01' : '19'})
+                {pointInfo.distFromThreshold.toFixed(0)} ft (RWY {pointInfo.nearerEnd === 'end1' ? (runways[0]?.end1_designator ?? '01') : (runways[0]?.end2_designator ?? '19')})
               </div>
             </div>
             <div>
