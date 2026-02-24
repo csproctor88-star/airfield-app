@@ -587,10 +587,10 @@ export default function HomePage() {
                     onClick={() => {
                       // Toggle between the two ends of this runway
                       const newEnd = rwy.active_end === rwy.end1 ? rwy.end2 : rwy.end1
-                      if (rwyEntries.length > 1) {
+                      if (runways.length > 0) {
                         setRunwayActiveEnd(rwy.label, newEnd)
                       } else {
-                        // Single runway: use legacy setter for backward compat
+                        // No configured runways: use legacy setter for backward compat
                         const designators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
                         if (designators.length === 0) return
                         const idx = designators.indexOf(activeRunway)
@@ -603,12 +603,12 @@ export default function HomePage() {
                       border: `2px solid ${c.btnBorder}`,
                       background: c.btnBg,
                     }}
-                  >{rwyEntries.length > 1 ? rwy.active_end : activeRunway}</button>
+                  >{runways.length > 0 ? rwy.active_end : activeRunway}</button>
                   <select
-                    value={rwyEntries.length > 1 ? rwy.status : runwayStatus}
+                    value={runways.length > 0 ? rwy.status : runwayStatus}
                     onChange={(e) => {
                       const val = e.target.value as 'open' | 'suspended' | 'closed'
-                      if (rwyEntries.length > 1) {
+                      if (runways.length > 0) {
                         setRunwayStatusForRunway(rwy.label, val)
                       } else {
                         setRunwayStatus(val)

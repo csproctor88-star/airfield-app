@@ -1065,9 +1065,9 @@ export default function InspectionsPage() {
                               onChange={(e) => setComment(item.id, e.target.value)}
                               rows={2}
                               style={{
-                                width: '100%', background: 'rgba(4,8,14,0.9)',
+                                width: '100%', background: '#fff',
                                 border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6,
-                                padding: '8px 10px', color: 'var(--color-text-1)', fontSize: 12,
+                                padding: '8px 10px', color: '#111', fontSize: 12,
                                 fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box',
                               }}
                             />
