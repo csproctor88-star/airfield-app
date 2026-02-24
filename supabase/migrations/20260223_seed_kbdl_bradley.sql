@@ -98,6 +98,21 @@ INSERT INTO base_navaids (base_id, navaid_name, sort_order) VALUES
   ((SELECT id FROM bases WHERE icao = 'KBDL'), '33 Glideslope',   8),
   ((SELECT id FROM bases WHERE icao = 'KBDL'), '33 ILS',          9);
 
+-- ── NAVAID dashboard statuses ──
+-- The dashboard reads from navaid_statuses (not base_navaids), so each
+-- NAVAID needs a corresponding status row to appear on the home page.
+DELETE FROM navaid_statuses WHERE base_id = (SELECT id FROM bases WHERE icao = 'KBDL');
+INSERT INTO navaid_statuses (base_id, navaid_name, status) VALUES
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), '06 Localizer',    'green'),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), '06 Glideslope',   'green'),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), '06 ILS',          'green'),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), '24 Localizer',    'green'),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), '24 Glideslope',   'green'),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), '24 ILS',          'green'),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), '33 Localizer',    'green'),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), '33 Glideslope',   'green'),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), '33 ILS',          'green');
+
 -- ═══════════════════════════════════════════════════════════════
 -- 4. Airfield areas
 --    Taxiways: A, B, C, D, E, F, H, K per FAA airport diagram.
