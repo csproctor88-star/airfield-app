@@ -7,6 +7,12 @@
 -- ═══════════════════════════════════════════════════════════════
 -- 1. Base record
 -- ═══════════════════════════════════════════════════════════════
+-- Delete any stale PGUA row (from earlier manual runs with a different UUID)
+-- then insert with the canonical deterministic ID. The CASCADE on base_runways,
+-- base_navaids, and base_areas will clean up child rows so the INSERTs below
+-- re-create them cleanly.
+DELETE FROM bases WHERE icao = 'PGUA' AND id != '00000000-0000-0000-0000-000000000002';
+
 INSERT INTO bases (id, name, icao, unit, majcom, location, elevation_msl, timezone, ce_shops)
 VALUES (
   '00000000-0000-0000-0000-000000000002',
