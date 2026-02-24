@@ -244,7 +244,7 @@ export default function AirfieldChecksPage() {
         <Link
           href="/checks/history"
           style={{
-            background: '#22D3EE14', border: '1px solid #22D3EE33', borderRadius: 8,
+            background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.2)', borderRadius: 8,
             padding: '8px 14px', color: 'var(--color-cyan)', fontSize: 12, fontWeight: 600,
             textDecoration: 'none', fontFamily: 'inherit',
           }}
@@ -304,12 +304,12 @@ export default function AirfieldChecksPage() {
                       flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 14, fontWeight: 700,
                       cursor: 'pointer', fontFamily: 'inherit', border: 'none',
                       background: rscCondition === c
-                        ? c === 'Dry' ? '#22C55E22' : '#3B82F622'
+                        ? c === 'Dry' ? 'rgba(34,197,94,0.13)' : 'rgba(59,130,246,0.13)'
                         : 'var(--color-bg-elevated)',
                       color: rscCondition === c
-                        ? c === 'Dry' ? '#22C55E' : '#3B82F6'
+                        ? c === 'Dry' ? 'var(--color-success)' : 'var(--color-accent)'
                         : 'var(--color-text-3)',
-                      outline: rscCondition === c ? `2px solid ${c === 'Dry' ? '#22C55E' : '#3B82F6'}` : 'none',
+                      outline: rscCondition === c ? `2px solid ${c === 'Dry' ? 'var(--color-success)' : 'var(--color-accent)'}` : 'none',
                     }}
                   >
                     {c === 'Dry' ? '☀️' : '💧'} {c}
@@ -356,7 +356,8 @@ export default function AirfieldChecksPage() {
                 <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 4 }}>Condition Code</div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {BASH_CONDITION_CODES.map((code) => {
-                    const colors: Record<string, string> = { LOW: '#22C55E', MODERATE: '#EAB308', SEVERE: '#EF4444' }
+                    const colors: Record<string, string> = { LOW: 'var(--color-success)', MODERATE: 'var(--color-warning)', SEVERE: 'var(--color-danger)' }
+                    const bgColors: Record<string, string> = { LOW: 'rgba(34,197,94,0.13)', MODERATE: 'rgba(234,179,8,0.13)', SEVERE: 'rgba(239,68,68,0.13)' }
                     const active = bashCondition === code
                     return (
                       <button
@@ -366,7 +367,7 @@ export default function AirfieldChecksPage() {
                         style={{
                           flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 700,
                           cursor: 'pointer', fontFamily: 'inherit', border: 'none',
-                          background: active ? `${colors[code]}22` : 'var(--color-bg-elevated)',
+                          background: active ? bgColors[code] : 'var(--color-bg-elevated)',
                           color: active ? colors[code] : 'var(--color-text-3)',
                           outline: active ? `2px solid ${colors[code]}` : 'none',
                         }}
@@ -425,14 +426,14 @@ export default function AirfieldChecksPage() {
                           display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
                           borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                           fontSize: 12, textAlign: 'left',
-                          background: checked ? '#22C55E11' : 'var(--color-bg-elevated)',
-                          color: checked ? '#22C55E' : 'var(--color-text-2)',
+                          background: checked ? 'rgba(34,197,94,0.07)' : 'var(--color-bg-elevated)',
+                          color: checked ? 'var(--color-success)' : 'var(--color-text-2)',
                         }}
                       >
                         <span style={{
                           width: 18, height: 18, borderRadius: 4, flexShrink: 0,
-                          border: checked ? '2px solid #22C55E' : '2px solid var(--color-text-4)',
-                          background: checked ? '#22C55E22' : 'transparent',
+                          border: checked ? '2px solid var(--color-success)' : '2px solid var(--color-text-4)',
+                          background: checked ? 'rgba(34,197,94,0.13)' : 'transparent',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 13, fontWeight: 700,
                         }}>
@@ -457,7 +458,7 @@ export default function AirfieldChecksPage() {
                         style={{
                           padding: '6px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600,
                           cursor: 'pointer', fontFamily: 'inherit', border: 'none',
-                          background: active ? '#38BDF822' : 'var(--color-bg-elevated)',
+                          background: active ? 'rgba(56,189,248,0.13)' : 'var(--color-bg-elevated)',
                           color: active ? 'var(--color-accent)' : 'var(--color-text-3)',
                           outline: active ? '1px solid var(--color-accent)' : 'none',
                         }}
@@ -498,14 +499,14 @@ export default function AirfieldChecksPage() {
                           display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
                           borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                           fontSize: 12, textAlign: 'left',
-                          background: checked ? '#22C55E11' : 'var(--color-bg-elevated)',
-                          color: checked ? '#22C55E' : 'var(--color-text-2)',
+                          background: checked ? 'rgba(34,197,94,0.07)' : 'var(--color-bg-elevated)',
+                          color: checked ? 'var(--color-success)' : 'var(--color-text-2)',
                         }}
                       >
                         <span style={{
                           width: 18, height: 18, borderRadius: 4, flexShrink: 0,
-                          border: checked ? '2px solid #22C55E' : '2px solid var(--color-text-4)',
-                          background: checked ? '#22C55E22' : 'transparent',
+                          border: checked ? '2px solid var(--color-success)' : '2px solid var(--color-text-4)',
+                          background: checked ? 'rgba(34,197,94,0.13)' : 'transparent',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 13, fontWeight: 700,
                         }}>
@@ -530,7 +531,7 @@ export default function AirfieldChecksPage() {
                         style={{
                           padding: '6px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600,
                           cursor: 'pointer', fontFamily: 'inherit', border: 'none',
-                          background: active ? '#38BDF822' : 'var(--color-bg-elevated)',
+                          background: active ? 'rgba(56,189,248,0.13)' : 'var(--color-bg-elevated)',
                           color: active ? 'var(--color-accent)' : 'var(--color-text-3)',
                           outline: active ? '1px solid var(--color-accent)' : 'none',
                         }}
@@ -579,7 +580,7 @@ export default function AirfieldChecksPage() {
                   style={{
                     padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
                     cursor: 'pointer', fontFamily: 'inherit', border: 'none',
-                    background: selected ? '#22D3EE18' : 'var(--color-bg-elevated)',
+                    background: selected ? 'rgba(34,211,238,0.09)' : 'var(--color-bg-elevated)',
                     color: selected ? 'var(--color-cyan)' : 'var(--color-text-3)',
                     outline: selected ? '1.5px solid var(--color-cyan)' : 'none',
                   }}
@@ -631,15 +632,15 @@ export default function AirfieldChecksPage() {
             width: '100%', padding: '12px 14px', marginBottom: 8, borderRadius: 10,
             display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
             fontFamily: 'inherit', fontSize: 14, fontWeight: 700,
-            border: issueFound ? '2px solid #EF4444' : '2px solid var(--color-text-4)',
-            background: issueFound ? '#EF444414' : 'var(--color-bg-surface-solid)',
-            color: issueFound ? '#EF4444' : 'var(--color-text-2)',
+            border: issueFound ? '2px solid var(--color-danger)' : '2px solid var(--color-text-4)',
+            background: issueFound ? 'rgba(239,68,68,0.08)' : 'var(--color-bg-surface-solid)',
+            color: issueFound ? 'var(--color-danger)' : 'var(--color-text-2)',
           }}
         >
           <span style={{
             width: 22, height: 22, borderRadius: 6, flexShrink: 0,
-            border: issueFound ? '2px solid #EF4444' : '2px solid var(--color-text-3)',
-            background: issueFound ? '#EF4444' : 'transparent',
+            border: issueFound ? '2px solid var(--color-danger)' : '2px solid var(--color-text-3)',
+            background: issueFound ? 'var(--color-danger)' : 'transparent',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 15, fontWeight: 800, color: '#FFFFFF',
           }}>
@@ -698,7 +699,7 @@ export default function AirfieldChecksPage() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               style={{
-                background: '#38BDF814', border: '1px solid var(--color-border-active)', borderRadius: 8,
+                background: 'var(--color-accent-glow)', border: '1px solid var(--color-border-active)', borderRadius: 8,
                 padding: 10, color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
                 fontFamily: 'inherit', minHeight: 44,
               }}
@@ -709,7 +710,7 @@ export default function AirfieldChecksPage() {
               type="button"
               onClick={() => cameraInputRef.current?.click()}
               style={{
-                background: '#38BDF814', border: '1px solid var(--color-border-active)', borderRadius: 8,
+                background: 'var(--color-accent-glow)', border: '1px solid var(--color-border-active)', borderRadius: 8,
                 padding: 10, color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
                 fontFamily: 'inherit', minHeight: 44,
               }}
@@ -786,7 +787,7 @@ export default function AirfieldChecksPage() {
           disabled={saving || !checkType || areas.length === 0}
           style={{
             width: '100%', opacity: saving ? 0.7 : 1,
-            background: '#22C55E', fontSize: 15, fontWeight: 800,
+            background: 'var(--color-success)', fontSize: 15, fontWeight: 800,
             padding: '14px', borderRadius: 10,
           }}
         >

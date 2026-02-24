@@ -26,22 +26,27 @@ function weatherEmoji(conditions: string): string {
 
 // --- User presence helpers ---
 function presenceLabel(lastSeen: string | null): { label: string; color: string } {
-  if (!lastSeen) return { label: 'Offline', color: '#64748B' }
+  if (!lastSeen) return { label: 'Offline', color: 'var(--color-text-3)' }
   const diff = Date.now() - new Date(lastSeen).getTime()
-  if (diff < 15 * 60 * 1000) return { label: 'Online', color: '#34D399' }
-  if (diff < 60 * 60 * 1000) return { label: 'Away', color: '#FBBF24' }
-  return { label: 'Inactive', color: '#64748B' }
+  if (diff < 15 * 60 * 1000) return { label: 'Online', color: 'var(--color-success)' }
+  if (diff < 60 * 60 * 1000) return { label: 'Away', color: 'var(--color-warning)' }
+  return { label: 'Inactive', color: 'var(--color-text-3)' }
 }
 
 // --- Quick Actions (KPI badges) ---
 const QUICK_ACTIONS = [
-  { label: 'Begin/Continue Airfield Inspection', icon: '📋', color: '#34D399', href: '/inspections?action=begin' },
-  { label: 'Begin Airfield Check', icon: '🛡️', color: '#FBBF24', href: '/checks' },
-  { label: 'New Discrepancy', icon: '🚨', color: '#EF4444', href: '/discrepancies/new' },
+  { label: 'Begin/Continue Airfield Inspection', icon: '📋', color: 'var(--color-success)', href: '/inspections?action=begin' },
+  { label: 'Begin Airfield Check', icon: '🛡️', color: 'var(--color-warning)', href: '/checks' },
+  { label: 'New Discrepancy', icon: '🚨', color: 'var(--color-danger)', href: '/discrepancies/new' },
 ]
 
-// --- NAVAID color map ---
+// --- NAVAID color map (theme-aware for text, raw hex for alpha interpolation) ---
 const STATUS_COLORS: Record<string, string> = {
+  green: 'var(--color-success)',
+  yellow: 'var(--color-warning)',
+  red: 'var(--color-danger)',
+}
+const STATUS_HEX: Record<string, string> = {
   green: '#34D399',
   yellow: '#FBBF24',
   red: '#EF4444',
@@ -93,9 +98,9 @@ type Advisory = {
 }
 
 const ADVISORY_COLORS: Record<string, { bg: string; border: string; text: string }> = {
-  INFO: { bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.35)', text: '#38BDF8' },
-  CAUTION: { bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.35)', text: '#FBBF24' },
-  WARNING: { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)', text: '#EF4444' },
+  INFO: { bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.35)', text: 'var(--color-accent)' },
+  CAUTION: { bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.35)', text: 'var(--color-warning)' },
+  WARNING: { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)', text: 'var(--color-danger)' },
 }
 
 type CurrentStatusData = {
@@ -484,7 +489,7 @@ export default function HomePage() {
                   style={{
                     flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 700,
                     cursor: 'pointer', border: '1px solid rgba(239,68,68,0.3)',
-                    background: 'rgba(239,68,68,0.1)', color: '#EF4444',
+                    background: 'rgba(239,68,68,0.1)', color: 'var(--color-danger)',
                   }}
                 >Clear</button>
               )}
@@ -498,7 +503,7 @@ export default function HomePage() {
                 style={{
                   flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 700,
                   cursor: 'pointer', border: '1px solid rgba(52,211,153,0.3)',
-                  background: 'rgba(52,211,153,0.15)', color: '#34D399',
+                  background: 'rgba(52,211,153,0.15)', color: 'var(--color-success)',
                 }}
               >Save</button>
               <button
@@ -518,12 +523,18 @@ export default function HomePage() {
       <span className="section-label">Current Status</span>
       {/* Active RWY card — color reflects runway status */}
       {(() => {
-        const statusColor = runwayStatus === 'closed' ? '#EF4444'
-          : runwayStatus === 'suspended' ? '#FBBF24' : '#34D399'
+        const statusColor = runwayStatus === 'closed' ? 'var(--color-danger)'
+          : runwayStatus === 'suspended' ? 'var(--color-warning)' : 'var(--color-success)'
         const statusBg = runwayStatus === 'closed' ? 'rgba(239,68,68,0.08)'
           : runwayStatus === 'suspended' ? 'rgba(251,191,36,0.08)' : 'rgba(52,211,153,0.08)'
         const statusBorder = runwayStatus === 'closed' ? 'rgba(239,68,68,0.2)'
           : runwayStatus === 'suspended' ? 'rgba(251,191,36,0.2)' : 'rgba(52,211,153,0.2)'
+        const statusBtnBorder = runwayStatus === 'closed' ? 'rgba(239,68,68,0.25)'
+          : runwayStatus === 'suspended' ? 'rgba(251,191,36,0.25)' : 'rgba(52,211,153,0.25)'
+        const statusBtnBg = runwayStatus === 'closed' ? 'rgba(239,68,68,0.1)'
+          : runwayStatus === 'suspended' ? 'rgba(251,191,36,0.1)' : 'rgba(52,211,153,0.1)'
+        const statusSelectBorder = runwayStatus === 'closed' ? 'rgba(239,68,68,0.4)'
+          : runwayStatus === 'suspended' ? 'rgba(251,191,36,0.4)' : 'rgba(52,211,153,0.4)'
         return (
           <div className="card" style={{
             marginBottom: 8, padding: '10px 12px',
@@ -536,8 +547,8 @@ export default function HomePage() {
               style={{
                 padding: '6px 28px', borderRadius: 6, fontSize: 20, fontWeight: 800,
                 cursor: 'pointer', color: statusColor,
-                border: `2px solid ${statusColor}40`,
-                background: `${statusColor}1A`,
+                border: `2px solid ${statusBtnBorder}`,
+                background: statusBtnBg,
               }}
             >{activeRunway}</button>
             <select
@@ -547,7 +558,7 @@ export default function HomePage() {
                 padding: '3px 10px', borderRadius: 5, fontSize: 12, fontWeight: 700,
                 cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', outline: 'none',
                 color: statusColor, background: 'var(--color-bg-inset)',
-                border: `1px solid ${statusColor}66`,
+                border: `1px solid ${statusSelectBorder}`,
               }}
             >
               <option value="open">Open</option>
@@ -569,7 +580,7 @@ export default function HomePage() {
           </div>
           <div style={{ padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ fontSize: 14, color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6 }}>BWC</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: currentStatus.bwc === 'SEV' || currentStatus.bwc === 'PROHIB' ? '#EF4444' : currentStatus.bwc === 'MOD' ? '#FBBF24' : '#34D399' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: currentStatus.bwc === 'SEV' || currentStatus.bwc === 'PROHIB' ? 'var(--color-danger)' : currentStatus.bwc === 'MOD' ? 'var(--color-warning)' : 'var(--color-success)' }}>
               {currentStatus.bwc || 'No Data'}
             </div>
           </div>
@@ -608,7 +619,7 @@ export default function HomePage() {
                 style={{
                   width: 36, height: 28, borderRadius: 6,
                   border: `2px solid ${STATUS_COLORS[n.status]}`,
-                  background: `${STATUS_COLORS[n.status]}20`,
+                  background: `${STATUS_HEX[n.status]}20`,
                   cursor: 'pointer', fontSize: 12, fontWeight: 700,
                   color: STATUS_COLORS[n.status], textTransform: 'uppercase', padding: 0,
                 }}
@@ -649,7 +660,7 @@ export default function HomePage() {
                     style={{
                       width: '100%', boxSizing: 'border-box',
                       background: 'var(--color-bg-inset)',
-                      border: `1px solid ${STATUS_COLORS[n.status]}40`,
+                      border: `1px solid ${STATUS_HEX[n.status]}40`,
                       borderRadius: 6, padding: '6px 10px', fontSize: 14,
                       color: 'var(--color-text-1)', outline: 'none',
                       resize: 'none', overflow: 'hidden',
@@ -727,13 +738,21 @@ export default function HomePage() {
         <>
           {(activityExpanded ? activity : activity.slice(0, 3)).map((a, i, arr) => {
             const actionColor: Record<string, string> = {
-              created: '#34D399',
-              completed: '#22D3EE',
-              updated: '#FBBF24',
-              status_updated: '#A78BFA',
-              deleted: '#EF4444',
+              created: 'var(--color-success)',
+              completed: 'var(--color-cyan)',
+              updated: 'var(--color-warning)',
+              status_updated: 'var(--color-purple)',
+              deleted: 'var(--color-danger)',
             }
-            const color = actionColor[a.action] || '#64748B'
+            const actionDotBg: Record<string, string> = {
+              created: 'rgba(52,211,153,0.07)',
+              completed: 'rgba(34,211,238,0.07)',
+              updated: 'rgba(251,191,36,0.07)',
+              status_updated: 'rgba(167,139,250,0.07)',
+              deleted: 'rgba(239,68,68,0.07)',
+            }
+            const color = actionColor[a.action] || 'var(--color-text-3)'
+            const dotBg = actionDotBg[a.action] || 'rgba(100,116,139,0.07)'
             const date = new Date(a.created_at)
             const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
             const timeStr = date.toTimeString().slice(0, 5)
@@ -754,7 +773,7 @@ export default function HomePage() {
                     width: 24,
                     height: 24,
                     borderRadius: 6,
-                    background: `${color}12`,
+                    background: dotBg,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',

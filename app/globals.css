@@ -52,45 +52,45 @@
 }
 
 [data-theme="light"] {
-  --color-bg: #F1F5F9;
+  --color-bg: #F8FAFC;
   --color-bg-surface: #FFFFFF;
   --color-bg-surface-solid: #FFFFFF;
   --color-bg-elevated: #FFFFFF;
-  --color-bg-inset: #E2E8F0;
+  --color-bg-inset: #F1F5F9;
   --color-bg-nav: rgba(255, 255, 255, 0.97);
   --color-bg-header-start: #FFFFFF;
   --color-bg-header-end: #F8FAFC;
-  --color-border: rgba(15, 23, 42, 0.08);
-  --color-border-active: rgba(14, 165, 233, 0.3);
-  --color-border-mid: rgba(15, 23, 42, 0.12);
-  --color-text-1: #0F172A;
-  --color-text-2: #334155;
-  --color-text-3: #475569;
-  --color-text-4: #64748B;
-  --color-accent: #0EA5E9;
-  --color-accent-secondary: #0284C7;
-  --color-accent-dark: #0369A1;
-  --color-accent-glow: rgba(14, 165, 233, 0.1);
-  --color-success: #10B981;
-  --color-danger: #EF4444;
-  --color-warning: #D97706;
-  --color-orange: #EA580C;
-  --color-purple: #7C3AED;
-  --color-cyan: #0891B2;
-  --color-overlay: rgba(0, 0, 0, 0.4);
-  --color-scrollbar: rgba(15, 23, 42, 0.15);
-  --color-logo-start: #0F172A;
-  --color-logo-end: #0EA5E9;
+  --color-border: rgba(15, 23, 42, 0.06);
+  --color-border-active: rgba(15, 23, 42, 0.15);
+  --color-border-mid: rgba(15, 23, 42, 0.08);
+  --color-text-1: #1E293B;
+  --color-text-2: #475569;
+  --color-text-3: #64748B;
+  --color-text-4: #94A3B8;
+  --color-accent: #2563EB;
+  --color-accent-secondary: #1D4ED8;
+  --color-accent-dark: #1E40AF;
+  --color-accent-glow: rgba(37, 99, 235, 0.06);
+  --color-success: #15803D;
+  --color-danger: #B91C1C;
+  --color-warning: #92400E;
+  --color-orange: #9A3412;
+  --color-purple: #6D28D9;
+  --color-cyan: #155E75;
+  --color-overlay: rgba(0, 0, 0, 0.3);
+  --color-scrollbar: rgba(15, 23, 42, 0.1);
+  --color-logo-start: #1E293B;
+  --color-logo-end: #2563EB;
   --color-switch-off: #CBD5E1;
   --color-toast-bg: #FFFFFF;
   --color-toast-border: #E2E8F0;
-  --color-toast-text: #0F172A;
+  --color-toast-text: #1E293B;
   --color-progress-track: #E2E8F0;
-  --color-detail-box-bg: #DBEAFE;
-  --color-detail-box-label: #0F172A;
+  --color-detail-box-bg: #F1F5F9;
+  --color-detail-box-label: #334155;
   --color-detail-box-value: #64748B;
   --color-search-bg: #FFFFFF;
-  --color-search-border: #1E293B;
+  --color-search-border: #CBD5E1;
 }
 
 @layer base {
