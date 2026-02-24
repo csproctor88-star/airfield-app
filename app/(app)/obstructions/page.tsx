@@ -77,6 +77,8 @@ function ObstructionsContent() {
           length_ft: rwy.length_ft ?? 9000,
           width_ft: rwy.width_ft ?? 150,
           true_heading: rwy.true_heading ?? undefined,
+          end1_elevation_msl: rwy.end1_elevation_msl,
+          end2_elevation_msl: rwy.end2_elevation_msl,
         }),
       }))
     }

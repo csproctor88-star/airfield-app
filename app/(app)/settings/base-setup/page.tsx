@@ -150,9 +150,11 @@ function RunwayTab({
     end1_designator: '',
     end1_latitude: '',
     end1_longitude: '',
+    end1_elevation_msl: '',
     end2_designator: '',
     end2_latitude: '',
     end2_longitude: '',
+    end2_elevation_msl: '',
   })
 
   const handleAddRunway = async () => {
@@ -174,11 +176,13 @@ function RunwayTab({
       end1_longitude: parseFloat(newRunway.end1_longitude) || null,
       end1_heading: null,
       end1_approach_lighting: null,
+      end1_elevation_msl: parseFloat(newRunway.end1_elevation_msl) || null,
       end2_designator: newRunway.end2_designator.trim() || newRunway.runway_id.split('/')[1] || '',
       end2_latitude: parseFloat(newRunway.end2_latitude) || null,
       end2_longitude: parseFloat(newRunway.end2_longitude) || null,
       end2_heading: null,
       end2_approach_lighting: null,
+      end2_elevation_msl: parseFloat(newRunway.end2_elevation_msl) || null,
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -194,7 +198,7 @@ function RunwayTab({
       toast.success(`Runway ${newRunway.runway_id} added`)
       setRunways(prev => [...prev, data])
       setAdding(false)
-      setNewRunway({ runway_id: '', length_ft: '', width_ft: '', surface: 'Asphalt', true_heading: '', runway_class: 'B', end1_designator: '', end1_latitude: '', end1_longitude: '', end2_designator: '', end2_latitude: '', end2_longitude: '' })
+      setNewRunway({ runway_id: '', length_ft: '', width_ft: '', surface: 'Asphalt', true_heading: '', runway_class: 'B', end1_designator: '', end1_latitude: '', end1_longitude: '', end1_elevation_msl: '', end2_designator: '', end2_latitude: '', end2_longitude: '', end2_elevation_msl: '' })
     }
     setSaving(false)
   }
@@ -253,10 +257,10 @@ function RunwayTab({
               {rwy.length_ft} ft x {rwy.width_ft} ft | {rwy.surface} | Heading {rwy.true_heading}°
             </div>
             <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 4, fontFamily: 'monospace' }}>
-              {rwy.end1_designator}: {rwy.end1_latitude?.toFixed(5)}°N, {rwy.end1_longitude ? Math.abs(rwy.end1_longitude).toFixed(5) : '—'}°W
+              {rwy.end1_designator}: {rwy.end1_latitude?.toFixed(5)}°N, {rwy.end1_longitude ? Math.abs(rwy.end1_longitude).toFixed(5) : '—'}°W{rwy.end1_elevation_msl != null ? ` | ${rwy.end1_elevation_msl} ft MSL` : ''}
             </div>
             <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 2, fontFamily: 'monospace' }}>
-              {rwy.end2_designator}: {rwy.end2_latitude?.toFixed(5)}°N, {rwy.end2_longitude ? Math.abs(rwy.end2_longitude).toFixed(5) : '—'}°W
+              {rwy.end2_designator}: {rwy.end2_latitude?.toFixed(5)}°N, {rwy.end2_longitude ? Math.abs(rwy.end2_longitude).toFixed(5) : '—'}°W{rwy.end2_elevation_msl != null ? ` | ${rwy.end2_elevation_msl} ft MSL` : ''}
             </div>
           </div>
           <button
@@ -324,7 +328,7 @@ function RunwayTab({
           </div>
 
           <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-2)', marginTop: 4 }}>End 1</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
             <div>
               <label style={labelStyle}>Designator</label>
               <input value={newRunway.end1_designator} onChange={e => setNewRunway(p => ({ ...p, end1_designator: e.target.value }))} placeholder="01" style={fieldStyle} />
@@ -337,10 +341,14 @@ function RunwayTab({
               <label style={labelStyle}>Longitude</label>
               <input type="number" step="0.00001" value={newRunway.end1_longitude} onChange={e => setNewRunway(p => ({ ...p, end1_longitude: e.target.value }))} placeholder="-82.83000" style={fieldStyle} />
             </div>
+            <div>
+              <label style={labelStyle}>Elev (ft MSL)</label>
+              <input type="number" step="0.1" value={newRunway.end1_elevation_msl} onChange={e => setNewRunway(p => ({ ...p, end1_elevation_msl: e.target.value }))} placeholder="580" style={fieldStyle} />
+            </div>
           </div>
 
           <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-2)', marginTop: 4 }}>End 2</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
             <div>
               <label style={labelStyle}>Designator</label>
               <input value={newRunway.end2_designator} onChange={e => setNewRunway(p => ({ ...p, end2_designator: e.target.value }))} placeholder="19" style={fieldStyle} />
@@ -352,6 +360,10 @@ function RunwayTab({
             <div>
               <label style={labelStyle}>Longitude</label>
               <input type="number" step="0.00001" value={newRunway.end2_longitude} onChange={e => setNewRunway(p => ({ ...p, end2_longitude: e.target.value }))} placeholder="-82.84000" style={fieldStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Elev (ft MSL)</label>
+              <input type="number" step="0.1" value={newRunway.end2_elevation_msl} onChange={e => setNewRunway(p => ({ ...p, end2_elevation_msl: e.target.value }))} placeholder="580" style={fieldStyle} />
             </div>
           </div>
 

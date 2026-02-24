@@ -277,6 +277,10 @@ export function evaluateObstruction(
   }
 
   // --- 2. Approach-Departure Clearance Surface ---
+  // Per UFC 3-260-01, the approach-departure surface rises at 50:1 from the
+  // threshold (primary surface end) elevation. When per-threshold elevations
+  // are provided via RunwayGeometry, use the nearer threshold's elevation as
+  // the baseline; otherwise fall back to the airfield-wide elevation.
   {
     const c = criteria.approach_departure
     // Distance from nearest primary surface end along extended centerline
@@ -295,8 +299,14 @@ export function evaluateObstruction(
     const withinWidth = relation.distanceFromCenterline <= widthAtDistance
 
     const isWithin = beyondPrimary && withinLength && withinWidth
-    const maxHeightAboveField = distAlongApproach / c.slope
-    const maxMSL = airfieldElev + maxHeightAboveField
+
+    // Use the threshold elevation of the nearer runway end as the surface baseline
+    const thresholdElev = primaryEndInfo.end === 'end1'
+      ? (runway.end1ElevationMSL ?? airfieldElev)
+      : (runway.end2ElevationMSL ?? airfieldElev)
+
+    const maxHeightAboveThreshold = distAlongApproach / c.slope
+    const maxMSL = thresholdElev + maxHeightAboveThreshold
     const maxAGL = maxMSL - groundElev
     const violated = isWithin && obstructionTopMSL > maxMSL
     surfaces.push({

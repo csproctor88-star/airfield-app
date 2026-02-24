@@ -43,6 +43,8 @@ export type Database = {
           end2_heading: number | null
           end2_approach_lighting: string | null
           runway_class: string
+          end1_elevation_msl: number | null
+          end2_elevation_msl: number | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['base_runways']['Row'], 'id' | 'created_at'>

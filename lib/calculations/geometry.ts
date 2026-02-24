@@ -74,6 +74,8 @@ export type RunwayGeometry = {
   bearingDeg: number // true bearing from end1 → end2
   lengthFt: number
   widthFt: number
+  end1ElevationMSL?: number  // threshold elevation (ft MSL) for approach surface baseline
+  end2ElevationMSL?: number  // threshold elevation (ft MSL) for approach surface baseline
 }
 
 /** Derive runway geometry from the INSTALLATION constants. */
@@ -83,6 +85,8 @@ export function getRunwayGeometry(runway: {
   length_ft: number
   width_ft: number
   true_heading?: number
+  end1_elevation_msl?: number | null
+  end2_elevation_msl?: number | null
 }): RunwayGeometry {
   const end1: LatLon = { lat: runway.end1.latitude, lon: runway.end1.longitude }
   const end2: LatLon = { lat: runway.end2.latitude, lon: runway.end2.longitude }
@@ -99,6 +103,8 @@ export function getRunwayGeometry(runway: {
     bearingDeg: brg,
     lengthFt: runway.length_ft,
     widthFt: runway.width_ft,
+    end1ElevationMSL: runway.end1_elevation_msl ?? undefined,
+    end2ElevationMSL: runway.end2_elevation_msl ?? undefined,
   }
 }
 
