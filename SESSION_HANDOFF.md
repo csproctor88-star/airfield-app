@@ -1,170 +1,150 @@
-# Session Handoff — Regulations Database Build
+# Session Handoff — v2.1.0
 
-> **Date:** 2026-02-21
-> **Session:** Regulations Database & Reference Library (v2.0.0)
-> **Branch:** `claude/build-aos-reg-database-R4Ytm`
-> **Commits this session:** ~114 (commits 155–268)
-> **Build:** Clean (`next build` zero errors, 29 routes)
+**Date**: 2026-02-24
+**Branch**: `claude/final-touches-l9wPl`
+**Version**: 2.1.0 | **Commits**: 279 | **Routes**: 31 | **Source Files**: 94 | **LOC**: ~29,500
 
 ---
 
-## What Was Built This Session
+## What Was Built (v2.1.0 Session)
 
-### Regulations / References Module (`/regulations`)
+This session transformed the app from a single-base Selfridge tool into a multi-tenant platform, added operational reporting, a theme system, an aircraft database, and configurable inspection templates.
 
-Replaced the placeholder "Coming Soon" page with a full-featured regulatory reference library:
+### Major Features Delivered
+1. **Multi-base architecture** — `bases`, `base_runways`, `base_navaids`, `base_areas`, `base_ce_shops`, `base_members` tables; all queries scoped by `base_id`; installation switcher in settings
+2. **Base configuration UI** — `/settings/base-setup` with tabs for runways, NAVAIDs, areas, CE shops, templates; dashboard preview
+3. **Inspection templates** — `/settings/templates` with per-base customizable airfield/lighting checklists
+4. **Reports module** — 4 report types: Daily Ops Summary, Open Discrepancies, Discrepancy Trends, Aging Discrepancies — all with PDF export
+5. **Aircraft database** — `/aircraft` with 1,000+ entries, search/filter/sort, ACN/PCN comparison
+6. **Light/Dark/Auto theme** — CSS custom properties, system-preference auto mode
+7. **Multi-runway obstruction evaluation** — surfaces generated for every runway, per-runway legend toggles
+8. **Dashboard status persistence** — runway status, advisory, BWC, RSC saved to DB with audit logging
+9. **Andersen AFB (PGUA)** seeded as second base with dual runways
 
-1. **70-entry regulation database** — Sourced from AOMS Regulation Database v6 (DOCX), organized into sections matching DAFMAN 13-204 Vols 1–3 and UFC 3-260-01:
-   - 3 Core publications (DAFMAN 13-204 Vols 1/2/3)
-   - 6 Section I refs (Vol 1), 5 Section II (Vol 2), 5 Section III (Vol 3)
-   - 7 Section IV (UFC 3-260-01), 4 Section V (Additional systems)
-   - 13 Section VI-A (DAF cross-refs), 7 VI-B (FAA/CFR), 6 VI-C (UFC engineering)
-   - 9 Section VII-A (Scrubbed from Vols), 2 VII-B (FAA orders), 2 VII-C (Additional)
-
-2. **In-app PDF viewer** — `RegulationPDFViewer.tsx` renders PDFs using react-pdf with:
-   - Pinch-to-zoom touch gestures for mobile
-   - Scroll-based page navigation
-   - Offline-first: loads from IndexedDB cache, falls back to Supabase Storage
-   - Supports both URL-based and storage-only PDFs (signed URLs for private bucket)
-
-3. **Offline caching system** — IndexedDB (v4, 6 stores) for:
-   - PDF blob cache (`blobs` store) — Cache All / Clear Cache in settings panel
-   - Text page cache (`text_pages` / `text_meta`) — extracted text for search
-   - User document blobs (`user_blobs`) and text (`user_text`)
-
-4. **My Documents tab** — User-uploaded personal PDFs/images:
-   - Upload to Supabase Storage (`user-uploads` bucket)
-   - Client-side PDF.js text extraction → `user_document_pages` table
-   - Per-document cache/uncache toggle
-   - Status pipeline: uploaded → extracting → ready/failed
-
-5. **Admin CRUD** — `sys_admin` role can:
-   - Add Reference (full form with section auto-derivation, PDF upload)
-   - Delete Reference (removes from DB + Storage + IDB cache)
-
-6. **PDF Library** (`/library`) — Admin-only page for bulk PDF management
-
-7. **PDF text search** — `pdfTextCache.ts`:
-   - Offline: scans IndexedDB text cache client-side
-   - Online: Postgres full-text search via `search_all_pdfs` RPC
-   - Background text upload: client-extracted text auto-uploads to server
-
-### Database Changes (13 new migrations)
-
-New tables: `regulations`, `pdf_text_pages`, `pdf_extraction_status`, `user_regulation_pdfs`, `user_documents`, `user_document_pages`
-
-Total table count: 14 (was 11)
-
-Multiple URL-fix migrations were needed because the initial seed data had incorrect download URLs for e-Publishing, WBDG/UFC, and FAA document libraries. Also removed 8 irrelevant entries (NFPA 780, NFPA 415, IEEE 142, DoD 7000.14-R, AFI 90-201, AFH 36-2618, AFI 38-201, AFTTP 3-4.4) and cleaned up CFR/ICAO entries that don't have public PDF URLs.
-
-### New Source Files
-
-| File | Lines | Purpose |
-|------|-------|---------|
-| `lib/regulations-data.ts` | 1,165 | 70 regulation entries (static seed/demo fallback) |
-| `lib/idb.ts` | 101 | Shared IndexedDB CRUD helpers |
-| `lib/pdfTextCache.ts` | 283 | PDF text search cache manager |
-| `lib/userDocuments.ts` | 277 | User document service |
-| `lib/supabase/regulations.ts` | 87 | Regulation CRUD queries |
-| `components/RegulationPDFViewer.tsx` | ~500 | In-app PDF viewer |
-| `components/PDFLibrary.jsx` | ~800 | Admin PDF library |
-| `app/(app)/regulations/page.tsx` | 1,647 | References + My Documents page |
-| `app/(app)/library/page.tsx` | ~50 | Admin library route |
-
-### PWA / Offline
-
-- Added service worker via `@ducanh2912/next-pwa`
-- PDF.js worker (`pdf.worker.min.mjs`) copied to `public/` and cached for 90 days
-- Runtime caching rules in `next.config.js`
+### Database Migrations Added (14)
+`20260222_*` through `20260224_*` — see CHANGELOG.md for full list.
 
 ---
 
-## What Was NOT Changed
+## Build Status
 
-These modules were untouched this session:
-- Dashboard (`/`)
-- Discrepancies (`/discrepancies`)
-- Airfield Checks (`/checks`)
-- Daily Inspections (`/inspections`)
-- NOTAMs (`/notams`)
-- Obstruction Evaluations (`/obstructions`)
-- More Menu (`/more`)
-- All placeholder pages (Aircraft, Reports, Settings, etc.)
+| Check | Status |
+|-------|--------|
+| `next build` | Clean — zero errors |
+| TypeScript (`tsc --noEmit`) | Clean — zero errors |
+| All 31 routes render | Confirmed |
+| Demo mode | Works (no Supabase required) |
 
 ---
 
-## Known Issues Introduced
+## Tech Debt & Cleanup Items
 
-1. **`regulations/page.tsx` is 1,647 lines** — The References tab, My Documents tab, and Add Reference modal are all in one file. Should be decomposed into sub-components when the file is next touched.
+### Priority 1 — Should fix before next feature work
 
-2. **Duplicate `sanitizeFileName()`** — Two slightly different implementations exist in `regulations/page.tsx` and `lib/userDocuments.ts`. Should be unified into a shared utility.
+| Item | Location | Description |
+|------|----------|-------------|
+| **Selfridge toast message** | `app/(app)/settings/base-setup/page.tsx:830` | Toast says "Default templates created from Selfridge template" — should be generic |
+| **Hardcoded source base UUID** | `lib/supabase/inspection-templates.ts:103` | Uses `'00000000-0000-0000-0000-000000000001'` as Selfridge UUID for template cloning — should accept parameter or query DB |
+| **Loose root files** | `aircraft_database_schema.ts`, `seed_aircraft.ts` | Type definitions and seed data in project root — should move to `lib/` or `scripts/` |
+| **Root doc clutter** | 14 `.md` files in root | Consolidate into `docs/`: PLAN.md, SCALING-ASSESSMENT.md, BASE-ONBOARDING.md, INTEGRATION_GUIDE.md, MIGRATION_README.md, PDF_LIBRARY_SETUP.md, CLAUDE_SESSION_BRIEF.md, Claude_Code_Starter_Prompt.md, AOMS_Module_Capabilities_Briefings.md |
+| **Duplicate INTEGRATION_GUIDE.md** | Root and `docs/` | Same file in two places |
+| **Public folder artifacts** | `public/COMPLETE_IMPLEMENTATION_GUIDE.md`, `public/PDFLibrary-integrated.jsx` | Development artifacts served as static files — move to `docs/` |
+| **docs/ loose scripts** | `docs/pdfTextCache.js`, `docs/extract-pdf-text.ts`, `docs/001_pdf_text_search.sql` | Reference scripts mixed with docs — consider `scripts/` subfolder |
 
-3. **`handleCacheAll` missing dependency** — The `useCallback` for `handleCacheAll` in `regulations/page.tsx` doesn't include `regulations` in its dependency array. Works because regulations rarely change, but technically incorrect.
+### Priority 2 — Address when building related features
 
-4. **Debug commits in history** — Several commits in the 155–268 range are debug logging that was later removed (e.g., "Log Supabase URL and key for debugging", "Add session email logging"). The final code is clean but the git history is messy.
+| Item | Location | Description |
+|------|----------|-------------|
+| **RLS disabled** | All tables | Row-Level Security stripped for MVP. Must re-enable with base-scoped policies before production |
+| **API stubs** | `app/api/weather/route.ts`, `app/api/notams/sync/route.ts` | Return placeholder data. Weather uses Open-Meteo client-side; NOTAM sync awaits NASA DIP API |
+| **ESLint not configured** | No `.eslintrc.*` or `eslint.config.*` | `next lint` prompts for initial config |
+| **No test suite** | — | Zero unit/integration/e2e tests |
+| **geometry.ts comment** | `lib/calculations/geometry.ts:3` | References "Selfridge ANGB" in a comment — cosmetic only |
 
----
+### Priority 3 — Nice to have
 
-## Tech Debt Carried Forward
-
-See `PROJECT_STATUS.md` for the full audit. Key items:
-
-- **RLS disabled** — Must re-enable before production
-- **NOTAM form** doesn't save to DB
-- **`recharts`** installed but unused
-- **`/inspections/new`** dead redirect route
-- **50+ `eslint-disable`** directives for `no-explicit-any`
-- **No ESLint config** at root
-- **Missing PWA icons** (`public/icons/` doesn't exist)
-- **Hardcoded inspector name** ("MSgt Proctor" in checks)
-
----
-
-## Recommended Next Steps
-
-### High Priority
-1. **Reports module** — The `recharts` dependency is already installed. Build analytics/charting for inspection trends, discrepancy KPIs, check completion rates.
-2. **NOTAM persistence** — Wire the existing create form to a `lib/supabase/notams.ts` CRUD module.
-3. **Aircraft Database** — Tail number management, fleet tracking, parking assignments.
-
-### Medium Priority
-4. **Waivers module** — Airfield waiver lifecycle (request → review → approve/deny → track expiration).
-5. **Users & Security** — Profile management page, role assignment UI, prepare for RLS re-enablement.
-6. **Settings page** — User preferences, notification settings, theme toggle.
-7. **Sync & Data** — Real sync button behavior, data export, backup.
-
-### Low Priority / Cleanup
-8. **Delete `/inspections/new`** — Dead redirect route.
-9. **Remove `recharts`** if not used in the reports module, or build with it.
-10. **Unify `sanitizeFileName()`** — Extract to `lib/utils.ts`.
-11. **Add ESLint config** — Enable `next lint`.
-12. **Generate PWA icons** — Add real icons to `public/icons/`.
-13. **Decompose large files** — Split `regulations/page.tsx` and `inspections/page.tsx`.
+| Item | Description |
+|------|-------------|
+| **Inspection template source base** | Allow selecting which base to clone from (currently always Selfridge) |
+| **Offline mutation queue** | Writes made offline are lost on reload — a write-ahead queue in IndexedDB would enable true offline-first |
+| **Bundle size** | `/library` route is 241 KB first-load JS — evaluate code splitting for react-pdf |
+| **Large page files** | `regulations/page.tsx` (~1,647 lines), `inspections/page.tsx`, `obstructions/page.tsx` — could decompose into sub-components |
 
 ---
 
-## File Map for New Session Context
+## Placeholder Pages (Coming Soon)
 
-The new session should read these files first to understand the codebase:
+| Route | Module | Notes |
+|-------|--------|-------|
+| `/waivers` | Waivers | Airfield waiver lifecycle (request → review → approve → expire) |
+| `/users` | Users & Security | User management, role assignment, base membership admin |
+| `/sync` | Sync & Data | Offline queue, data export, import, audit |
+
+---
+
+## Architecture Notes
+
+### Multi-Base Data Flow
+```
+User logs in → profiles.primary_base_id → loads base config
+  → base_runways, base_navaids, base_areas, base_ce_shops
+  → All data queries include WHERE base_id = $currentBase
+  → Settings page allows switching between bases via base_members
+```
+
+### Key State Patterns
+- **No global state library** — page-level `useState` + Supabase queries
+- **Installation context** — `currentInstallation` as page-level state, not React Context
+- **Demo mode** — `getSupabaseConfig()` returns null when env vars are placeholders
+- **Theme** — `localStorage('theme')` → `data-theme` attribute on `<html>`
+
+### Supabase Client Pattern
+- **Browser**: `lib/supabase/client.ts` — `createBrowserClient()` singleton
+- **Server**: `lib/supabase/server.ts` — `createServerClient()` with cookies
+- **API routes**: `SUPABASE_SERVICE_ROLE_KEY` for admin operations
+- **Middleware**: Auth check → redirect unauthenticated to `/login`
+
+### PDF Export Pattern
+- `lib/pdf-export.ts` — jsPDF functions per report type
+- All accept `baseName`, `baseIcao`, `generatedBy` for multi-base labeling
+- Client-side only — no server-side PDF generation
+
+### Inspection Template System
+- `inspection_template_sections` → has many `inspection_template_items`
+- Both scoped by `base_id`
+- `initializeDefaultTemplates(baseId)` clones hardcoded defaults
+- Templates consumed by inspection form at runtime
+
+---
+
+## File Inventory by Feature
+
+| Feature | Pages | Components | Lib Modules | DB Tables |
+|---------|-------|------------|-------------|-----------|
+| Dashboard | 1 | 0 | weather.ts, activity.ts, navaids.ts | airfield_status, navaid_statuses, activity_log, runway_status_log |
+| Discrepancies | 3 | 5 | discrepancies.ts | discrepancies, status_updates, photos |
+| Checks | 3 | 0 | checks.ts | airfield_checks, check_comments, photos |
+| Inspections | 3 | 0 | inspections.ts, inspection-draft.ts, inspection-templates.ts | inspections, inspection_template_* |
+| Obstructions | 3 | 1 | obstructions.ts, geometry.ts, surface-criteria.ts | obstruction_evaluations, photos |
+| Reports | 5 | 0 | pdf-export.ts | (reads from discrepancies, checks, inspections, etc.) |
+| Regulations | 2 | 2 | regulations.ts, regulations-data.ts, idb.ts, pdfTextCache.ts | regulations, pdf_text_pages |
+| Aircraft | 1 | 0 | aircraft-data.ts | — (static data) |
+| Settings | 3 | 0 | inspection-templates.ts | bases, base_*, inspection_template_* |
+| NOTAMs | 3 | 0 | — | notams |
+| Auth | 1 | 0 | client.ts, server.ts | profiles, base_members |
+
+---
+
+## Files to Read First in a New Session
 
 ```
-README.md                          — Project overview, tech stack, module descriptions
-PROJECT_STATUS.md                  — Architecture, route table, tech debt audit
-CHANGELOG.md                       — Full version history (v0.0.1 → v2.0.0)
-lib/constants.ts                   — All app constants, categories, types
+README.md                          — Project overview, tech stack, all modules
+CHANGELOG.md                       — Full version history (v0.0.1 → v2.1.0)
+SESSION_HANDOFF.md                 — This document (tech debt, architecture, file map)
+lib/constants.ts                   — App constants, checklists, types, categories
 lib/supabase/types.ts              — TypeScript types for all database tables
 supabase/schema.sql                — Base database schema
-Documentation/SRS.md               — Software Requirements Specification (authoritative spec)
-```
-
-For the regulations module specifically:
-```
-app/(app)/regulations/page.tsx     — Main references page (1,647 lines)
-lib/regulations-data.ts            — 70 regulation entries
-lib/idb.ts                         — IndexedDB helpers
-lib/pdfTextCache.ts                — Text search cache
-lib/userDocuments.ts               — User document service
-components/RegulationPDFViewer.tsx  — PDF viewer component
+SRS.md                             — Software Requirements Specification (authoritative spec)
 ```
 
 ---
@@ -173,15 +153,24 @@ components/RegulationPDFViewer.tsx  — PDF viewer component
 
 ```
 $ npx next build
-Route (app)                          Size     First Load JS
-┌ ○ /                                6.06 kB   161 kB
-├ ○ /checks                          6.75 kB   175 kB
-├ ○ /discrepancies                   5.04 kB   164 kB
-├ ○ /inspections                     8.92 kB   182 kB
-├ ƒ /library                         143 kB    241 kB
-├ ○ /obstructions                    10.1 kB   170 kB
-├ ○ /regulations                     20.7 kB   171 kB
-└ ... (29 total routes, all green)
+Route (app)                              Size     First Load JS
+┌ ○ /                                    6.27 kB         163 kB
+├ ○ /aircraft                            54 kB           145 kB
+├ ○ /checks                              8.32 kB         176 kB
+├ ○ /discrepancies                       6.33 kB         165 kB
+├ ○ /inspections                         9.18 kB         184 kB
+├ ƒ /library                             143 kB          241 kB
+├ ○ /obstructions                        13.9 kB         169 kB
+├ ○ /regulations                         12.9 kB         171 kB
+├ ○ /reports                             2.15 kB         102 kB
+├ ○ /reports/aging                       5.21 kB         293 kB
+├ ○ /reports/daily                       7.99 kB         296 kB
+├ ○ /reports/discrepancies               4.6 kB          292 kB
+├ ○ /reports/trends                      5.13 kB         293 kB
+├ ○ /settings                            8.65 kB         180 kB
+├ ○ /settings/base-setup                 8.05 kB         172 kB
+├ ○ /settings/templates                  5.32 kB         169 kB
+└ ... (31 total routes, all clean)
 
 Zero errors. Zero warnings.
 ```

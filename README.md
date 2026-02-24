@@ -1,8 +1,8 @@
 # Airfield OPS Management Suite
 
-Mobile-first web application for managing airfield operations at **Selfridge Air National Guard Base (KMTC)**, 127th Wing, Michigan ANG. Covers discrepancy tracking, airfield checks, daily inspections, NOTAMs, obstruction evaluations, a regulatory reference library, and a real-time operational dashboard.
+Mobile-first web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.0.0 | **Build:** Clean | **268 commits** | **29 routes** | **~75 source files**
+**Version:** 2.1.0 | **Build:** Clean | **279 commits** | **31 routes** | **94 source files** | **~29,500 LOC**
 
 ## Tech Stack
 
@@ -10,11 +10,11 @@ Mobile-first web application for managing airfield operations at **Selfridge Air
 |-------|-----------|---------|
 | Framework | Next.js (App Router) | 14.2.35 |
 | Language | TypeScript (strict mode) | 5.9.3 |
-| Styling | Tailwind CSS — custom dark theme | 3.4.19 |
+| Styling | Tailwind CSS — light/dark/auto theme | 3.4.19 |
 | Backend | Supabase (PostgreSQL, Auth, Storage) | SSR 0.8.0 |
 | Maps | Mapbox GL JS | 3.18.1 |
-| PDF Viewing | react-pdf (PDF.js) | — |
-| PDF Export | jsPDF | 4.1.0 |
+| PDF Viewing | react-pdf (PDF.js) | 10.3.0 |
+| PDF Export | jsPDF + jspdf-autotable | 4.1.0 |
 | Validation | Zod | 3.25.76 |
 | Offline Storage | IndexedDB (6 object stores) | — |
 | Icons | Lucide React | 0.563.0 |
@@ -51,12 +51,14 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 Apply the schema and migrations to a Supabase project:
 
 1. Run `supabase/schema.sql` to create the base tables and sequences
-2. Apply the 20 migrations in order from `supabase/migrations/`
+2. Apply the 34 migrations in order from `supabase/migrations/`
+
+See [BASE-ONBOARDING.md](./BASE-ONBOARDING.md) for adding new installations.
 
 ## Modules
 
 ### Dashboard (`/`)
-Real-time operational hub. Live clock, Open-Meteo weather with conditions/wind/visibility, advisory system (INFO/CAUTION/WARNING), Active Runway toggle (01/19 with Open/Suspended/Closed), Current Status panel (RSC, BWC, Last Check), side-by-side NAVAID status for RWY 01 and RWY 19 with G/Y/R toggles and notes, quick actions (Begin Inspection, Begin Check, New Discrepancy), user presence tracking, and expandable activity feed from `activity_log`.
+Real-time operational hub. Live clock, Open-Meteo weather with conditions/wind/visibility, advisory system (INFO/CAUTION/WARNING), Active Runway toggle with Open/Suspended/Closed status (color-coded card, persisted to DB with audit log), Current Status panel (RSC, BWC, Last Check), side-by-side NAVAID status panels with G/Y/R toggles and notes, quick actions (Begin Inspection, Begin Check, New Discrepancy), user presence tracking, and expandable activity feed.
 
 ### Discrepancies (`/discrepancies`)
 Track and resolve airfield issues. 11 discrepancy types (FOD, pavement, lighting, markings, signage, drainage, vegetation, wildlife, equipment, security, other). Full lifecycle: Open → Submitted to AFM → Submitted to CES → Work Completed → Closed/Cancelled. Photo uploads, Mapbox location pinning, notes history with timestamps, work order tracking, linked NOTAMs.
@@ -75,34 +77,50 @@ Photo capture, map location, issue-found gating, follow-up remarks. Full history
 
 ### Daily Inspections (`/inspections`)
 Combined Airfield Inspection Report with two halves:
-- **Airfield** — 9 sections, 42 checklist items (obstacles, signs, construction, habitat, pavement, driving, FOD, construction meeting, joint monthly)
-- **Lighting** — 5 sections, 32 checklist items (PAPI, approach lights, runway lights, taxiway lights, airfield lighting systems)
+- **Airfield** — configurable sections and checklist items (per-base templates)
+- **Lighting** — configurable sections and checklist items (per-base templates)
 
-Three-state toggle (Pass/Fail/N/A), Mark All Pass per section, BWC integration (LOW/MOD/SEV/PROHIB), draft persistence to localStorage, review step before filing. Combined PDF export. Also supports standalone Construction Meeting and Joint Monthly inspection forms with personnel attendance tracking.
+Three-state toggle (Pass/Fail/N/A), Mark All Pass per section, BWC integration (LOW/MOD/SEV/PROHIB), draft persistence to localStorage, two-step Complete/File workflow with per-user tracking, combined PDF export. Also supports standalone Construction Meeting and Joint Monthly inspection forms with personnel attendance tracking.
+
+### Reports (`/reports`)
+Four report types with PDF export:
+- **Daily Operations Summary** — all activity for a date/range (inspections, checks, status changes, discrepancies, obstructions)
+- **Open Discrepancies** — current snapshot with area and type breakdowns
+- **Discrepancy Trends** — opened vs. closed over 30d/90d/6m/1y with top areas/types
+- **Aging Discrepancies** — open items grouped by age tiers with severity and shop breakdowns
+
+### Obstruction Evaluations (`/obstructions`)
+UFC 3-260-01 Class B imaginary surface analysis with multi-runway support:
+- 10 surfaces: Primary, Approach-Departure, Transitional, Inner Horizontal, Conical, Outer Horizontal, Clear Zone, Graded Area, APZ I, APZ II
+- Interactive Mapbox map with color-coded surface overlays and per-runway toggles
+- Evaluates against ALL base runways simultaneously
+- Geodesic calculations (Haversine, cross-track/along-track), Open-Elevation API for MSL heights
+- Multiple photos per evaluation, violation detection with UFC table references
+
+### Aircraft Database (`/aircraft`)
+1,000+ military and civilian aircraft reference entries. Search by name, type, manufacturer, or branch. Sort by weight, wingspan, or ACN values. Favorites system. ACN/PCN comparison panel for pavement loading analysis.
 
 ### References (`/regulations`)
 Comprehensive regulatory reference library with two tabs:
 
-**References tab** — 70 regulation entries (3 Core + 27 Direct + 27 Cross-Refs + 13 Scrubbed) from DAFMAN 13-204 Vols 1–3 and UFC 3-260-01. Full-text search, category/pub-type filters, favorites with localStorage persistence. In-app PDF viewer with pinch-to-zoom. Offline caching via IndexedDB with "Cache All" bulk download. Admin controls for adding/deleting references with PDF upload.
+**References tab** — 70 regulation entries from DAFMAN 13-204 Vols 1–3 and UFC 3-260-01. Full-text search, category/pub-type filters, favorites with localStorage persistence. In-app PDF viewer with pinch-to-zoom. Offline caching via IndexedDB with "Cache All" bulk download. Admin controls for adding/deleting references with PDF upload.
 
 **My Documents tab** — Upload personal PDFs, JPGs, and PNGs. Client-side text extraction for search. Per-document offline caching. Supabase Storage integration.
 
 ### NOTAMs (`/notams`)
 FAA and LOCAL NOTAM management. List with source/status filtering, detail view, draft creation for local NOTAMs. FAA sync API stubbed for future NASA DIP integration.
 
-### Obstruction Evaluations (`/obstructions`)
-UFC 3-260-01 Class B imaginary surface analysis:
-- Primary Surface (0 ft clearance)
-- Approach-Departure (50:1 slope)
-- Transitional (7:1 slope)
-- Inner Horizontal (150 ft, 13,120 ft radius)
-- Conical (20:1 slope, 7,000 ft extent)
-- Outer Horizontal (500 ft, 42,250 ft radius)
-
-Interactive Mapbox map with color-coded surface overlays. Click to evaluate any point. Geodesic calculations (Haversine distance, cross-track/along-track), Open-Elevation API for MSL heights. Multiple photos per evaluation. Violation detection with UFC table references.
+### Settings (`/settings`)
+- **Profile** — read-only display of user info, rank, role, primary base
+- **Appearance** — Day/Night/Auto theme toggle
+- **Installation management** — switch between bases, add new installations, manage membership
+- **Base Configuration** (`/settings/base-setup`) — runways, NAVAIDs, areas, CE shops, templates
+- **Inspection Templates** (`/settings/templates`) — customize airfield/lighting checklist sections and items
+- **Regulations cache** — download all PDFs for offline, manage storage
+- **Data & Storage** — view/clear cached data, estimated storage used
 
 ### More Menu (`/more`)
-Module directory linking to all features. Includes coming-soon placeholder pages for: Aircraft, Waivers, Reports, Settings, Users & Security, Sync & Data.
+Module directory linking to all features. Includes coming-soon placeholder pages for Waivers, Sync & Data, and Users & Security.
 
 ## Project Structure
 
@@ -110,11 +128,13 @@ Module directory linking to all features. Includes coming-soon placeholder pages
 airfield-app/
 ├── app/
 │   ├── layout.tsx                        # Root layout (metadata, PWA manifest, toasts)
-│   ├── globals.css                       # Dark theme global styles
+│   ├── globals.css                       # Light/dark theme CSS custom properties
 │   ├── login/page.tsx                    # Auth page (email/password + demo bypass)
 │   ├── api/
-│   │   ├── weather/route.ts             # Weather API stub
-│   │   └── notams/sync/route.ts         # NOTAM sync API stub
+│   │   ├── weather/route.ts             # Weather API (stub — SRS §11.2)
+│   │   ├── notams/sync/route.ts         # NOTAM sync API (stub — SRS §11.1)
+│   │   ├── airfield-status/route.ts     # Airfield status GET/PATCH
+│   │   └── installations/route.ts       # Installation management POST/DELETE
 │   └── (app)/                            # Authenticated app shell
 │       ├── layout.tsx                    # Header + bottom nav, 480px max-width
 │       ├── page.tsx                      # Dashboard
@@ -125,10 +145,10 @@ airfield-app/
 │       ├── obstructions/                 # Evaluation, history, detail
 │       ├── regulations/page.tsx          # Reference library + My Documents
 │       ├── library/page.tsx              # Admin PDF library management
+│       ├── aircraft/page.tsx             # Aircraft database with ACN/PCN
+│       ├── reports/                      # Hub + 4 report pages (daily, discrepancies, trends, aging)
+│       ├── settings/                     # Hub + base-setup + templates
 │       ├── more/page.tsx                 # Module directory
-│       ├── aircraft/page.tsx             # Coming soon
-│       ├── reports/page.tsx              # Coming soon
-│       ├── settings/page.tsx             # Coming soon
 │       ├── sync/page.tsx                 # Coming soon
 │       ├── users/page.tsx                # Coming soon
 │       └── waivers/page.tsx              # Coming soon
@@ -140,55 +160,69 @@ airfield-app/
 │   ├── PDFLibrary.jsx                   # Admin PDF library component
 │   └── ui/                               # Badge, button, card, input, skeleton
 ├── lib/
-│   ├── constants.ts                      # Installation config, checklists, types, regulation categories
+│   ├── constants.ts                      # Checklists, types, regulation categories
+│   ├── base-directory.ts                # 155 military installations with ICAO codes
+│   ├── aircraft-data.ts                 # 1,000+ aircraft reference entries
 │   ├── validators.ts                     # Zod schemas for all forms
 │   ├── utils.ts                          # Class merge, relative time, display IDs
-│   ├── demo-data.ts                      # Offline mock data (6 discrepancies, 4 NOTAMs, 7 checks, 3 inspections)
+│   ├── demo-data.ts                      # Offline mock data
 │   ├── weather.ts                        # Open-Meteo weather fetching
 │   ├── inspection-draft.ts              # localStorage draft persistence
-│   ├── pdf-export.ts                     # jsPDF report generation (single, combined, special)
+│   ├── pdf-export.ts                     # jsPDF report generation
 │   ├── regulations-data.ts              # 70 regulation entries (static seed data)
 │   ├── idb.ts                            # Shared IndexedDB helpers (6 stores)
 │   ├── pdfTextCache.ts                  # PDF text search cache (offline/server hybrid)
 │   ├── userDocuments.ts                 # User document upload/cache/search service
 │   ├── calculations/                     # UFC 3-260-01 geometry + obstruction analysis
+│   │   ├── obstructions.ts             # Multi-runway surface evaluation engine
+│   │   ├── surface-criteria.ts          # Class B and Army_B surface dimensions
+│   │   └── geometry.ts                  # Geodesic math and polygon generation
 │   └── supabase/                         # Client, server, types, CRUD modules
 │       ├── types.ts                     # Full TypeScript types for all tables
 │       ├── client.ts / server.ts        # Browser and SSR Supabase clients
 │       ├── discrepancies.ts             # CRUD + KPI queries + photos
 │       ├── checks.ts                    # CRUD + photos + comments
 │       ├── inspections.ts               # CRUD for inspections
+│       ├── inspection-templates.ts      # Template CRUD for base config
 │       ├── obstructions.ts              # Obstruction evaluation CRUD + photos
 │       ├── navaids.ts                   # NAVAID status read/update
 │       ├── regulations.ts              # Regulation CRUD + search
 │       └── activity.ts                  # Activity log write
 ├── supabase/
 │   ├── schema.sql                        # Full database schema
-│   ├── migrations/                       # 20 migration files
+│   ├── migrations/                       # 34 migration files
 │   └── functions/                        # Edge functions (PDF text extraction)
 ├── middleware.ts                          # Auth guard + demo mode bypass
 ├── public/
 │   ├── manifest.json                    # PWA manifest
 │   └── pdf.worker.min.mjs              # PDF.js worker for react-pdf
-└── Documentation/
-    ├── SRS.md                           # Software Requirements Specification (1,291 lines)
-    └── AOMS_Regulation_Database_v4.docx # Regulation catalog source document
+└── docs/                                 # Integration guides, reference scripts
 ```
 
 ## Database
 
-**14 tables** across the Supabase PostgreSQL database:
+**18+ tables** across the Supabase PostgreSQL database:
 
 | Table | Purpose |
 |-------|---------|
-| `profiles` | User accounts, roles, rank, shop, presence |
+| `profiles` | User accounts, roles, rank, shop, primary base, presence |
+| `bases` | Installation definitions (name, ICAO, location) |
+| `base_runways` | Runway geometry per base (ends, heading, class, dimensions) |
+| `base_navaids` | Navigation aids per base |
+| `base_areas` | Airfield areas per base |
+| `base_ce_shops` | Civil Engineering shops per base |
+| `base_members` | User ↔ base membership join table |
 | `discrepancies` | Airfield issues with full lifecycle tracking |
 | `airfield_checks` | 7 check types with JSONB data |
 | `check_comments` | Remarks timeline for checks |
 | `inspections` | Daily inspections (Airfield + Lighting) |
+| `inspection_template_sections` | Per-base inspection template sections |
+| `inspection_template_items` | Per-base inspection checklist items |
 | `notams` | FAA and LOCAL NOTAM tracking |
 | `photos` | Photos for discrepancies, checks, evaluations |
 | `obstruction_evaluations` | UFC 3-260-01 surface analysis |
+| `airfield_status` | Persisted runway status, advisory, BWC, RSC |
+| `runway_status_log` | Audit trail for all runway status changes |
 | `activity_log` | Audit trail for all mutations |
 | `navaid_statuses` | G/Y/R status for approach systems |
 | `regulations` | 70 regulatory references with metadata |
@@ -198,32 +232,32 @@ airfield-app/
 
 ## Key Design Decisions
 
-1. **Demo Mode** — App runs fully offline with mock data when Supabase env vars are missing. No setup required for development or demos.
-2. **Mobile-First** — 480px max-width layout, bottom navigation, 44px+ touch targets. Designed for iPad/phone use in the field.
-3. **Dual Inspection System** — Airfield and Lighting are separate inspection types with distinct checklists, combined into a single daily report via `daily_group_id`.
-4. **Single-Runway Config** — Hardcoded for Selfridge ANGB Runway 01/19 (9,000 x 150 ft). Multi-runway would require refactoring `lib/constants.ts`.
-5. **Client-Side PDF** — jsPDF generates reports in the browser. Server-side email delivery planned for a future phase.
-6. **RLS Disabled for MVP** — Row-Level Security policies removed during development. Must be re-enabled with role-based access before production.
-7. **Hybrid Offline** — IndexedDB caches PDF blobs and extracted text. PWA service worker caches app shell. Full offline reference viewing supported.
-8. **Admin-Gated CRUD** — Reference add/delete requires `sys_admin` role. Demo mode grants admin access.
+1. **Multi-Base Architecture** — All data tables carry a `base_id` foreign key. Users belong to installations via `base_members`. Queries are scoped to the user's current installation at the application layer.
+2. **Demo Mode** — App runs fully offline with mock data when Supabase env vars are missing. No setup required for development or demos.
+3. **Mobile-First** — 480px max-width layout, bottom navigation, 44px+ touch targets. Designed for iPad/phone use in the field.
+4. **Theme System** — Light/Dark/Auto modes via CSS custom properties. Auto follows `prefers-color-scheme`.
+5. **Configurable Templates** — Inspection checklists are stored in the database per base, not hardcoded. New bases clone from a default template.
+6. **Client-Side PDF** — jsPDF generates reports in the browser. Server-side email delivery planned for a future phase.
+7. **RLS Disabled for MVP** — Row-Level Security policies removed during development. Must be re-enabled with role-based access before production.
+8. **Hybrid Offline** — IndexedDB caches PDF blobs and extracted text. PWA service worker caches app shell. Full offline reference viewing supported.
+9. **Admin-Gated CRUD** — Base configuration and reference management require `airfield_manager` or `sys_admin` role.
 
 ## Current Status
 
-**Build**: Compiles and runs cleanly — `next build` zero errors
+**Build**: Compiles and runs cleanly — `next build` zero errors, zero TypeScript errors
 
-**Complete modules**: Dashboard, Discrepancies, Airfield Checks, Daily Inspections, NOTAMs, Obstruction Evaluations, References (with My Documents), More hub
+**Complete modules**: Dashboard, Discrepancies, Airfield Checks, Daily Inspections, NOTAMs, Obstruction Evaluations, References (with My Documents), Reports (4 types), Aircraft Database, Settings (with Base Setup and Templates), More hub
 
-**Placeholder modules** (coming soon pages): Aircraft, Reports, Settings, Sync & Data, Users & Security, Waivers
+**Placeholder modules** (coming soon pages): Waivers, Sync & Data, Users & Security
 
 **API stubs** (not yet implemented): NOTAM sync (`/api/notams/sync`), Weather METAR (`/api/weather`)
-
-**Known tech debt**: See [PROJECT_STATUS.md](./PROJECT_STATUS.md) for the full audit
 
 See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 
 ## Reference Documents
 
-- `Documentation/SRS.md` — Software Requirements Specification (1,291 lines, the definitive blueprint)
-- `Airfield_OPS_Unified_Prototype.jsx` — Interactive React prototype used as visual design reference
-- `PROJECT_STATUS.md` — Architecture details, tech debt audit, and open questions
-- `Documentation/AOMS_Regulation_Database_v4.docx` — Source document for the regulation database
+- `SRS.md` — Software Requirements Specification (1,291 lines, the definitive blueprint)
+- `BASE-ONBOARDING.md` — Guide for adding new installations
+- `SCALING-ASSESSMENT.md` — Multi-base architecture assessment
+- `PROJECT_STATUS.md` — Architecture details and tech debt audit
+- `docs/INTEGRATION_GUIDE.md` — PDF text search integration architecture
