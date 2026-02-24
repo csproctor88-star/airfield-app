@@ -3,24 +3,22 @@
 -- references. NOT FOR NAVIGATION USE.
 -- Base admin should verify all values against current FAA Chart Supplement
 -- before operational use, particularly ILS frequencies and taxiway inventory.
+--
+-- NOTE: KBDL was already added via the in-app installation UI, so a bases row
+-- with icao='KBDL' already exists. This migration updates that row in place
+-- and uses its existing UUID for all child inserts.
 
 -- ═══════════════════════════════════════════════════════════════
--- 1. Base record
+-- 1. Update the existing base record (added via settings UI)
 -- ═══════════════════════════════════════════════════════════════
--- INSERT the base row if it doesn't exist yet, otherwise UPDATE in place.
--- Many tables (airfield_status, inspections, etc.) reference bases(id)
--- WITHOUT ON DELETE CASCADE, so we cannot delete-and-reinsert.
-INSERT INTO bases (id, name, icao, unit, majcom, location, elevation_msl, timezone, ce_shops)
-VALUES (
-  '00000000-0000-0000-0000-000000000003',
-  'Bradley International Airport',
-  'KBDL',
-  '103rd Airlift Wing',
-  'Connecticut Air National Guard',
-  'Windsor Locks, Connecticut',
-  173,
-  'America/New_York',
-  ARRAY[
+UPDATE bases SET
+  name          = 'Bradley International Airport',
+  unit          = '103rd Airlift Wing',
+  majcom        = 'Connecticut Air National Guard',
+  location      = 'Windsor Locks, Connecticut',
+  elevation_msl = 173,
+  timezone      = 'America/New_York',
+  ce_shops      = ARRAY[
     'CE Pavements',
     'CE Electrical',
     'CE Grounds',
@@ -29,22 +27,13 @@ VALUES (
     'CES Engineering',
     'Airfield Management'
   ]
-)
-ON CONFLICT (id) DO UPDATE SET
-  name          = EXCLUDED.name,
-  icao          = EXCLUDED.icao,
-  unit          = EXCLUDED.unit,
-  majcom        = EXCLUDED.majcom,
-  location      = EXCLUDED.location,
-  elevation_msl = EXCLUDED.elevation_msl,
-  timezone      = EXCLUDED.timezone,
-  ce_shops      = EXCLUDED.ce_shops;
+WHERE icao = 'KBDL';
 
 -- Child rows (base_runways, base_navaids, base_areas) have ON DELETE CASCADE,
 -- so we can safely delete and re-insert them below.
-DELETE FROM base_runways WHERE base_id = '00000000-0000-0000-0000-000000000003';
-DELETE FROM base_navaids WHERE base_id = '00000000-0000-0000-0000-000000000003';
-DELETE FROM base_areas   WHERE base_id = '00000000-0000-0000-0000-000000000003';
+DELETE FROM base_runways WHERE base_id = (SELECT id FROM bases WHERE icao = 'KBDL');
+DELETE FROM base_navaids WHERE base_id = (SELECT id FROM bases WHERE icao = 'KBDL');
+DELETE FROM base_areas   WHERE base_id = (SELECT id FROM bases WHERE icao = 'KBDL');
 
 -- ═══════════════════════════════════════════════════════════════
 -- 2. Runways
@@ -64,7 +53,7 @@ INSERT INTO base_runways (
   end2_designator, end2_latitude, end2_longitude, end2_heading, end2_approach_lighting, end2_elevation_msl
 )
 VALUES (
-  '00000000-0000-0000-0000-000000000003',
+  (SELECT id FROM bases WHERE icao = 'KBDL'),
   '06/24', 9510, 200, 'Asphalt', 44,
   '06', 41.9320, -72.6966, 44, 'ALSF-2', 173.0,
   '24', 41.9507, -72.6721, 224, 'MALSR', 160.9
@@ -81,7 +70,7 @@ INSERT INTO base_runways (
   end2_designator, end2_latitude, end2_longitude, end2_heading, end2_approach_lighting, end2_elevation_msl
 )
 VALUES (
-  '00000000-0000-0000-0000-000000000003',
+  (SELECT id FROM bases WHERE icao = 'KBDL'),
   '15/33', 6847, 150, 'Asphalt', 136,
   '15', 41.9424, -72.6933, 136, 'REIL', 168.8,
   '33', 41.9293, -72.6753, 316, 'MALSF', 168.5
@@ -97,17 +86,17 @@ VALUES (
 -- ═══════════════════════════════════════════════════════════════
 INSERT INTO base_navaids (base_id, navaid_name, sort_order) VALUES
   -- RWY 06 — ILS identifier: I-BDL (111.1 MHz)
-  ('00000000-0000-0000-0000-000000000003', '06 Localizer',    1),
-  ('00000000-0000-0000-0000-000000000003', '06 Glideslope',   2),
-  ('00000000-0000-0000-0000-000000000003', '06 ILS',          3),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), '06 Localizer',    1),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), '06 Glideslope',   2),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), '06 ILS',          3),
   -- RWY 24 — ILS identifier: I-MYQ
-  ('00000000-0000-0000-0000-000000000003', '24 Localizer',    4),
-  ('00000000-0000-0000-0000-000000000003', '24 Glideslope',   5),
-  ('00000000-0000-0000-0000-000000000003', '24 ILS',          6),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), '24 Localizer',    4),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), '24 Glideslope',   5),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), '24 ILS',          6),
   -- RWY 33 — ILS identifier: I-IKX (108.55 MHz)
-  ('00000000-0000-0000-0000-000000000003', '33 Localizer',    7),
-  ('00000000-0000-0000-0000-000000000003', '33 Glideslope',   8),
-  ('00000000-0000-0000-0000-000000000003', '33 ILS',          9);
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), '33 Localizer',    7),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), '33 Glideslope',   8),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), '33 ILS',          9);
 
 -- ═══════════════════════════════════════════════════════════════
 -- 4. Airfield areas
@@ -115,21 +104,21 @@ INSERT INTO base_navaids (base_id, navaid_name, sort_order) VALUES
 --    Aprons: Terminal, Cargo, ANG (103rd Airlift Wing).
 -- ═══════════════════════════════════════════════════════════════
 INSERT INTO base_areas (base_id, area_name, sort_order) VALUES
-  ('00000000-0000-0000-0000-000000000003', 'Entire Airfield',    0),
-  ('00000000-0000-0000-0000-000000000003', 'RWY 06/24',          1),
-  ('00000000-0000-0000-0000-000000000003', 'RWY 15/33',          2),
-  ('00000000-0000-0000-0000-000000000003', 'Terminal Apron',     3),
-  ('00000000-0000-0000-0000-000000000003', 'Cargo Apron',        4),
-  ('00000000-0000-0000-0000-000000000003', 'ANG Apron',          5),
-  ('00000000-0000-0000-0000-000000000003', 'TWY A',              6),
-  ('00000000-0000-0000-0000-000000000003', 'TWY B',              7),
-  ('00000000-0000-0000-0000-000000000003', 'TWY C',              8),
-  ('00000000-0000-0000-0000-000000000003', 'TWY D',              9),
-  ('00000000-0000-0000-0000-000000000003', 'TWY E',             10),
-  ('00000000-0000-0000-0000-000000000003', 'TWY F',             11),
-  ('00000000-0000-0000-0000-000000000003', 'TWY H',             12),
-  ('00000000-0000-0000-0000-000000000003', 'TWY K',             13),
-  ('00000000-0000-0000-0000-000000000003', 'Flight Line',       14);
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), 'Entire Airfield',    0),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), 'RWY 06/24',          1),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), 'RWY 15/33',          2),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), 'Terminal Apron',     3),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), 'Cargo Apron',        4),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), 'ANG Apron',          5),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), 'TWY A',              6),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), 'TWY B',              7),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), 'TWY C',              8),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), 'TWY D',              9),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), 'TWY E',             10),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), 'TWY F',             11),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), 'TWY H',             12),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), 'TWY K',             13),
+  ((SELECT id FROM bases WHERE icao = 'KBDL'), 'Flight Line',       14);
 
 -- ═══════════════════════════════════════════════════════════════
 -- 5. Airfield status
@@ -138,7 +127,7 @@ INSERT INTO base_areas (base_id, area_name, sort_order) VALUES
 -- ═══════════════════════════════════════════════════════════════
 INSERT INTO airfield_status (base_id, active_runway, runway_status, runway_statuses)
 VALUES (
-  '00000000-0000-0000-0000-000000000003',
+  (SELECT id FROM bases WHERE icao = 'KBDL'),
   '06',
   'open',
   '{
