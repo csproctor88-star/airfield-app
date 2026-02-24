@@ -276,12 +276,8 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
         }),
       )
     }
-    return [getRunwayGeometry({
-      end1: { latitude: 42.601550, longitude: -82.837339 },
-      end2: { latitude: 42.626239, longitude: -82.836481 },
-      length_ft: 9000,
-      width_ft: 150,
-    })]
+    // No runways configured — return empty; map will show base center or default view
+    return []
   }, [installationRunways])
 
   const handleClick = useCallback(
@@ -303,10 +299,18 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
     const primaryRwy = allRwys[0]
     numRunwaysRef.current = allRwys.length
 
+    // Default center: first runway midpoint, or first installation runway midpoint, or 0,0
+    const defaultCenter: [number, number] = primaryRwy
+      ? [primaryRwy.midpoint.lon, primaryRwy.midpoint.lat]
+      : installationRunways.length > 0
+        ? [((installationRunways[0].end1_longitude ?? 0) + (installationRunways[0].end2_longitude ?? 0)) / 2,
+           ((installationRunways[0].end1_latitude ?? 0) + (installationRunways[0].end2_latitude ?? 0)) / 2]
+        : [0, 0]
+
     const m = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-v9',
-      center: [primaryRwy.midpoint.lon, primaryRwy.midpoint.lat],
+      center: defaultCenter,
       zoom: 13,
       pitch: 0,
       bearing: 0,

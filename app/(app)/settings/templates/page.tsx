@@ -13,6 +13,8 @@ import {
   addTemplateSection,
   deleteTemplateSection,
   updateTemplateSection,
+  reorderTemplateItems,
+  reorderTemplateSections,
   type TemplateSection,
   type TemplateItem,
 } from '@/lib/supabase/inspection-templates'
@@ -159,6 +161,49 @@ export default function TemplateManagementPage() {
     }
   }
 
+  // ── Reorder items within a section ──
+  const handleMoveItem = async (section: TemplateSection, itemIndex: number, direction: 'up' | 'down') => {
+    const items = [...section.items]
+    const targetIndex = direction === 'up' ? itemIndex - 1 : itemIndex + 1
+    if (targetIndex < 0 || targetIndex >= items.length) return
+
+    // Swap
+    ;[items[itemIndex], items[targetIndex]] = [items[targetIndex], items[itemIndex]]
+
+    // Build update payload with new sort_order and sequential item_number
+    const updates = items.map((item, i) => ({
+      id: item.id,
+      sort_order: i,
+      item_number: i + 1,
+    }))
+
+    const ok = await reorderTemplateItems(updates)
+    if (ok) {
+      await loadTemplate()
+    } else {
+      toast.error('Failed to reorder')
+    }
+  }
+
+  // ── Reorder sections ──
+  const handleMoveSection = async (sectionIndex: number, direction: 'up' | 'down') => {
+    const list = [...sections]
+    const targetIndex = direction === 'up' ? sectionIndex - 1 : sectionIndex + 1
+    if (targetIndex < 0 || targetIndex >= list.length) return
+
+    // Swap
+    ;[list[sectionIndex], list[targetIndex]] = [list[targetIndex], list[sectionIndex]]
+
+    const updates = list.map((s, i) => ({ id: s.id, sort_order: i }))
+
+    const ok = await reorderTemplateSections(updates)
+    if (ok) {
+      await loadTemplate()
+    } else {
+      toast.error('Failed to reorder')
+    }
+  }
+
   if (!canEdit) {
     return (
       <div style={{ padding: 24 }}>
@@ -222,7 +267,7 @@ export default function TemplateManagementPage() {
         <EmptyTemplateState installationId={installationId} activeType={activeType} onCreated={loadTemplate} />
       ) : (
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {sections.map(section => (
+          {sections.map((section, sectionIndex) => (
             <div
               key={section.id}
               style={{
@@ -255,19 +300,61 @@ export default function TemplateManagementPage() {
                     ({section.items.length} items)
                   </span>
                 </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleDeleteSection(section) }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--color-danger)',
-                    cursor: 'pointer',
-                    fontSize: 12,
-                    padding: '2px 8px',
-                  }}
-                >
-                  Delete
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleMoveSection(sectionIndex, 'up') }}
+                    disabled={sectionIndex === 0}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: sectionIndex === 0 ? 'var(--color-text-4)' : 'var(--color-text-2)',
+                      cursor: sectionIndex === 0 ? 'default' : 'pointer',
+                      fontSize: 16,
+                      padding: '2px 6px',
+                      minWidth: 32,
+                      minHeight: 32,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    title="Move section up"
+                  >
+                    &#9650;
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleMoveSection(sectionIndex, 'down') }}
+                    disabled={sectionIndex === sections.length - 1}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: sectionIndex === sections.length - 1 ? 'var(--color-text-4)' : 'var(--color-text-2)',
+                      cursor: sectionIndex === sections.length - 1 ? 'default' : 'pointer',
+                      fontSize: 16,
+                      padding: '2px 6px',
+                      minWidth: 32,
+                      minHeight: 32,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    title="Move section down"
+                  >
+                    &#9660;
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDeleteSection(section) }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--color-danger)',
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      padding: '2px 8px',
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
 
               {/* Section guidance */}
@@ -280,7 +367,7 @@ export default function TemplateManagementPage() {
               {/* Items */}
               {expandedSections.has(section.id) && (
                 <div style={{ padding: '8px 14px' }}>
-                  {section.items.map(item => (
+                  {section.items.map((item, itemIndex) => (
                     <div
                       key={item.id}
                       style={{
@@ -292,6 +379,52 @@ export default function TemplateManagementPage() {
                         fontSize: 13,
                       }}
                     >
+                      {/* Reorder arrows */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 0, flexShrink: 0 }}>
+                        <button
+                          onClick={() => handleMoveItem(section, itemIndex, 'up')}
+                          disabled={itemIndex === 0}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: itemIndex === 0 ? 'var(--color-text-4)' : 'var(--color-text-2)',
+                            cursor: itemIndex === 0 ? 'default' : 'pointer',
+                            fontSize: 10,
+                            padding: 0,
+                            lineHeight: 1,
+                            minWidth: 24,
+                            minHeight: 22,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                          title="Move up"
+                        >
+                          &#9650;
+                        </button>
+                        <button
+                          onClick={() => handleMoveItem(section, itemIndex, 'down')}
+                          disabled={itemIndex === section.items.length - 1}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: itemIndex === section.items.length - 1 ? 'var(--color-text-4)' : 'var(--color-text-2)',
+                            cursor: itemIndex === section.items.length - 1 ? 'default' : 'pointer',
+                            fontSize: 10,
+                            padding: 0,
+                            lineHeight: 1,
+                            minWidth: 24,
+                            minHeight: 22,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                          title="Move down"
+                        >
+                          &#9660;
+                        </button>
+                      </div>
+
                       <span style={{ width: 28, textAlign: 'right', color: 'var(--color-text-3)', fontSize: 11, flexShrink: 0 }}>
                         {item.item_number}.
                       </span>

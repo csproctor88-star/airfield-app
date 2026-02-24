@@ -827,7 +827,7 @@ function TemplatesTab({ installationId }: { installationId: string | null }) {
     const af = await createDefaultTemplate(installationId, 'airfield')
     const lt = await createDefaultTemplate(installationId, 'lighting')
     if (af && lt) {
-      toast.success('Default templates created from Selfridge template')
+      toast.success('Default inspection templates created')
       setHasAirfield(true)
       setHasLighting(true)
     } else {

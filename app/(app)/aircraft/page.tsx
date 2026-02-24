@@ -6,7 +6,7 @@ import {
   Search, ChevronDown, ChevronUp, Star, Plane, Shield,
   ArrowUpDown, X, SlidersHorizontal, Layers,
 } from 'lucide-react'
-import type { AircraftCharacteristics } from '@/aircraft_database_schema'
+import type { AircraftCharacteristics } from '@/lib/aircraft_database_schema'
 import {
   allAircraft,
   AIRCRAFT_COUNT,

@@ -1,6 +1,6 @@
 // Geodesic coordinate math for obstruction evaluation
 // Used to compute distances, bearings, and surface polygon coordinates
-// relative to runway geometry at Selfridge ANGB (KMTC).
+// relative to runway geometry for any configured installation.
 
 const EARTH_RADIUS_M = 6371000
 const FT_TO_M = 0.3048
