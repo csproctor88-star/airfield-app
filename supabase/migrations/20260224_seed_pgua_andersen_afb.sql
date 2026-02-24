@@ -7,14 +7,9 @@
 -- ═══════════════════════════════════════════════════════════════
 -- 1. Base record
 -- ═══════════════════════════════════════════════════════════════
--- Temporarily nullify profile references so we can delete and re-insert.
--- The profiles.primary_base_id FK lacks ON DELETE CASCADE, so we must
--- detach profiles first, then reattach after the INSERT.
-UPDATE profiles SET primary_base_id = NULL
-WHERE primary_base_id IN (SELECT id FROM bases WHERE icao = 'PGUA');
-
-DELETE FROM bases WHERE icao = 'PGUA';
-
+-- INSERT the base row if it doesn't exist yet, otherwise UPDATE in place.
+-- Many tables (airfield_status, inspections, work_orders, etc.) reference
+-- bases(id) WITHOUT ON DELETE CASCADE, so we cannot delete-and-reinsert.
 INSERT INTO bases (id, name, icao, unit, majcom, location, elevation_msl, timezone, ce_shops)
 VALUES (
   '00000000-0000-0000-0000-000000000002',
@@ -34,15 +29,22 @@ VALUES (
     'CES Engineering',
     'Airfield Management'
   ]
-);
+)
+ON CONFLICT (id) DO UPDATE SET
+  name          = EXCLUDED.name,
+  icao          = EXCLUDED.icao,
+  unit          = EXCLUDED.unit,
+  majcom        = EXCLUDED.majcom,
+  location      = EXCLUDED.location,
+  elevation_msl = EXCLUDED.elevation_msl,
+  timezone      = EXCLUDED.timezone,
+  ce_shops      = EXCLUDED.ce_shops;
 
--- Restore profile references for any users whose primary_base_id was nulled
-UPDATE profiles SET primary_base_id = '00000000-0000-0000-0000-000000000002'
-WHERE primary_base_id IS NULL
-  AND id IN (
-    SELECT user_id FROM base_members
-    WHERE base_id = '00000000-0000-0000-0000-000000000002'
-  );
+-- Child rows (base_runways, base_navaids, base_areas) have ON DELETE CASCADE,
+-- so we can safely delete and re-insert them below.
+DELETE FROM base_runways WHERE base_id = '00000000-0000-0000-0000-000000000002';
+DELETE FROM base_navaids WHERE base_id = '00000000-0000-0000-0000-000000000002';
+DELETE FROM base_areas   WHERE base_id = '00000000-0000-0000-0000-000000000002';
 
 -- ═══════════════════════════════════════════════════════════════
 -- 2. Runways
@@ -67,8 +69,7 @@ VALUES (
   '06L/24R', 10528, 200, 'Asphalt', 65,
   '06L', 13.580356, 144.915644, 63, 'MALSR',
   '24R', 13.592203, 144.942706, 243, 'ALSF-1'
-)
-ON CONFLICT (base_id, runway_id) DO NOTHING;
+);
 
 -- Runway 06R/24L — 11,200 ft × 200 ft, PCN 98 R/A/W/T
 -- 06R: threshold elev 556.8 ft. BAK-12 arresting gear.
@@ -88,8 +89,7 @@ VALUES (
   '06R/24L', 11200, 200, 'Asphalt', 65,
   '06R', 13.575328, 144.916494, 63, 'MALSR',
   '24L', 13.587942, 144.945278, 243, NULL
-)
-ON CONFLICT (base_id, runway_id) DO NOTHING;
+);
 
 -- ═══════════════════════════════════════════════════════════════
 -- 3. NAVAIDs
@@ -117,8 +117,7 @@ INSERT INTO base_navaids (base_id, navaid_name, sort_order) VALUES
   ('00000000-0000-0000-0000-000000000002', '24L Glideslope',  11),
   ('00000000-0000-0000-0000-000000000002', '24L ILS',         12),
   -- TACAN — identifier: UAM, Channel 54X, located at 13.574553°N / 144.946578°E
-  ('00000000-0000-0000-0000-000000000002', 'TACAN',           13)
-ON CONFLICT (base_id, navaid_name) DO NOTHING;
+  ('00000000-0000-0000-0000-000000000002', 'TACAN',           13);
 
 -- ═══════════════════════════════════════════════════════════════
 -- 4. Airfield areas
@@ -149,8 +148,7 @@ INSERT INTO base_areas (base_id, area_name, sort_order) VALUES
   ('00000000-0000-0000-0000-000000000002', 'TWY J',                    17),
   ('00000000-0000-0000-0000-000000000002', 'TWY K',                    18),
   ('00000000-0000-0000-0000-000000000002', 'TWY L',                    19),
-  ('00000000-0000-0000-0000-000000000002', 'Flight Line',              20)
-ON CONFLICT (base_id, area_name) DO NOTHING;
+  ('00000000-0000-0000-0000-000000000002', 'Flight Line',              20);
 
 -- ═══════════════════════════════════════════════════════════════
 -- NOTE: airfield_status row intentionally omitted for Andersen.
