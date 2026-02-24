@@ -53,6 +53,20 @@ const TOGGLE_LAYER_IDS: Record<ToggleKey, string[]> = {
   'apz-ii': ['fill-apz-ii-end1', 'line-apz-ii-end1', 'fill-apz-ii-end2', 'line-apz-ii-end2'],
 }
 
+// Surface layer IDs that are runway-specific (generated per runway).
+// Airfield-wide surfaces (outer-horizontal, conical, inner-horizontal) are
+// computed from the first runway and are not filterable by runway.
+const RUNWAY_SPECIFIC_IDS = new Set([
+  'transitional-left', 'transitional-right',
+  'approach-end1', 'approach-end2',
+  'apz-ii-end1', 'apz-ii-end2',
+  'apz-i-end1', 'apz-i-end2',
+  'clear-zone-end1', 'clear-zone-end2',
+  'primary-surface',
+  'graded-area-end1', 'graded-area-end2',
+  'runway',
+])
+
 // Legend items: label, color, toggleKey, default visibility
 const LEGEND_ITEMS: { label: string; color: string; toggleKey: ToggleKey; defaultOn: boolean }[] = [
   { label: 'Outer Horizontal', color: IMAGINARY_SURFACES.outer_horizontal.color, toggleKey: 'outer-horizontal', defaultOn: true },
@@ -92,7 +106,8 @@ const SURFACE_LAYERS = [
  * Airfield-wide surfaces (outer horizontal, conical, inner horizontal) use the
  * first runway only — for parallel runways the radii are large enough that the
  * difference is negligible. Runway-specific surfaces generate features for every
- * runway with the same `id` property so existing layers render them all.
+ * runway; each feature carries a `rwyIndex` property so Mapbox filters can
+ * show/hide individual runways.
  */
 function buildSurfaceGeoJSON(runways: RunwayGeometry[]) {
   const features: GeoJSON.Feature[] = []
@@ -107,107 +122,109 @@ function buildSurfaceGeoJSON(runways: RunwayGeometry[]) {
   const outerH = generateStadiumPolygon(primaryRwy, outerHRadius, 64)
   features.push({
     type: 'Feature',
-    properties: { id: 'outer-horizontal' },
+    properties: { id: 'outer-horizontal', rwyIndex: -1 },
     geometry: { type: 'Polygon', coordinates: [outerH] },
   })
 
   const conical = generateStadiumPolygon(primaryRwy, innerHRadius + conicalExtent, 64)
   features.push({
     type: 'Feature',
-    properties: { id: 'conical' },
+    properties: { id: 'conical', rwyIndex: -1 },
     geometry: { type: 'Polygon', coordinates: [conical] },
   })
 
   const innerH = generateStadiumPolygon(primaryRwy, innerHRadius, 64)
   features.push({
     type: 'Feature',
-    properties: { id: 'inner-horizontal' },
+    properties: { id: 'inner-horizontal', rwyIndex: -1 },
     geometry: { type: 'Polygon', coordinates: [innerH] },
   })
 
-  // Runway-specific surfaces — generate for every runway
-  for (const rwy of runways) {
+  // Runway-specific surfaces — generate for every runway, tagged with rwyIndex
+  for (let ri = 0; ri < runways.length; ri++) {
+    const rwy = runways[ri]
+
     const transitional = generateTransitionalPolygons(rwy)
     features.push({
       type: 'Feature',
-      properties: { id: 'transitional-left' },
+      properties: { id: 'transitional-left', rwyIndex: ri },
       geometry: { type: 'Polygon', coordinates: [transitional.left] },
     })
     features.push({
       type: 'Feature',
-      properties: { id: 'transitional-right' },
+      properties: { id: 'transitional-right', rwyIndex: ri },
       geometry: { type: 'Polygon', coordinates: [transitional.right] },
     })
 
     const approach = generateApproachDeparturePolygons(rwy)
     features.push({
       type: 'Feature',
-      properties: { id: 'approach-end1' },
+      properties: { id: 'approach-end1', rwyIndex: ri },
       geometry: { type: 'Polygon', coordinates: [approach.end1] },
     })
     features.push({
       type: 'Feature',
-      properties: { id: 'approach-end2' },
+      properties: { id: 'approach-end2', rwyIndex: ri },
       geometry: { type: 'Polygon', coordinates: [approach.end2] },
     })
 
     const apz = generateAPZPolygons(rwy)
     features.push({
       type: 'Feature',
-      properties: { id: 'apz-ii-end1' },
+      properties: { id: 'apz-ii-end1', rwyIndex: ri },
       geometry: { type: 'Polygon', coordinates: [apz.apz_ii_end1] },
     })
     features.push({
       type: 'Feature',
-      properties: { id: 'apz-ii-end2' },
+      properties: { id: 'apz-ii-end2', rwyIndex: ri },
       geometry: { type: 'Polygon', coordinates: [apz.apz_ii_end2] },
     })
     features.push({
       type: 'Feature',
-      properties: { id: 'apz-i-end1' },
+      properties: { id: 'apz-i-end1', rwyIndex: ri },
       geometry: { type: 'Polygon', coordinates: [apz.apz_i_end1] },
     })
     features.push({
       type: 'Feature',
-      properties: { id: 'apz-i-end2' },
+      properties: { id: 'apz-i-end2', rwyIndex: ri },
       geometry: { type: 'Polygon', coordinates: [apz.apz_i_end2] },
     })
 
     const clearZones = generateClearZonePolygons(rwy)
     features.push({
       type: 'Feature',
-      properties: { id: 'clear-zone-end1' },
+      properties: { id: 'clear-zone-end1', rwyIndex: ri },
       geometry: { type: 'Polygon', coordinates: [clearZones.end1] },
     })
     features.push({
       type: 'Feature',
-      properties: { id: 'clear-zone-end2' },
+      properties: { id: 'clear-zone-end2', rwyIndex: ri },
       geometry: { type: 'Polygon', coordinates: [clearZones.end2] },
     })
 
     const primary = generatePrimarySurfacePolygon(rwy)
     features.push({
       type: 'Feature',
-      properties: { id: 'primary-surface' },
+      properties: { id: 'primary-surface', rwyIndex: ri },
       geometry: { type: 'Polygon', coordinates: [primary] },
     })
 
     const gradedAreas = generateGradedAreaPolygons(rwy)
     features.push({
       type: 'Feature',
-      properties: { id: 'graded-area-end1' },
+      properties: { id: 'graded-area-end1', rwyIndex: ri },
       geometry: { type: 'Polygon', coordinates: [gradedAreas.end1] },
     })
     features.push({
       type: 'Feature',
-      properties: { id: 'graded-area-end2' },
+      properties: { id: 'graded-area-end2', rwyIndex: ri },
       geometry: { type: 'Polygon', coordinates: [gradedAreas.end2] },
     })
 
     const runway = generateRunwayPolygon(rwy)
     features.push({
       type: 'Feature',
-      properties: { id: 'runway' },
+      properties: { id: 'runway', rwyIndex: ri },
       geometry: { type: 'Polygon', coordinates: [runway] },
     })
   }
@@ -231,13 +248,21 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const marker = useRef<mapboxgl.Marker | null>(null)
+  const numRunwaysRef = useRef(1)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [visibility, setVisibility] = useState<Record<ToggleKey, boolean>>(getDefaultVisibility)
+  const [runwayVisibility, setRunwayVisibility] = useState<Record<number, boolean>>({})
   const [legendOpen, setLegendOpen] = useState(false)
   const { runways: installationRunways } = useInstallation()
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const mapboxReady = isMapboxConfigured()
+
+  // Derived: runway labels and multi-runway flag
+  const runwayLabels = installationRunways.length > 0
+    ? installationRunways.map((rwy) => rwy.runway_id ?? 'Unknown')
+    : []
+  const isMultiRunway = runwayLabels.length > 1
 
   const getAllRunways = useCallback((): RunwayGeometry[] => {
     if (installationRunways.length > 0) {
@@ -276,6 +301,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
 
     const allRwys = getAllRunways()
     const primaryRwy = allRwys[0]
+    numRunwaysRef.current = allRwys.length
 
     const m = new mapboxgl.Map({
       container: mapContainer.current,
@@ -343,19 +369,19 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
         })
       }
 
-      // Add runway end labels for all runways
+      // Add runway end labels for all runways (tagged with rwyIndex for filtering)
       const labelFeatures: GeoJSON.Feature[] = []
       for (let i = 0; i < allRwys.length; i++) {
         const rwy = allRwys[i]
         const instRwy = installationRunways[i]
         labelFeatures.push({
           type: 'Feature',
-          properties: { label: instRwy?.end1_designator ?? '01' },
+          properties: { label: instRwy?.end1_designator ?? '01', rwyIndex: i },
           geometry: { type: 'Point', coordinates: [rwy.end1.lon, rwy.end1.lat] },
         })
         labelFeatures.push({
           type: 'Feature',
-          properties: { label: instRwy?.end2_designator ?? '19' },
+          properties: { label: instRwy?.end2_designator ?? '19', rwyIndex: i },
           geometry: { type: 'Point', coordinates: [rwy.end2.lon, rwy.end2.lat] },
         })
       }
@@ -411,7 +437,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
     }
   }, [handleClick, mapLoaded])
 
-  // Sync toggle visibility to Mapbox layers
+  // Sync surface-type toggle visibility to Mapbox layers
   useEffect(() => {
     const m = map.current
     if (!m || !mapLoaded) return
@@ -425,6 +451,39 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
       }
     }
   }, [visibility, mapLoaded])
+
+  // Sync per-runway visibility via Mapbox filters (multi-runway only)
+  useEffect(() => {
+    const m = map.current
+    if (!m || !mapLoaded) return
+    const numRwys = numRunwaysRef.current
+    if (numRwys <= 1) return
+
+    // Build list of visible runway indices (treat undefined as visible)
+    const visibleIndices = Array.from({ length: numRwys }, (_, i) => i)
+      .filter((i) => runwayVisibility[i] !== false)
+    const allVisible = visibleIndices.length === numRwys
+
+    // Build the Mapbox filter expression
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const filter: any = allVisible
+      ? null
+      : visibleIndices.length === 0
+        ? ['==', ['get', 'rwyIndex'], -999] // match nothing
+        : ['any', ...visibleIndices.map((i) => ['==', ['get', 'rwyIndex'], i])]
+
+    // Apply to runway-specific surface layers
+    for (const layer of SURFACE_LAYERS) {
+      if (!RUNWAY_SPECIFIC_IDS.has(layer.id)) continue
+      const fillId = `fill-${layer.id}`
+      const lineId = `line-${layer.id}`
+      if (m.getLayer(fillId)) m.setFilter(fillId, filter)
+      if (m.getLayer(lineId)) m.setFilter(lineId, filter)
+    }
+
+    // Apply to runway labels
+    if (m.getLayer('rwy-labels')) m.setFilter('rwy-labels', filter)
+  }, [runwayVisibility, mapLoaded])
 
   // Update marker when selectedPoint changes
   useEffect(() => {
@@ -453,6 +512,13 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
 
   const toggleLayer = (key: ToggleKey) => {
     setVisibility((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const toggleRunway = (index: number) => {
+    setRunwayVisibility((prev) => ({
+      ...prev,
+      [index]: prev[index] !== false ? false : true,
+    }))
   }
 
   const allVisible = LEGEND_ITEMS.every((item) => visibility[item.toggleKey])
@@ -555,6 +621,46 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
               overflowY: 'auto',
             }}
           >
+            {/* Runway toggles (multi-runway only) */}
+            {isMultiRunway && (
+              <div style={{ paddingBottom: 5, marginBottom: 5, borderBottom: '1px solid rgba(148,163,184,0.15)' }}>
+                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Runways
+                </div>
+                {runwayLabels.map((label, i) => (
+                  <div
+                    key={i}
+                    onClick={() => toggleRunway(i)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      cursor: 'pointer',
+                      padding: '1px 0',
+                      opacity: runwayVisibility[i] !== false ? 1 : 0.4,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: 2,
+                        background: runwayVisibility[i] !== false ? '#FFFFFF' : 'transparent',
+                        border: '1.5px solid #FFFFFF',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span style={{ color: '#CBD5E1' }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Surface type toggles */}
+            {isMultiRunway && (
+              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Surfaces
+              </div>
+            )}
             {LEGEND_ITEMS.map((item) => (
               <div
                 key={item.toggleKey}
