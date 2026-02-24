@@ -17,6 +17,7 @@ export type CheckPhotoRow = {
 export type CheckRow = {
   id: string
   display_id: string
+  base_id: string | null
   check_type: CheckType
   areas: string[]
   data: Record<string, unknown>
@@ -45,6 +46,7 @@ export async function createCheck(input: {
   comments: { comment: string; user_name: string; created_at: string }[]
   latitude?: number | null
   longitude?: number | null
+  base_id?: string | null
 }): Promise<{ data: CheckRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -63,6 +65,7 @@ export async function createCheck(input: {
     latitude: input.latitude ?? null,
     longitude: input.longitude ?? null,
   }
+  if (input.base_id) row.base_id = input.base_id
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
@@ -80,11 +83,15 @@ export async function createCheck(input: {
 
   // Save comments
   if (input.comments.length > 0) {
-    const commentRows = input.comments.map((c) => ({
-      check_id: created.id,
-      comment: c.comment,
-      user_name: c.user_name,
-    }))
+    const commentRows = input.comments.map((c) => {
+      const cr: Record<string, unknown> = {
+        check_id: created.id,
+        comment: c.comment,
+        user_name: c.user_name,
+      }
+      if (input.base_id) cr.base_id = input.base_id
+      return cr
+    })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: commentError } = await (supabase as any)
       .from('check_comments')
@@ -94,20 +101,26 @@ export async function createCheck(input: {
     }
   }
 
-  logActivity('completed', 'check', created.id, created.display_id, { check_type: input.check_type, areas: input.areas })
+  logActivity('completed', 'check', created.id, created.display_id, { check_type: input.check_type, areas: input.areas }, input.base_id)
 
   return { data: created, error: null }
 }
 
-export async function fetchChecks(): Promise<{ data: CheckRow[]; error: string | null }> {
+export async function fetchChecks(baseId?: string | null): Promise<{ data: CheckRow[]; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: [], error: 'Supabase not configured' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  let query = (supabase as any)
     .from('airfield_checks')
     .select('*')
     .order('created_at', { ascending: false })
+
+  if (baseId) {
+    query = query.eq('base_id', baseId)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error('Failed to fetch checks:', error.message)
@@ -158,15 +171,19 @@ export async function fetchCheckComments(checkId: string): Promise<CheckCommentR
 export async function addCheckComment(
   checkId: string,
   comment: string,
-  userName: string
+  userName: string,
+  baseId?: string | null
 ): Promise<{ data: CheckCommentRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
 
+  const row: Record<string, unknown> = { check_id: checkId, comment, user_name: userName }
+  if (baseId) row.base_id = baseId
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
     .from('check_comments')
-    .insert({ check_id: checkId, comment, user_name: userName })
+    .insert(row)
     .select()
     .single()
 
@@ -182,19 +199,13 @@ export async function deleteCheck(id: string): Promise<{ error: string | null }>
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // Capture display info before deletion for activity log
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase as any).from('airfield_checks').select('display_id, check_type').eq('id', id).single()
+  const { data: existing } = await (supabase as any).from('airfield_checks').select('display_id, check_type, base_id').eq('id', id).single()
 
-  // Delete comments first
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (supabase as any).from('check_comments').delete().eq('check_id', id)
-
-  // Delete photos
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (supabase as any).from('photos').delete().eq('check_id', id)
-
-  // Delete the check
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any).from('airfield_checks').delete().eq('id', id)
 
@@ -203,14 +214,15 @@ export async function deleteCheck(id: string): Promise<{ error: string | null }>
     return { error: error.message }
   }
 
-  logActivity('deleted', 'check', id, existing?.display_id, { check_type: existing?.check_type })
+  logActivity('deleted', 'check', id, existing?.display_id, { check_type: existing?.check_type }, existing?.base_id)
 
   return { error: null }
 }
 
 export async function uploadCheckPhoto(
   checkId: string,
-  file: File
+  file: File,
+  baseId?: string | null
 ): Promise<{ data: CheckPhotoRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -218,7 +230,6 @@ export async function uploadCheckPhoto(
   const ext = file.name.split('.').pop() || 'jpg'
   const storagePath = `check-photos/${checkId}/${Date.now()}.${ext}`
 
-  // Try uploading to Supabase Storage first
   let storageUrl = storagePath
   let usedStorage = false
   try {
@@ -236,7 +247,6 @@ export async function uploadCheckPhoto(
     console.warn('Storage not available, storing as data URL')
   }
 
-  // If storage failed, convert to base64 data URL as fallback
   if (!usedStorage) {
     try {
       const buffer = await file.arrayBuffer()
@@ -253,7 +263,6 @@ export async function uploadCheckPhoto(
     }
   }
 
-  // Get current user
   let uploaded_by: string | undefined
   try {
     const { data: { user } } = await supabase.auth.getUser()
@@ -270,6 +279,7 @@ export async function uploadCheckPhoto(
     mime_type: file.type || 'image/jpeg',
   }
   if (uploaded_by) photoRow.uploaded_by = uploaded_by
+  if (baseId) photoRow.base_id = baseId
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
@@ -283,7 +293,6 @@ export async function uploadCheckPhoto(
     return { data: null, error: error.message }
   }
 
-  // Increment photo_count on the check
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: chk } = await (supabase as any)
     .from('airfield_checks')

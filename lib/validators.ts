@@ -19,7 +19,7 @@ export type DiscrepancyFormData = z.infer<typeof discrepancySchema>
 // === Status Update Validation ===
 
 export const statusUpdateSchema = z.object({
-  new_status: z.enum(['open', 'assigned', 'in_progress', 'resolved', 'closed']),
+  new_status: z.enum(['open', 'completed', 'cancelled']),
   notes: z.string().optional(),
   assigned_shop: z.string().optional(),
   resolution_notes: z.string().optional(),

@@ -3,20 +3,28 @@ import { createClient } from './client'
 export interface NavaidStatus {
   id: string
   navaid_name: string
+  base_id: string | null
   status: 'green' | 'yellow' | 'red'
   notes: string | null
   updated_by: string | null
   updated_at: string
 }
 
-export async function fetchNavaidStatuses(): Promise<NavaidStatus[]> {
+export async function fetchNavaidStatuses(baseId?: string | null): Promise<NavaidStatus[]> {
   const supabase = createClient()
   if (!supabase) return []
 
-  const { data, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query = (supabase as any)
     .from('navaid_statuses')
     .select('*')
     .order('navaid_name')
+
+  if (baseId) {
+    query = query.eq('base_id', baseId)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error('Failed to fetch NAVAID statuses:', error.message)

@@ -239,6 +239,66 @@ export function generatePrimarySurfacePolygon(rwy: RunwayGeometry): [number, num
   ]
 }
 
+/** Generate clear zone rectangles (3,000 ft x 3,000 ft) at each runway end. */
+export function generateClearZonePolygons(rwy: RunwayGeometry): {
+  end1: [number, number][]
+  end2: [number, number][]
+} {
+  const halfWidth = 1500
+  const length = 3000
+  const perpL = normalizeBearing(rwy.bearingDeg - 90)
+  const perpR = normalizeBearing(rwy.bearingDeg + 90)
+  const revBearing = normalizeBearing(rwy.bearingDeg + 180)
+
+  function buildRect(end: LatLon, outwardBearing: number): [number, number][] {
+    const far = offsetPoint(end, outwardBearing, length)
+    const p1 = offsetPoint(end, perpL, halfWidth)
+    const p2 = offsetPoint(end, perpR, halfWidth)
+    const p3 = offsetPoint(far, perpR, halfWidth)
+    const p4 = offsetPoint(far, perpL, halfWidth)
+    return [
+      [p1.lon, p1.lat], [p2.lon, p2.lat],
+      [p3.lon, p3.lat], [p4.lon, p4.lat],
+      [p1.lon, p1.lat],
+    ]
+  }
+
+  return {
+    end1: buildRect(rwy.end1, revBearing),
+    end2: buildRect(rwy.end2, rwy.bearingDeg),
+  }
+}
+
+/** Generate graded area rectangles (1,000 ft x 1,000 ft wide) at each runway end. */
+export function generateGradedAreaPolygons(rwy: RunwayGeometry): {
+  end1: [number, number][]
+  end2: [number, number][]
+} {
+  const halfWidth = 500
+  const length = 1000
+  const perpL = normalizeBearing(rwy.bearingDeg - 90)
+  const perpR = normalizeBearing(rwy.bearingDeg + 90)
+  const revBearing = normalizeBearing(rwy.bearingDeg + 180)
+
+  function buildRect(end: LatLon, outwardBearing: number): [number, number][] {
+    const far = offsetPoint(end, outwardBearing, length)
+    const p1 = offsetPoint(end, perpL, halfWidth)
+    const p2 = offsetPoint(end, perpR, halfWidth)
+    const p3 = offsetPoint(far, perpR, halfWidth)
+    const p4 = offsetPoint(far, perpL, halfWidth)
+    return [
+      [p1.lon, p1.lat], [p2.lon, p2.lat],
+      [p3.lon, p3.lat], [p4.lon, p4.lat],
+      [p1.lon, p1.lat],
+    ]
+  }
+
+  return {
+    end1: buildRect(rwy.end1, revBearing),
+    end2: buildRect(rwy.end2, rwy.bearingDeg),
+  }
+}
+
 /** Generate one approach-departure trapezoid for a given runway end. */
 function generateApproachTrapezoid(
   rwy: RunwayGeometry,
@@ -390,6 +450,48 @@ export function generateTransitionalPolygons(rwy: RunwayGeometry): {
   return {
     left: buildSide(perpL),
     right: buildSide(perpR),
+  }
+}
+
+/** Generate APZ I and APZ II rectangles at each runway end.
+ *  APZ I: 3,000 ft wide, starts 3,000 ft from threshold (end of clear zone), extends 5,000 ft.
+ *  APZ II: 3,000 ft wide, starts 8,000 ft from threshold (end of APZ I), extends 7,000 ft.
+ *  Per DoD Instruction 4165.57, Table 1. */
+export function generateAPZPolygons(rwy: RunwayGeometry): {
+  apz_i_end1: [number, number][]
+  apz_i_end2: [number, number][]
+  apz_ii_end1: [number, number][]
+  apz_ii_end2: [number, number][]
+} {
+  const halfWidth = 1500
+  const perpL = normalizeBearing(rwy.bearingDeg - 90)
+  const perpR = normalizeBearing(rwy.bearingDeg + 90)
+  const revBearing = normalizeBearing(rwy.bearingDeg + 180)
+
+  function buildRect(
+    end: LatLon,
+    outwardBearing: number,
+    startOffset: number,
+    length: number,
+  ): [number, number][] {
+    const start = offsetPoint(end, outwardBearing, startOffset)
+    const far = offsetPoint(end, outwardBearing, startOffset + length)
+    const p1 = offsetPoint(start, perpL, halfWidth)
+    const p2 = offsetPoint(start, perpR, halfWidth)
+    const p3 = offsetPoint(far, perpR, halfWidth)
+    const p4 = offsetPoint(far, perpL, halfWidth)
+    return [
+      [p1.lon, p1.lat], [p2.lon, p2.lat],
+      [p3.lon, p3.lat], [p4.lon, p4.lat],
+      [p1.lon, p1.lat],
+    ]
+  }
+
+  return {
+    apz_i_end1: buildRect(rwy.end1, revBearing, 3000, 5000),
+    apz_i_end2: buildRect(rwy.end2, rwy.bearingDeg, 3000, 5000),
+    apz_ii_end1: buildRect(rwy.end1, revBearing, 8000, 7000),
+    apz_ii_end2: buildRect(rwy.end2, rwy.bearingDeg, 8000, 7000),
   }
 }
 

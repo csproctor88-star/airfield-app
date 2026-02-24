@@ -31,7 +31,7 @@ export default async function LibraryPage() {
     .eq('id', user.id)
     .single()
 
-  const role = (profile?.role ?? 'observer') as UserRole
+  const role = (profile?.role ?? 'read_only') as UserRole
   const roleConfig = USER_ROLES[role]
 
   // Only users with canManageUsers (sys_admin, airfield_manager) can access

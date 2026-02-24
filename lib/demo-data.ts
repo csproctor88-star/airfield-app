@@ -167,7 +167,7 @@ export const DEMO_INSPECTIONS = [
       { id: 'af-1', section: 'Section 1 — Obstacle Clearance Criteria', item: "Primary Surface — 1000' from runway centerline", response: 'pass' as const, notes: '', photo_id: null, generated_discrepancy_id: null },
       { id: 'af-2', section: 'Section 1 — Obstacle Clearance Criteria', item: 'Transitional Slope (7:1)', response: 'pass' as const, notes: '', photo_id: null, generated_discrepancy_id: null },
       { id: 'af-3', section: 'Section 1 — Obstacle Clearance Criteria', item: "Runway Clear Zones — 3000'L x 3000'W", response: 'pass' as const, notes: '', photo_id: null, generated_discrepancy_id: null },
-      { id: 'af-4', section: 'Section 1 — Obstacle Clearance Criteria', item: "Graded Area — 1000'L x 1000'W", response: 'pass' as const, notes: '', photo_id: null, generated_discrepancy_id: null },
+      { id: 'af-4', section: 'Section 1 — Obstacle Clearance Criteria', item: "Graded Portion of Clear Zone — 1000'L x 3000'W", response: 'pass' as const, notes: '', photo_id: null, generated_discrepancy_id: null },
       { id: 'af-5', section: 'Section 1 — Obstacle Clearance Criteria', item: 'Approach / Departure Surface (50:1)', response: 'pass' as const, notes: '', photo_id: null, generated_discrepancy_id: null },
       { id: 'af-6', section: 'Section 1 — Obstacle Clearance Criteria', item: "Taxiway — 200' from centerline", response: 'pass' as const, notes: '', photo_id: null, generated_discrepancy_id: null },
       { id: 'af-7', section: 'Section 1 — Obstacle Clearance Criteria', item: "Apron — 110' from boundary marking", response: 'pass' as const, notes: '', photo_id: null, generated_discrepancy_id: null },

@@ -22,8 +22,8 @@ export function PageHeader({ title, backHref, action }: PageHeaderProps) {
           style={{
             background: 'none',
             border: 'none',
-            color: '#22D3EE',
-            fontSize: 12,
+            color: 'var(--color-cyan)',
+            fontSize: 13,
             fontWeight: 600,
             cursor: 'pointer',
             padding: 0,

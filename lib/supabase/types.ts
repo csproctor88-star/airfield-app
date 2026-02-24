@@ -4,11 +4,94 @@
 export type Database = {
   public: {
     Tables: {
+      bases: {
+        Row: {
+          id: string
+          name: string
+          icao: string
+          unit: string | null
+          majcom: string | null
+          location: string | null
+          elevation_msl: number | null
+          timezone: string
+          ce_shops: string[]
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['bases']['Row'], 'id' | 'created_at' | 'updated_at' | 'is_active'>
+        Update: Partial<Database['public']['Tables']['bases']['Insert']>
+        Relationships: []
+      }
+      base_runways: {
+        Row: {
+          id: string
+          base_id: string
+          runway_id: string
+          length_ft: number
+          width_ft: number
+          surface: string
+          true_heading: number | null
+          end1_designator: string
+          end1_latitude: number | null
+          end1_longitude: number | null
+          end1_heading: number | null
+          end1_approach_lighting: string | null
+          end2_designator: string
+          end2_latitude: number | null
+          end2_longitude: number | null
+          end2_heading: number | null
+          end2_approach_lighting: string | null
+          runway_class: string
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['base_runways']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['base_runways']['Insert']>
+        Relationships: []
+      }
+      base_navaids: {
+        Row: {
+          id: string
+          base_id: string
+          navaid_name: string
+          sort_order: number
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['base_navaids']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['base_navaids']['Insert']>
+        Relationships: []
+      }
+      base_areas: {
+        Row: {
+          id: string
+          base_id: string
+          area_name: string
+          sort_order: number
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['base_areas']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['base_areas']['Insert']>
+        Relationships: []
+      }
+      base_members: {
+        Row: {
+          id: string
+          base_id: string
+          user_id: string
+          role: string
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['base_members']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['base_members']['Insert']>
+        Relationships: []
+      }
       profiles: {
         Row: {
           id: string
           email: string
           name: string
+          first_name: string | null
+          last_name: string | null
           rank: string | null
           role: UserRole
           organization: string | null
@@ -16,6 +99,7 @@ export type Database = {
           phone: string | null
           is_active: boolean
           last_seen_at: string | null
+          primary_base_id: string | null
           created_at: string
           updated_at: string
         }
@@ -27,6 +111,7 @@ export type Database = {
         Row: {
           id: string
           display_id: string
+          base_id: string | null
           type: string
           severity: Severity
           status: DiscrepancyStatus
@@ -58,6 +143,7 @@ export type Database = {
           id: string
           discrepancy_id: string | null
           check_id: string | null
+          base_id: string | null
           storage_path: string
           thumbnail_path: string | null
           file_name: string
@@ -77,6 +163,7 @@ export type Database = {
         Row: {
           id: string
           discrepancy_id: string
+          base_id: string | null
           old_status: string | null
           new_status: string | null
           notes: string | null
@@ -91,6 +178,7 @@ export type Database = {
         Row: {
           id: string
           display_id: string
+          base_id: string | null
           check_type: CheckType
           areas: string[]
           data: Record<string, unknown>
@@ -110,6 +198,7 @@ export type Database = {
         Row: {
           id: string
           check_id: string
+          base_id: string | null
           comment: string
           user_name: string
           created_at: string
@@ -122,6 +211,7 @@ export type Database = {
         Row: {
           id: string
           display_id: string
+          base_id: string | null
           inspection_type: InspectionType
           inspector_id: string
           inspector_name: string | null
@@ -141,7 +231,12 @@ export type Database = {
           temperature_f: number | null
           notes: string | null
           daily_group_id: string | null
+          completed_by_name: string | null
+          completed_by_id: string | null
           completed_at: string | null
+          filed_by_name: string | null
+          filed_by_id: string | null
+          filed_at: string | null
           created_at: string
           updated_at: string
         }
@@ -153,6 +248,7 @@ export type Database = {
         Row: {
           id: string
           notam_number: string
+          base_id: string | null
           source: 'faa' | 'local'
           status: NotamStatus
           notam_type: string | null
@@ -175,7 +271,8 @@ export type Database = {
         Row: {
           id: string
           display_id: string
-          runway_class: 'A' | 'B'
+          base_id: string | null
+          runway_class: 'B' | 'Army_B'
           object_height_agl: number
           object_distance_ft: number | null
           distance_from_centerline_ft: number | null
@@ -202,6 +299,7 @@ export type Database = {
         Row: {
           id: string
           user_id: string
+          base_id: string | null
           action: string
           entity_type: string
           entity_id: string
@@ -217,6 +315,7 @@ export type Database = {
         Row: {
           id: string
           navaid_name: string
+          base_id: string | null
           status: 'green' | 'yellow' | 'red'
           notes: string | null
           updated_by: string | null
@@ -277,12 +376,12 @@ export type Database = {
 // Convenience type aliases
 export type UserRole =
   | 'airfield_manager'
-  | 'am_ncoic'
-  | 'am_tech'
-  | 'ce_shop'
-  | 'wing_safety'
+  | 'namo'
+  | 'amops'
+  | 'ces'
+  | 'safety'
   | 'atc'
-  | 'observer'
+  | 'read_only'
   | 'sys_admin'
 
 export type Severity = 'critical' | 'high' | 'medium' | 'low'
@@ -304,6 +403,11 @@ export type InspectionItem = {
 }
 
 // Table row shorthand types
+export type Installation = Database['public']['Tables']['bases']['Row']
+export type InstallationRunway = Database['public']['Tables']['base_runways']['Row']
+export type InstallationNavaid = Database['public']['Tables']['base_navaids']['Row']
+export type InstallationArea = Database['public']['Tables']['base_areas']['Row']
+export type InstallationMember = Database['public']['Tables']['base_members']['Row']
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type Discrepancy = Database['public']['Tables']['discrepancies']['Row']
 export type Photo = Database['public']['Tables']['photos']['Row']

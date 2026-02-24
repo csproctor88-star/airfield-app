@@ -29,13 +29,13 @@ export default function UsersSecurityPage() {
             justifyContent: 'center',
           }}
         >
-          <Users size={28} color="#64748B" />
+          <Users size={28} color="var(--color-text-3)" />
         </div>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#F1F5F9', marginBottom: 4 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
             Coming Soon
           </div>
-          <div style={{ fontSize: 11, color: '#64748B', lineHeight: 1.5 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-3)', lineHeight: 1.5 }}>
             Users & Security will be available in a future update.
             This module will allow managing user accounts and security settings.
           </div>

@@ -74,8 +74,8 @@ export default function ObstructionHistoryPage() {
         style={{
           background: 'none',
           border: 'none',
-          color: '#22D3EE',
-          fontSize: 12,
+          color: 'var(--color-cyan)',
+          fontSize: 13,
           fontWeight: 600,
           cursor: 'pointer',
           padding: 0,
@@ -92,10 +92,10 @@ export default function ObstructionHistoryPage() {
         {!loading && (
           <span
             style={{
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: 700,
-              color: '#94A3B8',
-              background: 'rgba(56,189,248,0.1)',
+              color: 'var(--color-text-2)',
+              background: 'var(--color-border-mid)',
               padding: '2px 8px',
               borderRadius: 10,
             }}
@@ -121,7 +121,7 @@ export default function ObstructionHistoryPage() {
             height="14"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#64748B"
+            stroke="var(--color-text-3)"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -141,7 +141,7 @@ export default function ObstructionHistoryPage() {
                 transform: 'translateY(-50%)',
                 background: 'none',
                 border: 'none',
-                color: '#64748B',
+                color: 'var(--color-text-3)',
                 fontSize: 16,
                 cursor: 'pointer',
                 padding: '0 4px',
@@ -157,21 +157,21 @@ export default function ObstructionHistoryPage() {
 
       {loading ? (
         <div style={{ textAlign: 'center', paddingTop: 40 }}>
-          <div style={{ fontSize: 12, color: '#64748B' }}>Loading...</div>
+          <div style={{ fontSize: 13, color: 'var(--color-text-3)' }}>Loading...</div>
         </div>
       ) : evaluations.length === 0 ? (
         <div style={{ textAlign: 'center', paddingTop: 40 }}>
           <div style={{ fontSize: 24, marginBottom: 8 }}>🗺️</div>
-          <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>
+          <div style={{ fontSize: 13, color: 'var(--color-text-3)', marginBottom: 4 }}>
             No evaluations yet
           </div>
-          <div style={{ fontSize: 11, color: '#475569' }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-3)' }}>
             Saved obstruction evaluations will appear here.
           </div>
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', paddingTop: 40 }}>
-          <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>
+          <div style={{ fontSize: 13, color: 'var(--color-text-3)', marginBottom: 4 }}>
             No evaluations match &ldquo;{search.trim()}&rdquo;
           </div>
           <button
@@ -180,8 +180,8 @@ export default function ObstructionHistoryPage() {
             style={{
               background: 'none',
               border: 'none',
-              color: '#38BDF8',
-              fontSize: 11,
+              color: 'var(--color-accent)',
+              fontSize: 12,
               fontWeight: 600,
               cursor: 'pointer',
               fontFamily: 'inherit',
@@ -209,7 +209,7 @@ export default function ObstructionHistoryPage() {
                 marginBottom: 8,
                 borderColor: ev.has_violation
                   ? 'rgba(239,68,68,0.15)'
-                  : 'rgba(56,189,248,0.06)',
+                  : 'var(--color-border)',
                 fontFamily: 'inherit',
               }}
             >
@@ -218,15 +218,15 @@ export default function ObstructionHistoryPage() {
                 <span
                   style={{
                     fontFamily: 'monospace',
-                    fontSize: 10,
-                    color: '#64748B',
+                    fontSize: 11,
+                    color: 'var(--color-text-3)',
                   }}
                 >
                   {ev.display_id}
                 </span>
                 <span
                   style={{
-                    fontSize: 9,
+                    fontSize: 10,
                     fontWeight: 800,
                     padding: '1px 6px',
                     borderRadius: 4,
@@ -237,7 +237,7 @@ export default function ObstructionHistoryPage() {
                   {ev.has_violation ? 'VIOLATION' : 'CLEAR'}
                 </span>
                 <span style={{ flex: 1 }} />
-                <span style={{ fontSize: 10, color: '#475569' }}>
+                <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
                   {formatDistanceToNow(createdAt, { addSuffix: true })}
                 </span>
               </div>
@@ -246,9 +246,9 @@ export default function ObstructionHistoryPage() {
               {ev.notes && (
                 <div
                   style={{
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: 600,
-                    color: '#F1F5F9',
+                    color: 'var(--color-text-1)',
                     marginBottom: 4,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -260,12 +260,12 @@ export default function ObstructionHistoryPage() {
               )}
 
               {/* Stats row */}
-              <div style={{ display: 'flex', gap: 12, fontSize: 10, color: '#94A3B8' }}>
+              <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--color-text-2)' }}>
                 <span>
-                  <strong style={{ color: '#CBD5E1' }}>{ev.object_height_agl}</strong> ft AGL
+                  <strong style={{ color: 'var(--color-text-1)' }}>{ev.object_height_agl}</strong> ft AGL
                 </span>
                 <span>
-                  <strong style={{ color: '#CBD5E1' }}>
+                  <strong style={{ color: 'var(--color-text-1)' }}>
                     {ev.distance_from_centerline_ft?.toFixed(0) ?? '—'}
                   </strong>{' '}
                   ft from CL
@@ -276,7 +276,7 @@ export default function ObstructionHistoryPage() {
                   </span>
                 )}
                 {ev.controlling_surface && (
-                  <span style={{ color: '#64748B' }}>
+                  <span style={{ color: 'var(--color-text-3)' }}>
                     {ev.controlling_surface}
                   </span>
                 )}
@@ -289,7 +289,7 @@ export default function ObstructionHistoryPage() {
                     <span
                       key={i}
                       style={{
-                        fontSize: 9,
+                        fontSize: 10,
                         background: '#EF444414',
                         color: '#EF4444',
                         padding: '1px 6px',
@@ -314,7 +314,7 @@ export default function ObstructionHistoryPage() {
                         height: 48,
                         borderRadius: 6,
                         overflow: 'hidden',
-                        border: '1px solid rgba(56,189,248,0.15)',
+                        border: '1px solid var(--color-border-mid)',
                         flexShrink: 0,
                       }}
                     >
@@ -326,7 +326,7 @@ export default function ObstructionHistoryPage() {
                     </div>
                   ))}
                   {parsePhotoPaths(ev.photo_storage_path).length > 4 && (
-                    <span style={{ fontSize: 9, color: '#64748B' }}>
+                    <span style={{ fontSize: 10, color: 'var(--color-text-3)' }}>
                       +{parsePhotoPaths(ev.photo_storage_path).length - 4} more
                     </span>
                   )}
@@ -334,13 +334,13 @@ export default function ObstructionHistoryPage() {
               )}
 
               {/* Actions */}
-              <div style={{ display: 'flex', gap: 8, marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(56,189,248,0.06)' }}>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--color-border)' }}>
                 <span
                   role="button"
                   tabIndex={0}
                   onClick={(e) => { e.stopPropagation(); router.push(`/obstructions?edit=${ev.id}`) }}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); router.push(`/obstructions?edit=${ev.id}`) } }}
-                  style={{ fontSize: 10, fontWeight: 600, color: '#38BDF8', cursor: 'pointer' }}
+                  style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-accent)', cursor: 'pointer' }}
                 >
                   Edit
                 </span>
@@ -349,7 +349,7 @@ export default function ObstructionHistoryPage() {
                   tabIndex={0}
                   onClick={(e) => handleDelete(e, ev.id)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleDelete(e as unknown as React.MouseEvent, ev.id) }}
-                  style={{ fontSize: 10, fontWeight: 600, color: '#EF4444', cursor: 'pointer', opacity: deletingId === ev.id ? 0.5 : 1 }}
+                  style={{ fontSize: 11, fontWeight: 600, color: '#EF4444', cursor: 'pointer', opacity: deletingId === ev.id ? 0.5 : 1 }}
                 >
                   {deletingId === ev.id ? 'Deleting...' : 'Delete'}
                 </span>
@@ -365,7 +365,7 @@ export default function ObstructionHistoryPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.6)',
+            background: 'var(--color-overlay)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -376,8 +376,8 @@ export default function ObstructionHistoryPage() {
         >
           <div
             style={{
-              background: '#0F172A',
-              border: '1px solid rgba(56,189,248,0.15)',
+              background: 'var(--color-bg-surface-solid)',
+              border: '1px solid var(--color-border-mid)',
               borderRadius: 12,
               padding: 24,
               maxWidth: 320,
@@ -385,10 +385,10 @@ export default function ObstructionHistoryPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#F1F5F9', marginBottom: 8 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
               Delete this Evaluation?
             </div>
-            <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 20 }}>
+            <div style={{ fontSize: 13, color: 'var(--color-text-2)', marginBottom: 20 }}>
               This cannot be undone.
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -398,10 +398,10 @@ export default function ObstructionHistoryPage() {
                   flex: 1,
                   padding: '10px 16px',
                   borderRadius: 8,
-                  border: '1px solid rgba(56,189,248,0.15)',
+                  border: '1px solid var(--color-border-mid)',
                   background: 'transparent',
-                  color: '#94A3B8',
-                  fontSize: 12,
+                  color: 'var(--color-text-2)',
+                  fontSize: 13,
                   fontWeight: 600,
                   cursor: 'pointer',
                   fontFamily: 'inherit',
@@ -418,7 +418,7 @@ export default function ObstructionHistoryPage() {
                   border: 'none',
                   background: '#EF4444',
                   color: '#fff',
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: 600,
                   cursor: 'pointer',
                   fontFamily: 'inherit',

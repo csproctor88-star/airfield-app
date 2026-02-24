@@ -6,6 +6,7 @@ import { DiscrepancyCard } from '@/components/discrepancies/discrepancy-card'
 import { fetchDiscrepancies, type DiscrepancyRow } from '@/lib/supabase/discrepancies'
 import { DEMO_DISCREPANCIES } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
+import { useInstallation } from '@/lib/installation-context'
 
 const FILTERS = ['open', 'completed', 'cancelled', 'all'] as const
 const FILTER_LABELS: Record<string, string> = {
@@ -16,6 +17,7 @@ const FILTER_LABELS: Record<string, string> = {
 }
 
 export default function DiscrepanciesPage() {
+  const { installationId } = useInstallation()
   const [filter, setFilter] = useState<string>('open')
   const [over30Only, setOver30Only] = useState(false)
   const [search, setSearch] = useState('')
@@ -32,7 +34,7 @@ export default function DiscrepanciesPage() {
         return
       }
 
-      const data = await fetchDiscrepancies()
+      const data = await fetchDiscrepancies(installationId)
       if (data.length === 0) {
         // Could be empty table or fetch error — check if Supabase is reachable
         setDiscrepancies([])
@@ -42,7 +44,7 @@ export default function DiscrepanciesPage() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [installationId])
 
   // Compute days_open for live data
   const daysOpen = (createdAt: string) => {
@@ -79,12 +81,12 @@ export default function DiscrepanciesPage() {
         <Link
           href="/discrepancies/new"
           style={{
-            background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
+            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
             border: 'none',
             borderRadius: 8,
             padding: '7px 12px',
             color: '#fff',
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 700,
             cursor: 'pointer',
             textDecoration: 'none',
@@ -105,15 +107,15 @@ export default function DiscrepanciesPage() {
             key={k.label}
             onClick={k.onClick}
             style={{
-              background: 'rgba(10,16,28,0.92)',
-              border: `1px solid ${k.active ? k.color + '44' : 'rgba(56,189,248,0.06)'}`,
+              background: 'var(--color-bg-surface)',
+              border: `1px solid ${k.active ? k.color + '44' : 'var(--color-border)'}`,
               borderRadius: 10,
               padding: '10px 6px',
               textAlign: 'center',
               cursor: 'pointer',
             }}
           >
-            <div style={{ fontSize: 9, color: '#64748B', letterSpacing: '0.08em', fontWeight: 600 }}>
+            <div style={{ fontSize: 10, color: 'var(--color-text-3)', letterSpacing: '0.08em', fontWeight: 600 }}>
               {k.label}
             </div>
             <div style={{ fontSize: 22, fontWeight: 800, color: k.color }}>{k.value}</div>
@@ -128,11 +130,11 @@ export default function DiscrepanciesPage() {
             onClick={() => { setFilter(v); setOver30Only(false) }}
             style={{
               background: filter === v ? 'rgba(34,211,238,0.12)' : 'transparent',
-              border: `1px solid ${filter === v ? 'rgba(34,211,238,0.3)' : 'rgba(56,189,248,0.06)'}`,
+              border: `1px solid ${filter === v ? 'rgba(34,211,238,0.3)' : 'var(--color-border)'}`,
               borderRadius: 5,
               padding: '4px 8px',
-              color: filter === v ? '#22D3EE' : '#64748B',
-              fontSize: 9,
+              color: filter === v ? 'var(--color-cyan)' : 'var(--color-text-3)',
+              fontSize: 10,
               fontWeight: 700,
               cursor: 'pointer',
               fontFamily: 'inherit',
@@ -153,11 +155,11 @@ export default function DiscrepanciesPage() {
           width: '100%',
           padding: '8px 12px',
           marginBottom: 12,
-          background: 'rgba(15,23,42,0.6)',
-          border: '1px solid #1E293B',
+          background: 'var(--color-search-bg)',
+          border: '1px solid var(--color-search-border)',
           borderRadius: 8,
-          color: '#E2E8F0',
-          fontSize: 12,
+          color: 'var(--color-text-1)',
+          fontSize: 13,
           fontFamily: 'inherit',
           outline: 'none',
           boxSizing: 'border-box',
@@ -165,7 +167,7 @@ export default function DiscrepanciesPage() {
       />
 
       {loading ? (
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B', fontSize: 12 }}>
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 13 }}>
           Loading...
         </div>
       ) : usingDemo ? (
@@ -207,7 +209,7 @@ export default function DiscrepanciesPage() {
       )}
 
       {!loading && (usingDemo ? demoFiltered : liveFiltered).length === 0 && (
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B', fontSize: 12 }}>
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 13 }}>
           No discrepancies match this filter
         </div>
       )}

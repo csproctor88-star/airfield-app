@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { fetchCurrentWeather, type WeatherResult } from '@/lib/weather'
 import { fetchNavaidStatuses, updateNavaidStatus, type NavaidStatus } from '@/lib/supabase/navaids'
+import { useDashboard } from '@/lib/dashboard-context'
+import { useInstallation } from '@/lib/installation-context'
 
 // --- Weather emoji mapping ---
 function weatherEmoji(conditions: string): string {
@@ -24,26 +26,34 @@ function weatherEmoji(conditions: string): string {
 
 // --- User presence helpers ---
 function presenceLabel(lastSeen: string | null): { label: string; color: string } {
-  if (!lastSeen) return { label: 'Offline', color: '#64748B' }
+  if (!lastSeen) return { label: 'Offline', color: 'var(--color-text-3)' }
   const diff = Date.now() - new Date(lastSeen).getTime()
-  if (diff < 15 * 60 * 1000) return { label: 'Online', color: '#34D399' }
-  if (diff < 60 * 60 * 1000) return { label: 'Away', color: '#FBBF24' }
-  return { label: 'Inactive', color: '#64748B' }
+  if (diff < 15 * 60 * 1000) return { label: 'Online', color: 'var(--color-success)' }
+  if (diff < 60 * 60 * 1000) return { label: 'Away', color: 'var(--color-warning)' }
+  return { label: 'Inactive', color: 'var(--color-text-3)' }
 }
 
 // --- Quick Actions (KPI badges) ---
 const QUICK_ACTIONS = [
-  { label: 'Begin/Continue Airfield Inspection', icon: '📋', color: '#34D399', href: '/inspections?action=begin' },
-  { label: 'Begin Airfield Check', icon: '🛡️', color: '#FBBF24', href: '/checks' },
-  { label: 'New Discrepancy', icon: '🚨', color: '#EF4444', href: '/discrepancies/new' },
+  { label: 'Begin/Continue Airfield Inspection', icon: '📋', color: 'var(--color-success)', href: '/inspections?action=begin' },
+  { label: 'Begin Airfield Check', icon: '🛡️', color: 'var(--color-warning)', href: '/checks' },
+  { label: 'New Discrepancy', icon: '🚨', color: 'var(--color-danger)', href: '/discrepancies/new' },
 ]
 
-// --- NAVAID color map ---
+// --- NAVAID color map (theme-aware for text, raw hex for alpha interpolation) ---
 const STATUS_COLORS: Record<string, string> = {
+  green: 'var(--color-success)',
+  yellow: 'var(--color-warning)',
+  red: 'var(--color-danger)',
+}
+const STATUS_HEX: Record<string, string> = {
   green: '#34D399',
   yellow: '#FBBF24',
   red: '#EF4444',
 }
+
+// --- Empty NAVAID default (NAVAIDs are fetched per-base from DB) ---
+const DEFAULT_NAVAIDS: NavaidStatus[] = []
 
 // --- Activity action formatting ---
 function formatAction(action: string, entityType: string, displayId?: string): string {
@@ -81,9 +91,9 @@ type Advisory = {
 }
 
 const ADVISORY_COLORS: Record<string, { bg: string; border: string; text: string }> = {
-  INFO: { bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.35)', text: '#38BDF8' },
-  CAUTION: { bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.35)', text: '#FBBF24' },
-  WARNING: { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)', text: '#EF4444' },
+  INFO: { bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.35)', text: 'var(--color-accent)' },
+  CAUTION: { bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.35)', text: 'var(--color-warning)' },
+  WARNING: { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)', text: 'var(--color-danger)' },
 }
 
 type CurrentStatusData = {
@@ -93,11 +103,11 @@ type CurrentStatusData = {
   inspectionCompletion: string | null
   rscCondition: string | null
   rscTime: string | null
-  activeRunway: '01' | '19'
-  runwayStatus: 'open' | 'suspended' | 'closed'
 }
 
 export default function HomePage() {
+  const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus } = useDashboard()
+  const { installationId, currentInstallation, runways } = useInstallation()
   const [time, setTime] = useState('')
   const [weather, setWeather] = useState<WeatherResult | null>(null)
   const [weatherLoaded, setWeatherLoaded] = useState(false)
@@ -107,9 +117,8 @@ export default function HomePage() {
   const [activity, setActivity] = useState<ActivityEntry[]>([])
   const [activityExpanded, setActivityExpanded] = useState(false)
   const [currentStatus, setCurrentStatus] = useState<CurrentStatusData>({
-    bwc: null, lastCheckType: null, lastCheckTime: null, inspectionCompletion: null, rscCondition: null, rscTime: null, activeRunway: '01', runwayStatus: 'open',
+    bwc: null, lastCheckType: null, lastCheckTime: null, inspectionCompletion: null, rscCondition: null, rscTime: null,
   })
-  const [advisory, setAdvisory] = useState<Advisory | null>(null)
   const [advisoryDialogOpen, setAdvisoryDialogOpen] = useState(false)
   const [advisoryDraftType, setAdvisoryDraftType] = useState<'INFO' | 'CAUTION' | 'WARNING'>('INFO')
   const [advisoryDraftText, setAdvisoryDraftText] = useState('')
@@ -157,7 +166,10 @@ export default function HomePage() {
   // --- Load weather ---
   useEffect(() => {
     async function loadWeather() {
-      const result = await fetchCurrentWeather()
+      const rwy = runways[0]
+      const baseLat = rwy ? ((rwy.end1_latitude ?? 0) + (rwy.end2_latitude ?? 0)) / 2 : undefined
+      const baseLon = rwy ? ((rwy.end1_longitude ?? 0) + (rwy.end2_longitude ?? 0)) / 2 : undefined
+      const result = await fetchCurrentWeather(baseLat, baseLon)
       setWeather(result)
       setWeatherLoaded(true)
     }
@@ -167,14 +179,19 @@ export default function HomePage() {
   // --- Load NAVAIDs ---
   const loadNavaids = useCallback(async () => {
     const supabase = createClient()
-    if (!supabase) return
+    if (!supabase) {
+      // No Supabase — use defaults so NAVAIDs still render
+      setNavaids(DEFAULT_NAVAIDS)
+      return
+    }
 
-    const data = await fetchNavaidStatuses()
-    setNavaids(data)
+    const data = await fetchNavaidStatuses(installationId)
+    const resolved = data.length > 0 ? data : DEFAULT_NAVAIDS
+    setNavaids(resolved)
     const notes: Record<string, string> = {}
-    data.forEach((n) => { notes[n.id] = n.notes || '' })
+    resolved.forEach((n) => { notes[n.id] = n.notes || '' })
     setNavaidNotes(notes)
-  }, [])
+  }, [installationId])
 
   useEffect(() => { loadNavaids() }, [loadNavaids])
 
@@ -186,38 +203,46 @@ export default function HomePage() {
 
       // Latest inspection with BWC
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: insp } = await (supabase as any)
+      let inspQuery = (supabase as any)
         .from('inspections')
         .select('bwc_value, completed_at')
         .not('bwc_value', 'is', null)
         .order('completed_at', { ascending: false })
         .limit(1)
+      if (installationId) inspQuery = inspQuery.eq('base_id', installationId)
+      const { data: insp } = await inspQuery
 
       // Latest completed inspection
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: latestInsp } = await (supabase as any)
+      let latestInspQuery = (supabase as any)
         .from('inspections')
         .select('completed_at')
         .eq('status', 'completed')
         .order('completed_at', { ascending: false })
         .limit(1)
+      if (installationId) latestInspQuery = latestInspQuery.eq('base_id', installationId)
+      const { data: latestInsp } = await latestInspQuery
 
       // Latest check of any type
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: lastCheck } = await (supabase as any)
+      let lastCheckQuery = (supabase as any)
         .from('airfield_checks')
         .select('check_type, completed_at')
         .order('completed_at', { ascending: false })
         .limit(1)
+      if (installationId) lastCheckQuery = lastCheckQuery.eq('base_id', installationId)
+      const { data: lastCheck } = await lastCheckQuery
 
       // Latest RSC check
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: rscCheck } = await (supabase as any)
+      let rscQuery = (supabase as any)
         .from('airfield_checks')
         .select('data, completed_at')
         .eq('check_type', 'rsc')
         .order('completed_at', { ascending: false })
         .limit(1)
+      if (installationId) rscQuery = rscQuery.eq('base_id', installationId)
+      const { data: rscCheck } = await rscQuery
 
       const bwc = insp?.[0]?.bwc_value || null
       const checkType = lastCheck?.[0]?.check_type?.toUpperCase() || null
@@ -244,7 +269,7 @@ export default function HomePage() {
       }))
     }
     loadCurrentStatus()
-  }, [])
+  }, [installationId])
 
   // --- Load Activity Feed ---
   useEffect(() => {
@@ -253,20 +278,24 @@ export default function HomePage() {
       if (!supabase) return
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      let activityQuery = (supabase as any)
         .from('activity_log')
         .select('id, action, entity_type, entity_display_id, created_at, user_id, profiles:user_id(name, rank)')
         .order('created_at', { ascending: false })
         .limit(20)
+      if (installationId) activityQuery = activityQuery.eq('base_id', installationId)
+      const { data, error } = await activityQuery
 
       if (error) {
         // Try without join
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: fallback } = await (supabase as any)
+        let fallbackQuery = (supabase as any)
           .from('activity_log')
           .select('*')
           .order('created_at', { ascending: false })
           .limit(20)
+        if (installationId) fallbackQuery = fallbackQuery.eq('base_id', installationId)
+        const { data: fallback } = await fallbackQuery
 
         if (fallback) {
           setActivity(fallback.map((r: Record<string, unknown>) => ({
@@ -287,7 +316,7 @@ export default function HomePage() {
       }
     }
     loadActivity()
-  }, [])
+  }, [installationId])
 
   // --- NAVAID status toggle handler ---
   async function handleNavaidToggle(navaid: NavaidStatus, newStatus: 'green' | 'yellow' | 'red') {
@@ -310,8 +339,8 @@ export default function HomePage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <span style={{ fontSize: 22, fontWeight: 800 }}>{time || '--:--'}</span>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#F1F5F9' }}>{userDisplay.name}</div>
-          <div style={{ fontSize: 9, color: presence.color, fontWeight: 600 }}>{presence.label}</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)' }}>{userDisplay.name}</div>
+          <div style={{ fontSize: 10, color: presence.color, fontWeight: 600 }}>{presence.label}</div>
         </div>
       </div>
 
@@ -324,7 +353,7 @@ export default function HomePage() {
           justifyContent: 'space-between',
           alignItems: 'center',
           background: 'rgba(56,189,248,0.03)',
-          border: '1px solid rgba(56,189,248,0.1)',
+          border: '1px solid var(--color-border-mid)',
           marginBottom: 16,
         }}
       >
@@ -334,10 +363,10 @@ export default function HomePage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 18 }}>{weatherEmoji(weather.conditions)}</span>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>
                     {weather.temperature_f}&deg;F &bull; {weather.conditions}
                   </div>
-                  <div style={{ fontSize: 10, color: '#64748B' }}>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
                     Wind {weather.wind_speed_mph} mph &bull; Vis {weather.visibility_miles} SM
                   </div>
                 </div>
@@ -346,11 +375,11 @@ export default function HomePage() {
                 onClick={() => setAdvisoryDialogOpen(true)}
                 style={{ textAlign: 'right', cursor: 'pointer', minWidth: 60 }}
               >
-                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Advisory</div>
+                <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Advisory</div>
                 {advisory ? (
-                  <div style={{ fontSize: 11, fontWeight: 700, color: ADVISORY_COLORS[advisory.type].text }}>{advisory.type}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: ADVISORY_COLORS[advisory.type].text }}>{advisory.type}</div>
                 ) : (
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#475569' }}>None</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-3)' }}>None</div>
                 )}
               </div>
             </>
@@ -359,25 +388,25 @@ export default function HomePage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 18 }}>❓</span>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#64748B' }}>UNKWN</div>
-                  <div style={{ fontSize: 10, color: '#475569' }}>Weather data unavailable</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-3)' }}>UNKWN</div>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>Weather data unavailable</div>
                 </div>
               </div>
               <div
                 onClick={() => setAdvisoryDialogOpen(true)}
                 style={{ textAlign: 'right', cursor: 'pointer', minWidth: 60 }}
               >
-                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Advisory</div>
+                <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Advisory</div>
                 {advisory ? (
-                  <div style={{ fontSize: 11, fontWeight: 700, color: ADVISORY_COLORS[advisory.type].text }}>{advisory.type}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: ADVISORY_COLORS[advisory.type].text }}>{advisory.type}</div>
                 ) : (
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#475569' }}>None</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-3)' }}>None</div>
                 )}
               </div>
             </>
           )
         ) : (
-          <div style={{ fontSize: 11, color: '#64748B' }}>Loading weather...</div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-3)' }}>Loading weather...</div>
         )}
       </div>
 
@@ -394,8 +423,8 @@ export default function HomePage() {
             cursor: 'pointer',
           }}
         >
-          <div style={{ fontSize: 11, fontWeight: 800, color: ADVISORY_COLORS[advisory.type].text, marginBottom: 2 }}>{advisory.type}</div>
-          <div style={{ fontSize: 12, color: '#E2E8F0', lineHeight: 1.4 }}>{advisory.text}</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: ADVISORY_COLORS[advisory.type].text, marginBottom: 2 }}>{advisory.type}</div>
+          <div style={{ fontSize: 13, color: 'var(--color-text-1)', lineHeight: 1.4 }}>{advisory.text}</div>
         </div>
       )}
 
@@ -404,30 +433,30 @@ export default function HomePage() {
         <div
           onClick={() => setAdvisoryDialogOpen(false)}
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200,
+            position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: '#0F172A', borderRadius: 14, padding: 20, width: '100%', maxWidth: 340,
-              border: '1px solid rgba(56,189,248,0.12)',
+              background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 20, width: '100%', maxWidth: 340,
+              border: '1px solid var(--color-border-mid)',
             }}
           >
-            <div style={{ fontSize: 15, fontWeight: 800, color: '#F1F5F9', marginBottom: 14 }}>Set Advisory</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>Set Advisory</div>
             <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
               {(['INFO', 'CAUTION', 'WARNING'] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setAdvisoryDraftType(t)}
                   style={{
-                    flex: 1, padding: '8px 4px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                    flex: 1, padding: '8px 4px', borderRadius: 8, fontSize: 12, fontWeight: 700,
                     cursor: 'pointer', textAlign: 'center',
                     border: advisoryDraftType === t
                       ? `2px solid ${ADVISORY_COLORS[t].text}`
-                      : '1px solid rgba(56,189,248,0.12)',
-                    background: advisoryDraftType === t ? ADVISORY_COLORS[t].bg : 'rgba(4,7,12,0.5)',
+                      : '1px solid var(--color-border-mid)',
+                    background: advisoryDraftType === t ? ADVISORY_COLORS[t].bg : 'var(--color-bg-inset)',
                     color: ADVISORY_COLORS[t].text,
                   }}
                 >{t}</button>
@@ -440,8 +469,8 @@ export default function HomePage() {
               onChange={(e) => setAdvisoryDraftText(e.target.value)}
               style={{
                 width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8,
-                background: 'rgba(4,7,12,0.7)', border: '1px solid rgba(56,189,248,0.12)',
-                color: '#E2E8F0', fontSize: 13, outline: 'none', marginBottom: 14,
+                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                color: 'var(--color-text-1)', fontSize: 14, outline: 'none', marginBottom: 14,
                 fontFamily: 'inherit',
               }}
             />
@@ -454,9 +483,9 @@ export default function HomePage() {
                     setAdvisoryDialogOpen(false)
                   }}
                   style={{
-                    flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                    flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 700,
                     cursor: 'pointer', border: '1px solid rgba(239,68,68,0.3)',
-                    background: 'rgba(239,68,68,0.1)', color: '#EF4444',
+                    background: 'rgba(239,68,68,0.1)', color: 'var(--color-danger)',
                   }}
                 >Clear</button>
               )}
@@ -468,17 +497,17 @@ export default function HomePage() {
                   setAdvisoryDialogOpen(false)
                 }}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 700,
                   cursor: 'pointer', border: '1px solid rgba(52,211,153,0.3)',
-                  background: 'rgba(52,211,153,0.15)', color: '#34D399',
+                  background: 'rgba(52,211,153,0.15)', color: 'var(--color-success)',
                 }}
               >Save</button>
               <button
                 onClick={() => setAdvisoryDialogOpen(false)}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 12, fontWeight: 700,
-                  cursor: 'pointer', border: '1px solid rgba(56,189,248,0.12)',
-                  background: 'rgba(4,7,12,0.5)', color: '#64748B',
+                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                  background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
                 }}
               >Cancel</button>
             </div>
@@ -488,63 +517,71 @@ export default function HomePage() {
 
       {/* ===== Current Status ===== */}
       <span className="section-label">Current Status</span>
-      <div className="card" style={{
-        marginBottom: 8, padding: '10px 12px',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-        background: currentStatus.runwayStatus === 'suspended'
-          ? 'rgba(251,191,36,0.08)'
-          : currentStatus.runwayStatus === 'closed'
-            ? 'rgba(239,68,68,0.08)'
-            : undefined,
-        border: currentStatus.runwayStatus === 'suspended'
-          ? '1px solid rgba(251,191,36,0.2)'
-          : currentStatus.runwayStatus === 'closed'
-            ? '1px solid rgba(239,68,68,0.2)'
-            : undefined,
-      }}>
-        <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600 }}>Active RWY</div>
-        <button
-          onClick={() => setCurrentStatus((prev) => ({ ...prev, activeRunway: prev.activeRunway === '01' ? '19' : '01' }))}
-          style={{
-            padding: '4px 20px', borderRadius: 6, fontSize: 15, fontWeight: 800, cursor: 'pointer',
-            border: '2px solid #475569',
-            background: 'rgba(71,85,105,0.15)',
-            color: '#E2E8F0',
-          }}
-        >{currentStatus.activeRunway}</button>
-        <select
-          value={currentStatus.runwayStatus}
-          onChange={(e) => setCurrentStatus((prev) => ({ ...prev, runwayStatus: e.target.value as 'open' | 'suspended' | 'closed' }))}
-          style={{
-            padding: '2px 8px', borderRadius: 5, fontSize: 10, fontWeight: 700, cursor: 'pointer', textAlign: 'center',
-            border: currentStatus.runwayStatus === 'suspended'
-              ? '1px solid rgba(251,191,36,0.4)'
-              : currentStatus.runwayStatus === 'closed'
-                ? '1px solid rgba(239,68,68,0.4)'
-                : '1px solid rgba(52,211,153,0.3)',
-            background: 'rgba(4,7,12,0.7)',
-            color: currentStatus.runwayStatus === 'suspended' ? '#FBBF24' : currentStatus.runwayStatus === 'closed' ? '#EF4444' : '#34D399',
-            fontFamily: 'inherit', outline: 'none',
-          }}
-        >
-          <option value="open">Open</option>
-          <option value="suspended">Suspended</option>
-          <option value="closed">Closed</option>
-        </select>
-      </div>
-      <div className="card" style={{ marginBottom: 12, padding: '12px 10px' }}>
+      {/* Active RWY card — color reflects runway status */}
+      {(() => {
+        const statusColor = runwayStatus === 'closed' ? 'var(--color-danger)'
+          : runwayStatus === 'suspended' ? 'var(--color-warning)' : 'var(--color-success)'
+        const statusBg = runwayStatus === 'closed' ? 'rgba(239,68,68,0.08)'
+          : runwayStatus === 'suspended' ? 'rgba(251,191,36,0.08)' : 'rgba(52,211,153,0.08)'
+        const statusBorder = runwayStatus === 'closed' ? 'rgba(239,68,68,0.2)'
+          : runwayStatus === 'suspended' ? 'rgba(251,191,36,0.2)' : 'rgba(52,211,153,0.2)'
+        const statusBtnBorder = runwayStatus === 'closed' ? 'rgba(239,68,68,0.25)'
+          : runwayStatus === 'suspended' ? 'rgba(251,191,36,0.25)' : 'rgba(52,211,153,0.25)'
+        const statusBtnBg = runwayStatus === 'closed' ? 'rgba(239,68,68,0.1)'
+          : runwayStatus === 'suspended' ? 'rgba(251,191,36,0.1)' : 'rgba(52,211,153,0.1)'
+        const statusSelectBorder = runwayStatus === 'closed' ? 'rgba(239,68,68,0.4)'
+          : runwayStatus === 'suspended' ? 'rgba(251,191,36,0.4)' : 'rgba(52,211,153,0.4)'
+        return (
+          <div className="card" style={{
+            marginBottom: 8, padding: '10px 12px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+            background: statusBg, border: `1px solid ${statusBorder}`,
+          }}>
+            <div style={{ fontSize: 14, color: 'var(--color-text-3)', fontWeight: 600 }}>Active RWY</div>
+            <button
+              onClick={() => {
+                const designators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
+                if (designators.length === 0) return
+                const idx = designators.indexOf(activeRunway)
+                setActiveRunway(designators[(idx + 1) % designators.length])
+              }}
+              style={{
+                padding: '6px 28px', borderRadius: 6, fontSize: 20, fontWeight: 800,
+                cursor: 'pointer', color: statusColor,
+                border: `2px solid ${statusBtnBorder}`,
+                background: statusBtnBg,
+              }}
+            >{activeRunway}</button>
+            <select
+              value={runwayStatus}
+              onChange={(e) => setRunwayStatus(e.target.value as 'open' | 'suspended' | 'closed')}
+              style={{
+                padding: '3px 10px', borderRadius: 5, fontSize: 12, fontWeight: 700,
+                cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', outline: 'none',
+                color: statusColor, background: 'var(--color-bg-inset)',
+                border: `1px solid ${statusSelectBorder}`,
+              }}
+            >
+              <option value="open">Open</option>
+              <option value="suspended">Suspended</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+        )
+      })()}
+      <div className="card" style={{ marginBottom: 12, padding: '14px 12px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <div style={{ padding: 12, background: 'rgba(4,7,12,0.5)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600, marginBottom: 6 }}>RSC</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#38BDF8' }}>
+          <div style={{ padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ fontSize: 14, color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6 }}>RSC</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-accent)' }}>
               {currentStatus.rscCondition
                 ? `${currentStatus.rscCondition}${currentStatus.rscTime ? ` @ ${currentStatus.rscTime}` : ''}`
                 : 'No Data'}
             </div>
           </div>
-          <div style={{ padding: 12, background: 'rgba(4,7,12,0.5)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600, marginBottom: 6 }}>BWC</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: currentStatus.bwc === 'SEV' || currentStatus.bwc === 'PROHIB' ? '#EF4444' : currentStatus.bwc === 'MOD' ? '#FBBF24' : '#34D399' }}>
+          <div style={{ padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ fontSize: 14, color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6 }}>BWC</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: currentStatus.bwc === 'SEV' || currentStatus.bwc === 'PROHIB' ? 'var(--color-danger)' : currentStatus.bwc === 'MOD' ? 'var(--color-warning)' : 'var(--color-success)' }}>
               {currentStatus.bwc || 'No Data'}
             </div>
           </div>
@@ -555,24 +592,34 @@ export default function HomePage() {
       <span className="section-label">NAVAID Status</span>
       {navaids.length === 0 ? (
         <div className="card" style={{ marginBottom: 16, padding: 12 }}>
-          <div style={{ fontSize: 11, color: '#64748B', textAlign: 'center' }}>
-            Connect to Supabase to manage NAVAID statuses
+          <div style={{ fontSize: 12, color: 'var(--color-text-3)', textAlign: 'center' }}>
+            Loading NAVAID statuses...
           </div>
         </div>
       ) : (() => {
-        const rwy01 = navaids
-          .filter((n) => n.navaid_name.startsWith('01'))
-          .sort((a, b) => (a.navaid_name.includes('ILS') ? -1 : b.navaid_name.includes('ILS') ? 1 : 0))
-        const rwy19 = navaids
-          .filter((n) => n.navaid_name.startsWith('19') && !n.navaid_name.includes('Localizer'))
-          .sort((a, b) => (a.navaid_name.includes('ILS') ? -1 : b.navaid_name.includes('ILS') ? 1 : 0))
+        const allEndDesignators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
+        const endGroups = allEndDesignators.map(des => ({
+          designator: des,
+          items: navaids
+            .filter(n => n.navaid_name === des || n.navaid_name.startsWith(des + ' '))
+            .sort((a, b) => (a.navaid_name.includes('ILS') ? -1 : b.navaid_name.includes('ILS') ? 1 : 0)),
+        }))
+        const otherNavaids = navaids
+          .filter(n => !allEndDesignators.some(des => n.navaid_name === des || n.navaid_name.startsWith(des + ' ')))
+          .sort((a, b) => a.navaid_name.localeCompare(b.navaid_name))
+        const getNavaidDisplayName = (name: string) => {
+          for (const des of allEndDesignators) {
+            if (name.startsWith(des + ' ')) return name.slice(des.length).trim()
+          }
+          return name
+        }
         const NAVAID_CYCLE: ('green' | 'yellow' | 'red')[] = ['green', 'yellow', 'red']
         const NAVAID_LABELS: Record<string, string> = { green: 'G', yellow: 'Y', red: 'R' }
         const renderNavaidItem = (n: NavaidStatus) => (
           <div key={n.id} style={{ marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#E2E8F0' }}>
-                {n.navaid_name.replace(/^(01|19)\s*/, '')}
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-1)' }}>
+                {getNavaidDisplayName(n.navaid_name)}
               </span>
               <button
                 onClick={() => {
@@ -583,67 +630,84 @@ export default function HomePage() {
                 style={{
                   width: 36, height: 28, borderRadius: 6,
                   border: `2px solid ${STATUS_COLORS[n.status]}`,
-                  background: `${STATUS_COLORS[n.status]}20`,
-                  cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                  background: `${STATUS_HEX[n.status]}20`,
+                  cursor: 'pointer', fontSize: 12, fontWeight: 700,
                   color: STATUS_COLORS[n.status], textTransform: 'uppercase', padding: 0,
                 }}
               >
                 {NAVAID_LABELS[n.status] || 'G'}
               </button>
             </div>
-            {(n.status === 'yellow' || n.status === 'red') && (
-              <textarea
-                placeholder="Add note..."
-                value={navaidNotes[n.id] || ''}
-                onChange={(e) => setNavaidNotes((prev) => ({ ...prev, [n.id]: e.target.value }))}
-                onBlur={() => handleNavaidNotesSave(n)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) handleNavaidNotesSave(n) }}
-                rows={1}
-                style={{
-                  width: '100%', boxSizing: 'border-box',
-                  background: 'rgba(4,7,12,0.7)',
-                  border: `1px solid ${STATUS_COLORS[n.status]}40`,
-                  borderRadius: 6, padding: '6px 10px', fontSize: 13,
-                  color: '#E2E8F0', outline: 'none',
-                  resize: 'none', overflow: 'hidden',
-                  fontFamily: 'inherit',
-                  fieldSizing: 'content' as unknown as undefined,
-                  minHeight: 32,
-                }}
-                ref={(el) => {
-                  if (el) {
-                    el.style.height = 'auto'
-                    el.style.height = el.scrollHeight + 'px'
-                  }
-                }}
-                onInput={(e) => {
-                  const target = e.target as HTMLTextAreaElement
-                  target.style.height = 'auto'
-                  target.style.height = target.scrollHeight + 'px'
-                }}
-              />
-            )}
           </div>
         )
+        const allFlagged = navaids.filter(n => n.status === 'yellow' || n.status === 'red')
         return (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-            <div className="card" style={{ padding: '10px 14px 4px' }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: '#FBBF24', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 01</div>
-              {rwy01.map(renderNavaidItem)}
-            </div>
-            <div className="card" style={{ padding: '10px 14px 4px' }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: '#FBBF24', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY 19</div>
-              {rwy19.map(renderNavaidItem)}
-            </div>
+          <>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: allFlagged.length > 0 ? 8 : 16 }}>
+            {endGroups.map(group => (
+              <div key={group.designator} className="card" style={{ padding: '10px 14px 4px' }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY {group.designator}</div>
+                {group.items.map(renderNavaidItem)}
+              </div>
+            ))}
+            {otherNavaids.length > 0 && (
+              <div className="card" style={{ padding: '10px 14px 4px' }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>OTHER</div>
+                {otherNavaids.map(renderNavaidItem)}
+              </div>
+            )}
           </div>
+          {allFlagged.length > 0 && (
+            <div className="card" style={{ padding: '10px 14px', marginBottom: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-warning)', marginBottom: 6, letterSpacing: '0.04em' }}>NAVAID NOTES</div>
+              {allFlagged.map(n => (
+                <div key={n.id} style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: STATUS_COLORS[n.status], marginBottom: 2 }}>
+                    {n.navaid_name}
+                  </div>
+                  <textarea
+                    placeholder="Add note..."
+                    value={navaidNotes[n.id] || ''}
+                    onChange={(e) => setNavaidNotes((prev) => ({ ...prev, [n.id]: e.target.value }))}
+                    onBlur={() => handleNavaidNotesSave(n)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) handleNavaidNotesSave(n) }}
+                    rows={1}
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      background: 'var(--color-bg-inset)',
+                      border: `1px solid ${STATUS_HEX[n.status]}40`,
+                      borderRadius: 6, padding: '6px 10px', fontSize: 14,
+                      color: 'var(--color-text-1)', outline: 'none',
+                      resize: 'none', overflow: 'hidden',
+                      fontFamily: 'inherit',
+                      fieldSizing: 'content' as unknown as undefined,
+                      minHeight: 32,
+                    }}
+                    ref={(el) => {
+                      if (el) {
+                        el.style.height = 'auto'
+                        el.style.height = el.scrollHeight + 'px'
+                      }
+                    }}
+                    onInput={(e) => {
+                      const target = e.target as HTMLTextAreaElement
+                      target.style.height = 'auto'
+                      target.style.height = target.scrollHeight + 'px'
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+          </>
         )
       })()}
 
       {/* ===== Last Check Completed ===== */}
       <div className="card" style={{ marginBottom: 16 }}>
-        <div style={{ padding: 12, background: 'rgba(4,7,12,0.5)', borderRadius: 10, border: '1px solid rgba(56,189,248,0.06)', textAlign: 'center' }}>
-          <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600, marginBottom: 4 }}>Last Check Completed</div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#22D3EE' }}>
+        <div style={{ padding: 12, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', textAlign: 'center' }}>
+          <div style={{ fontSize: 13, color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4 }}>Last Check Completed</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-cyan)' }}>
             {currentStatus.lastCheckType && currentStatus.lastCheckTime
               ? `${currentStatus.lastCheckType} @ ${currentStatus.lastCheckTime}`
               : 'No Data'}
@@ -659,8 +723,8 @@ export default function HomePage() {
             key={q.label}
             href={q.href}
             style={{
-              background: 'rgba(10,16,28,0.92)',
-              border: '1px solid rgba(56,189,248,0.06)',
+              background: 'var(--color-bg-surface)',
+              border: '1px solid var(--color-border)',
               borderRadius: 12,
               padding: '14px 16px',
               cursor: 'pointer',
@@ -672,7 +736,7 @@ export default function HomePage() {
             }}
           >
             <span style={{ fontSize: 24 }}>{q.icon}</span>
-            <span style={{ fontSize: 14, color: q.color, letterSpacing: '0.04em', fontWeight: 700 }}>
+            <span style={{ fontSize: 15, color: q.color, letterSpacing: '0.04em', fontWeight: 700 }}>
               {q.label}
             </span>
           </Link>
@@ -683,19 +747,27 @@ export default function HomePage() {
       <span className="section-label">Recent Activity</span>
       {activity.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: 16 }}>
-          <div style={{ fontSize: 11, color: '#64748B' }}>No activity recorded yet</div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-3)' }}>No activity recorded yet</div>
         </div>
       ) : (
         <>
           {(activityExpanded ? activity : activity.slice(0, 3)).map((a, i, arr) => {
             const actionColor: Record<string, string> = {
-              created: '#34D399',
-              completed: '#22D3EE',
-              updated: '#FBBF24',
-              status_updated: '#A78BFA',
-              deleted: '#EF4444',
+              created: 'var(--color-success)',
+              completed: 'var(--color-cyan)',
+              updated: 'var(--color-warning)',
+              status_updated: 'var(--color-purple)',
+              deleted: 'var(--color-danger)',
             }
-            const color = actionColor[a.action] || '#64748B'
+            const actionDotBg: Record<string, string> = {
+              created: 'rgba(52,211,153,0.07)',
+              completed: 'rgba(34,211,238,0.07)',
+              updated: 'rgba(251,191,36,0.07)',
+              status_updated: 'rgba(167,139,250,0.07)',
+              deleted: 'rgba(239,68,68,0.07)',
+            }
+            const color = actionColor[a.action] || 'var(--color-text-3)'
+            const dotBg = actionDotBg[a.action] || 'rgba(100,116,139,0.07)'
             const date = new Date(a.created_at)
             const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
             const timeStr = date.toTimeString().slice(0, 5)
@@ -708,7 +780,7 @@ export default function HomePage() {
                   display: 'flex',
                   gap: 8,
                   padding: '7px 0',
-                  borderBottom: i < arr.length - 1 ? '1px solid rgba(56,189,248,0.06)' : 'none',
+                  borderBottom: i < arr.length - 1 ? '1px solid var(--color-border)' : 'none',
                 }}
               >
                 <div
@@ -716,11 +788,11 @@ export default function HomePage() {
                     width: 24,
                     height: 24,
                     borderRadius: 6,
-                    background: `${color}12`,
+                    background: dotBg,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 10,
+                    fontSize: 11,
                     flexShrink: 0,
                     color,
                   }}
@@ -729,12 +801,12 @@ export default function HomePage() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#22D3EE' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-cyan)' }}>
                       {userName}
                     </span>
-                    <span style={{ fontSize: 9, color: '#64748B' }}>{dateStr} {timeStr}</span>
+                    <span style={{ fontSize: 10, color: 'var(--color-text-3)' }}>{dateStr} {timeStr}</span>
                   </div>
-                  <div style={{ fontSize: 10, color: '#94A3B8' }}>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-2)' }}>
                     {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined)}
                   </div>
                 </div>
@@ -747,7 +819,7 @@ export default function HomePage() {
               style={{
                 width: '100%', padding: '8px 0', marginTop: 4,
                 background: 'none', border: 'none',
-                color: '#0EA5E9', fontSize: 11, fontWeight: 600,
+                color: 'var(--color-accent-secondary)', fontSize: 12, fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
             >

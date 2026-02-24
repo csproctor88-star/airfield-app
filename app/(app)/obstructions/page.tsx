@@ -4,13 +4,15 @@ import { Suspense, useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
-import { INSTALLATION } from '@/lib/constants'
+import { useInstallation } from '@/lib/installation-context'
 import type { LatLon, RunwayGeometry } from '@/lib/calculations/geometry'
-import { getRunwayGeometry } from '@/lib/calculations/geometry'
+import { getRunwayGeometry, pointToRunwayRelation, distanceFt } from '@/lib/calculations/geometry'
 import {
   evaluateObstruction,
+  evaluateObstructionAllRunways,
   identifySurface,
   type ObstructionAnalysis,
+  type MultiRunwayAnalysis,
 } from '@/lib/calculations/obstructions'
 import { fetchElevation } from '@/lib/calculations/geometry'
 import {
@@ -30,6 +32,10 @@ type PointInfo = {
   point: LatLon
   groundElevMSL: number | null
   distFromCenterline: number
+  distFromThreshold: number
+  nearerEnd: 'end1' | 'end2'
+  closestRunwayLabel: string
+  closestRunwayIndex: number
   surfaceName: string
   loadingElev: boolean
 }
@@ -46,14 +52,47 @@ function ObstructionsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const { installationId, currentInstallation, runways } = useInstallation()
+
+  // Airfield elevation from base config
+  const airfieldElevMSL = currentInstallation?.elevation_msl ?? 580
+
+  // Runway class from base runway config
+  const runwayClass: 'B' | 'Army_B' = runways.length > 0
+    ? ((runways[0].runway_class === 'Army_B' ? 'Army_B' : 'B') as 'B' | 'Army_B')
+    : 'B'
 
   // Edit mode
   const editId = searchParams.get('edit')
 
-  // Build runway geometry
-  const getRunway = useCallback((): RunwayGeometry => {
-    return getRunwayGeometry(INSTALLATION.runways[0])
-  }, [])
+  // Build runway geometries from ALL base runways
+  const getAllRunways = useCallback((): { label: string; geometry: RunwayGeometry }[] => {
+    if (runways.length > 0) {
+      return runways.map((rwy) => ({
+        label: rwy.runway_id ?? 'Unknown',
+        geometry: getRunwayGeometry({
+          end1: { latitude: rwy.end1_latitude ?? 0, longitude: rwy.end1_longitude ?? 0 },
+          end2: { latitude: rwy.end2_latitude ?? 0, longitude: rwy.end2_longitude ?? 0 },
+          length_ft: rwy.length_ft ?? 9000,
+          width_ft: rwy.width_ft ?? 150,
+          true_heading: rwy.true_heading ?? undefined,
+        }),
+      }))
+    }
+    return [{
+      label: 'Default',
+      geometry: getRunwayGeometry({
+        end1: { latitude: 0, longitude: 0 },
+        end2: { latitude: 0, longitude: 0 },
+        length_ft: 9000,
+        width_ft: 150,
+      }),
+    }]
+  }, [runways])
+
+  // Convenience: first runway geometry (for backward-compatible single-runway operations)
+  const getRunway = useCallback((): RunwayGeometry => getAllRunways()[0].geometry, [getAllRunways])
 
   // Map / point state
   const [pointInfo, setPointInfo] = useState<PointInfo | null>(null)
@@ -63,9 +102,26 @@ function ObstructionsContent() {
   const [description, setDescription] = useState('')
   const [photos, setPhotos] = useState<{ file?: File; url: string }[]>([])
 
-  // Evaluation result
-  const [analysis, setAnalysis] = useState<ObstructionAnalysis | null>(null)
+  // Evaluation result — supports multi-runway
+  const [multiAnalysis, setMultiAnalysis] = useState<MultiRunwayAnalysis | null>(null)
+  // Convenience: first runway's full analysis (for save payload backward compat)
+  const analysis: ObstructionAnalysis | null = multiAnalysis?.perRunway[0]?.analysis ?? null
   const [saving, setSaving] = useState(false)
+
+  // Helper: find the closest runway to a point
+  const findClosestRunway = useCallback((point: LatLon) => {
+    const allRwys = getAllRunways()
+    let closestIdx = 0
+    let closestDist = Infinity
+    for (let i = 0; i < allRwys.length; i++) {
+      const rel = pointToRunwayRelation(point, allRwys[i].geometry)
+      if (rel.distanceFromCenterline < closestDist) {
+        closestDist = rel.distanceFromCenterline
+        closestIdx = i
+      }
+    }
+    return { index: closestIdx, ...allRwys[closestIdx] }
+  }, [getAllRunways])
 
   // Load existing evaluation in edit mode and auto-run analysis
   useEffect(() => {
@@ -85,20 +141,29 @@ function ObstructionsContent() {
       }
       if (existing.latitude && existing.longitude) {
         const point: LatLon = { lat: existing.latitude, lon: existing.longitude }
-        const rwy = getRunwayGeometry(INSTALLATION.runways[0])
-        const surfaceName = identifySurface(point, rwy)
-        const groundElev = existing.object_elevation_msl ?? INSTALLATION.elevation_msl
+        const allRwys = getAllRunways()
+        const allGeometries = allRwys.map((r) => r.geometry)
+        const surfaceName = identifySurface(point, allGeometries, airfieldElevMSL, runwayClass)
+        const groundElev = existing.object_elevation_msl ?? airfieldElevMSL
+        const closest = findClosestRunway(point)
+        const relation = pointToRunwayRelation(point, closest.geometry)
+        const nearerThreshold = relation.nearerEnd === 'end1' ? closest.geometry.end1 : closest.geometry.end2
+        const distToThreshold = distanceFt(point, nearerThreshold)
         setPointInfo({
           point,
           groundElevMSL: groundElev,
           distFromCenterline: existing.distance_from_centerline_ft ?? 0,
+          distFromThreshold: distToThreshold,
+          nearerEnd: relation.nearerEnd,
+          closestRunwayLabel: closest.label,
+          closestRunwayIndex: closest.index,
           surfaceName,
           loadingElev: false,
         })
-        // Auto-run evaluation so results + save button appear immediately
+        // Auto-run evaluation against all runways
         if (h > 0) {
-          const result = evaluateObstruction(point, h, groundElev, rwy)
-          setAnalysis(result)
+          const result = evaluateObstructionAllRunways(point, h, groundElev, allRwys, airfieldElevMSL, runwayClass)
+          setMultiAnalysis(result)
         }
       }
     }
@@ -107,24 +172,26 @@ function ObstructionsContent() {
 
   // Handle map click
   const handlePointSelected = useCallback(async (point: LatLon) => {
-    const rwy = getRunway()
-    const surfaceName = identifySurface(point, rwy)
+    const allRwys = getAllRunways()
+    const allGeometries = allRwys.map((r) => r.geometry)
+    const surfaceName = identifySurface(point, allGeometries, airfieldElevMSL, runwayClass)
+    // Find closest runway for distance display
+    const closest = findClosestRunway(point)
+    const relation = pointToRunwayRelation(point, closest.geometry)
+    const nearerThreshold = relation.nearerEnd === 'end1' ? closest.geometry.end1 : closest.geometry.end2
+    const distToThreshold = distanceFt(point, nearerThreshold)
     setPointInfo({
       point,
       groundElevMSL: null,
-      distFromCenterline: 0,
+      distFromCenterline: relation.distanceFromCenterline,
+      distFromThreshold: distToThreshold,
+      nearerEnd: relation.nearerEnd,
+      closestRunwayLabel: closest.label,
+      closestRunwayIndex: closest.index,
       surfaceName,
       loadingElev: true,
     })
-    setAnalysis(null)
-
-    // Quick pre-evaluation at 0 height to get centerline distance
-    const preEval = evaluateObstruction(point, 0, null, rwy)
-    setPointInfo((prev) =>
-      prev
-        ? { ...prev, distFromCenterline: preEval.distanceFromCenterline }
-        : prev,
-    )
+    setMultiAnalysis(null)
 
     // Fetch real elevation
     const elev = await fetchElevation(point)
@@ -132,7 +199,7 @@ function ObstructionsContent() {
       prev
         ? {
             ...prev,
-            groundElevMSL: elev ?? INSTALLATION.elevation_msl,
+            groundElevMSL: elev ?? airfieldElevMSL,
             loadingElev: false,
           }
         : prev,
@@ -141,11 +208,11 @@ function ObstructionsContent() {
     if (elev) {
       toast.success(`Elevation: ${elev.toFixed(0)} ft MSL`)
     } else {
-      toast(`Using airfield elevation (${INSTALLATION.elevation_msl} ft MSL)`, { description: 'Open-Elevation API unavailable' })
+      toast(`Using airfield elevation (${airfieldElevMSL} ft MSL)`, { description: 'Open-Elevation API unavailable' })
     }
-  }, [getRunway])
+  }, [getAllRunways, findClosestRunway, airfieldElevMSL, runwayClass])
 
-  // Run the evaluation
+  // Run the evaluation against all runways
   const runEvaluation = () => {
     if (!pointInfo) {
       toast.error('Select a point on the map first')
@@ -157,13 +224,15 @@ function ObstructionsContent() {
       return
     }
 
-    const result = evaluateObstruction(
+    const result = evaluateObstructionAllRunways(
       pointInfo.point,
       h,
       pointInfo.groundElevMSL,
-      getRunway(),
+      getAllRunways(),
+      airfieldElevMSL,
+      runwayClass,
     )
-    setAnalysis(result)
+    setMultiAnalysis(result)
 
     if (result.hasViolation) {
       toast.error(`VIOLATION — ${result.violatedSurfaces.length} surface(s) penetrated`)
@@ -247,7 +316,7 @@ function ObstructionsContent() {
 
   // Save to database
   const handleSave = async () => {
-    if (!analysis || !pointInfo) return
+    if (!multiAnalysis || !analysis || !pointInfo) return
     setSaving(true)
 
     // Compress new photos (with File) for DB storage; keep existing URLs as-is
@@ -266,19 +335,12 @@ function ObstructionsContent() {
       photoUrls = photos.map((p) => p.url)
     }
 
-    const evaluationPayload = {
-      object_height_agl: analysis.obstructionHeightAGL,
-      object_distance_ft: analysis.distanceFromCenterline,
-      distance_from_centerline_ft: analysis.distanceFromCenterline,
-      object_elevation_msl: analysis.groundElevationMSL,
-      obstruction_top_msl: analysis.obstructionTopMSL,
-      latitude: analysis.point.lat,
-      longitude: analysis.point.lon,
-      description: description || null,
-      photo_storage_paths: photoUrls,
-      results: analysis.surfaces.map((s) => ({
+    // Collect surface results across all runways (tagged with runway label)
+    const allSurfaceResults = multiAnalysis.perRunway.flatMap(({ runwayLabel, analysis: rwyAnalysis }) =>
+      rwyAnalysis.surfaces.map((s) => ({
         surfaceKey: s.surfaceKey,
         surfaceName: s.surfaceName,
+        runwayLabel,
         isWithinBounds: s.isWithinBounds,
         maxAllowableHeightAGL: s.maxAllowableHeightAGL,
         maxAllowableHeightMSL: s.maxAllowableHeightMSL,
@@ -288,9 +350,26 @@ function ObstructionsContent() {
         ufcReference: s.ufcReference,
         ufcCriteria: s.ufcCriteria,
       })),
-      controlling_surface: analysis.controllingSurface?.surfaceName ?? null,
-      violated_surfaces: analysis.violatedSurfaces.map((s) => s.surfaceName),
-      has_violation: analysis.hasViolation,
+    )
+
+    const evaluationPayload = {
+      object_height_agl: multiAnalysis.obstructionHeightAGL,
+      object_distance_ft: pointInfo.distFromCenterline,
+      distance_from_centerline_ft: pointInfo.distFromCenterline,
+      object_elevation_msl: multiAnalysis.groundElevationMSL,
+      obstruction_top_msl: multiAnalysis.obstructionTopMSL,
+      latitude: multiAnalysis.point.lat,
+      longitude: multiAnalysis.point.lon,
+      description: description || null,
+      photo_storage_paths: photoUrls,
+      results: allSurfaceResults,
+      controlling_surface: multiAnalysis.controllingSurface
+        ? `${multiAnalysis.controllingSurface.surfaceName}${multiAnalysis.controllingSurface.runwayLabel ? ` (RWY ${multiAnalysis.controllingSurface.runwayLabel})` : ''}`
+        : null,
+      violated_surfaces: multiAnalysis.violatedSurfaces.map((s) =>
+        `${s.surfaceName}${s.runwayLabel ? ` (RWY ${s.runwayLabel})` : ''}`,
+      ),
+      has_violation: multiAnalysis.hasViolation,
       notes: description || null,
     }
 
@@ -299,8 +378,9 @@ function ObstructionsContent() {
       ({ data, error } = await updateObstructionEvaluation(editId, evaluationPayload))
     } else {
       ({ data, error } = await createObstructionEvaluation({
-        runway_class: 'B',
+        runway_class: runwayClass,
         ...evaluationPayload,
+        base_id: installationId,
       }))
     }
 
@@ -315,8 +395,8 @@ function ObstructionsContent() {
     router.push(`/obstructions/${data.id}`)
   }
 
-  const surfaceAtPoint = analysis
-    ? analysis.hasViolation
+  const surfaceAtPoint = multiAnalysis
+    ? multiAnalysis.hasViolation
       ? 'violation'
       : 'No violation'
     : pointInfo?.surfaceName ?? null
@@ -329,8 +409,8 @@ function ObstructionsContent() {
         style={{
           background: 'none',
           border: 'none',
-          color: '#22D3EE',
-          fontSize: 12,
+          color: 'var(--color-cyan)',
+          fontSize: 13,
           fontWeight: 600,
           cursor: 'pointer',
           padding: 0,
@@ -349,8 +429,8 @@ function ObstructionsContent() {
           style={{
             background: 'none',
             border: 'none',
-            color: '#38BDF8',
-            fontSize: 11,
+            color: 'var(--color-accent)',
+            fontSize: 12,
             fontWeight: 600,
             cursor: 'pointer',
             fontFamily: 'inherit',
@@ -361,7 +441,7 @@ function ObstructionsContent() {
           History →
         </button>
       </div>
-      <div style={{ fontSize: 10, color: '#64748B', marginBottom: 10 }}>
+      <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 10 }}>
         UFC 3-260-01, Chapter 3 — Imaginary Surface Analysis
       </div>
 
@@ -376,33 +456,41 @@ function ObstructionsContent() {
       {pointInfo && (
         <div className="card" style={{ marginTop: 10 }}>
           <span className="section-label">Selected Location</span>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, fontSize: 11 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, fontSize: 12 }}>
             <div>
-              <span style={{ color: '#64748B' }}>Coordinates</span>
-              <div style={{ fontFamily: 'monospace', color: '#CBD5E1', fontSize: 10, marginTop: 2 }}>
+              <span style={{ color: 'var(--color-text-3)' }}>Coordinates</span>
+              <div style={{ fontFamily: 'monospace', color: 'var(--color-text-1)', fontSize: 11, marginTop: 2 }}>
                 {pointInfo.point.lat.toFixed(5)}°N, {Math.abs(pointInfo.point.lon).toFixed(5)}°W
               </div>
             </div>
             <div>
-              <span style={{ color: '#64748B' }}>From Centerline</span>
-              <div style={{ color: '#CBD5E1', fontFamily: 'monospace', fontSize: 10, marginTop: 2 }}>
+              <span style={{ color: 'var(--color-text-3)' }}>From Centerline</span>
+              <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 11, marginTop: 2 }}>
                 {pointInfo.distFromCenterline.toFixed(0)} ft
               </div>
             </div>
             <div>
-              <span style={{ color: '#64748B' }}>Ground Elevation</span>
-              <div style={{ color: '#CBD5E1', fontFamily: 'monospace', fontSize: 10, marginTop: 2 }}>
-                {pointInfo.loadingElev
-                  ? 'Fetching...'
-                  : `${(pointInfo.groundElevMSL ?? INSTALLATION.elevation_msl).toFixed(0)} ft MSL`}
+              <span style={{ color: 'var(--color-text-3)' }}>From Nearest Threshold</span>
+              <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 11, marginTop: 2 }}>
+                {pointInfo.distFromThreshold.toFixed(0)} ft (RWY {pointInfo.nearerEnd === 'end1'
+                  ? (runways[pointInfo.closestRunwayIndex]?.end1_designator ?? '01')
+                  : (runways[pointInfo.closestRunwayIndex]?.end2_designator ?? '19')})
               </div>
             </div>
             <div>
-              <span style={{ color: '#64748B' }}>Surface Zone</span>
+              <span style={{ color: 'var(--color-text-3)' }}>Ground Elevation</span>
+              <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 11, marginTop: 2 }}>
+                {pointInfo.loadingElev
+                  ? 'Fetching...'
+                  : `${(pointInfo.groundElevMSL ?? airfieldElevMSL).toFixed(0)} ft MSL`}
+              </div>
+            </div>
+            <div>
+              <span style={{ color: 'var(--color-text-3)' }}>Surface Zone</span>
               <div
                 style={{
-                  color: '#CBD5E1',
-                  fontSize: 10,
+                  color: 'var(--color-text-1)',
+                  fontSize: 11,
                   marginTop: 2,
                   fontWeight: 600,
                 }}
@@ -419,7 +507,7 @@ function ObstructionsContent() {
         <span className="section-label">Obstruction Details</span>
 
         <div style={{ marginBottom: 10 }}>
-          <label style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+          <label style={{ fontSize: 11, color: 'var(--color-text-2)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
             Obstruction Height (ft AGL) *
           </label>
           <input
@@ -434,7 +522,7 @@ function ObstructionsContent() {
         </div>
 
         <div style={{ marginBottom: 10 }}>
-          <label style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+          <label style={{ fontSize: 11, color: 'var(--color-text-2)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
             Obstruction Description
           </label>
           <textarea
@@ -456,26 +544,53 @@ function ObstructionsContent() {
           onChange={handlePhoto}
           style={{ display: 'none' }}
         />
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handlePhoto}
+          style={{ display: 'none' }}
+        />
         <div style={{ marginBottom: 10 }}>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              width: '100%',
-              background: '#38BDF814',
-              border: '1px solid #38BDF833',
-              borderRadius: 8,
-              padding: 10,
-              color: '#38BDF8',
-              fontSize: 11,
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              minHeight: 44,
-            }}
-          >
-            {photos.length > 0 ? `+ Add More Photos (${photos.length})` : 'Add Photos'}
-          </button>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                background: 'var(--color-border)',
+                border: '1px solid var(--color-border-active)',
+                borderRadius: 8,
+                padding: 10,
+                color: 'var(--color-accent)',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                minHeight: 44,
+              }}
+            >
+              🖼️ Upload Photo
+            </button>
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              style={{
+                background: 'var(--color-border)',
+                border: '1px solid var(--color-border-active)',
+                borderRadius: 8,
+                padding: 10,
+                color: 'var(--color-accent)',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                minHeight: 44,
+              }}
+            >
+              📸 Take Photo
+            </button>
+          </div>
           {photos.length > 0 && (
             <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
               {photos.map((p, i) => (
@@ -486,7 +601,7 @@ function ObstructionsContent() {
                     height: 64,
                     borderRadius: 8,
                     overflow: 'hidden',
-                    border: '1px solid #38BDF833',
+                    border: '1px solid var(--color-border-active)',
                     flexShrink: 0,
                     position: 'relative',
                   }}
@@ -502,10 +617,10 @@ function ObstructionsContent() {
                       width: 18,
                       height: 18,
                       borderRadius: '50%',
-                      background: 'rgba(0,0,0,0.7)',
+                      background: 'var(--color-overlay)',
                       border: '1px solid rgba(255,255,255,0.2)',
                       color: '#fff',
-                      fontSize: 10,
+                      fontSize: 11,
                       lineHeight: '16px',
                       textAlign: 'center',
                       cursor: 'pointer',
@@ -532,14 +647,14 @@ function ObstructionsContent() {
       </div>
 
       {/* Results */}
-      {analysis && (
+      {multiAnalysis && (
         <>
           {/* Summary Banner */}
           <div
             className="card"
             style={{
               marginTop: 10,
-              borderColor: analysis.hasViolation
+              borderColor: multiAnalysis.hasViolation
                 ? 'rgba(239, 68, 68, 0.3)'
                 : 'rgba(34, 197, 94, 0.3)',
             }}
@@ -557,7 +672,7 @@ function ObstructionsContent() {
                   width: 32,
                   height: 32,
                   borderRadius: '50%',
-                  background: analysis.hasViolation ? '#EF444422' : '#22C55E22',
+                  background: multiAnalysis.hasViolation ? '#EF444422' : '#22C55E22',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -565,21 +680,21 @@ function ObstructionsContent() {
                   flexShrink: 0,
                 }}
               >
-                {analysis.hasViolation ? '⚠️' : '✅'}
+                {multiAnalysis.hasViolation ? '⚠️' : '✅'}
               </div>
               <div>
                 <div
                   style={{
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: 800,
-                    color: analysis.hasViolation ? '#EF4444' : '#22C55E',
+                    color: multiAnalysis.hasViolation ? '#EF4444' : '#22C55E',
                   }}
                 >
-                  {analysis.hasViolation ? 'VIOLATION DETECTED' : 'NO VIOLATION'}
+                  {multiAnalysis.hasViolation ? 'VIOLATION DETECTED' : 'NO VIOLATION'}
                 </div>
-                <div style={{ fontSize: 10, color: '#94A3B8' }}>
-                  {analysis.controllingSurface
-                    ? `Controlling surface: ${analysis.controllingSurface.surfaceName}`
+                <div style={{ fontSize: 11, color: 'var(--color-text-2)' }}>
+                  {multiAnalysis.controllingSurface
+                    ? `Controlling surface: ${multiAnalysis.controllingSurface.surfaceName}${multiAnalysis.controllingSurface.runwayLabel ? ` (RWY ${multiAnalysis.controllingSurface.runwayLabel})` : ''}`
                     : 'Outside all imaginary surfaces'}
                 </div>
               </div>
@@ -591,116 +706,146 @@ function ObstructionsContent() {
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr 1fr',
                 gap: 6,
-                fontSize: 10,
+                fontSize: 11,
                 marginTop: 4,
               }}
             >
-              <div style={{ background: 'rgba(4,7,12,0.6)', borderRadius: 6, padding: '6px 8px' }}>
-                <div style={{ color: '#64748B', marginBottom: 2 }}>Total Obstruction Height MSL</div>
-                <div style={{ color: '#F1F5F9', fontWeight: 700, fontFamily: 'monospace' }}>
-                  {analysis.obstructionTopMSL.toFixed(0)} ft MSL
+              <div style={{ background: 'var(--color-bg-inset)', borderRadius: 6, padding: '6px 8px' }}>
+                <div style={{ color: 'var(--color-text-3)', marginBottom: 2 }}>Total Obstruction Height MSL</div>
+                <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
+                  {multiAnalysis.obstructionTopMSL.toFixed(0)} ft MSL
                 </div>
               </div>
-              <div style={{ background: 'rgba(4,7,12,0.6)', borderRadius: 6, padding: '6px 8px' }}>
-                <div style={{ color: '#64748B', marginBottom: 2 }}>Max Allowable</div>
-                <div style={{ color: '#F1F5F9', fontWeight: 700, fontFamily: 'monospace' }}>
-                  {analysis.controllingSurface
-                    ? `${analysis.controllingSurface.maxAllowableHeightMSL.toFixed(0)} ft MSL`
+              <div style={{ background: 'var(--color-bg-inset)', borderRadius: 6, padding: '6px 8px' }}>
+                <div style={{ color: 'var(--color-text-3)', marginBottom: 2 }}>Max Allowable</div>
+                <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
+                  {multiAnalysis.controllingSurface
+                    ? `${multiAnalysis.controllingSurface.maxAllowableHeightMSL.toFixed(0)} ft MSL`
                     : 'N/A'}
                 </div>
               </div>
-              <div style={{ background: 'rgba(4,7,12,0.6)', borderRadius: 6, padding: '6px 8px' }}>
-                <div style={{ color: '#64748B', marginBottom: 2 }}>CL Distance</div>
-                <div style={{ color: '#F1F5F9', fontWeight: 700, fontFamily: 'monospace' }}>
-                  {analysis.distanceFromCenterline.toFixed(0)} ft
+              <div style={{ background: 'var(--color-bg-inset)', borderRadius: 6, padding: '6px 8px' }}>
+                <div style={{ color: 'var(--color-text-3)', marginBottom: 2 }}>CL Distance</div>
+                <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
+                  {pointInfo?.distFromCenterline.toFixed(0) ?? '—'} ft
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Surface-by-surface results */}
-          <div className="card" style={{ marginTop: 10 }}>
-            <span className="section-label">Surface Analysis</span>
-            {analysis.surfaces
-              .filter((s) => s.isWithinBounds)
-              .map((s) => (
-                <div
-                  key={s.surfaceKey}
-                  style={{
-                    background: 'rgba(4,7,12,0.6)',
-                    border: `1px solid ${s.violated ? 'rgba(239,68,68,0.3)' : 'rgba(56,189,248,0.06)'}`,
-                    borderRadius: 8,
-                    padding: 10,
-                    marginBottom: 6,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: 2,
-                        background: s.color,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#F1F5F9', flex: 1 }}>
-                      {s.surfaceName}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 9,
-                        fontWeight: 800,
-                        padding: '2px 6px',
-                        borderRadius: 4,
-                        background: s.violated ? '#EF444422' : '#22C55E22',
-                        color: s.violated ? '#EF4444' : '#22C55E',
-                      }}
-                    >
-                      {s.violated ? `VIOLATION (${s.penetrationFt.toFixed(1)} ft)` : 'CLEAR'}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 10, color: '#94A3B8', lineHeight: 1.4 }}>
-                    Max allowable: <strong style={{ color: '#CBD5E1' }}>{s.maxAllowableHeightMSL.toFixed(0)} ft MSL</strong>
-                    {' '}({s.maxAllowableHeightAGL.toFixed(0)} ft AGL)
-                  </div>
-                  <div style={{ fontSize: 9, color: '#64748B', marginTop: 4, fontStyle: 'italic' }}>
-                    {s.ufcReference}
-                  </div>
-                </div>
-              ))}
-
-            {/* Surfaces the point is NOT within */}
-            {analysis.surfaces.filter((s) => !s.isWithinBounds).length > 0 && (
-              <div style={{ marginTop: 6 }}>
-                <div style={{ fontSize: 9, color: '#475569', fontWeight: 600, marginBottom: 4 }}>
-                  NOT APPLICABLE AT THIS LOCATION:
-                </div>
-                {analysis.surfaces
-                  .filter((s) => !s.isWithinBounds)
-                  .map((s) => (
+          {/* Per-runway surface analysis */}
+          {multiAnalysis.perRunway.map(({ runwayLabel, analysis: rwyAnalysis }) => (
+            <div className="card" style={{ marginTop: 10 }} key={runwayLabel}>
+              <span className="section-label">
+                {multiAnalysis.perRunway.length > 1
+                  ? `Surface Analysis — RWY ${runwayLabel}`
+                  : 'Surface Analysis'}
+              </span>
+              {rwyAnalysis.surfaces
+                .filter((s) => s.isWithinBounds)
+                .map((s) => {
+                  const isLandUseZone = s.maxAllowableHeightMSL === -1
+                  return (
                     <div
                       key={s.surfaceKey}
                       style={{
-                        fontSize: 10,
-                        color: '#475569',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        paddingLeft: 4,
-                        marginBottom: 2,
+                        background: 'var(--color-bg-inset)',
+                        border: `1px solid ${s.violated ? 'rgba(239,68,68,0.3)' : isLandUseZone ? `${s.color}33` : 'var(--color-border)'}`,
+                        borderRadius: 8,
+                        padding: 10,
+                        marginBottom: 6,
                       }}
                     >
-                      <span style={{ width: 6, height: 6, borderRadius: 2, background: s.color, opacity: 0.3, flexShrink: 0 }} />
-                      {s.surfaceName}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <span
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: 2,
+                            background: s.color,
+                            flexShrink: 0,
+                          }}
+                        />
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)', flex: 1 }}>
+                          {s.surfaceName}
+                        </span>
+                        {isLandUseZone ? (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 800,
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              background: `${s.color}22`,
+                              color: s.color,
+                            }}
+                          >
+                            WITHIN ZONE
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 800,
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              background: s.violated ? '#EF444422' : '#22C55E22',
+                              color: s.violated ? '#EF4444' : '#22C55E',
+                            }}
+                          >
+                            {s.violated ? `VIOLATION (${s.penetrationFt.toFixed(1)} ft)` : 'CLEAR'}
+                          </span>
+                        )}
+                      </div>
+                      {isLandUseZone ? (
+                        <div style={{ fontSize: 11, color: 'var(--color-text-2)', lineHeight: 1.5 }}>
+                          {s.ufcCriteria}
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: 11, color: 'var(--color-text-2)', lineHeight: 1.4 }}>
+                          Max allowable: <strong style={{ color: 'var(--color-text-1)' }}>{s.maxAllowableHeightMSL.toFixed(0)} ft MSL</strong>
+                          {' '}({s.maxAllowableHeightAGL.toFixed(0)} ft AGL)
+                        </div>
+                      )}
+                      <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 4, fontStyle: 'italic' }}>
+                        {s.ufcReference}
+                      </div>
                     </div>
-                  ))}
-              </div>
-            )}
-          </div>
+                  )
+                })}
+
+              {/* Surfaces the point is NOT within */}
+              {rwyAnalysis.surfaces.filter((s) => !s.isWithinBounds).length > 0 && (
+                <div style={{ marginTop: 6 }}>
+                  <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4 }}>
+                    NOT APPLICABLE AT THIS LOCATION:
+                  </div>
+                  {rwyAnalysis.surfaces
+                    .filter((s) => !s.isWithinBounds)
+                    .map((s) => (
+                      <div
+                        key={s.surfaceKey}
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--color-text-3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          paddingLeft: 4,
+                          marginBottom: 2,
+                        }}
+                      >
+                        <span style={{ width: 6, height: 6, borderRadius: 2, background: s.color, opacity: 0.3, flexShrink: 0 }} />
+                        {s.surfaceName}
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          ))}
 
           {/* UFC References (only if violations) */}
-          {analysis.hasViolation && (
+          {multiAnalysis.hasViolation && (
             <div
               className="card"
               style={{
@@ -712,9 +857,9 @@ function ObstructionsContent() {
               <span className="section-label" style={{ color: '#EF4444' }}>
                 Applicable UFC References
               </span>
-              {analysis.violatedSurfaces.map((vs) => (
+              {multiAnalysis.violatedSurfaces.map((vs, i) => (
                 <div
-                  key={vs.surfaceKey}
+                  key={`${vs.surfaceKey}-${vs.runwayLabel ?? i}`}
                   style={{
                     background: 'rgba(239, 68, 68, 0.06)',
                     border: '1px solid rgba(239, 68, 68, 0.15)',
@@ -723,13 +868,13 @@ function ObstructionsContent() {
                     marginBottom: 6,
                   }}
                 >
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#F1F5F9', marginBottom: 4 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
                     {vs.ufcReference}
                   </div>
-                  <div style={{ fontSize: 10, color: '#CBD5E1', lineHeight: 1.4 }}>
-                    {vs.surfaceName} — {vs.penetrationFt.toFixed(1)} ft penetration
+                  <div style={{ fontSize: 11, color: 'var(--color-text-1)', lineHeight: 1.4 }}>
+                    {vs.surfaceName}{vs.runwayLabel ? ` (RWY ${vs.runwayLabel})` : ''} — {vs.penetrationFt.toFixed(1)} ft penetration
                   </div>
-                  <div style={{ fontSize: 9, color: '#94A3B8', marginTop: 4, fontStyle: 'italic', lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 10, color: 'var(--color-text-2)', marginTop: 4, fontStyle: 'italic', lineHeight: 1.4 }}>
                     {vs.ufcCriteria}
                   </div>
                 </div>

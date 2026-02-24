@@ -268,7 +268,7 @@ function LazyPage({ pageNumber, scale, searchTerm }) {
     <div ref={ref} style={{ marginBottom: 12, position: "relative" }} id={`pdf-page-${pageNumber}`}>
       <div style={{
         position: "absolute", top: 6, right: 10, zIndex: 10,
-        fontSize: 10, fontWeight: 700, color: "#64748B",
+        fontSize: 10, fontWeight: 700, color: "var(--color-text-3)",
         background: "rgba(15,23,42,0.85)", padding: "2px 8px",
         borderRadius: 4, fontFamily: "'JetBrains Mono', monospace",
       }}>
@@ -285,12 +285,12 @@ function LazyPage({ pageNumber, scale, searchTerm }) {
       ) : (
         <div style={{
           height: Math.round(1056 * scale),
-          background: "#1E293B",
+          background: "var(--color-bg-elevated)",
           borderRadius: 4,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "#475569",
+          color: "var(--color-text-3)",
           fontSize: 12,
         }}>
           Page {pageNumber}
@@ -744,7 +744,7 @@ export default function PDFLibrary() {
         <div style={S.headerRow}>
           <div style={S.hLeft}>
             <div style={S.logo}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F172A" strokeWidth="2.5" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-bg-surface-solid)" strokeWidth="2.5" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
             </div>
             <div>
               <h1 style={S.title}>Regulation Library</h1>
@@ -764,7 +764,7 @@ export default function PDFLibrary() {
           {/* Toolbar */}
           <div style={S.toolbar}>
             <div style={S.sWrap}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-3)" strokeWidth="2" style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
               <input type="text" placeholder="Search across all regulations..." value={globalSearch || listSearch}
                 onChange={(e) => {
                   const v = e.target.value;
@@ -796,8 +796,8 @@ export default function PDFLibrary() {
           {globalResults.length > 0 && globalSearch.length >= 2 && (
             <div style={S.globalResults}>
               <div style={S.globalHeader}>
-                <span style={{ fontWeight: 700, color: "#E2E8F0", fontSize: 13 }}>Search Results</span>
-                <span style={{ color: "#64748B", fontSize: 12 }}>{globalResults.length} match{globalResults.length !== 1 ? "es" : ""} across regulations</span>
+                <span style={{ fontWeight: 700, color: "var(--color-text-1)", fontSize: 13 }}>Search Results</span>
+                <span style={{ color: "var(--color-text-3)", fontSize: 12 }}>{globalResults.length} match{globalResults.length !== 1 ? "es" : ""} across regulations</span>
               </div>
               <div style={S.globalList}>
                 {globalResults.slice(0, 30).map((r, i) => (
@@ -806,7 +806,7 @@ export default function PDFLibrary() {
                     <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
                       <span style={S.gBadge}>p.{r.page}</span>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: "#CBD5E1", marginBottom: 2 }}>{r.fileName}</div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-1)", marginBottom: 2 }}>{r.fileName}</div>
                         <div style={S.gSnippet}>{renderSnippet(r.snippet, globalSearch)}</div>
                       </div>
                     </div>
@@ -832,7 +832,7 @@ export default function PDFLibrary() {
                 {/* Search button (react-pdf mode) */}
                 {viewMode === "react-pdf" && (
                   <button onClick={() => { setDocSearchOpen((o) => !o); setTimeout(() => searchInputRef.current && searchInputRef.current.focus(), 50); }}
-                    style={Object.assign({}, S.cb, docSearchOpen ? { background: "rgba(56,189,248,0.15)", borderColor: "rgba(56,189,248,0.3)", color: "#38BDF8" } : {})}
+                    style={Object.assign({}, S.cb, docSearchOpen ? { background: "rgba(56,189,248,0.15)", borderColor: "rgba(56,189,248,0.3)", color: "var(--color-accent)" } : {})}
                     title="Search (Ctrl+F)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
                   </button>
@@ -874,7 +874,7 @@ export default function PDFLibrary() {
             {docSearchOpen && viewMode === "react-pdf" && (
               <div style={S.sPanel}>
                 <div style={S.sPanelRow}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-3)" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
                   <input ref={searchInputRef} type="text"
                     placeholder={docPageTexts.length === 0 ? "No text index \u2014 run Extract first" : "Search in document..."}
                     value={docSearchTerm} onChange={(e) => setDocSearchTerm(e.target.value)}
@@ -905,7 +905,7 @@ export default function PDFLibrary() {
 
             {/* Viewer body */}
             <div ref={viewerBodyRef} style={S.vBody}>
-              {pdfLoading && <div style={S.ctr}><span style={S.spin} /><span style={{ color: "#64748B", marginLeft: 8 }}>Loading&hellip;</span></div>}
+              {pdfLoading && <div style={S.ctr}><span style={S.spin} /><span style={{ color: "var(--color-text-3)", marginLeft: 8 }}>Loading&hellip;</span></div>}
               {pdfError && <div style={S.ctr}><div style={S.eBox}><strong style={{ color: "#EF4444" }}>PDF Unavailable</strong><p style={{ margin: "8px 0 0", fontSize: 13 }}>{pdfError}</p></div></div>}
 
               {!pdfLoading && !pdfError && viewMode === "native" && blobUrl && (
@@ -947,11 +947,11 @@ export default function PDFLibrary() {
             </div>
           </div>
         ) : loading ? (
-          <div style={S.ctr}><span style={S.spin} /><span style={{ color: "#64748B", marginLeft: 8 }}>Loading&hellip;</span></div>
+          <div style={S.ctr}><span style={S.spin} /><span style={{ color: "var(--color-text-3)", marginLeft: 8 }}>Loading&hellip;</span></div>
         ) : filtered.length === 0 && !globalResults.length ? (
           <div style={Object.assign({}, S.ctr, { flexDirection: "column", padding: 80 })}>
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-            <p style={{ color: "#94A3B8", marginTop: 12, fontWeight: 600 }}>{listSearch ? "No matching files" : "No PDFs found"}</p>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-4)" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+            <p style={{ color: "var(--color-text-2)", marginTop: 12, fontWeight: 600 }}>{listSearch ? "No matching files" : "No PDFs found"}</p>
           </div>
         ) : (
           // ═══════════════════ FILE LIST ═══════════════════
@@ -963,10 +963,10 @@ export default function PDFLibrary() {
                 var isDl = downloading.has(file.name);
                 return (
                   <div key={file.name} style={S.row}
-                    onMouseEnter={function(e) { e.currentTarget.style.background = "#1E293B"; e.currentTarget.style.borderColor = "#334155"; }}
-                    onMouseLeave={function(e) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "#1E293B"; }}>
+                    onMouseEnter={function(e) { e.currentTarget.style.background = "var(--color-bg-elevated)"; e.currentTarget.style.borderColor = "var(--color-text-4)"; }}
+                    onMouseLeave={function(e) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "var(--color-bg-elevated)"; }}>
                     <button onClick={() => viewPdf(file.name)} disabled={!cached && !isOnline} style={S.fBtn}>
-                      <div style={Object.assign({}, S.fIco, { borderColor: cached ? "rgba(52,211,153,0.25)" : "rgba(100,116,139,0.25)", color: cached ? "#34D399" : "#64748B" })}>
+                      <div style={Object.assign({}, S.fIco, { borderColor: cached ? "rgba(52,211,153,0.25)" : "rgba(100,116,139,0.25)", color: cached ? "#34D399" : "var(--color-text-3)" })}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
                       </div>
                       <div style={S.fInf}>
@@ -984,7 +984,7 @@ export default function PDFLibrary() {
                       {extracted && <span style={{ color: "#FACC15", display: "flex", fontSize: 14 }} title="Text indexed">{"\u2699"}</span>}
                       {!cached && isOnline && !isDl && <button onClick={() => downloadAndCache(file.name)} style={S.aBtn}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg></button>}
                       {isDl && <span style={S.spin} />}
-                      {cached && <button onClick={() => removeFromCache(file.name)} style={Object.assign({}, S.aBtn, { color: "#475569" })} title="Remove"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg></button>}
+                      {cached && <button onClick={() => removeFromCache(file.name)} style={Object.assign({}, S.aBtn, { color: "var(--color-text-3)" })} title="Remove"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg></button>}
                     </div>
                   </div>
                 );
@@ -1004,36 +1004,36 @@ export default function PDFLibrary() {
 
 // ─── Styles ──────────────────────────────────────────────────
 var S = {
-  root: { fontFamily: "'DM Sans', -apple-system, sans-serif", background: "#0F172A", color: "#E2E8F0", minHeight: "100vh", display: "flex", flexDirection: "column" },
-  header: { background: "linear-gradient(180deg, #1E293B 0%, #0F172A 100%)", borderBottom: "1px solid #1E293B", padding: "18px 24px" },
+  root: { fontFamily: "'DM Sans', -apple-system, sans-serif", background: "var(--color-bg-surface-solid)", color: "var(--color-text-1)", minHeight: "100vh", display: "flex", flexDirection: "column" },
+  header: { background: "linear-gradient(180deg, var(--color-bg-elevated) 0%, var(--color-bg-surface-solid) 100%)", borderBottom: "1px solid var(--color-bg-elevated)", padding: "18px 24px" },
   headerRow: { maxWidth: 960, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" },
   hLeft: { display: "flex", alignItems: "center", gap: 14 },
-  logo: { width: 38, height: 38, borderRadius: 10, background: "linear-gradient(135deg, #38BDF8, #818CF8)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  title: { margin: 0, fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "#F1F5F9" },
-  sub: { margin: 0, fontSize: 13, color: "#64748B" },
+  logo: { width: 38, height: 38, borderRadius: 10, background: "linear-gradient(135deg, var(--color-accent), #818CF8)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  title: { margin: 0, fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "var(--color-text-1)" },
+  sub: { margin: 0, fontSize: 13, color: "var(--color-text-3)" },
   badge: { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, padding: "4px 12px", borderRadius: 20, border: "1px solid" },
   badgeOn: { color: "#34D399", borderColor: "rgba(52,211,153,0.2)", background: "rgba(52,211,153,0.08)" },
   badgeOff: { color: "#FBBF24", borderColor: "rgba(251,191,36,0.2)", background: "rgba(251,191,36,0.08)" },
 
   toolbar: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "14px 24px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", boxSizing: "border-box" },
   sWrap: { position: "relative", flex: "1 1 220px", minWidth: 180 },
-  sInput: { width: "100%", boxSizing: "border-box", padding: "9px 12px 9px 34px", background: "#1E293B", border: "1px solid #334155", borderRadius: 8, color: "#E2E8F0", fontSize: 14, fontFamily: "inherit", outline: "none" },
+  sInput: { width: "100%", boxSizing: "border-box", padding: "9px 12px 9px 34px", background: "var(--color-bg-elevated)", border: "1px solid var(--color-text-4)", borderRadius: 8, color: "var(--color-text-1)", fontSize: 14, fontFamily: "inherit", outline: "none" },
   btn: { display: "inline-flex", alignItems: "center", gap: 5, padding: "8px 14px", borderRadius: 8, border: "1px solid", fontSize: 13, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", lineHeight: 1, whiteSpace: "nowrap" },
-  btnA: { background: "rgba(56,189,248,0.12)", borderColor: "rgba(56,189,248,0.25)", color: "#38BDF8" },
-  btnG: { background: "rgba(241,245,249,0.04)", borderColor: "#334155", color: "#94A3B8" },
+  btnA: { background: "var(--color-border-mid)", borderColor: "rgba(56,189,248,0.25)", color: "var(--color-accent)" },
+  btnG: { background: "rgba(241,245,249,0.04)", borderColor: "var(--color-text-4)", color: "var(--color-text-2)" },
   btnE: { background: "rgba(250,204,21,0.12)", borderColor: "rgba(250,204,21,0.25)", color: "#FACC15" },
   off: { opacity: 0.3, cursor: "not-allowed" },
 
   progressBar: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "0 24px", boxSizing: "border-box" },
-  progressFill: { height: 3, background: "linear-gradient(90deg, #38BDF8, #818CF8)", borderRadius: 2, transition: "width 0.3s" },
-  progressText: { fontSize: 11, color: "#64748B", marginTop: 4, display: "block", fontFamily: "'JetBrains Mono', monospace" },
+  progressFill: { height: 3, background: "linear-gradient(90deg, var(--color-accent), #818CF8)", borderRadius: 2, transition: "width 0.3s" },
+  progressText: { fontSize: 11, color: "var(--color-text-3)", marginTop: 4, display: "block", fontFamily: "'JetBrains Mono', monospace" },
 
   globalResults: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "0 24px", boxSizing: "border-box" },
-  globalHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #1E293B" },
+  globalHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--color-bg-elevated)" },
   globalList: { maxHeight: 400, overflowY: "auto" },
-  globalItem: { display: "flex", padding: "10px 0", background: "none", border: "none", borderBottom: "1px solid #1E293B", color: "inherit", cursor: "pointer", textAlign: "left", width: "100%", fontFamily: "inherit" },
-  gBadge: { flexShrink: 0, fontSize: 10, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: "#38BDF8", background: "rgba(56,189,248,0.12)", padding: "2px 6px", borderRadius: 4, marginTop: 2 },
-  gSnippet: { fontSize: 12, lineHeight: 1.5, color: "#94A3B8" },
+  globalItem: { display: "flex", padding: "10px 0", background: "none", border: "none", borderBottom: "1px solid var(--color-bg-elevated)", color: "inherit", cursor: "pointer", textAlign: "left", width: "100%", fontFamily: "inherit" },
+  gBadge: { flexShrink: 0, fontSize: 10, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: "var(--color-accent)", background: "var(--color-border-mid)", padding: "2px 6px", borderRadius: 4, marginTop: 2 },
+  gSnippet: { fontSize: 12, lineHeight: 1.5, color: "var(--color-text-2)" },
 
   err: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "10px 24px", boxSizing: "border-box", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, color: "#F87171", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "space-between" },
   errX: { background: "none", border: "none", color: "#F87171", cursor: "pointer", fontSize: 16, padding: 4 },
@@ -1041,43 +1041,43 @@ var S = {
   main: { flex: 1, maxWidth: 960, margin: "0 auto", width: "100%", padding: "0 24px 24px", boxSizing: "border-box" },
 
   list: { display: "flex", flexDirection: "column", gap: 2 },
-  row: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 8px", borderRadius: 10, border: "1px solid #1E293B", transition: "all 0.15s", gap: 8 },
+  row: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 8px", borderRadius: 10, border: "1px solid var(--color-bg-elevated)", transition: "all 0.15s", gap: 8 },
   fBtn: { display: "flex", alignItems: "center", gap: 12, flex: 1, padding: "8px 4px", background: "none", border: "none", color: "inherit", cursor: "pointer", textAlign: "left", fontFamily: "inherit", minWidth: 0 },
-  fIco: { width: 38, height: 38, borderRadius: 8, border: "1px solid", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "rgba(15,23,42,0.6)" },
+  fIco: { width: 38, height: 38, borderRadius: 8, border: "1px solid", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "var(--color-bg-surface)" },
   fInf: { display: "flex", flexDirection: "column", gap: 2, minWidth: 0 },
-  fNm: { fontSize: 14, fontWeight: 500, color: "#E2E8F0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  fMt: { fontSize: 12, color: "#64748B", fontFamily: "'JetBrains Mono', monospace" },
+  fNm: { fontSize: 14, fontWeight: 500, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  fMt: { fontSize: 12, color: "var(--color-text-3)", fontFamily: "'JetBrains Mono', monospace" },
   fAct: { display: "flex", alignItems: "center", gap: 4, flexShrink: 0 },
-  aBtn: { display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 6, background: "none", border: "none", color: "#94A3B8", cursor: "pointer" },
+  aBtn: { display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 6, background: "none", border: "none", color: "var(--color-text-2)", cursor: "pointer" },
 
-  viewer: { display: "flex", flexDirection: "column", height: "calc(100vh - 140px)", minHeight: 500, background: "#1E293B", borderRadius: 12, border: "1px solid #334155", overflow: "hidden" },
-  vBar: { display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderBottom: "1px solid #334155", background: "#0F172A", flexWrap: "wrap" },
-  back: { padding: "6px 12px", borderRadius: 6, background: "rgba(241,245,249,0.05)", border: "1px solid #334155", color: "#94A3B8", fontSize: 13, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" },
-  vName: { flex: 1, fontSize: 14, fontWeight: 500, color: "#CBD5E1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 },
+  viewer: { display: "flex", flexDirection: "column", height: "calc(100vh - 140px)", minHeight: 500, background: "var(--color-bg-elevated)", borderRadius: 12, border: "1px solid var(--color-text-4)", overflow: "hidden" },
+  vBar: { display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderBottom: "1px solid var(--color-text-4)", background: "var(--color-bg-surface-solid)", flexWrap: "wrap" },
+  back: { padding: "6px 12px", borderRadius: 6, background: "rgba(241,245,249,0.05)", border: "1px solid var(--color-text-4)", color: "var(--color-text-2)", fontSize: 13, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" },
+  vName: { flex: 1, fontSize: 14, fontWeight: 500, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 },
   vCtrls: { display: "flex", alignItems: "center", gap: 4, flexShrink: 0, flexWrap: "wrap" },
-  cb: { width: 30, height: 30, borderRadius: 6, background: "rgba(241,245,249,0.05)", border: "1px solid #334155", color: "#94A3B8", fontSize: 16, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
-  zoom: { fontSize: 12, color: "#64748B", fontFamily: "'JetBrains Mono', monospace", minWidth: 40, textAlign: "center" },
-  div: { width: 1, height: 20, background: "#334155", margin: "0 4px" },
+  cb: { width: 30, height: 30, borderRadius: 6, background: "rgba(241,245,249,0.05)", border: "1px solid var(--color-text-4)", color: "var(--color-text-2)", fontSize: 16, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
+  zoom: { fontSize: 12, color: "var(--color-text-3)", fontFamily: "'JetBrains Mono', monospace", minWidth: 40, textAlign: "center" },
+  div: { width: 1, height: 20, background: "var(--color-text-4)", margin: "0 4px" },
 
-  sPanel: { borderBottom: "1px solid #334155", background: "#0F172A" },
+  sPanel: { borderBottom: "1px solid var(--color-text-4)", background: "var(--color-bg-surface-solid)" },
   sPanelRow: { display: "flex", alignItems: "center", gap: 8, padding: "8px 16px" },
-  sPanelIn: { flex: 1, padding: "6px 8px", background: "#1E293B", border: "1px solid #334155", borderRadius: 6, color: "#E2E8F0", fontSize: 13, fontFamily: "inherit", outline: "none", minWidth: 120 },
-  mc: { fontSize: 12, color: "#94A3B8", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" },
-  nb: { width: 26, height: 26, borderRadius: 5, background: "rgba(241,245,249,0.05)", border: "1px solid #334155", color: "#94A3B8", fontSize: 13, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
-  mList: { maxHeight: 200, overflowY: "auto", borderTop: "1px solid #1E293B" },
-  mItem: { display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 16px", background: "none", border: "none", borderBottom: "1px solid #1E293B", color: "#CBD5E1", fontSize: 12, fontFamily: "inherit", cursor: "pointer", textAlign: "left", width: "100%", boxSizing: "border-box" },
-  mItemA: { background: "rgba(56,189,248,0.08)" },
-  mBadge: { flexShrink: 0, fontSize: 10, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: "#38BDF8", background: "rgba(56,189,248,0.12)", padding: "2px 6px", borderRadius: 4, marginTop: 1 },
-  mSnip: { fontSize: 12, lineHeight: 1.5, color: "#94A3B8", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" },
+  sPanelIn: { flex: 1, padding: "6px 8px", background: "var(--color-bg-elevated)", border: "1px solid var(--color-text-4)", borderRadius: 6, color: "var(--color-text-1)", fontSize: 13, fontFamily: "inherit", outline: "none", minWidth: 120 },
+  mc: { fontSize: 12, color: "var(--color-text-2)", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" },
+  nb: { width: 26, height: 26, borderRadius: 5, background: "rgba(241,245,249,0.05)", border: "1px solid var(--color-text-4)", color: "var(--color-text-2)", fontSize: 13, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
+  mList: { maxHeight: 200, overflowY: "auto", borderTop: "1px solid var(--color-bg-elevated)" },
+  mItem: { display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 16px", background: "none", border: "none", borderBottom: "1px solid var(--color-bg-elevated)", color: "var(--color-text-1)", fontSize: 12, fontFamily: "inherit", cursor: "pointer", textAlign: "left", width: "100%", boxSizing: "border-box" },
+  mItemA: { background: "var(--color-border)" },
+  mBadge: { flexShrink: 0, fontSize: 10, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: "var(--color-accent)", background: "var(--color-border-mid)", padding: "2px 6px", borderRadius: 4, marginTop: 1 },
+  mSnip: { fontSize: 12, lineHeight: 1.5, color: "var(--color-text-2)", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" },
 
-  vBody: { flex: 1, overflow: "auto", display: "flex", flexDirection: "column", justifyContent: "flex-start", alignItems: "center", padding: 16, background: "#0F172A", minHeight: 0 },
+  vBody: { flex: 1, overflow: "auto", display: "flex", flexDirection: "column", justifyContent: "flex-start", alignItems: "center", padding: 16, background: "var(--color-bg-surface-solid)", minHeight: 0 },
 
   ctr: { display: "flex", alignItems: "center", justifyContent: "center", padding: 40 },
-  spin: { display: "inline-block", width: 16, height: 16, border: "2px solid #334155", borderTopColor: "#38BDF8", borderRadius: "50%", animation: "spin 0.6s linear infinite" },
-  miniSpin: { display: "inline-block", width: 12, height: 12, border: "2px solid #334155", borderTopColor: "#FACC15", borderRadius: "50%", animation: "spin 0.6s linear infinite", flexShrink: 0 },
-  eBox: { maxWidth: 500, padding: 20, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, color: "#CBD5E1" },
-  code: { background: "rgba(56,189,248,0.1)", padding: "2px 6px", borderRadius: 4, color: "#38BDF8", fontSize: 11, fontFamily: "'JetBrains Mono', monospace" },
-  foot: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "14px 24px", boxSizing: "border-box", borderTop: "1px solid #1E293B", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, fontSize: 11, color: "#475569", fontFamily: "'JetBrains Mono', monospace" },
+  spin: { display: "inline-block", width: 16, height: 16, border: "2px solid var(--color-text-4)", borderTopColor: "var(--color-accent)", borderRadius: "50%", animation: "spin 0.6s linear infinite" },
+  miniSpin: { display: "inline-block", width: 12, height: 12, border: "2px solid var(--color-text-4)", borderTopColor: "#FACC15", borderRadius: "50%", animation: "spin 0.6s linear infinite", flexShrink: 0 },
+  eBox: { maxWidth: 500, padding: 20, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, color: "var(--color-text-1)" },
+  code: { background: "var(--color-border-mid)", padding: "2px 6px", borderRadius: 4, color: "var(--color-accent)", fontSize: 11, fontFamily: "'JetBrains Mono', monospace" },
+  foot: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "14px 24px", boxSizing: "border-box", borderTop: "1px solid var(--color-bg-elevated)", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, fontSize: 11, color: "var(--color-text-3)", fontFamily: "'JetBrains Mono', monospace" },
 };
 
 if (typeof document !== "undefined") {

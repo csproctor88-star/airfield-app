@@ -32,8 +32,8 @@ export function BottomNav() {
         transform: 'translateX(-50%)',
         width: '100%',
         maxWidth: 480,
-        background: 'rgba(4,7,12,0.97)',
-        borderTop: '1px solid rgba(56,189,248,0.06)',
+        background: 'var(--color-bg-nav)',
+        borderTop: '1px solid var(--color-border)',
         display: 'flex',
         justifyContent: 'space-around',
         padding: '6px 0 20px',
@@ -53,7 +53,7 @@ export function BottomNav() {
             style={{
               background: 'none',
               border: 'none',
-              color: isActive ? '#22D3EE' : '#64748B',
+              color: isActive ? 'var(--color-cyan)' : 'var(--color-text-3)',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -67,7 +67,7 @@ export function BottomNav() {
             }}
           >
             <Icon size={20} />
-            <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.08em' }}>
+            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em' }}>
               {label}
             </span>
           </Link>

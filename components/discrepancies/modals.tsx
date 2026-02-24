@@ -2,7 +2,8 @@
 
 import { useState, type ReactNode } from 'react'
 import type { DiscrepancyRow } from '@/lib/supabase/discrepancies'
-import { DISCREPANCY_TYPES, INSTALLATION, ALLOWED_TRANSITIONS, STATUS_CONFIG, CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS } from '@/lib/constants'
+import { DISCREPANCY_TYPES, ALLOWED_TRANSITIONS, STATUS_CONFIG, CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS } from '@/lib/constants'
+import { useInstallation } from '@/lib/installation-context'
 
 // ─── Generic overlay ────────────────────────────────────────────────
 
@@ -12,19 +13,19 @@ function ModalOverlay({ title, onClose, children }: { title: string; onClose: ()
       style={{
         position: 'fixed', inset: 0, zIndex: 1000, display: 'flex',
         alignItems: 'flex-end', justifyContent: 'center',
-        background: 'rgba(0,0,0,0.6)', padding: 0,
+        background: 'var(--color-overlay)', padding: 0,
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{
-        background: '#0F172A', borderRadius: '16px 16px 0 0', width: '100%', maxWidth: 480,
-        maxHeight: '85vh', overflow: 'auto', padding: 20, border: '1px solid #1E293B',
+        background: 'var(--color-bg-surface-solid)', borderRadius: '16px 16px 0 0', width: '100%', maxWidth: 480,
+        maxHeight: '85vh', overflow: 'auto', padding: 20, border: '1px solid var(--color-border-mid)',
         borderBottom: 'none',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <span style={{ fontSize: 14, fontWeight: 800 }}>{title}</span>
+          <span style={{ fontSize: 15, fontWeight: 800 }}>{title}</span>
           <button type="button" onClick={onClose} style={{
-            background: 'none', border: 'none', color: '#64748B', fontSize: 18,
+            background: 'none', border: 'none', color: 'var(--color-text-3)', fontSize: 18,
             cursor: 'pointer', padding: 0, lineHeight: 1,
           }}>×</button>
         </div>
@@ -151,6 +152,7 @@ export function StatusUpdateModal({
   onSaved: (updated: DiscrepancyRow) => void
   onDeleted?: () => void
 }) {
+  const { ceShops } = useInstallation()
   const allowed = ALLOWED_TRANSITIONS[discrepancy.status] || []
   const [saving, setSaving] = useState(false)
   const [newStatus, setNewStatus] = useState('')
@@ -240,7 +242,7 @@ export function StatusUpdateModal({
         <>
           <div style={{ marginBottom: 12 }}>
             <FieldLabel>Open / Closed</FieldLabel>
-            <div style={{ fontSize: 12, fontWeight: 600, color: STATUS_CONFIG[discrepancy.status as keyof typeof STATUS_CONFIG]?.color || '#94A3B8' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: STATUS_CONFIG[discrepancy.status as keyof typeof STATUS_CONFIG]?.color || '#94A3B8' }}>
               {STATUS_CONFIG[discrepancy.status as keyof typeof STATUS_CONFIG]?.label || discrepancy.status}
             </div>
           </div>
@@ -254,8 +256,8 @@ export function StatusUpdateModal({
                 return (
                   <button key={s} type="button" onClick={() => setNewStatus(s)} style={{
                     background: active ? `${cfg?.color || '#64748B'}22` : 'transparent',
-                    border: `1px solid ${active ? cfg?.color || '#64748B' : '#334155'}`,
-                    borderRadius: 6, padding: '6px 12px', fontSize: 11, fontWeight: 600,
+                    border: `1px solid ${active ? cfg?.color || 'var(--color-text-3)' : 'var(--color-text-4)'}`,
+                    borderRadius: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600,
                     color: cfg?.color || '#94A3B8', cursor: 'pointer', fontFamily: 'inherit',
                   }}>
                     {cfg?.label || s}
@@ -280,7 +282,7 @@ export function StatusUpdateModal({
         <select className="input-dark" value={assignedShop}
           onChange={(e) => setAssignedShop(e.target.value)}>
           <option value="">Unassigned</option>
-          {INSTALLATION.ce_shops.map(s => <option key={s} value={s}>{s}</option>)}
+          {ceShops.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
 
@@ -332,7 +334,7 @@ export function WorkOrderModal({
           value={workOrder} onChange={(e) => setWorkOrder(e.target.value)} />
       </div>
 
-      <div style={{ fontSize: 10, color: '#64748B', marginBottom: 12 }}>
+      <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 12 }}>
         {discrepancy.work_order_number
           ? `Current: ${discrepancy.work_order_number}`
           : 'No work order assigned yet.'}
@@ -371,7 +373,7 @@ export function PhotoViewerModal({
         border: 'none', color: '#fff', fontSize: 24, cursor: 'pointer', zIndex: 10,
       }}>×</button>
 
-      <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 8, textAlign: 'center' }}>
+      <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 8, textAlign: 'center' }}>
         {photo.name} — {index + 1} of {photos.length}
       </div>
 
@@ -384,11 +386,11 @@ export function PhotoViewerModal({
       {photos.length > 1 && (
         <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>
           <button type="button" onClick={() => setIndex((i) => (i - 1 + photos.length) % photos.length)}
-            style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-mid)', borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
             ← Prev
           </button>
           <button type="button" onClick={() => setIndex((i) => (i + 1) % photos.length)}
-            style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-mid)', borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
             Next →
           </button>
         </div>

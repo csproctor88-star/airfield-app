@@ -9,6 +9,7 @@ import type { UserRole, RegulationPubType } from '@/lib/supabase/types'
 import { createClient } from '@/lib/supabase/client'
 import { userDocService, type UserDocument } from '@/lib/userDocuments'
 import { idbGet, idbSet, idbGetAllKeys, idbDelete, STORE_BLOBS } from '@/lib/idb'
+import { sanitizeRegId as sanitizeFileName } from '@/lib/utils'
 
 const RegulationPDFViewer = dynamic(
   () => import('@/components/RegulationPDFViewer'),
@@ -21,15 +22,6 @@ function getCategoryConfig(categoryValue: string) {
 }
 
 const REG_BUCKET = 'regulation-pdfs'
-
-function sanitizeFileName(regId: string): string {
-  return regId
-    .toLowerCase()
-    .replace(/,\s*/g, '-')
-    .replace(/\.\s+/g, '-')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-}
 
 // --- Favorites persistence (localStorage) ---
 const FAVORITES_KEY = 'aoms_reg_favorites'
@@ -120,14 +112,14 @@ export default function RegulationsPage() {
               flex: 1,
               padding: '8px 0',
               background: tab === t.key
-                ? 'linear-gradient(135deg, #0369A1, #0EA5E9)'
+                ? 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))'
                 : 'rgba(14,165,233,0.08)',
               border: tab === t.key
-                ? '1px solid #0EA5E9'
+                ? '1px solid var(--color-accent-secondary)'
                 : '1px solid rgba(14,165,233,0.2)',
               borderRadius: 8,
-              color: tab === t.key ? '#fff' : '#64748B',
-              fontSize: 12,
+              color: tab === t.key ? '#fff' : 'var(--color-text-3)',
+              fontSize: 13,
               fontWeight: 700,
               fontFamily: 'inherit',
               cursor: 'pointer',
@@ -284,7 +276,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
       setCacheProgress({ done, total, errors })
     }
     setCacheProgress(null)
-  }, [])
+  }, [regulations])
 
   const [clearing, setClearing] = useState(false)
 
@@ -374,8 +366,8 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
     <>
       {/* Search — prominent, takes former KPI space */}
       <div style={{
-        background: 'rgba(10,16,28,0.92)',
-        border: '1px solid rgba(56,189,248,0.06)',
+        background: 'var(--color-bg-surface)',
+        border: '1px solid var(--color-border)',
         borderRadius: 10,
         padding: 12,
         marginBottom: 10,
@@ -383,7 +375,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
         <div style={{ position: 'relative', marginBottom: 10 }}>
           <Search
             size={16}
-            color="#64748B"
+            color="var(--color-text-3)"
             style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }}
           />
           <input
@@ -394,11 +386,11 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
             style={{
               width: '100%',
               padding: '10px 14px 10px 38px',
-              background: 'rgba(15,23,42,0.6)',
-              border: '1px solid #1E293B',
+              background: 'var(--color-search-bg)',
+              border: '1px solid var(--color-search-border)',
               borderRadius: 8,
-              color: '#E2E8F0',
-              fontSize: 14,
+              color: 'var(--color-text-1)',
+              fontSize: 15,
               fontFamily: 'inherit',
               outline: 'none',
               boxSizing: 'border-box',
@@ -412,7 +404,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                 background: 'none', border: 'none', cursor: 'pointer', padding: 2,
               }}
             >
-              <X size={16} color="#64748B" />
+              <X size={16} color="var(--color-text-3)" />
             </button>
           )}
         </div>
@@ -424,10 +416,10 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
             style={{
               display: 'flex', alignItems: 'center', gap: 4,
               background: hasActiveFilters ? 'rgba(34,211,238,0.08)' : 'transparent',
-              border: `1px solid ${hasActiveFilters ? 'rgba(34,211,238,0.25)' : 'rgba(56,189,248,0.12)'}`,
+              border: `1px solid ${hasActiveFilters ? 'rgba(34,211,238,0.25)' : 'var(--color-border-mid)'}`,
               borderRadius: 6, padding: '6px 10px', cursor: 'pointer',
-              color: hasActiveFilters ? '#22D3EE' : '#94A3B8',
-              fontSize: 11, fontWeight: 700, fontFamily: 'inherit',
+              color: hasActiveFilters ? 'var(--color-cyan)' : 'var(--color-text-2)',
+              fontSize: 12, fontWeight: 700, fontFamily: 'inherit',
             }}
           >
             {showFilters ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -435,7 +427,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
             {hasActiveFilters && (
               <span
                 onClick={e => { e.stopPropagation(); setCategoryFilter('all'); setPubTypeFilter('all') }}
-                style={{ marginLeft: 4, color: '#EF4444', cursor: 'pointer' }}
+                style={{ marginLeft: 4, color: 'var(--color-danger)', cursor: 'pointer' }}
               >
                 Clear
               </span>
@@ -447,10 +439,10 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
             style={{
               display: 'flex', alignItems: 'center', gap: 4,
               background: showFavoritesOnly ? 'rgba(250,204,21,0.10)' : 'transparent',
-              border: `1px solid ${showFavoritesOnly ? 'rgba(250,204,21,0.30)' : 'rgba(56,189,248,0.12)'}`,
+              border: `1px solid ${showFavoritesOnly ? 'rgba(250,204,21,0.30)' : 'var(--color-border-mid)'}`,
               borderRadius: 6, padding: '6px 10px', cursor: 'pointer',
-              color: showFavoritesOnly ? '#FACC15' : '#94A3B8',
-              fontSize: 11, fontWeight: 700, fontFamily: 'inherit',
+              color: showFavoritesOnly ? '#FACC15' : 'var(--color-text-2)',
+              fontSize: 12, fontWeight: 700, fontFamily: 'inherit',
             }}
           >
             <Star size={12} fill={showFavoritesOnly ? '#FACC15' : 'none'} />
@@ -462,9 +454,9 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
             style={{
               display: 'flex', alignItems: 'center',
               background: 'transparent',
-              border: '1px solid rgba(56,189,248,0.12)',
+              border: '1px solid var(--color-border-mid)',
               borderRadius: 6, padding: '6px 8px', cursor: 'pointer',
-              color: '#64748B', fontFamily: 'inherit',
+              color: 'var(--color-text-3)', fontFamily: 'inherit',
             }}
             title="Favorites settings"
           >
@@ -477,19 +469,19 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
           <div style={{
             marginTop: 8, padding: '10px 10px',
             background: 'rgba(15,23,42,0.6)', borderRadius: 6,
-            border: '1px solid rgba(56,189,248,0.06)',
+            border: '1px solid var(--color-border)',
             display: 'flex', flexDirection: 'column', gap: 10,
           }}>
             {/* Favorites default toggle */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 11, color: '#94A3B8', fontWeight: 600 }}>
+              <span style={{ fontSize: 12, color: 'var(--color-text-2)', fontWeight: 600 }}>
                 Show favorites by default
               </span>
               <button
                 onClick={toggleFavDefault}
                 style={{
                   width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
-                  background: loadFavoritesDefault() ? '#FACC15' : '#334155',
+                  background: loadFavoritesDefault() ? '#FACC15' : 'var(--color-text-4)',
                   position: 'relative', transition: 'background 0.2s',
                 }}
               >
@@ -502,13 +494,13 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
             </div>
 
             {/* Cache All */}
-            <div style={{ borderTop: '1px solid rgba(56,189,248,0.06)', paddingTop: 10 }}>
+            <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                 <div>
-                  <div style={{ fontSize: 11, color: '#94A3B8', fontWeight: 600 }}>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-2)', fontWeight: 600 }}>
                     Cache all references
                   </div>
-                  <div style={{ fontSize: 9, color: '#64748B', marginTop: 2 }}>
+                  <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 2 }}>
                     {cachedCount !== null
                       ? `${cachedCount} of ${regulations.length} cached for offline use`
                       : 'Download all PDFs for offline use'}
@@ -522,7 +514,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                       background: 'transparent',
                       border: '1px solid rgba(239,68,68,0.3)',
                       borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
-                      color: '#F87171', fontSize: 10, fontWeight: 700, fontFamily: 'inherit',
+                      color: '#F87171', fontSize: 11, fontWeight: 700, fontFamily: 'inherit',
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -536,12 +528,12 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 4,
                       background: cachedCount === regulations.length
-                        ? 'transparent' : 'linear-gradient(135deg, #0369A1, #0EA5E9)',
+                        ? 'transparent' : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
                       border: cachedCount === regulations.length
                         ? '1px solid rgba(52,211,153,0.3)' : 'none',
                       borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
                       color: cachedCount === regulations.length ? '#34D399' : '#fff',
-                      fontSize: 10, fontWeight: 700, fontFamily: 'inherit',
+                      fontSize: 11, fontWeight: 700, fontFamily: 'inherit',
                       whiteSpace: 'nowrap',
                       opacity: cachedCount === regulations.length ? 0.8 : 1,
                     }}
@@ -556,18 +548,18 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
               {cacheProgress && (
                 <div style={{ marginTop: 8 }}>
                   <div style={{
-                    height: 4, borderRadius: 2, background: '#1E293B', overflow: 'hidden',
+                    height: 4, borderRadius: 2, background: 'var(--color-bg-elevated)', overflow: 'hidden',
                   }}>
                     <div style={{
                       height: '100%', borderRadius: 2,
                       background: cacheProgress.errors > 0
-                        ? 'linear-gradient(90deg, #0EA5E9, #F97316)'
-                        : '#0EA5E9',
+                        ? 'linear-gradient(90deg, var(--color-accent-secondary), #F97316)'
+                        : 'var(--color-accent-secondary)',
                       width: `${Math.round((cacheProgress.done / cacheProgress.total) * 100)}%`,
                       transition: 'width 0.3s',
                     }} />
                   </div>
-                  <div style={{ fontSize: 9, color: '#64748B', marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
                     <span>{cacheProgress.done} of {cacheProgress.total} downloaded</span>
                     {cacheProgress.errors > 0 && (
                       <span style={{ color: '#F97316' }}>{cacheProgress.errors} unavailable</span>
@@ -579,7 +571,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
               {/* Clear Cache */}
               {(cachedCount ?? 0) > 0 && !cacheProgress && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(56,189,248,0.04)' }}>
-                  <span style={{ fontSize: 10, color: '#64748B' }}>
+                  <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
                     Free up storage space
                   </span>
                   <button
@@ -590,7 +582,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                       background: 'transparent',
                       border: '1px solid rgba(239,68,68,0.25)',
                       borderRadius: 6, padding: '4px 10px', cursor: clearing ? 'not-allowed' : 'pointer',
-                      color: '#F87171', fontSize: 10, fontWeight: 700, fontFamily: 'inherit',
+                      color: '#F87171', fontSize: 11, fontWeight: 700, fontFamily: 'inherit',
                       whiteSpace: 'nowrap',
                       opacity: clearing ? 0.5 : 1,
                     }}
@@ -610,14 +602,14 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
             display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10,
           }}>
             <div>
-              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 4, letterSpacing: '0.06em' }}>CATEGORY</div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4, letterSpacing: '0.06em' }}>CATEGORY</div>
               <select
                 value={categoryFilter}
                 onChange={e => setCategoryFilter(e.target.value)}
                 style={{
                   width: '100%', padding: '6px 8px', background: 'rgba(15,23,42,0.8)',
-                  border: '1px solid #1E293B', borderRadius: 6, color: '#E2E8F0',
-                  fontSize: 11, fontFamily: 'inherit', outline: 'none',
+                  border: '1px solid var(--color-bg-elevated)', borderRadius: 6, color: 'var(--color-text-1)',
+                  fontSize: 12, fontFamily: 'inherit', outline: 'none',
                 }}
               >
                 <option value="all">All Categories</option>
@@ -627,14 +619,14 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
               </select>
             </div>
             <div>
-              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, marginBottom: 4, letterSpacing: '0.06em' }}>PUB TYPE</div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4, letterSpacing: '0.06em' }}>PUB TYPE</div>
               <select
                 value={pubTypeFilter}
                 onChange={e => setPubTypeFilter(e.target.value)}
                 style={{
                   width: '100%', padding: '6px 8px', background: 'rgba(15,23,42,0.8)',
-                  border: '1px solid #1E293B', borderRadius: 6, color: '#E2E8F0',
-                  fontSize: 11, fontFamily: 'inherit', outline: 'none',
+                  border: '1px solid var(--color-bg-elevated)', borderRadius: 6, color: 'var(--color-text-1)',
+                  fontSize: 12, fontFamily: 'inherit', outline: 'none',
                 }}
               >
                 <option value="all">All Types</option>
@@ -649,7 +641,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
 
       {/* Results count + Add button */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600 }}>
+        <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontWeight: 600 }}>
           {showFavoritesOnly
             ? `${filtered.length} favorite${filtered.length !== 1 ? 's' : ''}`
             : filtered.length === regulations.length
@@ -664,7 +656,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
               display: 'inline-flex', alignItems: 'center', gap: 4,
               background: 'linear-gradient(135deg, #059669, #10B981)',
               border: 'none', borderRadius: 6, padding: '5px 12px',
-              color: '#fff', fontSize: 10, fontWeight: 700,
+              color: '#fff', fontSize: 11, fontWeight: 700,
               fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap',
             }}
           >
@@ -676,7 +668,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
 
       {/* Regulation cards */}
       {filtered.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: 32, color: '#64748B', fontSize: 12 }}>
+        <div className="card" style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)', fontSize: 13 }}>
           {showFavoritesOnly
             ? 'No favorites yet. Tap the star on any reference to add it.'
             : 'No references match your search.'}
@@ -697,17 +689,17 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                 padding: '10px 12px',
                 cursor: 'pointer',
                 border: isExpanded
-                  ? '1px solid rgba(56,189,248,0.2)'
-                  : '1px solid rgba(56,189,248,0.06)',
+                  ? '1px solid var(--color-border-active)'
+                  : '1px solid var(--color-border)',
                 transition: 'border-color 0.15s',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: '#38BDF8', marginBottom: 2 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--color-accent)', marginBottom: 2 }}>
                     {reg.reg_id}
                   </div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#F1F5F9', lineHeight: 1.3 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-1)', lineHeight: 1.3 }}>
                     {reg.title}
                   </div>
                 </div>
@@ -721,7 +713,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                 >
                   <Star
                     size={18}
-                    color={isFav ? '#FACC15' : '#475569'}
+                    color={isFav ? '#FACC15' : 'var(--color-text-3)'}
                     fill={isFav ? '#FACC15' : 'none'}
                   />
                 </button>
@@ -730,21 +722,21 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
               <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
                 {catConfig && (
                   <span style={{
-                    fontSize: 8, fontWeight: 700, color: catConfig.color,
+                    fontSize: 9, fontWeight: 700, color: catConfig.color,
                     background: catConfig.color + '18', padding: '1px 6px', borderRadius: 3,
                   }}>
                     {catConfig.label}
                   </span>
                 )}
                 <span style={{
-                  fontSize: 8, fontWeight: 600, color: '#94A3B8',
+                  fontSize: 9, fontWeight: 600, color: 'var(--color-text-2)',
                   background: 'rgba(148,163,184,0.10)', padding: '1px 6px', borderRadius: 3,
                 }}>
                   {reg.pub_type}
                 </span>
                 {reg.publication_date && (
                   <span style={{
-                    fontSize: 8, fontWeight: 600, color: '#64748B',
+                    fontSize: 9, fontWeight: 600, color: 'var(--color-text-3)',
                     padding: '1px 4px',
                   }}>
                     {reg.publication_date}
@@ -753,38 +745,38 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
               </div>
 
               {isExpanded && (
-                <div style={{ marginTop: 10, borderTop: '1px solid rgba(56,189,248,0.06)', paddingTop: 10 }}>
-                  <div style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.6, marginBottom: 10 }}>
+                <div style={{ marginTop: 10, borderTop: '1px solid var(--color-border)', paddingTop: 10 }}>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-1)', lineHeight: 1.6, marginBottom: 10 }}>
                     {reg.description}
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 10 }}>
                     <div>
-                      <div style={{ fontSize: 8, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em' }}>PUB TYPE</div>
-                      <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600 }}>{reg.pub_type}</div>
+                      <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em' }}>PUB TYPE</div>
+                      <div style={{ fontSize: 11, color: 'var(--color-text-2)', fontWeight: 600 }}>{reg.pub_type}</div>
                     </div>
                     {reg.source_volume && (
                       <div>
-                        <div style={{ fontSize: 8, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em' }}>SOURCE VOLUME</div>
-                        <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600 }}>{reg.source_volume}</div>
+                        <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em' }}>SOURCE VOLUME</div>
+                        <div style={{ fontSize: 11, color: 'var(--color-text-2)', fontWeight: 600 }}>{reg.source_volume}</div>
                       </div>
                     )}
                     <div>
-                      <div style={{ fontSize: 8, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em' }}>DATE</div>
-                      <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600 }}>{reg.publication_date ?? 'N/A'}</div>
+                      <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em' }}>DATE</div>
+                      <div style={{ fontSize: 11, color: 'var(--color-text-2)', fontWeight: 600 }}>{reg.publication_date ?? 'N/A'}</div>
                     </div>
                   </div>
 
                   {reg.tags.length > 0 && (
                     <div style={{ marginBottom: 10 }}>
-                      <div style={{ fontSize: 8, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>TAGS</div>
+                      <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>TAGS</div>
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                         {reg.tags.map(tag => (
                           <span
                             key={tag}
                             onClick={e => { e.stopPropagation(); setSearch(tag) }}
                             style={{
-                              fontSize: 9, color: '#94A3B8', background: 'rgba(148,163,184,0.08)',
+                              fontSize: 10, color: 'var(--color-text-2)', background: 'rgba(148,163,184,0.08)',
                               padding: '2px 6px', borderRadius: 3, cursor: 'pointer',
                               border: '1px solid rgba(148,163,184,0.10)',
                             }}
@@ -801,8 +793,8 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                       onClick={e => { e.stopPropagation(); onViewReg(reg) }}
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 6,
-                        background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
-                        color: '#fff', fontSize: 11, fontWeight: 700,
+                        background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+                        color: '#fff', fontSize: 12, fontWeight: 700,
                         padding: '6px 14px', borderRadius: 6, textDecoration: 'none',
                         border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                       }}
@@ -819,8 +811,8 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 6,
                           background: 'transparent',
-                          border: '1px solid rgba(56,189,248,0.2)',
-                          color: '#94A3B8', fontSize: 11, fontWeight: 700,
+                          border: '1px solid var(--color-border-active)',
+                          color: 'var(--color-text-2)', fontSize: 12, fontWeight: 700,
                           padding: '6px 14px', borderRadius: 6, textDecoration: 'none',
                         }}
                       >
@@ -833,8 +825,8 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 6,
                           background: 'transparent',
-                          border: '1px solid rgba(56,189,248,0.2)',
-                          color: '#94A3B8', fontSize: 11, fontWeight: 700,
+                          border: '1px solid var(--color-border-active)',
+                          color: 'var(--color-text-2)', fontSize: 12, fontWeight: 700,
                           padding: '6px 14px', borderRadius: 6,
                           cursor: 'pointer', fontFamily: 'inherit',
                         }}
@@ -850,7 +842,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                           display: 'inline-flex', alignItems: 'center', gap: 6,
                           background: 'transparent',
                           border: '1px solid rgba(239,68,68,0.25)',
-                          color: '#F87171', fontSize: 11, fontWeight: 700,
+                          color: '#F87171', fontSize: 12, fontWeight: 700,
                           padding: '6px 14px', borderRadius: 6,
                           cursor: 'pointer', fontFamily: 'inherit',
                           marginLeft: 'auto',
@@ -875,10 +867,10 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 10 }}>
                         <AlertTriangle size={14} color="#F87171" style={{ flexShrink: 0, marginTop: 1 }} />
                         <div>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: '#F87171', marginBottom: 2 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: '#F87171', marginBottom: 2 }}>
                             Delete this reference?
                           </div>
-                          <div style={{ fontSize: 10, color: '#94A3B8', lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 11, color: 'var(--color-text-2)', lineHeight: 1.5 }}>
                             This will remove <strong>{reg.reg_id}</strong> from the database, delete its cached PDF, and remove it from storage. This cannot be undone.
                           </div>
                         </div>
@@ -887,9 +879,9 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                         <button
                           onClick={e => { e.stopPropagation(); setConfirmDeleteId(null) }}
                           style={{
-                            padding: '5px 14px', borderRadius: 6, fontSize: 10, fontWeight: 700,
-                            background: 'transparent', border: '1px solid #334155',
-                            color: '#94A3B8', cursor: 'pointer', fontFamily: 'inherit',
+                            padding: '5px 14px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                            background: 'transparent', border: '1px solid var(--color-text-4)',
+                            color: 'var(--color-text-2)', cursor: 'pointer', fontFamily: 'inherit',
                           }}
                         >
                           Cancel
@@ -898,7 +890,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                           onClick={e => { e.stopPropagation(); handleDeleteRef(reg.reg_id) }}
                           disabled={deletingRegId === reg.reg_id}
                           style={{
-                            padding: '5px 14px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+                            padding: '5px 14px', borderRadius: 6, fontSize: 11, fontWeight: 700,
                             background: deletingRegId === reg.reg_id ? '#7F1D1D' : '#DC2626',
                             border: 'none', color: '#fff', cursor: deletingRegId === reg.reg_id ? 'not-allowed' : 'pointer',
                             fontFamily: 'inherit', opacity: deletingRegId === reg.reg_id ? 0.6 : 1,
@@ -1058,12 +1050,12 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '8px 10px', background: 'rgba(15,23,42,0.8)',
-    border: '1px solid #1E293B', borderRadius: 6, color: '#E2E8F0',
-    fontSize: 12, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
+    border: '1px solid var(--color-bg-elevated)', borderRadius: 6, color: 'var(--color-text-1)',
+    fontSize: 13, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
   }
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.06em',
+    fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em',
     marginBottom: 4, display: 'block',
   }
 
@@ -1071,7 +1063,7 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 9999,
-        background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+        background: 'var(--color-overlay)', backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
         padding: '40px 16px', overflowY: 'auto',
       }}
@@ -1088,12 +1080,12 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
       >
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: '#F1F5F9' }}>Add Reference</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--color-text-1)' }}>Add Reference</div>
           <button
             onClick={onClose}
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
           >
-            <X size={18} color="#64748B" />
+            <X size={18} color="var(--color-text-3)" />
           </button>
         </div>
 
@@ -1101,7 +1093,7 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
           <div style={{
             padding: '8px 12px', marginBottom: 12, borderRadius: 6,
             background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-            color: '#F87171', fontSize: 11, fontWeight: 600,
+            color: '#F87171', fontSize: 12, fontWeight: 600,
           }}>
             {error}
           </div>
@@ -1225,9 +1217,9 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   background: 'transparent',
-                  border: '1px solid rgba(56,189,248,0.2)',
+                  border: '1px solid var(--color-border-active)',
                   borderRadius: 6, padding: '6px 12px',
-                  color: '#94A3B8', fontSize: 11, fontWeight: 700,
+                  color: 'var(--color-text-2)', fontSize: 12, fontWeight: 700,
                   fontFamily: 'inherit', cursor: 'pointer',
                 }}
               >
@@ -1235,7 +1227,7 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
                 {pdfFile ? 'Change File' : 'Choose PDF'}
               </button>
               {pdfFile && (
-                <span style={{ fontSize: 10, color: '#38BDF8', fontWeight: 600 }}>
+                <span style={{ fontSize: 11, color: 'var(--color-accent)', fontWeight: 600 }}>
                   {pdfFile.name} ({formatFileSize(pdfFile.size)})
                 </span>
               )}
@@ -1253,18 +1245,18 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
           <div style={{
             padding: '8px 10px', borderRadius: 6,
             background: 'rgba(56,189,248,0.04)',
-            border: '1px solid rgba(56,189,248,0.08)',
-            fontSize: 9, color: '#64748B', lineHeight: 1.6,
+            border: '1px solid var(--color-border)',
+            fontSize: 10, color: 'var(--color-text-3)', lineHeight: 1.6,
           }}>
-            <strong style={{ color: '#94A3B8' }}>Auto-derived:</strong>{' '}
-            Source Volume: <span style={{ color: '#94A3B8' }}>{form.source_volume ?? 'None'}</span>{' | '}
-            Core: <span style={{ color: '#94A3B8' }}>{form.is_core ? 'Yes' : 'No'}</span>{' | '}
-            Cross-Ref: <span style={{ color: '#94A3B8' }}>{form.is_cross_ref ? 'Yes' : 'No'}</span>{' | '}
-            Scrubbed: <span style={{ color: '#94A3B8' }}>{form.is_scrubbed ? 'Yes' : 'No'}</span>
+            <strong style={{ color: 'var(--color-text-2)' }}>Auto-derived:</strong>{' '}
+            Source Volume: <span style={{ color: 'var(--color-text-2)' }}>{form.source_volume ?? 'None'}</span>{' | '}
+            Core: <span style={{ color: 'var(--color-text-2)' }}>{form.is_core ? 'Yes' : 'No'}</span>{' | '}
+            Cross-Ref: <span style={{ color: 'var(--color-text-2)' }}>{form.is_cross_ref ? 'Yes' : 'No'}</span>{' | '}
+            Scrubbed: <span style={{ color: 'var(--color-text-2)' }}>{form.is_scrubbed ? 'Yes' : 'No'}</span>
             {form.reg_id && (
               <>
                 <br />
-                Storage name: <span style={{ color: '#94A3B8' }}>{sanitizeFileName(form.reg_id || 'example')}.pdf</span>
+                Storage name: <span style={{ color: 'var(--color-text-2)' }}>{sanitizeFileName(form.reg_id || 'example')}.pdf</span>
               </>
             )}
           </div>
@@ -1275,9 +1267,9 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
           <button
             onClick={onClose}
             style={{
-              padding: '8px 20px', borderRadius: 6, fontSize: 12, fontWeight: 700,
-              background: 'transparent', border: '1px solid #334155',
-              color: '#94A3B8', cursor: 'pointer', fontFamily: 'inherit',
+              padding: '8px 20px', borderRadius: 6, fontSize: 13, fontWeight: 700,
+              background: 'transparent', border: '1px solid var(--color-text-4)',
+              color: 'var(--color-text-2)', cursor: 'pointer', fontFamily: 'inherit',
             }}
           >
             Cancel
@@ -1286,7 +1278,7 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
             onClick={handleSubmit}
             disabled={saving}
             style={{
-              padding: '8px 20px', borderRadius: 6, fontSize: 12, fontWeight: 700,
+              padding: '8px 20px', borderRadius: 6, fontSize: 13, fontWeight: 700,
               background: saving ? '#064E3B' : 'linear-gradient(135deg, #059669, #10B981)',
               border: 'none', color: '#fff',
               cursor: saving ? 'not-allowed' : 'pointer',
@@ -1418,7 +1410,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
   // ── No auth ──────────────────────────────────────────────
   if (!supabase) {
     return (
-      <div className="card" style={{ textAlign: 'center', padding: 32, color: '#64748B', fontSize: 12 }}>
+      <div className="card" style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)', fontSize: 13 }}>
         Supabase is not configured. User documents require authentication.
       </div>
     )
@@ -1429,7 +1421,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
       <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
         <span style={{
           display: 'inline-block', width: 20, height: 20,
-          border: '2px solid #334155', borderTopColor: '#38BDF8',
+          border: '2px solid var(--color-text-4)', borderTopColor: 'var(--color-accent)',
           borderRadius: '50%', animation: 'spin 0.6s linear infinite',
         }} />
       </div>
@@ -1438,7 +1430,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
 
   if (!userId) {
     return (
-      <div className="card" style={{ textAlign: 'center', padding: 32, color: '#64748B', fontSize: 12 }}>
+      <div className="card" style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)', fontSize: 13 }}>
         Please log in to upload and manage personal documents.
       </div>
     )
@@ -1448,14 +1440,14 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
     <>
       {/* Upload button + count */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600 }}>
+        <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontWeight: 600 }}>
           {docs.length} document{docs.length !== 1 ? 's' : ''}
         </div>
         <label
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: uploading ? '#1E293B' : 'linear-gradient(135deg, #0369A1, #0EA5E9)',
-            color: '#fff', fontSize: 11, fontWeight: 700,
+            background: uploading ? 'var(--color-bg-elevated)' : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+            color: '#fff', fontSize: 12, fontWeight: 700,
             padding: '6px 14px', borderRadius: 6,
             cursor: uploading ? 'not-allowed' : 'pointer',
             opacity: uploading ? 0.6 : 1,
@@ -1478,7 +1470,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
         <div style={{
           padding: '8px 12px', marginBottom: 12, borderRadius: 6,
           background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-          color: '#F87171', fontSize: 11, fontWeight: 600,
+          color: '#F87171', fontSize: 12, fontWeight: 600,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
           <span>{error}</span>
@@ -1494,11 +1486,11 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
       {/* Empty state */}
       {docs.length === 0 && !uploading && (
         <div className="card" style={{ textAlign: 'center', padding: 32 }}>
-          <FileText size={32} color="#334155" style={{ marginBottom: 12 }} />
-          <div style={{ color: '#94A3B8', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+          <FileText size={32} color="var(--color-text-4)" style={{ marginBottom: 12 }} />
+          <div style={{ color: 'var(--color-text-2)', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
             No documents yet
           </div>
-          <div style={{ color: '#64748B', fontSize: 11, lineHeight: 1.5 }}>
+          <div style={{ color: 'var(--color-text-3)', fontSize: 12, lineHeight: 1.5 }}>
             Upload your personal references and publications.
             They&apos;ll sync across your devices and work offline.
           </div>
@@ -1518,7 +1510,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
             style={{
               marginBottom: 8,
               padding: '10px 12px',
-              border: '1px solid rgba(56,189,248,0.06)',
+              border: '1px solid var(--color-border)',
               opacity: isDeleting ? 0.4 : 1,
               transition: 'opacity 0.2s',
             }}
@@ -1526,7 +1518,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
             {/* Title row */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#F1F5F9', lineHeight: 1.3 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-1)', lineHeight: 1.3 }}>
                   {doc.display_name}
                 </div>
               </div>
@@ -1534,7 +1526,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
                 {/* Status badge (only show for non-ready states) */}
                 {doc.status !== 'ready' && (
                   <div style={{
-                    fontSize: 8, fontWeight: 700, letterSpacing: '0.06em',
+                    fontSize: 9, fontWeight: 700, letterSpacing: '0.06em',
                     background: doc.status === 'failed'
                       ? 'rgba(239,68,68,0.15)' : 'rgba(253,230,138,0.15)',
                     color: doc.status === 'failed'
@@ -1547,8 +1539,8 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
                 {/* Cache indicator */}
                 {isCached && (
                   <div style={{
-                    fontSize: 8, fontWeight: 700, letterSpacing: '0.06em',
-                    background: 'rgba(14,165,233,0.15)', color: '#38BDF8',
+                    fontSize: 9, fontWeight: 700, letterSpacing: '0.06em',
+                    background: 'rgba(14,165,233,0.15)', color: 'var(--color-accent)',
                     padding: '2px 6px', borderRadius: 4, whiteSpace: 'nowrap',
                   }}>
                     CACHED
@@ -1559,15 +1551,15 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
 
             {/* Meta row */}
             <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>
+              <span style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600 }}>
                 {formatFileSize(doc.file_size)}
               </span>
               {doc.total_pages && (
-                <span style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>
+                <span style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600 }}>
                   {doc.total_pages} pages
                 </span>
               )}
-              <span style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>
+              <span style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600 }}>
                 {new Date(doc.uploaded_at).toLocaleDateString()}
               </span>
             </div>
@@ -1577,7 +1569,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
               <div style={{
                 marginTop: 6, padding: '6px 8px', borderRadius: 6,
                 background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.12)',
-                fontSize: 10, color: '#F87171', lineHeight: 1.4,
+                fontSize: 11, color: '#F87171', lineHeight: 1.4,
               }}>
                 Text extraction failed — the file may be scanned or image-based.
                 You can still view the document, but search won&apos;t be available.
@@ -1590,8 +1582,8 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
                 onClick={() => onViewDoc(doc, userId)}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
-                  background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
-                  color: '#fff', fontSize: 10, fontWeight: 700,
+                  background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+                  color: '#fff', fontSize: 11, fontWeight: 700,
                   padding: '5px 10px', borderRadius: 5,
                   border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                 }}
@@ -1606,9 +1598,9 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   background: 'transparent',
-                  border: '1px solid rgba(56,189,248,0.2)',
-                  color: isCached ? '#F87171' : '#94A3B8',
-                  fontSize: 10, fontWeight: 700,
+                  border: '1px solid var(--color-border-active)',
+                  color: isCached ? '#F87171' : 'var(--color-text-2)',
+                  fontSize: 11, fontWeight: 700,
                   padding: '4px 10px', borderRadius: 5,
                   cursor: isCaching ? 'not-allowed' : 'pointer',
                   fontFamily: 'inherit',
@@ -1627,7 +1619,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
                   background: 'transparent',
                   border: '1px solid rgba(239,68,68,0.2)',
                   color: '#F87171',
-                  fontSize: 10, fontWeight: 700,
+                  fontSize: 11, fontWeight: 700,
                   padding: '4px 10px', borderRadius: 5,
                   cursor: isDeleting ? 'not-allowed' : 'pointer',
                   fontFamily: 'inherit',

@@ -6,16 +6,115 @@ All notable changes to the Airfield OPS Management Suite.
 
 ### Planned
 - Server-side email delivery for inspection reports (branded sender address)
-- Real Supabase project integration and auth testing
 - NASA DIP API integration for FAA NOTAM sync
 - METAR weather API integration (aviationweather.gov)
 - Role-based access control (re-enable RLS policies)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
-- Reports module (charts, analytics, export)
 - Waivers module (airfield waiver lifecycle)
-- Aircraft Database module (tail numbers, fleet management)
-- Users & Security module (profile management, roles)
+- Users & Security module (profile management, roles, admin)
+- Sync & Data module (offline queue, export, import)
+
+---
+
+## [2.1.0] — 2026-02-24
+
+### Multi-Base Scaling, Reports, Theme System & Aircraft Database
+
+This release transforms the app from a single-base tool (Selfridge ANGB) into a multi-tenant platform supporting any number of installations. It also adds a full reporting suite, light/dark theme system, a 1,000+ aircraft reference database, and configurable inspection templates.
+
+#### Multi-Base Architecture
+- **`bases` table and `base_members` join table**: Full multi-tenant schema with per-installation data isolation
+- **Installation context**: All data queries (discrepancies, checks, inspections, obstructions, activity) scoped to the user's current `base_id`
+- **Installation switcher**: Settings page allows switching between bases; admins can manage multiple installations
+- **Base directory**: Static directory of 155 military installations with ICAO codes for dropdown selection
+- **Signup flow**: New users select an installation on signup; `base_members` row auto-created via database trigger
+- **Selfridge hardcoding removed**: Replaced all hardcoded KMTC references with dynamic base config from Supabase
+- **Andersen AFB (PGUA) seed**: Second base seeded as proof of multi-base support with dual runways
+
+#### Base Configuration (`/settings/base-setup`)
+- **Runways tab**: Add/edit/delete runways with full metadata (length, width, surface, heading, class B/Army_B, end coordinates, designators, approach lighting)
+- **NAVAIDs tab**: Add/delete navigation aids with automatic `navaid_statuses` row creation
+- **Areas tab**: Manage airfield area names (used in checks, discrepancies, inspections)
+- **CE Shops tab**: Manage Civil Engineering shop list for discrepancy assignment
+- **Templates tab**: Initialize default inspection templates or navigate to full editor
+- **Dashboard preview**: Live preview of current base configuration
+
+#### Inspection Templates (`/settings/templates`)
+- **Customizable checklists**: Per-base airfield and lighting inspection templates
+- **Section and item CRUD**: Add/edit/delete sections and checklist items
+- **Item type toggle**: Switch items between Pass/Fail and BWC types
+- **Template initialization**: Clone from default template for new bases
+- **Database**: `inspection_template_sections` and `inspection_template_items` tables
+
+#### Reports Module (`/reports`)
+- **Daily Operations Summary**: Date-range report covering inspections, checks, status changes, new discrepancies, obstruction evaluations — with PDF export
+- **Open Discrepancies Report**: Current snapshot with area and type breakdowns, aging highlights — with PDF export
+- **Discrepancy Trends**: Opened vs. closed over 30d/90d/6m/1y with top areas and types — with PDF export
+- **Aging Discrepancies**: Open items grouped by age tiers (0–7, 8–14, 15–30, 31–60, 61–90, 90+ days) with severity and shop breakdowns — with PDF export
+
+#### Aircraft Database (`/aircraft`)
+- **1,000+ aircraft reference entries**: Military and civilian aircraft with ACN/PCN comparison data
+- **Search and filtering**: By name, type, manufacturer, military branch
+- **Sorting**: By name, weight, wingspan, ACN values
+- **Favorites**: Star aircraft for quick access
+- **ACN/PCN comparison panel**: Compare aircraft pavement loading against runway PCN values
+
+#### Theme System
+- **Light/Dark/Auto modes**: CSS custom properties with smooth transitions
+- **Auto mode**: Follows system preference via `prefers-color-scheme`
+- **Theme toggle**: Available in Settings page under Appearance section
+- **Professional light theme**: Carefully tuned light colors for outdoor/bright-light use
+
+#### Obstruction Tool Enhancements
+- **Multi-runway evaluation**: Evaluates obstructions against ALL base runways simultaneously
+- **Per-runway surface overlays**: Runway-specific surfaces (primary, approach-departure, transitional, clear zone, graded area, APZ I/II) generated for every runway
+- **Per-runway toggles in legend**: Map legend shows toggles grouped by runway for multi-runway bases
+- **Clear Zone and Graded Area surfaces**: Added to evaluation and map (previously missing)
+- **APZ I and APZ II zones**: Land-use zone evaluation with guidance text
+- **Distance to threshold**: Shows distance to nearest runway end in evaluation results
+
+#### Dashboard Improvements
+- **Airfield status persistence**: Runway status, active runway, advisory, BWC, RSC all persist to `airfield_status` table via server-side API
+- **Runway status audit log**: All status changes logged to `runway_status_log` with database trigger
+- **Status-colored Active Runway card**: Green (open), yellow (suspended), red (closed)
+- **NAVAID and Areas display fixes**: Resolved issues where NAVAID toggles and areas checked were not rendering
+
+#### Inspection Workflow
+- **Complete/File flow**: Two-step workflow — inspectors complete their half, then a filer combines and files the daily report
+- **Per-user tracking**: `completed_by` and `filed_by` fields for audit trail
+
+#### UI Polish
+- **Search bar restyle**: White background with dark border in light theme
+- **Detail box restyle**: Better label/value contrast across themes
+- **Toggle button borders**: Consistent 1.5px borders on all toggle elements
+- **Professional color palette**: Toned down both light and dark themes
+
+#### Database (14 new migrations)
+- `20260222_add_completed_filed_by.sql` — Inspection workflow fields
+- `20260222_create_airfield_status.sql` — Airfield status persistence table
+- `20260222_create_runway_status_log.sql` — Runway status audit log with trigger
+- `20260222_disable_rls_new_tables.sql` — Disable RLS on new tables for MVP
+- `20260223_01_create_bases.sql` — Multi-base schema (bases, base_runways, base_navaids, base_areas, base_ce_shops, base_members)
+- `20260223_02_add_base_id_and_seed.sql` — Add base_id to all data tables, seed Selfridge
+- `20260223_03_add_profile_fields.sql` — Add primary_base_id, icao to profiles
+- `20260223_04_signup_base_membership.sql` — Auto-create base_members on signup trigger
+- `20260223_05_base_rls_policies.sql` — Base-scoped RLS policies
+- `20260223_06_fix_bases_icao_constraint.sql` — ICAO uniqueness constraint
+- `20260224_consolidate_selfridge_base.sql` — Merge duplicate Selfridge entries
+- `20260224_inspection_templates.sql` — Inspection template tables
+- `20260224_relax_airfield_status_constraint.sql` — Allow flexible status values
+- `20260224_seed_pgua_andersen_afb.sql` — Andersen AFB seed with dual runways
+
+#### New Source Files
+- `lib/base-directory.ts` — 155 military installations with ICAO codes
+- `lib/aircraft-data.ts` — 1,000+ aircraft reference entries
+- `lib/supabase/inspection-templates.ts` — Template CRUD operations
+- `app/(app)/reports/` — 5 report pages (hub + 4 report types)
+- `app/(app)/settings/` — 3 settings pages (hub + base-setup + templates)
+- `app/(app)/aircraft/page.tsx` — Aircraft database with ACN/PCN comparison
+- `app/api/installations/route.ts` — Installation management API
+- `app/api/airfield-status/route.ts` — Airfield status GET/PATCH API
 
 ---
 

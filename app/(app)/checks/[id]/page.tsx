@@ -17,6 +17,7 @@ export default function CheckDetailPage() {
   const params = useParams()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
   const [liveData, setLiveData] = useState<CheckRow | null>(null)
   const [comments, setComments] = useState<CheckCommentRow[]>([])
   const [dbPhotos, setDbPhotos] = useState<CheckPhotoRow[]>([])
@@ -118,7 +119,7 @@ export default function CheckDetailPage() {
   if (loading) {
     return (
       <div style={{ padding: 16, paddingBottom: 100 }}>
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>Loading...</div>
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>Loading...</div>
       </div>
     )
   }
@@ -135,10 +136,10 @@ export default function CheckDetailPage() {
   if (!check) {
     return (
       <div style={{ padding: 16, paddingBottom: 100 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#22D3EE', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
           ← Back
         </button>
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>Check not found</div>
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>Check not found</div>
       </div>
     )
   }
@@ -174,12 +175,12 @@ export default function CheckDetailPage() {
     <div style={{ padding: 16, paddingBottom: 100 }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#22D3EE', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
           ← Back
         </button>
         <Link
           href="/checks/history"
-          style={{ color: '#22D3EE', fontSize: 11, fontWeight: 600, textDecoration: 'none' }}
+          style={{ color: 'var(--color-cyan)', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}
         >
           All History
         </Link>
@@ -188,7 +189,7 @@ export default function CheckDetailPage() {
       {/* Check Summary Card */}
       <div className="card" style={{ marginBottom: 8 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <span style={{ fontSize: 16, fontWeight: 800, color: '#22D3EE', fontFamily: 'monospace' }}>
+          <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>
             {displayId}
           </span>
           <Badge label="COMPLETED" color="#22C55E" />
@@ -198,18 +199,18 @@ export default function CheckDetailPage() {
         {typeConfig && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <span style={{ fontSize: 20 }}>{typeConfig.icon}</span>
-            <span style={{ fontSize: 14, fontWeight: 700, color: typeConfig.color }}>{typeConfig.label}</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: typeConfig.color }}>{typeConfig.label}</span>
           </div>
         )}
 
         {/* Info Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 11, marginBottom: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12, marginBottom: 12 }}>
           <div>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Completed By</div>
-            <div style={{ fontWeight: 600, marginTop: 2, color: '#38BDF8' }}>{completedBy}</div>
+            <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Completed By</div>
+            <div style={{ fontWeight: 600, marginTop: 2, color: 'var(--color-accent)' }}>{completedBy}</div>
           </div>
           <div>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Completed At</div>
+            <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Completed At</div>
             <div style={{ fontWeight: 500, marginTop: 2 }}>
               {completedAt
                 ? `${new Date(completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${new Date(completedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
@@ -220,7 +221,7 @@ export default function CheckDetailPage() {
 
         {/* Areas */}
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Areas Checked</div>
+          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Areas Checked</div>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {checkAreas.map((area) => (
               <Badge key={area} label={area} color="#22D3EE" />
@@ -231,7 +232,7 @@ export default function CheckDetailPage() {
         {/* Type-Specific Details */}
         {checkTypeStr === 'rsc' && !!data.condition && (
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Runway Surface Condition</div>
+            <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Runway Surface Condition</div>
             <Badge
               label={data.condition as string}
               color={(data.condition as string) === 'Dry' ? '#22C55E' : '#3B82F6'}
@@ -242,11 +243,11 @@ export default function CheckDetailPage() {
         {checkTypeStr === 'rcr' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
             <div>
-              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>RCR Value</div>
-              <div style={{ fontSize: 24, fontWeight: 800, fontFamily: 'monospace', color: '#22D3EE', marginTop: 2 }}>{(data.rcr_value as string) || '—'}</div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>RCR Value</div>
+              <div style={{ fontSize: 24, fontWeight: 800, fontFamily: 'monospace', color: 'var(--color-cyan)', marginTop: 2 }}>{(data.rcr_value as string) || '—'}</div>
             </div>
             <div>
-              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Condition</div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Condition</div>
               <div style={{ fontWeight: 600, marginTop: 2 }}>{(data.condition_type as string) || '—'}</div>
             </div>
           </div>
@@ -255,7 +256,7 @@ export default function CheckDetailPage() {
         {checkTypeStr === 'bash' && (
           <>
             <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Condition Code</div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Condition Code</div>
               {!!data.condition_code && (
                 <Badge
                   label={data.condition_code as string}
@@ -269,8 +270,8 @@ export default function CheckDetailPage() {
             </div>
             {!!data.species_observed && (
               <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Species Observed</div>
-                <div style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.4 }}>{data.species_observed as string}</div>
+                <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Species Observed</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-1)', lineHeight: 1.4 }}>{data.species_observed as string}</div>
               </div>
             )}
           </>
@@ -281,29 +282,29 @@ export default function CheckDetailPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 8 }}>
               {!!data.aircraft_type && (
                 <div>
-                  <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Aircraft Type</div>
+                  <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Aircraft Type</div>
                   <div style={{ fontWeight: 600, marginTop: 2 }}>{data.aircraft_type as string}</div>
                 </div>
               )}
               {!!data.callsign && (
                 <div>
-                  <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Callsign</div>
+                  <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Callsign</div>
                   <div style={{ fontWeight: 600, marginTop: 2 }}>{data.callsign as string}</div>
                 </div>
               )}
             </div>
             {!!data.nature && (
               <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Nature of Emergency</div>
-                <div style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.4 }}>{data.nature as string}</div>
+                <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Nature of Emergency</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-1)', lineHeight: 1.4 }}>{data.nature as string}</div>
               </div>
             )}
             {Array.isArray(data.actions) && (data.actions as string[]).length > 0 && (
               <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Actions Completed</div>
+                <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Actions Completed</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                   {(data.actions as string[]).map((action, i) => (
-                    <div key={i} style={{ fontSize: 10, color: '#22C55E', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div key={i} style={{ fontSize: 11, color: '#22C55E', display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span>✓</span> {action}
                     </div>
                   ))}
@@ -312,7 +313,7 @@ export default function CheckDetailPage() {
             )}
             {Array.isArray(data.agencies_notified) && (data.agencies_notified as string[]).length > 0 && (
               <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Agencies Notified</div>
+                <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Agencies Notified</div>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                   {(data.agencies_notified as string[]).map((agency, i) => (
                     <Badge key={i} label={agency} color="#38BDF8" />
@@ -325,15 +326,15 @@ export default function CheckDetailPage() {
 
         {checkTypeStr === 'heavy_aircraft' && !!data.aircraft_type && (
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Aircraft Type / MDS</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#8B5CF6' }}>{data.aircraft_type as string}</div>
+            <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Aircraft Type / MDS</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#8B5CF6' }}>{data.aircraft_type as string}</div>
           </div>
         )}
       </div>
 
       {/* Remarks Section */}
       <div className="card" style={{ marginBottom: 8 }}>
-        <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+        <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
           Remarks
         </div>
 
@@ -359,9 +360,9 @@ export default function CheckDetailPage() {
             disabled={!remarkText.trim() || savingRemark}
             style={{
               padding: '0 14px', borderRadius: 8, border: 'none',
-              background: remarkText.trim() ? '#22D3EE' : '#1E293B',
-              color: remarkText.trim() ? '#0F172A' : '#334155',
-              fontSize: 11, fontWeight: 700, cursor: remarkText.trim() ? 'pointer' : 'default',
+              background: remarkText.trim() ? 'var(--color-cyan)' : 'var(--color-bg-elevated)',
+              color: remarkText.trim() ? 'var(--color-bg-surface-solid)' : 'var(--color-text-4)',
+              fontSize: 12, fontWeight: 700, cursor: remarkText.trim() ? 'pointer' : 'default',
               fontFamily: 'inherit', alignSelf: 'flex-end', height: 36,
             }}
           >
@@ -371,31 +372,31 @@ export default function CheckDetailPage() {
 
         {/* Comments Timeline */}
         {displayComments.length > 0 && (
-          <div style={{ borderTop: '1px solid #1E293B', paddingTop: 10 }}>
+          <div style={{ borderTop: '1px solid var(--color-bg-elevated)', paddingTop: 10 }}>
             {displayComments.map((c) => (
-              <div key={c.id} style={{ borderLeft: '2px solid #334155', paddingLeft: 10, marginBottom: 10 }}>
-                <div style={{ fontSize: 10, color: '#64748B', marginBottom: 2 }}>
-                  <span style={{ fontWeight: 600, color: '#38BDF8' }}>{c.user_name}</span>
+              <div key={c.id} style={{ borderLeft: '2px solid var(--color-text-4)', paddingLeft: 10, marginBottom: 10 }}>
+                <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 2 }}>
+                  <span style={{ fontWeight: 600, color: 'var(--color-accent)' }}>{c.user_name}</span>
                   {' — '}
                   {new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   {' '}
                   {new Date(c.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                 </div>
-                <div style={{ fontSize: 11, color: '#CBD5E1', lineHeight: 1.4 }}>{c.comment}</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-1)', lineHeight: 1.4 }}>{c.comment}</div>
               </div>
             ))}
           </div>
         )}
 
         {displayComments.length === 0 && (
-          <div style={{ fontSize: 11, color: '#475569', fontStyle: 'italic' }}>No remarks yet.</div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-3)', fontStyle: 'italic' }}>No remarks yet.</div>
         )}
       </div>
 
       {/* Pinned Location Map */}
       {staticMapUrl && (
         <div className="card" style={{ marginBottom: 8, padding: 0, overflow: 'hidden' }}>
-          <div style={{ padding: '8px 12px 4px', fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          <div style={{ padding: '8px 12px 4px', fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             Pinned Location
           </div>
           <img
@@ -403,7 +404,7 @@ export default function CheckDetailPage() {
             alt="Check location on map"
             style={{ width: '100%', display: 'block', borderRadius: '0 0 10px 10px' }}
           />
-          <div style={{ padding: '4px 12px 8px', fontSize: 10, color: '#34D399', fontFamily: 'monospace', fontWeight: 600 }}>
+          <div style={{ padding: '4px 12px 8px', fontSize: 11, color: '#34D399', fontFamily: 'monospace', fontWeight: 600 }}>
             {checkLat!.toFixed(5)}, {checkLng!.toFixed(5)}
           </div>
         </div>
@@ -412,14 +413,14 @@ export default function CheckDetailPage() {
       {/* Photo Thumbnails */}
       {allPhotos.length > 0 && (
         <div className="card" style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
             Photos ({allPhotos.length})
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {allPhotos.map((p, i) => (
               <div
                 key={i}
-                style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid #38BDF833', cursor: 'pointer' }}
+                style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border-active)', cursor: 'pointer' }}
                 onClick={() => setViewerIndex(i)}
               >
                 <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -433,19 +434,35 @@ export default function CheckDetailPage() {
       {!usingDemo && (
         <>
           <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            style={{
-              width: '100%', padding: 10, marginBottom: 8, borderRadius: 8,
-              background: '#38BDF814', border: '1px solid #38BDF833', cursor: uploading ? 'default' : 'pointer',
-              color: '#38BDF8', fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
-              opacity: uploading ? 0.7 : 1,
-            }}
-          >
-            {uploading ? '⏳ Uploading...' : `📸 Add Photo${allPhotos.length > 0 ? ` (${allPhotos.length})` : ''}`}
-          </button>
+          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              style={{
+                padding: 10, borderRadius: 8,
+                background: '#38BDF814', border: '1px solid var(--color-border-active)', cursor: uploading ? 'default' : 'pointer',
+                color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+                opacity: uploading ? 0.7 : 1,
+              }}
+            >
+              {uploading ? '⏳ Uploading...' : '🖼️ Upload Photo'}
+            </button>
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={uploading}
+              style={{
+                padding: 10, borderRadius: 8,
+                background: '#38BDF814', border: '1px solid var(--color-border-active)', cursor: uploading ? 'default' : 'pointer',
+                color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+                opacity: uploading ? 0.7 : 1,
+              }}
+            >
+              📸 Take Photo
+            </button>
+          </div>
         </>
       )}
 
@@ -456,7 +473,7 @@ export default function CheckDetailPage() {
           style={{
             flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
             background: '#22C55E14', border: '1px solid #22C55E33',
-            color: '#22C55E', fontSize: 12, fontWeight: 700,
+            color: '#22C55E', fontSize: 13, fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',
           }}
         >
@@ -467,7 +484,7 @@ export default function CheckDetailPage() {
           style={{
             flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
             background: '#22D3EE14', border: '1px solid #22D3EE33',
-            color: '#22D3EE', fontSize: 12, fontWeight: 700,
+            color: 'var(--color-cyan)', fontSize: 13, fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',
           }}
         >

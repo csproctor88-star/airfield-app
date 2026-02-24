@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
-import { INSTALLATION } from '@/lib/constants'
+import { useInstallation } from '@/lib/installation-context'
+import { isMapboxConfigured } from '@/lib/utils'
 
 type Props = {
   onPointSelected: (lat: number, lng: number) => void
@@ -17,8 +18,10 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
   const map = useRef<mapboxgl.Map | null>(null)
   const marker = useRef<mapboxgl.Marker | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const { runways } = useInstallation()
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+  const mapboxReady = isMapboxConfigured()
 
   const handleClick = useCallback(
     (e: mapboxgl.MapMouseEvent) => {
@@ -30,14 +33,18 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainer.current || !token || token === 'your-mapbox-token-here') return
+    if (!mapContainer.current || !mapboxReady || !token) return
     if (map.current) return
 
     mapboxgl.accessToken = token
 
-    const rwy = INSTALLATION.runways[0]
-    const centerLat = (rwy.end1.latitude + rwy.end2.latitude) / 2
-    const centerLng = (rwy.end1.longitude + rwy.end2.longitude) / 2
+    const rwy = runways[0]
+    const centerLat = rwy
+      ? ((rwy.end1_latitude ?? 0) + (rwy.end2_latitude ?? 0)) / 2
+      : 42.6139
+    const centerLng = rwy
+      ? ((rwy.end1_longitude ?? 0) + (rwy.end2_longitude ?? 0)) / 2
+      : -82.8369
 
     const m = new mapboxgl.Map({
       container: mapContainer.current,
@@ -101,25 +108,25 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
     }
   }, [selectedLat, selectedLng, mapLoaded])
 
-  if (!token || token === 'your-mapbox-token-here') {
+  if (!mapboxReady) {
     return (
       <div
         style={{
-          background: 'rgba(10, 16, 28, 0.92)',
-          border: '1px solid rgba(56, 189, 248, 0.1)',
+          background: 'var(--color-bg-surface)',
+          border: '1px solid var(--color-border-mid)',
           borderRadius: 10,
           padding: 24,
           textAlign: 'center',
         }}
       >
         <div style={{ fontSize: 24, marginBottom: 8 }}>🗺️</div>
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#94A3B8', marginBottom: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 8 }}>
           Mapbox Token Required
         </div>
-        <div style={{ fontSize: 11, color: '#64748B', lineHeight: 1.5 }}>
-          Add your Mapbox access token to <code style={{ color: '#38BDF8' }}>.env.local</code>
+        <div style={{ fontSize: 12, color: 'var(--color-text-3)', lineHeight: 1.5 }}>
+          Add your Mapbox access token to <code style={{ color: 'var(--color-accent)' }}>.env.local</code>
           <br />
-          <code style={{ color: '#38BDF8', fontSize: 10 }}>NEXT_PUBLIC_MAPBOX_TOKEN=pk.xxx</code>
+          <code style={{ color: 'var(--color-accent)', fontSize: 11 }}>NEXT_PUBLIC_MAPBOX_TOKEN=pk.xxx</code>
         </div>
       </div>
     )
@@ -134,7 +141,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
           height: 280,
           borderRadius: 10,
           overflow: 'hidden',
-          border: '1px solid rgba(56, 189, 248, 0.1)',
+          border: '1px solid var(--color-border-mid)',
         }}
       />
       {!selectedLat && mapLoaded && (
@@ -147,7 +154,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
             background: 'rgba(4, 7, 12, 0.88)',
             borderRadius: 6,
             padding: '4px 10px',
-            fontSize: 10,
+            fontSize: 11,
             color: '#94A3B8',
             fontWeight: 600,
             whiteSpace: 'nowrap',
@@ -165,7 +172,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
             background: 'rgba(4, 7, 12, 0.88)',
             borderRadius: 6,
             padding: '4px 8px',
-            fontSize: 10,
+            fontSize: 11,
             color: '#34D399',
             fontWeight: 600,
             fontFamily: 'monospace',

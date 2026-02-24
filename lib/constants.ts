@@ -1,49 +1,6 @@
 // Glidepath — App-wide Constants
-// Source: SRS Sections 6 & 14
-
-// === Selfridge ANGB Configuration (SRS Section 14) ===
-
-export const INSTALLATION = {
-  name: 'Selfridge Air National Guard Base',
-  icao: 'KMTC',
-  unit: '127th Wing',
-  majcom: 'Michigan Air National Guard',
-  location: 'Harrison Township, Michigan',
-  elevation_msl: 580,
-  timezone: 'America/Detroit',
-  runways: [
-    {
-      id: '01/19',
-      length_ft: 9000,
-      width_ft: 150,
-      surface: 'Asphalt',
-      true_heading: 2, // FAA true heading (end1 → end2)
-      end1: {
-        designator: '01',
-        latitude: 42.601550,
-        longitude: -82.837339,
-        heading: 8,
-        approach_lighting: 'SALS',
-      },
-      end2: {
-        designator: '19',
-        latitude: 42.626239,
-        longitude: -82.836481,
-        heading: 188,
-        approach_lighting: 'ALSF-1',
-      },
-    },
-  ],
-  ce_shops: [
-    'CE Pavements',
-    'CE Electrical',
-    'CE Grounds',
-    'CE Structures',
-    'CE HVAC',
-    'CES Engineering',
-    'Airfield Management',
-  ],
-} as const
+// Base-specific configuration (name, ICAO, runways, areas, etc.) is
+// stored in the database and loaded via InstallationContext.
 
 // === Discrepancy Types (SRS Section 6.1) ===
 
@@ -157,7 +114,7 @@ export const AIRFIELD_INSPECTION_SECTIONS: InspectionSection[] = [
       { id: 'af-1', itemNumber: 1, item: "Primary Surface — 1000' from runway centerline" },
       { id: 'af-2', itemNumber: 2, item: 'Transitional Slope (7:1)' },
       { id: 'af-3', itemNumber: 3, item: "Runway Clear Zones — 3000'L x 3000'W" },
-      { id: 'af-4', itemNumber: 4, item: "Graded Area — 1000'L x 1000'W" },
+      { id: 'af-4', itemNumber: 4, item: "Graded Portion of Clear Zone — 1000'L x 3000'W" },
       { id: 'af-5', itemNumber: 5, item: 'Approach / Departure Surface (50:1)' },
       { id: 'af-6', itemNumber: 6, item: "Taxiway — 200' from centerline" },
       { id: 'af-7', itemNumber: 7, item: "Apron — 110' from boundary marking" },
@@ -333,28 +290,6 @@ export const CHECK_TYPE_CONFIG = {
   bash:             { label: 'BASH Check', color: '#A78BFA', icon: '🦅' },
 } as const
 
-// === Airfield Areas (Multi-select for checks) ===
-
-export const AIRFIELD_AREAS = [
-  'Entire Airfield',
-  'RWY 01/19',
-  'West Ramp',
-  'East Ramp',
-  'HAZ Cargo Pad',
-  'USCG Apron',
-  'DHS Apron',
-  'Army Apron',
-  'TWY A',
-  'TWY G',
-  'TWY K',
-  'TWY E',
-  'TWY B',
-  'TWY L',
-  'TWY H',
-  'TWY J',
-  'Access Road',
-] as const
-
 // === RSC Conditions ===
 
 export const RSC_CONDITIONS = ['Dry', 'Wet'] as const
@@ -446,11 +381,11 @@ export const REGULATION_SOURCE_SECTIONS = [
 
 export const USER_ROLES = {
   airfield_manager: { label: 'Airfield Manager', canCreate: true, canManageUsers: true },
-  am_ncoic:         { label: 'AM NCOIC', canCreate: true, canManageUsers: false },
-  am_tech:          { label: 'AM Technician', canCreate: true, canManageUsers: false },
-  ce_shop:          { label: 'CE Shop', canCreate: false, canManageUsers: false },
-  wing_safety:      { label: 'Wing Safety', canCreate: false, canManageUsers: false },
-  atc:              { label: 'ATC / RAPCON', canCreate: false, canManageUsers: false },
-  observer:         { label: 'Observer', canCreate: false, canManageUsers: false },
+  namo:             { label: 'NAMO', canCreate: true, canManageUsers: true },
+  amops:            { label: 'AMOPS', canCreate: true, canManageUsers: false },
+  ces:              { label: 'CES', canCreate: false, canManageUsers: false },
+  safety:           { label: 'Safety', canCreate: false, canManageUsers: false },
+  atc:              { label: 'ATC', canCreate: false, canManageUsers: false },
+  read_only:        { label: 'Read Only', canCreate: false, canManageUsers: false },
   sys_admin:        { label: 'System Admin', canCreate: true, canManageUsers: true },
 } as const

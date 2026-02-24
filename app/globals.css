@@ -4,13 +4,105 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════
+   Theme: CSS custom properties for dark & light modes
+   ═══════════════════════════════════════════════════════════════ */
+
+:root,
+[data-theme="dark"] {
+  --color-bg: #0B1120;
+  --color-bg-surface: rgba(15, 23, 42, 0.92);
+  --color-bg-surface-solid: #0F172A;
+  --color-bg-elevated: #131C30;
+  --color-bg-inset: rgba(8, 12, 24, 0.6);
+  --color-bg-nav: rgba(8, 14, 26, 0.97);
+  --color-bg-header-start: #0E1726;
+  --color-bg-header-end: #0B1120;
+  --color-border: rgba(56, 189, 248, 0.08);
+  --color-border-active: rgba(56, 189, 248, 0.2);
+  --color-border-mid: rgba(56, 189, 248, 0.12);
+  --color-text-1: #F1F5F9;
+  --color-text-2: #94A3B8;
+  --color-text-3: #64748B;
+  --color-text-4: #334155;
+  --color-accent: #38BDF8;
+  --color-accent-secondary: #0EA5E9;
+  --color-accent-dark: #0369A1;
+  --color-accent-glow: rgba(56, 189, 248, 0.15);
+  --color-success: #34D399;
+  --color-danger: #EF4444;
+  --color-warning: #FBBF24;
+  --color-orange: #F97316;
+  --color-purple: #A78BFA;
+  --color-cyan: #22D3EE;
+  --color-overlay: rgba(0, 0, 0, 0.7);
+  --color-scrollbar: rgba(56, 189, 248, 0.1);
+  --color-logo-start: #F1F5F9;
+  --color-logo-end: #38BDF8;
+  --color-switch-off: #334155;
+  --color-toast-bg: #1E293B;
+  --color-toast-border: #334155;
+  --color-toast-text: #F1F5F9;
+  --color-progress-track: #1E293B;
+  --color-detail-box-bg: rgba(56, 189, 248, 0.06);
+  --color-detail-box-label: #CBD5E1;
+  --color-detail-box-value: #94A3B8;
+  --color-search-bg: rgba(15, 23, 42, 0.6);
+  --color-search-border: rgba(148, 163, 184, 0.1);
+}
+
+[data-theme="light"] {
+  --color-bg: #F8FAFC;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-surface-solid: #FFFFFF;
+  --color-bg-elevated: #FFFFFF;
+  --color-bg-inset: #F1F5F9;
+  --color-bg-nav: rgba(255, 255, 255, 0.97);
+  --color-bg-header-start: #FFFFFF;
+  --color-bg-header-end: #F8FAFC;
+  --color-border: rgba(15, 23, 42, 0.06);
+  --color-border-active: rgba(15, 23, 42, 0.15);
+  --color-border-mid: rgba(15, 23, 42, 0.08);
+  --color-text-1: #1E293B;
+  --color-text-2: #475569;
+  --color-text-3: #64748B;
+  --color-text-4: #94A3B8;
+  --color-accent: #2563EB;
+  --color-accent-secondary: #1D4ED8;
+  --color-accent-dark: #1E40AF;
+  --color-accent-glow: rgba(37, 99, 235, 0.06);
+  --color-success: #15803D;
+  --color-danger: #B91C1C;
+  --color-warning: #92400E;
+  --color-orange: #9A3412;
+  --color-purple: #6D28D9;
+  --color-cyan: #155E75;
+  --color-overlay: rgba(0, 0, 0, 0.3);
+  --color-scrollbar: rgba(15, 23, 42, 0.1);
+  --color-logo-start: #1E293B;
+  --color-logo-end: #2563EB;
+  --color-switch-off: #CBD5E1;
+  --color-toast-bg: #FFFFFF;
+  --color-toast-border: #E2E8F0;
+  --color-toast-text: #1E293B;
+  --color-progress-track: #E2E8F0;
+  --color-detail-box-bg: #F1F5F9;
+  --color-detail-box-label: #334155;
+  --color-detail-box-value: #64748B;
+  --color-search-bg: #FFFFFF;
+  --color-search-border: #CBD5E1;
+}
+
 @layer base {
   body {
-    @apply bg-background text-slate-100 antialiased;
+    background: var(--color-bg);
+    color: var(--color-text-1);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     font-family: 'Outfit', system-ui, -apple-system, sans-serif;
   }
 
-  /* Scrollbar styling for dark theme */
+  /* Scrollbar */
   ::-webkit-scrollbar {
     width: 4px;
     height: 4px;
@@ -19,56 +111,56 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(56, 189, 248, 0.1);
+    background: var(--color-scrollbar);
     border-radius: 2px;
   }
 }
 
 @layer components {
-  /* Card component matching prototype */
+  /* Card */
   .card {
-    background: rgba(10, 16, 28, 0.92);
-    border: 1px solid rgba(56, 189, 248, 0.06);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
     border-radius: 10px;
     padding: 14px;
   }
 
-  /* Section label — 9px uppercase tracking */
+  /* Section label */
   .section-label {
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
-    color: #64748B;
+    color: var(--color-text-3);
     letter-spacing: 0.12em;
     text-transform: uppercase;
     display: block;
     margin-bottom: 8px;
   }
 
-  /* Dark input matching prototype */
+  /* Dark input */
   .input-dark {
-    background: rgba(4, 8, 14, 0.9);
-    border: 1px solid rgba(56, 189, 248, 0.06);
+    background: var(--color-bg-inset);
+    border: 1px solid var(--color-border);
     border-radius: 6px;
     padding: 8px 10px;
-    color: #F1F5F9;
-    font-size: 12px;
+    color: var(--color-text-1);
+    font-size: 13px;
     width: 100%;
     font-family: inherit;
     box-sizing: border-box;
   }
   .input-dark:focus {
     outline: none;
-    border-color: rgba(56, 189, 248, 0.2);
+    border-color: var(--color-border-active);
   }
 
   /* Primary CTA button gradient */
   .btn-primary {
-    background: linear-gradient(135deg, #0369A1, #0EA5E9);
+    background: linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary));
     color: #fff;
     border: none;
     border-radius: 8px;
     padding: 12px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     cursor: pointer;
     width: 100%;

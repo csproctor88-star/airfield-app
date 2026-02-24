@@ -1,27 +1,20 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-
-function isSupabaseConfigured(): boolean {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  return !!(
-    url && key &&
-    !url.includes('your-project') &&
-    key !== 'your-anon-key'
-  )
-}
+import { getSupabaseConfig } from '@/lib/utils'
 
 export async function updateSession(request: NextRequest) {
+  const config = getSupabaseConfig()
+
   // Demo mode: skip auth when Supabase is not configured
-  if (!isSupabaseConfigured()) {
+  if (!config) {
     return NextResponse.next({ request })
   }
 
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    config.url,
+    config.key,
     {
       cookies: {
         getAll() {

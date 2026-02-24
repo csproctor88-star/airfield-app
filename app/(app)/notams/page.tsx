@@ -61,10 +61,10 @@ export default function NotamsPage() {
         <button
           onClick={() => router.push('/notams/new')}
           style={{
-            background: 'linear-gradient(135deg, #0EA5E9, #22D3EE)',
+            background: 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-cyan))',
             border: 'none',
             color: '#FFF',
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: 700,
             padding: '7px 16px',
             borderRadius: 8,
@@ -79,8 +79,8 @@ export default function NotamsPage() {
       {/* FAA Feed status card */}
       <div
         style={{
-          background: '#0F172A',
-          border: '1px solid #1E293B',
+          background: 'var(--color-bg-surface-solid)',
+          border: '1px solid var(--color-bg-elevated)',
           borderRadius: 10,
           padding: '10px 14px',
           display: 'flex',
@@ -99,11 +99,11 @@ export default function NotamsPage() {
               boxShadow: '0 0 6px rgba(34,197,94,0.5)',
             }}
           />
-          <span style={{ fontSize: 12, fontWeight: 600, color: '#CBD5E1' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-1)' }}>
             FAA Feed Connected
           </span>
         </div>
-        <span style={{ fontSize: 10, color: '#64748B' }}>Last: 06:50L</span>
+        <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>Last: 06:50L</span>
       </div>
 
       {/* Filter chips */}
@@ -113,10 +113,10 @@ export default function NotamsPage() {
             key={f.key}
             onClick={() => setFilter(f.key)}
             style={{
-              background: filter === f.key ? '#1E293B' : 'transparent',
-              border: `1px solid ${filter === f.key ? '#334155' : '#1E293B'}`,
-              color: filter === f.key ? '#F1F5F9' : '#64748B',
-              fontSize: 11,
+              background: filter === f.key ? 'var(--color-bg-elevated)' : 'transparent',
+              border: `1px solid ${filter === f.key ? 'var(--color-text-4)' : 'var(--color-bg-elevated)'}`,
+              color: filter === f.key ? 'var(--color-text-1)' : 'var(--color-text-3)',
+              fontSize: 12,
               fontWeight: 600,
               padding: '5px 12px',
               borderRadius: 20,
@@ -133,15 +133,15 @@ export default function NotamsPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {filtered.map((notam) => {
           const isExpired = notam.status === 'expired'
-          const borderLeftColor = SOURCE_COLORS[notam.source] || '#334155'
+          const borderLeftColor = SOURCE_COLORS[notam.source] || 'var(--color-text-4)'
 
           return (
             <div
               key={notam.id}
               onClick={() => router.push(`/notams/${notam.id}`)}
               style={{
-                background: '#0F172A',
-                border: '1px solid #1E293B',
+                background: 'var(--color-bg-surface-solid)',
+                border: '1px solid var(--color-bg-elevated)',
                 borderLeft: `3px solid ${borderLeftColor}`,
                 borderRadius: 10,
                 padding: '12px 14px',
@@ -174,9 +174,9 @@ export default function NotamsPage() {
               {/* Title */}
               <div
                 style={{
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: 700,
-                  color: '#F1F5F9',
+                  color: 'var(--color-text-1)',
                   marginBottom: 4,
                 }}
               >
@@ -184,7 +184,7 @@ export default function NotamsPage() {
               </div>
 
               {/* Effective dates */}
-              <div style={{ fontSize: 10, color: '#64748B' }}>
+              <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
                 {formatDate(notam.effective_start)} — {formatDate(notam.effective_end)}
               </div>
             </div>
@@ -196,8 +196,8 @@ export default function NotamsPage() {
             style={{
               textAlign: 'center',
               padding: 24,
-              color: '#64748B',
-              fontSize: 12,
+              color: 'var(--color-text-3)',
+              fontSize: 13,
             }}
           >
             No NOTAMs match the selected filter.
