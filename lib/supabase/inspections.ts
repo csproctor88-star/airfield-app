@@ -1,6 +1,7 @@
 import { createClient } from './client'
 import { logActivity } from './activity'
 import type { InspectionType, InspectionItem } from './types'
+import type { InspectionHalfDraft } from '@/lib/inspection-draft'
 
 export type InspectionRow = {
   id: string
@@ -31,11 +32,15 @@ export type InspectionRow = {
   filed_by_name: string | null
   filed_by_id: string | null
   filed_at: string | null
+  draft_data: InspectionHalfDraft | null
+  saved_by_name: string | null
+  saved_by_id: string | null
+  saved_at: string | null
   created_at: string
   updated_at: string
 }
 
-export async function fetchInspections(baseId?: string | null): Promise<InspectionRow[]> {
+export async function fetchInspections(baseId?: string | null, status?: 'in_progress' | 'completed'): Promise<InspectionRow[]> {
   const supabase = createClient()
   if (!supabase) return []
 
@@ -47,6 +52,9 @@ export async function fetchInspections(baseId?: string | null): Promise<Inspecti
 
   if (baseId) {
     query = query.eq('base_id', baseId)
+  }
+  if (status) {
+    query = query.eq('status', status)
   }
 
   const { data, error } = await query
@@ -194,6 +202,217 @@ export async function createInspection(input: {
   logActivity('completed', 'inspection', created.id, created.display_id, { inspection_type: input.inspection_type }, input.base_id)
 
   return { data: created, error: null }
+}
+
+/** Save (upsert) an inspection draft to the database.
+ *  If `id` is provided, updates the existing row; otherwise inserts a new row. */
+export async function saveInspectionDraft(input: {
+  id?: string | null
+  inspection_type: InspectionType
+  draft_data: InspectionHalfDraft
+  items: InspectionItem[]
+  total_items: number
+  passed_count: number
+  failed_count: number
+  na_count: number
+  bwc_value: string | null
+  notes: string | null
+  daily_group_id: string
+  construction_meeting: boolean
+  joint_monthly: boolean
+  base_id?: string | null
+}): Promise<{ data: InspectionRow | null; error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { data: null, error: 'Supabase not configured' }
+
+  let userId: string | undefined
+  let savedByName: string | null = null
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      userId = user.id
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: profile } = await (supabase as any)
+        .from('profiles')
+        .select('name, rank')
+        .eq('id', user.id)
+        .single()
+      if (profile) {
+        savedByName = profile.rank ? `${profile.rank} ${profile.name}` : profile.name
+      } else {
+        savedByName = user.email || null
+      }
+    }
+  } catch {
+    // No authenticated user
+  }
+
+  const now = new Date()
+  const completion_percent = input.total_items > 0
+    ? Math.round(((input.passed_count + input.failed_count + input.na_count) / input.total_items) * 100)
+    : 0
+
+  if (input.id) {
+    // Update existing row
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from('inspections')
+      .update({
+        draft_data: input.draft_data,
+        items: input.items,
+        total_items: input.total_items,
+        passed_count: input.passed_count,
+        failed_count: input.failed_count,
+        na_count: input.na_count,
+        completion_percent,
+        bwc_value: input.bwc_value,
+        notes: input.notes,
+        saved_by_name: savedByName,
+        saved_by_id: userId || null,
+        saved_at: now.toISOString(),
+      })
+      .eq('id', input.id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Failed to update inspection draft:', error.message)
+      return { data: null, error: error.message }
+    }
+
+    const updated = data as InspectionRow
+    logActivity('saved', 'inspection', updated.id, updated.display_id, { inspection_type: input.inspection_type }, input.base_id)
+    return { data: updated, error: null }
+  }
+
+  // Insert new row
+  const year = now.getFullYear()
+  const ts = now.getTime().toString(36).slice(-4).toUpperCase()
+  const prefixMap: Record<string, string> = {
+    airfield: 'AI',
+    lighting: 'LI',
+    construction_meeting: 'CM',
+    joint_monthly: 'JM',
+  }
+  const prefix = prefixMap[input.inspection_type] || 'AI'
+  const display_id = `${prefix}-${year}-${ts}`
+
+  const row: Record<string, unknown> = {
+    display_id,
+    inspection_type: input.inspection_type,
+    inspector_name: savedByName,
+    inspection_date: now.toISOString().split('T')[0],
+    status: 'in_progress',
+    items: input.items,
+    total_items: input.total_items,
+    passed_count: input.passed_count,
+    failed_count: input.failed_count,
+    na_count: input.na_count,
+    completion_percent,
+    construction_meeting: input.construction_meeting,
+    joint_monthly: input.joint_monthly,
+    personnel: [],
+    bwc_value: input.bwc_value,
+    notes: input.notes,
+    daily_group_id: input.daily_group_id,
+    draft_data: input.draft_data,
+    saved_by_name: savedByName,
+    saved_by_id: userId || null,
+    saved_at: now.toISOString(),
+  }
+  if (userId) row.inspector_id = userId
+  if (input.base_id) row.base_id = input.base_id
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('inspections')
+    .insert(row)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Failed to save inspection draft:', error.message)
+    return { data: null, error: error.message }
+  }
+
+  const created = data as InspectionRow
+  logActivity('saved', 'inspection', created.id, created.display_id, { inspection_type: input.inspection_type }, input.base_id)
+  return { data: created, error: null }
+}
+
+/** File (finalize) an in-progress inspection: set status to completed, clear draft_data */
+export async function fileInspection(input: {
+  id: string
+  items: InspectionItem[]
+  total_items: number
+  passed_count: number
+  failed_count: number
+  na_count: number
+  bwc_value: string | null
+  weather_conditions: string | null
+  temperature_f: number | null
+  notes: string | null
+  inspector_name: string
+  completed_by_name: string
+  completed_by_id: string | null
+  completed_at: string
+  filed_by_name: string
+  filed_by_id: string | null
+  personnel?: string[]
+  construction_meeting?: boolean
+  joint_monthly?: boolean
+  base_id?: string | null
+}): Promise<{ data: InspectionRow | null; error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { data: null, error: 'Supabase not configured' }
+
+  const now = new Date()
+  const completion_percent = input.total_items > 0
+    ? Math.round(((input.passed_count + input.failed_count + input.na_count) / input.total_items) * 100)
+    : 0
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('inspections')
+    .update({
+      status: 'completed',
+      items: input.items,
+      total_items: input.total_items,
+      passed_count: input.passed_count,
+      failed_count: input.failed_count,
+      na_count: input.na_count,
+      completion_percent,
+      bwc_value: input.bwc_value,
+      weather_conditions: input.weather_conditions,
+      temperature_f: input.temperature_f,
+      notes: input.notes,
+      inspector_name: input.inspector_name,
+      completed_by_name: input.completed_by_name,
+      completed_by_id: input.completed_by_id,
+      completed_at: input.completed_at,
+      filed_by_name: input.filed_by_name,
+      filed_by_id: input.filed_by_id,
+      filed_at: now.toISOString(),
+      draft_data: null,
+      saved_at: null,
+      saved_by_name: null,
+      saved_by_id: null,
+      ...(input.personnel !== undefined ? { personnel: input.personnel } : {}),
+      ...(input.construction_meeting !== undefined ? { construction_meeting: input.construction_meeting } : {}),
+      ...(input.joint_monthly !== undefined ? { joint_monthly: input.joint_monthly } : {}),
+    })
+    .eq('id', input.id)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Failed to file inspection:', error.message)
+    return { data: null, error: error.message }
+  }
+
+  const filed = data as InspectionRow
+  logActivity('filed', 'inspection', filed.id, filed.display_id, { inspection_type: filed.inspection_type }, input.base_id)
+  return { data: filed, error: null }
 }
 
 /** Get the current user's profile name for auto-fill */

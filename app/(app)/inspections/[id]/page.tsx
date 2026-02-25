@@ -71,6 +71,35 @@ export default function InspectionDetailPage() {
     )
   }
 
+  // If the inspection is in-progress, redirect to the main inspections page to resume
+  const hasInProgress = inspections.some((i) => i.status === 'in_progress')
+  if (hasInProgress && !usingDemo) {
+    return (
+      <div style={{ padding: 16, paddingBottom: 100 }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
+          &larr; Back
+        </button>
+        <div className="card" style={{ textAlign: 'center', padding: 24 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#3B82F6', marginBottom: 8 }}>Inspection In Progress</div>
+          <div style={{ fontSize: 13, color: 'var(--color-text-2)', marginBottom: 16, lineHeight: 1.5 }}>
+            This inspection has not been filed yet. You can resume it from the inspections page.
+          </div>
+          <button
+            onClick={() => router.push('/inspections?view=history')}
+            style={{
+              padding: '10px 20px', borderRadius: 8, border: 'none',
+              background: 'linear-gradient(135deg, #3B82F6, #6366F1)',
+              color: '#FFF', fontSize: 13, fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            Resume Inspection
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allInspections: any[] = usingDemo ? demoInspections : inspections
 
