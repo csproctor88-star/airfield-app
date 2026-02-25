@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const FAA_API_URL = 'https://external-api.faa.gov/notamapi/v1/notams'
+const FAA_API_URL = 'https://api.data.gov/faa/notamapi/v1/notams'
 
 interface FaaNotamProperties {
   coreNOTAMData?: {
@@ -74,10 +74,10 @@ export async function GET(request: NextRequest) {
     url.searchParams.set('sortBy', 'effectiveStartDate')
     url.searchParams.set('sortOrder', 'DESC')
     url.searchParams.set('pageSize', '50')
+    url.searchParams.set('api_key', apiKey)
 
     const res = await fetch(url.toString(), {
       headers: {
-        client_id: apiKey,
         Accept: 'application/geo+json',
       },
       next: { revalidate: 300 }, // cache for 5 minutes
