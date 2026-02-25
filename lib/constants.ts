@@ -377,38 +377,79 @@ export const REGULATION_SOURCE_SECTIONS = [
   { value: 'VII-C', label: 'VII-C — Scrubbed (Vols 2-3)', color: '#A5B4FC' },
 ] as const
 
-// === Waiver Types ===
+// === Waiver Classifications (AF Form 505) ===
 
-export const WAIVER_TYPES = [
-  { value: 'obstruction', label: 'Obstruction', emoji: '⛔', description: 'Obstruction clearance waiver' },
-  { value: 'lighting', label: 'Lighting', emoji: '💡', description: 'Lighting system waiver' },
-  { value: 'marking', label: 'Marking', emoji: '🎨', description: 'Marking deficiency waiver' },
-  { value: 'driving', label: 'Driving', emoji: '🚗', description: 'Airfield driving waiver' },
-  { value: 'construction', label: 'Construction', emoji: '🏗️', description: 'Construction activity waiver' },
-  { value: 'other', label: 'Other', emoji: '📋', description: 'Other waiver type' },
+export const WAIVER_CLASSIFICATIONS = [
+  { value: 'permanent', label: 'Permanent', emoji: '🔒', description: 'Permanent waiver — no corrective action planned' },
+  { value: 'temporary', label: 'Temporary', emoji: '⏳', description: 'Temporary waiver — corrective action programmed' },
+  { value: 'construction', label: 'Construction', emoji: '🏗️', description: 'Construction-period waiver' },
+  { value: 'event', label: 'Event', emoji: '📅', description: 'Single event or exercise waiver' },
+  { value: 'extension', label: 'Extension', emoji: '🔄', description: 'Extension of existing waiver' },
+  { value: 'amendment', label: 'Amendment', emoji: '📝', description: 'Amendment to existing waiver' },
 ] as const
 
 // === Waiver Status Styling ===
 
 export const WAIVER_STATUS_CONFIG = {
   draft:     { color: '#9CA3AF', bg: '#E5E7EB', label: 'Draft' },
-  submitted: { color: '#3B82F6', bg: '#DBEAFE', label: 'Submitted' },
+  pending:   { color: '#3B82F6', bg: '#DBEAFE', label: 'Pending' },
   approved:  { color: '#10B981', bg: '#D1FAE5', label: 'Approved' },
-  denied:    { color: '#EF4444', bg: '#FEE2E2', label: 'Denied' },
   active:    { color: '#8B5CF6', bg: '#EDE9FE', label: 'Active' },
+  completed: { color: '#22C55E', bg: '#DCFCE7', label: 'Completed' },
+  cancelled: { color: '#EF4444', bg: '#FEE2E2', label: 'Cancelled' },
   expired:   { color: '#F59E0B', bg: '#FEF3C7', label: 'Expired' },
 } as const
 
 // === Waiver Status Transitions ===
 
 export const WAIVER_TRANSITIONS: Record<string, string[]> = {
-  draft: ['submitted'],
-  submitted: ['approved', 'denied', 'draft'],
-  approved: ['active'],
-  denied: [],
-  active: ['expired'],
+  draft: ['pending', 'cancelled'],
+  pending: ['approved', 'draft', 'cancelled'],
+  approved: ['active', 'cancelled'],
+  active: ['completed', 'expired', 'cancelled'],
+  completed: [],
+  cancelled: ['draft'],
   expired: [],
 }
+
+// === Waiver Hazard Ratings ===
+
+export const WAIVER_HAZARD_RATINGS = [
+  { value: 'low', label: 'Low', color: '#3B82F6', bg: '#DBEAFE' },
+  { value: 'medium', label: 'Medium', color: '#F59E0B', bg: '#FEF3C7' },
+  { value: 'high', label: 'High', color: '#F97316', bg: '#FED7AA' },
+  { value: 'extremely_high', label: 'Extremely High', color: '#EF4444', bg: '#FEE2E2' },
+] as const
+
+// === Waiver Criteria Sources ===
+
+export const WAIVER_CRITERIA_SOURCES = [
+  { value: 'ufc_3_260_01', label: 'UFC 3-260-01' },
+  { value: 'ufc_3_260_04', label: 'UFC 3-260-04' },
+  { value: 'ufc_3_535_01', label: 'UFC 3-535-01' },
+  { value: 'other', label: 'Other' },
+] as const
+
+// === Waiver Coordination Offices ===
+
+export const WAIVER_COORDINATION_OFFICES = [
+  { value: 'civil_engineer', label: 'Civil Engineer (BCE)' },
+  { value: 'airfield_manager', label: 'Airfield Manager' },
+  { value: 'airfield_ops_terps', label: 'Airfield Ops / TERPS' },
+  { value: 'base_safety', label: 'Base Safety' },
+  { value: 'installation_cc', label: 'Installation Commander' },
+  { value: 'other', label: 'Other' },
+] as const
+
+// === Waiver Review Recommendations ===
+
+export const WAIVER_REVIEW_RECOMMENDATIONS = [
+  { value: 'retain', label: 'Retain' },
+  { value: 'modify', label: 'Modify' },
+  { value: 'cancel', label: 'Cancel / Remove' },
+  { value: 'convert_to_temporary', label: 'Convert to Temporary' },
+  { value: 'convert_to_permanent', label: 'Convert to Permanent' },
+] as const
 
 // === User Roles (SRS Section 2.1) ===
 
