@@ -6,7 +6,6 @@ All notable changes to the Airfield OPS Management Suite.
 
 ### Planned
 - Server-side email delivery for inspection reports (branded sender address)
-- NASA DIP API integration for FAA NOTAM sync
 - METAR weather API integration (aviationweather.gov)
 - Role-based access control (re-enable RLS policies)
 - NOTAM persistence (draft form does not save to DB)
@@ -14,6 +13,46 @@ All notable changes to the Airfield OPS Management Suite.
 - Waivers module (airfield waiver lifecycle)
 - Users & Security module (profile management, roles, admin)
 - Sync & Data module (offline queue, export, import)
+
+---
+
+## [2.2.0] — 2026-02-24
+
+### Live FAA NOTAM Feed, Settings Overhaul & Access Control
+
+This release replaces the stub NOTAM API with a live connection to the FAA's public NOTAM Search, overhauls the Settings page with collapsible sections, and restricts installation switching to system administrators.
+
+#### Live FAA NOTAM Feed (`/notams`)
+- **Real-time FAA data**: API route proxies `notams.aim.faa.gov/notamSearch/search` — no API key required
+- **Auto-fetch by ICAO**: Page loads NOTAMs for the current installation's ICAO code on mount
+- **ICAO search**: Text input to query any airport (e.g., KJFK, KSEM, KMUO)
+- **Feed status indicator**: Green (connected), red (error), gray (idle) dot with ICAO label
+- **Refresh button**: Manual re-fetch with "Last fetched" timestamp
+- **Loading spinner**: Shown while fetching from FAA
+- **Error handling**: Displays FAA errors (rate limit, network failure) in a red banner
+- **Full NOTAM text on cards**: Each card shows the complete NOTAM text in monospace format
+- **FAA date parsing**: Handles `MM/DD/YYYY HHMM` format and `PERM` end dates
+- **Demo mode fallback**: Falls back to `DEMO_NOTAMS` when Supabase is not configured
+- **Filter chips preserved**: All/FAA/LOCAL/Active/Expired still work on live data
+
+#### Settings Page Overhaul (`/settings`)
+- **Collapsible sections**: All sections are now dropdowns with chevron indicators
+- **Default state**: Profile and About open on load; all others collapsed
+- **Section reorder**: Profile → Installation → Data & Storage → Regulations Library → Base Configuration → Appearance → About
+
+#### Access Control
+- **Installation switching restricted**: Only `sys_admin` users can change installations in Settings
+- **Non-admin view**: All other roles see their current installation as read-only
+
+#### More Menu
+- **NOTAMs entry added**: `📡 NOTAMs` appears between Reports and PDF Library
+
+#### Files Modified
+- `app/api/notams/sync/route.ts` — Complete rewrite: FAA NOTAM Search proxy with normalization
+- `app/(app)/notams/page.tsx` — Complete rewrite: live feed with ICAO search and full-text cards
+- `app/(app)/settings/page.tsx` — Collapsible sections, reorder, sys_admin gate
+- `app/(app)/more/page.tsx` — NOTAMs menu item added and repositioned
+- `.env.local` — `FAA_NOTAM_API_KEY` placeholder added (not required for current endpoint)
 
 ---
 

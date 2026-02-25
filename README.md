@@ -2,7 +2,7 @@
 
 Mobile-first web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.1.0 | **Build:** Clean | **279 commits** | **31 routes** | **94 source files** | **~29,500 LOC**
+**Version:** 2.2.0 | **Build:** Clean | **457 commits** | **31 routes** | **94 source files** | **~31,000 LOC**
 
 ## Tech Stack
 
@@ -108,16 +108,18 @@ Comprehensive regulatory reference library with two tabs:
 **My Documents tab** — Upload personal PDFs, JPGs, and PNGs. Client-side text extraction for search. Per-document offline caching. Supabase Storage integration.
 
 ### NOTAMs (`/notams`)
-FAA and LOCAL NOTAM management. List with source/status filtering, detail view, draft creation for local NOTAMs. FAA sync API stubbed for future NASA DIP integration.
+Live FAA NOTAM feed via `notams.aim.faa.gov` — no API key required. Auto-fetches NOTAMs for the current installation's ICAO code on page load. ICAO search input for querying any airport. Full NOTAM text displayed on each card in monospace. Feed status indicator, refresh button, loading/error states. Filter chips (All/FAA/LOCAL/Active/Expired). Falls back to demo data when Supabase is not configured. Draft creation for local NOTAMs.
 
 ### Settings (`/settings`)
+Collapsible dropdown sections — Profile and About default open, all others collapsed.
 - **Profile** — read-only display of user info, rank, role, primary base
-- **Appearance** — Day/Night/Auto theme toggle
-- **Installation management** — switch between bases, add new installations, manage membership
-- **Base Configuration** (`/settings/base-setup`) — runways, NAVAIDs, areas, CE shops, templates
-- **Inspection Templates** (`/settings/templates`) — customize airfield/lighting checklist sections and items
-- **Regulations cache** — download all PDFs for offline, manage storage
+- **Installation** — current base display; switching/adding restricted to sys_admin only
 - **Data & Storage** — view/clear cached data, estimated storage used
+- **Regulations Library** — download all PDFs for offline, manage cache
+- **Base Configuration** (`/settings/base-setup`) — runways, NAVAIDs, areas, CE shops, templates
+- **Appearance** — Day/Night/Auto theme toggle
+- **About** — version, environment, branding
+- **Inspection Templates** (`/settings/templates`) — customize airfield/lighting checklist sections and items
 
 ### More Menu (`/more`)
 Module directory linking to all features. Includes coming-soon placeholder pages for Waivers, Sync & Data, and Users & Security.
@@ -132,7 +134,7 @@ airfield-app/
 │   ├── login/page.tsx                    # Auth page (email/password + demo bypass)
 │   ├── api/
 │   │   ├── weather/route.ts             # Weather API (stub — SRS §11.2)
-│   │   ├── notams/sync/route.ts         # NOTAM sync API (stub — SRS §11.1)
+│   │   ├── notams/sync/route.ts         # FAA NOTAM Search proxy (live)
 │   │   ├── airfield-status/route.ts     # Airfield status GET/PATCH
 │   │   └── installations/route.ts       # Installation management POST/DELETE
 │   └── (app)/                            # Authenticated app shell
@@ -190,7 +192,7 @@ airfield-app/
 │       └── activity.ts                  # Activity log write
 ├── supabase/
 │   ├── schema.sql                        # Full database schema
-│   ├── migrations/                       # 34 migration files
+│   ├── migrations/                       # 41 migration files
 │   └── functions/                        # Edge functions (PDF text extraction)
 ├── middleware.ts                          # Auth guard + demo mode bypass
 ├── public/
@@ -244,13 +246,13 @@ airfield-app/
 
 ## Current Status
 
-**Build**: Compiles and runs cleanly — `next build` zero errors, zero TypeScript errors
+**Build**: Compiles and runs cleanly (20 pre-existing type warnings in report PDF files — missing `jspdf-autotable` types, run `npm install` to resolve)
 
-**Complete modules**: Dashboard, Discrepancies, Airfield Checks, Daily Inspections, NOTAMs, Obstruction Evaluations, References (with My Documents), Reports (4 types), Aircraft Database, Settings (with Base Setup and Templates), More hub
+**Complete modules**: Dashboard, Discrepancies, Airfield Checks, Daily Inspections, NOTAMs (live FAA feed), Obstruction Evaluations, References (with My Documents), Reports (4 types), Aircraft Database, Settings (with Base Setup and Templates), More hub
 
 **Placeholder modules** (coming soon pages): Waivers, Sync & Data, Users & Security
 
-**API stubs** (not yet implemented): NOTAM sync (`/api/notams/sync`), Weather METAR (`/api/weather`)
+**API stubs** (not yet implemented): Weather METAR (`/api/weather`)
 
 See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 
