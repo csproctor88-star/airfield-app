@@ -46,10 +46,15 @@ export default function AirfieldChecksPage() {
       setCurrentUser('Demo User')
       return
     }
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user?.user_metadata?.name) {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: profile } = await (supabase as any).from('profiles').select('name, rank').eq('id', user.id).single()
+      if (profile?.name) {
+        setCurrentUser(profile.rank ? `${profile.rank} ${profile.name}` : profile.name)
+      } else if (user.user_metadata?.name) {
         setCurrentUser(user.user_metadata.name)
-      } else if (user?.email) {
+      } else if (user.email) {
         setCurrentUser(user.email.split('@')[0])
       }
     })
