@@ -353,6 +353,8 @@ function InstallationSectionContent() {
           </div>
         </div>
 
+        {/* Switch/manage installations — sys_admin only */}
+        {userRole === 'sys_admin' && (<>
         <div style={{ borderTop: '1px solid var(--color-border)' }} />
 
         {/* Switch installation dropdown */}
@@ -556,6 +558,7 @@ function InstallationSectionContent() {
             </div>
           </>
         )}
+        </>)}
       </div>
 
       {/* Remove installation confirmation */}
