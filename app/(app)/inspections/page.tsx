@@ -13,7 +13,8 @@ import {
   type InspectionSection,
 } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
-import { fetchInspections, createInspection, getInspectorName, type InspectionRow } from '@/lib/supabase/inspections'
+import { fetchInspections, createInspection, saveInspectionDraft, fileInspection, fetchDailyGroup, getInspectorName, type InspectionRow } from '@/lib/supabase/inspections'
+import { logActivity } from '@/lib/supabase/activity'
 import { useInstallation } from '@/lib/installation-context'
 import { fetchCurrentWeather } from '@/lib/weather'
 import { fetchInspectionTemplate, toInspectionSections } from '@/lib/supabase/inspection-templates'
@@ -22,6 +23,7 @@ import {
   saveDraftToStorage,
   clearDraft,
   createNewDraft,
+  halfDraftToItems,
   type DailyInspectionDraft,
   type InspectionHalfDraft,
 } from '@/lib/inspection-draft'
@@ -281,6 +283,99 @@ export default function InspectionsPage() {
     toast.success('New daily inspection started')
   }
 
+  // ── Save current tab's draft to DB ──
+  const handleSave = async () => {
+    if (!draft || !currentHalf) return
+    setSaving(true)
+
+    const secs = activeTab === 'airfield'
+      ? (dbAirfieldSections ?? AIRFIELD_INSPECTION_SECTIONS)
+      : (dbLightingSections ?? LIGHTING_INSPECTION_SECTIONS)
+    const { items, passed, failed, na, total } = halfDraftToItems(currentHalf, secs)
+
+    const { data: saved, error } = await saveInspectionDraft({
+      id: currentHalf.dbRowId,
+      inspection_type: activeTab,
+      draft_data: currentHalf,
+      items,
+      total_items: total,
+      passed_count: passed,
+      failed_count: failed,
+      na_count: na,
+      bwc_value: currentHalf.bwcValue,
+      notes: currentHalf.notes || null,
+      daily_group_id: draft.id,
+      construction_meeting: false,
+      joint_monthly: false,
+      base_id: installationId,
+    })
+
+    if (error) {
+      toast.error(`Failed to save: ${error}`)
+      setSaving(false)
+      return
+    }
+
+    // Store the DB row ID back into the draft so future saves update the same row
+    if (saved && !currentHalf.dbRowId) {
+      updateHalf(activeTab, (h) => ({ ...h, dbRowId: saved.id }))
+    }
+
+    setSaving(false)
+    toast.success(`${activeTab === 'airfield' ? 'Airfield' : 'Lighting'} progress saved`)
+    await loadHistory()
+  }
+
+  // ── Resume an in-progress inspection from DB ──
+  const handleResume = async (report: { id: string; type: string; airfield?: { daily_group_id?: string } | null; lighting?: { daily_group_id?: string } | null }) => {
+    const groupId = report.type === 'daily'
+      ? report.id
+      : (report.airfield?.daily_group_id || report.lighting?.daily_group_id || report.id)
+
+    // Fetch the group members from DB
+    const members = await fetchDailyGroup(groupId)
+    if (members.length === 0) {
+      // Try fetching as a single inspection
+      const { fetchInspection } = await import('@/lib/supabase/inspections')
+      const single = await fetchInspection(report.id)
+      if (single) members.push(single)
+    }
+
+    if (members.length === 0) {
+      toast.error('Could not load inspection data')
+      return
+    }
+
+    // Reconstruct a DailyInspectionDraft from draft_data
+    const newDraft = createNewDraft()
+    newDraft.id = groupId
+
+    for (const member of members) {
+      const tab = member.inspection_type as TabType
+      if (tab !== 'airfield' && tab !== 'lighting') continue
+      if (member.draft_data) {
+        // Restore saved draft data
+        newDraft[tab] = { ...member.draft_data, dbRowId: member.id }
+      } else {
+        // No draft_data (shouldn't happen for in-progress, but handle gracefully)
+        newDraft[tab] = { ...newDraft[tab], dbRowId: member.id }
+      }
+    }
+
+    setDraft(newDraft)
+    saveDraftToStorage(newDraft, installationId)
+    setShowHistory(false)
+
+    // Switch to the first tab that has data
+    const afMember = members.find((m) => m.inspection_type === 'airfield')
+    const ltMember = members.find((m) => m.inspection_type === 'lighting')
+    if (afMember) setActiveTab('airfield')
+    else if (ltMember) setActiveTab('lighting')
+
+    logActivity('resumed', 'inspection', members[0].id, members[0].display_id, { inspection_type: members[0].inspection_type }, installationId)
+    toast.success('Inspection resumed')
+  }
+
   // ── Complete current tab (auto-captures weather + inspector) ──
   const handleComplete = async (tab?: TabType) => {
     const targetTab = tab || activeTab
@@ -295,14 +390,48 @@ export default function InspectionsPage() {
     const inspector = await getInspectorName()
     const fallbackName = usingDemo ? 'Demo Inspector' : null
 
-    updateHalf(targetTab, (h) => ({
-      ...h,
+    const completedHalf: InspectionHalfDraft = {
+      ...half,
       inspectorName: inspector.name || fallbackName,
       inspectorId: inspector.id,
       savedAt: new Date().toISOString(),
-      weatherConditions: weather?.conditions || h.weatherConditions || null,
-      temperatureF: weather?.temperature_f ?? h.temperatureF ?? null,
-    }))
+      weatherConditions: weather?.conditions || half.weatherConditions || null,
+      temperatureF: weather?.temperature_f ?? half.temperatureF ?? null,
+    }
+
+    updateHalf(targetTab, () => completedHalf)
+
+    // Also save to DB
+    const secs = targetTab === 'airfield'
+      ? (dbAirfieldSections ?? AIRFIELD_INSPECTION_SECTIONS)
+      : (dbLightingSections ?? LIGHTING_INSPECTION_SECTIONS)
+    const { items, passed, failed, na, total } = halfDraftToItems(completedHalf, secs)
+
+    const { data: saved } = await saveInspectionDraft({
+      id: half.dbRowId,
+      inspection_type: targetTab,
+      draft_data: completedHalf,
+      items,
+      total_items: total,
+      passed_count: passed,
+      failed_count: failed,
+      na_count: na,
+      bwc_value: completedHalf.bwcValue,
+      notes: completedHalf.notes || null,
+      daily_group_id: draft.id,
+      construction_meeting: false,
+      joint_monthly: false,
+      base_id: installationId,
+    })
+
+    // Store the DB row ID back into the draft
+    if (saved && !half.dbRowId) {
+      updateHalf(targetTab, (h) => ({ ...h, dbRowId: saved.id }))
+    }
+
+    if (saved) {
+      logActivity('completed', 'inspection', saved.id, saved.display_id, { inspection_type: targetTab }, installationId)
+    }
 
     setSaving(false)
     const label = targetTab === 'airfield' ? 'Airfield' : 'Lighting'
@@ -311,6 +440,8 @@ export default function InspectionsPage() {
         ? `${weather.conditions}, ${weather.temperature_f}°F`
         : 'Weather data unavailable',
     })
+
+    await loadHistory()
 
     // Auto-switch to lighting tab after completing airfield (only if lighting not started)
     if (targetTab === 'airfield' && !draft.lighting.savedAt) {
@@ -389,163 +520,202 @@ export default function InspectionsPage() {
     if (airfieldSaved) {
       if (airfieldSpecialMode && airfieldSpecialType) {
         // ── Special mode: file as standalone construction_meeting or joint_monthly ──
-        const { data: created, error } = await createInspection({
-          inspection_type: airfieldSpecialType,
-          inspector_name: airfieldHalf.inspectorName || 'Unknown',
-          items: [],
-          total_items: 0,
-          passed_count: 0,
-          failed_count: 0,
-          na_count: 0,
-          construction_meeting: airfieldSpecialType === 'construction_meeting',
-          joint_monthly: airfieldSpecialType === 'joint_monthly',
-          personnel: (airfieldHalf.selectedPersonnel || []).map((p) => {
-            const name = airfieldHalf.personnelNames?.[p]
-            return name ? `${p} — ${name}` : p
-          }),
-          bwc_value: null,
-          weather_conditions: airfieldHalf.weatherConditions,
-          temperature_f: airfieldHalf.temperatureF,
-          notes: airfieldHalf.specialComment || null,
-          completed_by_name: airfieldHalf.inspectorName || 'Unknown',
-          completed_by_id: airfieldHalf.inspectorId,
-          completed_at: airfieldHalf.savedAt,
-          filed_by_name: filerName,
-          filed_by_id: filerId,
-          base_id: installationId,
-          // No daily_group_id — standalone record
-        })
-        if (error) {
-          toast.error(`Failed to file ${airfieldSpecialType}: ${error}`)
+        if (airfieldHalf.dbRowId) {
+          const { data: filed_data, error } = await fileInspection({
+            id: airfieldHalf.dbRowId,
+            items: [],
+            total_items: 0,
+            passed_count: 0,
+            failed_count: 0,
+            na_count: 0,
+            bwc_value: null,
+            weather_conditions: airfieldHalf.weatherConditions,
+            temperature_f: airfieldHalf.temperatureF,
+            notes: airfieldHalf.specialComment || null,
+            inspector_name: airfieldHalf.inspectorName || 'Unknown',
+            completed_by_name: airfieldHalf.inspectorName || 'Unknown',
+            completed_by_id: airfieldHalf.inspectorId,
+            completed_at: airfieldHalf.savedAt || new Date().toISOString(),
+            filed_by_name: filerName,
+            filed_by_id: filerId,
+            personnel: (airfieldHalf.selectedPersonnel || []).map((p) => {
+              const name = airfieldHalf.personnelNames?.[p]
+              return name ? `${p} — ${name}` : p
+            }),
+            construction_meeting: airfieldSpecialType === 'construction_meeting',
+            joint_monthly: airfieldSpecialType === 'joint_monthly',
+            base_id: installationId,
+          })
+          if (error) {
+            toast.error(`Failed to file ${airfieldSpecialType}: ${error}`)
+          } else {
+            filed++
+            if (filed_data && !filedId) filedId = filed_data.id
+          }
         } else {
-          filed++
-          if (created && !filedId) filedId = created.id
+          const { data: created, error } = await createInspection({
+            inspection_type: airfieldSpecialType,
+            inspector_name: airfieldHalf.inspectorName || 'Unknown',
+            items: [],
+            total_items: 0,
+            passed_count: 0,
+            failed_count: 0,
+            na_count: 0,
+            construction_meeting: airfieldSpecialType === 'construction_meeting',
+            joint_monthly: airfieldSpecialType === 'joint_monthly',
+            personnel: (airfieldHalf.selectedPersonnel || []).map((p) => {
+              const name = airfieldHalf.personnelNames?.[p]
+              return name ? `${p} — ${name}` : p
+            }),
+            bwc_value: null,
+            weather_conditions: airfieldHalf.weatherConditions,
+            temperature_f: airfieldHalf.temperatureF,
+            notes: airfieldHalf.specialComment || null,
+            completed_by_name: airfieldHalf.inspectorName || 'Unknown',
+            completed_by_id: airfieldHalf.inspectorId,
+            completed_at: airfieldHalf.savedAt,
+            filed_by_name: filerName,
+            filed_by_id: filerId,
+            base_id: installationId,
+          })
+          if (error) {
+            toast.error(`Failed to file ${airfieldSpecialType}: ${error}`)
+          } else {
+            filed++
+            if (created && !filedId) filedId = created.id
+          }
         }
       } else {
         // ── Normal airfield inspection ──
-        const secs = dbAirfieldSections ?? AIRFIELD_INSPECTION_SECTIONS
-        const visSecs = secs.filter((s) => !s.conditional || airfieldHalf.enabledConditionals[s.id])
-        const visItems = visSecs.flatMap((s) => s.items)
+        const afSecs = dbAirfieldSections ?? AIRFIELD_INSPECTION_SECTIONS
+        const { items, passed, failed, na, total } = halfDraftToItems(airfieldHalf, afSecs)
 
-        const items: InspectionItem[] = visItems.map((item) => {
-          const section = visSecs.find((s) => s.items.some((i) => i.id === item.id))
-          const response = item.type === 'bwc'
-            ? (airfieldHalf.bwcValue ? 'pass' : null)
-            : (airfieldHalf.responses[item.id] ?? null)
-          return {
-            id: item.id,
-            section: section?.title || '',
-            item: item.item,
-            response: response as 'pass' | 'fail' | 'na' | null,
-            notes: item.type === 'bwc' ? (airfieldHalf.bwcValue || '') : (airfieldHalf.comments[item.id] || ''),
-            photo_id: null,
-            generated_discrepancy_id: null,
+        if (airfieldHalf.dbRowId) {
+          // Update existing in-progress row to completed
+          const { data: filed_data, error } = await fileInspection({
+            id: airfieldHalf.dbRowId,
+            items,
+            total_items: total,
+            passed_count: passed,
+            failed_count: failed,
+            na_count: na,
+            bwc_value: airfieldHalf.bwcValue,
+            weather_conditions: airfieldHalf.weatherConditions,
+            temperature_f: airfieldHalf.temperatureF,
+            notes: airfieldHalf.notes || null,
+            inspector_name: airfieldHalf.inspectorName || 'Unknown',
+            completed_by_name: airfieldHalf.inspectorName || 'Unknown',
+            completed_by_id: airfieldHalf.inspectorId,
+            completed_at: airfieldHalf.savedAt || new Date().toISOString(),
+            filed_by_name: filerName,
+            filed_by_id: filerId,
+            base_id: installationId,
+          })
+          if (error) {
+            toast.error(`Failed to file airfield: ${error}`)
+          } else {
+            filed++
+            if (filed_data && !filedId) filedId = filed_data.id
           }
-        })
-
-        const passed = visItems.filter((i) => {
-          if (i.type === 'bwc') return airfieldHalf.bwcValue !== null
-          return airfieldHalf.responses[i.id] === 'pass'
-        }).length
-        const failed = visItems.filter((i) => airfieldHalf.responses[i.id] === 'fail').length
-        const na = visItems.filter((i) => {
-          if (i.type === 'bwc') return false
-          return airfieldHalf.responses[i.id] === 'na'
-        }).length
-
-        const { data: created, error } = await createInspection({
-          inspection_type: 'airfield',
-          inspector_name: airfieldHalf.inspectorName || 'Unknown',
-          items,
-          total_items: visItems.length,
-          passed_count: passed,
-          failed_count: failed,
-          na_count: na,
-          construction_meeting: false,
-          joint_monthly: false,
-          bwc_value: airfieldHalf.bwcValue,
-          weather_conditions: airfieldHalf.weatherConditions,
-          temperature_f: airfieldHalf.temperatureF,
-          notes: airfieldHalf.notes || null,
-          daily_group_id: groupId,
-          completed_by_name: airfieldHalf.inspectorName || 'Unknown',
-          completed_by_id: airfieldHalf.inspectorId,
-          completed_at: airfieldHalf.savedAt,
-          filed_by_name: filerName,
-          filed_by_id: filerId,
-          base_id: installationId,
-        })
-        if (error) {
-          toast.error(`Failed to file airfield: ${error}`)
         } else {
-          filed++
-          if (created && !filedId) filedId = created.id
+          // Insert new completed row
+          const { data: created, error } = await createInspection({
+            inspection_type: 'airfield',
+            inspector_name: airfieldHalf.inspectorName || 'Unknown',
+            items,
+            total_items: total,
+            passed_count: passed,
+            failed_count: failed,
+            na_count: na,
+            construction_meeting: false,
+            joint_monthly: false,
+            bwc_value: airfieldHalf.bwcValue,
+            weather_conditions: airfieldHalf.weatherConditions,
+            temperature_f: airfieldHalf.temperatureF,
+            notes: airfieldHalf.notes || null,
+            daily_group_id: groupId,
+            completed_by_name: airfieldHalf.inspectorName || 'Unknown',
+            completed_by_id: airfieldHalf.inspectorId,
+            completed_at: airfieldHalf.savedAt,
+            filed_by_name: filerName,
+            filed_by_id: filerId,
+            base_id: installationId,
+          })
+          if (error) {
+            toast.error(`Failed to file airfield: ${error}`)
+          } else {
+            filed++
+            if (created && !filedId) filedId = created.id
+          }
         }
       }
     }
 
     // File lighting half (always normal)
     if (lightingSaved) {
-      const secs = dbLightingSections ?? LIGHTING_INSPECTION_SECTIONS
-      const visSecs = secs.filter((s) => !s.conditional || lightingHalf.enabledConditionals[s.id])
-      const visItems = visSecs.flatMap((s) => s.items)
-
-      const items: InspectionItem[] = visItems.map((item) => {
-        const section = visSecs.find((s) => s.items.some((i) => i.id === item.id))
-        const response = item.type === 'bwc'
-          ? (lightingHalf.bwcValue ? 'pass' : null)
-          : (lightingHalf.responses[item.id] ?? null)
-        return {
-          id: item.id,
-          section: section?.title || '',
-          item: item.item,
-          response: response as 'pass' | 'fail' | 'na' | null,
-          notes: item.type === 'bwc' ? (lightingHalf.bwcValue || '') : (lightingHalf.comments[item.id] || ''),
-          photo_id: null,
-          generated_discrepancy_id: null,
-        }
-      })
-
-      const passed = visItems.filter((i) => {
-        if (i.type === 'bwc') return lightingHalf.bwcValue !== null
-        return lightingHalf.responses[i.id] === 'pass'
-      }).length
-      const failed = visItems.filter((i) => lightingHalf.responses[i.id] === 'fail').length
-      const na = visItems.filter((i) => {
-        if (i.type === 'bwc') return false
-        return lightingHalf.responses[i.id] === 'na'
-      }).length
+      const ltSecs = dbLightingSections ?? LIGHTING_INSPECTION_SECTIONS
+      const { items, passed, failed, na, total } = halfDraftToItems(lightingHalf, ltSecs)
 
       // If airfield was special mode, lighting is standalone (no group)
       const lightingGroupId = airfieldSpecialMode ? undefined : groupId
 
-      const { data: created, error } = await createInspection({
-        inspection_type: 'lighting',
-        inspector_name: lightingHalf.inspectorName || 'Unknown',
-        items,
-        total_items: visItems.length,
-        passed_count: passed,
-        failed_count: failed,
-        na_count: na,
-        construction_meeting: false,
-        joint_monthly: false,
-        bwc_value: lightingHalf.bwcValue,
-        weather_conditions: lightingHalf.weatherConditions,
-        temperature_f: lightingHalf.temperatureF,
-        notes: lightingHalf.notes || null,
-        daily_group_id: lightingGroupId,
-        completed_by_name: lightingHalf.inspectorName || 'Unknown',
-        completed_by_id: lightingHalf.inspectorId,
-        completed_at: lightingHalf.savedAt,
-        filed_by_name: filerName,
-        filed_by_id: filerId,
-        base_id: installationId,
-      })
-      if (error) {
-        toast.error(`Failed to file lighting: ${error}`)
+      if (lightingHalf.dbRowId) {
+        // Update existing in-progress row to completed
+        const { data: filed_data, error } = await fileInspection({
+          id: lightingHalf.dbRowId,
+          items,
+          total_items: total,
+          passed_count: passed,
+          failed_count: failed,
+          na_count: na,
+          bwc_value: lightingHalf.bwcValue,
+          weather_conditions: lightingHalf.weatherConditions,
+          temperature_f: lightingHalf.temperatureF,
+          notes: lightingHalf.notes || null,
+          inspector_name: lightingHalf.inspectorName || 'Unknown',
+          completed_by_name: lightingHalf.inspectorName || 'Unknown',
+          completed_by_id: lightingHalf.inspectorId,
+          completed_at: lightingHalf.savedAt || new Date().toISOString(),
+          filed_by_name: filerName,
+          filed_by_id: filerId,
+          base_id: installationId,
+        })
+        if (error) {
+          toast.error(`Failed to file lighting: ${error}`)
+        } else {
+          filed++
+          if (filed_data && !filedId) filedId = filed_data.id
+        }
       } else {
-        filed++
-        if (created && !filedId) filedId = created.id
+        // Insert new completed row
+        const { data: created, error } = await createInspection({
+          inspection_type: 'lighting',
+          inspector_name: lightingHalf.inspectorName || 'Unknown',
+          items,
+          total_items: total,
+          passed_count: passed,
+          failed_count: failed,
+          na_count: na,
+          construction_meeting: false,
+          joint_monthly: false,
+          bwc_value: lightingHalf.bwcValue,
+          weather_conditions: lightingHalf.weatherConditions,
+          temperature_f: lightingHalf.temperatureF,
+          notes: lightingHalf.notes || null,
+          daily_group_id: lightingGroupId,
+          completed_by_name: lightingHalf.inspectorName || 'Unknown',
+          completed_by_id: lightingHalf.inspectorId,
+          completed_at: lightingHalf.savedAt,
+          filed_by_name: filerName,
+          filed_by_id: filerId,
+          base_id: installationId,
+        })
+        if (error) {
+          toast.error(`Failed to file lighting: ${error}`)
+        } else {
+          filed++
+          if (created && !filedId) filedId = created.id
+        }
       }
     }
 
@@ -590,6 +760,7 @@ export default function InspectionsPage() {
     temperatureF: number | null
     completedAt: string | null
     personnel?: string[]
+    status: 'in_progress' | 'completed'
   }
 
   const dailyReports: DailyReport[] = useMemo(() => {
@@ -613,13 +784,14 @@ export default function InspectionsPage() {
       const af = members.find((m: typeof rawInspections[0]) => m.inspection_type === 'airfield') || null
       const lt = members.find((m: typeof rawInspections[0]) => m.inspection_type === 'lighting') || null
       const primary = af || lt
+      const anyInProgress = members.some((m: typeof rawInspections[0]) => m.status === 'in_progress')
       reports.push({
         id: groupId,
         type: 'daily',
         airfield: af,
         lighting: lt,
         date: primary.inspection_date,
-        inspectorName: primary.inspector_name || 'Unknown',
+        inspectorName: primary.inspector_name || primary.saved_by_name || 'Unknown',
         totalPassed: (af?.passed_count || 0) + (lt?.passed_count || 0),
         totalFailed: (af?.failed_count || 0) + (lt?.failed_count || 0),
         totalNa: (af?.na_count || 0) + (lt?.na_count || 0),
@@ -628,6 +800,7 @@ export default function InspectionsPage() {
         weatherConditions: primary.weather_conditions,
         temperatureF: primary.temperature_f,
         completedAt: primary.completed_at,
+        status: anyInProgress ? 'in_progress' : 'completed',
       })
     }
 
@@ -641,7 +814,7 @@ export default function InspectionsPage() {
         airfield: insp.inspection_type === 'airfield' ? insp : null,
         lighting: insp.inspection_type === 'lighting' ? insp : null,
         date: insp.inspection_date,
-        inspectorName: insp.inspector_name || 'Unknown',
+        inspectorName: insp.inspector_name || insp.saved_by_name || 'Unknown',
         totalPassed: isSpecialType ? 0 : insp.passed_count,
         totalFailed: isSpecialType ? 0 : insp.failed_count,
         totalNa: isSpecialType ? 0 : insp.na_count,
@@ -651,11 +824,14 @@ export default function InspectionsPage() {
         temperatureF: insp.temperature_f,
         completedAt: insp.completed_at,
         personnel: insp.personnel || [],
+        status: insp.status || 'completed',
       })
     }
 
-    // Sort by completion date descending
+    // Sort: in-progress first, then by date descending
     reports.sort((a, b) => {
+      if (a.status === 'in_progress' && b.status !== 'in_progress') return -1
+      if (b.status === 'in_progress' && a.status !== 'in_progress') return 1
       const da = a.completedAt || a.date
       const db = b.completedAt || b.date
       return db.localeCompare(da)
@@ -1097,36 +1273,59 @@ export default function InspectionsPage() {
           </>
         )}
 
-        {/* ── Action Buttons ── */}
+        {/* ── Smart Action Buttons ── */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          <button
-            onClick={() => handleComplete()}
-            disabled={saving}
-            style={{
-              flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
-              background: 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-cyan))',
-              color: '#FFF', fontSize: 15, fontWeight: 700,
-              cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
-              opacity: saving ? 0.7 : 1,
-            }}
-          >
-            {saving ? 'Completing...' : 'Complete'}
-          </button>
-          <button
-            onClick={() => handleFile()}
-            disabled={filing}
-            style={{
-              flex: 1, padding: '14px 0', borderRadius: 10,
-              border: '1px solid rgba(34,197,94,0.4)',
-              background: 'rgba(34,197,94,0.1)',
-              color: '#22C55E',
-              fontSize: 15, fontWeight: 700,
-              cursor: filing ? 'default' : 'pointer', fontFamily: 'inherit',
-              opacity: filing ? 0.7 : 1,
-            }}
-          >
-            {filing ? 'Filing...' : 'File'}
-          </button>
+          {/* Smart per-tab button: Save (<100%) or Complete (100% and not yet completed) */}
+          {!currentHalf?.savedAt && (
+            progress < 100 ? (
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={{
+                  flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
+                  background: 'linear-gradient(135deg, #3B82F6, #6366F1)',
+                  color: '#FFF', fontSize: 15, fontWeight: 700,
+                  cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
+                  opacity: saving ? 0.7 : 1,
+                }}
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            ) : (
+              <button
+                onClick={() => handleComplete()}
+                disabled={saving}
+                style={{
+                  flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
+                  background: 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-cyan))',
+                  color: '#FFF', fontSize: 15, fontWeight: 700,
+                  cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
+                  opacity: saving ? 0.7 : 1,
+                }}
+              >
+                {saving ? 'Completing...' : 'Complete'}
+              </button>
+            )
+          )}
+
+          {/* File button: appears once at least one tab is completed */}
+          {(draft.airfield.savedAt || draft.lighting.savedAt) && (
+            <button
+              onClick={() => handleFile()}
+              disabled={filing}
+              style={{
+                flex: 1, padding: '14px 0', borderRadius: 10,
+                border: '1px solid rgba(34,197,94,0.4)',
+                background: 'rgba(34,197,94,0.1)',
+                color: '#22C55E',
+                fontSize: 15, fontWeight: 700,
+                cursor: filing ? 'default' : 'pointer', fontFamily: 'inherit',
+                opacity: filing ? 0.7 : 1,
+              }}
+            >
+              {filing ? 'Filing...' : 'File'}
+            </button>
+          )}
         </div>
 
         {/* ── Lighting Incomplete Confirmation Dialog ── */}
@@ -1187,7 +1386,7 @@ export default function InspectionsPage() {
         <div>
           <div style={{ fontSize: 16, fontWeight: 800 }}>Inspections</div>
           <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
-            {dailyReports.length} filed report{dailyReports.length !== 1 ? 's' : ''}
+            {dailyReports.length} report{dailyReports.length !== 1 ? 's' : ''}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -1269,6 +1468,7 @@ export default function InspectionsPage() {
       {!loading && filtered.map((report) => {
         const isDaily = report.type === 'daily'
         const isSpecialType = report.inspectionType === 'construction_meeting' || report.inspectionType === 'joint_monthly'
+        const isInProgress = report.status === 'in_progress'
         // Link to the airfield inspection detail (which will fetch the full group)
         const linkId = isSpecialType ? report.id : (report.airfield?.id || report.lighting?.id)
         const displayIds = isSpecialType ? [] : [report.airfield?.display_id, report.lighting?.display_id].filter(Boolean)
@@ -1278,19 +1478,10 @@ export default function InspectionsPage() {
           : report.inspectionType === 'joint_monthly'
           ? 'Joint Monthly Airfield Inspection'
           : ''
-        const borderColor = isSpecialType ? '#A78BFA' : isDaily ? 'var(--color-cyan)' : report.airfield ? '#34D399' : '#FBBF24'
+        const borderColor = isInProgress ? '#3B82F6' : isSpecialType ? '#A78BFA' : isDaily ? 'var(--color-cyan)' : report.airfield ? '#34D399' : '#FBBF24'
 
-        return (
-          <Link
-            key={report.id}
-            href={`/inspections/${linkId}`}
-            className="card"
-            style={{
-              display: 'block', marginBottom: 6, cursor: 'pointer',
-              textDecoration: 'none', color: 'inherit',
-              borderLeft: `3px solid ${borderColor}`,
-            }}
-          >
+        const cardContent = (
+          <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <div>
                 {isSpecialType ? (
@@ -1298,16 +1489,19 @@ export default function InspectionsPage() {
                     {specialLabel}
                   </span>
                 ) : isDaily ? (
-                  <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--color-cyan)' }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: isInProgress ? '#3B82F6' : 'var(--color-cyan)' }}>
                     Airfield Inspection Report
                   </span>
                 ) : (
-                  <span style={{ fontSize: 13, fontWeight: 800, fontFamily: 'monospace', color: 'var(--color-cyan)' }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, fontFamily: 'monospace', color: isInProgress ? '#3B82F6' : 'var(--color-cyan)' }}>
                     {displayIds[0]}
                   </span>
                 )}
               </div>
               <div style={{ display: 'flex', gap: 4 }}>
+                {isInProgress && (
+                  <Badge label="In Progress" color="#3B82F6" />
+                )}
                 {isSpecialType ? (
                   <Badge label={report.inspectionType === 'construction_meeting' ? 'Construction' : 'Joint Monthly'} color="#A78BFA" />
                 ) : (
@@ -1384,6 +1578,39 @@ export default function InspectionsPage() {
                   : report.date}
               </span>
             </div>
+          </>
+        )
+
+        // In-progress cards: click to resume instead of navigating to detail page
+        if (isInProgress) {
+          return (
+            <div
+              key={report.id}
+              onClick={() => handleResume(report)}
+              className="card"
+              style={{
+                display: 'block', marginBottom: 6, cursor: 'pointer',
+                textDecoration: 'none', color: 'inherit',
+                borderLeft: `3px solid ${borderColor}`,
+              }}
+            >
+              {cardContent}
+            </div>
+          )
+        }
+
+        return (
+          <Link
+            key={report.id}
+            href={`/inspections/${linkId}`}
+            className="card"
+            style={{
+              display: 'block', marginBottom: 6, cursor: 'pointer',
+              textDecoration: 'none', color: 'inherit',
+              borderLeft: `3px solid ${borderColor}`,
+            }}
+          >
+            {cardContent}
           </Link>
         )
       })}
