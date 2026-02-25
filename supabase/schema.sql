@@ -216,7 +216,9 @@ CREATE INDEX idx_activity_log_entity ON activity_log(entity_type, entity_id);
 -- 5.9b NAVAID Status Tracking
 CREATE TABLE navaid_statuses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  navaid_name TEXT NOT NULL UNIQUE,
+  navaid_name TEXT NOT NULL,
+  base_id UUID REFERENCES bases(id),
+  UNIQUE (base_id, navaid_name),
   status TEXT NOT NULL DEFAULT 'green' CHECK (status IN ('green', 'yellow', 'red')),
   notes TEXT,
   updated_by UUID REFERENCES profiles(id),
