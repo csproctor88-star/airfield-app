@@ -1,53 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const FAA_API_URL = 'https://api.data.gov/faa/notamapi/v1/notams'
+// FAA public NOTAM Search backend — no API key required
+const FAA_NOTAM_SEARCH_URL = 'https://notams.aim.faa.gov/notamSearch/search'
 
-interface FaaNotamProperties {
-  coreNOTAMData?: {
-    notam?: {
-      id?: string
-      number?: string
-      type?: string
-      classification?: string
-      effectiveStart?: string
-      effectiveEnd?: string
-      text?: string
-      location?: string
-    }
-  }
+interface FaaNotamItem {
+  notamNumber?: string
+  featureName?: string
+  keyword?: string
+  issueDate?: string
+  startDate?: string
+  endDate?: string
+  source?: string
+  sourceType?: string
+  icaoMessage?: string
+  traditionalMessage?: string
+  traditionalMessageFrom4thWord?: string
+  icaoId?: string
+  airportName?: string
+  cancelledOrExpired?: boolean
+  status?: string
+  facilityDesignator?: string
+  transactionID?: number
 }
 
-interface FaaFeature {
-  properties?: FaaNotamProperties
+interface FaaSearchResponse {
+  notamList?: FaaNotamItem[]
+  totalNotamCount?: number
 }
 
-interface FaaGeoJsonResponse {
-  items?: FaaFeature[]
-}
-
-function normalizeNotam(feature: FaaFeature, index: number) {
-  const core = feature.properties?.coreNOTAMData?.notam
-  if (!core) return null
-
-  const effectiveEnd = core.effectiveEnd || ''
+function normalizeNotam(item: FaaNotamItem, index: number) {
+  const endStr = item.endDate || ''
   const now = new Date()
-  const isExpired = effectiveEnd ? new Date(effectiveEnd) < now : false
 
-  // Extract a short title from the full text (first line or first 80 chars)
-  const fullText = core.text || ''
-  const title = fullText.split('\n')[0]?.slice(0, 100) || core.number || `NOTAM ${index + 1}`
+  // Parse FAA date format "MM/DD/YYYY HHMM" or "PERM"
+  const isPerm = endStr.toUpperCase() === 'PERM'
+  let isExpired = false
+  if (!isPerm && endStr) {
+    const parsed = parseFaaDate(endStr)
+    if (parsed) isExpired = parsed < now
+  }
+  // Also respect the FAA's own status/cancelledOrExpired flag
+  if (item.cancelledOrExpired) isExpired = true
+
+  // Build title from the keyword + first portion of the traditional message
+  const messageText = item.traditionalMessageFrom4thWord || item.icaoMessage || ''
+  const title = messageText.split('\n')[0]?.slice(0, 120) || item.notamNumber || `NOTAM ${index + 1}`
+
+  const fullText = item.icaoMessage || item.traditionalMessage || messageText
 
   return {
-    id: core.id || `faa-${index}`,
-    notam_number: core.number || '',
+    id: `faa-${item.transactionID || index}`,
+    notam_number: item.notamNumber || '',
     source: 'faa' as const,
     status: isExpired ? ('expired' as const) : ('active' as const),
-    notam_type: core.classification || core.type || 'NOTAM',
+    notam_type: item.keyword || item.featureName || 'NOTAM',
     title,
     full_text: fullText,
-    effective_start: core.effectiveStart || '',
-    effective_end: effectiveEnd,
+    effective_start: item.startDate || item.issueDate || '',
+    effective_end: endStr,
   }
+}
+
+function parseFaaDate(str: string): Date | null {
+  // Format: "MM/DD/YYYY HHMM"
+  const match = str.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2})(\d{2})$/)
+  if (!match) return null
+  const [, month, day, year, hour, minute] = match
+  return new Date(Date.UTC(+year, +month - 1, +day, +hour, +minute))
 }
 
 export async function GET(request: NextRequest) {
@@ -60,62 +79,45 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const apiKey = process.env.FAA_NOTAM_API_KEY
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: 'FAA NOTAM API key is not configured. Set FAA_NOTAM_API_KEY in your environment.' },
-      { status: 503 }
-    )
-  }
-
   try {
-    const url = new URL(FAA_API_URL)
-    url.searchParams.set('domesticLocation', icao)
-    url.searchParams.set('sortBy', 'effectiveStartDate')
-    url.searchParams.set('sortOrder', 'DESC')
-    url.searchParams.set('pageSize', '50')
-    url.searchParams.set('api_key', apiKey)
-
-    const res = await fetch(url.toString(), {
+    const res = await fetch(FAA_NOTAM_SEARCH_URL, {
+      method: 'POST',
       headers: {
-        Accept: 'application/geo+json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
+      body: `searchType=0&designatorsForLocation=${encodeURIComponent(icao)}`,
       next: { revalidate: 300 }, // cache for 5 minutes
     })
 
-    if (res.status === 401 || res.status === 403) {
-      return NextResponse.json(
-        { error: 'FAA API authentication failed. Check your FAA_NOTAM_API_KEY.' },
-        { status: 401 }
-      )
-    }
-
     if (res.status === 429) {
       return NextResponse.json(
-        { error: 'FAA API rate limit reached. Try again in a few minutes.' },
+        { error: 'FAA rate limit reached. Try again in a few minutes.' },
         { status: 429 }
       )
     }
 
     if (!res.ok) {
       return NextResponse.json(
-        { error: `FAA API returned status ${res.status}.` },
+        { error: `FAA NOTAM Search returned status ${res.status}.` },
         { status: 502 }
       )
     }
 
-    const data: FaaGeoJsonResponse = await res.json()
-    const items = data.items || []
+    const data: FaaSearchResponse = await res.json()
+    const items = data.notamList || []
 
-    const notams = items
-      .map((feature, i) => normalizeNotam(feature, i))
-      .filter(Boolean)
+    const notams = items.map((item, i) => normalizeNotam(item, i))
 
-    return NextResponse.json({ notams, icao, fetchedAt: new Date().toISOString() })
+    return NextResponse.json({
+      notams,
+      icao,
+      totalCount: data.totalNotamCount || notams.length,
+      fetchedAt: new Date().toISOString(),
+    })
   } catch (err) {
     console.error('FAA NOTAM fetch error:', err)
     return NextResponse.json(
-      { error: 'Failed to reach FAA NOTAM API. Check your network connection.' },
+      { error: 'Failed to reach FAA NOTAM Search. Check your network connection.' },
       { status: 502 }
     )
   }
