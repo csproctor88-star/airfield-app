@@ -59,6 +59,7 @@ export default function NotamsPage() {
   const router = useRouter()
   const { currentInstallation } = useInstallation()
   const [filter, setFilter] = useState<FilterType>('all')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const isDemoMode = !createClient()
   const defaultIcao = currentInstallation?.icao || ''
@@ -360,11 +361,12 @@ export default function NotamsPage() {
           {filtered.map((notam) => {
             const isExpired = notam.status === 'expired'
             const borderLeftColor = SOURCE_COLORS[notam.source] || 'var(--color-text-4)'
+            const isExpanded = expandedId === notam.id
 
             return (
               <div
                 key={notam.id}
-                onClick={() => router.push(`/notams/${notam.id}`)}
+                onClick={() => setExpandedId(isExpanded ? null : notam.id)}
                 style={{
                   background: 'var(--color-bg-surface-solid)',
                   border: '1px solid var(--color-bg-elevated)',
@@ -404,9 +406,9 @@ export default function NotamsPage() {
                     fontWeight: 700,
                     color: 'var(--color-text-1)',
                     marginBottom: 4,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
+                    ...(!isExpanded
+                      ? { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }
+                      : {}),
                   }}
                 >
                   {notam.title}
@@ -423,6 +425,30 @@ export default function NotamsPage() {
                     {formatDate(notam.effective_start)} — {formatDate(notam.effective_end)}
                   </span>
                 </div>
+
+                {/* Expanded full text */}
+                {isExpanded && notam.full_text && (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      paddingTop: 10,
+                      borderTop: '1px solid var(--color-bg-elevated)',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontFamily: 'monospace',
+                        color: 'var(--color-text-2)',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {notam.full_text}
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}
