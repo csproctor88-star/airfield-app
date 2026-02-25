@@ -23,13 +23,27 @@ export default function SettingsPage() {
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Settings</div>
-      <ProfileSection />
-      <ThemeSection />
-      <InstallationSection />
-      <BaseConfigSection />
-      <RegulationsSection />
-      <StorageSection />
-      <AboutSection />
+      <CollapsibleSection label="PROFILE" icon={User} defaultOpen>
+        <ProfileSectionContent />
+      </CollapsibleSection>
+      <CollapsibleSection label="APPEARANCE" icon={Sun}>
+        <ThemeSectionContent />
+      </CollapsibleSection>
+      <CollapsibleSection label="INSTALLATION" icon={MapPin}>
+        <InstallationSectionContent />
+      </CollapsibleSection>
+      <CollapsibleSection label="BASE CONFIGURATION" icon={Wrench}>
+        <BaseConfigSectionContent />
+      </CollapsibleSection>
+      <CollapsibleSection label="REGULATIONS LIBRARY" icon={BookOpen}>
+        <RegulationsSectionContent />
+      </CollapsibleSection>
+      <CollapsibleSection label="DATA & STORAGE" icon={HardDrive}>
+        <StorageSectionContent />
+      </CollapsibleSection>
+      <CollapsibleSection label="ABOUT" icon={Info} defaultOpen>
+        <AboutSectionContent />
+      </CollapsibleSection>
       <SignOutSection />
     </div>
   )
@@ -38,6 +52,52 @@ export default function SettingsPage() {
 // ═══════════════════════════════════════════════════════════════
 // Section Header
 // ═══════════════════════════════════════════════════════════════
+
+function CollapsibleSection({
+  label,
+  icon: Icon,
+  defaultOpen = false,
+  children,
+}: {
+  label: string
+  icon: React.ComponentType<{ size: number; color: string }>
+  defaultOpen?: boolean
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+
+  return (
+    <div style={{ marginTop: 24 }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          width: '100%',
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          marginBottom: open ? 8 : 0,
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+        }}
+      >
+        <Icon size={12} color="var(--color-text-3)" />
+        <div className="section-label" style={{ marginBottom: 0, flex: 1, textAlign: 'left' }}>{label}</div>
+        <ChevronDown
+          size={14}
+          color="var(--color-text-3)"
+          style={{
+            transition: 'transform 0.2s',
+            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+          }}
+        />
+      </button>
+      {open && children}
+    </div>
+  )
+}
 
 function SectionHeader({ label, icon: Icon }: { label: string; icon: React.ComponentType<{ size: number; color: string }> }) {
   return (
@@ -55,7 +115,7 @@ function SectionHeader({ label, icon: Icon }: { label: string; icon: React.Compo
 // Section 1: Profile (read-only)
 // ═══════════════════════════════════════════════════════════════
 
-function ProfileSection() {
+function ProfileSectionContent() {
   const { currentInstallation } = useInstallation()
   const [profile, setProfile] = useState<{
     name: string
@@ -110,10 +170,7 @@ function ProfileSection() {
 
   if (!profile) {
     return (
-      <>
-        <SectionHeader label="PROFILE" icon={User} />
-        <div className="card" style={{ padding: 16, color: 'var(--color-text-3)', fontSize: 13 }}>Loading...</div>
-      </>
+      <div className="card" style={{ padding: 16, color: 'var(--color-text-3)', fontSize: 13 }}>Loading...</div>
     )
   }
 
@@ -121,10 +178,8 @@ function ProfileSection() {
   const displayName = [profile.rank, profile.name].filter(Boolean).join(' ')
 
   return (
-    <>
-      <SectionHeader label="PROFILE" icon={User} />
-      <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {/* Name */}
+    <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Name */}
         <div>
           <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 2 }}>NAME</div>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-1)' }}>{displayName || 'Not set'}</div>
@@ -160,7 +215,6 @@ function ProfileSection() {
           </span>
         </div>
       </div>
-    </>
   )
 }
 
@@ -168,7 +222,7 @@ function ProfileSection() {
 // Section: Appearance / Theme
 // ═══════════════════════════════════════════════════════════════
 
-function ThemeSection() {
+function ThemeSectionContent() {
   const { theme, setTheme } = useTheme()
 
   const options: { value: ThemePreference; label: string; icon: React.ComponentType<{ size: number }> }[] = [
@@ -178,8 +232,6 @@ function ThemeSection() {
   ]
 
   return (
-    <>
-      <SectionHeader label="APPEARANCE" icon={Sun} />
       <div className="card" style={{ padding: 14 }}>
         <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 8 }}>THEME</div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -214,7 +266,6 @@ function ThemeSection() {
           {theme === 'auto' ? 'Follows your device settings' : theme === 'light' ? 'Light theme active' : 'Dark theme active'}
         </div>
       </div>
-    </>
   )
 }
 
@@ -222,7 +273,7 @@ function ThemeSection() {
 // Section 2: Installation Config
 // ═══════════════════════════════════════════════════════════════
 
-function InstallationSection() {
+function InstallationSectionContent() {
   const { currentInstallation, allInstallations, switchInstallation, removeInstallation, userRole } = useInstallation()
   const [showDropdown, setShowDropdown] = useState(false)
   const [search, setSearch] = useState('')
@@ -291,7 +342,6 @@ function InstallationSection() {
 
   return (
     <>
-      <SectionHeader label="INSTALLATION" icon={MapPin} />
       <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* Current installation display */}
         <div>
@@ -537,14 +587,12 @@ function InstallationSection() {
 // Section: Base Configuration (templates, areas, navaids, etc.)
 // ═══════════════════════════════════════════════════════════════
 
-function BaseConfigSection() {
+function BaseConfigSectionContent() {
   const { userRole } = useInstallation()
   const canManage = userRole === 'airfield_manager' || userRole === 'sys_admin'
   if (!canManage) return null
 
   return (
-    <>
-      <SectionHeader label="BASE CONFIGURATION" icon={Wrench} />
       <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-1)' }}>Runways, Areas & NAVAIDs</div>
@@ -582,7 +630,6 @@ function BaseConfigSection() {
           Manage Templates
         </a>
       </div>
-    </>
   )
 }
 
@@ -592,7 +639,7 @@ function BaseConfigSection() {
 
 const FAVORITES_DEFAULT_KEY = 'aoms_reg_favorites_default'
 
-function RegulationsSection() {
+function RegulationsSectionContent() {
   const [favDefault, setFavDefault] = useState(false)
   const [cachedCount, setCachedCount] = useState<number | null>(null)
   const [totalCount, setTotalCount] = useState(0)
@@ -717,7 +764,6 @@ function RegulationsSection() {
 
   return (
     <>
-      <SectionHeader label="REGULATIONS LIBRARY" icon={BookOpen} />
       <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
         {/* Favorites toggle */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -847,7 +893,7 @@ function RegulationsSection() {
 // Section 4: Data & Storage
 // ═══════════════════════════════════════════════════════════════
 
-function StorageSection() {
+function StorageSectionContent() {
   const [storageEstimate, setStorageEstimate] = useState<{ usageMB: string; quotaMB: string } | null>(null)
   const [storageSupported, setStorageSupported] = useState(true)
   const [regCount, setRegCount] = useState(0)
@@ -912,7 +958,6 @@ function StorageSection() {
 
   return (
     <>
-      <SectionHeader label="DATA & STORAGE" icon={HardDrive} />
       <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* Overall storage */}
         <div>
@@ -983,12 +1028,11 @@ function StorageSection() {
 // Section 5: About
 // ═══════════════════════════════════════════════════════════════
 
-function AboutSection() {
+function AboutSectionContent() {
   const env = process.env.NODE_ENV === 'production' ? 'Production' : 'Development'
 
   return (
     <>
-      <SectionHeader label="ABOUT" icon={Info} />
       <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ textAlign: 'center', padding: '8px 0' }}>
           <div style={{
