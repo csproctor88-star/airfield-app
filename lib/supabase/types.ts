@@ -14,6 +14,7 @@ export type Database = {
           location: string | null
           elevation_msl: number | null
           timezone: string
+          installation_code: string | null
           ce_shops: string[]
           is_active: boolean
           created_at: string
@@ -297,6 +298,111 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['obstruction_evaluations']['Insert']>
         Relationships: []
       }
+      waivers: {
+        Row: {
+          id: string
+          base_id: string | null
+          waiver_number: string
+          classification: WaiverClassification
+          status: WaiverStatus
+          hazard_rating: WaiverHazardRating | null
+          action_requested: WaiverActionRequested | null
+          description: string
+          justification: string | null
+          risk_assessment_summary: string | null
+          corrective_action: string | null
+          criteria_impact: string | null
+          proponent: string | null
+          project_number: string | null
+          program_fy: number | null
+          estimated_cost: number | null
+          project_status: string | null
+          faa_case_number: string | null
+          period_valid: string | null
+          date_submitted: string | null
+          date_approved: string | null
+          expiration_date: string | null
+          last_reviewed_date: string | null
+          next_review_due: string | null
+          location_description: string | null
+          location_lat: number | null
+          location_lng: number | null
+          notes: string | null
+          photo_count: number
+          attachment_count: number
+          created_by: string | null
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['waivers']['Row'], 'id' | 'created_at' | 'updated_at' | 'photo_count' | 'attachment_count'>
+        Update: Partial<Database['public']['Tables']['waivers']['Insert']>
+        Relationships: []
+      }
+      waiver_criteria: {
+        Row: {
+          id: string
+          waiver_id: string
+          criteria_source: WaiverCriteriaSource
+          reference: string | null
+          description: string | null
+          sort_order: number
+        }
+        Insert: Omit<Database['public']['Tables']['waiver_criteria']['Row'], 'id'>
+        Update: Partial<Database['public']['Tables']['waiver_criteria']['Insert']>
+        Relationships: []
+      }
+      waiver_attachments: {
+        Row: {
+          id: string
+          waiver_id: string
+          file_path: string
+          file_name: string
+          file_type: WaiverAttachmentType
+          file_size: number | null
+          mime_type: string | null
+          caption: string | null
+          uploaded_by: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['waiver_attachments']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['waiver_attachments']['Insert']>
+        Relationships: []
+      }
+      waiver_reviews: {
+        Row: {
+          id: string
+          waiver_id: string
+          review_year: number
+          review_date: string | null
+          reviewed_by: string | null
+          recommendation: WaiverReviewRecommendation | null
+          mitigation_verified: boolean
+          project_status_update: string | null
+          notes: string | null
+          presented_to_facilities_board: boolean
+          facilities_board_date: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['waiver_reviews']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['waiver_reviews']['Insert']>
+        Relationships: []
+      }
+      waiver_coordination: {
+        Row: {
+          id: string
+          waiver_id: string
+          office: WaiverCoordinationOffice
+          office_label: string | null
+          coordinator_name: string | null
+          coordinated_date: string | null
+          status: WaiverCoordinationStatus
+          comments: string | null
+        }
+        Insert: Omit<Database['public']['Tables']['waiver_coordination']['Row'], 'id'>
+        Update: Partial<Database['public']['Tables']['waiver_coordination']['Insert']>
+        Relationships: []
+      }
       activity_log: {
         Row: {
           id: string
@@ -392,6 +498,15 @@ export type CurrentStatus = 'submitted_to_afm' | 'submitted_to_ces' | 'awaiting_
 export type CheckType = 'fod' | 'rsc' | 'ife' | 'ground_emergency' | 'heavy_aircraft' | 'bash' | 'rcr'
 export type InspectionType = 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
 export type NotamStatus = 'draft' | 'active' | 'cancelled' | 'expired'
+export type WaiverClassification = 'permanent' | 'temporary' | 'construction' | 'event' | 'extension' | 'amendment'
+export type WaiverStatus = 'draft' | 'pending' | 'approved' | 'active' | 'completed' | 'cancelled' | 'expired'
+export type WaiverHazardRating = 'low' | 'medium' | 'high' | 'extremely_high'
+export type WaiverActionRequested = 'new' | 'extension' | 'amendment'
+export type WaiverCriteriaSource = 'ufc_3_260_01' | 'ufc_3_260_04' | 'ufc_3_535_01' | 'other'
+export type WaiverAttachmentType = 'photo' | 'site_map' | 'risk_assessment' | 'ufc_excerpt' | 'faa_report' | 'coordination_sheet' | 'af_form_505' | 'other'
+export type WaiverReviewRecommendation = 'retain' | 'modify' | 'cancel' | 'convert_to_temporary' | 'convert_to_permanent'
+export type WaiverCoordinationOffice = 'civil_engineer' | 'airfield_manager' | 'airfield_ops_terps' | 'base_safety' | 'installation_cc' | 'other'
+export type WaiverCoordinationStatus = 'pending' | 'concur' | 'non_concur'
 export type RegulationPubType = 'DAF' | 'FAA' | 'UFC' | 'DoD' | 'ICAO' | 'CFR'
 
 export type InspectionItem = {
@@ -421,5 +536,10 @@ export type Notam = Database['public']['Tables']['notams']['Row']
 export type ObstructionEvaluation = Database['public']['Tables']['obstruction_evaluations']['Row']
 export type ActivityLog = Database['public']['Tables']['activity_log']['Row']
 export type NavaidStatus = Database['public']['Tables']['navaid_statuses']['Row']
+export type Waiver = Database['public']['Tables']['waivers']['Row']
+export type WaiverCriteria = Database['public']['Tables']['waiver_criteria']['Row']
+export type WaiverAttachment = Database['public']['Tables']['waiver_attachments']['Row']
+export type WaiverReview = Database['public']['Tables']['waiver_reviews']['Row']
+export type WaiverCoordination = Database['public']['Tables']['waiver_coordination']['Row']
 export type Regulation = Database['public']['Tables']['regulations']['Row']
 export type UserRegulationPdf = Database['public']['Tables']['user_regulation_pdfs']['Row']

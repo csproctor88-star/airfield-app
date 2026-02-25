@@ -7,7 +7,7 @@ ALTER TABLE inspections
 
 ALTER TABLE inspections
   ADD CONSTRAINT inspections_inspection_type_check
-  CHECK (inspection_type IN ('airfield', 'lighting'));
+  CHECK (inspection_type IN ('airfield', 'lighting', 'construction_meeting', 'joint_monthly'));
 
 -- 2. Add conditional section flags and BWC value
 ALTER TABLE inspections
