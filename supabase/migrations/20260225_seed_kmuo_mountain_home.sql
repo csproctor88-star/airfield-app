@@ -8,7 +8,7 @@
 -- 1. Base record
 -- ═══════════════════════════════════════════════════════════════
 INSERT INTO bases (name, icao, unit, majcom, location, elevation_msl, timezone, ce_shops)
-VALUES (
+SELECT
   'Mountain Home Air Force Base',
   'KMUO',
   '366th Fighter Wing',
@@ -25,15 +25,26 @@ VALUES (
     'CES Engineering',
     'Airfield Management'
   ]
-)
-ON CONFLICT (icao) DO UPDATE SET
-  name          = EXCLUDED.name,
-  unit          = EXCLUDED.unit,
-  majcom        = EXCLUDED.majcom,
-  location      = EXCLUDED.location,
-  elevation_msl = EXCLUDED.elevation_msl,
-  timezone      = EXCLUDED.timezone,
-  ce_shops      = EXCLUDED.ce_shops;
+WHERE NOT EXISTS (SELECT 1 FROM bases WHERE icao = 'KMUO');
+
+-- Update in case the base was already added via the settings UI
+UPDATE bases SET
+  name          = 'Mountain Home Air Force Base',
+  unit          = '366th Fighter Wing',
+  majcom        = 'Air Combat Command (ACC)',
+  location      = 'Mountain Home, Idaho',
+  elevation_msl = 2996,
+  timezone      = 'America/Boise',
+  ce_shops      = ARRAY[
+    'CE Pavements',
+    'CE Electrical',
+    'CE Grounds',
+    'CE Structures',
+    'CE HVAC',
+    'CES Engineering',
+    'Airfield Management'
+  ]
+WHERE icao = 'KMUO';
 
 -- Child rows (base_runways, base_navaids, base_areas) have ON DELETE CASCADE,
 -- so we can safely delete and re-insert them below.
