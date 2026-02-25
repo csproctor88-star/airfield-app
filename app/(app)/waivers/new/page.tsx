@@ -329,7 +329,7 @@ export default function NewWaiverPage() {
             </div>
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">Criteria Impact</span>
-              <input type="text" className="input-dark" placeholder='e.g., "25\' deficiency", "9\' into clear zone"' value={formData.criteria_impact} onChange={(e) => setFormData(p => ({ ...p, criteria_impact: e.target.value }))} />
+              <input type="text" className="input-dark" placeholder={'e.g., "25\' deficiency", "9\' into clear zone"'} value={formData.criteria_impact} onChange={(e) => setFormData(p => ({ ...p, criteria_impact: e.target.value }))} />
             </div>
             <div>
               <span className="section-label">FAA OE/AAA Case Number</span>

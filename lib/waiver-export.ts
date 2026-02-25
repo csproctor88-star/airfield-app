@@ -48,7 +48,7 @@ export async function generateWaiverExcel(
   XLSX.utils.book_append_sheet(wb, ws1, 'Waiver Register')
 
   // Sheet 2: Annual Review
-  const reviewYears = [...new Set(reviews.map(r => r.review_year))].sort()
+  const reviewYears = Array.from(new Set(reviews.map(r => r.review_year))).sort()
   if (reviewYears.length > 0) {
     const reviewData = waivers.map(w => {
       const row: Record<string, unknown> = {
