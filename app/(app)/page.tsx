@@ -717,7 +717,7 @@ export default function HomePage() {
         return (
           <>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: allFlagged.length > 0 ? 8 : 16 }}>
-            {endGroups.map(group => (
+            {endGroups.filter(group => group.items.length > 0).map(group => (
               <div key={group.designator} className="card" style={{ padding: '10px 14px 4px' }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY {group.designator}</div>
                 {group.items.map(renderNavaidItem)}
