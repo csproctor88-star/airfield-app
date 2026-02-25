@@ -39,13 +39,21 @@ const STATUS_COLORS: Record<string, string> = {
   expired: '#64748B',
 }
 
-function formatDate(iso: string) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+function formatDate(str: string) {
+  if (!str) return '—'
+  if (str.toUpperCase() === 'PERM') return 'PERM'
+  // Try FAA format "MM/DD/YYYY HHMM"
+  const faaMatch = str.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2})(\d{2})$/)
+  if (faaMatch) {
+    const [, month, day, year, hour, minute] = faaMatch
+    const d = new Date(Date.UTC(+year, +month - 1, +day, +hour, +minute))
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      + ' ' + hour + minute + 'Z'
+  }
+  // Try ISO format
+  const d = new Date(str)
+  if (isNaN(d.getTime())) return str // fallback: show raw string
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function formatTime(iso: string) {
@@ -59,7 +67,6 @@ export default function NotamsPage() {
   const router = useRouter()
   const { currentInstallation } = useInstallation()
   const [filter, setFilter] = useState<FilterType>('all')
-  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const isDemoMode = !createClient()
   const defaultIcao = currentInstallation?.icao || ''
@@ -361,19 +368,16 @@ export default function NotamsPage() {
           {filtered.map((notam) => {
             const isExpired = notam.status === 'expired'
             const borderLeftColor = SOURCE_COLORS[notam.source] || 'var(--color-text-4)'
-            const isExpanded = expandedId === notam.id
 
             return (
               <div
                 key={notam.id}
-                onClick={() => setExpandedId(isExpanded ? null : notam.id)}
                 style={{
                   background: 'var(--color-bg-surface-solid)',
                   border: '1px solid var(--color-bg-elevated)',
                   borderLeft: `3px solid ${borderLeftColor}`,
                   borderRadius: 10,
                   padding: '12px 14px',
-                  cursor: 'pointer',
                   opacity: isExpired ? 0.5 : 1,
                 }}
               >
@@ -399,23 +403,8 @@ export default function NotamsPage() {
                   />
                 </div>
 
-                {/* Title */}
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 700,
-                    color: 'var(--color-text-1)',
-                    marginBottom: 4,
-                    ...(!isExpanded
-                      ? { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }
-                      : {}),
-                  }}
-                >
-                  {notam.title}
-                </div>
-
                 {/* NOTAM number + Effective dates */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   {notam.notam_number && (
                     <span style={{ fontSize: 11, color: 'var(--color-text-3)', fontFamily: 'monospace' }}>
                       {notam.notam_number}
@@ -426,27 +415,19 @@ export default function NotamsPage() {
                   </span>
                 </div>
 
-                {/* Expanded full text */}
-                {isExpanded && notam.full_text && (
+                {/* Full NOTAM text */}
+                {notam.full_text && (
                   <div
                     style={{
-                      marginTop: 10,
-                      paddingTop: 10,
-                      borderTop: '1px solid var(--color-bg-elevated)',
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                      color: 'var(--color-text-2)',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      lineHeight: 1.5,
                     }}
                   >
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontFamily: 'monospace',
-                        color: 'var(--color-text-2)',
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-word',
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {notam.full_text}
-                    </div>
+                    {notam.full_text}
                   </div>
                 )}
               </div>
