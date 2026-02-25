@@ -297,6 +297,36 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['obstruction_evaluations']['Insert']>
         Relationships: []
       }
+      waivers: {
+        Row: {
+          id: string
+          display_id: string
+          base_id: string | null
+          waiver_type: WaiverType
+          status: WaiverStatus
+          title: string
+          description: string
+          location_text: string | null
+          authority_reference: string | null
+          conditions: string | null
+          requested_by: string | null
+          approved_by: string | null
+          effective_start: string | null
+          effective_end: string | null
+          approved_at: string | null
+          denied_at: string | null
+          denial_reason: string | null
+          linked_discrepancy_id: string | null
+          linked_obstruction_id: string | null
+          linked_notam_id: string | null
+          photo_count: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['waivers']['Row'], 'id' | 'created_at' | 'updated_at' | 'photo_count'>
+        Update: Partial<Database['public']['Tables']['waivers']['Insert']>
+        Relationships: []
+      }
       activity_log: {
         Row: {
           id: string
@@ -392,6 +422,8 @@ export type CurrentStatus = 'submitted_to_afm' | 'submitted_to_ces' | 'awaiting_
 export type CheckType = 'fod' | 'rsc' | 'ife' | 'ground_emergency' | 'heavy_aircraft' | 'bash' | 'rcr'
 export type InspectionType = 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
 export type NotamStatus = 'draft' | 'active' | 'cancelled' | 'expired'
+export type WaiverType = 'obstruction' | 'lighting' | 'marking' | 'driving' | 'construction' | 'other'
+export type WaiverStatus = 'draft' | 'submitted' | 'approved' | 'denied' | 'active' | 'expired'
 export type RegulationPubType = 'DAF' | 'FAA' | 'UFC' | 'DoD' | 'ICAO' | 'CFR'
 
 export type InspectionItem = {
@@ -421,5 +453,6 @@ export type Notam = Database['public']['Tables']['notams']['Row']
 export type ObstructionEvaluation = Database['public']['Tables']['obstruction_evaluations']['Row']
 export type ActivityLog = Database['public']['Tables']['activity_log']['Row']
 export type NavaidStatus = Database['public']['Tables']['navaid_statuses']['Row']
+export type Waiver = Database['public']['Tables']['waivers']['Row']
 export type Regulation = Database['public']['Tables']['regulations']['Row']
 export type UserRegulationPdf = Database['public']['Tables']['user_regulation_pdfs']['Row']

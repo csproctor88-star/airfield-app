@@ -377,6 +377,39 @@ export const REGULATION_SOURCE_SECTIONS = [
   { value: 'VII-C', label: 'VII-C — Scrubbed (Vols 2-3)', color: '#A5B4FC' },
 ] as const
 
+// === Waiver Types ===
+
+export const WAIVER_TYPES = [
+  { value: 'obstruction', label: 'Obstruction', emoji: '⛔', description: 'Obstruction clearance waiver' },
+  { value: 'lighting', label: 'Lighting', emoji: '💡', description: 'Lighting system waiver' },
+  { value: 'marking', label: 'Marking', emoji: '🎨', description: 'Marking deficiency waiver' },
+  { value: 'driving', label: 'Driving', emoji: '🚗', description: 'Airfield driving waiver' },
+  { value: 'construction', label: 'Construction', emoji: '🏗️', description: 'Construction activity waiver' },
+  { value: 'other', label: 'Other', emoji: '📋', description: 'Other waiver type' },
+] as const
+
+// === Waiver Status Styling ===
+
+export const WAIVER_STATUS_CONFIG = {
+  draft:     { color: '#9CA3AF', bg: '#E5E7EB', label: 'Draft' },
+  submitted: { color: '#3B82F6', bg: '#DBEAFE', label: 'Submitted' },
+  approved:  { color: '#10B981', bg: '#D1FAE5', label: 'Approved' },
+  denied:    { color: '#EF4444', bg: '#FEE2E2', label: 'Denied' },
+  active:    { color: '#8B5CF6', bg: '#EDE9FE', label: 'Active' },
+  expired:   { color: '#F59E0B', bg: '#FEF3C7', label: 'Expired' },
+} as const
+
+// === Waiver Status Transitions ===
+
+export const WAIVER_TRANSITIONS: Record<string, string[]> = {
+  draft: ['submitted'],
+  submitted: ['approved', 'denied', 'draft'],
+  approved: ['active'],
+  denied: [],
+  active: ['expired'],
+  expired: [],
+}
+
 // === User Roles (SRS Section 2.1) ===
 
 export const USER_ROLES = {

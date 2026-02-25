@@ -125,7 +125,7 @@ export default function MorePage() {
           Guiding You to Mission Success
         </div>
         <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 6 }}>
-          v2.1.0
+          v2.3.0
         </div>
       </div>
     </div>
