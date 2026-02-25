@@ -11,8 +11,6 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchCheck, fetchCheckComments, addCheckComment, fetchCheckPhotos, uploadCheckPhoto, type CheckRow, type CheckCommentRow, type CheckPhotoRow } from '@/lib/supabase/checks'
 import { PhotoViewerModal } from '@/components/discrepancies/modals'
 
-const CURRENT_USER = 'MSgt Proctor'
-
 export default function CheckDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -27,6 +25,24 @@ export default function CheckDetailPage() {
   const [savingRemark, setSavingRemark] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
+  const [currentUser, setCurrentUser] = useState('Inspector')
+
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) { setCurrentUser('Demo User'); return }
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: profile } = await (supabase as any).from('profiles').select('name, rank').eq('id', user.id).single()
+      if (profile?.name) {
+        setCurrentUser(profile.rank ? `${profile.rank} ${profile.name}` : profile.name)
+      } else if (user.user_metadata?.name) {
+        setCurrentUser(user.user_metadata.name)
+      } else if (user.email) {
+        setCurrentUser(user.email.split('@')[0])
+      }
+    })
+  }, [])
 
   const loadData = useCallback(async () => {
     const supabase = createClient()
@@ -63,7 +79,7 @@ export default function CheckDetailPage() {
         id: `demo-${Date.now()}`,
         check_id: params.id as string,
         comment: remarkText.trim(),
-        user_name: CURRENT_USER,
+        user_name: currentUser,
         created_at: new Date().toISOString(),
       }
       setComments((prev) => [...prev, newComment])
@@ -75,7 +91,7 @@ export default function CheckDetailPage() {
 
     if (!liveData) return
 
-    const { error } = await addCheckComment(liveData.id, remarkText.trim(), CURRENT_USER)
+    const { error } = await addCheckComment(liveData.id, remarkText.trim(), currentUser)
     if (error) {
       toast.error('Failed to save remark')
       setSavingRemark(false)
