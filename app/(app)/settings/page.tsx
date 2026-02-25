@@ -26,20 +26,20 @@ export default function SettingsPage() {
       <CollapsibleSection label="PROFILE" icon={User} defaultOpen>
         <ProfileSectionContent />
       </CollapsibleSection>
-      <CollapsibleSection label="APPEARANCE" icon={Sun}>
-        <ThemeSectionContent />
-      </CollapsibleSection>
       <CollapsibleSection label="INSTALLATION" icon={MapPin}>
         <InstallationSectionContent />
       </CollapsibleSection>
-      <CollapsibleSection label="BASE CONFIGURATION" icon={Wrench}>
-        <BaseConfigSectionContent />
+      <CollapsibleSection label="DATA & STORAGE" icon={HardDrive}>
+        <StorageSectionContent />
       </CollapsibleSection>
       <CollapsibleSection label="REGULATIONS LIBRARY" icon={BookOpen}>
         <RegulationsSectionContent />
       </CollapsibleSection>
-      <CollapsibleSection label="DATA & STORAGE" icon={HardDrive}>
-        <StorageSectionContent />
+      <CollapsibleSection label="BASE CONFIGURATION" icon={Wrench}>
+        <BaseConfigSectionContent />
+      </CollapsibleSection>
+      <CollapsibleSection label="APPEARANCE" icon={Sun}>
+        <ThemeSectionContent />
       </CollapsibleSection>
       <CollapsibleSection label="ABOUT" icon={Info} defaultOpen>
         <AboutSectionContent />
