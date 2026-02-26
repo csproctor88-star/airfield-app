@@ -169,7 +169,6 @@
   .btn-primary:active {
     opacity: 0.9;
   }
-}
 
   /* ── User Management Badges ── */
 
@@ -206,38 +205,6 @@
     color: #CBD5E1;
     border: 1px solid rgba(71, 85, 105, 0.5);
   }
-
-  /* Light theme overrides */
-  [data-theme="light"] .badge-status-active {
-    background: #DCFCE7;
-    color: #15803D;
-    border: 1px solid #BBF7D0;
-  }
-  [data-theme="light"] .badge-status-deactivated {
-    background: #FEE2E2;
-    color: #B91C1C;
-    border: 1px solid #FECACA;
-  }
-  [data-theme="light"] .badge-status-pending {
-    background: #FEF3C7;
-    color: #92400E;
-    border: 1px solid #FDE68A;
-  }
-  [data-theme="light"] .badge-role-sysadmin {
-    background: #FEE2E2;
-    color: #B91C1C;
-    border: 1px solid #FECACA;
-  }
-  [data-theme="light"] .badge-role-baseadmin {
-    background: #CFFAFE;
-    color: #155E75;
-    border: 1px solid #A5F3FC;
-  }
-  [data-theme="light"] .badge-role-user {
-    background: #F1F5F9;
-    color: #475569;
-    border: 1px solid #E2E8F0;
-  }
 }
 
 @layer utilities {
@@ -246,4 +213,36 @@
     min-width: 44px;
     min-height: 44px;
   }
+}
+
+/* ── Light-theme badge overrides ── */
+[data-theme="light"] .badge-status-active {
+  background: #DCFCE7;
+  color: #15803D;
+  border: 1px solid #BBF7D0;
+}
+[data-theme="light"] .badge-status-deactivated {
+  background: #FEE2E2;
+  color: #B91C1C;
+  border: 1px solid #FECACA;
+}
+[data-theme="light"] .badge-status-pending {
+  background: #FEF3C7;
+  color: #92400E;
+  border: 1px solid #FDE68A;
+}
+[data-theme="light"] .badge-role-sysadmin {
+  background: #FEE2E2;
+  color: #B91C1C;
+  border: 1px solid #FECACA;
+}
+[data-theme="light"] .badge-role-baseadmin {
+  background: #CFFAFE;
+  color: #155E75;
+  border: 1px solid #A5F3FC;
+}
+[data-theme="light"] .badge-role-user {
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #E2E8F0;
 }
