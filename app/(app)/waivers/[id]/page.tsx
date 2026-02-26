@@ -871,8 +871,9 @@ export default function WaiverDetailPage() {
             style={{
               position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 200,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              touchAction: 'pan-y',
+              touchAction: 'pan-y', cursor: 'pointer',
             }}
+            onClick={() => setFullscreenPhoto(false)}
             onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; touchDeltaX.current = 0 }}
             onTouchMove={(e) => { touchDeltaX.current = e.touches[0].clientX - touchStartX.current }}
             onTouchEnd={() => {
@@ -900,7 +901,6 @@ export default function WaiverDetailPage() {
               src={currentUrl}
               alt={currentPhoto?.caption || currentPhoto?.file_name || 'Photo'}
               style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
-              onClick={() => setFullscreenPhoto(false)}
             />
             {currentPhoto?.caption && (
               <div style={{ marginTop: 8, fontSize: 13, color: 'rgba(255,255,255,0.8)', textAlign: 'center', padding: '0 16px' }}>
