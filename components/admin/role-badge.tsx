@@ -10,6 +10,7 @@ const ROLE_CLASSES: Record<string, { className: string; label: string }> = {
   safety:           { className: 'badge-role-user', label: 'SAFETY' },
   atc:              { className: 'badge-role-user', label: 'ATC' },
   read_only:        { className: 'badge-role-user', label: 'READ ONLY' },
+  observer:         { className: 'badge-role-user', label: 'READ ONLY' },
 }
 
 export function RoleBadge({ role }: { role: string }) {
