@@ -101,6 +101,7 @@ export type Database = {
           shop: string | null
           phone: string | null
           is_active: boolean
+          status: ProfileStatus
           last_seen_at: string | null
           primary_base_id: string | null
           created_at: string
@@ -490,7 +491,10 @@ export type UserRole =
   | 'safety'
   | 'atc'
   | 'read_only'
+  | 'base_admin'
   | 'sys_admin'
+
+export type ProfileStatus = 'active' | 'deactivated' | 'pending'
 
 export type Severity = 'critical' | 'high' | 'medium' | 'low'
 export type DiscrepancyStatus = 'open' | 'completed' | 'cancelled'

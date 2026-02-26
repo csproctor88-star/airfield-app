@@ -461,5 +461,38 @@ export const USER_ROLES = {
   safety:           { label: 'Safety', canCreate: false, canManageUsers: false },
   atc:              { label: 'ATC', canCreate: false, canManageUsers: false },
   read_only:        { label: 'Read Only', canCreate: false, canManageUsers: false },
+  base_admin:       { label: 'Base Admin', canCreate: true, canManageUsers: true },
   sys_admin:        { label: 'System Admin', canCreate: true, canManageUsers: true },
 } as const
+
+// Rank options for user management
+export const RANK_OPTIONS = [
+  // Enlisted
+  { value: 'AB', label: 'AB - Airman Basic' },
+  { value: 'Amn', label: 'Amn - Airman' },
+  { value: 'A1C', label: 'A1C - Airman First Class' },
+  { value: 'SrA', label: 'SrA - Senior Airman' },
+  { value: 'SSgt', label: 'SSgt - Staff Sergeant' },
+  { value: 'TSgt', label: 'TSgt - Technical Sergeant' },
+  { value: 'MSgt', label: 'MSgt - Master Sergeant' },
+  { value: 'SMSgt', label: 'SMSgt - Senior Master Sergeant' },
+  { value: 'CMSgt', label: 'CMSgt - Chief Master Sergeant' },
+  // Officer
+  { value: '2d Lt', label: '2d Lt - Second Lieutenant' },
+  { value: '1st Lt', label: '1st Lt - First Lieutenant' },
+  { value: 'Capt', label: 'Capt - Captain' },
+  { value: 'Maj', label: 'Maj - Major' },
+  { value: 'Lt Col', label: 'Lt Col - Lieutenant Colonel' },
+  { value: 'Col', label: 'Col - Colonel' },
+  { value: 'Brig Gen', label: 'Brig Gen - Brigadier General' },
+  { value: 'Maj Gen', label: 'Maj Gen - Major General' },
+  { value: 'Lt Gen', label: 'Lt Gen - Lieutenant General' },
+  { value: 'Gen', label: 'Gen - General' },
+  // Civilian
+  { value: 'Mr.', label: 'Mr.' },
+  { value: 'Ms.', label: 'Ms.' },
+  { value: 'Mrs.', label: 'Mrs.' },
+  { value: 'Dr.', label: 'Dr.' },
+  { value: 'GS', label: 'GS - General Schedule' },
+  { value: 'CTR', label: 'CTR - Contractor' },
+] as const

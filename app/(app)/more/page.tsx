@@ -19,7 +19,7 @@ const modules = [
   { name: 'Reports', icon: '📊', color: '#22D3EE', badge: null, href: '/reports', adminOnly: false, sysAdminOnly: false },
   { name: 'NOTAMs', icon: '📡', color: '#22D3EE', badge: null, href: '/notams', adminOnly: false, sysAdminOnly: false },
   { name: 'PDF Library', icon: '📖', color: '#A855F7', badge: null, href: '/library', adminOnly: true, sysAdminOnly: false },
-  { name: 'Users & Security', icon: '👥', color: '#64748B', badge: '3 online', href: '/users', adminOnly: false, sysAdminOnly: true },
+  { name: 'User Management', icon: '👥', color: '#64748B', badge: null, href: '/users', adminOnly: true, sysAdminOnly: false },
   { name: 'Settings', icon: '⚙️', color: '#64748B', badge: null, href: '/settings', adminOnly: false, sysAdminOnly: false },
 ]
 

@@ -120,7 +120,7 @@ export default function LoginPage() {
         return
       }
 
-      const { error: authError } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
@@ -128,6 +128,27 @@ export default function LoginPage() {
       if (authError) {
         setError(authError.message)
         return
+      }
+
+      // Check if user account is deactivated
+      if (signInData?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('status')
+          .eq('id', signInData.user.id)
+          .single()
+
+        if (profile?.status === 'deactivated') {
+          await supabase.auth.signOut()
+          setError('Your account has been deactivated. Contact your administrator.')
+          return
+        }
+
+        // Update last_seen_at on successful login
+        await supabase
+          .from('profiles')
+          .update({ last_seen_at: new Date().toISOString() })
+          .eq('id', signInData.user.id)
       }
 
       router.push('/')
