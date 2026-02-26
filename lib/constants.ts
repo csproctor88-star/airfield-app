@@ -407,9 +407,9 @@ export const WAIVER_TRANSITIONS: Record<string, string[]> = {
   pending: ['approved', 'draft', 'cancelled'],
   approved: ['active', 'cancelled'],
   active: ['completed', 'expired', 'cancelled'],
-  completed: [],
+  completed: ['active', 'expired'],
   cancelled: ['draft'],
-  expired: [],
+  expired: ['active', 'completed'],
 }
 
 // === Waiver Hazard Ratings ===
