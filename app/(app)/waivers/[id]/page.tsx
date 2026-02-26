@@ -72,6 +72,7 @@ export default function WaiverDetailPage() {
   const [attachCaption, setAttachCaption] = useState('')
   const [attachmentUrls, setAttachmentUrls] = useState<Record<string, string>>({})
   const [carouselIndex, setCarouselIndex] = useState(0)
+  const [fullscreenPhoto, setFullscreenPhoto] = useState(false)
   const touchStartX = useRef(0)
   const touchDeltaX = useRef(0)
 
@@ -367,18 +368,22 @@ export default function WaiverDetailPage() {
               style={{
                 borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border)',
                 background: 'var(--color-bg-elevated)', aspectRatio: '16/10', position: 'relative',
-                touchAction: 'pan-y',
+                touchAction: 'pan-y', cursor: currentUrl ? 'pointer' : 'default',
               }}
               onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; touchDeltaX.current = 0 }}
               onTouchMove={(e) => { touchDeltaX.current = e.touches[0].clientX - touchStartX.current }}
               onTouchEnd={() => {
+                const wasSwiped = Math.abs(touchDeltaX.current) > 50
                 if (touchDeltaX.current < -50 && carouselIndex < photos.length - 1) {
                   setCarouselIndex(carouselIndex + 1)
                 } else if (touchDeltaX.current > 50 && carouselIndex > 0) {
                   setCarouselIndex(carouselIndex - 1)
+                } else if (!wasSwiped && currentUrl) {
+                  setFullscreenPhoto(true)
                 }
                 touchDeltaX.current = 0
               }}
+              onClick={() => { if (currentUrl) setFullscreenPhoto(true) }}
             >
               {currentUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -854,6 +859,73 @@ export default function WaiverDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Fullscreen Photo */}
+      {fullscreenPhoto && (() => {
+        const photos = allAttachments.filter(a => a.mime_type?.startsWith('image/'))
+        const currentPhoto = photos[carouselIndex]
+        const currentUrl = currentPhoto ? attachmentUrls[currentPhoto.id] : null
+        if (!currentUrl) return null
+        return (
+          <div
+            style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 200,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              touchAction: 'pan-y',
+            }}
+            onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; touchDeltaX.current = 0 }}
+            onTouchMove={(e) => { touchDeltaX.current = e.touches[0].clientX - touchStartX.current }}
+            onTouchEnd={() => {
+              if (touchDeltaX.current < -50 && carouselIndex < photos.length - 1) {
+                setCarouselIndex(carouselIndex + 1)
+              } else if (touchDeltaX.current > 50 && carouselIndex > 0) {
+                setCarouselIndex(carouselIndex - 1)
+              }
+              touchDeltaX.current = 0
+            }}
+          >
+            <button
+              onClick={() => setFullscreenPhoto(false)}
+              style={{
+                position: 'absolute', top: 16, right: 16, zIndex: 201,
+                background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%',
+                width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: 20, cursor: 'pointer',
+              }}
+            >
+              &times;
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={currentUrl}
+              alt={currentPhoto?.caption || currentPhoto?.file_name || 'Photo'}
+              style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
+              onClick={() => setFullscreenPhoto(false)}
+            />
+            {currentPhoto?.caption && (
+              <div style={{ marginTop: 8, fontSize: 13, color: 'rgba(255,255,255,0.8)', textAlign: 'center', padding: '0 16px' }}>
+                {currentPhoto.caption}
+              </div>
+            )}
+            {photos.length > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 12 }}>
+                {photos.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={(e) => { e.stopPropagation(); setCarouselIndex(i) }}
+                    style={{
+                      width: i === carouselIndex ? 16 : 6, height: 6, borderRadius: 3,
+                      background: i === carouselIndex ? '#fff' : 'rgba(255,255,255,0.4)',
+                      border: 'none', padding: 0, cursor: 'pointer',
+                      transition: 'width 0.2s, background 0.2s',
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Attachment Modal */}
       {activeModal === 'attachment' && (
