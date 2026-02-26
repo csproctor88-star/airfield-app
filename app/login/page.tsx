@@ -52,6 +52,32 @@ export default function LoginPage() {
     return BASE_DIRECTORY.filter(entry => entry.name.toLowerCase().includes(q) || entry.icao.toLowerCase().includes(q))
   }, [installationSearch])
 
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setError('Enter your email address, then click Forgot Password')
+      return
+    }
+    setError(null)
+    setSuccess(null)
+    setLoading(true)
+    try {
+      const supabase = createClient()
+      if (!supabase) return
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/confirm?next=/reset-password`,
+      })
+      if (resetError) {
+        setError(resetError.message)
+      } else {
+        setSuccess('Password reset email sent! Check your inbox.')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send reset email')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -443,7 +469,7 @@ export default function LoginPage() {
                 autoComplete="email"
               />
             </div>
-            <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: mode === 'signin' ? 8 : 16 }}>
               <span className="section-label">Password</span>
               <input
                 type="password"
@@ -456,6 +482,26 @@ export default function LoginPage() {
                 autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
               />
             </div>
+
+            {mode === 'signin' && (
+              <div style={{ textAlign: 'right', marginBottom: 16 }}>
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={loading}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--color-accent)',
+                    fontSize: 11,
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                >
+                  Forgot Password?
+                </button>
+              </div>
+            )}
 
             {error && (
               <div
