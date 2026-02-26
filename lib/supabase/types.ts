@@ -108,7 +108,7 @@ export type Database = {
           updated_at: string
         }
         Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'created_at' | 'updated_at' | 'last_seen_at'>
-        Update: Partial<Database['public']['Tables']['profiles']['Insert']>
+        Update: Partial<Omit<Database['public']['Tables']['profiles']['Row'], 'created_at' | 'updated_at'>>
         Relationships: []
       }
       discrepancies: {
