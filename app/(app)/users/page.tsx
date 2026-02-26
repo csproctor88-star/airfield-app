@@ -30,11 +30,11 @@ async function loadUsers(
   if (!supabase) return { users: [], error: 'Supabase client not available' }
 
   try {
-    // Explicitly select only columns we need — avoids issues with schema cache
+    // Use select('*') to get whatever columns exist — avoids errors from missing columns
     let query = supabase
       .from('profiles')
-      .select('id, email, first_name, last_name, name, rank, role, is_active, last_seen_at, primary_base_id, created_at')
-      .order('last_name', { ascending: true })
+      .select('*')
+      .order('name', { ascending: true })
 
     if (baseId) {
       query = query.eq('primary_base_id', baseId)
@@ -53,19 +53,28 @@ async function loadUsers(
 
     console.log(`[UserMgmt] Loaded ${data.length} profiles, baseFilter=${baseId || 'ALL'}`)
 
-    const mapped: UserCardData[] = data.map((u) => ({
-      id: u.id,
-      email: u.email,
-      first_name: u.first_name || null,
-      last_name: u.last_name || null,
-      rank: u.rank || null,
-      role: u.role || 'read_only',
-      status: u.is_active === false ? 'deactivated' : 'active',
-      last_seen_at: u.last_seen_at || null,
-      primary_base_id: u.primary_base_id || null,
-      created_at: u.created_at,
-      bases: u.primary_base_id ? baseLookup.get(u.primary_base_id) || null : null,
-    }))
+    const mapped: UserCardData[] = data.map((u: Record<string, unknown>) => {
+      // Parse name — handle both first_name/last_name and legacy name column
+      const firstName = (u.first_name as string) || null
+      const lastName = (u.last_name as string) || null
+      const fullName = (u.name as string) || ''
+      const parsedFirst = firstName || fullName.split(' ')[0] || ''
+      const parsedLast = lastName || fullName.split(' ').slice(1).join(' ') || ''
+
+      return {
+        id: u.id as string,
+        email: u.email as string,
+        first_name: parsedFirst || null,
+        last_name: parsedLast || null,
+        rank: (u.rank as string) || null,
+        role: (u.role as string) || 'read_only',
+        status: u.is_active === false ? 'deactivated' : 'active',
+        last_seen_at: (u.last_seen_at as string) || null,
+        primary_base_id: (u.primary_base_id as string) || null,
+        created_at: u.created_at as string,
+        bases: u.primary_base_id ? baseLookup.get(u.primary_base_id as string) || null : null,
+      }
+    })
 
     return { users: mapped, error: null }
   } catch (err) {
