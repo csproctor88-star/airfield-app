@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
@@ -71,7 +71,9 @@ export default function WaiverDetailPage() {
   const [attachType, setAttachType] = useState<WaiverAttachmentType>('photo')
   const [attachCaption, setAttachCaption] = useState('')
   const [attachmentUrls, setAttachmentUrls] = useState<Record<string, string>>({})
-  const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null)
+  const [carouselIndex, setCarouselIndex] = useState(0)
+  const touchStartX = useRef(0)
+  const touchDeltaX = useRef(0)
 
   const loadData = useCallback(async () => {
     const supabase = createClient()
@@ -101,17 +103,14 @@ export default function WaiverDetailPage() {
     loadData()
   }, [loadData])
 
-  // Generate signed URLs for image attachments
+  // Generate signed URLs for all attachments
   useEffect(() => {
     if (attachments.length === 0) return
     const supabase = createClient()
     if (!supabase) return
 
-    const imageAttachments = attachments.filter(a => a.mime_type?.startsWith('image/'))
-    if (imageAttachments.length === 0) return
-
     Promise.all(
-      imageAttachments.map(async (a) => {
+      attachments.map(async (a) => {
         const { data } = await supabase.storage
           .from('waiver-attachments')
           .createSignedUrl(a.file_path, 3600)
@@ -356,6 +355,73 @@ export default function WaiverDetailPage() {
         <div style={{ fontSize: 12, color: 'var(--color-text-2)', lineHeight: 1.6 }}>{w.description}</div>
       </div>
 
+      {/* Photo Carousel */}
+      {(() => {
+        const photos = allAttachments.filter(a => a.mime_type?.startsWith('image/'))
+        if (photos.length === 0) return null
+        const currentPhoto = photos[carouselIndex]
+        const currentUrl = currentPhoto ? attachmentUrls[currentPhoto.id] : null
+        return (
+          <div style={{ marginBottom: 8, position: 'relative' }}>
+            <div
+              style={{
+                borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border)',
+                background: 'var(--color-bg-elevated)', aspectRatio: '16/10', position: 'relative',
+                touchAction: 'pan-y',
+              }}
+              onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; touchDeltaX.current = 0 }}
+              onTouchMove={(e) => { touchDeltaX.current = e.touches[0].clientX - touchStartX.current }}
+              onTouchEnd={() => {
+                if (touchDeltaX.current < -50 && carouselIndex < photos.length - 1) {
+                  setCarouselIndex(carouselIndex + 1)
+                } else if (touchDeltaX.current > 50 && carouselIndex > 0) {
+                  setCarouselIndex(carouselIndex - 1)
+                }
+                touchDeltaX.current = 0
+              }}
+            >
+              {currentUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={currentUrl}
+                  alt={currentPhoto?.caption || currentPhoto?.file_name || 'Photo'}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-3)', fontSize: 12 }}>
+                  Loading photo...
+                </div>
+              )}
+              {currentPhoto?.caption && (
+                <div style={{
+                  position: 'absolute', bottom: 0, left: 0, right: 0,
+                  background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', padding: '16px 12px 8px',
+                  fontSize: 12, color: '#fff',
+                }}>
+                  {currentPhoto.caption}
+                </div>
+              )}
+            </div>
+            {photos.length > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6 }}>
+                {photos.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCarouselIndex(i)}
+                    style={{
+                      width: i === carouselIndex ? 16 : 6, height: 6, borderRadius: 3,
+                      background: i === carouselIndex ? 'var(--color-cyan)' : 'var(--color-text-4)',
+                      border: 'none', padding: 0, cursor: 'pointer',
+                      transition: 'width 0.2s, background 0.2s',
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
       {/* Overview Section */}
       <div className="card" style={{ marginBottom: 8 }}>
         {sectionHeader('overview', 'Overview')}
@@ -474,98 +540,48 @@ export default function WaiverDetailPage() {
         {sectionHeader('attachments', 'Attachments', allAttachments.length)}
         {expandedSections.attachments && (
           <>
-            {allAttachments.length === 0 ? (
-              <div style={{ fontSize: 12, color: 'var(--color-text-3)', padding: '8px 0' }}>No attachments</div>
-            ) : (
-              <>
-                {/* Photo grid */}
-                {(() => {
-                  const photos = allAttachments.filter(a => a.mime_type?.startsWith('image/'))
-                  if (photos.length === 0) return null
-                  return (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 8 }}>
-                      {photos.map((a) => {
-                        const url = attachmentUrls[a.id]
-                        return (
-                          <div
-                            key={a.id}
-                            onClick={() => url && setExpandedPhoto(expandedPhoto === a.id ? null : a.id)}
-                            style={{
-                              aspectRatio: '1',
-                              borderRadius: 8,
-                              overflow: 'hidden',
-                              border: '1px solid var(--color-border)',
-                              cursor: url ? 'pointer' : 'default',
-                              background: 'var(--color-bg-elevated)',
-                              position: 'relative',
-                            }}
-                          >
-                            {url ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={url}
-                                alt={a.caption || a.file_name}
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                              />
-                            ) : (
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 10, color: 'var(--color-text-3)' }}>
-                                Loading...
-                              </div>
-                            )}
-                            {a.caption && (
-                              <div style={{
-                                position: 'absolute', bottom: 0, left: 0, right: 0,
-                                background: 'rgba(0,0,0,0.6)', padding: '3px 6px',
-                                fontSize: 10, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                              }}>
-                                {a.caption}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
+            {(() => {
+              const files = allAttachments.filter(a => !a.mime_type?.startsWith('image/'))
+              const photoCount = allAttachments.filter(a => a.mime_type?.startsWith('image/')).length
+              if (files.length === 0 && photoCount === 0) {
+                return <div style={{ fontSize: 12, color: 'var(--color-text-3)', padding: '8px 0' }}>No attachments</div>
+              }
+              return (
+                <>
+                  {photoCount > 0 && files.length === 0 && (
+                    <div style={{ fontSize: 12, color: 'var(--color-text-3)', padding: '8px 0' }}>
+                      {photoCount} photo{photoCount > 1 ? 's' : ''} shown above
                     </div>
-                  )
-                })()}
-
-                {/* Expanded photo view */}
-                {expandedPhoto && attachmentUrls[expandedPhoto] && (
-                  <div
-                    onClick={() => setExpandedPhoto(null)}
-                    style={{ marginBottom: 8, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--color-border)', cursor: 'pointer' }}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={attachmentUrls[expandedPhoto]}
-                      alt={allAttachments.find(a => a.id === expandedPhoto)?.caption || 'Photo'}
-                      style={{ width: '100%', display: 'block' }}
-                    />
-                    {(() => {
-                      const photo = allAttachments.find(a => a.id === expandedPhoto)
-                      return photo?.caption ? (
-                        <div style={{ padding: '6px 10px', fontSize: 12, color: 'var(--color-text-2)', background: 'var(--color-bg-elevated)' }}>
-                          {photo.caption}
+                  )}
+                  {files.map((a, i) => (
+                    <div key={a.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < files.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.file_name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
+                          {a.file_type.replace(/_/g, ' ')} {a.file_size ? `\u2022 ${(a.file_size / 1024).toFixed(0)} KB` : ''}
                         </div>
-                      ) : null
-                    })()}
-                  </div>
-                )}
-
-                {/* Non-image file list */}
-                {allAttachments.filter(a => !a.mime_type?.startsWith('image/')).map((a, i, arr) => (
-                  <div key={a.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < arr.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-1)' }}>{a.file_name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
-                        {a.file_type.replace(/_/g, ' ')} {a.file_size ? `\u2022 ${(a.file_size / 1024).toFixed(0)} KB` : ''}
+                        {a.caption && <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontStyle: 'italic' }}>{a.caption}</div>}
                       </div>
-                      {a.caption && <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontStyle: 'italic' }}>{a.caption}</div>}
+                      <button
+                        onClick={() => {
+                          const url = attachmentUrls[a.id]
+                          if (url) window.open(url, '_blank')
+                        }}
+                        style={{
+                          marginLeft: 8, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+                          background: '#3B82F614', border: '1px solid #3B82F633', color: '#3B82F6',
+                          cursor: attachmentUrls[a.id] ? 'pointer' : 'default', fontFamily: 'inherit',
+                          opacity: attachmentUrls[a.id] ? 1 : 0.5, flexShrink: 0,
+                        }}
+                        disabled={!attachmentUrls[a.id]}
+                      >
+                        View
+                      </button>
                     </div>
-                    <Badge label={a.file_type.replace(/_/g, ' ')} color="#64748B" />
-                  </div>
-                ))}
-              </>
-            )}
+                  ))}
+                </>
+              )
+            })()}
             <button
               type="button"
               onClick={() => setActiveModal('attachment')}
