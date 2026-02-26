@@ -70,6 +70,8 @@ export default function WaiverDetailPage() {
   const [attachFile, setAttachFile] = useState<File | null>(null)
   const [attachType, setAttachType] = useState<WaiverAttachmentType>('photo')
   const [attachCaption, setAttachCaption] = useState('')
+  const [attachmentUrls, setAttachmentUrls] = useState<Record<string, string>>({})
+  const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
     const supabase = createClient()
@@ -98,6 +100,31 @@ export default function WaiverDetailPage() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  // Generate signed URLs for image attachments
+  useEffect(() => {
+    if (attachments.length === 0) return
+    const supabase = createClient()
+    if (!supabase) return
+
+    const imageAttachments = attachments.filter(a => a.mime_type?.startsWith('image/'))
+    if (imageAttachments.length === 0) return
+
+    Promise.all(
+      imageAttachments.map(async (a) => {
+        const { data } = await supabase.storage
+          .from('waiver-attachments')
+          .createSignedUrl(a.file_path, 3600)
+        return { id: a.id, url: data?.signedUrl || '' }
+      })
+    ).then(results => {
+      const urls: Record<string, string> = {}
+      for (const r of results) {
+        if (r.url) urls[r.id] = r.url
+      }
+      setAttachmentUrls(urls)
+    })
+  }, [attachments])
 
   const isManager = !userRole || userRole === 'airfield_manager' || userRole === 'sys_admin'
 
@@ -450,18 +477,94 @@ export default function WaiverDetailPage() {
             {allAttachments.length === 0 ? (
               <div style={{ fontSize: 12, color: 'var(--color-text-3)', padding: '8px 0' }}>No attachments</div>
             ) : (
-              allAttachments.map((a, i) => (
-                <div key={a.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < allAttachments.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-1)' }}>{a.file_name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
-                      {a.file_type} {a.file_size ? `• ${(a.file_size / 1024).toFixed(0)} KB` : ''}
+              <>
+                {/* Photo grid */}
+                {(() => {
+                  const photos = allAttachments.filter(a => a.mime_type?.startsWith('image/'))
+                  if (photos.length === 0) return null
+                  return (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 8 }}>
+                      {photos.map((a) => {
+                        const url = attachmentUrls[a.id]
+                        return (
+                          <div
+                            key={a.id}
+                            onClick={() => url && setExpandedPhoto(expandedPhoto === a.id ? null : a.id)}
+                            style={{
+                              aspectRatio: '1',
+                              borderRadius: 8,
+                              overflow: 'hidden',
+                              border: '1px solid var(--color-border)',
+                              cursor: url ? 'pointer' : 'default',
+                              background: 'var(--color-bg-elevated)',
+                              position: 'relative',
+                            }}
+                          >
+                            {url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={url}
+                                alt={a.caption || a.file_name}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              />
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 10, color: 'var(--color-text-3)' }}>
+                                Loading...
+                              </div>
+                            )}
+                            {a.caption && (
+                              <div style={{
+                                position: 'absolute', bottom: 0, left: 0, right: 0,
+                                background: 'rgba(0,0,0,0.6)', padding: '3px 6px',
+                                fontSize: 10, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                              }}>
+                                {a.caption}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
-                    {a.caption && <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontStyle: 'italic' }}>{a.caption}</div>}
+                  )
+                })()}
+
+                {/* Expanded photo view */}
+                {expandedPhoto && attachmentUrls[expandedPhoto] && (
+                  <div
+                    onClick={() => setExpandedPhoto(null)}
+                    style={{ marginBottom: 8, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--color-border)', cursor: 'pointer' }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={attachmentUrls[expandedPhoto]}
+                      alt={allAttachments.find(a => a.id === expandedPhoto)?.caption || 'Photo'}
+                      style={{ width: '100%', display: 'block' }}
+                    />
+                    {(() => {
+                      const photo = allAttachments.find(a => a.id === expandedPhoto)
+                      return photo?.caption ? (
+                        <div style={{ padding: '6px 10px', fontSize: 12, color: 'var(--color-text-2)', background: 'var(--color-bg-elevated)' }}>
+                          {photo.caption}
+                        </div>
+                      ) : null
+                    })()}
                   </div>
-                  <Badge label={a.file_type} color="#64748B" />
-                </div>
-              ))
+                )}
+
+                {/* Non-image file list */}
+                {allAttachments.filter(a => !a.mime_type?.startsWith('image/')).map((a, i, arr) => (
+                  <div key={a.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < arr.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-1)' }}>{a.file_name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
+                        {a.file_type.replace(/_/g, ' ')} {a.file_size ? `\u2022 ${(a.file_size / 1024).toFixed(0)} KB` : ''}
+                      </div>
+                      {a.caption && <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontStyle: 'italic' }}>{a.caption}</div>}
+                    </div>
+                    <Badge label={a.file_type.replace(/_/g, ' ')} color="#64748B" />
+                  </div>
+                ))}
+              </>
             )}
             <button
               type="button"
