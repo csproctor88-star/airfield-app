@@ -2,7 +2,7 @@
 
 Mobile-first web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.4.0 | **Build:** Clean | **38 routes** | **120+ source files** | **47 migrations**
+**Version:** 2.5.0 | **Build:** Clean | **41 routes** | **130+ source files** | **48 migrations**
 
 ## Tech Stack
 
@@ -125,8 +125,18 @@ Collapsible dropdown sections — Profile and About default open, all others col
 - **About** — version, environment, branding
 - **Inspection Templates** (`/settings/templates`) — customize airfield/lighting checklist sections and items
 
+### User Management (`/users`)
+Admin-only module for managing users across installations. System admins see all users with an installation dropdown; base admins, airfield managers, and NAMOs see only their base's users. Features include:
+- **Searchable user list** with role and status filter dropdowns
+- **User cards** with rank, role badge, status badge, base assignment, last seen
+- **User detail modal** for editing profiles (rank, names, role, installation) with field-level permission enforcement
+- **Invite user** with email, rank, names, role, installation — sends branded setup email
+- **Password reset** sends recovery email; users can also self-serve via "Forgot Password?" on login
+- **Account lifecycle**: Deactivate/reactivate users, delete accounts (sys_admin only)
+- **Three-tier role hierarchy**: sys_admin > base_admin/AFM/NAMO > regular roles
+
 ### More Menu (`/more`)
-Module directory linking to all features. Includes coming-soon placeholder pages for Sync & Data and Users & Security.
+Module directory linking to all features. Includes coming-soon placeholder page for Sync & Data.
 
 ## Project Structure
 
@@ -140,7 +150,14 @@ airfield-app/
 │   │   ├── weather/route.ts             # Weather API (stub — SRS §11.2)
 │   │   ├── notams/sync/route.ts         # FAA NOTAM Search proxy (live)
 │   │   ├── airfield-status/route.ts     # Airfield status GET/PATCH
-│   │   └── installations/route.ts       # Installation management POST/DELETE
+│   │   ├── installations/route.ts       # Installation management POST/DELETE
+│   │   └── admin/                        # Admin API routes (service role)
+│   │       ├── invite/route.ts          # User invitation
+│   │       ├── reset-password/route.ts  # Password reset email
+│   │       └── users/[id]/route.ts      # Profile update + user deletion
+│   ├── auth/confirm/route.ts            # OTP/PKCE token exchange for email links
+│   ├── reset-password/page.tsx          # Password reset form
+│   ├── setup-account/page.tsx           # Invited user account setup
 │   └── (app)/                            # Authenticated app shell
 │       ├── layout.tsx                    # Header + bottom nav, 480px max-width
 │       ├── page.tsx                      # Dashboard
@@ -157,8 +174,18 @@ airfield-app/
 │       ├── waivers/                       # List, create, detail, edit, annual review
 │       ├── more/page.tsx                 # Module directory
 │       ├── sync/page.tsx                 # Coming soon
-│       └── users/page.tsx                # Coming soon
+│       └── users/page.tsx                # User Management (admin)
 ├── components/
+│   ├── admin/                            # User management components
+│   │   ├── role-badge.tsx               # Color-coded role badge
+│   │   ├── status-badge.tsx             # Color-coded status badge
+│   │   ├── user-card.tsx                # User card with badges
+│   │   ├── user-list.tsx                # Scrollable card list
+│   │   ├── user-filters.tsx             # Search + filter dropdowns
+│   │   ├── user-detail-modal.tsx        # Edit profile slide-up modal
+│   │   ├── invite-user-modal.tsx        # Invite user form modal
+│   │   ├── installation-selector.tsx    # Base dropdown selector
+│   │   └── delete-confirmation-dialog.tsx  # Type-to-confirm delete
 │   ├── layout/                           # Header, bottom-nav, page-header
 │   ├── discrepancies/                    # Cards, badges, map, modals
 │   ├── obstructions/                     # Airfield map with surface overlays
@@ -185,6 +212,9 @@ airfield-app/
 │   │   ├── obstructions.ts             # Multi-runway surface evaluation engine
 │   │   ├── surface-criteria.ts          # Class B and Army_B surface dimensions
 │   │   └── geometry.ts                  # Geodesic math and polygon generation
+│   ├── admin/                             # User management server utilities
+│   │   ├── role-checks.ts              # isSysAdmin, isBaseAdmin, isAdmin, permission guards
+│   │   └── user-management.ts          # Client-side API wrappers for admin routes
 │   └── supabase/                         # Client, server, types, CRUD modules
 │       ├── types.ts                     # Full TypeScript types for all tables
 │       ├── client.ts / server.ts        # Browser and SSR Supabase clients
@@ -199,7 +229,7 @@ airfield-app/
 │       └── activity.ts                  # Activity log write
 ├── supabase/
 │   ├── schema.sql                        # Full database schema
-│   ├── migrations/                       # 47 migration files
+│   ├── migrations/                       # 48 migration files
 │   └── functions/                        # Edge functions (PDF text extraction)
 ├── middleware.ts                          # Auth guard + demo mode bypass
 ├── public/
@@ -252,17 +282,18 @@ airfield-app/
 4. **Theme System** — Light/Dark/Auto modes via CSS custom properties. Auto follows `prefers-color-scheme`.
 5. **Configurable Templates** — Inspection checklists are stored in the database per base, not hardcoded. New bases clone from a default template.
 6. **Client-Side PDF** — jsPDF generates reports in the browser. Server-side email delivery planned for a future phase.
-7. **RLS Disabled for MVP** — Row-Level Security policies removed during development. Must be re-enabled with role-based access before production.
+7. **RLS Partially Enabled** — Base-scoped RLS active for data isolation. Role-based write restrictions enforced at application layer (API routes + UI). Full database-level role enforcement planned for production hardening.
 8. **Hybrid Offline** — IndexedDB caches PDF blobs and extracted text. PWA service worker caches app shell. Full offline reference viewing supported.
 9. **Admin-Gated CRUD** — Base configuration and reference management require `airfield_manager` or `sys_admin` role.
+10. **Three-Tier Admin Hierarchy** — `sys_admin` has full access; `base_admin`, `airfield_manager`, and `namo` have base-scoped admin capabilities; all other roles are standard users.
 
 ## Current Status
 
 **Build**: TypeScript compiles clean (`tsc --noEmit` passes with zero errors)
 
-**Complete modules**: Dashboard, Discrepancies, Airfield Checks, Daily Inspections, NOTAMs (live FAA feed), Obstruction Evaluations, References (with My Documents), Reports (4 types), Aircraft Database, Waivers (full lifecycle with annual review, PDF/Excel export), Settings (with Base Setup and Templates), More hub
+**Complete modules**: Dashboard, Discrepancies, Airfield Checks, Daily Inspections, NOTAMs (live FAA feed), Obstruction Evaluations, References (with My Documents), Reports (4 types), Aircraft Database, Waivers (full lifecycle with annual review, PDF/Excel export), Settings (with Base Setup and Templates), User Management (invite, edit, reset password, roles), More hub
 
-**Placeholder modules** (coming soon pages): Sync & Data, Users & Security
+**Placeholder modules** (coming soon pages): Sync & Data
 
 **API stubs** (not yet implemented): Weather METAR (`/api/weather`)
 

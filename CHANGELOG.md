@@ -7,13 +7,101 @@ All notable changes to the Airfield OPS Management Suite.
 ### Planned
 - Server-side email delivery for inspection reports (branded sender address)
 - METAR weather API integration (aviationweather.gov)
-- Role-based access control (re-enable RLS policies)
+- Role-based access control (re-enable RLS policies with role-based enforcement)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
-- Users & Security module (profile management, roles, admin)
 - Sync & Data module (offline queue, export, import)
 - Regenerate Supabase types (`supabase gen types typescript`) to eliminate `as any` casts
 - Clean up dead files (validators.ts, installation.ts, lib/supabase/middleware.ts, unused UI components)
+- Refactor duplicate Supabase server auth initialization into shared utility
+- Add database-level role enforcement for `read_only` and other non-admin roles (currently app-layer only)
+
+---
+
+## [2.5.0] — 2026-02-26
+
+### User Management Module, Auth Flows & Role System
+
+This release replaces the "Users & Security" placeholder with a full User Management module. Includes admin user list with role/status badges, invite flow with account setup, password reset with email delivery, forgot password on login, and a three-tier role permission system (sys_admin > base_admin/AFM/NAMO > regular users).
+
+#### User Management Page (`/users`)
+- **Installation selector**: System admins see dropdown of all bases + "All Installations" view; base admins locked to their base
+- **Searchable user list**: Filter by name, email, or rank with real-time search
+- **Role and status filters**: Dropdown filters for all 9 roles and 3 statuses (active, deactivated, pending)
+- **User cards**: Display rank, name, email, role badge, status badge, base assignment, and last seen timestamp
+- **User count**: Shows filtered vs total user count
+- **Role badges**: Color-coded — red for sys_admin, cyan for base_admin/AFM/NAMO, slate for regular roles
+- **Status badges**: Green (active), red (deactivated), amber (pending) — theme-aware for both light and dark modes
+
+#### User Detail Modal
+- **Slide-up modal**: Edit rank, first name, last name, role, and installation assignment
+- **Field-level permissions**: Base admins cannot change role or installation (fields hidden)
+- **Action buttons**: Reset Password, Deactivate/Reactivate, Delete (sys_admin only)
+- **Delete confirmation**: Type-to-confirm dialog requiring the user's last name
+
+#### Invite User Flow
+- **Invite modal**: Email, rank, first/last name, role, and installation fields
+- **Role restriction**: Base admins can only invite non-admin roles; sys_admins can assign any role
+- **Base restriction**: Base admins can only invite to their own installation
+- **Supabase auth**: Uses `inviteUserByEmail` with profile and base_members records created server-side
+- **Account setup page** (`/setup-account`): Invited users land on a branded "Welcome — Set Up Your Account" page to create their password; profile status updated from `pending` to `active` on completion
+
+#### Password Reset Flow
+- **Admin-initiated**: "Reset Password" button in user detail modal sends recovery email via `resetPasswordForEmail`
+- **Self-service**: "Forgot Password?" link on login page lets users request their own reset email
+- **Auth confirm route** (`/auth/confirm`): Server-side route handles both PKCE code exchange and direct OTP token verification
+- **Reset password page** (`/reset-password`): Branded page with password + confirm fields, listens for `PASSWORD_RECOVERY` and `SIGNED_IN` auth events
+
+#### Role System
+- **Three-tier hierarchy**: `sys_admin` (full access) > `base_admin`/`airfield_manager`/`namo` (base-scoped admin) > all other roles
+- **Permission flags**: `canCreate` and `canManageUsers` per role in `USER_ROLES` constant
+- **Admin API routes**: `/api/admin/invite`, `/api/admin/reset-password`, `/api/admin/users/[id]` (PATCH/DELETE)
+- **Escalation prevention**: Only sys_admin can assign admin-tier roles
+- **`observer` → `read_only` mapping**: Database `observer` role mapped to `read_only` in app for consistency
+
+#### Login Page Enhancements
+- **Forgot Password link**: Right-aligned below password field on sign-in form
+- **Deactivation check**: Blocked users see "Your account has been deactivated" after sign-in attempt
+- **Last seen tracking**: `last_seen_at` updated on every successful login
+
+#### Middleware Updates
+- **New public routes**: `/reset-password`, `/setup-account`, and `/auth/confirm` allowed through without authentication
+
+#### Theme-Aware Badge CSS
+- **6 badge classes**: `badge-status-active`, `badge-status-deactivated`, `badge-status-pending`, `badge-role-sysadmin`, `badge-role-baseadmin`, `badge-role-user`
+- **Dark theme**: RGBA backgrounds with bright text inside `@layer components`
+- **Light theme**: Solid pastel backgrounds with dark text as overrides outside the layer block
+
+#### Database (1 new migration)
+- `2026022600_user_management.sql` — Adds `status` column to profiles, indexes on `primary_base_id`/`role`/`status`, `user_is_base_admin_at()` function, RLS policies for admin profile management (insert/update/delete)
+
+#### New Source Files
+- `lib/admin/role-checks.ts` — Admin client factory, `isSysAdmin`, `isBaseAdmin`, `isAdmin`, permission guards
+- `lib/admin/user-management.ts` — Client-side API wrappers (invite, reset password, update profile, delete)
+- `components/admin/role-badge.tsx` — Color-coded role badge component
+- `components/admin/status-badge.tsx` — Color-coded status badge component
+- `components/admin/installation-selector.tsx` — Base dropdown for sys_admin / static display for base_admin
+- `components/admin/user-filters.tsx` — Search input + role/status filter dropdowns
+- `components/admin/user-card.tsx` — User card with badges and last seen timestamp
+- `components/admin/user-list.tsx` — Scrollable card list with skeleton loading and empty states
+- `components/admin/user-detail-modal.tsx` — Slide-up modal for editing profiles + admin actions
+- `components/admin/invite-user-modal.tsx` — Modal form for inviting new users
+- `components/admin/delete-confirmation-dialog.tsx` — Type-to-confirm destructive delete dialog
+- `app/api/admin/invite/route.ts` — POST route for user invitation
+- `app/api/admin/reset-password/route.ts` — POST route for password reset email
+- `app/api/admin/users/[id]/route.ts` — PATCH (update profile) and DELETE (remove user) routes
+- `app/auth/confirm/route.ts` — Server-side OTP verification and PKCE code exchange
+- `app/reset-password/page.tsx` — Password reset form page
+- `app/setup-account/page.tsx` — Invited user account setup page
+
+#### Files Modified
+- `lib/supabase/types.ts` — Added `base_admin` to UserRole, `ProfileStatus` type, `status` field, fixed Update type derivation
+- `lib/constants.ts` — Added `base_admin` role config, `RANK_OPTIONS` array
+- `app/(app)/users/page.tsx` — Complete rewrite from placeholder to full User Management page
+- `app/(app)/more/page.tsx` — Renamed "Users & Security" to "User Management", changed from sysAdminOnly to adminOnly
+- `app/login/page.tsx` — Added forgot password, deactivation check, last_seen_at update
+- `app/globals.css` — Added badge CSS classes with light/dark theme support
+- `middleware.ts` — Added /reset-password, /setup-account, /auth/confirm to public routes
 
 ---
 
