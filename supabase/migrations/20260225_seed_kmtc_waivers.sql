@@ -260,7 +260,7 @@ BEGIN
   INSERT INTO waivers (base_id, waiver_number, classification, status, hazard_rating, action_requested,
     description, corrective_action, criteria_impact, period_valid,
     date_approved, last_reviewed_date, next_review_due, location_description)
-  VALUES (v_base_id, 'VGLZ220125001', 'permanent', 'completed', 'medium', 'new',
+  VALUES (v_base_id, 'VGLZ220125001', 'permanent', 'active', 'medium', 'new',
     'South End Expanded Clear Zone South and East of the Clinton River. On 16 Feb 1979 this area was excluded permanently from the Expanded Clear Zone acquisition within a compromise solution between Congressmen Bonner & Nedzi and HQ AF/LEE',
     'No action will be taken to initiate acquisition of any real property interest IAW AFI32-1015, Paragraph 3.4. Runway Encroachment Solution projects in work.',
     '80 homes within 1800'' of runway threshold', 'Indefinite',
