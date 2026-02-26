@@ -430,13 +430,13 @@ export default function ObstructionDetailPage() {
             1. Submit Work Order to CES (Civil Engineering Squadron) for evaluation and corrective action.
           </div>
           <div style={{ fontSize: 12, color: 'var(--color-text-1)', lineHeight: 1.6, paddingLeft: 8 }}>
-            2. Per DAFI 13-213, Para 3.5 — Document all known airfield obstructions and coordinate waivers.
+            2. Per DAFMAN 13-204 Vol. 1 — Document all known airfield obstructions and coordinate waivers.
           </div>
           <div style={{ fontSize: 12, color: 'var(--color-text-1)', lineHeight: 1.6, paddingLeft: 8 }}>
             3. Per DAFMAN 13-204, Para 1.14 — Coordinate with ATC/RAPCON regarding obstruction impact on flying operations.
           </div>
           <div style={{ fontSize: 12, color: 'var(--color-text-1)', lineHeight: 1.6, paddingLeft: 8 }}>
-            4. Submit a work order to CES and coordinate with the BCE to request a Permanent or Temporary Airspace Criteria Waiver.
+            4. Coordinate with BCE or Installation Community Planner to process a temporary or permanent waiver as required.
           </div>
           {violatedResults.map((v, i) => (
             <div key={i} style={{ fontSize: 12, color: 'var(--color-text-1)', lineHeight: 1.6, paddingLeft: 8, marginTop: 2 }}>
