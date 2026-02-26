@@ -403,6 +403,44 @@ export async function upsertWaiverCriteria(
   return { error: null }
 }
 
+export async function fetchAllWaiverCriteria(baseId: string): Promise<WaiverCriteriaRow[]> {
+  const supabase = createClient()
+  if (!supabase) return []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('waiver_criteria')
+    .select('*, waivers!inner(base_id)')
+    .eq('waivers.base_id', baseId)
+    .order('sort_order', { ascending: true })
+
+  if (error) {
+    console.error('Failed to fetch all waiver criteria:', error.message)
+    return []
+  }
+
+  return data as WaiverCriteriaRow[]
+}
+
+export async function fetchAllWaiverReviews(baseId: string): Promise<WaiverReviewRow[]> {
+  const supabase = createClient()
+  if (!supabase) return []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('waiver_reviews')
+    .select('*, waivers!inner(base_id)')
+    .eq('waivers.base_id', baseId)
+    .order('review_year', { ascending: false })
+
+  if (error) {
+    console.error('Failed to fetch all waiver reviews:', error.message)
+    return []
+  }
+
+  return data as WaiverReviewRow[]
+}
+
 // ─── Attachments ─────────────────────────────────────────────
 
 export async function fetchWaiverAttachments(waiverId: string): Promise<WaiverAttachmentRow[]> {

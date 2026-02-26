@@ -47,7 +47,25 @@ export async function generateWaiverExcel(
   ]
   XLSX.utils.book_append_sheet(wb, ws1, 'Waiver Register')
 
-  // Sheet 2: Annual Review
+  // Sheet 2: Criteria & Standards
+  if (criteria.length > 0) {
+    const criteriaData = criteria.map(c => {
+      const waiver = waivers.find(w => w.id === c.waiver_id)
+      return {
+        'Waiver Number': waiver?.waiver_number || '',
+        'Criteria Source': (c.criteria_source || '').replace(/_/g, ' ').toUpperCase(),
+        'Reference': c.reference || '',
+        'Description': c.description || '',
+      }
+    })
+    const wsCriteria = XLSX.utils.json_to_sheet(criteriaData)
+    wsCriteria['!cols'] = [
+      { wch: 18 }, { wch: 18 }, { wch: 25 }, { wch: 60 },
+    ]
+    XLSX.utils.book_append_sheet(wb, wsCriteria, 'Criteria & Standards')
+  }
+
+  // Sheet 3: Annual Review
   const reviewYears = Array.from(new Set(reviews.map(r => r.review_year))).sort()
   if (reviewYears.length > 0) {
     const reviewData = waivers.map(w => {
@@ -67,7 +85,7 @@ export async function generateWaiverExcel(
     XLSX.utils.book_append_sheet(wb, ws2, 'Annual Review')
   }
 
-  // Sheet 3: Coordination Status (placeholder — data from coordination table)
+  // Sheet 4: Coordination Status (placeholder — data from coordination table)
   const coordData = waivers.map(w => ({
     'Waiver Number': w.waiver_number,
     'Classification': w.classification,

@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
-import { fetchWaivers, type WaiverRow } from '@/lib/supabase/waivers'
-import { DEMO_WAIVERS } from '@/lib/demo-data'
+import { fetchWaivers, fetchAllWaiverCriteria, fetchAllWaiverReviews, type WaiverRow } from '@/lib/supabase/waivers'
+import { DEMO_WAIVERS, DEMO_WAIVER_CRITERIA, DEMO_WAIVER_REVIEWS } from '@/lib/demo-data'
 import { WAIVER_STATUS_CONFIG, WAIVER_CLASSIFICATIONS, WAIVER_HAZARD_RATINGS } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
@@ -80,7 +80,17 @@ export default function WaiversPage() {
 
   const handleExport = async () => {
     const { generateWaiverExcel } = await import('@/lib/waiver-export')
-    generateWaiverExcel(allItems, [], [], { name: 'Installation', icao: 'KMTC' })
+    let criteria, reviews
+    if (usingDemo) {
+      criteria = DEMO_WAIVER_CRITERIA
+      reviews = DEMO_WAIVER_REVIEWS
+    } else {
+      ;[criteria, reviews] = await Promise.all([
+        fetchAllWaiverCriteria(installationId || ''),
+        fetchAllWaiverReviews(installationId || ''),
+      ])
+    }
+    generateWaiverExcel(allItems, criteria, reviews, { name: 'Installation', icao: 'KMTC' })
   }
 
   return (
