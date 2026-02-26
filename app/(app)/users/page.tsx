@@ -92,8 +92,8 @@ export default function UserManagementPage() {
         .order('name', { ascending: true })
 
       if (bases) {
-        setInstallations(bases)
-        const userBase = bases.find((b) => b.id === profile.primary_base_id)
+        setInstallations(bases as Installation[])
+        const userBase = (bases as Installation[]).find((b) => b.id === profile.primary_base_id)
         setCallerInstallation(userBase || null)
 
         // Base admins default to their base
