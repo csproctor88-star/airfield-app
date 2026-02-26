@@ -24,6 +24,7 @@ const FILTER_LABELS: Record<string, string> = {
 export default function WaiversPage() {
   const { installationId } = useInstallation()
   const [filter, setFilter] = useState<string>('all')
+  const [kpiFilter, setKpiFilter] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [waivers, setWaivers] = useState<WaiverRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -52,21 +53,33 @@ export default function WaiversPage() {
     !q || w.waiver_number.toLowerCase().includes(q) || w.description.toLowerCase().includes(q) ||
     (w.criteria_impact || '').toLowerCase().includes(q) || (w.proponent || '').toLowerCase().includes(q)
 
-  const permanentCount = allItems.filter(w => w.classification === 'permanent' && (w.status === 'active' || w.status === 'approved')).length
-  const temporaryCount = allItems.filter(w => w.classification === 'temporary' && (w.status === 'active' || w.status === 'approved')).length
-  const expiringCount = allItems.filter(w => {
+  const isPermanent = (w: WaiverRow) => w.classification === 'permanent' && (w.status === 'active' || w.status === 'approved')
+  const isTemporary = (w: WaiverRow) => w.classification === 'temporary' && (w.status === 'active' || w.status === 'approved')
+  const isExpiring = (w: WaiverRow) => {
     if (!['active', 'approved'].includes(w.status) || !w.expiration_date) return false
     const daysLeft = Math.floor((new Date(w.expiration_date).getTime() - Date.now()) / 86400000)
     return daysLeft >= 0 && daysLeft <= 365
-  }).length
-  const overdueReviewCount = allItems.filter(w => {
+  }
+  const isOverdueReview = (w: WaiverRow) => {
     if (!['active', 'approved'].includes(w.status)) return false
     if (!w.next_review_due) return false
     return new Date(w.next_review_due).getTime() < Date.now()
-  }).length
+  }
+
+  const kpiPredicates: Record<string, (w: WaiverRow) => boolean> = {
+    permanent: isPermanent,
+    temporary: isTemporary,
+    expiring: isExpiring,
+    overdue: isOverdueReview,
+  }
+
+  const permanentCount = allItems.filter(isPermanent).length
+  const temporaryCount = allItems.filter(isTemporary).length
+  const expiringCount = allItems.filter(isExpiring).length
+  const overdueReviewCount = allItems.filter(isOverdueReview).length
 
   const filtered = allItems
-    .filter(w => filter === 'all' || w.status === filter)
+    .filter(w => kpiFilter ? kpiPredicates[kpiFilter](w) : (filter === 'all' || w.status === filter))
     .filter(matchesSearch)
 
   const getClassInfo = (c: string) => WAIVER_CLASSIFICATIONS.find(t => t.value === c)
@@ -151,34 +164,39 @@ export default function WaiversPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
         {[
-          { label: 'PERMANENT', value: permanentCount, color: '#8B5CF6' },
-          { label: 'TEMPORARY', value: temporaryCount, color: '#3B82F6' },
-          { label: 'EXPIRING ≤12MO', value: expiringCount, color: expiringCount > 0 ? '#F59E0B' : '#34D399' },
-          { label: 'OVERDUE REVIEW', value: overdueReviewCount, color: overdueReviewCount > 0 ? '#EF4444' : '#34D399' },
-        ].map((k) => (
-          <div
-            key={k.label}
-            style={{
-              background: 'var(--color-bg-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 10,
-              padding: '10px 6px',
-              textAlign: 'center',
-            }}
-          >
-            <div style={{ fontSize: 10, color: 'var(--color-text-3)', letterSpacing: '0.08em', fontWeight: 600 }}>
-              {k.label}
+          { label: 'PERMANENT', key: 'permanent', value: permanentCount, color: '#8B5CF6' },
+          { label: 'TEMPORARY', key: 'temporary', value: temporaryCount, color: '#3B82F6' },
+          { label: 'EXPIRING ≤12MO', key: 'expiring', value: expiringCount, color: expiringCount > 0 ? '#F59E0B' : '#34D399' },
+          { label: 'OVERDUE REVIEW', key: 'overdue', value: overdueReviewCount, color: overdueReviewCount > 0 ? '#EF4444' : '#34D399' },
+        ].map((k) => {
+          const active = kpiFilter === k.key
+          return (
+            <div
+              key={k.label}
+              onClick={() => { setKpiFilter(active ? null : k.key); setFilter('all') }}
+              style={{
+                background: active ? `${k.color}14` : 'var(--color-bg-surface)',
+                border: `1px solid ${active ? `${k.color}44` : 'var(--color-border)'}`,
+                borderRadius: 10,
+                padding: '10px 6px',
+                textAlign: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <div style={{ fontSize: 10, color: active ? k.color : 'var(--color-text-3)', letterSpacing: '0.08em', fontWeight: 600 }}>
+                {k.label}
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: k.color }}>{k.value}</div>
             </div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: k.color }}>{k.value}</div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       <div style={{ display: 'flex', gap: 3, marginBottom: 12, overflowX: 'auto', paddingBottom: 4 }}>
         {FILTERS.map((v) => (
           <button
             key={v}
-            onClick={() => setFilter(v)}
+            onClick={() => { setFilter(v); setKpiFilter(null) }}
             style={{
               background: filter === v ? 'rgba(34,211,238,0.12)' : 'transparent',
               border: `1px solid ${filter === v ? 'rgba(34,211,238,0.3)' : 'var(--color-border)'}`,
