@@ -420,6 +420,8 @@ export default function WaiverDetailPage() {
     setCoordComments('')
   }
 
+  const [exporting, setExporting] = useState(false)
+
   if (loading) {
     return (
       <div style={{ padding: 16, paddingBottom: 100 }}>
@@ -434,6 +436,51 @@ export default function WaiverDetailPage() {
   const demoReviews = usingDemo ? DEMO_WAIVER_REVIEWS.filter(r => r.waiver_id === params.id) : reviews
   const demoCoordination = usingDemo ? DEMO_WAIVER_COORDINATION.filter(c => c.waiver_id === params.id) : coordination
   const allAttachments = usingDemo ? [] : attachments
+
+  const handleExportPdf = async () => {
+    if (!w) return
+    setExporting(true)
+    try {
+      const { generateWaiverPdf } = await import('@/lib/waiver-pdf')
+
+      // Fetch photo data URLs for embedding
+      const photos = allAttachments.filter(a => a.mime_type?.startsWith('image/'))
+      const photoDataUrls: { name: string; dataUrl: string }[] = []
+
+      for (const photo of photos) {
+        const url = attachmentUrls[photo.id]
+        if (url) {
+          try {
+            const response = await fetch(url)
+            const blob = await response.blob()
+            const dataUrl = await new Promise<string>((resolve) => {
+              const reader = new FileReader()
+              reader.onloadend = () => resolve(reader.result as string)
+              reader.readAsDataURL(blob)
+            })
+            photoDataUrls.push({ name: photo.caption || photo.file_name, dataUrl })
+          } catch {
+            // Skip photos that fail to load
+          }
+        }
+      }
+
+      generateWaiverPdf({
+        waiver: w,
+        criteria: demoCriteria,
+        reviews: demoReviews,
+        coordination: demoCoordination,
+        attachments: allAttachments,
+        photoDataUrls,
+        baseName: 'Selfridge ANGB',
+        baseIcao: 'KMTC',
+      })
+    } catch (err) {
+      console.error('PDF export failed:', err)
+      toast.error('Failed to generate PDF')
+    }
+    setExporting(false)
+  }
 
   if (!w) {
     return (
@@ -487,17 +534,30 @@ export default function WaiverDetailPage() {
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
           &larr; Back
         </button>
-        {(w.status === 'draft' || w.status === 'pending') && (
-          <Link
-            href={`/waivers/${params.id}/edit`}
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            onClick={handleExportPdf}
+            disabled={exporting}
             style={{
-              background: '#3B82F614', border: '1px solid #3B82F633', borderRadius: 8, padding: '6px 12px',
-              color: '#3B82F6', fontSize: 12, fontWeight: 600, textDecoration: 'none',
+              background: '#10B98114', border: '1px solid #10B98133', borderRadius: 8, padding: '6px 12px',
+              color: '#10B981', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+              opacity: exporting ? 0.6 : 1,
             }}
           >
-            Edit
-          </Link>
-        )}
+            {exporting ? 'Exporting...' : 'Export PDF'}
+          </button>
+          {(w.status === 'draft' || w.status === 'pending') && (
+            <Link
+              href={`/waivers/${params.id}/edit`}
+              style={{
+                background: '#3B82F614', border: '1px solid #3B82F633', borderRadius: 8, padding: '6px 12px',
+                color: '#3B82F6', fontSize: 12, fontWeight: 600, textDecoration: 'none',
+              }}
+            >
+              Edit
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Header Card */}
