@@ -1,14 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { WAIVER_CLASSIFICATIONS, WAIVER_HAZARD_RATINGS, WAIVER_CRITERIA_SOURCES } from '@/lib/constants'
-import { createWaiver, upsertWaiverCriteria } from '@/lib/supabase/waivers'
+import { createWaiver, upsertWaiverCriteria, uploadWaiverAttachment } from '@/lib/supabase/waivers'
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
-import type { WaiverStatus, WaiverClassification, WaiverCriteriaSource } from '@/lib/supabase/types'
+import type { WaiverStatus, WaiverClassification, WaiverCriteriaSource, WaiverAttachmentType } from '@/lib/supabase/types'
 
 type CriteriaEntry = { criteria_source: WaiverCriteriaSource; reference: string; description: string }
+type PendingPhoto = { file: File; preview: string }
+type PendingAttachment = { file: File; type: WaiverAttachmentType; caption: string }
 
 export default function NewWaiverPage() {
   const router = useRouter()
@@ -20,6 +22,8 @@ export default function NewWaiverPage() {
     risk: false,
     project: false,
     location: false,
+    photos: false,
+    attachments: false,
   })
 
   const [formData, setFormData] = useState({
@@ -51,6 +55,32 @@ export default function NewWaiverPage() {
 
   const [classDropdownOpen, setClassDropdownOpen] = useState(false)
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false)
+  const classDropdownRef = useRef<HTMLDivElement>(null)
+  const locationDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Photos & Attachments state
+  const [photos, setPhotos] = useState<PendingPhoto[]>([])
+  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([])
+  const [showAttachModal, setShowAttachModal] = useState(false)
+  const [attachFile, setAttachFile] = useState<File | null>(null)
+  const [attachType, setAttachType] = useState<WaiverAttachmentType>('site_map')
+  const [attachCaption, setAttachCaption] = useState('')
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+
+  // Close dropdowns on click outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (classDropdownOpen && classDropdownRef.current && !classDropdownRef.current.contains(e.target as Node)) {
+        setClassDropdownOpen(false)
+      }
+      if (locationDropdownOpen && locationDropdownRef.current && !locationDropdownRef.current.contains(e.target as Node)) {
+        setLocationDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [classDropdownOpen, locationDropdownOpen])
 
   const toggleSection = (key: string) => {
     setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }))
@@ -70,6 +100,35 @@ export default function NewWaiverPage() {
     const yy = new Date().getFullYear().toString().slice(-2)
     return `${prefix}-VGLZ-${yy}-####`
   })()
+
+  const handlePhotoSelected = (files: FileList | null) => {
+    if (!files) return
+    const newPhotos: PendingPhoto[] = Array.from(files).map(file => ({
+      file,
+      preview: URL.createObjectURL(file),
+    }))
+    setPhotos(prev => [...prev, ...newPhotos])
+  }
+
+  const removePhoto = (index: number) => {
+    setPhotos(prev => {
+      URL.revokeObjectURL(prev[index].preview)
+      return prev.filter((_, i) => i !== index)
+    })
+  }
+
+  const addAttachment = () => {
+    if (!attachFile) return
+    setPendingAttachments(prev => [...prev, { file: attachFile, type: attachType, caption: attachCaption }])
+    setAttachFile(null)
+    setAttachType('site_map')
+    setAttachCaption('')
+    setShowAttachModal(false)
+  }
+
+  const removeAttachment = (index: number) => {
+    setPendingAttachments(prev => prev.filter((_, i) => i !== index))
+  }
 
   const handleSubmit = async (status: WaiverStatus) => {
     if (!formData.classification || !formData.description) {
@@ -110,13 +169,35 @@ export default function NewWaiverPage() {
       return
     }
 
-    // Save criteria if we have a waiver ID
     if (data?.id) {
+      // Save criteria
       const validCriteria = criteria.filter(c => c.reference || c.description)
       if (validCriteria.length > 0) {
         await upsertWaiverCriteria(data.id, validCriteria)
       }
+
+      // Upload photos
+      for (const photo of photos) {
+        await uploadWaiverAttachment({
+          waiver_id: data.id,
+          file: photo.file,
+          file_type: 'photo',
+        })
+      }
+
+      // Upload attachments
+      for (const att of pendingAttachments) {
+        await uploadWaiverAttachment({
+          waiver_id: data.id,
+          file: att.file,
+          file_type: att.type,
+          caption: att.caption || undefined,
+        })
+      }
     }
+
+    // Clean up preview URLs
+    photos.forEach(p => URL.revokeObjectURL(p.preview))
 
     toast.success(status === 'draft' ? 'Waiver saved as draft' : 'Waiver submitted for review')
     router.push('/waivers')
@@ -134,7 +215,9 @@ export default function NewWaiverPage() {
     setCriteria(prev => prev.map((c, i) => i === index ? { ...c, [field]: value } : c))
   }
 
-  const sectionHeader = (key: string, title: string, expanded: boolean) => (
+  const titleCase = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+
+  const sectionHeader = (key: string, title: string, expanded: boolean, count?: number) => (
     <button
       type="button"
       onClick={() => toggleSection(key)}
@@ -145,7 +228,7 @@ export default function NewWaiverPage() {
         marginBottom: expanded ? 12 : 0,
       }}
     >
-      <span>{title}</span>
+      <span>{title}{count !== undefined && count > 0 ? ` (${count})` : ''}</span>
       <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>{expanded ? '▲' : '▼'}</span>
     </button>
   )
@@ -165,7 +248,7 @@ export default function NewWaiverPage() {
         {expandedSections.basic && (
           <>
             {/* Classification */}
-            <div style={{ marginBottom: 12, position: 'relative' }}>
+            <div ref={classDropdownRef} style={{ marginBottom: 12, position: 'relative' }}>
               <span className="section-label">Classification *</span>
               <button
                 type="button"
@@ -381,7 +464,7 @@ export default function NewWaiverPage() {
         {sectionHeader('location', '5. Location & Dates', expandedSections.location)}
         {expandedSections.location && (
           <>
-            <div style={{ marginBottom: 12, position: 'relative' }}>
+            <div ref={locationDropdownRef} style={{ marginBottom: 12, position: 'relative' }}>
               <span className="section-label">Location</span>
               <button
                 type="button"
@@ -436,6 +519,113 @@ export default function NewWaiverPage() {
         )}
       </div>
 
+      {/* Section 6: Photos */}
+      <div className="card" style={{ marginBottom: 8 }}>
+        {sectionHeader('photos', '6. Photos', expandedSections.photos, photos.length)}
+        {expandedSections.photos && (
+          <>
+            {/* Hidden file inputs */}
+            <input ref={photoInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }}
+              onChange={(e) => { handlePhotoSelected(e.target.files); e.target.value = '' }} />
+            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+              onChange={(e) => { handlePhotoSelected(e.target.files); e.target.value = '' }} />
+
+            {/* Photo previews */}
+            {photos.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
+                {photos.map((p, i) => (
+                  <div key={i} style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border)', aspectRatio: '1' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.preview} alt={`Photo ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(i)}
+                      style={{
+                        position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: '50%',
+                        background: 'rgba(0,0,0,0.6)', border: 'none', color: '#fff', fontSize: 14,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', lineHeight: 1,
+                      }}
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Upload / Capture buttons */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                style={{
+                  padding: 10, borderRadius: 6, border: '1px dashed var(--color-border)',
+                  background: 'transparent', color: 'var(--color-cyan)', fontSize: 12, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Take Photo
+              </button>
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                style={{
+                  padding: 10, borderRadius: 6, border: '1px dashed var(--color-border)',
+                  background: 'transparent', color: 'var(--color-cyan)', fontSize: 12, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Upload Photo
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Section 7: Attachments */}
+      <div className="card" style={{ marginBottom: 8 }}>
+        {sectionHeader('attachments', '7. Attachments', expandedSections.attachments, pendingAttachments.length)}
+        {expandedSections.attachments && (
+          <>
+            {pendingAttachments.length === 0 ? (
+              <div style={{ fontSize: 12, color: 'var(--color-text-3)', padding: '8px 0' }}>No attachments added yet</div>
+            ) : (
+              pendingAttachments.map((att, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < pendingAttachments.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {att.file.name}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
+                      {titleCase(att.type)} {att.file.size ? `\u2022 ${(att.file.size / 1024).toFixed(0)} KB` : ''}
+                    </div>
+                    {att.caption && <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontStyle: 'italic' }}>{att.caption}</div>}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(i)}
+                    style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '2px 8px', fontFamily: 'inherit', flexShrink: 0 }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))
+            )}
+            <button
+              type="button"
+              onClick={() => setShowAttachModal(true)}
+              style={{
+                marginTop: 8, width: '100%', padding: 8, borderRadius: 6, border: '1px dashed var(--color-border)',
+                background: 'transparent', color: 'var(--color-cyan)', fontSize: 12, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              + Add Attachment
+            </button>
+          </>
+        )}
+      </div>
+
       {/* Submit Buttons */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <button
@@ -467,6 +657,50 @@ export default function NewWaiverPage() {
           {saving ? 'Submitting...' : 'Submit for Review'}
         </button>
       </div>
+
+      {/* Attachment Upload Modal */}
+      {showAttachModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--color-bg-surface)', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Add Attachment</div>
+            <div style={{ marginBottom: 12 }}>
+              <span className="section-label">File</span>
+              <input type="file" accept=".pdf,.docx,.xlsx,.xls,.doc,.pptx,.ppt,.csv,.txt,.jpg,.jpeg,.png"
+                onChange={(e) => setAttachFile(e.target.files?.[0] || null)}
+                style={{ fontSize: 12, color: 'var(--color-text-2)' }} />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <span className="section-label">Type</span>
+              <select className="input-dark" value={attachType} onChange={(e) => setAttachType(e.target.value as WaiverAttachmentType)} style={{ width: '100%' }}>
+                {[
+                  { value: 'site_map', label: 'Site Map' },
+                  { value: 'risk_assessment', label: 'Risk Assessment' },
+                  { value: 'ufc_excerpt', label: 'UFC Excerpt' },
+                  { value: 'faa_report', label: 'FAA Report' },
+                  { value: 'coordination_sheet', label: 'Coordination Sheet' },
+                  { value: 'af_form_505', label: 'AF Form 505' },
+                  { value: 'other', label: 'Other' },
+                ].map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <span className="section-label">Caption</span>
+              <input type="text" className="input-dark" placeholder="Optional caption..." value={attachCaption} onChange={(e) => setAttachCaption(e.target.value)} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <button onClick={() => { setShowAttachModal(false); setAttachFile(null); setAttachCaption('') }}
+                style={{ padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Cancel
+              </button>
+              <button className="btn-primary" onClick={addAttachment} disabled={!attachFile}>
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { WAIVER_CLASSIFICATIONS, WAIVER_HAZARD_RATINGS, WAIVER_CRITERIA_SOURCES } from '@/lib/constants'
 import { fetchWaiver, fetchWaiverCriteria, updateWaiver, upsertWaiverCriteria, type WaiverRow, type WaiverCriteriaRow } from '@/lib/supabase/waivers'
@@ -34,6 +34,22 @@ export default function EditWaiverPage() {
   const [criteria, setCriteria] = useState<CriteriaEntry[]>([])
   const [classDropdownOpen, setClassDropdownOpen] = useState(false)
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false)
+  const classDropdownRef = useRef<HTMLDivElement>(null)
+  const locationDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdowns on click outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (classDropdownOpen && classDropdownRef.current && !classDropdownRef.current.contains(e.target as Node)) {
+        setClassDropdownOpen(false)
+      }
+      if (locationDropdownOpen && locationDropdownRef.current && !locationDropdownRef.current.contains(e.target as Node)) {
+        setLocationDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [classDropdownOpen, locationDropdownOpen])
 
   useEffect(() => {
     async function load() {
@@ -187,7 +203,7 @@ export default function EditWaiverPage() {
         {sectionHeader('basic', '1. Basic Information', expandedSections.basic)}
         {expandedSections.basic && (
           <>
-            <div style={{ marginBottom: 12, position: 'relative' }}>
+            <div ref={classDropdownRef} style={{ marginBottom: 12, position: 'relative' }}>
               <span className="section-label">Classification *</span>
               <button type="button" className="input-dark" onClick={() => setClassDropdownOpen(v => !v)}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
@@ -353,7 +369,7 @@ export default function EditWaiverPage() {
         {sectionHeader('location', '5. Location & Dates', expandedSections.location)}
         {expandedSections.location && (
           <>
-            <div style={{ marginBottom: 12, position: 'relative' }}>
+            <div ref={locationDropdownRef} style={{ marginBottom: 12, position: 'relative' }}>
               <span className="section-label">Location</span>
               <button type="button" className="input-dark" onClick={() => setLocationDropdownOpen(v => !v)}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
