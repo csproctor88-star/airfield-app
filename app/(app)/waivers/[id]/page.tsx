@@ -53,8 +53,6 @@ export default function WaiverDetailPage() {
   // Coordination modal state
   const [coordOffice, setCoordOffice] = useState<WaiverCoordinationOffice>('civil_engineer')
   const [coordLabel, setCoordLabel] = useState('')
-  const [coordName, setCoordName] = useState('')
-  const [coordDate, setCoordDate] = useState('')
   const [coordStatus, setCoordStatus] = useState<WaiverCoordinationStatus>('concur')
   const [coordComments, setCoordComments] = useState('')
 
@@ -179,11 +177,23 @@ export default function WaiverDetailPage() {
     }
 
     setActionLoading(true)
+
+    // Auto-pull current user name
+    let coordinatorName = ''
+    const supabase = createClient()
+    if (supabase) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('name, rank').eq('id', user.id).single()
+        coordinatorName = profile?.rank ? `${profile.rank} ${profile.name}` : (profile?.name || user.email || '')
+      }
+    }
+
     const newEntry = {
       office: coordOffice,
       office_label: coordOffice === 'other' ? coordLabel : undefined,
-      coordinator_name: coordName,
-      coordinated_date: coordDate || new Date().toISOString().split('T')[0],
+      coordinator_name: coordinatorName,
+      coordinated_date: new Date().toISOString().split('T')[0],
       status: coordStatus,
       comments: coordComments || undefined,
     }
@@ -204,8 +214,6 @@ export default function WaiverDetailPage() {
     }
     setActionLoading(false)
     setActiveModal(null)
-    setCoordName('')
-    setCoordDate('')
     setCoordComments('')
   }
 
@@ -768,14 +776,6 @@ export default function WaiverDetailPage() {
                 <input type="text" className="input-dark" placeholder="e.g., Security Forces" value={coordLabel} onChange={(e) => setCoordLabel(e.target.value)} />
               </div>
             )}
-            <div style={{ marginBottom: 12 }}>
-              <span className="section-label">Coordinator Name</span>
-              <input type="text" className="input-dark" placeholder="Name and rank..." value={coordName} onChange={(e) => setCoordName(e.target.value)} />
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <span className="section-label">Date Coordinated</span>
-              <input type="date" className="input-dark" value={coordDate} onChange={(e) => setCoordDate(e.target.value)} />
-            </div>
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">Status</span>
               <div style={{ display: 'flex', gap: 6 }}>
