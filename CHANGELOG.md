@@ -10,9 +10,158 @@ All notable changes to the Airfield OPS Management Suite.
 - Role-based access control (re-enable RLS policies)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
-- Waivers module (airfield waiver lifecycle)
 - Users & Security module (profile management, roles, admin)
 - Sync & Data module (offline queue, export, import)
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate `as any` casts
+- Clean up dead files (validators.ts, installation.ts, lib/supabase/middleware.ts, unused UI components)
+
+---
+
+## [2.4.0] — 2026-02-25
+
+### Waiver Enhancements — Status Workflows, Photos, PDF Export & Annual Review Merge
+
+This release enhances the waivers module with a full status change workflow (mandatory comments for all transitions), photo capture/upload on new waivers, individual waiver PDF export, and a consolidated annual review page.
+
+#### Status Change Workflow
+- **"Closed" replaces "Completed"**: All status labels, filter chips, and transitions updated
+- **Mandatory comment dialog**: All transitions between Active, Expired, and Closed require a comment explaining the change
+- **Generic status change modal**: Configurable `STATUS_CHANGE_CONFIG` adapts title, description, and button per target status
+- **Comments saved as coordination activity**: Tagged `[Closure]`, `[Expired]`, or `[Reactivated]` in the coordination history
+- **Expanded transitions**: Closed waivers can be reactivated or marked expired; expired waivers can be reactivated or closed
+- **Action buttons per status**: Active (Close, Expire), Closed (Reactivate, Mark Expired), Expired (Reactivate, Mark Closed)
+
+#### Photo Capture & Attachments on New Waiver Form
+- **Take Photo**: Camera capture via `<input capture="environment">` for field use
+- **Upload Photo**: Standard file picker for existing images
+- **3-column thumbnail grid**: Preview with individual remove buttons
+- **Attachments section**: Add Attachment modal with file type dropdown (photo, site map, risk assessment, UFC excerpt, FAA report, coordination sheet, AF Form 505, other) and caption
+- **Sequential upload**: Photos and attachments queued locally, uploaded after waiver creation via `uploadWaiverAttachment`
+- **Dropdown click-outside fix**: Classification and location dropdowns close on click-away (applied to both new and edit pages)
+
+#### Waiver PDF Export
+- **NEW `lib/waiver-pdf.ts`**: Comprehensive PDF generation with jsPDF + jspdf-autotable
+- **Blue header bar**: Waiver number, status badge, installation name/ICAO
+- **Two-column field layout**: Classification, hazard rating, dates, proponent, project info
+- **Wrapped text fields**: Description, justification, corrective action, risk assessment
+- **Criteria table**: Source, reference, and description columns
+- **Coordination table**: Office, coordinator, date, status, and comments
+- **Review history table**: Year, date, recommendation, mitigation, board, notes
+- **Embedded photos**: 2-column grid with medium-size images fetched as base64 from signed URLs
+- **Attachment list**: File names, types, and sizes in a table (no file content embedded)
+- **Page numbers and generation date** in footer
+- **"Export PDF" button** at top of every waiver detail page
+
+#### Annual Review Consolidation
+- **Merged annual review pages**: `annual-review/page.tsx` now redirects to current year
+- **"Annual Review" link** on main waivers page goes directly to the year page
+- **Clickable KPI badges** on annual review page to filter waivers by review status
+
+#### Coordination & Review Management
+- **Edit coordination entries**: Edit button opens pre-populated coordination modal
+- **Delete coordination entries**: Remove button with confirmation
+- **Delete reviews**: "Remove" button on each review in Review History section
+- **New CRUD functions**: `updateWaiverCoordination`, `deleteWaiverCoordination`, `deleteWaiverReview`
+
+#### Other Improvements
+- **Auto-populate coordinator**: Coordinator name and date pre-filled in coordination modal
+- **Fullscreen photo viewer**: Tap photo carousel to view fullscreen, tap anywhere to close
+- **Photo carousel**: Swipeable carousel at top of waiver detail page for photo attachments
+- **Duplicate review prevention**: Friendly message when attempting to add a duplicate annual review
+
+#### Files Modified
+- `lib/waiver-pdf.ts` — NEW: PDF export generation
+- `lib/supabase/waivers.ts` — Added updateWaiverCoordination, deleteWaiverCoordination, deleteWaiverReview
+- `lib/constants.ts` — "Closed" label, expanded WAIVER_TRANSITIONS
+- `app/(app)/waivers/[id]/page.tsx` — Major: status change modal, PDF export, review/coord edit/delete, photo carousel
+- `app/(app)/waivers/new/page.tsx` — Photos, attachments, dropdown click-outside
+- `app/(app)/waivers/[id]/edit/page.tsx` — Dropdown click-outside fix
+- `app/(app)/waivers/annual-review/page.tsx` — Converted to year redirect
+- `app/(app)/waivers/annual-review/[year]/page.tsx` — Clickable KPIs, consolidated features
+- `app/(app)/waivers/page.tsx` — "Closed" filter label, direct year link
+
+---
+
+## [2.3.0] — 2026-02-24
+
+### Waivers Module — Full Lifecycle Management
+
+This release adds the complete Airfield Waivers module modeled after AF Form 505, the AFCEC Playbook Appendix B, and real Selfridge ANGB (KMTC) waiver data. Includes a rebuilt database schema, full CRUD, annual reviews, coordination tracking, Excel export, and 17 seed waivers from KMTC historical records.
+
+#### Database Rebuild
+- **Dropped and rebuilt waivers schema**: 5 new tables replacing the original single-table MVP
+- **`waivers`** — waiver_number, classification (permanent/temporary/construction/event/extension/amendment), status (7 values), hazard_rating, action_requested, full AF-505 field set
+- **`waiver_criteria`** — UFC references per waiver (source, reference, description)
+- **`waiver_attachments`** — File metadata with typed categories (photo, site_map, risk_assessment, etc.)
+- **`waiver_reviews`** — Annual review records with recommendation, mitigation verification, board presentation
+- **`waiver_coordination`** — Office-by-office coordination tracking (civil engineer, airfield manager, ops/TERPS, safety, commander)
+- **`bases.installation_code`** — Added for auto-generating waiver numbers (P-CODE-YY-##)
+
+#### Waivers List (`/waivers`)
+- **KPIs**: Permanent count, Temporary count, Expiring ≤12 months (amber), Overdue Review (red)
+- **Clickable KPI badges**: Filter the list by clicking any KPI card
+- **Filters**: All / Draft / Pending / Approved / Active / Closed / Expired / Cancelled
+- **Search**: Waiver number, description, criteria impact, proponent
+- **Cards**: Waiver number (monospace), status badge, classification badge, description, expiration date
+- **Header actions**: "+ New Waiver", "Annual Review", "Export Excel"
+
+#### New Waiver Form (`/waivers/new`)
+- **5 collapsible sections**: Basic Info, Criteria & Standards, Risk Assessment, Project Information, Location & Dates
+- **Dynamic criteria rows**: Add/remove UFC reference rows with source dropdown, reference text, description
+- **Auto-generated waiver number**: P-CODE-YY-## format with manual override
+- **Save as Draft or Submit for Review**: Two submit paths
+
+#### Waiver Detail (`/waivers/[id]`)
+- **Header**: Waiver number, status/classification/hazard badges, description
+- **6 collapsible sections**: Overview, Criteria & Standards, Coordination, Attachments, Review History, Notes
+- **Overview**: 2-column grid of all AF-505 fields
+- **Coordination**: Office list with status indicators, "Update Coordination" modal
+- **Attachments**: Photo thumbnails with upload, file list with type labels
+- **Review History**: Timeline of annual reviews with "Add Review" modal
+- **Status actions**: Submit, Approve (modal with dates), Send Back, Cancel, Activate, Mark Closed, Mark Expired, Edit, Delete Draft
+
+#### Edit Waiver (`/waivers/[id]/edit`)
+- **Same layout as new form**, pre-populated from database
+- **Criteria sync**: Deletes and re-inserts criteria batch on save
+
+#### Annual Review (`/waivers/annual-review`)
+- **Year selector** with prev/next navigation
+- **KPIs**: Total Active, Reviewed This Year, Not Reviewed, Presented to Board
+- **Expandable review form** per waiver: recommendation, mitigation verified, project status update, notes, board presentation
+- **Export Year Review**: Excel export of annual review data
+
+#### Excel Export
+- **NEW `lib/waiver-export.ts`**: Client-side SheetJS (xlsx) export
+- **Waiver Register sheet**: All waivers with key columns matching Appendix B format
+- **Criteria & Standards sheet**: All criteria references across all waivers
+- **Coordination Status sheet**: All coordination entries
+- **Annual Review export**: Single-year review data
+
+#### Seed Data
+- **17 KMTC historical waivers**: Real Selfridge ANGB waiver data (VGLZ format numbers)
+- **Criteria references**: UFC 3-260-01 and 3-260-04 references per waiver
+- **2025 review records**: All reviewed 2/20/2025, recommendation: retain
+- **Storage bucket**: `waiver-attachments` with 50MB file size limit and RLS policies
+
+#### Database (7 new migrations)
+- `2026022503_rebuild_waivers.sql` — 5-table waiver schema
+- `2026022504_seed_kmuo_mountain_home.sql` — Mountain Home AFB seed
+- `2026022505_seed_threshold_elevations.sql` — Runway threshold elevations
+- `2026022506_fix_vglz220125001_status.sql` — Fix specific waiver status
+- `2026022507_create_waiver_attachments_bucket.sql` — Storage bucket
+- `2026022508_seed_kmtc_waivers.sql` — 17 KMTC waiver seed records
+- `2026022509_waiver_attachments_storage_policies.sql` — Storage RLS policies
+
+#### New Source Files
+- `lib/supabase/waivers.ts` — Complete rewrite: ~17 exported functions
+- `lib/waiver-export.ts` — Excel export with SheetJS
+- `lib/constants.ts` — WAIVER_CLASSIFICATIONS, WAIVER_STATUS_CONFIG, WAIVER_TRANSITIONS, hazard ratings, criteria sources, coordination offices, review recommendations
+- `app/(app)/waivers/page.tsx` — Rewritten list page
+- `app/(app)/waivers/new/page.tsx` — Rewritten creation form
+- `app/(app)/waivers/[id]/page.tsx` — Rewritten detail page
+- `app/(app)/waivers/[id]/edit/page.tsx` — New edit page
+- `app/(app)/waivers/annual-review/page.tsx` — Year selector
+- `app/(app)/waivers/annual-review/[year]/page.tsx` — Per-year review checklist
 
 ---
 

@@ -2,7 +2,7 @@
 
 Mobile-first web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.2.0 | **Build:** Clean | **457 commits** | **31 routes** | **94 source files** | **~31,000 LOC**
+**Version:** 2.4.0 | **Build:** Clean | **38 routes** | **120+ source files** | **47 migrations**
 
 ## Tech Stack
 
@@ -15,6 +15,7 @@ Mobile-first web application for managing airfield operations across U.S. milita
 | Maps | Mapbox GL JS | 3.18.1 |
 | PDF Viewing | react-pdf (PDF.js) | 10.3.0 |
 | PDF Export | jsPDF + jspdf-autotable | 4.1.0 |
+| Excel Export | SheetJS (xlsx) | 0.18.5 |
 | Validation | Zod | 3.25.76 |
 | Offline Storage | IndexedDB (6 object stores) | — |
 | Icons | Lucide React | 0.563.0 |
@@ -51,7 +52,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 Apply the schema and migrations to a Supabase project:
 
 1. Run `supabase/schema.sql` to create the base tables and sequences
-2. Apply the 34 migrations in order from `supabase/migrations/`
+2. Apply the 47 migrations in order from `supabase/migrations/`
 
 See [BASE-ONBOARDING.md](./BASE-ONBOARDING.md) for adding new installations.
 
@@ -107,6 +108,9 @@ Comprehensive regulatory reference library with two tabs:
 
 **My Documents tab** — Upload personal PDFs, JPGs, and PNGs. Client-side text extraction for search. Per-document offline caching. Supabase Storage integration.
 
+### Waivers (`/waivers`)
+Full airfield waiver lifecycle management modeled after AF Form 505 and the AFCEC Playbook Appendix B. Six classification types (permanent, temporary, construction, event, extension, amendment), seven status values with mandatory comment dialogs for status transitions. Waiver detail pages include criteria & standards references, coordination tracking by office, photo attachments with camera capture, and annual review history. Individual waiver PDF export with embedded photos. Excel export of the full waiver register with criteria and coordination sheets. Annual review mode (`/waivers/annual-review`) with year-by-year review forms, KPIs, and board presentation tracking. Seeded with 17 real Selfridge ANGB (KMTC) historical waivers.
+
 ### NOTAMs (`/notams`)
 Live FAA NOTAM feed via `notams.aim.faa.gov` — no API key required. Auto-fetches NOTAMs for the current installation's ICAO code on page load. ICAO search input for querying any airport. Full NOTAM text displayed on each card in monospace. Feed status indicator, refresh button, loading/error states. Filter chips (All/FAA/LOCAL/Active/Expired). Falls back to demo data when Supabase is not configured. Draft creation for local NOTAMs.
 
@@ -122,7 +126,7 @@ Collapsible dropdown sections — Profile and About default open, all others col
 - **Inspection Templates** (`/settings/templates`) — customize airfield/lighting checklist sections and items
 
 ### More Menu (`/more`)
-Module directory linking to all features. Includes coming-soon placeholder pages for Waivers, Sync & Data, and Users & Security.
+Module directory linking to all features. Includes coming-soon placeholder pages for Sync & Data and Users & Security.
 
 ## Project Structure
 
@@ -150,10 +154,10 @@ airfield-app/
 │       ├── aircraft/page.tsx             # Aircraft database with ACN/PCN
 │       ├── reports/                      # Hub + 4 report pages (daily, discrepancies, trends, aging)
 │       ├── settings/                     # Hub + base-setup + templates
+│       ├── waivers/                       # List, create, detail, edit, annual review
 │       ├── more/page.tsx                 # Module directory
 │       ├── sync/page.tsx                 # Coming soon
-│       ├── users/page.tsx                # Coming soon
-│       └── waivers/page.tsx              # Coming soon
+│       └── users/page.tsx                # Coming soon
 ├── components/
 │   ├── layout/                           # Header, bottom-nav, page-header
 │   ├── discrepancies/                    # Cards, badges, map, modals
@@ -171,6 +175,8 @@ airfield-app/
 │   ├── weather.ts                        # Open-Meteo weather fetching
 │   ├── inspection-draft.ts              # localStorage draft persistence
 │   ├── pdf-export.ts                     # jsPDF report generation
+│   ├── waiver-pdf.ts                    # Individual waiver PDF export
+│   ├── waiver-export.ts                 # Waiver register Excel export (SheetJS)
 │   ├── regulations-data.ts              # 70 regulation entries (static seed data)
 │   ├── idb.ts                            # Shared IndexedDB helpers (6 stores)
 │   ├── pdfTextCache.ts                  # PDF text search cache (offline/server hybrid)
@@ -188,11 +194,12 @@ airfield-app/
 │       ├── inspection-templates.ts      # Template CRUD for base config
 │       ├── obstructions.ts              # Obstruction evaluation CRUD + photos
 │       ├── navaids.ts                   # NAVAID status read/update
+│       ├── waivers.ts                   # Waiver CRUD, reviews, coordination, attachments
 │       ├── regulations.ts              # Regulation CRUD + search
 │       └── activity.ts                  # Activity log write
 ├── supabase/
 │   ├── schema.sql                        # Full database schema
-│   ├── migrations/                       # 41 migration files
+│   ├── migrations/                       # 47 migration files
 │   └── functions/                        # Edge functions (PDF text extraction)
 ├── middleware.ts                          # Auth guard + demo mode bypass
 ├── public/
@@ -203,7 +210,7 @@ airfield-app/
 
 ## Database
 
-**18+ tables** across the Supabase PostgreSQL database:
+**25+ tables** across the Supabase PostgreSQL database:
 
 | Table | Purpose |
 |-------|---------|
@@ -231,6 +238,11 @@ airfield-app/
 | `user_documents` | User-uploaded personal document metadata |
 | `user_document_pages` | Extracted text per page for search |
 | `pdf_text_pages` | Server-side PDF text for full-text search |
+| `waivers` | Airfield waivers with AF-505 fields, classification, status |
+| `waiver_criteria` | UFC/standard references per waiver |
+| `waiver_attachments` | Photos and documents per waiver |
+| `waiver_reviews` | Annual review records with recommendations |
+| `waiver_coordination` | Office-by-office coordination tracking |
 
 ## Key Design Decisions
 
@@ -246,11 +258,11 @@ airfield-app/
 
 ## Current Status
 
-**Build**: Compiles and runs cleanly (20 pre-existing type warnings in report PDF files — missing `jspdf-autotable` types, run `npm install` to resolve)
+**Build**: TypeScript compiles clean (`tsc --noEmit` passes with zero errors)
 
-**Complete modules**: Dashboard, Discrepancies, Airfield Checks, Daily Inspections, NOTAMs (live FAA feed), Obstruction Evaluations, References (with My Documents), Reports (4 types), Aircraft Database, Settings (with Base Setup and Templates), More hub
+**Complete modules**: Dashboard, Discrepancies, Airfield Checks, Daily Inspections, NOTAMs (live FAA feed), Obstruction Evaluations, References (with My Documents), Reports (4 types), Aircraft Database, Waivers (full lifecycle with annual review, PDF/Excel export), Settings (with Base Setup and Templates), More hub
 
-**Placeholder modules** (coming soon pages): Waivers, Sync & Data, Users & Security
+**Placeholder modules** (coming soon pages): Sync & Data, Users & Security
 
 **API stubs** (not yet implemented): Weather METAR (`/api/weather`)
 
