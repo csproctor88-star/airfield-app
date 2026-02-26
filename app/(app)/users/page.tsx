@@ -21,9 +21,60 @@ import type { UserCardData } from '@/components/admin/user-card'
 import type { Installation, UserRole } from '@/lib/supabase/types'
 import { toast } from 'sonner'
 
+/** Fetch profiles from Supabase, with optional base filter */
+async function loadUsers(
+  supabase: ReturnType<typeof createClient>,
+  baseId: string | null,
+): Promise<UserCardData[]> {
+  if (!supabase) return []
+
+  let query = supabase
+    .from('profiles')
+    .select('*')
+    .order('last_name', { ascending: true })
+
+  if (baseId) {
+    query = query.eq('primary_base_id', baseId)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    console.error('Failed to load users:', error)
+    return []
+  }
+
+  // Load base names for display
+  const { data: allBases } = await supabase
+    .from('bases')
+    .select('id, name, icao')
+
+  const baseLookup = new Map<string, { name: string; icao: string }>()
+  if (allBases) {
+    for (const b of allBases) {
+      baseLookup.set(b.id, { name: b.name, icao: b.icao })
+    }
+  }
+
+  return (data || []).map((u: Record<string, unknown>) => ({
+    id: u.id as string,
+    email: u.email as string,
+    first_name: (u.first_name as string) || null,
+    last_name: (u.last_name as string) || null,
+    rank: (u.rank as string) || null,
+    role: (u.role as string) || 'read_only',
+    status: (u.status as string) || (u.is_active === false ? 'deactivated' : 'active'),
+    last_seen_at: (u.last_seen_at as string) || null,
+    primary_base_id: (u.primary_base_id as string) || null,
+    created_at: u.created_at as string,
+    bases: u.primary_base_id ? baseLookup.get(u.primary_base_id as string) || null : null,
+  }))
+}
+
 export default function UserManagementPage() {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
+  const [initialized, setInitialized] = useState(false)
+  const [loadingUsers, setLoadingUsers] = useState(false)
   const [users, setUsers] = useState<UserCardData[]>([])
   const [installations, setInstallations] = useState<Installation[]>([])
   const [callerRole, setCallerRole] = useState<UserRole>('read_only')
@@ -45,12 +96,12 @@ export default function UserManagementPage() {
   const isSysAdmin = callerRole === 'sys_admin'
   const isBaseAdmin = callerRole === 'base_admin'
 
-  // Load caller profile, installations, and users
+  // Initialize: load caller profile, installations, and first user list
   useEffect(() => {
     async function init() {
       const supabase = createClient()
       if (!supabase) {
-        setLoading(false)
+        setInitialized(true)
         return
       }
 
@@ -95,83 +146,46 @@ export default function UserManagementPage() {
         setInstallations(bases as Installation[])
         const userBase = (bases as Installation[]).find((b) => b.id === profile.primary_base_id)
         setCallerInstallation(userBase || null)
-
-        // Base admins default to their base
-        if (role !== 'sys_admin') {
-          setSelectedBaseId(profile.primary_base_id)
-        }
       }
 
-      setLoading(false)
+      // Determine initial base filter
+      const initialBaseFilter = role === 'sys_admin' ? null : profile.primary_base_id
+      setSelectedBaseId(initialBaseFilter)
+
+      // Load users immediately
+      const userList = await loadUsers(supabase, initialBaseFilter)
+      setUsers(userList)
+      setInitialized(true)
     }
 
     init()
   }, [router])
 
-  // Fetch users when base selection changes
+  // Refetch users when base filter changes (after init)
   const fetchUsers = useCallback(async () => {
     const supabase = createClient()
     if (!supabase) return
 
-    setLoading(true)
-
-    // Query profiles — select columns that definitely exist, handle optional ones gracefully
-    let query = supabase
-      .from('profiles')
-      .select('*')
-      .order('last_name', { ascending: true })
-
-    // Filter by selected installation
-    if (selectedBaseId) {
-      query = query.eq('primary_base_id', selectedBaseId)
-    }
-
-    const { data, error } = await query
-
-    if (error) {
-      console.error('Failed to load users:', error)
-      setUsers([])
-      setLoading(false)
-      return
-    }
-
-    // Load base names for display
-    const { data: allBases } = await supabase
-      .from('bases')
-      .select('id, name, icao')
-
-    const baseLookup = new Map<string, { name: string; icao: string }>()
-    if (allBases) {
-      for (const b of allBases) {
-        baseLookup.set(b.id, { name: b.name, icao: b.icao })
-      }
-    }
-
-    // Map to UserCardData
-    const mapped: UserCardData[] = (data || []).map((u: Record<string, unknown>) => ({
-      id: u.id as string,
-      email: u.email as string,
-      first_name: (u.first_name as string) || null,
-      last_name: (u.last_name as string) || null,
-      rank: (u.rank as string) || null,
-      role: (u.role as string) || 'read_only',
-      status: (u.status as string) || (u.is_active === false ? 'deactivated' : 'active'),
-      last_seen_at: (u.last_seen_at as string) || null,
-      primary_base_id: (u.primary_base_id as string) || null,
-      created_at: u.created_at as string,
-      bases: u.primary_base_id ? baseLookup.get(u.primary_base_id as string) || null : null,
-    }))
-
-    setUsers(mapped)
-    setLoading(false)
+    setLoadingUsers(true)
+    const userList = await loadUsers(supabase, selectedBaseId)
+    setUsers(userList)
+    setLoadingUsers(false)
   }, [selectedBaseId])
 
-  // Fetch when selectedBaseId changes or after init completes
+  // When selectedBaseId changes after init, refetch
+  const [prevBaseId, setPrevBaseId] = useState<string | null | undefined>(undefined)
   useEffect(() => {
-    if (callerRole && callerRole !== 'read_only') {
+    if (!initialized) return
+    if (prevBaseId === undefined) {
+      // First run after init — skip, already loaded
+      setPrevBaseId(selectedBaseId)
+      return
+    }
+    if (selectedBaseId !== prevBaseId) {
+      setPrevBaseId(selectedBaseId)
       fetchUsers()
     }
-  }, [callerRole, selectedBaseId, fetchUsers])
+  }, [initialized, selectedBaseId, prevBaseId, fetchUsers])
 
   // Client-side filter
   const filteredUsers = useMemo(() => {
@@ -252,8 +266,8 @@ export default function UserManagementPage() {
     }
   }
 
-  // Determine access for the initial load
-  if (loading && users.length === 0) {
+  // Show skeleton while initializing
+  if (!initialized) {
     return (
       <div style={{ padding: 16, paddingBottom: 100 }}>
         <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>User Management</div>
@@ -336,7 +350,7 @@ export default function UserManagementPage() {
       {/* User List */}
       <UserList
         users={filteredUsers}
-        loading={loading}
+        loading={loadingUsers}
         showInstallation={showInstallation}
         onSelectUser={(user) => setSelectedUser(user)}
       />
