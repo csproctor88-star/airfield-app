@@ -8,6 +8,7 @@ import { fetchNavaidStatuses, updateNavaidStatus, type NavaidStatus } from '@/li
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
 import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
+import { logActivity } from '@/lib/supabase/activity'
 import LoginActivityDialog from '@/components/login-activity-dialog'
 
 // --- Weather emoji mapping ---
@@ -37,8 +38,8 @@ function presenceLabel(lastSeen: string | null): { label: string; color: string 
 
 // --- Quick Actions (KPI badges) ---
 const QUICK_ACTIONS = [
-  { label: 'Begin/Continue Airfield Inspection', icon: '📋', color: 'var(--color-success)', href: '/inspections?action=begin' },
-  { label: 'Begin Airfield Check', icon: '🛡️', color: 'var(--color-warning)', href: '/checks' },
+  { label: 'Airfield Inspections', icon: '📋', color: 'var(--color-success)', href: '/inspections?action=begin' },
+  { label: 'Airfield Checks', icon: '🛡️', color: 'var(--color-warning)', href: '/checks' },
   { label: 'New Discrepancy', icon: '🚨', color: 'var(--color-danger)', href: '/discrepancies/new' },
 ]
 
@@ -100,6 +101,7 @@ const ADVISORY_COLORS: Record<string, { bg: string; border: string; text: string
 
 type CurrentStatusData = {
   bwc: string | null
+  bwcTime: string | null
   lastCheckType: string | null
   lastCheckTime: string | null
   inspectionCompletion: string | null
@@ -119,8 +121,10 @@ export default function HomePage() {
   const [activity, setActivity] = useState<ActivityEntry[]>([])
   const [activityExpanded, setActivityExpanded] = useState(false)
   const [currentStatus, setCurrentStatus] = useState<CurrentStatusData>({
-    bwc: null, lastCheckType: null, lastCheckTime: null, inspectionCompletion: null, rscCondition: null, rscTime: null,
+    bwc: null, bwcTime: null, lastCheckType: null, lastCheckTime: null, inspectionCompletion: null, rscCondition: null, rscTime: null,
   })
+  const [showRscTime, setShowRscTime] = useState(false)
+  const [showBwcTime, setShowBwcTime] = useState(false)
   const [advisoryDialogOpen, setAdvisoryDialogOpen] = useState(false)
   const [advisoryDraftType, setAdvisoryDraftType] = useState<'INFO' | 'CAUTION' | 'WARNING'>('INFO')
   const [advisoryDraftText, setAdvisoryDraftText] = useState('')
@@ -278,11 +282,15 @@ export default function HomePage() {
       const bashBwc = bashConditionRaw ? (bashConditionMap[bashConditionRaw] || bashConditionRaw) : null
 
       let bwc: string | null
+      let bwcTimeMs = 0
       if (inspBwc && bashBwc) {
         bwc = bashBwcTime > inspBwcTime ? bashBwc : inspBwc
+        bwcTimeMs = bashBwcTime > inspBwcTime ? bashBwcTime : inspBwcTime
       } else {
         bwc = inspBwc || bashBwc
+        bwcTimeMs = inspBwc ? inspBwcTime : bashBwcTime
       }
+      const bwcTime = bwcTimeMs ? new Date(bwcTimeMs).toTimeString().slice(0, 5) : null
 
       const checkType = lastCheck?.[0]?.check_type?.toUpperCase() || null
       const checkTime = lastCheck?.[0]?.completed_at
@@ -300,6 +308,7 @@ export default function HomePage() {
       setCurrentStatus((prev) => ({
         ...prev,
         bwc,
+        bwcTime,
         lastCheckType: checkType,
         lastCheckTime: checkTime,
         inspectionCompletion: inspTime,
@@ -361,13 +370,17 @@ export default function HomePage() {
   async function handleNavaidToggle(navaid: NavaidStatus, newStatus: 'green' | 'yellow' | 'red') {
     const notes = newStatus === 'green' ? null : (navaidNotes[navaid.id] || null)
     const ok = await updateNavaidStatus(navaid.id, newStatus, notes)
-    if (ok) loadNavaids()
+    if (ok) {
+      loadNavaids()
+      logActivity('updated', 'navaid_status', navaid.id, navaid.navaid_name, { status: newStatus }, installationId)
+    }
   }
 
   async function handleNavaidNotesSave(navaid: NavaidStatus) {
     const notes = navaidNotes[navaid.id] || null
     await updateNavaidStatus(navaid.id, navaid.status, notes)
     loadNavaids()
+    logActivity('updated', 'navaid_status', navaid.id, navaid.navaid_name, { notes }, installationId)
   }
 
   const presence = presenceLabel(userDisplay.lastSeen)
@@ -412,7 +425,11 @@ export default function HomePage() {
                 </div>
               </div>
               <div
-                onClick={() => setAdvisoryDialogOpen(true)}
+                onClick={() => {
+                  setAdvisoryDraftType(advisory?.type || 'INFO')
+                  setAdvisoryDraftText(advisory?.text || '')
+                  setAdvisoryDialogOpen(true)
+                }}
                 style={{ textAlign: 'right', cursor: 'pointer', minWidth: 60 }}
               >
                 <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Advisory</div>
@@ -433,7 +450,11 @@ export default function HomePage() {
                 </div>
               </div>
               <div
-                onClick={() => setAdvisoryDialogOpen(true)}
+                onClick={() => {
+                  setAdvisoryDraftType(advisory?.type || 'INFO')
+                  setAdvisoryDraftText(advisory?.text || '')
+                  setAdvisoryDialogOpen(true)
+                }}
                 style={{ textAlign: 'right', cursor: 'pointer', minWidth: 60 }}
               >
                 <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Advisory</div>
@@ -602,12 +623,14 @@ export default function HomePage() {
                       const newEnd = rwy.active_end === rwy.end1 ? rwy.end2 : rwy.end1
                       if (runways.length > 0) {
                         setRunwayActiveEnd(rwy.label, newEnd)
+                        logActivity('updated', 'airfield_status', 'active_runway', `RWY ${newEnd}`, { runway: rwy.label, active_end: newEnd }, installationId)
                       } else {
-                        // No configured runways: use legacy setter for backward compat
                         const designators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
                         if (designators.length === 0) return
                         const idx = designators.indexOf(activeRunway)
-                        setActiveRunway(designators[(idx + 1) % designators.length])
+                        const next = designators[(idx + 1) % designators.length]
+                        setActiveRunway(next)
+                        logActivity('updated', 'airfield_status', 'active_runway', `RWY ${next}`, { active_runway: next }, installationId)
                       }
                     }}
                     style={{
@@ -623,8 +646,10 @@ export default function HomePage() {
                       const val = e.target.value as 'open' | 'suspended' | 'closed'
                       if (runways.length > 0) {
                         setRunwayStatusForRunway(rwy.label, val)
+                        logActivity('status_updated', 'airfield_status', 'runway_status', `RWY ${rwy.active_end}`, { runway: rwy.label, status: val }, installationId)
                       } else {
                         setRunwayStatus(val)
+                        logActivity('status_updated', 'airfield_status', 'runway_status', `RWY ${activeRunway}`, { status: val }, installationId)
                       }
                     }}
                     style={{
@@ -646,19 +671,31 @@ export default function HomePage() {
       })()}
       <div className="card" style={{ marginBottom: 12, padding: '14px 12px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <div style={{ padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div
+            title={currentStatus.rscTime ? `Last checked: ${currentStatus.rscTime}` : undefined}
+            onClick={() => setShowRscTime(p => !p)}
+            style={{ padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+          >
             <div style={{ fontSize: 14, color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6 }}>RSC</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-accent)' }}>
-              {currentStatus.rscCondition
-                ? `${currentStatus.rscCondition}${currentStatus.rscTime ? ` @ ${currentStatus.rscTime}` : ''}`
-                : 'No Data'}
+              {currentStatus.rscCondition || 'No Data'}
             </div>
+            {showRscTime && currentStatus.rscTime && (
+              <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 4 }}>@ {currentStatus.rscTime}</div>
+            )}
           </div>
-          <div style={{ padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div
+            title={currentStatus.bwcTime ? `Last checked: ${currentStatus.bwcTime}` : undefined}
+            onClick={() => setShowBwcTime(p => !p)}
+            style={{ padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+          >
             <div style={{ fontSize: 14, color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6 }}>BWC</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: currentStatus.bwc === 'SEV' || currentStatus.bwc === 'PROHIB' ? 'var(--color-danger)' : currentStatus.bwc === 'MOD' ? 'var(--color-warning)' : 'var(--color-success)' }}>
               {currentStatus.bwc || 'No Data'}
             </div>
+            {showBwcTime && currentStatus.bwcTime && (
+              <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 4 }}>@ {currentStatus.bwcTime}</div>
+            )}
           </div>
         </div>
       </div>
