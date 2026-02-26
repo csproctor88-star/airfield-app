@@ -115,9 +115,10 @@ export default function UserManagementPage() {
 
     setLoading(true)
 
+    // Query profiles — select columns that definitely exist, handle optional ones gracefully
     let query = supabase
       .from('profiles')
-      .select('id, email, first_name, last_name, rank, role, status, last_seen_at, primary_base_id, created_at, bases(name, icao)')
+      .select('*')
       .order('last_name', { ascending: true })
 
     // Filter by selected installation
@@ -130,32 +131,47 @@ export default function UserManagementPage() {
     if (error) {
       console.error('Failed to load users:', error)
       setUsers([])
-    } else {
-      // Map joined data
-      const mapped = (data || []).map((u: Record<string, unknown>) => ({
-        ...u,
-        status: (u.status as string) || 'active',
-        bases: u.bases as { name: string; icao: string } | null,
-      })) as UserCardData[]
-      setUsers(mapped)
+      setLoading(false)
+      return
     }
 
+    // Load base names for display
+    const { data: allBases } = await supabase
+      .from('bases')
+      .select('id, name, icao')
+
+    const baseLookup = new Map<string, { name: string; icao: string }>()
+    if (allBases) {
+      for (const b of allBases) {
+        baseLookup.set(b.id, { name: b.name, icao: b.icao })
+      }
+    }
+
+    // Map to UserCardData
+    const mapped: UserCardData[] = (data || []).map((u: Record<string, unknown>) => ({
+      id: u.id as string,
+      email: u.email as string,
+      first_name: (u.first_name as string) || null,
+      last_name: (u.last_name as string) || null,
+      rank: (u.rank as string) || null,
+      role: (u.role as string) || 'read_only',
+      status: (u.status as string) || (u.is_active === false ? 'deactivated' : 'active'),
+      last_seen_at: (u.last_seen_at as string) || null,
+      primary_base_id: (u.primary_base_id as string) || null,
+      created_at: u.created_at as string,
+      bases: u.primary_base_id ? baseLookup.get(u.primary_base_id as string) || null : null,
+    }))
+
+    setUsers(mapped)
     setLoading(false)
   }, [selectedBaseId])
 
-  useEffect(() => {
-    if (!loading || users.length === 0) {
-      fetchUsers()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBaseId])
-
-  // Initial fetch
+  // Fetch when selectedBaseId changes or after init completes
   useEffect(() => {
     if (callerRole && callerRole !== 'read_only') {
       fetchUsers()
     }
-  }, [callerRole, fetchUsers])
+  }, [callerRole, selectedBaseId, fetchUsers])
 
   // Client-side filter
   const filteredUsers = useMemo(() => {
