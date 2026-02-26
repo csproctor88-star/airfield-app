@@ -37,6 +37,8 @@ export async function middleware(request: NextRequest) {
     if (
       !user
       && !request.nextUrl.pathname.startsWith('/login')
+      && !request.nextUrl.pathname.startsWith('/reset-password')
+      && !request.nextUrl.pathname.startsWith('/auth/confirm')
       && !request.nextUrl.pathname.startsWith('/api/installations')
     ) {
       const redirectUrl = request.nextUrl.clone()
@@ -49,6 +51,8 @@ export async function middleware(request: NextRequest) {
     // If auth check fails, redirect to login as a safety fallback
     if (
       !request.nextUrl.pathname.startsWith('/login')
+      && !request.nextUrl.pathname.startsWith('/reset-password')
+      && !request.nextUrl.pathname.startsWith('/auth/confirm')
       && !request.nextUrl.pathname.startsWith('/api/installations')
     ) {
       const redirectUrl = request.nextUrl.clone()
