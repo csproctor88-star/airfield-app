@@ -110,7 +110,7 @@ export default function WaiversPage() {
         <div style={{ fontSize: 16, fontWeight: 800 }}>Waivers</div>
         <div style={{ display: 'flex', gap: 6 }}>
           <Link
-            href="/waivers/annual-review"
+            href={`/waivers/annual-review/${new Date().getFullYear()}`}
             style={{
               background: '#F59E0B14',
               border: '1px solid #F59E0B33',

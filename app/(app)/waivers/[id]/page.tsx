@@ -8,7 +8,8 @@ import { ActionButton } from '@/components/ui/button'
 import {
   fetchWaiver, updateWaiverStatus, deleteWaiver,
   fetchWaiverCriteria, fetchWaiverAttachments, fetchWaiverReviews, fetchWaiverCoordination,
-  uploadWaiverAttachment, createWaiverReview, upsertWaiverCoordination,
+  uploadWaiverAttachment, createWaiverReview, deleteWaiverReview, upsertWaiverCoordination,
+  updateWaiverCoordination, deleteWaiverCoordination,
   type WaiverRow, type WaiverCriteriaRow, type WaiverAttachmentRow, type WaiverReviewRow, type WaiverCoordinationRow,
 } from '@/lib/supabase/waivers'
 import { createClient } from '@/lib/supabase/client'
@@ -169,53 +170,7 @@ export default function WaiverDetailPage() {
     }
   }
 
-  const handleAddCoordination = async () => {
-    if (usingDemo) {
-      toast.success('Coordination added (demo mode)')
-      setActiveModal(null)
-      return
-    }
-
-    setActionLoading(true)
-
-    // Auto-pull current user name
-    let coordinatorName = ''
-    const supabase = createClient()
-    if (supabase) {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data: profile } = await supabase.from('profiles').select('name, rank').eq('id', user.id).single()
-        coordinatorName = profile?.rank ? `${profile.rank} ${profile.name}` : (profile?.name || user.email || '')
-      }
-    }
-
-    const newEntry = {
-      office: coordOffice,
-      office_label: coordOffice === 'other' ? coordLabel : undefined,
-      coordinator_name: coordinatorName,
-      coordinated_date: new Date().toISOString().split('T')[0],
-      status: coordStatus,
-      comments: coordComments || undefined,
-    }
-    const existing = coordination.map(c => ({
-      office: c.office,
-      office_label: c.office_label || undefined,
-      coordinator_name: c.coordinator_name || undefined,
-      coordinated_date: c.coordinated_date || undefined,
-      status: c.status,
-      comments: c.comments || undefined,
-    }))
-    const { error } = await upsertWaiverCoordination(params.id as string, [...existing, newEntry])
-    if (error) {
-      toast.error(error)
-    } else {
-      toast.success('Coordination entry added')
-      await loadData()
-    }
-    setActionLoading(false)
-    setActiveModal(null)
-    setCoordComments('')
-  }
+  // handleAddCoordination is now replaced by handleSaveCoordination above
 
   const handleAddReview = async () => {
     if (usingDemo) {
@@ -274,6 +229,120 @@ export default function WaiverDetailPage() {
     setActiveModal(null)
     setAttachFile(null)
     setAttachCaption('')
+  }
+
+  const handleDeleteReview = async (reviewId: string, waiverId: string, year: number) => {
+    if (usingDemo) {
+      toast.success('Review removed (demo mode)')
+      return
+    }
+    if (!confirm(`Remove the ${year} review? This will also clear the waiver's last reviewed date.`)) return
+
+    setActionLoading(true)
+    const { error } = await deleteWaiverReview(reviewId, waiverId)
+    if (error) {
+      toast.error(error)
+    } else {
+      toast.success('Review removed')
+      await loadData()
+    }
+    setActionLoading(false)
+  }
+
+  const [editingCoordId, setEditingCoordId] = useState<string | null>(null)
+
+  const handleEditCoordination = (c: WaiverCoordinationRow) => {
+    setEditingCoordId(c.id)
+    setCoordOffice(c.office)
+    setCoordLabel(c.office_label || '')
+    setCoordStatus(c.status)
+    setCoordComments(c.comments || '')
+    setActiveModal('coordination')
+  }
+
+  const handleDeleteCoordination = async (id: string) => {
+    if (usingDemo) {
+      toast.success('Coordination entry removed (demo mode)')
+      return
+    }
+    if (!confirm('Delete this coordination entry?')) return
+
+    setActionLoading(true)
+    const { error } = await deleteWaiverCoordination(id)
+    if (error) {
+      toast.error(error)
+    } else {
+      toast.success('Coordination entry removed')
+      await loadData()
+    }
+    setActionLoading(false)
+  }
+
+  const handleSaveCoordination = async () => {
+    if (usingDemo) {
+      toast.success('Coordination saved (demo mode)')
+      setActiveModal(null)
+      setEditingCoordId(null)
+      return
+    }
+
+    setActionLoading(true)
+
+    if (editingCoordId) {
+      // Update existing entry
+      const { error } = await updateWaiverCoordination(editingCoordId, {
+        office: coordOffice,
+        office_label: coordOffice === 'other' ? coordLabel : null,
+        status: coordStatus,
+        comments: coordComments || null,
+      })
+      if (error) {
+        toast.error(error)
+      } else {
+        toast.success('Coordination entry updated')
+        await loadData()
+      }
+    } else {
+      // Add new entry (auto-pull user name)
+      let coordinatorName = ''
+      const supabase = createClient()
+      if (supabase) {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: profile } = await supabase.from('profiles').select('name, rank').eq('id', user.id).single()
+          coordinatorName = profile?.rank ? `${profile.rank} ${profile.name}` : (profile?.name || user.email || '')
+        }
+      }
+
+      const newEntry = {
+        office: coordOffice,
+        office_label: coordOffice === 'other' ? coordLabel : undefined,
+        coordinator_name: coordinatorName,
+        coordinated_date: new Date().toISOString().split('T')[0],
+        status: coordStatus,
+        comments: coordComments || undefined,
+      }
+      const existing = coordination.map(c => ({
+        office: c.office,
+        office_label: c.office_label || undefined,
+        coordinator_name: c.coordinator_name || undefined,
+        coordinated_date: c.coordinated_date || undefined,
+        status: c.status,
+        comments: c.comments || undefined,
+      }))
+      const { error } = await upsertWaiverCoordination(params.id as string, [...existing, newEntry])
+      if (error) {
+        toast.error(error)
+      } else {
+        toast.success('Coordination entry added')
+        await loadData()
+      }
+    }
+
+    setActionLoading(false)
+    setActiveModal(null)
+    setEditingCoordId(null)
+    setCoordComments('')
   }
 
   if (loading) {
@@ -524,23 +593,39 @@ export default function WaiverDetailPage() {
                 const officeInfo = WAIVER_COORDINATION_OFFICES.find(o => o.value === c.office)
                 const statusColor = c.status === 'concur' ? '#10B981' : c.status === 'non_concur' ? '#EF4444' : '#F59E0B'
                 return (
-                  <div key={c.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < demoCoordination.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-1)' }}>{officeInfo?.label || c.office_label || c.office}</div>
-                      <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
-                        {c.coordinator_name && <span>{c.coordinator_name}</span>}
-                        {c.coordinated_date && <span> &bull; {formatDate(c.coordinated_date)}</span>}
+                  <div key={c.id || i} style={{ padding: '8px 0', borderBottom: i < demoCoordination.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-1)' }}>{officeInfo?.label || c.office_label || c.office}</div>
+                        <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
+                          {c.coordinator_name && <span>{c.coordinator_name}</span>}
+                          {c.coordinated_date && <span> &bull; {formatDate(c.coordinated_date)}</span>}
+                        </div>
+                        {c.comments && <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 2 }}>{c.comments}</div>}
                       </div>
-                      {c.comments && <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 2 }}>{c.comments}</div>}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        <Badge label={c.status === 'non_concur' ? 'Non-Concur' : titleCase(c.status)} color={statusColor} />
+                        <button
+                          onClick={() => handleEditCoordination(c)}
+                          style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCoordination(c.id)}
+                          style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
-                    <Badge label={c.status === 'non_concur' ? 'Non-Concur' : titleCase(c.status)} color={statusColor} />
                   </div>
                 )
               })
             )}
             <button
               type="button"
-              onClick={() => setActiveModal('coordination')}
+              onClick={() => { setEditingCoordId(null); setCoordOffice('civil_engineer'); setCoordLabel(''); setCoordStatus('concur'); setCoordComments(''); setActiveModal('coordination') }}
               style={{
                 marginTop: 8, width: '100%', padding: 8, borderRadius: 6, border: '1px dashed var(--color-border)',
                 background: 'transparent', color: 'var(--color-cyan)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
@@ -628,7 +713,16 @@ export default function WaiverDetailPage() {
                   <div key={r.id || i} style={{ padding: '8px 10px', background: 'var(--color-bg-elevated)', borderRadius: 8, border: '1px solid var(--color-border)', marginBottom: 6 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-1)' }}>{r.review_year} Review</span>
-                      {recInfo && <Badge label={recInfo.label} color={recColor} />}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {recInfo && <Badge label={recInfo.label} color={recColor} />}
+                        <button
+                          onClick={() => handleDeleteReview(r.id, w.id, r.review_year)}
+                          disabled={actionLoading}
+                          style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 10, fontWeight: 600, cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
                       {r.review_date && <span>Reviewed {formatDate(r.review_date)}</span>}
@@ -765,7 +859,7 @@ export default function WaiverDetailPage() {
       {activeModal === 'coordination' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ background: 'var(--color-bg-surface)', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Add Coordination</div>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>{editingCoordId ? 'Edit Coordination' : 'Add Coordination'}</div>
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">Office</span>
               <select className="input-dark" value={coordOffice} onChange={(e) => setCoordOffice(e.target.value as WaiverCoordinationOffice)} style={{ width: '100%' }}>
@@ -802,11 +896,11 @@ export default function WaiverDetailPage() {
               <textarea className="input-dark" rows={2} style={{ resize: 'vertical' }} value={coordComments} onChange={(e) => setCoordComments(e.target.value)} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <button onClick={() => setActiveModal(null)} style={{ padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={() => { setActiveModal(null); setEditingCoordId(null) }} style={{ padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Cancel
               </button>
-              <button className="btn-primary" onClick={handleAddCoordination} disabled={actionLoading}>
-                {actionLoading ? 'Saving...' : 'Add Entry'}
+              <button className="btn-primary" onClick={handleSaveCoordination} disabled={actionLoading}>
+                {actionLoading ? 'Saving...' : editingCoordId ? 'Save Changes' : 'Add Entry'}
               </button>
             </div>
           </div>

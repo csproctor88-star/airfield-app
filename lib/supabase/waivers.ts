@@ -677,6 +677,36 @@ export async function updateWaiverReview(
   return { data: data as WaiverReviewRow, error: null }
 }
 
+export async function deleteWaiverReview(
+  id: string,
+  waiverId: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from('waiver_reviews')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    console.error('Failed to delete waiver review:', error.message)
+    return { error: error.message }
+  }
+
+  // Clear last_reviewed_date and next_review_due on the waiver
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase as any)
+    .from('waivers')
+    .update({ last_reviewed_date: null, next_review_due: null })
+    .eq('id', waiverId)
+
+  logActivity('waiver_review_deleted', 'waiver_reviews', id)
+
+  return { error: null }
+}
+
 // ─── Coordination ────────────────────────────────────────────
 
 export async function fetchWaiverCoordination(waiverId: string): Promise<WaiverCoordinationRow[]> {
@@ -733,6 +763,45 @@ export async function upsertWaiverCoordination(
 
   if (error) {
     console.error('Failed to upsert waiver coordination:', error.message)
+    return { error: error.message }
+  }
+
+  return { error: null }
+}
+
+export async function updateWaiverCoordination(
+  id: string,
+  fields: Partial<Omit<WaiverCoordinationRow, 'id' | 'waiver_id'>>
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from('waiver_coordination')
+    .update(fields)
+    .eq('id', id)
+
+  if (error) {
+    console.error('Failed to update waiver coordination:', error.message)
+    return { error: error.message }
+  }
+
+  return { error: null }
+}
+
+export async function deleteWaiverCoordination(id: string): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from('waiver_coordination')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    console.error('Failed to delete waiver coordination:', error.message)
     return { error: error.message }
   }
 
