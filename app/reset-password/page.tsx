@@ -14,18 +14,27 @@ export default function ResetPasswordPage() {
   const [sessionReady, setSessionReady] = useState(false)
   const router = useRouter()
 
-  // Check that we have an authenticated session (from the recovery link)
+  // Establish session from recovery link (handles hash fragments for implicit flow)
   useEffect(() => {
     const supabase = createClient()
     if (!supabase) return
 
+    // Listen for PASSWORD_RECOVERY event (triggered when hash fragment contains recovery token)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+        setSessionReady(true)
+        setError(null)
+      }
+    })
+
+    // Also check for existing session (set by /auth/confirm server-side code exchange)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setSessionReady(true)
-      } else {
-        setError('No active session. The reset link may have expired. Please request a new one.')
       }
     })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
