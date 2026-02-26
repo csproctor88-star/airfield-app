@@ -17,6 +17,7 @@ export default function AnnualReviewPage() {
   const [reviews, setReviews] = useState<WaiverReviewRow[]>([])
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
+  const [kpiFilter, setKpiFilter] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -48,6 +49,15 @@ export default function AnnualReviewPage() {
   const notReviewedCount = activeWaivers.length - reviewedCount
   const boardCount = allReviews.filter(r => r.presented_to_facilities_board).length
 
+  const kpiPredicates: Record<string, (w: WaiverRow) => boolean> = {
+    active: () => true,
+    reviewed: (w) => reviewedIds.has(w.id),
+    not_reviewed: (w) => !reviewedIds.has(w.id),
+    to_board: (w) => allReviews.some(r => r.waiver_id === w.id && r.presented_to_facilities_board),
+  }
+
+  const filteredWaivers = kpiFilter ? activeWaivers.filter(kpiPredicates[kpiFilter]) : activeWaivers
+
   const handleExport = async () => {
     const { generateAnnualReviewExcel } = await import('@/lib/waiver-export')
     generateAnnualReviewExcel(activeWaivers, allReviews, year, { name: 'Installation', icao: 'KMTC' })
@@ -72,11 +82,11 @@ export default function AnnualReviewPage() {
 
       {/* Year Selector */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, justifyContent: 'center' }}>
-        <button onClick={() => setYear(y => y - 1)} style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '6px 10px', color: 'var(--color-text-2)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+        <button onClick={() => { setYear(y => y - 1); setKpiFilter(null) }} style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '6px 10px', color: 'var(--color-text-2)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
           &larr;
         </button>
         <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{year}</span>
-        <button onClick={() => setYear(y => y + 1)} disabled={year >= currentYear}
+        <button onClick={() => { setYear(y => y + 1); setKpiFilter(null) }} disabled={year >= currentYear}
           style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '6px 10px', color: year >= currentYear ? 'var(--color-text-4)' : 'var(--color-text-2)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
           &rarr;
         </button>
@@ -85,27 +95,40 @@ export default function AnnualReviewPage() {
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
         {[
-          { label: 'ACTIVE', value: activeWaivers.length, color: '#8B5CF6' },
-          { label: 'REVIEWED', value: reviewedCount, color: '#22C55E' },
-          { label: 'NOT REVIEWED', value: notReviewedCount, color: notReviewedCount > 0 ? '#EF4444' : '#22C55E' },
-          { label: 'TO BOARD', value: boardCount, color: '#3B82F6' },
-        ].map(k => (
-          <div key={k.label} style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: 10, padding: '8px 4px', textAlign: 'center' }}>
-            <div style={{ fontSize: 9, color: 'var(--color-text-3)', letterSpacing: '0.08em', fontWeight: 600 }}>{k.label}</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: k.color }}>{k.value}</div>
-          </div>
-        ))}
+          { label: 'ACTIVE', key: 'active', value: activeWaivers.length, color: '#8B5CF6' },
+          { label: 'REVIEWED', key: 'reviewed', value: reviewedCount, color: '#22C55E' },
+          { label: 'NOT REVIEWED', key: 'not_reviewed', value: notReviewedCount, color: notReviewedCount > 0 ? '#EF4444' : '#22C55E' },
+          { label: 'TO BOARD', key: 'to_board', value: boardCount, color: '#3B82F6' },
+        ].map(k => {
+          const active = kpiFilter === k.key
+          return (
+            <div
+              key={k.label}
+              onClick={() => setKpiFilter(active ? null : k.key)}
+              style={{
+                background: active ? `${k.color}14` : 'var(--color-bg-surface)',
+                border: `1px solid ${active ? `${k.color}44` : 'var(--color-border)'}`,
+                borderRadius: 10, padding: '8px 4px', textAlign: 'center', cursor: 'pointer',
+              }}
+            >
+              <div style={{ fontSize: 9, color: active ? k.color : 'var(--color-text-3)', letterSpacing: '0.08em', fontWeight: 600 }}>{k.label}</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: k.color }}>{k.value}</div>
+            </div>
+          )
+        })}
       </div>
 
       {loading ? (
         <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 13 }}>Loading...</div>
       ) : (
         <>
-          {activeWaivers.length === 0 && (
-            <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 13 }}>No active waivers for review</div>
+          {filteredWaivers.length === 0 && (
+            <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 13 }}>
+              {activeWaivers.length === 0 ? 'No active waivers for review' : 'No waivers match this filter'}
+            </div>
           )}
 
-          {activeWaivers.map(w => {
+          {filteredWaivers.map(w => {
             const reviewed = reviewedIds.has(w.id)
             const review = allReviews.find(r => r.waiver_id === w.id)
             const classInfo = getClassInfo(w.classification)
