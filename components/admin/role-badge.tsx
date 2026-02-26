@@ -1,25 +1,23 @@
 'use client'
 
-const ROLE_STYLES: Record<string, { bg: string; text: string; border: string; label: string }> = {
-  sys_admin:   { bg: 'rgba(127,29,29,0.3)',  text: '#F87171', border: 'rgba(185,28,28,0.5)',  label: 'SYS ADMIN' },
-  base_admin:  { bg: 'rgba(22,78,99,0.3)',   text: '#22D3EE', border: 'rgba(14,116,144,0.5)', label: 'BASE ADMIN' },
-  airfield_manager: { bg: 'rgba(22,78,99,0.3)', text: '#22D3EE', border: 'rgba(14,116,144,0.5)', label: 'AFM' },
-  namo:        { bg: 'rgba(22,78,99,0.3)',   text: '#22D3EE', border: 'rgba(14,116,144,0.5)', label: 'NAMO' },
-  amops:       { bg: 'rgba(51,65,85,0.5)',   text: '#CBD5E1', border: 'rgba(71,85,105,0.5)',  label: 'AMOPS' },
-  ces:         { bg: 'rgba(51,65,85,0.5)',   text: '#CBD5E1', border: 'rgba(71,85,105,0.5)',  label: 'CES' },
-  safety:      { bg: 'rgba(51,65,85,0.5)',   text: '#CBD5E1', border: 'rgba(71,85,105,0.5)',  label: 'SAFETY' },
-  atc:         { bg: 'rgba(51,65,85,0.5)',   text: '#CBD5E1', border: 'rgba(71,85,105,0.5)',  label: 'ATC' },
-  read_only:   { bg: 'rgba(51,65,85,0.5)',   text: '#CBD5E1', border: 'rgba(71,85,105,0.5)',  label: 'READ ONLY' },
+const ROLE_CLASSES: Record<string, { className: string; label: string }> = {
+  sys_admin:        { className: 'badge-role-sysadmin', label: 'SYS ADMIN' },
+  base_admin:       { className: 'badge-role-baseadmin', label: 'BASE ADMIN' },
+  airfield_manager: { className: 'badge-role-baseadmin', label: 'AFM' },
+  namo:             { className: 'badge-role-baseadmin', label: 'NAMO' },
+  amops:            { className: 'badge-role-user', label: 'AMOPS' },
+  ces:              { className: 'badge-role-user', label: 'CES' },
+  safety:           { className: 'badge-role-user', label: 'SAFETY' },
+  atc:              { className: 'badge-role-user', label: 'ATC' },
+  read_only:        { className: 'badge-role-user', label: 'READ ONLY' },
 }
 
 export function RoleBadge({ role }: { role: string }) {
-  const style = ROLE_STYLES[role] || ROLE_STYLES.read_only
+  const config = ROLE_CLASSES[role] || ROLE_CLASSES.read_only
   return (
     <span
+      className={config.className}
       style={{
-        background: style.bg,
-        color: style.text,
-        border: `1px solid ${style.border}`,
         padding: '1px 6px',
         borderRadius: 4,
         fontSize: 9,
@@ -30,7 +28,7 @@ export function RoleBadge({ role }: { role: string }) {
         display: 'inline-block',
       }}
     >
-      {style.label}
+      {config.label}
     </span>
   )
 }

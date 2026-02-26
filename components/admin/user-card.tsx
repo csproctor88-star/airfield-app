@@ -76,7 +76,7 @@ export function UserCard({ user, showInstallation, onSelect }: UserCardProps) {
           <div />
         )}
         <div style={{ fontSize: 10, color: 'var(--color-text-4)' }}>
-          Last: {lastActive}
+          Last Seen: {lastActive}
         </div>
       </div>
     </button>

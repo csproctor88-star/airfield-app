@@ -171,6 +171,75 @@
   }
 }
 
+  /* ── User Management Badges ── */
+
+  /* Status badges */
+  .badge-status-active {
+    background: rgba(20, 83, 45, 0.3);
+    color: #4ADE80;
+    border: 1px solid rgba(21, 128, 61, 0.5);
+  }
+  .badge-status-deactivated {
+    background: rgba(127, 29, 29, 0.3);
+    color: #F87171;
+    border: 1px solid rgba(185, 28, 28, 0.5);
+  }
+  .badge-status-pending {
+    background: rgba(120, 53, 15, 0.3);
+    color: #FBBF24;
+    border: 1px solid rgba(161, 98, 7, 0.5);
+  }
+
+  /* Role badges */
+  .badge-role-sysadmin {
+    background: rgba(127, 29, 29, 0.3);
+    color: #F87171;
+    border: 1px solid rgba(185, 28, 28, 0.5);
+  }
+  .badge-role-baseadmin {
+    background: rgba(22, 78, 99, 0.3);
+    color: #22D3EE;
+    border: 1px solid rgba(14, 116, 144, 0.5);
+  }
+  .badge-role-user {
+    background: rgba(51, 65, 85, 0.5);
+    color: #CBD5E1;
+    border: 1px solid rgba(71, 85, 105, 0.5);
+  }
+
+  /* Light theme overrides */
+  [data-theme="light"] .badge-status-active {
+    background: #DCFCE7;
+    color: #15803D;
+    border: 1px solid #BBF7D0;
+  }
+  [data-theme="light"] .badge-status-deactivated {
+    background: #FEE2E2;
+    color: #B91C1C;
+    border: 1px solid #FECACA;
+  }
+  [data-theme="light"] .badge-status-pending {
+    background: #FEF3C7;
+    color: #92400E;
+    border: 1px solid #FDE68A;
+  }
+  [data-theme="light"] .badge-role-sysadmin {
+    background: #FEE2E2;
+    color: #B91C1C;
+    border: 1px solid #FECACA;
+  }
+  [data-theme="light"] .badge-role-baseadmin {
+    background: #CFFAFE;
+    color: #155E75;
+    border: 1px solid #A5F3FC;
+  }
+  [data-theme="light"] .badge-role-user {
+    background: #F1F5F9;
+    color: #475569;
+    border: 1px solid #E2E8F0;
+  }
+}
+
 @layer utilities {
   /* Minimum 44x44px touch targets per SRS Section 7.1 */
   .touch-target {
