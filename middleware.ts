@@ -38,6 +38,7 @@ export async function middleware(request: NextRequest) {
       !user
       && !request.nextUrl.pathname.startsWith('/login')
       && !request.nextUrl.pathname.startsWith('/reset-password')
+      && !request.nextUrl.pathname.startsWith('/setup-account')
       && !request.nextUrl.pathname.startsWith('/auth/confirm')
       && !request.nextUrl.pathname.startsWith('/api/installations')
     ) {
@@ -52,6 +53,7 @@ export async function middleware(request: NextRequest) {
     if (
       !request.nextUrl.pathname.startsWith('/login')
       && !request.nextUrl.pathname.startsWith('/reset-password')
+      && !request.nextUrl.pathname.startsWith('/setup-account')
       && !request.nextUrl.pathname.startsWith('/auth/confirm')
       && !request.nextUrl.pathname.startsWith('/api/installations')
     ) {

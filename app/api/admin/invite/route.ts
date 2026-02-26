@@ -80,9 +80,11 @@ export async function POST(request: Request) {
     }
 
     // Invite user via Supabase auth admin
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || request.headers.get('origin') || ''
     const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
       email,
       {
+        redirectTo: `${siteUrl}/auth/confirm?next=/setup-account`,
         data: {
           first_name: firstName.trim(),
           last_name: lastName.trim(),
