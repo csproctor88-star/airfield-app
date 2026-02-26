@@ -160,7 +160,7 @@ export default function LoginPage() {
       if (signInData?.user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('status')
+          .select('status, last_seen_at')
           .eq('id', signInData.user.id)
           .single()
 
@@ -168,6 +168,12 @@ export default function LoginPage() {
           await supabase.auth.signOut()
           setError('Your account has been deactivated. Contact your administrator.')
           return
+        }
+
+        // Stash previous login timestamp so the dashboard can show
+        // activity that happened while the user was away
+        if (profile?.last_seen_at) {
+          try { sessionStorage.setItem('glidepath_previous_login_at', profile.last_seen_at) } catch { /* noop */ }
         }
 
         // Update last_seen_at on successful login

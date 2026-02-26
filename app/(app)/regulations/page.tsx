@@ -468,7 +468,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
         {showFavSettings && (
           <div style={{
             marginTop: 8, padding: '10px 10px',
-            background: 'rgba(15,23,42,0.6)', borderRadius: 6,
+            background: 'var(--color-bg-inset)', borderRadius: 6,
             border: '1px solid var(--color-border)',
             display: 'flex', flexDirection: 'column', gap: 10,
           }}>
@@ -607,8 +607,8 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                 value={categoryFilter}
                 onChange={e => setCategoryFilter(e.target.value)}
                 style={{
-                  width: '100%', padding: '6px 8px', background: 'rgba(15,23,42,0.8)',
-                  border: '1px solid var(--color-bg-elevated)', borderRadius: 6, color: 'var(--color-text-1)',
+                  width: '100%', padding: '6px 8px', background: 'var(--color-bg-inset)',
+                  border: '1px solid var(--color-border)', borderRadius: 6, color: 'var(--color-text-1)',
                   fontSize: 12, fontFamily: 'inherit', outline: 'none',
                 }}
               >
@@ -624,8 +624,8 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                 value={pubTypeFilter}
                 onChange={e => setPubTypeFilter(e.target.value)}
                 style={{
-                  width: '100%', padding: '6px 8px', background: 'rgba(15,23,42,0.8)',
-                  border: '1px solid var(--color-bg-elevated)', borderRadius: 6, color: 'var(--color-text-1)',
+                  width: '100%', padding: '6px 8px', background: 'var(--color-bg-inset)',
+                  border: '1px solid var(--color-border)', borderRadius: 6, color: 'var(--color-text-1)',
                   fontSize: 12, fontFamily: 'inherit', outline: 'none',
                 }}
               >
@@ -1049,8 +1049,8 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
   }, [form, tagsInput, pdfFile, onAdd])
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '8px 10px', background: 'rgba(15,23,42,0.8)',
-    border: '1px solid var(--color-bg-elevated)', borderRadius: 6, color: 'var(--color-text-1)',
+    width: '100%', padding: '8px 10px', background: 'var(--color-bg-inset)',
+    border: '1px solid var(--color-border)', borderRadius: 6, color: 'var(--color-text-1)',
     fontSize: 13, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
   }
 
@@ -1073,8 +1073,8 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 500,
-          background: '#0B1120', borderRadius: 12,
-          border: '1px solid rgba(56,189,248,0.15)',
+          background: 'var(--color-bg-surface-solid)', borderRadius: 12,
+          border: '1px solid var(--color-border)',
           padding: 20, position: 'relative',
         }}
       >

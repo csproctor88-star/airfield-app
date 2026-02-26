@@ -8,6 +8,7 @@ import { fetchNavaidStatuses, updateNavaidStatus, type NavaidStatus } from '@/li
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
 import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
+import LoginActivityDialog from '@/components/login-activity-dialog'
 
 // --- Weather emoji mapping ---
 function weatherEmoji(conditions: string): string {
@@ -373,6 +374,7 @@ export default function HomePage() {
 
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
+      <LoginActivityDialog />
       {/* ===== Clock + User ===== */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <span style={{ fontSize: 22, fontWeight: 800 }}>{time || '--:--'}</span>

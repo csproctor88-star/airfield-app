@@ -41,7 +41,7 @@ const CORE_PUBLICATIONS: RegulationEntry[] = [
     is_core: true,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['AOF', 'AO-CV', 'AFPD 13-2', 'airfield operations', 'commander responsibilities', 'waiver'],
+    tags: ['AOF', 'AO-CV', 'AFPD 13-2', 'airfield operations', 'commander responsibilities', 'waiver', 'MAJCOM', 'compliance', 'airfield organization', 'staffing', 'oversight', 'runway operations', 'airfield policy', 'waivers process', 'AF Form 505'],
   },
   {
     reg_id: 'DAFMAN 13-204, Vol. 2',
@@ -56,7 +56,7 @@ const CORE_PUBLICATIONS: RegulationEntry[] = [
     is_core: true,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['AM', 'airfield management', 'NOTAM', 'inspections', 'airfield driving', 'transient aircraft'],
+    tags: ['AM', 'airfield management', 'NOTAM', 'inspections', 'airfield driving', 'transient aircraft', 'flight plans', 'runway closures', 'AM duties', 'FOD walk', 'RSC', 'RCR', 'BWC', 'bird watch condition', 'airfield checks', 'local procedures'],
   },
   {
     reg_id: 'DAFMAN 13-204, Vol. 3',
@@ -71,7 +71,7 @@ const CORE_PUBLICATIONS: RegulationEntry[] = [
     is_core: true,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['ATC', 'air traffic control', 'facility rating', 'watch supervisor', 'JO 7110.65'],
+    tags: ['ATC', 'air traffic control', 'facility rating', 'watch supervisor', 'JO 7110.65', 'tower', 'approach control', 'RAPCON', 'GCA', 'controller training', 'separation', 'phraseology', 'local procedures', 'radar'],
   },
 ]
 
@@ -93,7 +93,7 @@ const SECTION_I: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['publications', 'forms', 'administrative'],
+    tags: ['publications', 'forms', 'administrative', 'AF forms', 'document control', 'OPR', 'records', 'policy documents', 'templates'],
   },
   {
     reg_id: 'DAFI 90-302',
@@ -108,7 +108,7 @@ const SECTION_I: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['AO-CV', 'inspection', 'compliance verification'],
+    tags: ['AO-CV', 'inspection', 'compliance verification', 'IG', 'inspector general', 'self-assessment', 'checklist', 'readiness', 'audit', 'findings', 'corrective action'],
   },
   {
     reg_id: 'DAFMAN 90-161',
@@ -123,7 +123,7 @@ const SECTION_I: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['publishing', 'manual lifecycle', 'administrative'],
+    tags: ['publishing', 'manual lifecycle', 'administrative', 'supplements', 'revision tracking', 'OPR review', 'e-publishing', 'document management'],
   },
   {
     reg_id: 'AFI 10-1002',
@@ -138,7 +138,7 @@ const SECTION_I: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['joint use', 'civilian', 'agreement', 'shared airfield'],
+    tags: ['joint use', 'civilian', 'agreement', 'shared airfield', 'commercial operations', 'FAA coordination', 'tenant', 'mixed use', 'civil-military', 'host-tenant'],
   },
   {
     reg_id: 'AFI 10-1801',
@@ -153,7 +153,7 @@ const SECTION_I: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['foreign aircraft', 'landing permits', 'international'],
+    tags: ['foreign aircraft', 'landing permits', 'international', 'diplomatic clearance', 'overflight', 'allied aircraft', 'PPR', 'prior permission required', 'visiting forces'],
   },
   {
     reg_id: 'AFI 38-402',
@@ -168,7 +168,7 @@ const SECTION_I: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['innovation', 'process improvement'],
+    tags: ['innovation', 'process improvement', 'IDEA program', 'suggestion', 'efficiency', 'cost savings', 'continuous improvement'],
   },
 ]
 
@@ -190,7 +190,7 @@ const SECTION_II: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['Part 139', 'airport certification', 'ARFF', 'emergency planning', 'joint-use'],
+    tags: ['Part 139', 'airport certification', 'ARFF', 'emergency planning', 'joint-use', 'fire department', 'crash rescue', 'airport safety', 'snow removal', 'NOTAM', 'self-inspection', 'wildlife management', 'fueling safety'],
   },
   {
     reg_id: 'AFI 10-1001',
@@ -205,7 +205,7 @@ const SECTION_II: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['civil aircraft', 'landing permits', 'fees'],
+    tags: ['civil aircraft', 'landing permits', 'fees', 'civilian landing', 'transient', 'PPR', 'landing fee', 'commercial use', 'base operations'],
   },
   {
     reg_id: 'AFI 10-2501',
@@ -220,7 +220,7 @@ const SECTION_II: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['emergency management', 'all-hazards', 'disaster response', 'mishap'],
+    tags: ['emergency management', 'all-hazards', 'disaster response', 'mishap', 'CBRN', 'evacuation', 'shelter in place', 'IFE', 'in-flight emergency', 'crash response', 'EOC', 'major accident', 'exercise'],
   },
   {
     reg_id: 'AFH 32-7084',
@@ -235,7 +235,7 @@ const SECTION_II: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['AICUZ', 'land use', 'noise', 'compatible use zones'],
+    tags: ['AICUZ', 'land use', 'noise', 'compatible use zones', 'noise contours', 'APZ', 'accident potential zone', 'encroachment', 'community planning', 'runway clear zone', 'zoning'],
   },
   {
     reg_id: 'DAFMAN 32-1084',
@@ -250,7 +250,7 @@ const SECTION_II: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['facility requirements', 'space allocation', 'hangars', 'buildings'],
+    tags: ['facility requirements', 'space allocation', 'hangars', 'buildings', 'base operations building', 'control tower', 'fire station', 'maintenance facility', 'square footage', 'MILCON'],
   },
 ]
 
@@ -272,7 +272,7 @@ const SECTION_III: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['ATC facility', 'administration', 'JO 7210.3'],
+    tags: ['ATC facility', 'administration', 'JO 7210.3', 'tower management', 'staffing', 'facility operations', 'shift scheduling', 'equipment outages', 'coordination'],
   },
   {
     reg_id: 'FAA Order JO 7110.10',
@@ -287,7 +287,7 @@ const SECTION_III: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['flight services', 'briefings', 'radio contact', 'JO 7110.10'],
+    tags: ['flight services', 'briefings', 'radio contact', 'JO 7110.10', 'pilot briefing', 'weather brief', 'flight following', 'NOTAM dissemination', 'FSS', 'preflight'],
   },
   {
     reg_id: 'FAA Order JO 1900.47',
@@ -302,7 +302,7 @@ const SECTION_III: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['ATC contingency', 'operational readiness', 'emergency', 'JO 1900.47'],
+    tags: ['ATC contingency', 'operational readiness', 'emergency', 'JO 1900.47', 'tower evacuation', 'backup facility', 'equipment failure', 'COOP', 'continuity of operations', 'degraded operations'],
   },
   {
     reg_id: 'AFI 17-221',
@@ -317,7 +317,7 @@ const SECTION_III: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['spectrum', 'radio interference', 'communications', 'ATC'],
+    tags: ['spectrum', 'radio interference', 'communications', 'ATC', 'frequency', 'jamming', 'electromagnetic', 'radio equipment', 'NAVAID interference', 'ILS', 'comms outage'],
   },
   {
     reg_id: 'AFI 33-322',
@@ -332,7 +332,7 @@ const SECTION_III: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['records management', 'radio recordings', 'logs', 'information governance'],
+    tags: ['records management', 'radio recordings', 'logs', 'information governance', 'tape recordings', 'ATC tapes', 'retention schedule', 'FOIA', 'archiving', 'documentation'],
   },
 ]
 
@@ -354,7 +354,7 @@ const SECTION_IV: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['building code', 'DoD construction', 'modernization'],
+    tags: ['building code', 'DoD construction', 'modernization', 'facility standards', 'building criteria', 'IBC', 'construction standards', 'renovation', 'MILCON'],
   },
   {
     reg_id: 'UFC 3-201-01',
@@ -369,7 +369,7 @@ const SECTION_IV: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['civil engineering', 'site development', 'grading', 'drainage'],
+    tags: ['civil engineering', 'site development', 'grading', 'drainage', 'stormwater', 'erosion control', 'earthwork', 'utilities', 'airfield drainage', 'CES', 'base civil engineer'],
   },
   {
     reg_id: 'UFC 3-260-16',
@@ -384,7 +384,7 @@ const SECTION_IV: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['PCI', 'pavement condition', 'survey', 'distress'],
+    tags: ['PCI', 'pavement condition', 'survey', 'distress', 'pavement inspection', 'cracking', 'spalling', 'FOD hazard', 'runway condition', 'taxiway condition', 'apron', 'ramp condition', 'deterioration'],
   },
   {
     reg_id: 'FAA AC 150/5300-13',
@@ -399,7 +399,7 @@ const SECTION_IV: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['airport design', 'runway layout', 'geometry', 'AC 150/5300-13'],
+    tags: ['airport design', 'runway layout', 'geometry', 'AC 150/5300-13', 'taxiway design', 'runway safety area', 'RSA', 'OFZ', 'object free zone', 'runway width', 'shoulder', 'clearway', 'stopway', 'separation distances'],
   },
   {
     reg_id: 'FAA Order 8260.3',
@@ -414,7 +414,7 @@ const SECTION_IV: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['TERPS', 'instrument approach', 'departure procedures', '8260.3'],
+    tags: ['TERPS', 'instrument approach', 'departure procedures', '8260.3', 'ILS', 'GPS approach', 'RNAV', 'OCA', 'obstacle clearance', 'minimums', 'approach lighting', 'missed approach', 'circling'],
   },
   {
     reg_id: 'MIL-STD 3007',
@@ -429,7 +429,7 @@ const SECTION_IV: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['MIL-STD', 'UFC format', 'tri-service', 'technical criteria'],
+    tags: ['MIL-STD', 'UFC format', 'tri-service', 'technical criteria', 'Army', 'Navy', 'Air Force', 'DoD standards', 'unified criteria', 'engineering standards'],
   },
   {
     reg_id: 'ICAO Annex 14',
@@ -444,7 +444,7 @@ const SECTION_IV: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['ICAO', 'aerodrome', 'international standards', 'Annex 14'],
+    tags: ['ICAO', 'aerodrome', 'international standards', 'Annex 14', 'runway markings', 'taxiway markings', 'PAPI', 'VASI', 'visual aids', 'international operations', 'aerodrome design', 'obstacle limitation surfaces'],
   },
 ]
 
@@ -466,7 +466,7 @@ const SECTION_V: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['dust control', 'FOD prevention', 'unpaved surfaces', 'engine damage'],
+    tags: ['dust control', 'FOD prevention', 'unpaved surfaces', 'engine damage', 'soil stabilization', 'aggregate', 'shoulder maintenance', 'erosion', 'gravel', 'construction zone', 'temporary surfaces'],
   },
   {
     reg_id: 'UFC 3-270-01',
@@ -481,7 +481,7 @@ const SECTION_V: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['pavement maintenance', 'spall repair', 'joint sealing', 'asphalt'],
+    tags: ['pavement maintenance', 'spall repair', 'joint sealing', 'asphalt', 'concrete repair', 'crack sealing', 'pothole', 'patching', 'runway repair', 'taxiway repair', 'FOD prevention', 'surface condition'],
   },
   {
     reg_id: 'UFC 3-270-08',
@@ -496,7 +496,7 @@ const SECTION_V: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['pavement management', 'lifecycle planning', 'long-term'],
+    tags: ['pavement management', 'lifecycle planning', 'long-term', 'PCI tracking', 'M&R', 'maintenance and repair', 'budget planning', 'pavement network', 'rehabilitation', 'overlay', 'reconstruction'],
   },
   {
     reg_id: 'UFC 4-211-01',
@@ -511,7 +511,7 @@ const SECTION_V: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['hangars', 'maintenance bays', 'structural requirements'],
+    tags: ['hangars', 'maintenance bays', 'structural requirements', 'aircraft maintenance', 'fire suppression', 'hangar doors', 'ventilation', 'fuel vapor', 'floor loads', 'corrosion control'],
   },
 ]
 
@@ -533,7 +533,7 @@ const SECTION_VI_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['AFPD', 'parent directive', 'ATC policy', 'airfield policy'],
+    tags: ['AFPD', 'parent directive', 'ATC policy', 'airfield policy', 'range management', 'airspace management', 'command authority', 'governance', 'policy directive'],
   },
   {
     reg_id: 'DAFI 13-213',
@@ -548,7 +548,7 @@ const SECTION_VI_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['airfield driving', 'vehicle operations', 'licensing', 'training'],
+    tags: ['airfield driving', 'vehicle operations', 'licensing', 'training', 'flightline driving', 'vehicle control', 'runway incursion', 'FOD', 'speed limits', 'controlled movement area', 'CMA', 'radio procedures', 'escort'],
   },
   {
     reg_id: 'DAFMAN 13-217',
@@ -563,7 +563,7 @@ const SECTION_VI_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['drop zone', 'landing zone', 'DZ', 'LZ', 'tactical airlift'],
+    tags: ['drop zone', 'landing zone', 'DZ', 'LZ', 'tactical airlift', 'airdrop', 'C-130', 'C-17', 'assault landing', 'combat offload', 'survey', 'contingency airfield'],
   },
   {
     reg_id: 'DAFI 91-212',
@@ -578,7 +578,7 @@ const SECTION_VI_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['BASH', 'bird strike', 'wildlife', 'hazard management'],
+    tags: ['BASH', 'bird strike', 'wildlife', 'hazard management', 'bird watch condition', 'BWC', 'depredation', 'habitat management', 'bird radar', 'migration', 'geese', 'raptors', 'grass management', 'attractants'],
   },
   {
     reg_id: 'DAFI 91-202',
@@ -593,7 +593,7 @@ const SECTION_VI_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['mishap prevention', 'risk management', 'safety investigation'],
+    tags: ['mishap prevention', 'risk management', 'safety investigation', 'ORM', 'hazard reporting', 'near miss', 'safety program', 'accident prevention', 'risk assessment', 'safety briefing'],
   },
   {
     reg_id: 'DAFI 91-204',
@@ -608,7 +608,7 @@ const SECTION_VI_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['safety investigation', 'mishap reports', 'incident reporting'],
+    tags: ['safety investigation', 'mishap reports', 'incident reporting', 'SIB', 'safety investigation board', 'Class A', 'Class B', 'flight mishap', 'ground mishap', 'reporting timeline', 'evidence preservation'],
   },
   {
     reg_id: 'DAFMAN 91-203',
@@ -623,7 +623,7 @@ const SECTION_VI_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['occupational safety', 'fire', 'ARFF', 'flightline', 'health standards'],
+    tags: ['occupational safety', 'fire', 'ARFF', 'flightline', 'health standards', 'PPE', 'hearing protection', 'fall protection', 'confined space', 'HAZMAT', 'fire extinguisher', 'flightline safety', 'lockout tagout'],
   },
   {
     reg_id: 'AFI 33-332',
@@ -638,7 +638,7 @@ const SECTION_VI_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['privacy', 'civil liberties', 'ATC recordings', 'personnel data'],
+    tags: ['privacy', 'civil liberties', 'ATC recordings', 'personnel data', 'Privacy Act', 'PII', 'data protection', 'FOIA', 'release of information', 'surveillance recordings'],
   },
   {
     reg_id: 'AFI 36-2101',
@@ -653,7 +653,7 @@ const SECTION_VI_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['AFSC', 'personnel classification', '1C1X1', '1C7X1', '1C8X3', '13MX'],
+    tags: ['AFSC', 'personnel classification', '1C1X1', '1C7X1', '1C8X3', '13MX', 'career field', 'ATC controller', 'airfield manager', 'RAWS technician', 'officer', 'enlisted', 'skill level', 'upgrade training'],
   },
   {
     reg_id: 'AFI 36-2670',
@@ -668,7 +668,7 @@ const SECTION_VI_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['training', 'education', 'professional development', 'total force'],
+    tags: ['training', 'education', 'professional development', 'total force', 'PME', 'CDC', 'OJT', 'on-the-job training', 'certification', 'qualification', 'career progression', 'ancillary training'],
   },
   {
     reg_id: 'AFI 32-1041',
@@ -683,7 +683,7 @@ const SECTION_VI_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['pavement evaluation', 'structural capacity', 'weight-bearing'],
+    tags: ['pavement evaluation', 'structural capacity', 'weight-bearing', 'ACN', 'PCN', 'load classification', 'heavy aircraft', 'C-5', 'C-17', 'pavement strength', 'allowable load', 'weight restrictions', 'waiver'],
   },
   {
     reg_id: 'AFMAN 11-230',
@@ -698,7 +698,7 @@ const SECTION_VI_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['instrument procedures', 'TERPS', 'approach', 'departure'],
+    tags: ['instrument procedures', 'TERPS', 'approach', 'departure', 'ILS', 'GLS', 'RNAV', 'GPS', 'OCA', 'obstacle clearance', 'approach plate', 'missed approach', 'instrument flight', 'IFR'],
   },
   {
     reg_id: 'AFMAN 11-202 Vol 3',
@@ -713,7 +713,7 @@ const SECTION_VI_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['flight rules', 'USAF', 'ATC procedures', 'general flight'],
+    tags: ['flight rules', 'USAF', 'ATC procedures', 'general flight', 'VFR', 'IFR', 'traffic pattern', 'altitude restrictions', 'formation flight', 'airspace', 'weather minimums', 'pilot responsibilities'],
   },
 ]
 
@@ -735,7 +735,7 @@ const SECTION_VI_B: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['ATC', '7110.65', 'phraseology', 'separation standards', 'procedures'],
+    tags: ['ATC', '7110.65', 'phraseology', 'separation standards', 'procedures', 'clearance', 'taxi instructions', 'takeoff', 'landing', 'radar', 'tower', 'ground control', 'position and hold', 'progressive taxi'],
   },
   {
     reg_id: '14 CFR Part 77',
@@ -750,7 +750,7 @@ const SECTION_VI_B: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['Part 77', 'obstruction evaluation', 'imaginary surfaces', 'navigable airspace'],
+    tags: ['Part 77', 'obstruction evaluation', 'imaginary surfaces', 'navigable airspace', 'obstruction', 'tower height', 'crane', 'antenna', 'Form 7460', 'airspace analysis', 'OE/AAA', 'building height', 'waiver', 'approach surface'],
   },
   {
     reg_id: '14 CFR Part 121',
@@ -765,7 +765,7 @@ const SECTION_VI_B: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['Part 121', 'air carrier', 'operations', 'certification'],
+    tags: ['Part 121', 'air carrier', 'operations', 'certification', 'commercial aviation', 'airline', 'scheduled service', 'joint-use', 'passenger operations', 'cargo'],
   },
   {
     reg_id: '14 CFR Part 380',
@@ -780,7 +780,7 @@ const SECTION_VI_B: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['Part 380', 'public charters', 'charter operations'],
+    tags: ['Part 380', 'public charters', 'charter operations', 'charter flights', 'commercial charter', 'Part 139 applicability', 'civilian operations'],
   },
   {
     reg_id: '14 CFR Part 5',
@@ -795,7 +795,7 @@ const SECTION_VI_B: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['SMS', 'safety management systems', 'Part 5', 'data sharing'],
+    tags: ['SMS', 'safety management systems', 'Part 5', 'data sharing', 'safety culture', 'risk assessment', 'safety reporting', 'tenant coordination', 'proactive safety', 'hazard identification', 'safety assurance'],
   },
   {
     reg_id: '14 CFR Part 11',
@@ -810,7 +810,7 @@ const SECTION_VI_B: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['Part 11', 'rulemaking', 'exemptions', 'petitions'],
+    tags: ['Part 11', 'rulemaking', 'exemptions', 'petitions', 'FAA waiver', 'regulatory relief', 'Part 139 exemption', 'compliance alternative', 'deviation'],
   },
   {
     reg_id: '49 CFR 830',
@@ -825,7 +825,7 @@ const SECTION_VI_B: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['NTSB', 'accident reporting', 'incident notification', 'hazard definitions'],
+    tags: ['NTSB', 'accident reporting', 'incident notification', 'hazard definitions', 'crash investigation', 'wreckage', 'fatality', 'substantial damage', 'notification timeline', 'go-team', 'preliminary report'],
   },
 ]
 
@@ -847,7 +847,7 @@ const SECTION_VI_C: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['pavement design', 'CBR', 'layered analysis', 'flexible', 'rigid'],
+    tags: ['pavement design', 'CBR', 'layered analysis', 'flexible', 'rigid', 'concrete pavement', 'asphalt pavement', 'subgrade', 'base course', 'thickness design', 'load analysis', 'ACN PCN', 'new construction'],
   },
   {
     reg_id: 'UFC 3-260-04',
@@ -862,7 +862,7 @@ const SECTION_VI_C: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['marking', 'heliport', 'traffic control devices', 'FHWA'],
+    tags: ['marking', 'heliport', 'traffic control devices', 'FHWA', 'runway markings', 'taxiway markings', 'hold short', 'ILS critical area', 'centerline', 'threshold', 'aiming point', 'signage', 'paint', 'retroreflective'],
   },
   {
     reg_id: 'UFC 3-460-01',
@@ -877,7 +877,7 @@ const SECTION_VI_C: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['fuel facilities', 'petroleum', 'storage', 'distribution', 'dispensing'],
+    tags: ['fuel facilities', 'petroleum', 'storage', 'distribution', 'dispensing', 'JP-8', 'fuel spill', 'hot refueling', 'fuel truck', 'hydrant system', 'fuel farm', 'defueling', 'containment', 'POL'],
   },
   {
     reg_id: 'UFC 3-535-01',
@@ -892,7 +892,7 @@ const SECTION_VI_C: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['airfield lighting', 'approach lights', 'runway lights', 'taxiway lights', 'obstruction lights'],
+    tags: ['airfield lighting', 'approach lights', 'runway lights', 'taxiway lights', 'obstruction lights', 'PAPI', 'VASI', 'MALSR', 'ALSF', 'HIRL', 'MIRL', 'REILs', 'beacon', 'light maintenance', 'lamp replacement', 'CCR', 'lighting vault'],
   },
   {
     reg_id: 'UFC 4-010-01',
@@ -907,7 +907,7 @@ const SECTION_VI_C: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['antiterrorism', 'force protection', 'security', 'access control'],
+    tags: ['antiterrorism', 'force protection', 'security', 'access control', 'entry control point', 'ECP', 'perimeter fence', 'standoff distance', 'restricted area', 'FPCON', 'threat level', 'vulnerability assessment'],
   },
   {
     reg_id: 'UFC 1-200-02',
@@ -922,7 +922,7 @@ const SECTION_VI_C: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: true,
     is_scrubbed: false,
-    tags: ['sustainability', 'energy', 'high-performance', 'green building'],
+    tags: ['sustainability', 'energy', 'high-performance', 'green building', 'LEED', 'energy efficiency', 'solar', 'net zero', 'EO 14057', 'facility renovation', 'environmental compliance'],
   },
 ]
 
@@ -944,7 +944,7 @@ const SECTION_VII_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: true,
-    tags: ['RAWS', 'radar', 'weather systems', 'equipment maintenance', 'flight inspection'],
+    tags: ['RAWS', 'radar', 'weather systems', 'equipment maintenance', 'flight inspection', 'ILS', 'TACAN', 'VOR', 'ASR', 'PAR', 'NAVAID', 'wind measuring', 'RVR', 'weather observation', 'calibration'],
   },
   {
     reg_id: 'DAFMAN 36-2806',
@@ -959,7 +959,7 @@ const SECTION_VII_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: true,
-    tags: ['awards', 'Blake Award', 'airfield operations awards', 'recognition'],
+    tags: ['awards', 'Blake Award', 'airfield operations awards', 'recognition', 'annual awards', 'nomination', 'achievement', 'outstanding performer', 'quarterly awards', 'decorations'],
   },
   {
     reg_id: 'AFMAN 91-223',
@@ -974,7 +974,7 @@ const SECTION_VII_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: true,
-    tags: ['aviation safety', 'SIB', 'safety investigation', 'reporting'],
+    tags: ['aviation safety', 'SIB', 'safety investigation', 'reporting', 'safety investigation board', 'aircraft accident', 'flight safety', 'witness statements', 'root cause', 'corrective action', 'safety report'],
   },
   {
     reg_id: 'AFI 36-701',
@@ -989,7 +989,7 @@ const SECTION_VII_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: true,
-    tags: ['labor relations', 'civilian employees', 'union', 'ATC civilian'],
+    tags: ['labor relations', 'civilian employees', 'union', 'ATC civilian', 'bargaining unit', 'grievance', 'work rules', 'overtime', 'shift work', 'civilian controller'],
   },
   {
     reg_id: 'AFI 36-129',
@@ -1004,7 +1004,7 @@ const SECTION_VII_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: true,
-    tags: ['civilian personnel', 'key employee', 'GS-2150', 'CONUS'],
+    tags: ['civilian personnel', 'key employee', 'GS-2150', 'CONUS', 'GS-2152', 'GS-2154', 'civilian staffing', 'position management', 'hiring', 'recruitment', 'essential personnel'],
   },
   {
     reg_id: 'AFI 51-403',
@@ -1019,7 +1019,7 @@ const SECTION_VII_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: true,
-    tags: ['international agreements', 'LOP', 'host nation', 'coordination'],
+    tags: ['international agreements', 'LOP', 'host nation', 'coordination', 'letter of procedure', 'SOFA', 'bilateral', 'overseas', 'OCONUS', 'allied operations', 'NATO'],
   },
   {
     reg_id: 'AFI 10-401',
@@ -1034,7 +1034,7 @@ const SECTION_VII_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: true,
-    tags: ['OPLAN', 'operations planning', 'execution', 'airfield tasks'],
+    tags: ['OPLAN', 'operations planning', 'execution', 'airfield tasks', 'contingency', 'deployment', 'force beddown', 'TPFDD', 'wartime operations', 'surge operations', 'bare base'],
   },
   {
     reg_id: 'AFMAN 11-502',
@@ -1049,7 +1049,7 @@ const SECTION_VII_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: true,
-    tags: ['UAS', 'sUAS', 'unmanned', 'drone', 'Groups 1-5'],
+    tags: ['UAS', 'sUAS', 'unmanned', 'drone', 'Groups 1-5', 'RPA', 'remotely piloted', 'airspace integration', 'COA', 'certificate of authorization', 'drone operations', 'counter-UAS'],
   },
   {
     reg_id: 'AFI 36-2619',
@@ -1064,7 +1064,7 @@ const SECTION_VII_A: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: true,
-    tags: ['manday', 'manning', 'ATC', 'AM', 'personnel shortfall'],
+    tags: ['manday', 'manning', 'ATC', 'AM', 'personnel shortfall', 'temporary duty', 'TDY', 'augmentation', 'staffing gap', 'budget', 'MPA', 'military personnel'],
   },
 ]
 
@@ -1086,7 +1086,7 @@ const SECTION_VII_B: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: true,
-    tags: ['special operations', 'MOA', 'ATC evaluation', 'AO-CV', 'JO 7610.14'],
+    tags: ['special operations', 'MOA', 'ATC evaluation', 'AO-CV', 'JO 7610.14', 'military operations area', 'DOT-FAA agreement', 'restricted airspace', 'military airspace', 'evaluation criteria', 'facility evaluation'],
   },
   {
     reg_id: 'FAAO 8200.1D',
@@ -1101,7 +1101,7 @@ const SECTION_VII_B: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: true,
-    tags: ['flight inspection', 'RAWS', 'NAVAID certification', '8200.1D'],
+    tags: ['flight inspection', 'RAWS', 'NAVAID certification', '8200.1D', 'flight check', 'ILS calibration', 'TACAN check', 'VOR check', 'approach verification', 'NAVAID commissioning', 'periodic inspection'],
   },
 ]
 
@@ -1123,7 +1123,7 @@ const SECTION_VII_C: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: true,
-    tags: ['NOTAM', 'issuance', 'verification', 'dissemination', 'closures'],
+    tags: ['NOTAM', 'issuance', 'verification', 'dissemination', 'closures', 'runway closure', 'taxiway closure', 'lighting outage', 'NAVAID outage', 'airfield restrictions', 'FDC NOTAM', 'D-NOTAM', 'NOTAM management'],
   },
   {
     reg_id: 'AFI 36-2110',
@@ -1138,7 +1138,7 @@ const SECTION_VII_C: RegulationEntry[] = [
     is_core: false,
     is_cross_ref: false,
     is_scrubbed: true,
-    tags: ['assignments', 'ATC', 'AM', 'controller assignment', 'total force'],
+    tags: ['assignments', 'ATC', 'AM', 'controller assignment', 'total force', 'PCS', 'permanent change of station', 'manning document', 'UMD', 'fill rate', 'deployment tasking', 'returnee'],
   },
 ]
 
