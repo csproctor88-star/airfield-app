@@ -236,7 +236,11 @@ export default function WaiverDetailPage() {
       facilities_board_date: reviewBoardDate || undefined,
     })
     if (error) {
-      toast.error(error)
+      if (error.includes('waiver_reviews_waiver_id_review_year_key') || error.includes('duplicate key')) {
+        toast.error(`This waiver has already been reviewed for ${new Date().getFullYear()}`)
+      } else {
+        toast.error(error)
+      }
     } else {
       toast.success('Review recorded')
       await loadData()
