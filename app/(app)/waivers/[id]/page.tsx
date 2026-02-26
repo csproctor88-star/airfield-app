@@ -75,6 +75,7 @@ export default function WaiverDetailPage() {
   const [fullscreenPhoto, setFullscreenPhoto] = useState(false)
   const touchStartX = useRef(0)
   const touchDeltaX = useRef(0)
+  const didSwipe = useRef(false)
 
   const loadData = useCallback(async () => {
     const supabase = createClient()
@@ -370,20 +371,17 @@ export default function WaiverDetailPage() {
                 background: 'var(--color-bg-elevated)', aspectRatio: '16/10', position: 'relative',
                 touchAction: 'pan-y', cursor: currentUrl ? 'pointer' : 'default',
               }}
-              onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; touchDeltaX.current = 0 }}
+              onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; touchDeltaX.current = 0; didSwipe.current = false }}
               onTouchMove={(e) => { touchDeltaX.current = e.touches[0].clientX - touchStartX.current }}
               onTouchEnd={() => {
-                const wasSwiped = Math.abs(touchDeltaX.current) > 50
                 if (touchDeltaX.current < -50 && carouselIndex < photos.length - 1) {
-                  setCarouselIndex(carouselIndex + 1)
+                  setCarouselIndex(carouselIndex + 1); didSwipe.current = true
                 } else if (touchDeltaX.current > 50 && carouselIndex > 0) {
-                  setCarouselIndex(carouselIndex - 1)
-                } else if (!wasSwiped && currentUrl) {
-                  setFullscreenPhoto(true)
+                  setCarouselIndex(carouselIndex - 1); didSwipe.current = true
                 }
                 touchDeltaX.current = 0
               }}
-              onClick={() => { if (currentUrl) setFullscreenPhoto(true) }}
+              onClick={() => { if (!didSwipe.current && currentUrl) setFullscreenPhoto(true) }}
             >
               {currentUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -873,20 +871,20 @@ export default function WaiverDetailPage() {
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               touchAction: 'pan-y', cursor: 'pointer',
             }}
-            onClick={() => setFullscreenPhoto(false)}
-            onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; touchDeltaX.current = 0 }}
+            onClick={() => { if (!didSwipe.current) setFullscreenPhoto(false) }}
+            onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; touchDeltaX.current = 0; didSwipe.current = false }}
             onTouchMove={(e) => { touchDeltaX.current = e.touches[0].clientX - touchStartX.current }}
             onTouchEnd={() => {
               if (touchDeltaX.current < -50 && carouselIndex < photos.length - 1) {
-                setCarouselIndex(carouselIndex + 1)
+                setCarouselIndex(carouselIndex + 1); didSwipe.current = true
               } else if (touchDeltaX.current > 50 && carouselIndex > 0) {
-                setCarouselIndex(carouselIndex - 1)
+                setCarouselIndex(carouselIndex - 1); didSwipe.current = true
               }
               touchDeltaX.current = 0
             }}
           >
             <button
-              onClick={() => setFullscreenPhoto(false)}
+              onClick={(e) => { e.stopPropagation(); setFullscreenPhoto(false) }}
               style={{
                 position: 'absolute', top: 16, right: 16, zIndex: 201,
                 background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%',
