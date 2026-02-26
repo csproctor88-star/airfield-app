@@ -395,7 +395,7 @@ export const WAIVER_STATUS_CONFIG = {
   pending:   { color: '#3B82F6', bg: '#DBEAFE', label: 'Pending' },
   approved:  { color: '#10B981', bg: '#D1FAE5', label: 'Approved' },
   active:    { color: '#8B5CF6', bg: '#EDE9FE', label: 'Active' },
-  completed: { color: '#22C55E', bg: '#DCFCE7', label: 'Completed' },
+  completed: { color: '#22C55E', bg: '#DCFCE7', label: 'Closed' },
   cancelled: { color: '#EF4444', bg: '#FEE2E2', label: 'Cancelled' },
   expired:   { color: '#F59E0B', bg: '#FEF3C7', label: 'Expired' },
 } as const

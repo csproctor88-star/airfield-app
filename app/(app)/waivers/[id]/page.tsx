@@ -22,7 +22,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
 import type { WaiverStatus, WaiverCoordinationOffice, WaiverCoordinationStatus, WaiverAttachmentType, WaiverReviewRecommendation } from '@/lib/supabase/types'
 
-type ModalType = 'approve' | 'coordination' | 'review' | 'attachment' | null
+type ModalType = 'approve' | 'coordination' | 'review' | 'attachment' | 'close' | null
 
 export default function WaiverDetailPage() {
   const params = useParams()
@@ -64,6 +64,9 @@ export default function WaiverDetailPage() {
   const [reviewNotes, setReviewNotes] = useState('')
   const [reviewBoard, setReviewBoard] = useState(false)
   const [reviewBoardDate, setReviewBoardDate] = useState('')
+
+  // Close modal state
+  const [closeComments, setCloseComments] = useState('')
 
   // Attachment modal state
   const [attachFile, setAttachFile] = useState<File | null>(null)
@@ -149,6 +152,59 @@ export default function WaiverDetailPage() {
     }
     setActionLoading(false)
     setActiveModal(null)
+  }
+
+  const handleCloseWaiver = async () => {
+    if (usingDemo) {
+      toast.success('Waiver closed (demo mode)')
+      setActiveModal(null)
+      setCloseComments('')
+      return
+    }
+
+    setActionLoading(true)
+
+    // Save closure comments as a coordination activity entry
+    if (closeComments.trim()) {
+      let coordinatorName = ''
+      const supabase = createClient()
+      if (supabase) {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: profile } = await supabase.from('profiles').select('name, rank').eq('id', user.id).single()
+          coordinatorName = profile?.rank ? `${profile.rank} ${profile.name}` : (profile?.name || user.email || '')
+        }
+      }
+
+      const closureEntry = {
+        office: 'airfield_manager' as const,
+        coordinator_name: coordinatorName,
+        coordinated_date: new Date().toISOString().split('T')[0],
+        status: 'concur' as const,
+        comments: `[Closure] ${closeComments.trim()}`,
+      }
+      const existing = coordination.map(c => ({
+        office: c.office,
+        office_label: c.office_label || undefined,
+        coordinator_name: c.coordinator_name || undefined,
+        coordinated_date: c.coordinated_date || undefined,
+        status: c.status,
+        comments: c.comments || undefined,
+      }))
+      await upsertWaiverCoordination(params.id as string, [...existing, closureEntry])
+    }
+
+    // Change status to completed (closed)
+    const { error } = await updateWaiverStatus(params.id as string, 'completed')
+    if (error) {
+      toast.error(error)
+    } else {
+      toast.success('Waiver closed')
+      await loadData()
+    }
+    setActionLoading(false)
+    setActiveModal(null)
+    setCloseComments('')
   }
 
   const handleDelete = async () => {
@@ -797,8 +853,8 @@ export default function WaiverDetailPage() {
         {w.status === 'active' && isManager && (
           <>
             {allowedTransitions.includes('completed') && (
-              <ActionButton color="#22C55E" onClick={() => handleStatusChange('completed')} disabled={actionLoading}>
-                Mark Completed
+              <ActionButton color="#22C55E" onClick={() => setActiveModal('close')} disabled={actionLoading}>
+                Mark Closed
               </ActionButton>
             )}
             {allowedTransitions.includes('expired') && (
@@ -849,6 +905,31 @@ export default function WaiverDetailPage() {
                 disabled={actionLoading}
               >
                 {actionLoading ? 'Approving...' : 'Approve'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Close Waiver Modal */}
+      {activeModal === 'close' && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--color-bg-surface)', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Close Waiver</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginBottom: 12, lineHeight: 1.5 }}>
+              This waiver will be marked as closed, indicating it is no longer valid or open. Please provide closure comments below.
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <span className="section-label">Closure Comments</span>
+              <textarea className="input-dark" rows={3} style={{ resize: 'vertical' }} placeholder="Reason for closure, corrective actions taken, etc..."
+                value={closeComments} onChange={(e) => setCloseComments(e.target.value)} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <button onClick={() => { setActiveModal(null); setCloseComments('') }} style={{ padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Cancel
+              </button>
+              <button className="btn-primary" onClick={handleCloseWaiver} disabled={actionLoading}>
+                {actionLoading ? 'Closing...' : 'Close Waiver'}
               </button>
             </div>
           </div>

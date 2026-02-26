@@ -16,7 +16,7 @@ const FILTER_LABELS: Record<string, string> = {
   pending: 'Pending',
   approved: 'Approved',
   active: 'Active',
-  completed: 'Completed',
+  completed: 'Closed',
   expired: 'Expired',
   cancelled: 'Cancelled',
 }
