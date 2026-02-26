@@ -300,6 +300,8 @@ export default function WaiverDetailPage() {
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   }
 
+  const titleCase = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+
   const sectionHeader = (key: string, title: string, count?: number) => (
     <button
       type="button"
@@ -432,7 +434,7 @@ export default function WaiverDetailPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {fieldRow('Classification', classInfo?.label)}
             {fieldRow('Hazard Rating', hazardConf?.label)}
-            {fieldRow('Action Requested', w.action_requested)}
+            {fieldRow('Action Requested', w.action_requested ? titleCase(w.action_requested) : null)}
             {fieldRow('Period Valid', w.period_valid)}
             {fieldRow('Date Submitted', formatDate(w.date_submitted))}
             {fieldRow('Date Approved', formatDate(w.date_approved))}
@@ -519,7 +521,7 @@ export default function WaiverDetailPage() {
                       </div>
                       {c.comments && <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 2 }}>{c.comments}</div>}
                     </div>
-                    <Badge label={c.status.replace('_', ' ')} color={statusColor} />
+                    <Badge label={c.status === 'non_concur' ? 'Non-Concur' : titleCase(c.status)} color={statusColor} />
                   </div>
                 )
               })
@@ -561,7 +563,7 @@ export default function WaiverDetailPage() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.file_name}</div>
                         <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
-                          {a.file_type.replace(/_/g, ' ')} {a.file_size ? `\u2022 ${(a.file_size / 1024).toFixed(0)} KB` : ''}
+                          {titleCase(a.file_type)} {a.file_size ? `\u2022 ${(a.file_size / 1024).toFixed(0)} KB` : ''}
                         </div>
                         {a.caption && <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontStyle: 'italic' }}>{a.caption}</div>}
                       </div>
@@ -937,8 +939,17 @@ export default function WaiverDetailPage() {
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">Type</span>
               <select className="input-dark" value={attachType} onChange={(e) => setAttachType(e.target.value as WaiverAttachmentType)} style={{ width: '100%' }}>
-                {['photo', 'site_map', 'risk_assessment', 'ufc_excerpt', 'faa_report', 'coordination_sheet', 'af_form_505', 'other'].map(t => (
-                  <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
+                {[
+                  { value: 'photo', label: 'Photo' },
+                  { value: 'site_map', label: 'Site Map' },
+                  { value: 'risk_assessment', label: 'Risk Assessment' },
+                  { value: 'ufc_excerpt', label: 'UFC Excerpt' },
+                  { value: 'faa_report', label: 'FAA Report' },
+                  { value: 'coordination_sheet', label: 'Coordination Sheet' },
+                  { value: 'af_form_505', label: 'AF Form 505' },
+                  { value: 'other', label: 'Other' },
+                ].map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </select>
             </div>

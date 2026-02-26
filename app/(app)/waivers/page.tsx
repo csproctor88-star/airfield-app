@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { fetchWaivers, fetchAllWaiverCriteria, fetchAllWaiverReviews, type WaiverRow } from '@/lib/supabase/waivers'
 import { DEMO_WAIVERS, DEMO_WAIVER_CRITERIA, DEMO_WAIVER_REVIEWS } from '@/lib/demo-data'
-import { WAIVER_STATUS_CONFIG, WAIVER_CLASSIFICATIONS, WAIVER_HAZARD_RATINGS } from '@/lib/constants'
+import { WAIVER_STATUS_CONFIG, WAIVER_CLASSIFICATIONS } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 
@@ -84,8 +84,6 @@ export default function WaiversPage() {
 
   const getClassInfo = (c: string) => WAIVER_CLASSIFICATIONS.find(t => t.value === c)
   const getStatusConfig = (status: string) => WAIVER_STATUS_CONFIG[status as keyof typeof WAIVER_STATUS_CONFIG]
-  const getHazardConfig = (rating: string | null) => rating ? WAIVER_HAZARD_RATINGS.find(h => h.value === rating) : null
-
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return null
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -244,7 +242,6 @@ export default function WaiversPage() {
           {filtered.map((w) => {
             const classInfo = getClassInfo(w.classification)
             const statusConf = getStatusConfig(w.status)
-            const hazardConf = getHazardConfig(w.hazard_rating)
             return (
               <Link
                 key={w.id}
@@ -268,7 +265,6 @@ export default function WaiversPage() {
                 </div>
                 <div style={{ display: 'flex', gap: 4, marginBottom: 4, flexWrap: 'wrap' }}>
                   {classInfo && <Badge label={`${classInfo.emoji} ${classInfo.label}`} color="#64748B" />}
-                  {hazardConf && <Badge label={hazardConf.label} color={hazardConf.color} bg={hazardConf.bg} />}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--color-text-2)', lineHeight: 1.5, marginBottom: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                   {w.description}
