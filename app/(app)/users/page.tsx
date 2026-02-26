@@ -108,7 +108,7 @@ export default function UserManagementPage() {
   const [deleting, setDeleting] = useState(false)
 
   const isSysAdmin = callerRole === 'sys_admin'
-  const isBaseAdmin = callerRole === 'base_admin'
+  const isBaseAdmin = callerRole === 'base_admin' || callerRole === 'airfield_manager' || callerRole === 'namo'
 
   // Initialize: load caller profile, installations, and first user list
   useEffect(() => {

@@ -32,11 +32,11 @@ export function isSysAdmin(role: string): boolean {
 }
 
 export function isBaseAdmin(role: string): boolean {
-  return role === 'base_admin'
+  return role === 'base_admin' || role === 'airfield_manager' || role === 'namo'
 }
 
 export function isAdmin(role: string): boolean {
-  return role === 'sys_admin' || role === 'base_admin'
+  return role === 'sys_admin' || isBaseAdmin(role)
 }
 
 /**
