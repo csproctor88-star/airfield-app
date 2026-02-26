@@ -25,50 +25,53 @@ import { toast } from 'sonner'
 async function loadUsers(
   supabase: ReturnType<typeof createClient>,
   baseId: string | null,
-): Promise<UserCardData[]> {
-  if (!supabase) return []
+  baseLookup: Map<string, { name: string; icao: string }>,
+): Promise<{ users: UserCardData[]; error: string | null }> {
+  if (!supabase) return { users: [], error: 'Supabase client not available' }
 
-  let query = supabase
-    .from('profiles')
-    .select('*')
-    .order('last_name', { ascending: true })
+  try {
+    // Explicitly select only columns we need — avoids issues with schema cache
+    let query = supabase
+      .from('profiles')
+      .select('id, email, first_name, last_name, name, rank, role, is_active, last_seen_at, primary_base_id, created_at')
+      .order('last_name', { ascending: true })
 
-  if (baseId) {
-    query = query.eq('primary_base_id', baseId)
-  }
-
-  const { data, error } = await query
-
-  if (error) {
-    console.error('Failed to load users:', error)
-    return []
-  }
-
-  // Load base names for display
-  const { data: allBases } = await supabase
-    .from('bases')
-    .select('id, name, icao')
-
-  const baseLookup = new Map<string, { name: string; icao: string }>()
-  if (allBases) {
-    for (const b of allBases) {
-      baseLookup.set(b.id, { name: b.name, icao: b.icao })
+    if (baseId) {
+      query = query.eq('primary_base_id', baseId)
     }
-  }
 
-  return (data || []).map((u: Record<string, unknown>) => ({
-    id: u.id as string,
-    email: u.email as string,
-    first_name: (u.first_name as string) || null,
-    last_name: (u.last_name as string) || null,
-    rank: (u.rank as string) || null,
-    role: (u.role as string) || 'read_only',
-    status: (u.status as string) || (u.is_active === false ? 'deactivated' : 'active'),
-    last_seen_at: (u.last_seen_at as string) || null,
-    primary_base_id: (u.primary_base_id as string) || null,
-    created_at: u.created_at as string,
-    bases: u.primary_base_id ? baseLookup.get(u.primary_base_id as string) || null : null,
-  }))
+    const { data, error } = await query
+
+    if (error) {
+      console.error('[UserMgmt] Query error:', error.message, error.code, error.details)
+      return { users: [], error: `Query failed: ${error.message}` }
+    }
+
+    if (!data) {
+      return { users: [], error: null }
+    }
+
+    console.log(`[UserMgmt] Loaded ${data.length} profiles, baseFilter=${baseId || 'ALL'}`)
+
+    const mapped: UserCardData[] = data.map((u) => ({
+      id: u.id,
+      email: u.email,
+      first_name: u.first_name || null,
+      last_name: u.last_name || null,
+      rank: u.rank || null,
+      role: u.role || 'read_only',
+      status: u.is_active === false ? 'deactivated' : 'active',
+      last_seen_at: u.last_seen_at || null,
+      primary_base_id: u.primary_base_id || null,
+      created_at: u.created_at,
+      bases: u.primary_base_id ? baseLookup.get(u.primary_base_id) || null : null,
+    }))
+
+    return { users: mapped, error: null }
+  } catch (err) {
+    console.error('[UserMgmt] Unexpected error in loadUsers:', err)
+    return { users: [], error: err instanceof Error ? err.message : 'Unexpected error loading users' }
+  }
 }
 
 export default function UserManagementPage() {
@@ -77,6 +80,8 @@ export default function UserManagementPage() {
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [users, setUsers] = useState<UserCardData[]>([])
   const [installations, setInstallations] = useState<Installation[]>([])
+  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [baseLookup, setBaseLookup] = useState(new Map<string, { name: string; icao: string }>())
   const [callerRole, setCallerRole] = useState<UserRole>('read_only')
   const [callerBaseId, setCallerBaseId] = useState<string | null>(null)
   const [callerInstallation, setCallerInstallation] = useState<Installation | null>(null)
@@ -142,9 +147,16 @@ export default function UserManagementPage() {
         .eq('is_active', true)
         .order('name', { ascending: true })
 
+      // Build base lookup map
+      const lookup = new Map<string, { name: string; icao: string }>()
       if (bases) {
-        setInstallations(bases as Installation[])
-        const userBase = (bases as Installation[]).find((b) => b.id === profile.primary_base_id)
+        const typedBases = bases as Installation[]
+        setInstallations(typedBases)
+        for (const b of typedBases) {
+          lookup.set(b.id, { name: b.name, icao: b.icao })
+        }
+        setBaseLookup(lookup)
+        const userBase = typedBases.find((b) => b.id === profile.primary_base_id)
         setCallerInstallation(userBase || null)
       }
 
@@ -153,12 +165,17 @@ export default function UserManagementPage() {
       setSelectedBaseId(initialBaseFilter)
 
       // Load users immediately
-      const userList = await loadUsers(supabase, initialBaseFilter)
-      setUsers(userList)
+      const result = await loadUsers(supabase, initialBaseFilter, lookup)
+      setUsers(result.users)
+      if (result.error) setFetchError(result.error)
       setInitialized(true)
     }
 
-    init()
+    init().catch((err) => {
+      console.error('[UserMgmt] init() crashed:', err)
+      setFetchError(err instanceof Error ? err.message : 'Failed to initialize')
+      setInitialized(true)
+    })
   }, [router])
 
   // Refetch users when base filter changes (after init)
@@ -167,10 +184,12 @@ export default function UserManagementPage() {
     if (!supabase) return
 
     setLoadingUsers(true)
-    const userList = await loadUsers(supabase, selectedBaseId)
-    setUsers(userList)
+    setFetchError(null)
+    const result = await loadUsers(supabase, selectedBaseId, baseLookup)
+    setUsers(result.users)
+    if (result.error) setFetchError(result.error)
     setLoadingUsers(false)
-  }, [selectedBaseId])
+  }, [selectedBaseId, baseLookup])
 
   // When selectedBaseId changes after init, refetch
   const [prevBaseId, setPrevBaseId] = useState<string | null | undefined>(undefined)
@@ -346,6 +365,23 @@ export default function UserManagementPage() {
           isSysAdmin={isSysAdmin}
         />
       </div>
+
+      {/* Error display */}
+      {fetchError && (
+        <div
+          style={{
+            background: 'rgba(239,68,68,0.1)',
+            border: '1px solid rgba(239,68,68,0.2)',
+            borderRadius: 8,
+            padding: '10px 14px',
+            marginBottom: 12,
+            fontSize: 12,
+            color: '#F87171',
+          }}
+        >
+          {fetchError}
+        </div>
+      )}
 
       {/* User List */}
       <UserList
