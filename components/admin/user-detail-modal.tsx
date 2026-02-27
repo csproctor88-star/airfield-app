@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { X, RotateCcw, UserX, UserCheck, Trash2, Send } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { X, RotateCcw, UserX, UserCheck, Trash2, Send, ChevronDown } from 'lucide-react'
 import { RANK_OPTIONS, USER_ROLES } from '@/lib/constants'
 import { RoleBadge } from './role-badge'
 import { UserStatusBadge } from './status-badge'
@@ -44,6 +44,21 @@ export function UserDetailModal({
   const [toggling, setToggling] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [showInstDropdown, setShowInstDropdown] = useState(false)
+  const [instSearch, setInstSearch] = useState('')
+  const instDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close installation dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (instDropdownRef.current && !instDropdownRef.current.contains(e.target as Node)) {
+        setShowInstDropdown(false)
+        setInstSearch('')
+      }
+    }
+    if (showInstDropdown) document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showInstDropdown])
 
   const isDeactivated = user.status === 'deactivated'
 
@@ -259,22 +274,77 @@ export function UserDetailModal({
 
           {/* Installation (sys admin only) */}
           {isSysAdmin ? (
-            <div>
+            <div ref={instDropdownRef} style={{ position: 'relative' }}>
               <span className="section-label">Assigned Installation</span>
-              <select
+              <button
+                type="button"
+                onClick={() => { if (!anyLoading) setShowInstDropdown(!showInstDropdown) }}
                 className="input-dark"
-                value={baseId}
-                onChange={(e) => setBaseId(e.target.value)}
-                style={{ width: '100%' }}
                 disabled={anyLoading}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  cursor: anyLoading ? 'not-allowed' : 'pointer', textAlign: 'left',
+                  opacity: anyLoading ? 0.6 : 1,
+                }}
               >
-                <option value="">Select installation...</option>
-                {installations.map((inst) => (
-                  <option key={inst.id} value={inst.id}>
-                    {inst.name} · {inst.icao}
-                  </option>
-                ))}
-              </select>
+                <span style={{ color: baseId ? 'var(--color-text-1)' : 'var(--color-text-3)', fontSize: 13 }}>
+                  {baseId
+                    ? (() => { const inst = installations.find(i => i.id === baseId); return inst ? `${inst.name} · ${inst.icao}` : 'Select installation...' })()
+                    : 'Select installation...'}
+                </span>
+                <ChevronDown size={14} color="var(--color-text-3)" />
+              </button>
+
+              {showInstDropdown && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0,
+                  zIndex: 100, marginTop: 4,
+                  background: 'var(--color-bg-elevated)',
+                  border: '1px solid rgba(56,189,248,0.15)',
+                  borderRadius: 8,
+                  maxHeight: 200, overflowY: 'auto',
+                }}>
+                  <div style={{ padding: 8, borderBottom: '1px solid var(--color-border)' }}>
+                    <input
+                      type="text"
+                      placeholder="Search installations..."
+                      value={instSearch}
+                      onChange={(e) => setInstSearch(e.target.value)}
+                      className="input-dark"
+                      style={{ width: '100%', boxSizing: 'border-box', fontSize: 12 }}
+                      autoFocus
+                    />
+                  </div>
+                  {installations
+                    .filter(inst => !instSearch || `${inst.name} ${inst.icao}`.toLowerCase().includes(instSearch.toLowerCase()))
+                    .map(inst => (
+                      <button
+                        key={inst.id}
+                        type="button"
+                        onClick={() => { setBaseId(inst.id); setShowInstDropdown(false); setInstSearch('') }}
+                        style={{
+                          display: 'block', width: '100%', padding: '10px 14px',
+                          background: inst.id === baseId ? 'rgba(56,189,248,0.08)' : 'transparent',
+                          border: 'none',
+                          borderBottom: '1px solid rgba(56,189,248,0.04)',
+                          cursor: 'pointer', textAlign: 'left',
+                          color: inst.id === baseId ? 'var(--color-accent)' : 'var(--color-text-1)',
+                          fontSize: 13, fontFamily: 'inherit',
+                          fontWeight: inst.id === baseId ? 700 : 500,
+                        }}
+                      >
+                        {inst.name}
+                        {inst.icao && <span style={{ fontSize: 10, marginLeft: 8, opacity: 0.5 }}>{inst.icao}</span>}
+                      </button>
+                    ))}
+                  {installations.filter(inst => !instSearch || `${inst.name} ${inst.icao}`.toLowerCase().includes(instSearch.toLowerCase())).length === 0 && (
+                    <div style={{ padding: '12px 14px', fontSize: 12, color: 'var(--color-text-3)' }}>
+                      No installations found
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div>
