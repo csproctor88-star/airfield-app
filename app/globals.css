@@ -95,6 +95,18 @@
   --color-search-border: #CBD5E1;
 }
 
+/* Ensure html/body cover the full viewport — outside @layer for highest priority */
+html, body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background-color: #0B1120;
+  background-color: var(--color-bg);
+}
+
+body {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 @layer base {
   html {
     background: var(--color-bg);
@@ -107,19 +119,6 @@
     -moz-osx-font-smoothing: grayscale;
     font-family: 'Outfit', system-ui, -apple-system, sans-serif;
     min-height: 100dvh;
-  }
-
-  /* Solid fill behind the bottom safe area to prevent white strip on iOS PWA */
-  body::after {
-    content: '';
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 50px;
-    background: var(--color-bg-surface-solid);
-    z-index: 99;
-    pointer-events: none;
   }
 
   /* Scrollbar */
