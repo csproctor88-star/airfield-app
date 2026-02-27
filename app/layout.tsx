@@ -21,6 +21,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
+  viewportFit: 'cover',
   themeColor: '#0B1120',
 }
 
@@ -48,7 +49,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-screen font-sans">
+      <body className="font-sans" style={{ minHeight: '100dvh' }}>
         <ThemeProvider>
           {children}
           <Toaster

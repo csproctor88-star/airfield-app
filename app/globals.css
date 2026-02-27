@@ -96,12 +96,17 @@
 }
 
 @layer base {
+  html {
+    background: var(--color-bg);
+  }
+
   body {
     background: var(--color-bg);
     color: var(--color-text-1);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    min-height: 100dvh;
   }
 
   /* Scrollbar */
