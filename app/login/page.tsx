@@ -7,7 +7,7 @@ import { createInstallation } from '@/lib/supabase/installations'
 import { USER_ROLES } from '@/lib/constants'
 import { BASE_DIRECTORY, type BaseDirectoryEntry } from '@/lib/base-directory'
 import type { UserRole } from '@/lib/supabase/types'
-import { Plane, ChevronDown } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 
 // Military ranks: A1C through Lt Col
 const RANK_OPTIONS = [
@@ -218,37 +218,7 @@ export default function LoginPage() {
       <div style={{ width: '100%', maxWidth: 360 }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 14,
-              background: 'linear-gradient(135deg, #0C4A6E, #38BDF8)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 16,
-              boxShadow: '0 0 32px var(--color-accent-glow)',
-            }}
-          >
-            <Plane size={28} color="#fff" />
-          </div>
-          <div
-            style={{
-              fontSize: 20,
-              fontWeight: 800,
-              letterSpacing: '-0.02em',
-              background: 'linear-gradient(135deg, var(--color-logo-start), var(--color-logo-end))',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              marginBottom: 4,
-            }}
-          >
-            GLIDEPATH
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em' }}>
-            AIRFIELD OPERATIONS MANAGEMENT
-          </div>
+          <img src="/logo_motto.png" alt="Glidepath — Guiding You to Mission Success" style={{ height: 180, objectFit: 'contain', margin: '0 auto' }} />
         </div>
 
         {/* Login Card */}

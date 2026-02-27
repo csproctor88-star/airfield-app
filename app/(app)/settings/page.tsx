@@ -1145,15 +1145,7 @@ function AboutSectionContent() {
     <>
       <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ textAlign: 'center', padding: '8px 0' }}>
-          <div style={{
-            fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em',
-            background: 'linear-gradient(135deg, var(--color-logo-start), var(--color-logo-end))',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-          }}>
-            Glidepath
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 2 }}>Guiding You to Mission Success</div>
+          <img src="/glidepath.png" alt="Glidepath" style={{ height: 160, objectFit: 'contain', margin: '0 auto' }} />
         </div>
 
         <div style={{ borderTop: '1px solid var(--color-border)' }} />
