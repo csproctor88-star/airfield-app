@@ -204,17 +204,19 @@ export default function DiscrepanciesPage() {
     const margin = 12
     let y = margin
 
-    // ── Fetch photos for all filtered discrepancies (live mode only) ──
+    // ── Fetch photos + map images for all filtered discrepancies ──
     const PHOTO_THUMB_W = 20
     const PHOTO_THUMB_H = 15
     const PHOTO_GAP = 1.5
     const PHOTO_PAD = 2
+    const PHOTO_COL_W = 48
     const photoMap: Record<string, string[]> = {} // discrepancy_id → data URL[]
 
     if (!usingDemo) {
       const supabase = createClient()
       if (supabase) {
         const ids = filtered.map(d => d.id)
+        // Fetch uploaded photos
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: photoRows } = await (supabase as any)
           .from('photos')
@@ -222,7 +224,6 @@ export default function DiscrepanciesPage() {
           .eq('entity_type', 'discrepancy')
           .in('entity_id', ids)
         if (photoRows && photoRows.length > 0) {
-          // Resolve storage paths to data URLs
           for (const row of photoRows) {
             try {
               let dataUrl: string | null = null
@@ -248,6 +249,21 @@ export default function DiscrepanciesPage() {
                 photoMap[row.entity_id].push(dataUrl)
               }
             } catch { /* skip failed photo */ }
+          }
+        }
+      }
+
+      // Fetch Mapbox satellite map images for discrepancies with coordinates
+      for (const d of filtered) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const lat = (d as any).latitude != null ? Number((d as any).latitude) : null
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const lng = (d as any).longitude != null ? Number((d as any).longitude) : null
+        if (lat != null && lng != null) {
+          const mapDataUrl = await fetchMapImageDataUrl(lat, lng)
+          if (mapDataUrl) {
+            if (!photoMap[d.id]) photoMap[d.id] = []
+            photoMap[d.id].push(mapDataUrl)
           }
         }
       }
@@ -279,12 +295,8 @@ export default function DiscrepanciesPage() {
     doc.text(`Total: ${filtered.length} discrepancies`, margin, y)
     y += 7
 
-    // Table
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pdfHasCoords = filtered.some(d => (d as any).latitude != null && (d as any).longitude != null)
-    const headRow = ['ID', 'Title', 'Type', 'Severity', 'Status', 'Location']
-    if (pdfHasCoords) headRow.push('Coordinates')
-    headRow.push('Work Order', 'Days')
+    // Table columns
+    const headRow = ['ID', 'Title', 'Type', 'Severity', 'Status', 'Location', 'Work Order', 'Days']
     if (hasAnyPhotos) headRow.push('Photos')
 
     const tableBody = filtered.map(d => {
@@ -295,17 +307,9 @@ export default function DiscrepanciesPage() {
         d.severity,
         d.status,
         d.location_text,
-      ]
-      if (pdfHasCoords) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        row.push((d as any).latitude != null && (d as any).longitude != null
-          ? `${Number((d as any).latitude).toFixed(5)}, ${Number((d as any).longitude).toFixed(5)}`
-          : '')
-      }
-      row.push(
         d.work_order_number || '',
         String(usingDemo ? (d as typeof DEMO_DISCREPANCIES[number]).days_open : daysOpen(d.created_at)),
-      )
+      ]
       if (hasAnyPhotos) {
         const count = photoMap[d.id]?.length || 0
         row.push(count > 0 ? `${count} photo${count > 1 ? 's' : ''}` : '')
@@ -313,7 +317,7 @@ export default function DiscrepanciesPage() {
       return row
     })
 
-    const photoColIdx = hasAnyPhotos ? (pdfHasCoords ? 9 : 8) : -1
+    const photoColIdx = hasAnyPhotos ? 8 : -1
 
     autoTable(doc, {
       startY: y,
@@ -326,16 +330,15 @@ export default function DiscrepanciesPage() {
       columnStyles: {
         0: { cellWidth: 20 },
         1: { cellWidth: 40 },
-        ...(pdfHasCoords ? { 6: { cellWidth: 22 } } : {}),
-        [pdfHasCoords ? 8 : 7]: { cellWidth: 12, halign: 'center' },
-        ...(hasAnyPhotos ? { [pdfHasCoords ? 9 : 8]: { cellWidth: 30 } } : {}),
+        7: { cellWidth: 12, halign: 'center' },
+        ...(hasAnyPhotos ? { 8: { cellWidth: PHOTO_COL_W } } : {}),
       },
       didParseCell: (data: { section: string; column: { index: number }; row: { index: number }; cell: { styles: { minCellHeight?: number } } }) => {
         if (data.section === 'body' && data.column.index === photoColIdx) {
           const d = filtered[data.row.index]
           const photos = d ? (photoMap[d.id] || []) : []
           if (photos.length > 0) {
-            const available = 30 - PHOTO_PAD * 2
+            const available = PHOTO_COL_W - PHOTO_PAD * 2
             const thumbsPerRow = Math.max(1, Math.floor(available / (PHOTO_THUMB_W + PHOTO_GAP)))
             const rows = Math.ceil(photos.length / thumbsPerRow)
             const needed = PHOTO_PAD * 2 + rows * PHOTO_THUMB_H + Math.max(0, rows - 1) * PHOTO_GAP
@@ -374,59 +377,6 @@ export default function DiscrepanciesPage() {
         }
       },
     })
-
-    // ── Location Maps Section ──
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const discWithCoords = filtered.filter(d => (d as any).latitude != null && (d as any).longitude != null)
-    if (discWithCoords.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const finalY = (doc as any).lastAutoTable?.finalY || y + 10
-      let mapY = finalY + 8
-
-      const checkMapPageBreak = (needed: number) => {
-        if (mapY + needed > pageHeight - 20) {
-          doc.addPage()
-          mapY = margin
-        }
-      }
-
-      checkMapPageBreak(10)
-      doc.setFontSize(11)
-      doc.setTextColor(0)
-      doc.setFont('helvetica', 'bold')
-      doc.text('LOCATION MAPS', margin, mapY)
-      mapY += 6
-
-      for (const d of discWithCoords) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const lat = Number((d as any).latitude)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const lng = Number((d as any).longitude)
-        checkMapPageBreak(52)
-
-        doc.setFontSize(8)
-        doc.setTextColor(0)
-        doc.setFont('helvetica', 'bold')
-        doc.text(`${d.display_id} — ${d.title}`, margin, mapY)
-        mapY += 4
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(7)
-        doc.setTextColor(80)
-        doc.text(`Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}`, margin, mapY)
-        mapY += 4
-
-        const mapDataUrl = await fetchMapImageDataUrl(lat, lng)
-        if (mapDataUrl) {
-          try {
-            doc.addImage(mapDataUrl, 'PNG', margin, mapY, 80, 40)
-            mapY += 44
-          } catch {
-            mapY += 2
-          }
-        }
-        mapY += 4
-      }
-    }
 
     // Footer — page numbers
     const totalPages = doc.getNumberOfPages()
