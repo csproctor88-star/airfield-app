@@ -23,6 +23,7 @@ export function BottomNav() {
 
   return (
     <div
+      className="bottom-nav"
       style={{
         position: 'fixed',
         bottom: 0,
@@ -34,7 +35,8 @@ export function BottomNav() {
         borderTop: '1px solid var(--color-border)',
         display: 'flex',
         justifyContent: 'space-around',
-        padding: '6px 0 max(20px, env(safe-area-inset-bottom, 20px))',
+        paddingTop: 6,
+        paddingBottom: 'calc(6px + env(safe-area-inset-bottom, 0px))',
         zIndex: 100,
       }}
     >

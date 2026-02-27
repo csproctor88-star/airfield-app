@@ -16,8 +16,8 @@
   --color-bg-elevated: #131C30;
   --color-bg-inset: rgba(8, 12, 24, 0.6);
   --color-bg-nav: rgba(8, 14, 26, 0.97);
-  --color-bg-header-start: #2D3B52;
-  --color-bg-header-end: #263248;
+  --color-bg-header-start: #374151;
+  --color-bg-header-end: #2D3748;
   --color-header-border: rgba(56, 189, 248, 0.12);
   --color-border: rgba(56, 189, 248, 0.08);
   --color-border-active: rgba(56, 189, 248, 0.2);
@@ -101,10 +101,18 @@ html, body {
   min-height: 100dvh;
   background-color: #0B1120;
   background-color: var(--color-bg);
+  overscroll-behavior: none;
 }
 
-body {
-  padding-bottom: env(safe-area-inset-bottom);
+/* Extend bottom-nav background behind the Android gesture bar / safe area */
+.bottom-nav::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -100px;
+  height: 100px;
+  background: inherit;
 }
 
 @layer base {
