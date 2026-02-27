@@ -2,7 +2,7 @@
 
 Mobile-first web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.6.0 | **Build:** Clean | **41 routes** | **130+ source files** | **49 migrations**
+**Version:** 2.7.0 | **Build:** Clean | **41 routes** | **130+ source files** | **49 migrations**
 
 ## Tech Stack
 
@@ -66,7 +66,7 @@ Track and resolve airfield issues. 11 discrepancy types (FOD, pavement, lighting
 
 ### Airfield Checks (`/checks`)
 7 check types in a single unified form:
-- **FOD Walk** — route, items found, clear/not-clear
+- **FOD Check** — route, items found, clear/not-clear
 - **RSC Check** — contaminant type/depth/coverage, braking action, treatment
 - **RCR Check** — Mu readings (rollout/midpoint/departure), equipment, temperature
 - **IFE** — in-flight emergency response
@@ -139,7 +139,7 @@ Admin-only module for managing users across installations. System admins see all
 Full audit trail with date-range filtering (Today, 7 Days, 30 Days, Custom). Entries grouped by date with color-coded action dots. Clickable items link to source entity (discrepancy, check, inspection). Excel export with styled formatting.
 
 ### More Menu (`/more`)
-Module directory linking to all features. Profile section always expanded at top showing name, email, installation, and role. All modules visible as a flat list.
+Module directory linking to all features. All modules visible as a flat list with role-gated visibility (admin-only modules hidden for non-admin users).
 
 ## Project Structure
 

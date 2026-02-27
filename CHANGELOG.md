@@ -5,17 +5,70 @@ All notable changes to the Airfield OPS Management Suite.
 ## [Unreleased]
 
 ### Planned
+- iPad and desktop responsive layout optimization (research complete, implementation pending)
 - Server-side email delivery for inspection reports (branded sender address)
 - METAR weather API integration (aviationweather.gov)
 - Role-based access control (re-enable RLS policies with role-based enforcement)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
 - Sync & Data module (offline queue, export, import)
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate ~170 `as any` casts
-- Clean up 8 dead files (validators.ts, installation.ts, lib/supabase/middleware.ts, pdfTextCache.ts, card.tsx, input.tsx, loading-skeleton.tsx, page-header.tsx)
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate ~134 `as any` casts
+- Clean up 7 dead files (validators.ts, installation.ts, lib/supabase/middleware.ts, card.tsx, input.tsx, loading-skeleton.tsx, page-header.tsx)
 - Convert PDFLibrary.jsx to TypeScript (.tsx)
-- Remove ~12MB of unused public image assets (glidepath.png, icon.png, logo_motto.png, glidepath-logo.png)
+- Remove ~41MB unused `public/aircraft_images/` directory
+- Consolidate dark mode logo variants (3 files, 4.6MB)
 - Add database-level role enforcement for `read_only` and other non-admin roles (currently app-layer only)
+
+---
+
+## [2.7.0] — 2026-02-27
+
+### Bug Fixes, PWA Hardening & Code Quality
+
+This release fixes critical bugs in photo uploads/display, resolves Android PWA rendering issues, improves mobile UX for dropdowns, and cleans up the project for branching.
+
+#### Bug Fixes
+- **Discrepancy photos not displaying** — Three bugs fixed:
+  1. Photo URL construction was missing the `photos/` bucket name in the Supabase Storage public URL path (404 on every photo)
+  2. `base_id` was never passed during photo upload, causing RLS policy `user_has_base_access()` to reject NULL and return empty results
+  3. Added fallback in `uploadDiscrepancyPhoto()` that resolves `base_id` from the parent discrepancy when not explicitly provided
+- **Same URL bug fixed in Checks detail page** — `checks/[id]/page.tsx` had identical missing bucket name issue
+- **FOD Walk → FOD Check** — PDF export details section incorrectly said "FOD Walk completed" instead of "FOD Check completed"
+
+#### PWA / Android
+- **Android system navigation bar** — Investigated and resolved white bar at bottom of screen in installed PWA mode:
+  - Removed problematic `body { padding-bottom: env(safe-area-inset-bottom) }` that created a gap below the fixed nav
+  - Added `overscroll-behavior: none` on html/body to prevent white flash on overscroll
+  - Bottom nav now spans full viewport width (`left: 0; right: 0`) with inner content centered at 480px — eliminates gaps on edge-to-edge devices
+  - Added `::after` pseudo-element extending nav background 100px below viewport for gesture bar coverage
+  - Service worker config updated to use `NetworkFirst` for `manifest.json` so PWA color/theme updates take effect without reinstall
+  - Manifest `display` tested as both `standalone` and `fullscreen`; settled on `standalone` with device dark theme as the practical fix
+- **Header border** — Removed header bottom border in dark mode for cleaner look
+- **Dark mode logo** — Enlarged from 52px to 64px height
+
+#### UI Improvements
+- **Installation dropdown in User Management** — Replaced native `<select>` (which takes over the full screen on Android) with a custom scrollable dropdown matching the Settings > Installation pattern: `maxHeight: 200px`, search filter, click-outside-to-close
+- **More tab** — Removed user profile card section; page now goes straight to module list
+
+#### Project Cleanup
+- **Added `public/Downloads/` to `.gitignore`** — Prevents accidental commit of personal files
+- **Reorganized docs** — Removed outdated session handoff files and old docs; added Glidepath AFWERX Spark Proposal and SRS v3.0
+
+#### Files Modified
+- `app/globals.css` — Removed body padding-bottom, added overscroll-behavior, added .bottom-nav::after
+- `app/layout.tsx` — Theme-color meta tag adjustments (tested media queries, reverted to single dark value)
+- `app/(app)/more/page.tsx` — Removed ProfileSection component and useInstallation import
+- `app/(app)/discrepancies/[id]/page.tsx` — Fixed photo URL (added `photos/` bucket), added useInstallation for base_id
+- `app/(app)/discrepancies/new/page.tsx` — Pass installationId to uploadDiscrepancyPhoto
+- `app/(app)/checks/[id]/page.tsx` — Fixed photo URL (added `photos/` bucket)
+- `components/layout/bottom-nav.tsx` — Full-width nav wrapper with centered inner content
+- `components/layout/header.tsx` — Removed dark mode border, enlarged dark mode logo
+- `components/admin/user-detail-modal.tsx` — Custom installation dropdown with search
+- `lib/supabase/discrepancies.ts` — base_id fallback lookup in uploadDiscrepancyPhoto
+- `lib/check-pdf.ts` — FOD Walk → FOD Check
+- `next.config.js` — NetworkFirst caching for manifest.json
+- `public/manifest.json` — Tested fullscreen/standalone display modes
+- `.gitignore` — Added public/Downloads/
 
 ---
 
