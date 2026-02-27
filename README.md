@@ -2,7 +2,7 @@
 
 Mobile-first web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.6.0 | **Build:** Clean | **41 routes** | **130+ source files** | **48 migrations**
+**Version:** 2.6.0 | **Build:** Clean | **41 routes** | **130+ source files** | **49 migrations**
 
 ## Tech Stack
 
@@ -52,7 +52,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 Apply the schema and migrations to a Supabase project:
 
 1. Run `supabase/schema.sql` to create the base tables and sequences
-2. Apply the 47 migrations in order from `supabase/migrations/`
+2. Apply the 49 migrations in order from `supabase/migrations/`
 
 See [BASE-ONBOARDING.md](./BASE-ONBOARDING.md) for adding new installations.
 
@@ -120,7 +120,7 @@ Collapsible dropdown sections — Profile and About default open, all others col
 - **Installation** — current base display; switching/adding restricted to sys_admin only
 - **Data & Storage** — view/clear cached data, estimated storage used
 - **Regulations Library** — download all PDFs for offline, manage cache
-- **Base Configuration** (`/settings/base-setup`) — runways, NAVAIDs, areas, CE shops, templates
+- **Base Configuration** (`/settings/base-setup`) — runways, NAVAIDs, areas, CE shops, templates, airfield diagram upload
 - **Appearance** — Day/Night/Auto theme toggle
 - **About** — version, environment, branding
 - **Inspection Templates** (`/settings/templates`) — customize airfield/lighting checklist sections and items
@@ -232,7 +232,7 @@ airfield-app/
 │       └── activity.ts                  # Activity log write
 ├── supabase/
 │   ├── schema.sql                        # Full database schema
-│   ├── migrations/                       # 48 migration files
+│   ├── migrations/                       # 49 migration files
 │   └── functions/                        # Edge functions (PDF text extraction)
 ├── middleware.ts                          # Auth guard + demo mode bypass
 ├── public/
@@ -261,7 +261,7 @@ airfield-app/
 | `inspection_template_sections` | Per-base inspection template sections |
 | `inspection_template_items` | Per-base inspection checklist items |
 | `notams` | FAA and LOCAL NOTAM tracking |
-| `photos` | Photos for discrepancies, checks, evaluations |
+| `photos` | Photos for discrepancies, checks, inspections, evaluations |
 | `obstruction_evaluations` | UFC 3-260-01 surface analysis |
 | `airfield_status` | Persisted runway status, advisory, BWC, RSC |
 | `runway_status_log` | Audit trail for all runway status changes |
@@ -285,8 +285,8 @@ airfield-app/
 4. **Theme System** — Light/Dark/Auto modes via CSS custom properties. Auto follows `prefers-color-scheme`.
 5. **Configurable Templates** — Inspection checklists are stored in the database per base, not hardcoded. New bases clone from a default template.
 6. **Client-Side PDF** — jsPDF generates reports in the browser. Server-side email delivery planned for a future phase.
-7. **RLS Partially Enabled** — Base-scoped RLS active for data isolation. Role-based write restrictions enforced at application layer (API routes + UI). Full database-level role enforcement planned for production hardening.
-8. **Hybrid Offline** — IndexedDB caches PDF blobs and extracted text. PWA service worker caches app shell. Full offline reference viewing supported.
+7. **RLS Partially Enabled** — RLS policies active on `storage.objects` for the `photos` bucket. Role-based write restrictions enforced at application layer (API routes + UI). Full database-level role enforcement planned for production hardening.
+8. **Hybrid Offline** — IndexedDB caches PDF blobs, extracted text, and demo-mode airfield diagrams. PWA service worker caches app shell. Full offline reference viewing supported. Airfield diagrams stored in Supabase Storage for cross-device access.
 9. **Admin-Gated CRUD** — Base configuration and reference management require `airfield_manager` or `sys_admin` role.
 10. **Three-Tier Admin Hierarchy** — `sys_admin` has full access; `base_admin`, `airfield_manager`, and `namo` have base-scoped admin capabilities; all other roles are standard users.
 

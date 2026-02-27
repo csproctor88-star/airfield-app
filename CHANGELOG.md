@@ -16,7 +16,6 @@ All notable changes to the Airfield OPS Management Suite.
 - Convert PDFLibrary.jsx to TypeScript (.tsx)
 - Remove ~12MB of unused public image assets (glidepath.png, icon.png, logo_motto.png, glidepath-logo.png)
 - Add database-level role enforcement for `read_only` and other non-admin roles (currently app-layer only)
-- Construction Meeting & Joint Monthly standalone inspection tabs (planned in Component 9)
 
 ---
 
@@ -44,6 +43,12 @@ This release adds custom branding throughout the app, embeds photos and satellit
 #### Activity Log
 - **Clickable items**: Activity entries on dashboard and `/activity` page link to their source entity (discrepancy, check, inspection, obstruction)
 - **Visual indicators**: Linked items show cyan text with arrow indicator
+
+#### Airfield Diagram — Cross-Device Storage
+- **Supabase Storage**: Airfield diagrams now stored in Supabase Storage (`photos` bucket) instead of browser-local IndexedDB
+- **Cross-device sync**: Diagrams uploaded on one device are now visible on all devices for the same installation
+- **Demo mode fallback**: IndexedDB still used when Supabase is not configured (demo mode)
+- **Storage RLS policies**: Added INSERT/SELECT/UPDATE/DELETE policies on `storage.objects` for authenticated users accessing the `photos` bucket
 
 #### UX Improvements
 - **Discrepancy type labels**: Fixed display for multi-type discrepancies (split on comma, resolve each individually)
@@ -77,6 +82,8 @@ This release adds custom branding throughout the app, embeds photos and satellit
 - `lib/reports/daily-ops-data.ts` — Map image fetching for checks with coordinates
 - `lib/supabase/activity-queries.ts` — Added `entity_id` to type and query
 - `middleware.ts` — Excluded image files from auth middleware
+- `lib/airfield-diagram.ts` — Refactored from IndexedDB to Supabase Storage with IDB fallback
+- `supabase/migrations/2026022702_photos_storage_policies.sql` — RLS policies for photos bucket
 
 ---
 

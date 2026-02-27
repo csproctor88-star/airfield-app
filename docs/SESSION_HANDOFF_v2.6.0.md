@@ -38,6 +38,12 @@
 - Fixed `logo_motto.png` transparency (removed baked-in gray background)
 - Renamed "Discrepancy Register" → "Discrepancy Report" in PDF exports
 
+### Airfield Diagram Storage Fix
+- Refactored `lib/airfield-diagram.ts` from IndexedDB-only to Supabase Storage (photos bucket) with IDB fallback for demo mode
+- Diagrams now persist across devices (previously browser-local only via IndexedDB)
+- Storage path: `airfield-diagrams/{baseId}/diagram` in the `photos` bucket
+- Created `supabase/migrations/2026022702_photos_storage_policies.sql` — RLS policies for authenticated users on `storage.objects` (INSERT/SELECT/UPDATE/DELETE for `photos` bucket)
+
 ### Data Cleanup
 - Cleared all test data from Supabase (inspections, checks, discrepancies, photos, activity_log, status_updates, check_comments)
 
@@ -61,6 +67,7 @@
 | `lib/inspection-draft.ts` | itemLocations parameter |
 | `lib/reports/daily-ops-data.ts` | Map images for checks |
 | `lib/supabase/activity-queries.ts` | entity_id in type + query |
+| `lib/airfield-diagram.ts` | Refactored: Supabase Storage primary, IDB fallback for demo |
 
 ### Public Assets
 | File | Used By | Status |
@@ -111,21 +118,21 @@ These exist locally but are not in git:
 
 ---
 
-## Incomplete Features from Component 9 Plan
+## Component 9 Plan — Status: COMPLETE
 
-The following items from the Component 9 plan were NOT completed:
-1. **Construction Meeting & Joint Monthly standalone tabs** — planned as 4-tab bar on inspections page
-2. **Wire "View Airfield Diagram" on inspections/checks pages** — button still shows toast placeholder
-3. **Standardize "Use My Location" button styling** across checks, discrepancies, inspections
-4. **Excel formatting improvements** — `exceljs` installed but shared utility (`lib/excel-export.ts`) exists with basic implementation; waiver exports not yet refactored
-5. **Remove duplicate static Mapbox image** from checks page when location selected
+All items from the Component 9 plan have been completed:
+1. **Construction Meeting & Joint Monthly standalone tabs** — completed
+2. **Wire "View Airfield Diagram" on inspections/checks pages** — completed
+3. **Standardize "Use My Location" button styling** — completed across checks, discrepancies, inspections
+4. **Excel formatting improvements** — completed with `exceljs` styled exports
+5. **Remove duplicate static Mapbox image** — completed on checks page and discrepancies/new page
 
 ---
 
 ## Database State
 - All test data cleared (inspections, checks, discrepancies, photos, activity_log, status_updates, check_comments)
-- RLS disabled on all tables (MVP)
-- 48 migrations applied
+- RLS disabled on all tables (MVP), except `storage.objects` which has explicit policies for the `photos` bucket
+- 49 migrations applied (including photos storage policies)
 - 2 untracked migration files locally (inspection_photos)
 
 ---
@@ -141,7 +148,6 @@ The following items from the Component 9 plan were NOT completed:
 ## Suggested Next Steps
 1. **Cleanup sprint**: Delete dead files, unused images, duplicate migrations, stale branches
 2. **Type generation**: Run `supabase gen types typescript` to eliminate 170 `as any` casts
-3. **Component 9 completion**: CM/JM standalone tabs, diagram wiring, Use My Location standardization
-4. **RLS re-enablement**: Critical before production — currently all tables are open
-5. **Testing**: No unit or integration tests exist yet
-6. **Production deployment**: Vercel or similar, with proper env vars and Supabase project
+3. **RLS re-enablement**: Critical before production — currently all tables are open (except `storage.objects`)
+4. **Testing**: No unit or integration tests exist yet
+5. **Production deployment**: Vercel or similar, with proper env vars and Supabase project
