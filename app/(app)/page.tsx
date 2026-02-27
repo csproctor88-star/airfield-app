@@ -372,10 +372,13 @@ export default function HomePage() {
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
       <LoginActivityDialog />
-      {/* ===== Clock + User ===== */}
+      {/* ===== Clock + Installation + User ===== */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <span style={{ fontSize: 22, fontWeight: 800 }}>{time || '--:--'}</span>
         <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', marginBottom: 1 }}>
+            {currentInstallation?.name ? `${currentInstallation.name.toUpperCase()}${currentInstallation.icao ? ` \u2022 ${currentInstallation.icao}` : ''}` : 'AIRFIELD OPS'}
+          </div>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)' }}>{userDisplay.name}</div>
           <div style={{ fontSize: 10, color: presence.color, fontWeight: 600 }}>{presence.label}</div>
         </div>
