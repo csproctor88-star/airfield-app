@@ -109,6 +109,19 @@
     min-height: 100dvh;
   }
 
+  /* Solid fill behind the bottom safe area to prevent white strip on iOS PWA */
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50px;
+    background: var(--color-bg-surface-solid);
+    z-index: 99;
+    pointer-events: none;
+  }
+
   /* Scrollbar */
   ::-webkit-scrollbar {
     width: 4px;
