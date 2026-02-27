@@ -24,6 +24,18 @@ export default function NewDiscrepancyPage() {
   const [gpsLoading, setGpsLoading] = useState(false)
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false)
+  const typeDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!typeDropdownOpen) return
+    const handleClick = (e: MouseEvent) => {
+      if (typeDropdownRef.current && !typeDropdownRef.current.contains(e.target as Node)) {
+        setTypeDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [typeDropdownOpen])
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
@@ -180,7 +192,7 @@ export default function NewDiscrepancyPage() {
           )}
         </div>
 
-        <div style={{ marginBottom: 12, position: 'relative' }}>
+        <div style={{ marginBottom: 12, position: 'relative' }} ref={typeDropdownRef}>
           <span className="section-label">Type</span>
           <button
             type="button"
