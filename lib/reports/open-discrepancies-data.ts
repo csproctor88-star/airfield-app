@@ -222,10 +222,12 @@ export async function fetchOpenDiscrepanciesData(
           dataUrl = row.storage_path
         } else {
           try {
-            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
-            if (supabaseUrl) {
-              const publicUrl = `${supabaseUrl}/storage/v1/object/public/${row.storage_path}`
-              const response = await fetch(publicUrl)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data: urlData } = (supabase as any).storage
+              .from('photos')
+              .getPublicUrl(row.storage_path)
+            if (urlData?.publicUrl) {
+              const response = await fetch(urlData.publicUrl)
               if (response.ok) {
                 const blob = await response.blob()
                 dataUrl = await blobToDataUrl(blob)

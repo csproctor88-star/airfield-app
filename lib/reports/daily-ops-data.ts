@@ -3,6 +3,7 @@ import type { InspectionRow } from '@/lib/supabase/inspections'
 import type { CheckRow } from '@/lib/supabase/checks'
 import type { RunwayStatusLogRow } from '@/lib/supabase/airfield-status'
 import type { InspectionItem } from '@/lib/supabase/types'
+import { fetchMapImageDataUrl } from '@/lib/utils'
 
 // ── Types ──
 
@@ -102,6 +103,18 @@ export async function fetchDailyReportData(
     newDiscrepancies.map((d) => d.id),
     obstructionEvals,
   )
+
+  // Add Mapbox satellite map images for checks with coordinates
+  for (const check of checks) {
+    if (check.latitude != null && check.longitude != null) {
+      const mapDataUrl = await fetchMapImageDataUrl(check.latitude, check.longitude)
+      if (mapDataUrl) {
+        const key = `check:${check.id}`
+        if (!photos[key]) photos[key] = []
+        photos[key].push({ id: `map-${check.id}`, storage_path: '', file_name: 'Location Map', dataUrl: mapDataUrl })
+      }
+    }
+  }
 
   return {
     inspections: results[0],
@@ -425,16 +438,16 @@ async function fetchPhotosForDailyReport(
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function resolvePhotoUrl(_supabase: any, storagePath: string): Promise<string | null> {
+async function resolvePhotoUrl(supabase: any, storagePath: string): Promise<string | null> {
   if (storagePath.startsWith('data:')) return storagePath
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
-    if (!supabaseUrl) return null
-    const publicUrl = `${supabaseUrl}/storage/v1/object/public/${storagePath}`
-    const response = await fetch(publicUrl)
-    if (response.ok) {
-      const blob = await response.blob()
-      return await blobToDataUrl(blob)
+    const { data: urlData } = supabase.storage.from('photos').getPublicUrl(storagePath)
+    if (urlData?.publicUrl) {
+      const response = await fetch(urlData.publicUrl)
+      if (response.ok) {
+        const blob = await response.blob()
+        return await blobToDataUrl(blob)
+      }
     }
   } catch {
     // Storage not available

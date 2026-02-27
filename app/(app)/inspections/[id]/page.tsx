@@ -239,16 +239,32 @@ export default function InspectionDetailPage() {
       }
     }
 
+    // Merge photo location data into items for map embedding in PDF
+    const locationByItem: Record<string, { lat: number; lon: number }> = {}
+    for (const [itemId, photos] of Object.entries(photosByItem)) {
+      const photoWithLoc = photos.find(p => p.latitude != null && p.longitude != null)
+      if (photoWithLoc) {
+        locationByItem[itemId] = { lat: photoWithLoc.latitude!, lon: photoWithLoc.longitude! }
+      }
+    }
+    const inspectionsWithLocations = allInspections.map(insp => ({
+      ...insp,
+      items: (insp.items || []).map((item: InspectionItem) => ({
+        ...item,
+        location: item.location || locationByItem[item.id] || null,
+      })),
+    }))
+
     try {
       if (isSpecialType) {
         const { generateSpecialInspectionPdf } = await import('@/lib/pdf-export')
-        await generateSpecialInspectionPdf(allInspections[0], bi, generalPhotoUrls.length > 0 ? generalPhotoUrls : undefined)
+        await generateSpecialInspectionPdf(inspectionsWithLocations[0], bi, generalPhotoUrls.length > 0 ? generalPhotoUrls : undefined)
       } else if (isDaily) {
         const { generateCombinedInspectionPdf } = await import('@/lib/pdf-export')
-        await generateCombinedInspectionPdf(allInspections, bi, Object.keys(photoMapForPdf).length > 0 ? photoMapForPdf : undefined)
+        await generateCombinedInspectionPdf(inspectionsWithLocations, bi, Object.keys(photoMapForPdf).length > 0 ? photoMapForPdf : undefined)
       } else {
         const { generateInspectionPdf } = await import('@/lib/pdf-export')
-        await generateInspectionPdf(allInspections[0], bi, Object.keys(photoMapForPdf).length > 0 ? photoMapForPdf : undefined)
+        await generateInspectionPdf(inspectionsWithLocations[0], bi, Object.keys(photoMapForPdf).length > 0 ? photoMapForPdf : undefined)
       }
     } catch (e) {
       console.error('PDF export failed:', e)

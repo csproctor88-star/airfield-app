@@ -386,7 +386,7 @@ export default function InspectionsPage() {
       : []
     const { items, passed, failed, na, total } = isCmJm
       ? { items: [], passed: 0, failed: 0, na: 0, total: 0 }
-      : halfDraftToItems(currentHalf, secs)
+      : halfDraftToItems(currentHalf, secs, itemLocations)
 
     const { data: saved, error } = await saveInspectionDraft({
       id: currentHalf.dbRowId,
@@ -508,7 +508,7 @@ export default function InspectionsPage() {
       : []
     const { items, passed, failed, na, total } = isCmJm
       ? { items: [], passed: 0, failed: 0, na: 0, total: 0 }
-      : halfDraftToItems(completedHalf, secs)
+      : halfDraftToItems(completedHalf, secs, itemLocations)
 
     const { data: saved } = await saveInspectionDraft({
       id: half.dbRowId,
@@ -728,7 +728,7 @@ export default function InspectionsPage() {
     // ── File airfield half (normal) ──
     if (airfieldSaved) {
       const afSecs = (dbAirfieldSections ?? AIRFIELD_INSPECTION_SECTIONS).filter(s => !s.conditional)
-      const { items, passed, failed, na, total } = halfDraftToItems(airfieldHalf, afSecs)
+      const { items, passed, failed, na, total } = halfDraftToItems(airfieldHalf, afSecs, itemLocations)
 
       if (airfieldHalf.dbRowId) {
         const { data: filed_data, error } = await fileInspection({
@@ -791,7 +791,7 @@ export default function InspectionsPage() {
     // ── File lighting half ──
     if (lightingSaved) {
       const ltSecs = dbLightingSections ?? LIGHTING_INSPECTION_SECTIONS
-      const { items, passed, failed, na, total } = halfDraftToItems(lightingHalf, ltSecs)
+      const { items, passed, failed, na, total } = halfDraftToItems(lightingHalf, ltSecs, itemLocations)
 
       if (lightingHalf.dbRowId) {
         const { data: filed_data, error } = await fileInspection({

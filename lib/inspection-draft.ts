@@ -96,6 +96,7 @@ export function clearDraft(baseId?: string | null): void {
 export function halfDraftToItems(
   half: InspectionHalfDraft,
   sections: InspectionSection[],
+  itemLocations?: Record<string, { lat: number; lon: number }>,
 ): { items: InspectionItem[]; passed: number; failed: number; na: number; total: number } {
   const visSecs = sections.filter((s) => !s.conditional || half.enabledConditionals[s.id])
   const visItems = visSecs.flatMap((s) => s.items)
@@ -113,6 +114,7 @@ export function halfDraftToItems(
       notes: item.type === 'bwc' ? (half.bwcValue || '') : (half.comments[item.id] || ''),
       photo_id: null,
       generated_discrepancy_id: null,
+      location: itemLocations?.[item.id] || null,
     }
   })
 
