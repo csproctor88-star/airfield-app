@@ -66,7 +66,7 @@ export function Header() {
         background: resolvedTheme === 'dark'
           ? 'linear-gradient(180deg, var(--color-bg-header-start), var(--color-bg-header-end))'
           : '#ffffff',
-        borderBottom: '2px solid var(--color-header-border)',
+        borderBottom: resolvedTheme === 'dark' ? 'none' : '2px solid var(--color-header-border)',
         padding: '8px 16px',
         position: 'sticky',
         top: 0,
@@ -83,7 +83,7 @@ export function Header() {
           alt="Glidepath"
           style={{
             display: 'block',
-            height: resolvedTheme === 'dark' ? 52 : 48,
+            height: resolvedTheme === 'dark' ? 64 : 48,
             objectFit: 'contain',
           }}
         />
