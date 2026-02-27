@@ -22,18 +22,6 @@ export function Header() {
   const { resolvedTheme } = useTheme()
   const [userDisplay, setUserDisplay] = useState<{ name: string; lastSeen: string | null }>({ name: '—', lastSeen: null })
   const [showInstSwitcher, setShowInstSwitcher] = useState(false)
-  const [time, setTime] = useState('')
-
-  // Live clock — updates every second
-  useEffect(() => {
-    function tick() {
-      const now = new Date()
-      setTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [])
 
   const canSwitchInstallation = allInstallations.length > 1
     && (userRole === 'airfield_manager' || userRole === 'sys_admin')
@@ -79,10 +67,7 @@ export function Header() {
           ? 'linear-gradient(180deg, var(--color-bg-header-start), var(--color-bg-header-end))'
           : '#ffffff',
         borderBottom: resolvedTheme === 'dark' ? 'none' : '2px solid var(--color-header-border)',
-        paddingTop: 'calc(8px + env(safe-area-inset-top, 0px))',
-        paddingLeft: 16,
-        paddingRight: 16,
-        paddingBottom: 8,
+        padding: '8px 16px',
         position: 'sticky',
         top: 0,
         zIndex: 50,
@@ -91,19 +76,6 @@ export function Header() {
         alignItems: 'center',
       }}
     >
-      {/* Clock — replaces system status bar in fullscreen PWA */}
-      <div style={{
-        width: '100%',
-        textAlign: 'center',
-        fontSize: 11,
-        fontWeight: 600,
-        color: 'var(--color-text-2)',
-        marginBottom: 4,
-        letterSpacing: '0.04em',
-      }}>
-        {time}
-      </div>
-
       {/* Logo — centered */}
       <Link href="/" style={{ textDecoration: 'none' }}>
         <img
