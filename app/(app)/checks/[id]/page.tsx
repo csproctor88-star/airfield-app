@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchCheck, fetchCheckComments, addCheckComment, fetchCheckPhotos, uploadCheckPhoto, type CheckRow, type CheckCommentRow, type CheckPhotoRow } from '@/lib/supabase/checks'
 import { PhotoViewerModal } from '@/components/discrepancies/modals'
 import { useInstallation } from '@/lib/installation-context'
+import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 
 export default function CheckDetailPage() {
   const params = useParams()
@@ -455,38 +456,16 @@ export default function CheckDetailPage() {
 
       {/* Add Photo Button */}
       {!usingDemo && (
-        <>
+        <div style={{ marginBottom: 8 }}>
           <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
           <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              style={{
-                padding: 10, borderRadius: 8,
-                background: '#38BDF814', border: '1px solid var(--color-border-active)', cursor: uploading ? 'default' : 'pointer',
-                color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
-                opacity: uploading ? 0.7 : 1,
-              }}
-            >
-              {uploading ? '⏳ Uploading...' : '🖼️ Upload Photo'}
-            </button>
-            <button
-              type="button"
-              onClick={() => cameraInputRef.current?.click()}
-              disabled={uploading}
-              style={{
-                padding: 10, borderRadius: 8,
-                background: '#38BDF814', border: '1px solid var(--color-border-active)', cursor: uploading ? 'default' : 'pointer',
-                color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
-                opacity: uploading ? 0.7 : 1,
-              }}
-            >
-              📸 Take Photo
-            </button>
-          </div>
-        </>
+          <PhotoPickerButton
+            onUpload={() => fileInputRef.current?.click()}
+            onCapture={() => cameraInputRef.current?.click()}
+            disabled={uploading}
+            label={uploading ? 'Uploading...' : undefined}
+          />
+        </div>
       )}
 
       {/* Actions */}

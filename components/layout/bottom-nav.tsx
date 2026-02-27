@@ -13,11 +13,11 @@ import {
 // Bottom nav: Home | Aircraft Database | Regulations | Obstruction Eval | More
 
 const tabs = [
-  { href: '/', label: 'HOME', icon: Home },
-  { href: '/aircraft', label: 'AIRCRAFT', icon: Plane },
-  { href: '/regulations', label: 'REFS', icon: BookOpen },
-  { href: '/obstructions', label: 'OBS EVAL', icon: MapPin },
-  { href: '/more', label: 'MORE', icon: Menu },
+  { href: '/', label: 'HOME', icon: Home, stacked: false },
+  { href: '/aircraft', label: 'AIRCRAFT', icon: Plane, stacked: false },
+  { href: '/regulations', label: 'REFERENCES', icon: BookOpen, stacked: false },
+  { href: '/obstructions', labelTop: 'OBSTRUCTION', labelBottom: 'TOOL', icon: MapPin, stacked: true },
+  { href: '/more', label: 'MORE', icon: Menu, stacked: false },
 ] as const
 
 export function BottomNav() {
@@ -41,7 +41,8 @@ export function BottomNav() {
         backdropFilter: 'blur(24px)',
       }}
     >
-      {tabs.map(({ href, label, icon: Icon }) => {
+      {tabs.map((tab) => {
+        const { href, icon: Icon, stacked } = tab
         const isActive = href === '/'
           ? pathname === '/'
           : pathname.startsWith(href)
@@ -57,9 +58,9 @@ export function BottomNav() {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: 2,
+              gap: 1,
               cursor: 'pointer',
-              padding: '4px 8px',
+              padding: '4px 4px',
               position: 'relative',
               textDecoration: 'none',
               minWidth: 44,
@@ -67,9 +68,15 @@ export function BottomNav() {
             }}
           >
             <Icon size={20} />
-            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em' }}>
-              {label}
-            </span>
+            {stacked ? (
+              <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.06em', lineHeight: 1.2, textAlign: 'center' }}>
+                {(tab as typeof tabs[3]).labelTop}<br />{(tab as typeof tabs[3]).labelBottom}
+              </span>
+            ) : (
+              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em' }}>
+                {(tab as typeof tabs[0]).label}
+              </span>
+            )}
           </Link>
         )
       })}

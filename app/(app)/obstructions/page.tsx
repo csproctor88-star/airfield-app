@@ -21,6 +21,7 @@ import {
   fetchObstructionEvaluation,
   parsePhotoPaths,
 } from '@/lib/supabase/obstructions'
+import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 
 // Dynamic import for Mapbox (client-only, no SSR)
 const AirfieldMap = dynamic(
@@ -662,44 +663,10 @@ function ObstructionsContent() {
           style={{ display: 'none' }}
         />
         <div style={{ marginBottom: 10 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              style={{
-                background: 'var(--color-border)',
-                border: '1px solid var(--color-border-active)',
-                borderRadius: 8,
-                padding: 10,
-                color: 'var(--color-accent)',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                minHeight: 44,
-              }}
-            >
-              🖼️ Upload Photo
-            </button>
-            <button
-              type="button"
-              onClick={() => cameraInputRef.current?.click()}
-              style={{
-                background: 'var(--color-border)',
-                border: '1px solid var(--color-border-active)',
-                borderRadius: 8,
-                padding: 10,
-                color: 'var(--color-accent)',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                minHeight: 44,
-              }}
-            >
-              📸 Take Photo
-            </button>
-          </div>
+          <PhotoPickerButton
+            onUpload={() => fileInputRef.current?.click()}
+            onCapture={() => cameraInputRef.current?.click()}
+          />
           {photos.length > 0 && (
             <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
               {photos.map((p, i) => (

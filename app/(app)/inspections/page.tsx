@@ -29,8 +29,15 @@ import {
 } from '@/lib/inspection-draft'
 import { DEMO_INSPECTIONS } from '@/lib/demo-data'
 import { getAirfieldDiagram } from '@/lib/airfield-diagram'
+import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 import { uploadInspectionPhoto } from '@/lib/supabase/inspections'
 import type { InspectionItem } from '@/lib/supabase/types'
+import dynamic from 'next/dynamic'
+
+const InspectionLocationMap = dynamic(
+  () => import('@/components/discrepancies/location-map'),
+  { ssr: false },
+)
 
 type BwcValue = null | (typeof BWC_OPTIONS)[number]
 type TabType = 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
@@ -104,6 +111,8 @@ export default function InspectionsPage() {
   // ── GPS location state for fail items ──
   const [itemLocations, setItemLocations] = useState<Record<string, { lat: number; lon: number }>>({})
   const [gpsLoading, setGpsLoading] = useState<string | null>(null)
+  const [itemFlyTo, setItemFlyTo] = useState<Record<string, { lat: number; lng: number }>>({})
+
 
   // ── Airfield diagram state ──
   const [diagramUrl, setDiagramUrl] = useState<string | null>(null)
@@ -147,10 +156,13 @@ export default function InspectionsPage() {
     setGpsLoading(itemId)
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        const lat = position.coords.latitude
+        const lon = position.coords.longitude
         setItemLocations((prev) => ({
           ...prev,
-          [itemId]: { lat: position.coords.latitude, lon: position.coords.longitude },
+          [itemId]: { lat, lon },
         }))
+        setItemFlyTo((prev) => ({ ...prev, [itemId]: { lat, lng: lon } }))
         setGpsLoading(null)
         toast.success('Location acquired')
       },
@@ -172,6 +184,11 @@ export default function InspectionsPage() {
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     )
+  }, [])
+
+  const handleItemPointSelected = useCallback((itemId: string, lat: number, lng: number) => {
+    setItemLocations((prev) => ({ ...prev, [itemId]: { lat, lon: lng } }))
+    toast.success(`Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
   }, [])
 
   // ── Load draft from localStorage on mount (scoped to current base) ──
@@ -1047,14 +1064,14 @@ export default function InspectionsPage() {
           </div>
         </div>
 
-        {/* ── Tab Bar (4 tabs, scrollable) ── */}
-        <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-text-4)', marginBottom: 12, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        {/* ── Tab Bar (4 tabs) ── */}
+        <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-text-4)', marginBottom: 12 }}>
           {([
-            { key: 'airfield' as TabType, label: 'Airfield' },
-            { key: 'lighting' as TabType, label: 'Lighting' },
-            { key: 'construction_meeting' as TabType, label: 'Pre/Post Construction' },
-            { key: 'joint_monthly' as TabType, label: 'Joint Monthly' },
-          ]).map(({ key: type, label }) => {
+            { key: 'airfield' as TabType, topLine: 'Airfield', bottomLine: null, wide: true },
+            { key: 'lighting' as TabType, topLine: 'Lighting', bottomLine: null, wide: true },
+            { key: 'construction_meeting' as TabType, topLine: 'Pre/Post', bottomLine: 'Construction', wide: false },
+            { key: 'joint_monthly' as TabType, topLine: 'Joint Monthly', bottomLine: 'Inspection', wide: false },
+          ]).map(({ key: type, topLine, bottomLine, wide }) => {
             const active = activeTab === type
             const half = draft[type]
             const saved = !!half.savedAt
@@ -1063,28 +1080,32 @@ export default function InspectionsPage() {
                 key={type}
                 onClick={() => setActiveTab(type)}
                 style={{
-                  flex: '1 0 auto',
+                  flex: wide ? '1.3 0 0%' : '1 0 0%',
                   minWidth: 0,
-                  padding: '10px 12px',
+                  padding: bottomLine ? '6px 4px' : '10px 8px',
                   border: 'none',
                   background: active ? 'var(--color-accent-secondary)' : 'transparent',
                   color: active ? '#FFF' : 'var(--color-text-2)',
-                  fontSize: 13,
+                  fontSize: bottomLine ? 11 : 13,
                   fontWeight: 700,
                   cursor: 'pointer',
                   fontFamily: 'inherit',
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 5,
-                  whiteSpace: 'nowrap',
+                  gap: 0,
+                  lineHeight: bottomLine ? 1.3 : 1,
+                  position: 'relative',
                 }}
               >
-                {label}
+                <span>{topLine}</span>
+                {bottomLine && <span>{bottomLine}</span>}
                 {saved && (
                   <span style={{
-                    width: 16, height: 16, borderRadius: '50%',
-                    background: '#22C55E', color: '#FFF', fontSize: 11,
+                    position: 'absolute', top: 2, right: 2,
+                    width: 14, height: 14, borderRadius: '50%',
+                    background: '#22C55E', color: '#FFF', fontSize: 9,
                     fontWeight: 800, display: 'inline-flex', alignItems: 'center',
                     justifyContent: 'center', lineHeight: 1, flexShrink: 0,
                   }}>
@@ -1249,31 +1270,11 @@ export default function InspectionsPage() {
                 </div>
               )}
 
-              {/* Buttons */}
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  type="button"
-                  onClick={() => specialFileRef.current?.click()}
-                  style={{
-                    flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                    border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.08)',
-                    color: 'var(--color-accent-secondary)', cursor: 'pointer', fontFamily: 'inherit',
-                  }}
-                >
-                  Upload Photo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => specialCameraRef.current?.click()}
-                  style={{
-                    flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                    border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.08)',
-                    color: 'var(--color-accent-secondary)', cursor: 'pointer', fontFamily: 'inherit',
-                  }}
-                >
-                  Take Photo
-                </button>
-              </div>
+              {/* Photo button */}
+              <PhotoPickerButton
+                onUpload={() => specialFileRef.current?.click()}
+                onCapture={() => specialCameraRef.current?.click()}
+              />
             </div>
           </>
         ) : (
@@ -1457,75 +1458,48 @@ export default function InspectionsPage() {
                               </div>
                             )}
 
-                            {/* Photo + Location buttons */}
-                            <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                              <button
-                                type="button"
-                                onClick={() => { setActivePhotoItemId(item.id); itemFileRef.current?.click() }}
-                                style={{
-                                  padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600,
-                                  border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.08)',
-                                  color: 'var(--color-accent-secondary)', cursor: 'pointer', fontFamily: 'inherit',
-                                }}
-                              >
-                                Upload Photo
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => { setActivePhotoItemId(item.id); itemCameraRef.current?.click() }}
-                                style={{
-                                  padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600,
-                                  border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.08)',
-                                  color: 'var(--color-accent-secondary)', cursor: 'pointer', fontFamily: 'inherit',
-                                }}
-                              >
-                                Take Photo
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => captureLocation(item.id)}
-                                disabled={gpsLoading === item.id}
-                                style={{
-                                  display: 'flex', alignItems: 'center', gap: 4,
-                                  padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600,
-                                  border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
-                                  color: 'var(--color-accent)', cursor: gpsLoading === item.id ? 'wait' : 'pointer',
-                                  fontFamily: 'inherit', opacity: gpsLoading === item.id ? 0.6 : 1,
-                                }}
-                              >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <circle cx="12" cy="12" r="3" />
-                                  <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-                                </svg>
-                                {gpsLoading === item.id ? 'Getting...' : 'Use My Location'}
-                              </button>
+                            {/* Photo button */}
+                            <div style={{ marginTop: 6 }}>
+                              <PhotoPickerButton
+                                variant="compact"
+                                onUpload={() => { setActivePhotoItemId(item.id); itemFileRef.current?.click() }}
+                                onCapture={() => { setActivePhotoItemId(item.id); itemCameraRef.current?.click() }}
+                              />
                             </div>
 
-                            {/* Show captured location with mini-map */}
-                            {itemLocations[item.id] && (() => {
-                              const loc = itemLocations[item.id]
-                              const mapToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-                              const mapUrl = mapToken && mapToken !== 'your-mapbox-token-here'
-                                ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${loc.lon},${loc.lat})/${loc.lon},${loc.lat},16,0/400x200@2x?access_token=${mapToken}`
-                                : null
-                              return (
-                                <div style={{ marginTop: 6 }}>
-                                  {mapUrl && (
-                                    <img
-                                      src={mapUrl}
-                                      alt="Fail item location"
-                                      style={{
-                                        width: '100%', maxWidth: 400, height: 160, objectFit: 'cover',
-                                        borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginBottom: 4,
-                                      }}
-                                    />
-                                  )}
-                                  <div style={{ fontSize: 10, color: 'var(--color-text-3)' }}>
-                                    Location: {loc.lat.toFixed(5)}, {loc.lon.toFixed(5)}
-                                  </div>
-                                </div>
-                              )
-                            })()}
+                            {/* Interactive map for location selection */}
+                            <div style={{ marginTop: 8 }}>
+                              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+                                Pin Location on Map
+                              </div>
+                              <InspectionLocationMap
+                                onPointSelected={(lat, lng) => handleItemPointSelected(item.id, lat, lng)}
+                                selectedLat={itemLocations[item.id]?.lat ?? null}
+                                selectedLng={itemLocations[item.id]?.lon ?? null}
+                                flyToPoint={itemFlyTo[item.id] ?? null}
+                              />
+                            </div>
+
+                            {/* Use My Location GPS button */}
+                            <button
+                              type="button"
+                              onClick={() => captureLocation(item.id)}
+                              disabled={gpsLoading === item.id}
+                              style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                width: '100%', padding: '10px 16px', marginTop: 6, borderRadius: 8,
+                                border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
+                                color: 'var(--color-accent)', fontSize: 13, fontWeight: 600,
+                                cursor: gpsLoading === item.id ? 'wait' : 'pointer', fontFamily: 'inherit',
+                                opacity: gpsLoading === item.id ? 0.6 : 1,
+                              }}
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="3" />
+                                <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+                              </svg>
+                              {gpsLoading === item.id ? 'Getting Location...' : 'Use My Location'}
+                            </button>
                           </div>
                         )}
                       </div>

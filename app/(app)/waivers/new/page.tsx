@@ -6,6 +6,7 @@ import { WAIVER_CLASSIFICATIONS, WAIVER_HAZARD_RATINGS, WAIVER_CRITERIA_SOURCES 
 import { createWaiver, upsertWaiverCriteria, uploadWaiverAttachment } from '@/lib/supabase/waivers'
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
+import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 import type { WaiverStatus, WaiverClassification, WaiverCriteriaSource, WaiverAttachmentType } from '@/lib/supabase/types'
 
 type CriteriaEntry = { criteria_source: WaiverCriteriaSource; reference: string; description: string }
@@ -553,31 +554,11 @@ export default function NewWaiverPage() {
               </div>
             )}
 
-            {/* Upload / Capture buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <button
-                type="button"
-                onClick={() => cameraInputRef.current?.click()}
-                style={{
-                  padding: 10, borderRadius: 6, border: '1px dashed var(--color-border)',
-                  background: 'transparent', color: 'var(--color-cyan)', fontSize: 12, fontWeight: 600,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                Take Photo
-              </button>
-              <button
-                type="button"
-                onClick={() => photoInputRef.current?.click()}
-                style={{
-                  padding: 10, borderRadius: 6, border: '1px dashed var(--color-border)',
-                  background: 'transparent', color: 'var(--color-cyan)', fontSize: 12, fontWeight: 600,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                Upload Photo
-              </button>
-            </div>
+            {/* Upload / Capture button */}
+            <PhotoPickerButton
+              onUpload={() => photoInputRef.current?.click()}
+              onCapture={() => cameraInputRef.current?.click()}
+            />
           </>
         )}
       </div>

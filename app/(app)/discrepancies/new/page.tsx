@@ -7,6 +7,7 @@ import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
+import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 
 const DiscrepancyLocationMap = dynamic(
   () => import('@/components/discrepancies/location-map'),
@@ -289,13 +290,11 @@ export default function NewDiscrepancyPage() {
 
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
         <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
-          <button type="button" onClick={() => fileInputRef.current?.click()} style={{ background: '#38BDF814', border: '1px solid #38BDF833', borderRadius: 8, padding: 10, color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', minHeight: 44 }}>
-            🖼️ Upload Photo
-          </button>
-          <button type="button" onClick={() => cameraInputRef.current?.click()} style={{ background: '#38BDF814', border: '1px solid #38BDF833', borderRadius: 8, padding: 10, color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', minHeight: 44 }}>
-            📸 Take Photo
-          </button>
+        <div style={{ marginBottom: 12 }}>
+          <PhotoPickerButton
+            onUpload={() => fileInputRef.current?.click()}
+            onCapture={() => cameraInputRef.current?.click()}
+          />
         </div>
 
         <button type="button" className="btn-primary" onClick={handleSubmit} disabled={saving} style={{ opacity: saving ? 0.7 : 1 }}>

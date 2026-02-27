@@ -18,6 +18,7 @@ import { DEMO_CHECKS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { getAirfieldDiagram } from '@/lib/airfield-diagram'
+import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 
 const CheckLocationMap = dynamic(
   () => import('@/components/discrepancies/location-map'),
@@ -83,6 +84,7 @@ export default function AirfieldChecksPage() {
   // Location
   const [selectedLat, setSelectedLat] = useState<number | null>(null)
   const [selectedLng, setSelectedLng] = useState<number | null>(null)
+  const [flyToPoint, setFlyToPoint] = useState<{ lat: number; lng: number } | null>(null)
 
   const handlePointSelected = useCallback((lat: number, lng: number) => {
     setSelectedLat(lat)
@@ -98,10 +100,13 @@ export default function AirfieldChecksPage() {
     setGpsLoading(true)
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setSelectedLat(position.coords.latitude)
-        setSelectedLng(position.coords.longitude)
+        const lat = position.coords.latitude
+        const lng = position.coords.longitude
+        setSelectedLat(lat)
+        setSelectedLng(lng)
+        setFlyToPoint({ lat, lng })
         setGpsLoading(false)
-        toast.success(`Location: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`)
+        toast.success(`Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
       },
       (error) => {
         setGpsLoading(false)
@@ -730,6 +735,7 @@ export default function AirfieldChecksPage() {
             onPointSelected={handlePointSelected}
             selectedLat={selectedLat}
             selectedLng={selectedLng}
+            flyToPoint={flyToPoint}
           />
         </div>
       )}
@@ -844,30 +850,10 @@ export default function AirfieldChecksPage() {
 
           <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
           <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              style={{
-                background: 'var(--color-accent-glow)', border: '1px solid var(--color-border-active)', borderRadius: 8,
-                padding: 10, color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                fontFamily: 'inherit', minHeight: 44,
-              }}
-            >
-              Upload Photo
-            </button>
-            <button
-              type="button"
-              onClick={() => cameraInputRef.current?.click()}
-              style={{
-                background: 'var(--color-accent-glow)', border: '1px solid var(--color-border-active)', borderRadius: 8,
-                padding: 10, color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                fontFamily: 'inherit', minHeight: 44,
-              }}
-            >
-              Take Photo
-            </button>
-          </div>
+          <PhotoPickerButton
+            onUpload={() => fileInputRef.current?.click()}
+            onCapture={() => cameraInputRef.current?.click()}
+          />
         </div>
       )}
 

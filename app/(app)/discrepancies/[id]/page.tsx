@@ -12,6 +12,7 @@ import { CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS, DISCREPANCY_TYPES } from '@/l
 import { EditDiscrepancyModal, StatusUpdateModal, WorkOrderModal, PhotoViewerModal } from '@/components/discrepancies/modals'
 import { toast } from 'sonner'
 import Link from 'next/link'
+import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 
 type ModalType = 'edit' | 'status' | 'workorder' | null
 
@@ -248,12 +249,14 @@ export default function DiscrepancyDetailPage() {
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
         <ActionButton color="#38BDF8" onClick={() => setActiveModal('edit')}>✏️ Edit</ActionButton>
-        <ActionButton color="#38BDF8" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-          {uploading ? '⏳ Uploading...' : `🖼️ Upload${allPhotos.length > 0 ? ` (${allPhotos.length})` : ''}`}
-        </ActionButton>
-        <ActionButton color="#38BDF8" onClick={() => cameraInputRef.current?.click()} disabled={uploading}>
-          📸 Take Photo
-        </ActionButton>
+        <div>
+          <PhotoPickerButton
+            onUpload={() => fileInputRef.current?.click()}
+            onCapture={() => cameraInputRef.current?.click()}
+            disabled={uploading}
+            label={uploading ? 'Uploading...' : allPhotos.length > 0 ? `Add Photo (${allPhotos.length})` : undefined}
+          />
+        </div>
         <ActionButton color="#FBBF24" onClick={() => setActiveModal('status')}>🔄 Status</ActionButton>
         <ActionButton color="#34D399" onClick={() => setActiveModal('workorder')}>📋 Work Order</ActionButton>
       </div>

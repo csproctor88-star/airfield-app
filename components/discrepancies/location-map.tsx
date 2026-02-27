@@ -11,9 +11,10 @@ type Props = {
   selectedLat: number | null
   selectedLng: number | null
   promptText?: string
+  flyToPoint?: { lat: number; lng: number } | null
 }
 
-export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, selectedLng, promptText }: Props) {
+export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, selectedLng, promptText, flyToPoint }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const marker = useRef<mapboxgl.Marker | null>(null)
@@ -107,6 +108,12 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
         .addTo(map.current)
     }
   }, [selectedLat, selectedLng, mapLoaded])
+
+  // Fly to point when GPS location is captured
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !flyToPoint) return
+    map.current.flyTo({ center: [flyToPoint.lng, flyToPoint.lat], zoom: 16, duration: 1500 })
+  }, [flyToPoint, mapLoaded])
 
   if (!mapboxReady) {
     return (
