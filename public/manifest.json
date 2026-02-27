@@ -3,7 +3,7 @@
   "short_name": "Glidepath",
   "description": "Glidepath — Airfield Operations Suite",
   "start_url": "/",
-  "display": "fullscreen",
+  "display": "standalone",
   "background_color": "#0B1120",
   "theme_color": "#0B1120",
   "orientation": "any",

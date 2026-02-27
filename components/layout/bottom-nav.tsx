@@ -42,7 +42,7 @@ export function BottomNav() {
           justifyContent: 'space-around',
           borderTop: '1px solid var(--color-border)',
           paddingTop: 6,
-          paddingBottom: 'calc(6px + env(safe-area-inset-bottom, 0px))',
+          paddingBottom: 'calc(14px + env(safe-area-inset-bottom, 0px))',
         }}
       >
         {tabs.map(({ href, label, icon: Icon }) => {
