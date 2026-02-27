@@ -30,13 +30,12 @@ export function BottomNav() {
         transform: 'translateX(-50%)',
         width: '100%',
         maxWidth: 480,
-        background: 'var(--color-bg-nav)',
+        background: 'var(--color-bg-surface-solid)',
         borderTop: '1px solid var(--color-border)',
         display: 'flex',
         justifyContent: 'space-around',
         padding: '6px 0 calc(20px + env(safe-area-inset-bottom, 0px))',
         zIndex: 100,
-        backdropFilter: 'blur(24px)',
       }}
     >
       {tabs.map(({ href, label, icon: Icon }) => {

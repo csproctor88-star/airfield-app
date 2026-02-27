@@ -35,6 +35,9 @@ const themeScript = `
       ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
       : t;
     document.documentElement.setAttribute('data-theme', r);
+    var bg = r === 'light' ? '#F8FAFC' : '#0B1120';
+    document.documentElement.style.background = bg;
+    document.body.style.background = bg;
   } catch(e) {}
 })();
 `
@@ -45,11 +48,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning style={{ background: '#0B1120' }}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="font-sans" style={{ minHeight: '100dvh' }}>
+      <body className="font-sans" style={{ minHeight: '100dvh', background: '#0B1120' }}>
         <ThemeProvider>
           {children}
           <Toaster
