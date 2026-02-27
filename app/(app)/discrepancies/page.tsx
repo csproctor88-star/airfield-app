@@ -140,6 +140,8 @@ export default function DiscrepanciesPage() {
     }
 
     const hasPhotos = Object.keys(photoInfo).length > 0
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const hasCoords = filtered.some(d => (d as any).latitude != null && (d as any).longitude != null)
     const columns = [
       { header: 'Display ID', key: 'display_id', width: 16 },
       { header: 'Title', key: 'title', width: 36 },
@@ -148,6 +150,7 @@ export default function DiscrepanciesPage() {
       { header: 'Status', key: 'status', width: 12 },
       { header: 'Current Status', key: 'current_status', width: 30 },
       { header: 'Location', key: 'location', width: 12 },
+      ...(hasCoords ? [{ header: 'Coordinates', key: 'coordinates', width: 22 }] : []),
       { header: 'Assigned Shop', key: 'assigned_shop', width: 20 },
       { header: 'Work Order #', key: 'work_order', width: 16 },
       { header: 'Days Open', key: 'days_open', width: 10 },
@@ -168,6 +171,12 @@ export default function DiscrepanciesPage() {
         status: titleCase(d.status),
         current_status: getCurrentStatusLabel(d.current_status),
         location: d.location_text,
+        ...(hasCoords ? {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          coordinates: (d as any).latitude != null && (d as any).longitude != null
+            ? `${Number((d as any).latitude).toFixed(5)}, ${Number((d as any).longitude).toFixed(5)}`
+            : '',
+        } : {}),
         assigned_shop: d.assigned_shop || '',
         work_order: d.work_order_number || '',
         days_open: usingDemo ? (d as typeof DEMO_DISCREPANCIES[number]).days_open : daysOpen(d.created_at),
@@ -270,7 +279,11 @@ export default function DiscrepanciesPage() {
     y += 7
 
     // Table
-    const headRow = ['ID', 'Title', 'Type', 'Severity', 'Status', 'Location', 'Work Order', 'Days']
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pdfHasCoords = filtered.some(d => (d as any).latitude != null && (d as any).longitude != null)
+    const headRow = ['ID', 'Title', 'Type', 'Severity', 'Status', 'Location']
+    if (pdfHasCoords) headRow.push('Coordinates')
+    headRow.push('Work Order', 'Days')
     if (hasAnyPhotos) headRow.push('Photos')
 
     const tableBody = filtered.map(d => {
@@ -281,9 +294,17 @@ export default function DiscrepanciesPage() {
         d.severity,
         d.status,
         d.location_text,
+      ]
+      if (pdfHasCoords) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        row.push((d as any).latitude != null && (d as any).longitude != null
+          ? `${Number((d as any).latitude).toFixed(5)}, ${Number((d as any).longitude).toFixed(5)}`
+          : '')
+      }
+      row.push(
         d.work_order_number || '',
         String(usingDemo ? (d as typeof DEMO_DISCREPANCIES[number]).days_open : daysOpen(d.created_at)),
-      ]
+      )
       if (hasAnyPhotos) {
         const count = photoMap[d.id]?.length || 0
         row.push(count > 0 ? `${count} photo${count > 1 ? 's' : ''}` : '')
@@ -291,7 +312,7 @@ export default function DiscrepanciesPage() {
       return row
     })
 
-    const photoColIdx = hasAnyPhotos ? 8 : -1
+    const photoColIdx = hasAnyPhotos ? (pdfHasCoords ? 9 : 8) : -1
 
     autoTable(doc, {
       startY: y,
@@ -304,8 +325,9 @@ export default function DiscrepanciesPage() {
       columnStyles: {
         0: { cellWidth: 20 },
         1: { cellWidth: 40 },
-        7: { cellWidth: 12, halign: 'center' },
-        ...(hasAnyPhotos ? { 8: { cellWidth: 30 } } : {}),
+        ...(pdfHasCoords ? { 6: { cellWidth: 22 } } : {}),
+        [pdfHasCoords ? 8 : 7]: { cellWidth: 12, halign: 'center' },
+        ...(hasAnyPhotos ? { [pdfHasCoords ? 9 : 8]: { cellWidth: 30 } } : {}),
       },
       didParseCell: (data: { section: string; column: { index: number }; row: { index: number }; cell: { styles: { minCellHeight?: number } } }) => {
         if (data.section === 'body' && data.column.index === photoColIdx) {

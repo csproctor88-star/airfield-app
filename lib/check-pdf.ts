@@ -225,7 +225,7 @@ export async function generateCheckPdf(input: CheckPdfInput) {
   const lat = check.latitude != null ? Number(check.latitude) : null
   const lng = check.longitude != null ? Number(check.longitude) : null
   if (lat != null && lng != null) {
-    checkPageBreak(10)
+    checkPageBreak(50)
     y += 2
     doc.setFontSize(10)
     doc.setTextColor(0)
@@ -236,7 +236,32 @@ export async function generateCheckPdf(input: CheckPdfInput) {
     doc.setFontSize(9)
     doc.setTextColor(40)
     doc.text(`Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}`, margin, y)
-    y += 8
+    y += 5
+
+    // Embed static satellite map image
+    const mapToken = typeof window !== 'undefined' ? process.env.NEXT_PUBLIC_MAPBOX_TOKEN : null
+    if (mapToken && mapToken !== 'your-mapbox-token-here') {
+      try {
+        const mapUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${lng},${lat})/${lng},${lat},16,0/600x300@2x?access_token=${mapToken}`
+        const res = await fetch(mapUrl)
+        if (res.ok) {
+          const blob = await res.blob()
+          const dataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onloadend = () => resolve(reader.result as string)
+            reader.readAsDataURL(blob)
+          })
+          doc.addImage(dataUrl, 'PNG', margin, y, 80, 40)
+          y += 44
+        } else {
+          y += 4
+        }
+      } catch {
+        y += 4
+      }
+    } else {
+      y += 4
+    }
   }
 
   // ── Remarks ──

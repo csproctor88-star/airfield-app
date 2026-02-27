@@ -120,7 +120,7 @@ export default function InspectionsPage() {
 
   useEffect(() => {
     if (!installationId) return
-    getAirfieldDiagram(installationId).then(setDiagramUrl)
+    getAirfieldDiagram(installationId).then(setDiagramUrl).catch(() => setDiagramUrl(null))
   }, [installationId])
 
   const handleItemPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1655,26 +1655,30 @@ export default function InspectionsPage() {
         {showDiagram && diagramUrl && (
           <div
             onClick={() => setShowDiagram(false)}
+            onTouchEnd={(e) => { if (e.target === e.currentTarget) setShowDiagram(false) }}
             style={{
-              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 300,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16,
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 9999,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              padding: '60px 12px 24px',
+              overflowY: 'auto', WebkitOverflowScrolling: 'touch',
             }}
           >
-            <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 301 }}>
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowDiagram(false) }}
-                style={{
-                  background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8,
-                  padding: '8px 14px', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                }}
-              >Close</button>
-            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowDiagram(false) }}
+              style={{
+                position: 'fixed', top: 12, right: 12, zIndex: 10000,
+                background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8,
+                padding: '10px 18px', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+                backdropFilter: 'blur(8px)',
+              }}
+            >Close</button>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={diagramUrl}
               alt="Airfield Diagram"
               onClick={(e) => e.stopPropagation()}
-              style={{ maxWidth: '100%', maxHeight: 'calc(100vh - 80px)', objectFit: 'contain', borderRadius: 8 }}
+              onTouchEnd={(e) => e.stopPropagation()}
+              style={{ maxWidth: '100%', maxHeight: 'calc(100vh - 100px)', objectFit: 'contain', borderRadius: 8 }}
             />
           </div>
         )}

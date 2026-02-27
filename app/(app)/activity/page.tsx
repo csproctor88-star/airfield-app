@@ -14,6 +14,7 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     inspection: 'Inspection',
     obstruction_evaluation: 'Obstruction Eval',
     navaid_status: 'NAVAID',
+    airfield_status: 'Runway',
   }
   const entity = typeLabel[entityType] || entityType
   const id = displayId ? ` ${displayId}` : ''
