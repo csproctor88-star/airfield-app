@@ -11,10 +11,10 @@ import {
   RCR_CONDITION_TYPES,
   BASH_CONDITION_CODES,
   EMERGENCY_ACTIONS,
-  EMERGENCY_AGENCIES,
 } from '@/lib/constants'
 import type { CheckType } from '@/lib/supabase/types'
-import { createCheck, uploadCheckPhoto } from '@/lib/supabase/checks'
+import { createCheck, uploadCheckPhoto, fetchRecentChecks, type CheckRow } from '@/lib/supabase/checks'
+import { DEMO_CHECKS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 
@@ -39,18 +39,24 @@ export default function AirfieldChecksPage() {
   const [areas, setAreas] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [currentUser, setCurrentUser] = useState('Inspector')
+  const [recentChecks, setRecentChecks] = useState<CheckRow[]>([])
+  const [gpsLoading, setGpsLoading] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
     if (!supabase) {
       setCurrentUser('Demo User')
+      setRecentChecks(DEMO_CHECKS.slice(0, 5) as unknown as CheckRow[])
       return
     }
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: profile } = await (supabase as any).from('profiles').select('name, rank').eq('id', user.id).single()
-      if (profile?.name) {
+      const { data: profile } = await (supabase as any).from('profiles').select('name, rank, first_name, last_name').eq('id', user.id).single()
+      if (profile?.first_name && profile?.last_name) {
+        const displayName = `${profile.first_name} ${profile.last_name}`
+        setCurrentUser(profile.rank ? `${profile.rank} ${displayName}` : displayName)
+      } else if (profile?.name) {
         setCurrentUser(profile.rank ? `${profile.rank} ${profile.name}` : profile.name)
       } else if (user.user_metadata?.name) {
         setCurrentUser(user.user_metadata.name)
@@ -58,7 +64,8 @@ export default function AirfieldChecksPage() {
         setCurrentUser(user.email.split('@')[0])
       }
     })
-  }, [])
+    fetchRecentChecks(installationId, 5).then(setRecentChecks)
+  }, [installationId])
 
   // Issue Found toggle
   const [issueFound, setIssueFound] = useState(false)
@@ -71,6 +78,39 @@ export default function AirfieldChecksPage() {
     setSelectedLat(lat)
     setSelectedLng(lng)
     toast.success(`Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+  }, [])
+
+  const captureLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser')
+      return
+    }
+    setGpsLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setSelectedLat(position.coords.latitude)
+        setSelectedLng(position.coords.longitude)
+        setGpsLoading(false)
+        toast.success(`Location: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`)
+      },
+      (error) => {
+        setGpsLoading(false)
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            toast.error('Location access denied. Enable in browser settings.')
+            break
+          case error.POSITION_UNAVAILABLE:
+            toast.error('Location information unavailable.')
+            break
+          case error.TIMEOUT:
+            toast.error('Location request timed out.')
+            break
+          default:
+            toast.error('Unable to get your location.')
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    )
   }, [])
 
   // Photos
@@ -267,8 +307,14 @@ export default function AirfieldChecksPage() {
           className="input-dark"
           value={checkType}
           onChange={(e) => {
-            setCheckType(e.target.value as CheckType | '')
+            const newType = e.target.value as CheckType | ''
+            setCheckType(newType)
             resetTypeFields()
+            setAreas([])
+            // Auto-select all runway areas for RSC
+            if (newType === 'rsc') {
+              setAreas(installationAreas.filter(a => a.toUpperCase().startsWith('RWY')))
+            }
           }}
           style={{ fontSize: 14 }}
         >
@@ -287,6 +333,49 @@ export default function AirfieldChecksPage() {
           </div>
         )}
       </div>
+
+      {/* Recent Checks — shown when no check type selected */}
+      {!checkType && recentChecks.length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            Recent Checks
+          </div>
+          {recentChecks.map((rc) => {
+            const cfg = CHECK_TYPE_CONFIG[rc.check_type as keyof typeof CHECK_TYPE_CONFIG]
+            return (
+              <Link
+                key={rc.id}
+                href={`/checks/${rc.id}`}
+                style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '10px 12px', marginBottom: 4, borderRadius: 8,
+                  background: 'var(--color-bg-surface-solid)', border: '1px solid var(--color-border-mid)',
+                  textDecoration: 'none', color: 'inherit',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>{cfg?.icon}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{rc.display_id}</span>
+                  <span style={{ fontSize: 11, color: 'var(--color-text-2)' }}>{cfg?.label}</span>
+                </div>
+                <span style={{ fontSize: 10, color: 'var(--color-text-3)' }}>
+                  {rc.completed_at ? new Date(rc.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+                </span>
+              </Link>
+            )
+          })}
+          <Link
+            href="/checks/history"
+            style={{
+              display: 'block', textAlign: 'center', padding: '10px',
+              fontSize: 12, fontWeight: 600, color: 'var(--color-cyan)',
+              textDecoration: 'none',
+            }}
+          >
+            View Full Check History →
+          </Link>
+        </div>
+      )}
 
       {/* Dynamic Fields Based on Check Type */}
       {checkType && (
@@ -363,8 +452,8 @@ export default function AirfieldChecksPage() {
                 <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 4 }}>Condition Code</div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {BASH_CONDITION_CODES.map((code) => {
-                    const colors: Record<string, string> = { LOW: 'var(--color-success)', MODERATE: 'var(--color-warning)', SEVERE: 'var(--color-danger)' }
-                    const bgColors: Record<string, string> = { LOW: 'rgba(34,197,94,0.13)', MODERATE: 'rgba(234,179,8,0.13)', SEVERE: 'rgba(239,68,68,0.13)' }
+                    const colors: Record<string, string> = { LOW: 'var(--color-success)', MODERATE: 'var(--color-warning)', SEVERE: 'var(--color-danger)', PROHIBITED: '#DC2626' }
+                    const bgColors: Record<string, string> = { LOW: 'rgba(34,197,94,0.13)', MODERATE: 'rgba(234,179,8,0.13)', SEVERE: 'rgba(239,68,68,0.13)', PROHIBITED: 'rgba(220,38,38,0.18)' }
                     const active = bashCondition === code
                     return (
                       <button
@@ -372,7 +461,7 @@ export default function AirfieldChecksPage() {
                         type="button"
                         onClick={() => setBashCondition(code)}
                         style={{
-                          flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                          flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 11, fontWeight: 700,
                           cursor: 'pointer', fontFamily: 'inherit',
                           border: active ? `1.5px solid ${colors[code]}` : '1.5px solid var(--color-border-mid)',
                           background: active ? bgColors[code] : 'var(--color-bg-elevated)',
@@ -453,30 +542,6 @@ export default function AirfieldChecksPage() {
                   })}
                 </div>
               </div>
-              <div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 6 }}>Agency Notifications</div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {EMERGENCY_AGENCIES.map((agency) => {
-                    const active = notifiedAgencies.includes(agency)
-                    return (
-                      <button
-                        key={agency}
-                        type="button"
-                        onClick={() => toggleAgency(agency)}
-                        style={{
-                          padding: '6px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600,
-                          cursor: 'pointer', fontFamily: 'inherit',
-                          border: active ? '1.5px solid var(--color-accent)' : '1.5px solid var(--color-border-mid)',
-                          background: active ? 'rgba(56,189,248,0.13)' : 'var(--color-bg-elevated)',
-                          color: active ? 'var(--color-accent)' : 'var(--color-text-3)',
-                        }}
-                      >
-                        {active ? '✓ ' : ''}{agency}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
             </div>
           )}
 
@@ -527,30 +592,6 @@ export default function AirfieldChecksPage() {
                   })}
                 </div>
               </div>
-              <div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 6 }}>Agency Notifications</div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {EMERGENCY_AGENCIES.map((agency) => {
-                    const active = notifiedAgencies.includes(agency)
-                    return (
-                      <button
-                        key={agency}
-                        type="button"
-                        onClick={() => toggleAgency(agency)}
-                        style={{
-                          padding: '6px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600,
-                          cursor: 'pointer', fontFamily: 'inherit',
-                          border: active ? '1.5px solid var(--color-accent)' : '1.5px solid var(--color-border-mid)',
-                          background: active ? 'rgba(56,189,248,0.13)' : 'var(--color-bg-elevated)',
-                          color: active ? 'var(--color-accent)' : 'var(--color-text-3)',
-                        }}
-                      >
-                        {active ? '✓ ' : ''}{agency}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
             </div>
           )}
 
@@ -573,13 +614,22 @@ export default function AirfieldChecksPage() {
       )}
 
       {/* Areas Checked */}
-      {checkType && (
+      {checkType && (() => {
+        const displayAreas = checkType === 'rsc'
+          ? installationAreas.filter(a => a.toUpperCase().startsWith('RWY'))
+          : installationAreas
+        return (
         <div className="card" style={{ marginBottom: 8 }}>
           <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-            Areas Checked
+            {checkType === 'rsc' ? 'Runway Areas Checked' : 'Areas Checked'}
           </div>
+          {displayAreas.length === 0 && (
+            <div style={{ fontSize: 12, color: 'var(--color-text-3)', fontStyle: 'italic' }}>
+              No runway areas configured for this installation.
+            </div>
+          )}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {installationAreas.map((area) => {
+            {displayAreas.map((area) => {
               const selected = areas.includes(area)
               return (
                 <button
@@ -605,7 +655,8 @@ export default function AirfieldChecksPage() {
             </div>
           )}
         </div>
-      )}
+        )
+      })()}
 
       {/* Airfield Diagram Button */}
       {checkType && (
@@ -673,62 +724,48 @@ export default function AirfieldChecksPage() {
         </div>
       )}
 
-      {/* Photos Section — only when issue found */}
+      {/* GPS Use My Location — only when issue found */}
       {checkType && issueFound && (
-        <div className="card" style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-            Photos
-          </div>
-
-          {photos.length > 0 && (
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-              {photos.map((p, i) => (
-                <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border-active)' }}>
-                  <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <button
-                    type="button"
-                    onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))}
-                    style={{
-                      position: 'absolute', top: 2, right: 2, background: 'var(--color-overlay)', border: 'none',
-                      color: '#EF4444', fontSize: 13, width: 20, height: 20, borderRadius: '50%', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
-          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              style={{
-                background: 'var(--color-accent-glow)', border: '1px solid var(--color-border-active)', borderRadius: 8,
-                padding: 10, color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                fontFamily: 'inherit', minHeight: 44,
-              }}
-            >
-              🖼️ Upload Photo
-            </button>
-            <button
-              type="button"
-              onClick={() => cameraInputRef.current?.click()}
-              style={{
-                background: 'var(--color-accent-glow)', border: '1px solid var(--color-border-active)', borderRadius: 8,
-                padding: 10, color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                fontFamily: 'inherit', minHeight: 44,
-              }}
-            >
-              📸 Take Photo
-            </button>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={captureLocation}
+          disabled={gpsLoading}
+          style={{
+            width: '100%', padding: '12px', marginBottom: 8, borderRadius: 10,
+            border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)',
+            color: '#22C55E', fontSize: 13, fontWeight: 600, cursor: gpsLoading ? 'default' : 'pointer',
+            fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            opacity: gpsLoading ? 0.6 : 1,
+          }}
+        >
+          {gpsLoading ? 'Acquiring Location...' : 'Use My Location'}
+        </button>
       )}
+
+      {/* Captured location mini-map */}
+      {checkType && issueFound && selectedLat != null && selectedLng != null && (() => {
+        const mapToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+        const mapUrl = mapToken && mapToken !== 'your-mapbox-token-here'
+          ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+22d3ee(${selectedLng},${selectedLat})/${selectedLng},${selectedLat},16,0/400x200@2x?access_token=${mapToken}`
+          : null
+        return (
+          <div style={{ marginBottom: 8, textAlign: 'center' }}>
+            {mapUrl && (
+              <img
+                src={mapUrl}
+                alt="Captured location"
+                style={{
+                  width: '100%', maxWidth: 400, height: 160, objectFit: 'cover',
+                  borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginBottom: 4,
+                }}
+              />
+            )}
+            <div style={{ fontSize: 11, color: '#34D399', fontFamily: 'monospace', fontWeight: 600 }}>
+              {selectedLat.toFixed(5)}, {selectedLng.toFixed(5)}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Remarks Section */}
       {checkType && (
@@ -784,6 +821,63 @@ export default function AirfieldChecksPage() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Photos Section — only when issue found */}
+      {checkType && issueFound && (
+        <div className="card" style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            Photos
+          </div>
+
+          {photos.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+              {photos.map((p, i) => (
+                <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border-active)' }}>
+                  <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button
+                    type="button"
+                    onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))}
+                    style={{
+                      position: 'absolute', top: 2, right: 2, background: 'var(--color-overlay)', border: 'none',
+                      color: '#EF4444', fontSize: 13, width: 20, height: 20, borderRadius: '50%', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
+          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                background: 'var(--color-accent-glow)', border: '1px solid var(--color-border-active)', borderRadius: 8,
+                padding: 10, color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                fontFamily: 'inherit', minHeight: 44,
+              }}
+            >
+              Upload Photo
+            </button>
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              style={{
+                background: 'var(--color-accent-glow)', border: '1px solid var(--color-border-active)', borderRadius: 8,
+                padding: 10, color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                fontFamily: 'inherit', minHeight: 44,
+              }}
+            >
+              Take Photo
+            </button>
+          </div>
         </div>
       )}
 

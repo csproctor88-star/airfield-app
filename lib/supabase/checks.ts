@@ -130,6 +130,29 @@ export async function fetchChecks(baseId?: string | null): Promise<{ data: Check
   return { data: data as CheckRow[], error: null }
 }
 
+export async function fetchRecentChecks(baseId?: string | null, limit = 5): Promise<CheckRow[]> {
+  const supabase = createClient()
+  if (!supabase) return []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query = (supabase as any)
+    .from('airfield_checks')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (baseId) {
+    query = query.eq('base_id', baseId)
+  }
+
+  const { data, error } = await query
+  if (error) {
+    console.error('Failed to fetch recent checks:', error.message)
+    return []
+  }
+  return data as CheckRow[]
+}
+
 export async function fetchCheck(id: string): Promise<CheckRow | null> {
   const supabase = createClient()
   if (!supabase) return null

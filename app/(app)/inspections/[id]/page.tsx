@@ -6,10 +6,11 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { DEMO_INSPECTIONS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
-import { fetchInspection, fetchDailyGroup, type InspectionRow } from '@/lib/supabase/inspections'
+import { fetchInspection, fetchDailyGroup, fetchInspectionPhotos, type InspectionRow, type InspectionPhotoRow } from '@/lib/supabase/inspections'
 import type { InspectionItem } from '@/lib/supabase/types'
 import { useInstallation } from '@/lib/installation-context'
-import type { PdfBaseInfo } from '@/lib/pdf-export'
+import type { PdfBaseInfo, PdfPhotoMap, PdfGeneralPhotos } from '@/lib/pdf-export'
+import { PhotoViewerModal } from '@/components/discrepancies/modals'
 
 export default function InspectionDetailPage() {
   const params = useParams()
@@ -22,6 +23,26 @@ export default function InspectionDetailPage() {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ airfield: false, lighting: false })
   const [showFailedItems, setShowFailedItems] = useState(false)
 
+  // Photo state
+  const [photosByItem, setPhotosByItem] = useState<Record<string, InspectionPhotoRow[]>>({})
+  const [generalPhotos, setGeneralPhotos] = useState<InspectionPhotoRow[]>([])
+  const [viewerPhotos, setViewerPhotos] = useState<{ url: string; name: string }[] | null>(null)
+  const [viewerIndex, setViewerIndex] = useState(0)
+
+  const resolvePhotoUrl = (photo: InspectionPhotoRow): string => {
+    if (photo.storage_path.startsWith('data:')) return photo.storage_path
+    const supabase = createClient()
+    if (!supabase) return photo.storage_path
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = (supabase as any).storage.from('photos').getPublicUrl(photo.storage_path)
+    return data?.publicUrl || photo.storage_path
+  }
+
+  const openPhotoViewer = (photos: InspectionPhotoRow[], index: number) => {
+    setViewerPhotos(photos.map((p, i) => ({ url: resolvePhotoUrl(p), name: p.file_name || `Photo ${i + 1}` })))
+    setViewerIndex(index)
+  }
+
   const loadData = useCallback(async () => {
     const supabase = createClient()
     if (!supabase) {
@@ -29,19 +50,36 @@ export default function InspectionDetailPage() {
       setLoading(false)
       return
     }
-    // Fetch the requested inspection
     const data = await fetchInspection(params.id as string)
     if (!data) {
       setLoading(false)
       return
     }
-    // If it belongs to a daily group, fetch both halves
+    let allInsps: InspectionRow[]
     if (data.daily_group_id) {
       const group = await fetchDailyGroup(data.daily_group_id)
-      setInspections(group.length > 0 ? group : [data])
+      allInsps = group.length > 0 ? group : [data]
     } else {
-      setInspections([data])
+      allInsps = [data]
     }
+    setInspections(allInsps)
+
+    // Fetch photos for all inspections in the group
+    const byItem: Record<string, InspectionPhotoRow[]> = {}
+    const general: InspectionPhotoRow[] = []
+    for (const insp of allInsps) {
+      const photos = await fetchInspectionPhotos(insp.id)
+      for (const photo of photos) {
+        if (photo.inspection_item_id) {
+          if (!byItem[photo.inspection_item_id]) byItem[photo.inspection_item_id] = []
+          byItem[photo.inspection_item_id].push(photo)
+        } else {
+          general.push(photo)
+        }
+      }
+    }
+    setPhotosByItem(byItem)
+    setGeneralPhotos(general)
     setLoading(false)
   }, [params.id])
 
@@ -49,7 +87,10 @@ export default function InspectionDetailPage() {
     loadData()
   }, [loadData])
 
-  // For demo mode: find the inspection and its group
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
+
   const demoInspections = useMemo(() => {
     if (!usingDemo) return []
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -71,7 +112,6 @@ export default function InspectionDetailPage() {
     )
   }
 
-  // If the inspection is in-progress, redirect to the main inspections page to resume
   const hasInProgress = inspections.some((i) => i.status === 'in_progress')
   if (hasInProgress && !usingDemo) {
     return (
@@ -125,13 +165,12 @@ export default function InspectionDetailPage() {
     ? 'Joint Monthly Airfield Inspection'
     : ''
 
-  // Combined totals
   const totalPassed = allInspections.reduce((s: number, i: { passed_count: number }) => s + i.passed_count, 0)
   const totalFailed = allInspections.reduce((s: number, i: { failed_count: number }) => s + i.failed_count, 0)
   const totalNa = allInspections.reduce((s: number, i: { na_count: number }) => s + i.na_count, 0)
   const totalItems = allInspections.reduce((s: number, i: { total_items: number }) => s + i.total_items, 0)
+  const complianceRate = totalItems > 0 ? Math.round(((totalPassed + totalNa) / totalItems) * 100) : 0
 
-  // Combined failed items
   const allFailedItems: (InspectionItem & { fromType: string })[] = allInspections.flatMap(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (insp: any) => (insp.items || [])
@@ -139,26 +178,108 @@ export default function InspectionDetailPage() {
       .map((item: InspectionItem) => ({ ...item, fromType: insp.inspection_type }))
   )
 
+  // Color helpers
+  const typeColor = isSpecialType ? '#A78BFA' : '#22D3EE'
+  const topBorderColor = isSpecialType
+    ? '#A78BFA'
+    : airfieldInsp && lightingInsp ? 'var(--color-cyan)' : airfieldInsp ? '#34D399' : '#FBBF24'
+
   const handleExportPdf = async () => {
     setGeneratingPdf(true)
     const bi: PdfBaseInfo | undefined = currentInstallation
       ? { name: currentInstallation.name, icao: currentInstallation.icao, unit: currentInstallation.unit ?? '' }
       : undefined
+
+    // Prepare photo data for PDF embedding
+    const photoMapForPdf: PdfPhotoMap = {}
+    for (const [itemId, photos] of Object.entries(photosByItem)) {
+      const dataUrls: string[] = []
+      for (const photo of photos) {
+        const url = resolvePhotoUrl(photo)
+        if (url.startsWith('data:')) {
+          dataUrls.push(url)
+        } else {
+          try {
+            const resp = await fetch(url)
+            if (resp.ok) {
+              const blob = await resp.blob()
+              const reader = new FileReader()
+              const dataUrl = await new Promise<string>((resolve, reject) => {
+                reader.onload = () => resolve(reader.result as string)
+                reader.onerror = reject
+                reader.readAsDataURL(blob)
+              })
+              dataUrls.push(dataUrl)
+            }
+          } catch { /* skip failed photos */ }
+        }
+      }
+      if (dataUrls.length > 0) photoMapForPdf[itemId] = dataUrls
+    }
+
+    const generalPhotoUrls: PdfGeneralPhotos = []
+    for (const photo of generalPhotos) {
+      const url = resolvePhotoUrl(photo)
+      if (url.startsWith('data:')) {
+        generalPhotoUrls.push(url)
+      } else {
+        try {
+          const resp = await fetch(url)
+          if (resp.ok) {
+            const blob = await resp.blob()
+            const reader = new FileReader()
+            const dataUrl = await new Promise<string>((resolve, reject) => {
+              reader.onload = () => resolve(reader.result as string)
+              reader.onerror = reject
+              reader.readAsDataURL(blob)
+            })
+            generalPhotoUrls.push(dataUrl)
+          }
+        } catch { /* skip failed photos */ }
+      }
+    }
+
     try {
       if (isSpecialType) {
         const { generateSpecialInspectionPdf } = await import('@/lib/pdf-export')
-        generateSpecialInspectionPdf(allInspections[0], bi)
+        await generateSpecialInspectionPdf(allInspections[0], bi, generalPhotoUrls.length > 0 ? generalPhotoUrls : undefined)
       } else if (isDaily) {
         const { generateCombinedInspectionPdf } = await import('@/lib/pdf-export')
-        generateCombinedInspectionPdf(allInspections, bi)
+        await generateCombinedInspectionPdf(allInspections, bi, Object.keys(photoMapForPdf).length > 0 ? photoMapForPdf : undefined)
       } else {
         const { generateInspectionPdf } = await import('@/lib/pdf-export')
-        generateInspectionPdf(allInspections[0], bi)
+        await generateInspectionPdf(allInspections[0], bi, Object.keys(photoMapForPdf).length > 0 ? photoMapForPdf : undefined)
       }
     } catch (e) {
       console.error('PDF export failed:', e)
     }
     setGeneratingPdf(false)
+  }
+
+  // Render item photos inline
+  const renderItemPhotos = (itemId: string) => {
+    const photos = photosByItem[itemId]
+    if (!photos || photos.length === 0) return null
+    return (
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
+        {photos.map((photo, idx) => (
+          <div
+            key={photo.id}
+            onClick={() => openPhotoViewer(photos, idx)}
+            style={{
+              width: 56, height: 56, borderRadius: 6, overflow: 'hidden', cursor: 'pointer',
+              border: '1px solid rgba(239,68,68,0.3)',
+            }}
+          >
+            <img
+              src={resolvePhotoUrl(photo)}
+              alt={photo.file_name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+          </div>
+        ))}
+      </div>
+    )
   }
 
   // Render a single inspection's sections
@@ -177,31 +298,75 @@ export default function InspectionDetailPage() {
     return Object.entries(sections).map(([sectionTitle, sectionItems]) => {
       const passCount = sectionItems.filter((i) => i.response === 'pass').length
       const failCount = sectionItems.filter((i) => i.response === 'fail').length
-      const allPass = passCount === sectionItems.length
+      const sectionTotal = sectionItems.length
+      const sectionProgress = sectionTotal > 0 ? (passCount / sectionTotal) * 100 : 0
+      const borderColor = failCount > 0 ? '#EF4444' : passCount === sectionTotal ? '#22C55E' : 'var(--color-border)'
+
       return (
-        <div key={`${inspection.id}-${sectionTitle}`} className="card" style={{ marginBottom: 6 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: allPass ? '#22C55E' : failCount > 0 ? '#FBBF24' : 'var(--color-text-2)' }}>
+        <div
+          key={`${inspection.id}-${sectionTitle}`}
+          className="card"
+          style={{
+            marginBottom: 8,
+            borderRadius: 12,
+            borderLeft: `3px solid ${borderColor}`,
+            padding: '14px 14px 10px',
+          }}
+        >
+          {/* Section header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: failCount > 0 ? '#FBBF24' : passCount === sectionTotal ? '#22C55E' : 'var(--color-text-2)' }}>
               {sectionTitle}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
-              {passCount}/{sectionItems.length}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {failCount > 0 && (
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#EF4444', background: 'rgba(239,68,68,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                  {failCount} fail
+                </span>
+              )}
+              <span style={{ fontSize: 11, color: 'var(--color-text-3)', fontWeight: 600 }}>
+                {passCount}/{sectionTotal}
+              </span>
             </div>
           </div>
-          {sectionItems.map((item) => {
+
+          {/* Section progress bar */}
+          <div style={{ height: 3, background: 'var(--color-border)', borderRadius: 2, marginBottom: 10, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%', borderRadius: 2,
+              width: `${sectionProgress}%`,
+              background: failCount > 0 ? '#FBBF24' : '#22C55E',
+              transition: 'width 0.3s ease',
+            }} />
+          </div>
+
+          {/* Items */}
+          {sectionItems.map((item, idx) => {
             const color = item.response === 'pass' ? '#22C55E'
               : item.response === 'fail' ? '#EF4444'
               : item.response === 'na' ? 'var(--color-text-3)' : 'var(--color-text-4)'
             const symbol = item.response === 'pass' ? '\u2713'
               : item.response === 'fail' ? '\u2717'
-              : item.response === 'na' ? 'N/A' : '—'
+              : item.response === 'na' ? 'N/A' : '\u2014'
+            const isFail = item.response === 'fail'
             return (
-              <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '4px 0', borderBottom: '1px solid rgba(30,41,59,0.5)' }}>
+              <div
+                key={item.id}
+                style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 8,
+                  padding: isFail ? '6px 0 6px 8px' : '5px 0',
+                  borderBottom: idx < sectionItems.length - 1 ? '1px solid rgba(30,41,59,0.4)' : 'none',
+                  borderLeft: isFail ? '2px solid #EF4444' : '2px solid transparent',
+                  marginLeft: isFail ? -2 : 0,
+                  background: isFail ? 'rgba(239,68,68,0.03)' : 'transparent',
+                  borderRadius: isFail ? 4 : 0,
+                }}
+              >
                 <span style={{
-                  fontSize: item.response === 'na' ? 8 : 12,
+                  fontSize: item.response === 'na' ? 8 : 13,
                   fontWeight: 700,
                   color,
-                  minWidth: 20,
+                  minWidth: 22,
                   textAlign: 'center',
                   paddingTop: 2,
                 }}>
@@ -212,14 +377,43 @@ export default function InspectionDetailPage() {
                     fontSize: 12,
                     color: item.response === 'na' ? 'var(--color-text-3)' : 'var(--color-text-1)',
                     textDecoration: item.response === 'na' ? 'line-through' : 'none',
+                    lineHeight: 1.4,
                   }}>
                     {item.item}
                   </div>
-                  {item.notes && item.response === 'fail' && (
-                    <div style={{ fontSize: 11, color: '#FBBF24', marginTop: 2, fontStyle: 'italic' }}>
+                  {item.notes && isFail && (
+                    <div style={{
+                      fontSize: 11, color: '#FBBF24', marginTop: 4, fontStyle: 'italic',
+                      padding: '4px 8px', background: 'rgba(251,191,36,0.06)', borderRadius: 4,
+                    }}>
                       {item.notes}
                     </div>
                   )}
+                  {isFail && item.location && (() => {
+                    const loc = item.location
+                    const mapToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+                    const mapUrl = mapToken && mapToken !== 'your-mapbox-token-here'
+                      ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${loc.lon},${loc.lat})/${loc.lon},${loc.lat},16,0/400x200@2x?access_token=${mapToken}`
+                      : null
+                    return (
+                      <div style={{ marginTop: 4 }}>
+                        {mapUrl && (
+                          <img
+                            src={mapUrl}
+                            alt="Fail item location"
+                            style={{
+                              width: '100%', maxWidth: 400, height: 140, objectFit: 'cover',
+                              borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginBottom: 3,
+                            }}
+                          />
+                        )}
+                        <div style={{ fontSize: 10, color: 'var(--color-text-3)' }}>
+                          Location: {loc.lat.toFixed(5)}, {loc.lon.toFixed(5)}
+                        </div>
+                      </div>
+                    )
+                  })()}
+                  {isFail && renderItemPhotos(item.id)}
                 </div>
               </div>
             )
@@ -230,9 +424,9 @@ export default function InspectionDetailPage() {
   }
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div style={{ padding: '8px 16px 100px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
           &larr; Back
         </button>
@@ -244,52 +438,80 @@ export default function InspectionDetailPage() {
         </Link>
       </div>
 
-      {/* Summary Card */}
-      <div className="card" style={{ marginBottom: 8 }}>
+      {/* ═══ Summary Card ═══ */}
+      <div
+        className="card"
+        style={{
+          marginBottom: 10, borderRadius: 12, overflow: 'hidden',
+          borderTop: `3px solid ${topBorderColor}`,
+          padding: '16px 14px',
+        }}
+      >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <span style={{ fontSize: 16, fontWeight: 800, color: isSpecialType ? 'var(--color-purple)' : 'var(--color-cyan)' }}>
+          <span style={{ fontSize: 16, fontWeight: 800, color: typeColor }}>
             {isSpecialType ? specialLabel : isDaily ? 'Airfield Inspection Report' : primary.display_id}
           </span>
           <Badge label="COMPLETED" color="#22C55E" />
         </div>
 
-        {/* Show display IDs for daily report */}
+        {/* Display IDs for daily report */}
         {isDaily && (
-          <div style={{ display: 'flex', gap: 8, marginBottom: 10, fontSize: 12, fontFamily: 'monospace', color: 'var(--color-text-2)' }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
             {allInspections.map((insp: { id: string; display_id: string }) => (
-              <span key={insp.id}>{insp.display_id}</span>
+              <span key={insp.id} style={{
+                fontSize: 11, fontFamily: 'monospace', padding: '3px 8px', borderRadius: 6,
+                background: 'var(--color-border)', color: 'var(--color-text-2)',
+              }}>
+                {insp.display_id}
+              </span>
             ))}
           </div>
         )}
 
-        {/* Show display ID for special types */}
+        {/* Display ID for special types */}
         {isSpecialType && (
-          <div style={{ marginBottom: 10, fontSize: 12, fontFamily: 'monospace', color: 'var(--color-text-2)' }}>
+          <div style={{
+            marginBottom: 12, fontSize: 11, fontFamily: 'monospace', padding: '3px 8px',
+            borderRadius: 6, background: 'var(--color-border)', color: 'var(--color-text-2)',
+            display: 'inline-block',
+          }}>
             {primary.display_id}
           </div>
         )}
 
         {/* Type badges */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
           {isSpecialType ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ fontSize: 16 }}>{primary.inspection_type === 'construction_meeting' ? '🏗️' : '📋'}</span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#A78BFA' }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '5px 12px', borderRadius: 8,
+              background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
+            }}>
+              <span style={{ fontSize: 14 }}>{primary.inspection_type === 'construction_meeting' ? '🏗️' : '📋'}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#A78BFA' }}>
                 {primary.inspection_type === 'construction_meeting' ? 'Construction Meeting' : 'Joint Monthly'}
               </span>
             </div>
           ) : (
             <>
               {airfieldInsp && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ fontSize: 16 }}>📋</span>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#34D399' }}>Airfield</span>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '5px 12px', borderRadius: 8,
+                  background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)',
+                }}>
+                  <span style={{ fontSize: 14 }}>📋</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#34D399' }}>Airfield</span>
                 </div>
               )}
               {lightingInsp && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ fontSize: 16 }}>💡</span>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#FBBF24' }}>Lighting</span>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '5px 12px', borderRadius: 8,
+                  background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)',
+                }}>
+                  <span style={{ fontSize: 14 }}>💡</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#FBBF24' }}>Lighting</span>
                 </div>
               )}
             </>
@@ -297,10 +519,13 @@ export default function InspectionDetailPage() {
         </div>
 
         {/* Info Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12, marginBottom: 12 }}>
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 12, marginBottom: 14,
+          padding: '12px', borderRadius: 10, background: 'var(--color-border)', border: '1px solid var(--color-border-mid)',
+        }}>
           <div>
-            <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Filed By</div>
-            <div style={{ fontWeight: 600, marginTop: 2, color: 'var(--color-accent)' }}>{primary.filed_by_name || primary.inspector_name || 'Unknown'}</div>
+            <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>Filed By</div>
+            <div style={{ fontWeight: 600, color: 'var(--color-accent)' }}>{primary.filed_by_name || primary.inspector_name || 'Unknown'}</div>
             {primary.filed_at && (
               <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 1 }}>
                 {new Date(primary.filed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
@@ -308,8 +533,8 @@ export default function InspectionDetailPage() {
             )}
           </div>
           <div>
-            <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Date</div>
-            <div style={{ fontWeight: 500, marginTop: 2 }}>
+            <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>Date</div>
+            <div style={{ fontWeight: 500 }}>
               {primary.completed_at
                 ? `${new Date(primary.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${new Date(primary.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
                 : primary.inspection_date}
@@ -317,14 +542,14 @@ export default function InspectionDetailPage() {
           </div>
           {primary.weather_conditions && (
             <div>
-              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Weather</div>
-              <div style={{ fontWeight: 500, marginTop: 2 }}>{primary.weather_conditions}</div>
+              <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>Weather</div>
+              <div style={{ fontWeight: 500 }}>{primary.weather_conditions}</div>
             </div>
           )}
           {primary.temperature_f != null && (
             <div>
-              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Temperature</div>
-              <div style={{ fontWeight: 500, marginTop: 2 }}>{primary.temperature_f}°F</div>
+              <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>Temperature</div>
+              <div style={{ fontWeight: 500 }}>{primary.temperature_f}°F</div>
             </div>
           )}
         </div>
@@ -332,15 +557,16 @@ export default function InspectionDetailPage() {
         {/* BWC Value */}
         {(airfieldInsp?.bwc_value || primary.bwc_value) && (() => {
           const bwc = airfieldInsp?.bwc_value || primary.bwc_value
+          const bwcColor = bwc === 'LOW' ? '#22C55E' : bwc === 'MOD' ? '#EAB308' : bwc === 'SEV' ? '#F97316' : '#EF4444'
+          const bwcBg = bwc === 'LOW' ? 'rgba(34,197,94,0.12)' : bwc === 'MOD' ? 'rgba(234,179,8,0.12)' : bwc === 'SEV' ? 'rgba(249,115,22,0.12)' : 'rgba(239,68,68,0.12)'
           return (
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                 Bird Watch Condition
               </div>
               <span style={{
-                padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700,
-                color: bwc === 'LOW' ? '#22C55E' : bwc === 'MOD' ? '#EAB308' : bwc === 'SEV' ? '#F97316' : '#EF4444',
-                background: bwc === 'LOW' ? 'rgba(34,197,94,0.1)' : bwc === 'MOD' ? 'rgba(234,179,8,0.1)' : bwc === 'SEV' ? 'rgba(249,115,22,0.1)' : 'rgba(239,68,68,0.1)',
+                padding: '4px 14px', borderRadius: 8, fontSize: 12, fontWeight: 800,
+                color: bwcColor, background: bwcBg, border: `1px solid ${bwcColor}33`,
               }}>
                 {bwc}
               </span>
@@ -349,19 +575,19 @@ export default function InspectionDetailPage() {
         })()}
       </div>
 
-      {/* ══ Special Type Content (Construction Meeting / Joint Monthly) ══ */}
+      {/* ═══ Special Type Content (Construction Meeting / Joint Monthly) ═══ */}
       {isSpecialType ? (
         <>
           {/* Personnel */}
           {primary.personnel && primary.personnel.length > 0 && (
-            <div className="card" style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            <div className="card" style={{ marginBottom: 10, borderRadius: 12, padding: '14px' }}>
+              <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
                 Personnel / Offices Present
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {primary.personnel.map((person: string) => (
                   <span key={person} style={{
-                    fontSize: 12, padding: '4px 10px', borderRadius: 6, fontWeight: 600,
+                    fontSize: 12, padding: '5px 12px', borderRadius: 8, fontWeight: 600,
                     background: 'rgba(167,139,250,0.1)', color: '#A78BFA',
                     border: '1px solid rgba(167,139,250,0.2)',
                   }}>
@@ -374,66 +600,131 @@ export default function InspectionDetailPage() {
 
           {/* Comments */}
           {primary.notes && (
-            <div className="card" style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+            <div className="card" style={{ marginBottom: 10, borderRadius: 12, padding: '14px' }}>
+              <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
                 Comments
               </div>
               <div style={{ fontSize: 13, color: 'var(--color-text-1)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{primary.notes}</div>
             </div>
           )}
+
+          {/* General photos for special types */}
+          {generalPhotos.length > 0 && (
+            <div className="card" style={{ marginBottom: 10, borderRadius: 12, padding: '14px' }}>
+              <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                Photos ({generalPhotos.length})
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {generalPhotos.map((photo, idx) => (
+                  <div
+                    key={photo.id}
+                    onClick={() => openPhotoViewer(generalPhotos, idx)}
+                    style={{
+                      width: 72, height: 72, borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
+                      border: '1px solid var(--color-border-mid)',
+                    }}
+                  >
+                    <img
+                      src={resolvePhotoUrl(photo)}
+                      alt={photo.file_name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       ) : (
         <>
-          {/* Combined Results Card */}
-          <div className="card" style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+          {/* ═══ Results Card ═══ */}
+          <div className="card" style={{ marginBottom: 10, borderRadius: 12, padding: '14px 14px 16px' }}>
+            <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
               {isDaily ? 'Combined Results' : 'Results'}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
-              <div style={{ textAlign: 'center', padding: 8, background: 'rgba(34,197,94,0.08)', borderRadius: 8, border: '1px solid rgba(34,197,94,0.2)' }}>
-                <div style={{ fontSize: 20, fontWeight: 800, color: '#22C55E' }}>{totalPassed}</div>
-                <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600 }}>PASS</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+              <div style={{
+                textAlign: 'center', padding: '10px 6px', borderRadius: 10,
+                background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
+              }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#22C55E' }}>{totalPassed}</div>
+                <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.05em', marginTop: 2 }}>PASS</div>
               </div>
               <button
                 onClick={() => totalFailed > 0 && setShowFailedItems((p) => !p)}
                 style={{
-                  textAlign: 'center', padding: 8, borderRadius: 8,
+                  textAlign: 'center', padding: '10px 6px', borderRadius: 10,
                   background: showFailedItems ? 'rgba(239,68,68,0.18)' : 'rgba(239,68,68,0.08)',
                   border: `1px solid ${showFailedItems ? 'rgba(239,68,68,0.5)' : 'rgba(239,68,68,0.2)'}`,
                   cursor: totalFailed > 0 ? 'pointer' : 'default',
                   fontFamily: 'inherit',
+                  boxShadow: totalFailed > 0 ? '0 0 8px rgba(239,68,68,0.15)' : 'none',
                 }}
               >
-                <div style={{ fontSize: 20, fontWeight: 800, color: '#EF4444' }}>{totalFailed}</div>
-                <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600 }}>FAIL {totalFailed > 0 ? (showFailedItems ? '▴' : '▾') : ''}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#EF4444' }}>{totalFailed}</div>
+                <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.05em', marginTop: 2 }}>FAIL {totalFailed > 0 ? (showFailedItems ? '▴' : '▾') : ''}</div>
               </button>
-              <div style={{ textAlign: 'center', padding: 8, background: 'rgba(100,116,139,0.08)', borderRadius: 8, border: '1px solid rgba(100,116,139,0.2)' }}>
-                <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--color-text-3)' }}>{totalNa}</div>
-                <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600 }}>N/A</div>
+              <div style={{
+                textAlign: 'center', padding: '10px 6px', borderRadius: 10,
+                background: 'rgba(100,116,139,0.08)', border: '1px solid rgba(100,116,139,0.2)',
+              }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-text-3)' }}>{totalNa}</div>
+                <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.05em', marginTop: 2 }}>N/A</div>
               </div>
-              <div style={{ textAlign: 'center', padding: 8, background: 'var(--color-border)', borderRadius: 8, border: '1px solid var(--color-border-active)' }}>
-                <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--color-accent)' }}>{totalItems}</div>
-                <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600 }}>TOTAL</div>
+              <div style={{
+                textAlign: 'center', padding: '10px 6px', borderRadius: 10,
+                background: 'var(--color-border)', border: '1px solid var(--color-border-active)',
+              }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-accent)' }}>{totalItems}</div>
+                <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.05em', marginTop: 2 }}>TOTAL</div>
+              </div>
+            </div>
+
+            {/* Compliance bar */}
+            <div style={{ marginTop: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <span style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600 }}>Compliance Rate</span>
+                <span style={{
+                  fontSize: 13, fontWeight: 800,
+                  color: complianceRate >= 95 ? '#22C55E' : complianceRate >= 80 ? '#FBBF24' : '#EF4444',
+                }}>
+                  {complianceRate}%
+                </span>
+              </div>
+              <div style={{ height: 6, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', borderRadius: 3, transition: 'width 0.5s ease',
+                  width: `${complianceRate}%`,
+                  background: complianceRate >= 95
+                    ? 'linear-gradient(90deg, #22C55E, #34D399)'
+                    : complianceRate >= 80
+                    ? 'linear-gradient(90deg, #EAB308, #FBBF24)'
+                    : 'linear-gradient(90deg, #DC2626, #EF4444)',
+                }} />
               </div>
             </div>
           </div>
 
           {/* Combined Failed Items — toggled by Fail button */}
           {showFailedItems && allFailedItems.length > 0 && (
-            <div className="card" style={{ marginBottom: 8, borderLeft: '3px solid #EF4444' }}>
-              <div style={{ fontSize: 10, color: '#EF4444', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            <div className="card" style={{ marginBottom: 10, borderRadius: 12, borderLeft: '3px solid #EF4444', padding: '14px' }}>
+              <div style={{ fontSize: 9, color: '#EF4444', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
                 Failed Items ({allFailedItems.length})
               </div>
-              {allFailedItems.map((item) => (
-                <div key={item.id} style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid var(--color-bg-elevated)' }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-1)' }}>
+              {allFailedItems.map((item, idx) => (
+                <div key={item.id} style={{
+                  marginBottom: idx < allFailedItems.length - 1 ? 10 : 0,
+                  paddingBottom: idx < allFailedItems.length - 1 ? 10 : 0,
+                  borderBottom: idx < allFailedItems.length - 1 ? '1px solid var(--color-border)' : 'none',
+                }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-1)', lineHeight: 1.4 }}>
                     {item.item}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
                     {item.section}
                     {isDaily && (
                       <span style={{
-                        marginLeft: 6, fontSize: 10, fontWeight: 600, padding: '1px 4px', borderRadius: 3,
+                        fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4,
                         color: item.fromType === 'airfield' ? '#34D399' : '#FBBF24',
                         background: item.fromType === 'airfield' ? 'rgba(52,211,153,0.1)' : 'rgba(251,191,36,0.1)',
                       }}>
@@ -442,10 +733,14 @@ export default function InspectionDetailPage() {
                     )}
                   </div>
                   {item.notes && (
-                    <div style={{ fontSize: 12, color: '#FBBF24', marginTop: 4, fontStyle: 'italic' }}>
+                    <div style={{
+                      fontSize: 12, color: '#FBBF24', marginTop: 4, fontStyle: 'italic',
+                      padding: '4px 8px', background: 'rgba(251,191,36,0.06)', borderRadius: 4,
+                    }}>
                       {item.notes}
                     </div>
                   )}
+                  {renderItemPhotos(item.id)}
                 </div>
               ))}
             </div>
@@ -460,6 +755,8 @@ export default function InspectionDetailPage() {
             const completedTime = insp.completed_at
               ? new Date(insp.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
               : null
+            const color = insp.inspection_type === 'airfield' ? '#34D399' : '#FBBF24'
+            const bgAlpha = insp.inspection_type === 'airfield' ? 'rgba(52,211,153,' : 'rgba(251,191,36,'
 
             return (
               <div key={insp.id}>
@@ -470,35 +767,30 @@ export default function InspectionDetailPage() {
                     [insp.inspection_type]: !prev[insp.inspection_type],
                   }))}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                    margin: '12px 0 8px',
-                    padding: '10px 12px',
-                    borderRadius: 8,
-                    background: insp.inspection_type === 'airfield' ? 'rgba(52,211,153,0.06)' : 'rgba(251,191,36,0.06)',
-                    border: `1px solid ${insp.inspection_type === 'airfield' ? 'rgba(52,211,153,0.2)' : 'rgba(251,191,36,0.2)'}`,
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    width: '100%', margin: '14px 0 8px', padding: '12px 14px', borderRadius: 12,
+                    background: `${bgAlpha}0.06)`, border: `1px solid ${bgAlpha}0.2)`,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    transition: 'all 0.2s ease',
                   }}
                 >
                   <div style={{
-                    fontSize: 13, fontWeight: 800,
-                    color: insp.inspection_type === 'airfield' ? '#34D399' : '#FBBF24',
-                    display: 'flex', alignItems: 'center', gap: 6,
+                    fontSize: 13, fontWeight: 800, color,
+                    display: 'flex', alignItems: 'center', gap: 8,
                   }}>
                     <span>{insp.inspection_type === 'airfield' ? '📋' : '💡'}</span>
                     {insp.inspection_type === 'airfield' ? 'Airfield Inspection' : 'Lighting Inspection'}
-                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-3)', marginLeft: 4 }}>
+                    <span style={{
+                      fontSize: 11, fontWeight: 600, color: 'var(--color-text-3)', marginLeft: 2,
+                      background: 'var(--color-border)', padding: '2px 8px', borderRadius: 6,
+                    }}>
                       {insp.passed_count}/{insp.total_items}
                       {insp.failed_count > 0 && <span style={{ color: '#EF4444', marginLeft: 4 }}>{insp.failed_count} fail</span>}
                     </span>
                   </div>
                   <span style={{
-                    fontSize: 15,
-                    color: insp.inspection_type === 'airfield' ? '#34D399' : '#FBBF24',
-                    transition: 'transform 0.2s',
+                    fontSize: 15, color,
+                    transition: 'transform 0.2s ease',
                     transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
                     display: 'inline-block',
                   }}>
@@ -508,7 +800,7 @@ export default function InspectionDetailPage() {
 
                 {/* Completed by info */}
                 {isExpanded && (
-                  <div style={{ fontSize: 11, color: 'var(--color-text-2)', marginBottom: 6, paddingLeft: 4 }}>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-2)', marginBottom: 8, paddingLeft: 6 }}>
                     Completed by <span style={{ color: 'var(--color-accent)', fontWeight: 600 }}>{completedBy}</span>
                     {completedTime && <span> at {completedTime}</span>}
                   </div>
@@ -519,13 +811,12 @@ export default function InspectionDetailPage() {
                   <>
                     {renderInspectionSections(insp)}
 
-                    {/* Notes for this half */}
                     {insp.notes && (
-                      <div className="card" style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+                      <div className="card" style={{ marginBottom: 10, borderRadius: 12, padding: '14px' }}>
+                        <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
                           {isDaily ? `${insp.inspection_type === 'airfield' ? 'Airfield' : 'Lighting'} Notes` : 'Notes'}
                         </div>
-                        <div style={{ fontSize: 12, color: 'var(--color-text-1)', lineHeight: 1.5 }}>{insp.notes}</div>
+                        <div style={{ fontSize: 12, color: 'var(--color-text-1)', lineHeight: 1.6 }}>{insp.notes}</div>
                       </div>
                     )}
                   </>
@@ -536,13 +827,13 @@ export default function InspectionDetailPage() {
         </>
       )}
 
-      {/* Actions */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+      {/* ═══ Actions ═══ */}
+      <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12, marginTop: 8, display: 'flex', gap: 8 }}>
         <button
           onClick={handleExportPdf}
           disabled={generatingPdf}
           style={{
-            flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
+            flex: 1, padding: '12px', borderRadius: 12, textAlign: 'center',
             background: '#A78BFA14', border: '1px solid #A78BFA33',
             color: '#A78BFA', fontSize: 13, fontWeight: 700,
             fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
@@ -554,7 +845,7 @@ export default function InspectionDetailPage() {
         <Link
           href="/inspections?view=history"
           style={{
-            flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
+            flex: 1, padding: '12px', borderRadius: 12, textAlign: 'center',
             background: '#22C55E14', border: '1px solid #22C55E33',
             color: '#22C55E', fontSize: 13, fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',
@@ -563,6 +854,15 @@ export default function InspectionDetailPage() {
           All Inspections
         </Link>
       </div>
+
+      {/* Photo Viewer Modal */}
+      {viewerPhotos && (
+        <PhotoViewerModal
+          photos={viewerPhotos}
+          initialIndex={viewerIndex}
+          onClose={() => setViewerPhotos(null)}
+        />
+      )}
     </div>
   )
 }

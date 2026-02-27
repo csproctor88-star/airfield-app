@@ -303,7 +303,7 @@ export const RCR_CONDITION_TYPES = [
 
 // === BASH Condition Codes ===
 
-export const BASH_CONDITION_CODES = ['LOW', 'MODERATE', 'SEVERE'] as const
+export const BASH_CONDITION_CODES = ['LOW', 'MODERATE', 'SEVERE', 'PROHIBITED'] as const
 
 // === NOTAM Types ===
 

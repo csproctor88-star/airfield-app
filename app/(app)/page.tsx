@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { fetchCurrentWeather, type WeatherResult } from '@/lib/weather'
@@ -9,6 +10,7 @@ import { fetchInstallationNavaids } from '@/lib/supabase/installations'
 import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
 import { logActivity } from '@/lib/supabase/activity'
+import { fetchActivityLog } from '@/lib/supabase/activity-queries'
 import LoginActivityDialog from '@/components/login-activity-dialog'
 
 // --- Weather emoji mapping ---
@@ -65,6 +67,7 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     check: 'Check',
     inspection: 'Inspection',
     obstruction_evaluation: 'Obstruction Eval',
+    navaid_status: 'NAVAID',
   }
   const entity = typeLabel[entityType] || entityType
   const id = displayId ? ` ${displayId}` : ''
@@ -74,8 +77,14 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     deleted: 'Deleted',
     completed: 'Completed',
     status_updated: 'Status changed on',
+    saved: 'Saved',
+    filed: 'Filed',
+    resumed: 'Resumed',
+    reviewed: 'Reviewed',
+    waiver_review_deleted: 'Deleted review for',
   }
-  return `${actionLabel[action] || action} ${entity}${id}`
+  const label = actionLabel[action] || (action.charAt(0).toUpperCase() + action.slice(1).replace(/_/g, ' '))
+  return `${label} ${entity}${id}`
 }
 
 type ActivityEntry = {
@@ -83,6 +92,7 @@ type ActivityEntry = {
   action: string
   entity_type: string
   entity_display_id: string | null
+  metadata: Record<string, unknown> | null
   created_at: string
   user_name: string
   user_rank: string | null
@@ -110,6 +120,7 @@ type CurrentStatusData = {
 }
 
 export default function HomePage() {
+  const router = useRouter()
   const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway } = useDashboard()
   const { installationId, currentInstallation, runways } = useInstallation()
   const [time, setTime] = useState('')
@@ -119,7 +130,6 @@ export default function HomePage() {
   const [navaids, setNavaids] = useState<NavaidStatus[]>([])
   const [navaidNotes, setNavaidNotes] = useState<Record<string, string>>({})
   const [activity, setActivity] = useState<ActivityEntry[]>([])
-  const [activityExpanded, setActivityExpanded] = useState(false)
   const [currentStatus, setCurrentStatus] = useState<CurrentStatusData>({
     bwc: null, bwcTime: null, lastCheckType: null, lastCheckTime: null, inspectionCompletion: null, rscCondition: null, rscTime: null,
   })
@@ -322,46 +332,8 @@ export default function HomePage() {
   // --- Load Activity Feed ---
   useEffect(() => {
     async function loadActivity() {
-      const supabase = createClient()
-      if (!supabase) return
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let activityQuery = (supabase as any)
-        .from('activity_log')
-        .select('id, action, entity_type, entity_display_id, created_at, user_id, profiles:user_id(name, rank)')
-        .order('created_at', { ascending: false })
-        .limit(20)
-      if (installationId) activityQuery = activityQuery.eq('base_id', installationId)
-      const { data, error } = await activityQuery
-
-      if (error) {
-        // Try without join
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let fallbackQuery = (supabase as any)
-          .from('activity_log')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(20)
-        if (installationId) fallbackQuery = fallbackQuery.eq('base_id', installationId)
-        const { data: fallback } = await fallbackQuery
-
-        if (fallback) {
-          setActivity(fallback.map((r: Record<string, unknown>) => ({
-            ...r,
-            user_name: 'Unknown',
-            user_rank: null,
-          })) as ActivityEntry[])
-        }
-        return
-      }
-
-      if (data) {
-        setActivity(data.map((r: Record<string, unknown>) => ({
-          ...r,
-          user_name: (r.profiles as { name?: string } | null)?.name || 'Unknown',
-          user_rank: (r.profiles as { rank?: string } | null)?.rank || null,
-        })) as ActivityEntry[])
-      }
+      const { data } = await fetchActivityLog({ baseId: installationId, limit: 20 })
+      if (data.length > 0) setActivity(data as ActivityEntry[])
     }
     loadActivity()
   }, [installationId])
@@ -856,14 +828,22 @@ export default function HomePage() {
       </div>
 
       {/* ===== Recent Activity ===== */}
-      <span className="section-label">Recent Activity</span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <span className="section-label" style={{ marginBottom: 0 }}>Recent Activity</span>
+        <button
+          onClick={() => router.push('/activity')}
+          style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+        >
+          View All →
+        </button>
+      </div>
       {activity.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: 16 }}>
           <div style={{ fontSize: 12, color: 'var(--color-text-3)' }}>No activity recorded yet</div>
         </div>
       ) : (
         <>
-          {(activityExpanded ? activity : activity.slice(0, 3)).map((a, i, arr) => {
+          {activity.slice(0, 5).map((a, i, arr) => {
             const actionColor: Record<string, string> = {
               created: 'var(--color-success)',
               completed: 'var(--color-cyan)',
@@ -884,6 +864,8 @@ export default function HomePage() {
             const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
             const timeStr = date.toTimeString().slice(0, 5)
             const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
+            const navaidNoteText = a.entity_type === 'navaid_status' && a.metadata?.notes ? String(a.metadata.notes) : null
+            const navaidStatusVal = a.entity_type === 'navaid_status' && a.metadata?.status ? String(a.metadata.status) : null
 
             return (
               <div
@@ -920,24 +902,19 @@ export default function HomePage() {
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--color-text-2)' }}>
                     {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined)}
+                    {navaidStatusVal && (
+                      <span style={{ marginLeft: 6, width: 8, height: 8, borderRadius: '50%', display: 'inline-block', background: STATUS_HEX[navaidStatusVal] || '#64748B' }} />
+                    )}
                   </div>
+                  {navaidNoteText && (
+                    <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 2 }}>
+                      &ldquo;{navaidNoteText}&rdquo;
+                    </div>
+                  )}
                 </div>
               </div>
             )
           })}
-          {activity.length > 3 && (
-            <button
-              onClick={() => setActivityExpanded((p) => !p)}
-              style={{
-                width: '100%', padding: '8px 0', marginTop: 4,
-                background: 'none', border: 'none',
-                color: 'var(--color-accent-secondary)', fontSize: 12, fontWeight: 600,
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
-              {activityExpanded ? 'Show Less' : `Show All (${activity.length})`}
-            </button>
-          )}
         </>
       )}
     </div>

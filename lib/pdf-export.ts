@@ -1,6 +1,34 @@
 import jsPDF from 'jspdf'
 import type { InspectionItem } from '@/lib/supabase/types'
 
+/** Convert a blob to a data URL for embedding in PDF */
+async function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
+/** Fetch a photo URL and return it as a data URL, or null on failure */
+async function fetchPhotoAsDataUrl(url: string): Promise<string | null> {
+  if (url.startsWith('data:')) return url
+  try {
+    const response = await fetch(url)
+    if (!response.ok) return null
+    const blob = await response.blob()
+    return await blobToDataUrl(blob)
+  } catch {
+    return null
+  }
+}
+
+/** Photo data for PDF embedding, keyed by inspection item ID */
+export type PdfPhotoMap = Record<string, string[]>  // itemId -> dataUrl[]
+/** General photos (not tied to an item) */
+export type PdfGeneralPhotos = string[]  // dataUrl[]
+
 export interface PdfBaseInfo {
   name: string       // e.g. "Selfridge ANG Base"
   icao: string       // e.g. "KMTC"
@@ -40,7 +68,7 @@ interface InspectionData {
   filed_at?: string | null
 }
 
-export function generateInspectionPdf(inspection: InspectionData, baseInfo?: PdfBaseInfo) {
+export async function generateInspectionPdf(inspection: InspectionData, baseInfo?: PdfBaseInfo, photoMap?: PdfPhotoMap) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 15
@@ -212,6 +240,23 @@ export function generateInspectionPdf(inspection: InspectionData, baseInfo?: Pdf
         doc.text(noteLines, margin + 4, y)
         y += noteLines.length * 3.5
       }
+
+      // Embedded photos for failed items
+      if (item.response === 'fail' && photoMap && photoMap[item.id]?.length > 0) {
+        for (const dataUrl of photoMap[item.id]) {
+          checkPageBreak(38)
+          try {
+            const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG'
+            doc.addImage(dataUrl, format, margin + 4, y, 40, 30)
+            y += 34
+          } catch {
+            doc.setFontSize(7)
+            doc.setTextColor(150)
+            doc.text('[Photo unavailable]', margin + 4, y)
+            y += 5
+          }
+        }
+      }
     }
 
     y += 4
@@ -263,6 +308,7 @@ function renderInspectionSections(
   startY: number,
   margin: number,
   contentWidth: number,
+  photoMap?: PdfPhotoMap,
 ): number {
   let y = startY
 
@@ -329,6 +375,23 @@ function renderInspectionSections(
         doc.text(noteLines, margin + 4, y)
         y += noteLines.length * 3.5
       }
+
+      // Embedded photos for failed items
+      if (item.response === 'fail' && photoMap && photoMap[item.id]?.length > 0) {
+        for (const dataUrl of photoMap[item.id]) {
+          checkPageBreak(38)
+          try {
+            const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG'
+            doc.addImage(dataUrl, format, margin + 4, y, 40, 30)
+            y += 34
+          } catch {
+            doc.setFontSize(7)
+            doc.setTextColor(150)
+            doc.text('[Photo unavailable]', margin + 4, y)
+            y += 5
+          }
+        }
+      }
     }
 
     y += 4
@@ -358,7 +421,7 @@ function renderInspectionSections(
  * Generate a single combined PDF for a daily airfield inspection report
  * containing both airfield and lighting inspection halves.
  */
-export function generateCombinedInspectionPdf(inspections: InspectionData[], baseInfo?: PdfBaseInfo) {
+export async function generateCombinedInspectionPdf(inspections: InspectionData[], baseInfo?: PdfBaseInfo, photoMap?: PdfPhotoMap) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 15
@@ -559,7 +622,7 @@ export function generateCombinedInspectionPdf(inspections: InspectionData[], bas
     doc.text(`Completed by: ${inspCompletedBy}${inspCompletedTime ? ` @ ${inspCompletedTime}` : ''}`, margin, y)
     y += 5
 
-    y = renderInspectionSections(doc, insp, y, margin, contentWidth)
+    y = renderInspectionSections(doc, insp, y, margin, contentWidth, photoMap)
 
     y += 4
   }
@@ -591,7 +654,7 @@ export function generateCombinedInspectionPdf(inspections: InspectionData[], bas
  * Generate a PDF for a Construction Meeting or Joint Monthly Airfield Inspection.
  * These are standalone records with a comment and personnel list (no checklist items).
  */
-export function generateSpecialInspectionPdf(inspection: InspectionData, baseInfo?: PdfBaseInfo) {
+export async function generateSpecialInspectionPdf(inspection: InspectionData, baseInfo?: PdfBaseInfo, generalPhotos?: PdfGeneralPhotos) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 15
@@ -686,6 +749,39 @@ export function generateSpecialInspectionPdf(inspection: InspectionData, baseInf
     const noteLines = doc.splitTextToSize(inspection.notes, contentWidth)
     doc.text(noteLines, margin, y)
     y += noteLines.length * 4.5
+  }
+
+  // ── Photos ──
+  if (generalPhotos && generalPhotos.length > 0) {
+    const checkPageBreak = (needed: number) => {
+      if (y + needed > doc.internal.pageSize.getHeight() - 20) {
+        doc.addPage()
+        y = margin
+      }
+    }
+
+    checkPageBreak(10)
+    y += 4
+    doc.setFontSize(10)
+    doc.setTextColor(0)
+    doc.setFont('helvetica', 'bold')
+    doc.text('PHOTOS', margin, y)
+    y += 6
+    doc.setFont('helvetica', 'normal')
+
+    for (const dataUrl of generalPhotos) {
+      checkPageBreak(45)
+      try {
+        const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG'
+        doc.addImage(dataUrl, format, margin, y, 50, 38)
+        y += 42
+      } catch {
+        doc.setFontSize(7)
+        doc.setTextColor(150)
+        doc.text('[Photo unavailable]', margin, y)
+        y += 5
+      }
+    }
   }
 
   // ── Footer ──

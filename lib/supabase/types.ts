@@ -147,6 +147,8 @@ export type Database = {
           id: string
           discrepancy_id: string | null
           check_id: string | null
+          inspection_id: string | null
+          inspection_item_id: string | null
           base_id: string | null
           storage_path: string
           thumbnail_path: string | null
@@ -520,6 +522,8 @@ export type InspectionItem = {
   response: 'pass' | 'fail' | 'na' | null
   notes: string
   photo_id: string | null
+  photo_urls?: string[]
+  location?: { lat: number; lon: number } | null
   generated_discrepancy_id: string | null
 }
 

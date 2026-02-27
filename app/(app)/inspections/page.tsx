@@ -28,6 +28,7 @@ import {
   type InspectionHalfDraft,
 } from '@/lib/inspection-draft'
 import { DEMO_INSPECTIONS } from '@/lib/demo-data'
+import { uploadInspectionPhoto } from '@/lib/supabase/inspections'
 import type { InspectionItem } from '@/lib/supabase/types'
 
 type BwcValue = null | (typeof BWC_OPTIONS)[number]
@@ -73,6 +74,11 @@ export default function InspectionsPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [showHistory, setShowHistory] = useState(false)
 
+  // ── Scroll to top on mount ──
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
+
   // ── Sync showHistory from URL (handles client-side navigation) ──
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('view') === 'history') {
@@ -84,6 +90,80 @@ export default function InspectionsPage() {
   const [saving, setSaving] = useState(false)
   const [filing, setFiling] = useState(false)
   const [showLightingWarning, setShowLightingWarning] = useState(false)
+  const [optionalExpanded, setOptionalExpanded] = useState(false)
+
+  // ── Photo state for fail items & special inspections ──
+  const [itemPhotos, setItemPhotos] = useState<Record<string, { file: File; url: string; name: string }[]>>({})
+  const [specialPhotos, setSpecialPhotos] = useState<{ file: File; url: string; name: string }[]>([])
+  const [activePhotoItemId, setActivePhotoItemId] = useState<string | null>(null)
+  const itemFileRef = useRef<HTMLInputElement>(null)
+  const itemCameraRef = useRef<HTMLInputElement>(null)
+  const specialFileRef = useRef<HTMLInputElement>(null)
+  const specialCameraRef = useRef<HTMLInputElement>(null)
+
+  // ── GPS location state for fail items ──
+  const [itemLocations, setItemLocations] = useState<Record<string, { lat: number; lon: number }>>({})
+  const [gpsLoading, setGpsLoading] = useState<string | null>(null)
+
+  const handleItemPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!activePhotoItemId) return
+    const files = e.target.files
+    if (!files?.length) return
+    const itemId = activePhotoItemId
+    Array.from(files).forEach((file) => {
+      const url = URL.createObjectURL(file)
+      setItemPhotos((prev) => ({
+        ...prev,
+        [itemId]: [...(prev[itemId] || []), { file, url, name: file.name }],
+      }))
+    })
+    e.target.value = ''
+  }
+
+  const handleSpecialPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files?.length) return
+    Array.from(files).forEach((file) => {
+      const url = URL.createObjectURL(file)
+      setSpecialPhotos((prev) => [...prev, { file, url, name: file.name }])
+    })
+    e.target.value = ''
+  }
+
+  const captureLocation = useCallback((itemId: string) => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser')
+      return
+    }
+    setGpsLoading(itemId)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setItemLocations((prev) => ({
+          ...prev,
+          [itemId]: { lat: position.coords.latitude, lon: position.coords.longitude },
+        }))
+        setGpsLoading(null)
+        toast.success('Location acquired')
+      },
+      (error) => {
+        setGpsLoading(null)
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            toast.error('Location access denied. Enable in browser settings.')
+            break
+          case error.POSITION_UNAVAILABLE:
+            toast.error('Location information unavailable.')
+            break
+          case error.TIMEOUT:
+            toast.error('Location request timed out.')
+            break
+          default:
+            toast.error('Unable to get your location.')
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    )
+  }, [])
 
   // ── Load draft from localStorage on mount (scoped to current base) ──
   useEffect(() => {
@@ -280,6 +360,7 @@ export default function InspectionsPage() {
     setDraft(newDraft)
     setActiveTab('airfield')
     saveDraftToStorage(newDraft, installationId)
+    window.scrollTo(0, 0)
     toast.success('New daily inspection started')
   }
 
@@ -373,6 +454,7 @@ export default function InspectionsPage() {
     else if (ltMember) setActiveTab('lighting')
 
     logActivity('resumed', 'inspection', members[0].id, members[0].display_id, { inspection_type: members[0].inspection_type }, installationId)
+    window.scrollTo(0, 0)
     toast.success('Inspection resumed')
   }
 
@@ -720,12 +802,35 @@ export default function InspectionsPage() {
     }
 
     if (filed > 0 || usingDemo) {
+      // Upload photos for fail items (keyed by item ID)
+      if (filedId && Object.keys(itemPhotos).length > 0) {
+        for (const [itemId, photos] of Object.entries(itemPhotos)) {
+          const loc = itemLocations[itemId] || null
+          for (const photo of photos) {
+            await uploadInspectionPhoto(filedId, photo.file, itemId, loc?.lat, loc?.lon, installationId)
+          }
+        }
+      }
+
+      // Upload photos for special inspections (no item ID)
+      if (filedId && specialPhotos.length > 0) {
+        for (const photo of specialPhotos) {
+          await uploadInspectionPhoto(filedId, photo.file, null, null, null, installationId)
+        }
+      }
+
+      // Clean up object URLs
+      Object.values(itemPhotos).flat().forEach((p) => URL.revokeObjectURL(p.url))
+      specialPhotos.forEach((p) => URL.revokeObjectURL(p.url))
+      setItemPhotos({})
+      setSpecialPhotos([])
+      setItemLocations({})
+
       clearDraft(installationId)
       setDraft(null)
       toast.success(`Inspection${filed !== 1 ? 's' : ''} filed`, {
         description: `${filed} record${filed !== 1 ? 's' : ''} saved to history`,
       })
-      // Navigate to the filed inspection detail page
       if (filedId) {
         router.push(`/inspections/${filedId}`)
         return
@@ -991,23 +1096,56 @@ export default function InspectionsPage() {
           </div>
         </div>
 
-        {/* ── Conditional Section Toggles (airfield only) ── */}
+        {/* ── Conditional Section Toggles (airfield only) — collapsible ── */}
         {conditionalSections.length > 0 && (
-          <div style={{ marginBottom: 12, padding: 12, borderRadius: 8, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-              Optional Sections
-            </div>
-            {conditionalSections.map((s) => (
-              <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 0' }}>
-                <input
-                  type="checkbox"
-                  checked={!!currentHalf?.enabledConditionals[s.id]}
-                  onChange={() => toggleConditional(s.id)}
-                  style={{ accentColor: 'var(--color-accent-secondary)', width: 16, height: 16 }}
-                />
-                <span style={{ fontSize: 13, color: 'var(--color-text-1)' }}>{s.conditional}</span>
-              </label>
-            ))}
+          <div style={{ marginBottom: 12, borderRadius: 8, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', overflow: 'hidden' }}>
+            <button
+              type="button"
+              onClick={() => setOptionalExpanded(!optionalExpanded)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                width: '100%', padding: '10px 12px', background: 'none', border: 'none',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{
+                  fontSize: 11, fontWeight: 700, color: 'var(--color-text-3)',
+                  letterSpacing: '0.08em', textTransform: 'uppercase',
+                }}>
+                  Optional Sections
+                </span>
+                <span style={{
+                  fontSize: 10, color: 'var(--color-accent-secondary)', fontWeight: 600,
+                  background: 'rgba(14,165,233,0.1)', padding: '2px 8px', borderRadius: 10,
+                }}>
+                  {conditionalSections.length}
+                </span>
+              </div>
+              <span style={{
+                fontSize: 12, color: 'var(--color-text-3)',
+                transform: optionalExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease',
+                display: 'inline-block',
+              }}>
+                ▶
+              </span>
+            </button>
+            {optionalExpanded && (
+              <div style={{ padding: '0 12px 10px' }}>
+                {conditionalSections.map((s) => (
+                  <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 0' }}>
+                    <input
+                      type="checkbox"
+                      checked={!!currentHalf?.enabledConditionals[s.id]}
+                      onChange={() => toggleConditional(s.id)}
+                      style={{ accentColor: 'var(--color-accent-secondary)', width: 16, height: 16 }}
+                    />
+                    <span style={{ fontSize: 13, color: 'var(--color-text-1)' }}>{s.conditional}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -1093,6 +1231,64 @@ export default function InspectionsPage() {
                 onChange={(e) => setSpecialComment(e.target.value)}
                 style={{ resize: 'vertical', fontSize: 13 }}
               />
+            </div>
+
+            {/* ── Photos for Special Inspection ── */}
+            <div className="card" style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+                Photos / Attachments
+              </div>
+
+              {/* Thumbnails */}
+              {specialPhotos.length > 0 && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                  {specialPhotos.map((photo, idx) => (
+                    <div key={idx} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border-mid)' }}>
+                      <img src={photo.url} alt={photo.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          URL.revokeObjectURL(photo.url)
+                          setSpecialPhotos((prev) => prev.filter((_, i) => i !== idx))
+                        }}
+                        style={{
+                          position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%',
+                          background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', cursor: 'pointer',
+                          fontSize: 10, lineHeight: '18px', textAlign: 'center', padding: 0,
+                        }}
+                      >
+                        x
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Buttons */}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => specialFileRef.current?.click()}
+                  style={{
+                    flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                    border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.08)',
+                    color: 'var(--color-accent-secondary)', cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  Upload Photo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => specialCameraRef.current?.click()}
+                  style={{
+                    flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                    border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.08)',
+                    color: 'var(--color-accent-secondary)', cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  Take Photo
+                </button>
+              </div>
             </div>
           </>
         ) : (
@@ -1247,6 +1443,99 @@ export default function InspectionsPage() {
                                 fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box',
                               }}
                             />
+
+                            {/* Photo thumbnails for this item */}
+                            {itemPhotos[item.id] && itemPhotos[item.id].length > 0 && (
+                              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
+                                {itemPhotos[item.id].map((photo, pi) => (
+                                  <div key={pi} style={{ position: 'relative', width: 56, height: 56, borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(239,68,68,0.3)' }}>
+                                    <img src={photo.url} alt={photo.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        URL.revokeObjectURL(photo.url)
+                                        setItemPhotos((prev) => ({
+                                          ...prev,
+                                          [item.id]: prev[item.id].filter((_, i) => i !== pi),
+                                        }))
+                                      }}
+                                      style={{
+                                        position: 'absolute', top: 2, right: 2, width: 16, height: 16, borderRadius: '50%',
+                                        background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', cursor: 'pointer',
+                                        fontSize: 10, lineHeight: '16px', textAlign: 'center', padding: 0,
+                                      }}
+                                    >
+                                      x
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Photo + Location buttons */}
+                            <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                              <button
+                                type="button"
+                                onClick={() => { setActivePhotoItemId(item.id); itemFileRef.current?.click() }}
+                                style={{
+                                  padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+                                  border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.08)',
+                                  color: 'var(--color-accent-secondary)', cursor: 'pointer', fontFamily: 'inherit',
+                                }}
+                              >
+                                Upload Photo
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => { setActivePhotoItemId(item.id); itemCameraRef.current?.click() }}
+                                style={{
+                                  padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+                                  border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.08)',
+                                  color: 'var(--color-accent-secondary)', cursor: 'pointer', fontFamily: 'inherit',
+                                }}
+                              >
+                                Take Photo
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => captureLocation(item.id)}
+                                disabled={gpsLoading === item.id}
+                                style={{
+                                  padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+                                  border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)',
+                                  color: '#22C55E', cursor: 'pointer', fontFamily: 'inherit',
+                                  opacity: gpsLoading === item.id ? 0.6 : 1,
+                                }}
+                              >
+                                {gpsLoading === item.id ? 'Acquiring...' : 'Use My Location'}
+                              </button>
+                            </div>
+
+                            {/* Show captured location with mini-map */}
+                            {itemLocations[item.id] && (() => {
+                              const loc = itemLocations[item.id]
+                              const mapToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+                              const mapUrl = mapToken && mapToken !== 'your-mapbox-token-here'
+                                ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${loc.lon},${loc.lat})/${loc.lon},${loc.lat},16,0/400x200@2x?access_token=${mapToken}`
+                                : null
+                              return (
+                                <div style={{ marginTop: 6 }}>
+                                  {mapUrl && (
+                                    <img
+                                      src={mapUrl}
+                                      alt="Fail item location"
+                                      style={{
+                                        width: '100%', maxWidth: 400, height: 160, objectFit: 'cover',
+                                        borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginBottom: 4,
+                                      }}
+                                    />
+                                  )}
+                                  <div style={{ fontSize: 10, color: 'var(--color-text-3)' }}>
+                                    Location: {loc.lat.toFixed(5)}, {loc.lon.toFixed(5)}
+                                  </div>
+                                </div>
+                              )
+                            })()}
                           </div>
                         )}
                       </div>
@@ -1327,6 +1616,12 @@ export default function InspectionsPage() {
             </button>
           )}
         </div>
+
+        {/* Hidden file inputs for photo capture */}
+        <input ref={itemFileRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleItemPhoto} />
+        <input ref={itemCameraRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleItemPhoto} />
+        <input ref={specialFileRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleSpecialPhoto} />
+        <input ref={specialCameraRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleSpecialPhoto} />
 
         {/* ── Lighting Incomplete Confirmation Dialog ── */}
         {showLightingWarning && (

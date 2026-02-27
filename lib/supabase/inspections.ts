@@ -444,6 +444,122 @@ export async function getInspectorName(): Promise<{ name: string | null; id: str
   }
 }
 
+// ── Inspection Photo Types & Functions ──
+
+export type InspectionPhotoRow = {
+  id: string
+  inspection_id: string | null
+  inspection_item_id: string | null
+  storage_path: string
+  file_name: string
+  file_size: number | null
+  mime_type: string
+  latitude: number | null
+  longitude: number | null
+  created_at: string
+}
+
+export async function uploadInspectionPhoto(
+  inspectionId: string,
+  file: File,
+  itemId?: string | null,
+  latitude?: number | null,
+  longitude?: number | null,
+  baseId?: string | null,
+): Promise<{ data: InspectionPhotoRow | null; error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { data: null, error: 'Supabase not configured' }
+
+  const ext = file.name.split('.').pop() || 'jpg'
+  const storagePath = `inspection-photos/${inspectionId}/${Date.now()}.${ext}`
+
+  let storageUrl = storagePath
+  let usedStorage = false
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: uploadError } = await (supabase as any).storage
+      .from('photos')
+      .upload(storagePath, file, { contentType: file.type || 'image/jpeg' })
+    if (!uploadError) {
+      usedStorage = true
+    } else {
+      console.warn('Storage upload failed, storing as data URL:', uploadError.message)
+    }
+  } catch {
+    console.warn('Storage not available, storing as data URL')
+  }
+
+  if (!usedStorage) {
+    try {
+      const buffer = await file.arrayBuffer()
+      const bytes = new Uint8Array(buffer)
+      let binary = ''
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i])
+      }
+      const base64 = btoa(binary)
+      storageUrl = `data:${file.type || 'image/jpeg'};base64,${base64}`
+    } catch (e) {
+      console.error('Failed to convert file to data URL:', e)
+      return { data: null, error: 'Failed to process photo' }
+    }
+  }
+
+  let uploaded_by: string | undefined
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) uploaded_by = user.id
+  } catch {
+    // No authenticated user
+  }
+
+  const photoRow: Record<string, unknown> = {
+    inspection_id: inspectionId,
+    inspection_item_id: itemId || null,
+    storage_path: storageUrl,
+    file_name: file.name,
+    file_size: file.size,
+    mime_type: file.type || 'image/jpeg',
+  }
+  if (uploaded_by) photoRow.uploaded_by = uploaded_by
+  if (baseId) photoRow.base_id = baseId
+  if (latitude != null) photoRow.latitude = latitude
+  if (longitude != null) photoRow.longitude = longitude
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('photos')
+    .insert(photoRow)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Inspection photo insert failed:', error.message)
+    return { data: null, error: error.message }
+  }
+
+  return { data: data as InspectionPhotoRow, error: null }
+}
+
+export async function fetchInspectionPhotos(inspectionId: string): Promise<InspectionPhotoRow[]> {
+  const supabase = createClient()
+  if (!supabase) return []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('photos')
+    .select('*')
+    .eq('inspection_id', inspectionId)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('Failed to fetch inspection photos:', error.message)
+    return []
+  }
+
+  return data as InspectionPhotoRow[]
+}
+
 export async function deleteInspection(id: string): Promise<{ error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }

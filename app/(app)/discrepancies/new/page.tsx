@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
@@ -20,6 +20,7 @@ export default function NewDiscrepancyPage() {
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const [photos, setPhotos] = useState<{ file: File; url: string; name: string }[]>([])
   const [saving, setSaving] = useState(false)
+  const [gpsLoading, setGpsLoading] = useState(false)
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false)
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false)
@@ -53,6 +54,42 @@ export default function NewDiscrepancyPage() {
   const handlePointSelected = useCallback((lat: number, lng: number) => {
     setFormData((prev) => ({ ...prev, latitude: lat, longitude: lng }))
     toast.success(`Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+  }, [])
+
+  const captureLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser')
+      return
+    }
+    setGpsLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setFormData((prev) => ({
+          ...prev,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        }))
+        setGpsLoading(false)
+        toast.success(`Location: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`)
+      },
+      (error) => {
+        setGpsLoading(false)
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            toast.error('Location access denied. Enable in browser settings.')
+            break
+          case error.POSITION_UNAVAILABLE:
+            toast.error('Location information unavailable.')
+            break
+          case error.TIMEOUT:
+            toast.error('Location request timed out.')
+            break
+          default:
+            toast.error('Unable to get your location.')
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    )
   }, [])
 
   const handleSubmit = async () => {
@@ -188,7 +225,7 @@ export default function NewDiscrepancyPage() {
 
         <div style={{ marginBottom: 12 }}>
           <span className="section-label">Title</span>
-          <input type="text" className="input-dark" maxLength={120} placeholder="Short summary..." value={formData.title} onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value }))} />
+          <input type="text" className="input-dark" maxLength={60} placeholder="Short summary..." value={formData.title} onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value }))} />
         </div>
 
         <div style={{ marginBottom: 12 }}>
@@ -217,6 +254,47 @@ export default function NewDiscrepancyPage() {
             selectedLng={formData.longitude}
           />
         </div>
+
+        {/* GPS Use My Location */}
+        <button
+          type="button"
+          onClick={captureLocation}
+          disabled={gpsLoading}
+          style={{
+            width: '100%', padding: '12px', marginBottom: 8, borderRadius: 10,
+            border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)',
+            color: '#22C55E', fontSize: 13, fontWeight: 600, cursor: gpsLoading ? 'default' : 'pointer',
+            fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            opacity: gpsLoading ? 0.6 : 1,
+          }}
+        >
+          {gpsLoading ? 'Acquiring Location...' : 'Use My Location'}
+        </button>
+
+        {/* Captured location mini-map */}
+        {formData.latitude != null && formData.longitude != null && (() => {
+          const mapToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+          const mapUrl = mapToken && mapToken !== 'your-mapbox-token-here'
+            ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${formData.longitude},${formData.latitude})/${formData.longitude},${formData.latitude},16,0/400x200@2x?access_token=${mapToken}`
+            : null
+          return (
+            <div style={{ marginBottom: 12, textAlign: 'center' }}>
+              {mapUrl && (
+                <img
+                  src={mapUrl}
+                  alt="Captured location"
+                  style={{
+                    width: '100%', maxWidth: 400, height: 160, objectFit: 'cover',
+                    borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginBottom: 4,
+                  }}
+                />
+              )}
+              <div style={{ fontSize: 11, color: '#34D399', fontFamily: 'monospace', fontWeight: 600 }}>
+                {formData.latitude.toFixed(5)}, {formData.longitude.toFixed(5)}
+              </div>
+            </div>
+          )
+        })()}
 
         {photos.length > 0 && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>

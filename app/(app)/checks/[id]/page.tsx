@@ -10,6 +10,7 @@ import { DEMO_CHECKS, DEMO_CHECK_COMMENTS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { fetchCheck, fetchCheckComments, addCheckComment, fetchCheckPhotos, uploadCheckPhoto, type CheckRow, type CheckCommentRow, type CheckPhotoRow } from '@/lib/supabase/checks'
 import { PhotoViewerModal } from '@/components/discrepancies/modals'
+import { useInstallation } from '@/lib/installation-context'
 
 export default function CheckDetailPage() {
   const params = useParams()
@@ -26,6 +27,8 @@ export default function CheckDetailPage() {
   const [uploading, setUploading] = useState(false)
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
   const [currentUser, setCurrentUser] = useState('Inspector')
+  const [generatingPdf, setGeneratingPdf] = useState(false)
+  const { currentInstallation } = useInstallation()
 
   useEffect(() => {
     const supabase = createClient()
@@ -33,8 +36,11 @@ export default function CheckDetailPage() {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: profile } = await (supabase as any).from('profiles').select('name, rank').eq('id', user.id).single()
-      if (profile?.name) {
+      const { data: profile } = await (supabase as any).from('profiles').select('name, rank, first_name, last_name').eq('id', user.id).single()
+      if (profile?.first_name && profile?.last_name) {
+        const displayName = `${profile.first_name} ${profile.last_name}`
+        setCurrentUser(profile.rank ? `${profile.rank} ${displayName}` : displayName)
+      } else if (profile?.name) {
         setCurrentUser(profile.rank ? `${profile.rank} ${profile.name}` : profile.name)
       } else if (user.user_metadata?.name) {
         setCurrentUser(user.user_metadata.name)
@@ -279,6 +285,7 @@ export default function CheckDetailPage() {
                   color={
                     data.condition_code === 'LOW' ? '#22C55E'
                     : data.condition_code === 'MODERATE' ? '#EAB308'
+                    : data.condition_code === 'PROHIBITED' ? '#DC2626'
                     : '#EF4444'
                   }
                 />
@@ -436,7 +443,7 @@ export default function CheckDetailPage() {
             {allPhotos.map((p, i) => (
               <div
                 key={i}
-                style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border-active)', cursor: 'pointer' }}
+                style={{ position: 'relative', width: 140, height: 140, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border-active)', cursor: 'pointer' }}
                 onClick={() => setViewerIndex(i)}
               >
                 <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -483,7 +490,59 @@ export default function CheckDetailPage() {
       )}
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={async () => {
+            setGeneratingPdf(true)
+            try {
+              // Convert photos to data URLs for PDF embedding
+              const photoDataUrls: string[] = []
+              for (const p of allPhotos) {
+                if (p.url.startsWith('data:')) {
+                  photoDataUrls.push(p.url)
+                } else {
+                  try {
+                    const resp = await fetch(p.url)
+                    if (resp.ok) {
+                      const blob = await resp.blob()
+                      const reader = new FileReader()
+                      const dataUrl = await new Promise<string>((resolve, reject) => {
+                        reader.onload = () => resolve(reader.result as string)
+                        reader.onerror = reject
+                        reader.readAsDataURL(blob)
+                      })
+                      photoDataUrls.push(dataUrl)
+                    }
+                  } catch { /* skip failed photos */ }
+                }
+              }
+              const { generateCheckPdf } = await import('@/lib/check-pdf')
+              await generateCheckPdf({
+                check,
+                comments: displayComments,
+                photoDataUrls,
+                baseName: currentInstallation?.name,
+                baseIcao: currentInstallation?.icao,
+              })
+              toast.success('PDF generated')
+            } catch (e) {
+              console.error('PDF export failed:', e)
+              toast.error('Failed to generate PDF')
+            }
+            setGeneratingPdf(false)
+          }}
+          disabled={generatingPdf}
+          style={{
+            flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
+            background: '#A78BFA14', border: '1px solid #A78BFA33',
+            color: '#A78BFA', fontSize: 13, fontWeight: 700,
+            fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
+            opacity: generatingPdf ? 0.7 : 1,
+          }}
+        >
+          {generatingPdf ? 'Generating...' : 'Export PDF'}
+        </button>
         <Link
           href="/checks"
           style={{
