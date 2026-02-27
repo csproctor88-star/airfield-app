@@ -134,7 +134,7 @@ export default function NewDiscrepancyPage() {
     if (photos.length > 0) {
       let uploaded = 0
       for (const photo of photos) {
-        const { error: photoErr } = await uploadDiscrepancyPhoto(created.id, photo.file)
+        const { error: photoErr } = await uploadDiscrepancyPhoto(created.id, photo.file, installationId)
         if (!photoErr) uploaded++
       }
       if (uploaded < photos.length) {

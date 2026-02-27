@@ -173,7 +173,7 @@ export default function CheckDetailPage() {
     url: p.storage_path.startsWith('data:')
       ? p.storage_path
       : supabaseUrl
-        ? `${supabaseUrl}/storage/v1/object/public/${p.storage_path}`
+        ? `${supabaseUrl}/storage/v1/object/public/photos/${p.storage_path}`
         : p.storage_path,
     name: p.file_name,
   }))

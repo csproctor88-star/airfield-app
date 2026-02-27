@@ -6,6 +6,7 @@ import { StatusBadge, Badge } from '@/components/ui/badge'
 import { ActionButton } from '@/components/ui/button'
 import { fetchDiscrepancy, fetchDiscrepancyPhotos, uploadDiscrepancyPhoto, fetchStatusUpdates, type DiscrepancyRow, type PhotoRow, type StatusUpdateRow } from '@/lib/supabase/discrepancies'
 import { createClient } from '@/lib/supabase/client'
+import { useInstallation } from '@/lib/installation-context'
 import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
 import { CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS, DISCREPANCY_TYPES } from '@/lib/constants'
 
@@ -19,6 +20,7 @@ type ModalType = 'edit' | 'status' | 'workorder' | null
 export default function DiscrepancyDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const { installationId } = useInstallation()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const [dbPhotos, setDbPhotos] = useState<PhotoRow[]>([])
@@ -63,7 +65,7 @@ export default function DiscrepancyDetailPage() {
     setUploading(true)
     let uploaded = 0
     for (const file of Array.from(files)) {
-      const { error } = await uploadDiscrepancyPhoto(liveData.id, file)
+      const { error } = await uploadDiscrepancyPhoto(liveData.id, file, installationId)
       if (!error) uploaded++
     }
 
@@ -131,7 +133,7 @@ export default function DiscrepancyDetailPage() {
     url: p.storage_path.startsWith('data:')
       ? p.storage_path
       : supabaseUrl
-        ? `${supabaseUrl}/storage/v1/object/public/${p.storage_path}`
+        ? `${supabaseUrl}/storage/v1/object/public/photos/${p.storage_path}`
         : p.storage_path,
     name: p.file_name,
   }))

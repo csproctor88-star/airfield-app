@@ -322,6 +322,20 @@ export async function uploadDiscrepancyPhoto(
     // No authenticated user
   }
 
+  // Resolve base_id: use provided value, or look it up from the discrepancy
+  let resolvedBaseId = baseId
+  if (!resolvedBaseId) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: disc } = await (supabase as any)
+        .from('discrepancies')
+        .select('base_id')
+        .eq('id', discrepancyId)
+        .single()
+      if (disc?.base_id) resolvedBaseId = disc.base_id
+    } catch { /* proceed without base_id */ }
+  }
+
   const photoRow: Record<string, unknown> = {
     discrepancy_id: discrepancyId,
     storage_path: storageUrl,
@@ -330,7 +344,7 @@ export async function uploadDiscrepancyPhoto(
     mime_type: file.type || 'image/jpeg',
   }
   if (uploaded_by) photoRow.uploaded_by = uploaded_by
-  if (baseId) photoRow.base_id = baseId
+  if (resolvedBaseId) photoRow.base_id = resolvedBaseId
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
