@@ -127,14 +127,13 @@ export default function DiscrepanciesPage() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: photoRows } = await (supabase as any)
           .from('photos')
-          .select('entity_id, file_name')
-          .eq('entity_type', 'discrepancy')
-          .in('entity_id', ids)
+          .select('discrepancy_id, file_name')
+          .in('discrepancy_id', ids)
         if (photoRows) {
           for (const row of photoRows) {
-            if (!photoInfo[row.entity_id]) photoInfo[row.entity_id] = { count: 0, files: [] }
-            photoInfo[row.entity_id].count++
-            if (row.file_name) photoInfo[row.entity_id].files.push(row.file_name)
+            if (!photoInfo[row.discrepancy_id]) photoInfo[row.discrepancy_id] = { count: 0, files: [] }
+            photoInfo[row.discrepancy_id].count++
+            if (row.file_name) photoInfo[row.discrepancy_id].files.push(row.file_name)
           }
         }
       }
@@ -216,13 +215,12 @@ export default function DiscrepanciesPage() {
       const supabase = createClient()
       if (supabase) {
         const ids = filtered.map(d => d.id)
-        // Fetch uploaded photos
+        // Fetch uploaded photos (keyed by discrepancy_id FK)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: photoRows } = await (supabase as any)
           .from('photos')
-          .select('entity_id, storage_path')
-          .eq('entity_type', 'discrepancy')
-          .in('entity_id', ids)
+          .select('discrepancy_id, storage_path')
+          .in('discrepancy_id', ids)
         if (photoRows && photoRows.length > 0) {
           for (const row of photoRows) {
             try {
@@ -245,8 +243,8 @@ export default function DiscrepanciesPage() {
                 }
               }
               if (dataUrl) {
-                if (!photoMap[row.entity_id]) photoMap[row.entity_id] = []
-                photoMap[row.entity_id].push(dataUrl)
+                if (!photoMap[row.discrepancy_id]) photoMap[row.discrepancy_id] = []
+                photoMap[row.discrepancy_id].push(dataUrl)
               }
             } catch { /* skip failed photo */ }
           }
