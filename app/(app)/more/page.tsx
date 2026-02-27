@@ -122,7 +122,7 @@ export default function MorePage() {
   const [canManageUsers, setCanManageUsers] = useState(false)
   const [isSysAdmin, setIsSysAdmin] = useState(false)
   const [loaded, setLoaded] = useState(false)
-  const [modulesOpen, setModulesOpen] = useState(false)
+
 
   useEffect(() => {
     async function checkRole() {
@@ -175,82 +175,59 @@ export default function MorePage() {
       {/* Profile — always expanded */}
       <ProfileSection />
 
-      {/* Modules — collapsible */}
-      <button
-        onClick={() => setModulesOpen(v => !v)}
-        style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 14px',
-          background: 'var(--color-bg-surface)',
-          border: '1px solid var(--color-border)',
-          borderRadius: modulesOpen ? '12px 12px 0 0' : 12,
-          cursor: 'pointer',
-          color: 'var(--color-text-1)',
-          fontFamily: 'inherit',
-          marginBottom: modulesOpen ? 0 : 12,
-        }}
-      >
-        <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.04em' }}>ALL MODULES</span>
-        <span style={{ fontSize: 14, color: 'var(--color-text-3)', transition: 'transform 0.2s', transform: modulesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
-      </button>
-      {modulesOpen && (
-        <div style={{
-          background: 'var(--color-bg-surface)',
-          border: '1px solid var(--color-border)',
-          borderTop: 'none',
-          borderRadius: '0 0 12px 12px',
-          marginBottom: 12,
-          overflow: 'hidden',
-        }}>
-          {visibleModules.map((m) => (
-            <Link
-              key={m.name}
-              href={m.href}
+      {/* Modules */}
+      <div style={{
+        background: 'var(--color-bg-surface)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 12,
+        marginBottom: 12,
+        overflow: 'hidden',
+      }}>
+        {visibleModules.map((m) => (
+          <Link
+            key={m.name}
+            href={m.href}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '10px 14px',
+              textDecoration: 'none',
+              color: 'inherit',
+              borderBottom: '1px solid var(--color-border)',
+            }}
+          >
+            <div
               style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                background: `${m.color}10`,
+                border: `1px solid ${m.color}22`,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 12,
-                padding: '10px 14px',
-                textDecoration: 'none',
-                color: 'inherit',
-                borderBottom: '1px solid var(--color-border)',
+                justifyContent: 'center',
+                fontSize: 16,
+                flexShrink: 0,
               }}
             >
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  background: `${m.color}10`,
-                  border: `1px solid ${m.color}22`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 16,
-                  flexShrink: 0,
-                }}
-              >
-                {m.icon}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700 }}>{m.name}</div>
-              </div>
-              {m.badge && <Badge label={m.badge} color={m.color} />}
-              <span style={{ color: 'var(--color-text-4)', fontSize: 14 }}>›</span>
-            </Link>
-          ))}
-        </div>
-      )}
+              {m.icon}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>{m.name}</div>
+            </div>
+            {m.badge && <Badge label={m.badge} color={m.color} />}
+            <span style={{ color: 'var(--color-text-4)', fontSize: 14 }}>›</span>
+          </Link>
+        ))}
+      </div>
 
       {/* About */}
       <div
         className="card"
         style={{ textAlign: 'center', padding: 20 }}
       >
-        <img src="/glidepath.png" alt="Glidepath" style={{ height: 28, objectFit: 'contain', margin: '0 auto' }} />
+        <img src="/glidepath.png" alt="Glidepath" style={{ height: 80, objectFit: 'contain', margin: '0 auto' }} />
         <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 6 }}>
           v2.4.0
         </div>

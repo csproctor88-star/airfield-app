@@ -39,9 +39,9 @@ export function Header() {
             src="/icon.png"
             alt="Glidepath"
             style={{
-              width: 36,
-              height: 36,
-              borderRadius: 9,
+              width: 72,
+              height: 72,
+              borderRadius: 14,
               objectFit: 'cover',
             }}
           />
