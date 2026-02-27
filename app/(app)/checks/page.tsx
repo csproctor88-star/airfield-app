@@ -296,21 +296,9 @@ export default function AirfieldChecksPage() {
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div>
-          <div style={{ fontSize: 16, fontWeight: 800 }}>Airfield Check</div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>DAFI 13-213 / UFC 3-260-01</div>
-        </div>
-        <Link
-          href="/checks/history"
-          style={{
-            background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.2)', borderRadius: 8,
-            padding: '8px 14px', color: 'var(--color-cyan)', fontSize: 12, fontWeight: 600,
-            textDecoration: 'none', fontFamily: 'inherit',
-          }}
-        >
-          Check History
-        </Link>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 16, fontWeight: 800 }}>Airfield Check</div>
+        <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>DAFI 13-213 / UFC 3-260-01</div>
       </div>
 
       {/* Check Type Dropdown */}
