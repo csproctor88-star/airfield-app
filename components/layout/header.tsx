@@ -2,20 +2,14 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { RefreshCw, ChevronDown } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
 
 // Header: gradient bg, logo, installation name + ICAO, sync + status dot
 
 export function Header() {
-  const [syncing, setSyncing] = useState(false)
   const [showSwitcher, setShowSwitcher] = useState(false)
   const { currentInstallation, allInstallations, switchInstallation, userRole } = useInstallation()
-
-  const handleSync = () => {
-    setSyncing(true)
-    setTimeout(() => setSyncing(false), 1500)
-  }
 
   const icao = currentInstallation?.icao || ''
   const displayName = currentInstallation?.name || ''
@@ -36,83 +30,37 @@ export function Header() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <img
-            src="/icon.png"
+            src="/glidepath.png"
             alt="Glidepath"
             style={{
-              width: 72,
-              height: 72,
-              borderRadius: 14,
-              objectFit: 'cover',
+              height: 48,
+              objectFit: 'contain',
             }}
           />
-          <div>
-            <div
+        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.12em' }}>
+            {displayName ? `${displayName.toUpperCase()}${icao ? ` \u2022 ${icao}` : ''}` : 'AIRFIELD OPS'}
+          </div>
+          {canSwitchInstallation && (
+            <button
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setShowSwitcher(!showSwitcher)
+              }}
               style={{
-                fontSize: 16,
-                fontWeight: 800,
-                letterSpacing: '-0.02em',
-                background: 'linear-gradient(135deg, var(--color-logo-start), var(--color-logo-end))',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
               }}
             >
-              GLIDEPATH
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.12em' }}>
-                {displayName ? `${displayName.toUpperCase()}${icao ? ` \u2022 ${icao}` : ''}` : 'AIRFIELD OPS'}
-              </div>
-              {canSwitchInstallation && (
-                <button
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    setShowSwitcher(!showSwitcher)
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}
-                >
-                  <ChevronDown size={10} color="var(--color-text-3)" />
-                </button>
-              )}
-            </div>
-          </div>
-        </Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <button
-            onClick={handleSync}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 2,
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <RefreshCw
-              size={16}
-              color="var(--color-text-2)"
-              style={{
-                transition: 'transform 0.3s',
-                transform: syncing ? 'rotate(360deg)' : 'none',
-              }}
-            />
-          </button>
-          <div
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: 'var(--color-success)',
-            }}
-          />
+              <ChevronDown size={10} color="var(--color-text-3)" />
+            </button>
+          )}
         </div>
       </div>
 

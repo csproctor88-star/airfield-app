@@ -218,7 +218,7 @@ export default function LoginPage() {
       <div style={{ width: '100%', maxWidth: 360 }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <img src="/logo_motto.png" alt="Glidepath — Guiding You to Mission Success" style={{ height: 180, objectFit: 'contain', margin: '0 auto' }} />
+          <img src="/logo_motto.png" alt="Glidepath — Guiding You to Mission Success" style={{ display: 'block', width: '100%', maxWidth: 280, height: 'auto', objectFit: 'contain', margin: '0 auto' }} />
         </div>
 
         {/* Login Card */}
