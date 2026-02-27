@@ -27,62 +27,42 @@ export function Header() {
         zIndex: 50,
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <div
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+        <Link href="/" style={{ textDecoration: 'none' }}>
+          <img
+            src="/glidepath2.png"
+            alt="Glidepath"
             style={{
-              width: 36,
-              height: 36,
-              borderRadius: 9,
-              background: 'linear-gradient(135deg, #0C4A6E, #38BDF8)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 17,
-              boxShadow: '0 0 16px var(--color-accent-glow)',
+              display: 'block',
+              height: 56,
+              objectFit: 'contain',
             }}
-          >
-            ✈️
+          />
+        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.12em' }}>
+            {displayName ? `${displayName.toUpperCase()}${icao ? ` \u2022 ${icao}` : ''}` : 'AIRFIELD OPS'}
           </div>
-          <div>
-            <div
+          {canSwitchInstallation && (
+            <button
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setShowSwitcher(!showSwitcher)
+              }}
               style={{
-                fontSize: 16,
-                fontWeight: 800,
-                letterSpacing: '-0.02em',
-                background: 'linear-gradient(135deg, var(--color-logo-start), var(--color-logo-end))',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
               }}
             >
-              GLIDEPATH
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.12em' }}>
-                {displayName ? `${displayName.toUpperCase()}${icao ? ` \u2022 ${icao}` : ''}` : 'AIRFIELD OPS'}
-              </div>
-              {canSwitchInstallation && (
-                <button
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    setShowSwitcher(!showSwitcher)
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}
-                >
-                  <ChevronDown size={10} color="var(--color-text-3)" />
-                </button>
-              )}
-            </div>
-          </div>
-        </Link>
+              <ChevronDown size={10} color="var(--color-text-3)" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Installation switcher dropdown */}
