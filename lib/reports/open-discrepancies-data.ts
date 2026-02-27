@@ -219,25 +219,16 @@ export async function fetchOpenDiscrepanciesData(
 
         let dataUrl: string | null = null
         if (row.storage_path.startsWith('data:')) {
-          // Already a data URL
           dataUrl = row.storage_path
         } else {
-          // Try to get public URL from storage
           try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { data: urlData } = (supabase as any).storage
-              .from('photos')
-              .getPublicUrl(row.storage_path)
-            if (urlData?.publicUrl) {
-              // Fetch the image and convert to data URL for PDF embedding
-              try {
-                const response = await fetch(urlData.publicUrl)
-                if (response.ok) {
-                  const blob = await response.blob()
-                  dataUrl = await blobToDataUrl(blob)
-                }
-              } catch {
-                // Network error fetching image
+            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
+            if (supabaseUrl) {
+              const publicUrl = `${supabaseUrl}/storage/v1/object/public/${row.storage_path}`
+              const response = await fetch(publicUrl)
+              if (response.ok) {
+                const blob = await response.blob()
+                dataUrl = await blobToDataUrl(blob)
               }
             }
           } catch {

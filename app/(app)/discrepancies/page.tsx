@@ -224,24 +224,23 @@ export default function DiscrepanciesPage() {
           .eq('entity_type', 'discrepancy')
           .in('entity_id', ids)
         if (photoRows && photoRows.length > 0) {
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
           for (const row of photoRows) {
             try {
               let dataUrl: string | null = null
               if (row.storage_path.startsWith('data:')) {
                 dataUrl = row.storage_path
-              } else {
-                const { data: urlData } = supabase.storage.from('photos').getPublicUrl(row.storage_path)
-                if (urlData?.publicUrl) {
-                  const resp = await fetch(urlData.publicUrl)
-                  if (resp.ok) {
-                    const blob = await resp.blob()
-                    dataUrl = await new Promise<string>((resolve, reject) => {
-                      const reader = new FileReader()
-                      reader.onloadend = () => resolve(reader.result as string)
-                      reader.onerror = reject
-                      reader.readAsDataURL(blob)
-                    })
-                  }
+              } else if (supabaseUrl) {
+                const publicUrl = `${supabaseUrl}/storage/v1/object/public/${row.storage_path}`
+                const resp = await fetch(publicUrl)
+                if (resp.ok) {
+                  const blob = await resp.blob()
+                  dataUrl = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader()
+                    reader.onloadend = () => resolve(reader.result as string)
+                    reader.onerror = reject
+                    reader.readAsDataURL(blob)
+                  })
                 }
               }
               if (dataUrl) {

@@ -425,16 +425,16 @@ async function fetchPhotosForDailyReport(
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function resolvePhotoUrl(supabase: any, storagePath: string): Promise<string | null> {
+async function resolvePhotoUrl(_supabase: any, storagePath: string): Promise<string | null> {
   if (storagePath.startsWith('data:')) return storagePath
   try {
-    const { data: urlData } = supabase.storage.from('photos').getPublicUrl(storagePath)
-    if (urlData?.publicUrl) {
-      const response = await fetch(urlData.publicUrl)
-      if (response.ok) {
-        const blob = await response.blob()
-        return await blobToDataUrl(blob)
-      }
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
+    if (!supabaseUrl) return null
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/${storagePath}`
+    const response = await fetch(publicUrl)
+    if (response.ok) {
+      const blob = await response.blob()
+      return await blobToDataUrl(blob)
     }
   } catch {
     // Storage not available
