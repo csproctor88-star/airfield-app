@@ -112,7 +112,7 @@ export async function generateCheckPdf(input: CheckPdfInput) {
 
   switch (check.check_type) {
     case 'fod':
-      doc.text('FOD Walk completed. See remarks for details.', margin, y)
+      doc.text('FOD Check completed. See remarks for details.', margin, y)
       y += 6
       break
 
