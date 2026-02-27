@@ -16,8 +16,9 @@
   --color-bg-elevated: #131C30;
   --color-bg-inset: rgba(8, 12, 24, 0.6);
   --color-bg-nav: rgba(8, 14, 26, 0.97);
-  --color-bg-header-start: #162036;
-  --color-bg-header-end: #122240;
+  --color-bg-header-start: #2D3B52;
+  --color-bg-header-end: #263248;
+  --color-header-border: rgba(56, 189, 248, 0.12);
   --color-border: rgba(56, 189, 248, 0.08);
   --color-border-active: rgba(56, 189, 248, 0.2);
   --color-border-mid: rgba(56, 189, 248, 0.12);
@@ -60,6 +61,7 @@
   --color-bg-nav: rgba(255, 255, 255, 0.97);
   --color-bg-header-start: #EEF1F5;
   --color-bg-header-end: #E8ECF1;
+  --color-header-border: rgba(15, 23, 42, 0.12);
   --color-border: rgba(15, 23, 42, 0.06);
   --color-border-active: rgba(15, 23, 42, 0.15);
   --color-border-mid: rgba(15, 23, 42, 0.08);

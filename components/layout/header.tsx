@@ -9,7 +9,7 @@ export function Header() {
     <div
       style={{
         background: 'linear-gradient(180deg, var(--color-bg-header-start), var(--color-bg-header-end))',
-        borderBottom: '1px solid var(--color-border)',
+        borderBottom: '1px solid var(--color-header-border)',
         padding: '12px 16px 10px',
         position: 'sticky',
         top: 0,
