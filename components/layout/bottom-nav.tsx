@@ -22,56 +22,62 @@ export function BottomNav() {
   const pathname = usePathname()
 
   return (
-    <div
+    <nav
       className="bottom-nav"
       style={{
         position: 'fixed',
         bottom: 0,
-        left: '50%',
-        transform: 'translateX(-50%)',
+        left: 0,
+        right: 0,
         width: '100%',
-        maxWidth: 480,
         background: 'var(--color-bg-surface-solid)',
-        borderTop: '1px solid var(--color-border)',
-        display: 'flex',
-        justifyContent: 'space-around',
-        paddingTop: 6,
-        paddingBottom: 'calc(6px + env(safe-area-inset-bottom, 0px))',
         zIndex: 100,
       }}
     >
-      {tabs.map(({ href, label, icon: Icon }) => {
-        const isActive = href === '/'
-          ? pathname === '/'
-          : pathname.startsWith(href)
+      <div
+        style={{
+          maxWidth: 480,
+          margin: '0 auto',
+          display: 'flex',
+          justifyContent: 'space-around',
+          borderTop: '1px solid var(--color-border)',
+          paddingTop: 6,
+          paddingBottom: 'calc(6px + env(safe-area-inset-bottom, 0px))',
+        }}
+      >
+        {tabs.map(({ href, label, icon: Icon }) => {
+          const isActive = href === '/'
+            ? pathname === '/'
+            : pathname.startsWith(href)
 
-        return (
-          <Link
-            key={href}
-            href={href}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: isActive ? 'var(--color-cyan)' : 'var(--color-text-3)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 2,
-              cursor: 'pointer',
-              padding: '4px 4px',
-              position: 'relative',
-              textDecoration: 'none',
-              minWidth: 44,
-              minHeight: 44,
-            }}
-          >
-            <Icon size={20} />
-            <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.06em' }}>
-              {label}
-            </span>
-          </Link>
-        )
-      })}
-    </div>
+          return (
+            <Link
+              key={href}
+              href={href}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: isActive ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 2,
+                cursor: 'pointer',
+                padding: '4px 4px',
+                position: 'relative',
+                textDecoration: 'none',
+                minWidth: 44,
+                minHeight: 44,
+              }}
+            >
+              <Icon size={20} />
+              <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.06em' }}>
+                {label}
+              </span>
+            </Link>
+          )
+        })}
+      </div>
+    </nav>
   )
 }

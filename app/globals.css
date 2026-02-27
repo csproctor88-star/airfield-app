@@ -107,12 +107,13 @@ html, body {
 /* Extend bottom-nav background behind the Android gesture bar / safe area */
 .bottom-nav::after {
   content: '';
-  position: absolute;
+  position: fixed;
   left: 0;
   right: 0;
   bottom: -100px;
   height: 100px;
-  background: inherit;
+  background: var(--color-bg-surface-solid);
+  pointer-events: none;
 }
 
 @layer base {

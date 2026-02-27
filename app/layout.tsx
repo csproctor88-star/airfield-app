@@ -22,7 +22,10 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: 'cover',
-  themeColor: '#0B1120',
+  themeColor: [
+    { color: '#0B1120', media: '(prefers-color-scheme: dark)' },
+    { color: '#F8FAFC', media: '(prefers-color-scheme: light)' },
+  ],
 }
 
 // Inline script that runs synchronously before React hydrates

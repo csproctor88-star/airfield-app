@@ -14,6 +14,14 @@ const withPWA = require('@ducanh2912/next-pwa').default({
         },
       },
       {
+        // Always fetch fresh manifest so PWA theme/colors update without reinstall
+        urlPattern: /\/manifest\.json$/,
+        handler: 'NetworkFirst',
+        options: {
+          cacheName: 'manifest',
+        },
+      },
+      {
         // Cache the PDF.js worker for offline PDF rendering
         urlPattern: /\/pdf\.worker\.min\.mjs$/,
         handler: 'CacheFirst',
