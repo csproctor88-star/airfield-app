@@ -250,12 +250,7 @@ export default function MorePage() {
         className="card"
         style={{ textAlign: 'center', padding: 20 }}
       >
-        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--color-text-1)', letterSpacing: '-0.01em' }}>
-          Glidepath
-        </div>
-        <div style={{ fontSize: 11, color: 'var(--color-text-2)', marginTop: 2 }}>
-          Guiding You to Mission Success
-        </div>
+        <img src="/glidepath.png" alt="Glidepath" style={{ height: 28, objectFit: 'contain', margin: '0 auto' }} />
         <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 6 }}>
           v2.4.0
         </div>

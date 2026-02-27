@@ -35,21 +35,16 @@ export function Header() {
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <div
+          <img
+            src="/icon.png"
+            alt="Glidepath"
             style={{
               width: 36,
               height: 36,
               borderRadius: 9,
-              background: 'linear-gradient(135deg, #0C4A6E, #38BDF8)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 17,
-              boxShadow: '0 0 16px var(--color-accent-glow)',
+              objectFit: 'cover',
             }}
-          >
-            ✈️
-          </div>
+          />
           <div>
             <div
               style={{
