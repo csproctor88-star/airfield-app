@@ -307,7 +307,7 @@ export default function InspectionsPage() {
   const cmJmLabel = activeTab === 'construction_meeting'
     ? 'Pre/Post Construction Inspection'
     : activeTab === 'joint_monthly'
-    ? 'Joint Monthly Airfield Inspection'
+    ? 'Joint Monthly Inspection'
     : ''
 
   const setSpecialComment = (text: string) => {
@@ -577,8 +577,79 @@ export default function InspectionsPage() {
     }
   }
 
+  // ── File a standalone CM/JM inspection (one-step: complete + file + navigate) ──
+  const handleFileCmJm = async () => {
+    if (!draft || !currentHalf) return
+    const type = activeTab as 'construction_meeting' | 'joint_monthly'
+    setFiling(true)
+
+    // Auto-capture weather + inspector
+    const weather = await fetchCurrentWeather(baseLat, baseLon)
+    const inspector = await getInspectorName()
+    const fallbackName = usingDemo ? 'Demo Inspector' : null
+    const filer = inspector
+
+    const completedHalf: InspectionHalfDraft = {
+      ...currentHalf,
+      inspectorName: inspector.name || fallbackName,
+      inspectorId: inspector.id,
+      savedAt: new Date().toISOString(),
+      weatherConditions: weather?.conditions || currentHalf.weatherConditions || null,
+      temperatureF: weather?.temperature_f ?? currentHalf.temperatureF ?? null,
+    }
+
+    const { id, error } = await fileCmJmHalf(
+      completedHalf,
+      type,
+      filer.name || (usingDemo ? 'Demo Inspector' : 'Unknown'),
+      filer.id,
+    )
+
+    if (error) {
+      toast.error(`Failed to file: ${error}`)
+      setFiling(false)
+      return
+    }
+
+    // Upload photos
+    if (id && specialPhotos.length > 0) {
+      for (const photo of specialPhotos) {
+        await uploadInspectionPhoto(id, photo.file, null, null, null, installationId)
+      }
+    }
+
+    // Clean up
+    specialPhotos.forEach((p) => URL.revokeObjectURL(p.url))
+    setSpecialPhotos([])
+
+    // Reset the CM/JM half in the draft (don't clear the whole draft — airfield/lighting may be in progress)
+    updateHalf(type, () => ({
+      responses: {}, bwcValue: null, comments: {}, enabledConditionals: {},
+      notes: '', inspectorName: null, inspectorId: null, savedAt: null,
+      weatherConditions: null, temperatureF: null, specialComment: '',
+      selectedPersonnel: [], personnelNames: {}, dbRowId: null,
+    }))
+    saveDraftToStorage(draft, installationId)
+
+    if (id) {
+      logActivity('filed', 'inspection', id, undefined, { inspection_type: type }, installationId)
+    }
+
+    setFiling(false)
+    const label = type === 'construction_meeting' ? 'Pre/Post Construction' : 'Joint Monthly'
+    toast.success(`${label} inspection filed`)
+
+    if (id) {
+      router.push(`/inspections/${id}`)
+    } else {
+      // Fallback for demo mode
+      setActiveTab('airfield')
+      await loadHistory()
+    }
+  }
+
   // ── File the daily inspection (write to Supabase) ──
-  // Auto-completes the current tab first, then files all completed halves.
+  // Auto-completes the current tab first, then files all completed halves (airfield + lighting only).
   const handleFile = async (skipLightingWarning = false) => {
     if (!draft) return
 
@@ -612,20 +683,16 @@ export default function InspectionsPage() {
 
     const airfieldHalf = draft.airfield
     const lightingHalf = draft.lighting
-    const cmHalf = draft.construction_meeting
-    const jmHalf = draft.joint_monthly
     const airfieldSaved = !!airfieldHalf.savedAt
     const lightingSaved = !!lightingHalf.savedAt
-    const cmSaved = !!cmHalf.savedAt
-    const jmSaved = !!jmHalf.savedAt
 
-    if (!airfieldSaved && !lightingSaved && !cmSaved && !jmSaved) {
-      toast.error('Complete at least one inspection tab before filing')
+    if (!airfieldSaved && !lightingSaved) {
+      toast.error('Complete at least one inspection (airfield or lighting) before filing')
       return
     }
 
-    // Show warning if airfield is done but lighting is not (only for standard tabs)
-    if (airfieldSaved && !lightingSaved && !skipLightingWarning && (activeTab === 'airfield' || activeTab === 'lighting')) {
+    // Show warning if airfield is done but lighting is not
+    if (airfieldSaved && !lightingSaved && !skipLightingWarning) {
       setShowLightingWarning(true)
       return
     }
@@ -764,28 +831,6 @@ export default function InspectionsPage() {
           filed++
           if (created && !filedId) filedId = created.id
         }
-      }
-    }
-
-    // ── File construction meeting half ──
-    if (cmSaved) {
-      const { id, error } = await fileCmJmHalf(cmHalf, 'construction_meeting', filerName, filerId)
-      if (error) {
-        toast.error(`Failed to file construction meeting: ${error}`)
-      } else {
-        filed++
-        if (id && !filedId) filedId = id
-      }
-    }
-
-    // ── File joint monthly half ──
-    if (jmSaved) {
-      const { id, error } = await fileCmJmHalf(jmHalf, 'joint_monthly', filerName, filerId)
-      if (error) {
-        toast.error(`Failed to file joint monthly: ${error}`)
-      } else {
-        filed++
-        if (id && !filedId) filedId = id
       }
     }
 
@@ -1007,7 +1052,7 @@ export default function InspectionsPage() {
           {([
             { key: 'airfield' as TabType, label: 'Airfield' },
             { key: 'lighting' as TabType, label: 'Lighting' },
-            { key: 'construction_meeting' as TabType, label: 'Construction' },
+            { key: 'construction_meeting' as TabType, label: 'Pre/Post Construction' },
             { key: 'joint_monthly' as TabType, label: 'Joint Monthly' },
           ]).map(({ key: type, label }) => {
             const active = activeTab === type
@@ -1051,41 +1096,43 @@ export default function InspectionsPage() {
           })}
         </div>
 
-        {/* ── Status Bar ── */}
-        <div className="card" style={{ marginBottom: 12, padding: 10 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 11 }}>
-            <div>
-              <div style={{ color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 9, marginBottom: 2 }}>
-                Airfield
+        {/* ── Status Bar (airfield/lighting only) ── */}
+        {!isCmJmTab && (
+          <div className="card" style={{ marginBottom: 12, padding: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 11 }}>
+              <div>
+                <div style={{ color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 9, marginBottom: 2 }}>
+                  Airfield
+                </div>
+                {draft.airfield.savedAt ? (
+                  <>
+                    <div style={{ color: '#22C55E', fontWeight: 600 }}>
+                      Completed {new Date(draft.airfield.savedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    <div style={{ color: 'var(--color-text-2)', fontSize: 10 }}>{draft.airfield.inspectorName}</div>
+                  </>
+                ) : (
+                  <div style={{ color: 'var(--color-text-3)' }}>Not completed</div>
+                )}
               </div>
-              {draft.airfield.savedAt ? (
-                <>
-                  <div style={{ color: '#22C55E', fontWeight: 600 }}>
-                    Completed {new Date(draft.airfield.savedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                  <div style={{ color: 'var(--color-text-2)', fontSize: 10 }}>{draft.airfield.inspectorName}</div>
-                </>
-              ) : (
-                <div style={{ color: 'var(--color-text-3)' }}>Not completed</div>
-              )}
-            </div>
-            <div>
-              <div style={{ color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 9, marginBottom: 2 }}>
-                Lighting
+              <div>
+                <div style={{ color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 9, marginBottom: 2 }}>
+                  Lighting
+                </div>
+                {draft.lighting.savedAt ? (
+                  <>
+                    <div style={{ color: '#22C55E', fontWeight: 600 }}>
+                      Completed {new Date(draft.lighting.savedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    <div style={{ color: 'var(--color-text-2)', fontSize: 10 }}>{draft.lighting.inspectorName}</div>
+                  </>
+                ) : (
+                  <div style={{ color: 'var(--color-text-3)' }}>Not completed</div>
+                )}
               </div>
-              {draft.lighting.savedAt ? (
-                <>
-                  <div style={{ color: '#22C55E', fontWeight: 600 }}>
-                    Completed {new Date(draft.lighting.savedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                  <div style={{ color: 'var(--color-text-2)', fontSize: 10 }}>{draft.lighting.inspectorName}</div>
-                </>
-              ) : (
-                <div style={{ color: 'var(--color-text-3)' }}>Not completed</div>
-              )}
             </div>
           </div>
-        </div>
+        )}
 
         {/* ══════════════════════════════════════════════════════ */}
         {/* ══ CM/JM STANDALONE FORM                               */}
@@ -1098,44 +1145,8 @@ export default function InspectionsPage() {
                 {cmJmLabel}
               </div>
               <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginTop: 2 }}>
-                This form will be filed as a standalone record.
+                Fill out and file — this is a standalone record separate from the daily inspection.
               </div>
-            </div>
-
-            {/* ── Checklist Item ── */}
-            <div className="card" style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-                {activeTab === 'construction_meeting' ? 'Section 8 — Pre or Post Construction Inspection' : 'Section 9 — Joint Monthly Airfield Inspection'}
-              </div>
-              {(() => {
-                const itemId = activeTab === 'construction_meeting' ? 'af-41' : 'af-42'
-                const itemLabel = activeTab === 'construction_meeting' ? 'CE, Wing Safety' : 'TERPS, Flight & Ground Safety, SOF, CE, SFS'
-                const response = currentHalf?.responses[itemId] ?? null
-                return (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 13, flex: 1, color: 'var(--color-text-1)' }}>{itemLabel}</span>
-                    {(['pass', 'fail', 'na'] as const).map((val) => {
-                      const active = response === val
-                      const colors = { pass: '#22C55E', fail: '#EF4444', na: '#6B7280' }
-                      return (
-                        <button
-                          key={val}
-                          onClick={() => updateHalf(activeTab, (h) => ({ ...h, responses: { ...h.responses, [itemId]: active ? null : val } }))}
-                          style={{
-                            padding: '6px 12px', borderRadius: 6, fontSize: 11, fontWeight: 700,
-                            border: `1px solid ${active ? colors[val] : 'var(--color-text-4)'}`,
-                            background: active ? `${colors[val]}22` : 'transparent',
-                            color: active ? colors[val] : 'var(--color-text-3)',
-                            cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase',
-                          }}
-                        >
-                          {val === 'na' ? 'N/A' : val}
-                        </button>
-                      )
-                    })}
-                  </div>
-                )
-              })()}
             </div>
 
             {/* ── Personnel Multi-Select ── */}
@@ -1542,59 +1553,78 @@ export default function InspectionsPage() {
         )}
 
         {/* ── Smart Action Buttons ── */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          {/* Smart per-tab button: Save (<100%) or Complete (100% / CM+JM and not yet completed) */}
-          {!currentHalf?.savedAt && (
-            (isCmJmTab || progress >= 100) ? (
-              <button
-                onClick={() => handleComplete()}
-                disabled={saving}
-                style={{
-                  flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
-                  background: 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-cyan))',
-                  color: '#FFF', fontSize: 15, fontWeight: 700,
-                  cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
-                  opacity: saving ? 0.7 : 1,
-                }}
-              >
-                {saving ? 'Completing...' : 'Complete'}
-              </button>
-            ) : (
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                style={{
-                  flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
-                  background: 'linear-gradient(135deg, #3B82F6, #6366F1)',
-                  color: '#FFF', fontSize: 15, fontWeight: 700,
-                  cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
-                  opacity: saving ? 0.7 : 1,
-                }}
-              >
-                {saving ? 'Saving...' : 'Save'}
-              </button>
-            )
-          )}
-
-          {/* File button: appears once at least one tab is completed */}
-          {(draft.airfield.savedAt || draft.lighting.savedAt || draft.construction_meeting.savedAt || draft.joint_monthly.savedAt) && (
+        {isCmJmTab ? (
+          /* CM/JM: single "Complete & File" button — standalone, one-step */
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
             <button
-              onClick={() => handleFile()}
+              onClick={handleFileCmJm}
               disabled={filing}
               style={{
-                flex: 1, padding: '14px 0', borderRadius: 10,
-                border: '1px solid rgba(34,197,94,0.4)',
-                background: 'rgba(34,197,94,0.1)',
-                color: '#22C55E',
-                fontSize: 15, fontWeight: 700,
+                flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
+                background: 'linear-gradient(135deg, #22C55E, #16A34A)',
+                color: '#FFF', fontSize: 15, fontWeight: 700,
                 cursor: filing ? 'default' : 'pointer', fontFamily: 'inherit',
                 opacity: filing ? 0.7 : 1,
               }}
             >
-              {filing ? 'Filing...' : 'File'}
+              {filing ? 'Filing...' : 'Complete & File'}
             </button>
-          )}
-        </div>
+          </div>
+        ) : (
+          /* Airfield/Lighting: Save progress or Complete, then File */
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            {!currentHalf?.savedAt && (
+              progress >= 100 ? (
+                <button
+                  onClick={() => handleComplete()}
+                  disabled={saving}
+                  style={{
+                    flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
+                    background: 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-cyan))',
+                    color: '#FFF', fontSize: 15, fontWeight: 700,
+                    cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
+                    opacity: saving ? 0.7 : 1,
+                  }}
+                >
+                  {saving ? 'Completing...' : 'Complete'}
+                </button>
+              ) : (
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  style={{
+                    flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
+                    background: 'linear-gradient(135deg, #3B82F6, #6366F1)',
+                    color: '#FFF', fontSize: 15, fontWeight: 700,
+                    cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
+                    opacity: saving ? 0.7 : 1,
+                  }}
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+              )
+            )}
+
+            {/* File button: appears once at least one standard tab is completed */}
+            {(draft.airfield.savedAt || draft.lighting.savedAt) && (
+              <button
+                onClick={() => handleFile()}
+                disabled={filing}
+                style={{
+                  flex: 1, padding: '14px 0', borderRadius: 10,
+                  border: '1px solid rgba(34,197,94,0.4)',
+                  background: 'rgba(34,197,94,0.1)',
+                  color: '#22C55E',
+                  fontSize: 15, fontWeight: 700,
+                  cursor: filing ? 'default' : 'pointer', fontFamily: 'inherit',
+                  opacity: filing ? 0.7 : 1,
+                }}
+              >
+                {filing ? 'Filing...' : 'File'}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Hidden file inputs for photo capture */}
         <input ref={itemFileRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleItemPhoto} />
