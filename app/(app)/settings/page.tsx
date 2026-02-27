@@ -616,8 +616,8 @@ function BaseConfigSectionContent() {
       const url = await getAirfieldDiagram(installationId)
       setDiagramUrl(url)
       toast.success('Airfield diagram saved')
-    } catch {
-      toast.error('Failed to save diagram')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save diagram')
     }
     setUploading(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
