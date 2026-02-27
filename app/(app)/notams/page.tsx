@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { DEMO_NOTAMS } from '@/lib/demo-data'
 import { useInstallation } from '@/lib/installation-context'
@@ -63,8 +62,23 @@ function formatTime(iso: string) {
   })
 }
 
+/** Card background tint based on NOTAM number prefix */
+function cardBackground(notamNumber: string): string {
+  const prefix = notamNumber.charAt(0).toUpperCase()
+  if (prefix === 'M') return 'rgba(239,68,68,0.08)'   // safety — light red
+  if (prefix === 'L') return 'rgba(234,179,8,0.08)'    // local — light yellow
+  return 'var(--color-bg-surface-solid)'
+}
+
+/** Card border tint for left accent */
+function cardBorder(notamNumber: string, sourceFallback: string): string {
+  const prefix = notamNumber.charAt(0).toUpperCase()
+  if (prefix === 'M') return '#EF4444'
+  if (prefix === 'L') return '#EAB308'
+  return SOURCE_COLORS[sourceFallback] || 'var(--color-text-4)'
+}
+
 export default function NotamsPage() {
-  const router = useRouter()
   const { currentInstallation } = useInstallation()
   const [filter, setFilter] = useState<FilterType>('all')
 
@@ -148,6 +162,95 @@ export default function NotamsPage() {
 
   const feedConnected = !isDemoMode && !error && notams.length > 0
 
+  // --- PDF Export ---
+  const handleExportPdf = async () => {
+    const { default: jsPDF } = await import('jspdf')
+    const { default: autoTable } = await import('jspdf-autotable')
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' })
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 12
+    let y = margin
+
+    // Header
+    doc.setFontSize(8)
+    doc.setTextColor(100)
+    const headerLine = currentInstallation?.name && currentInstallation?.icao
+      ? `${currentInstallation.name} (${currentInstallation.icao})`
+      : activeIcao || 'GLIDEPATH'
+    doc.text(headerLine, margin, y)
+    y += 5
+
+    doc.setFontSize(14)
+    doc.setTextColor(0)
+    doc.setFont('helvetica', 'bold')
+    doc.text('NOTAM REGISTER', margin, y)
+    y += 6
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(60)
+    const now = new Date()
+    doc.text(`Generated: ${now.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`, margin, y)
+    y += 4
+    doc.text(`Total: ${filtered.length} NOTAMs`, margin, y)
+    y += 7
+
+    // Table
+    const tableBody = filtered.map(n => [
+      n.notam_number,
+      n.source.toUpperCase(),
+      n.notam_type,
+      n.status.toUpperCase(),
+      n.full_text,
+      formatDate(n.effective_start),
+      formatDate(n.effective_end),
+    ])
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [['NOTAM #', 'Source', 'Type', 'Status', 'Text', 'Effective', 'Expires']],
+      body: tableBody,
+      styles: { fontSize: 7, cellPadding: 1.5, textColor: [0, 0, 0] },
+      headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      columnStyles: {
+        0: { cellWidth: 24 },
+        1: { cellWidth: 14 },
+        2: { cellWidth: 22 },
+        3: { cellWidth: 16 },
+        4: { cellWidth: 120 },
+        5: { cellWidth: 28 },
+        6: { cellWidth: 28 },
+      },
+      didParseCell: (hookData) => {
+        if (hookData.section !== 'body') return
+        const n = filtered[hookData.row.index]
+        if (!n) return
+        const prefix = n.notam_number.charAt(0).toUpperCase()
+        if (prefix === 'M') {
+          hookData.cell.styles.fillColor = [254, 226, 226] // light red
+        } else if (prefix === 'L') {
+          hookData.cell.styles.fillColor = [254, 249, 195] // light yellow
+        }
+      },
+    })
+
+    // Footer — page numbers
+    const totalPages = doc.getNumberOfPages()
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i)
+      doc.setFontSize(8)
+      doc.setTextColor(150)
+      doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 6, { align: 'center' })
+      doc.text(now.toLocaleDateString('en-US'), pageWidth - margin, pageHeight - 6, { align: 'right' })
+    }
+
+    const dateStr = now.toISOString().split('T')[0]
+    doc.save(`NOTAM_Register_${dateStr}.pdf`)
+  }
+
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
       {/* Header row */}
@@ -161,20 +264,20 @@ export default function NotamsPage() {
       >
         <div style={{ fontSize: 16, fontWeight: 800 }}>NOTAMs</div>
         <button
-          onClick={() => router.push('/notams/new')}
+          onClick={handleExportPdf}
           style={{
-            background: 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-cyan))',
-            border: 'none',
-            color: '#FFF',
+            background: 'rgba(168,85,247,0.12)',
+            border: '1px solid rgba(168,85,247,0.3)',
+            borderRadius: 8,
+            padding: '7px 14px',
+            color: '#A855F7',
             fontSize: 13,
             fontWeight: 700,
-            padding: '7px 16px',
-            borderRadius: 8,
             cursor: 'pointer',
             fontFamily: 'inherit',
           }}
         >
-          + Draft
+          Export PDF
         </button>
       </div>
 
@@ -367,15 +470,16 @@ export default function NotamsPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {filtered.map((notam) => {
             const isExpired = notam.status === 'expired'
-            const borderLeftColor = SOURCE_COLORS[notam.source] || 'var(--color-text-4)'
+            const bg = cardBackground(notam.notam_number)
+            const borderLeft = cardBorder(notam.notam_number, notam.source)
 
             return (
               <div
                 key={notam.id}
                 style={{
-                  background: 'var(--color-bg-surface-solid)',
+                  background: bg,
                   border: '1px solid var(--color-bg-elevated)',
-                  borderLeft: `3px solid ${borderLeftColor}`,
+                  borderLeft: `3px solid ${borderLeft}`,
                   borderRadius: 10,
                   padding: '12px 14px',
                   opacity: isExpired ? 0.5 : 1,
@@ -396,6 +500,9 @@ export default function NotamsPage() {
                       color={SOURCE_COLORS[notam.source] || '#94A3B8'}
                     />
                     <Badge label={notam.notam_type} color="#94A3B8" />
+                    {notam.notam_number.charAt(0).toUpperCase() === 'M' && (
+                      <Badge label="SAFETY" color="#EF4444" />
+                    )}
                   </div>
                   <Badge
                     label={notam.status.toUpperCase()}

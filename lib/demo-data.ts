@@ -80,7 +80,7 @@ export const DEMO_NOTAMS = [
     linked_discrepancy_id: 'demo-004', created_at: '2026-01-21T00:00:00Z',
   },
   {
-    id: 'demo-notam-3', notam_number: 'N-2026-0088', source: 'local' as const, status: 'active' as const,
+    id: 'demo-notam-3', notam_number: 'L-2026-0088', source: 'local' as const, status: 'active' as const,
     notam_type: 'Construction', title: 'TWY A/B REPAIR AREA',
     full_text: 'CAUTION: PAVEMENT REPAIR IN PROGRESS TWY A/B INTERSECTION.',
     effective_start: '2026-02-01T00:00:00Z', effective_end: '2026-02-28T00:00:00Z',
@@ -92,6 +92,13 @@ export const DEMO_NOTAMS = [
     full_text: 'KMTC ILS RWY 01 GLIDEPATH OUT OF SERVICE.',
     effective_start: '2026-01-10T00:00:00Z', effective_end: '2026-01-12T00:00:00Z',
     linked_discrepancy_id: null, created_at: '2026-01-10T00:00:00Z',
+  },
+  {
+    id: 'demo-notam-5', notam_number: 'M-2026-0012', source: 'local' as const, status: 'active' as const,
+    notam_type: 'Runway Closure', title: 'RWY 01/19 CLSD FOR EMERG REPAIR',
+    full_text: 'KMTC RWY 01/19 CLOSED FOR EMERGENCY PAVEMENT REPAIR. ETA REOPENING 1800Z.',
+    effective_start: '2026-02-25T06:00:00Z', effective_end: '2026-02-26T18:00:00Z',
+    linked_discrepancy_id: null, created_at: '2026-02-25T06:00:00Z',
   },
 ]
 
