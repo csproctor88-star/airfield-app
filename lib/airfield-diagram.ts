@@ -41,15 +41,12 @@ export async function saveAirfieldDiagram(baseId: string, file: File): Promise<v
   // Live mode — upload to Supabase Storage (photos bucket)
   const path = storagePath(baseId)
 
-  // Delete existing diagram first (upsert)
+  // Remove existing diagram first, then upload fresh
   await supabase.storage.from('photos').remove([path])
 
   const { error } = await supabase.storage
     .from('photos')
-    .upload(path, file, {
-      cacheControl: '3600',
-      upsert: true,
-    })
+    .upload(path, file, { contentType: file.type || 'image/jpeg' })
 
   if (error) {
     throw new Error(`Failed to upload diagram: ${error.message}`)
