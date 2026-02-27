@@ -32,6 +32,8 @@ export interface DailyInspectionDraft {
   createdAt: string
   airfield: InspectionHalfDraft
   lighting: InspectionHalfDraft
+  construction_meeting: InspectionHalfDraft
+  joint_monthly: InspectionHalfDraft
 }
 
 function createEmptyHalf(): InspectionHalfDraft {
@@ -59,6 +61,8 @@ export function createNewDraft(): DailyInspectionDraft {
     createdAt: new Date().toISOString(),
     airfield: createEmptyHalf(),
     lighting: createEmptyHalf(),
+    construction_meeting: createEmptyHalf(),
+    joint_monthly: createEmptyHalf(),
   }
 }
 
@@ -67,7 +71,11 @@ export function loadDraft(baseId?: string | null): DailyInspectionDraft | null {
   try {
     const raw = localStorage.getItem(getDraftKey(baseId ?? undefined))
     if (!raw) return null
-    return JSON.parse(raw) as DailyInspectionDraft
+    const parsed = JSON.parse(raw) as DailyInspectionDraft
+    // Backward-compat: add CM/JM halves if missing from older drafts
+    if (!parsed.construction_meeting) parsed.construction_meeting = createEmptyHalf()
+    if (!parsed.joint_monthly) parsed.joint_monthly = createEmptyHalf()
+    return parsed
   } catch {
     return null
   }

@@ -261,40 +261,20 @@ export default function NewDiscrepancyPage() {
           onClick={captureLocation}
           disabled={gpsLoading}
           style={{
-            width: '100%', padding: '12px', marginBottom: 8, borderRadius: 10,
-            border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)',
-            color: '#22C55E', fontSize: 13, fontWeight: 600, cursor: gpsLoading ? 'default' : 'pointer',
-            fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            width: '100%', padding: '10px 16px', marginBottom: 8, borderRadius: 8,
+            border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
+            color: 'var(--color-accent)', fontSize: 13, fontWeight: 600,
+            cursor: gpsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
             opacity: gpsLoading ? 0.6 : 1,
           }}
         >
-          {gpsLoading ? 'Acquiring Location...' : 'Use My Location'}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+          </svg>
+          {gpsLoading ? 'Getting Location...' : 'Use My Location'}
         </button>
-
-        {/* Captured location mini-map */}
-        {formData.latitude != null && formData.longitude != null && (() => {
-          const mapToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-          const mapUrl = mapToken && mapToken !== 'your-mapbox-token-here'
-            ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${formData.longitude},${formData.latitude})/${formData.longitude},${formData.latitude},16,0/400x200@2x?access_token=${mapToken}`
-            : null
-          return (
-            <div style={{ marginBottom: 12, textAlign: 'center' }}>
-              {mapUrl && (
-                <img
-                  src={mapUrl}
-                  alt="Captured location"
-                  style={{
-                    width: '100%', maxWidth: 400, height: 160, objectFit: 'cover',
-                    borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginBottom: 4,
-                  }}
-                />
-              )}
-              <div style={{ fontSize: 11, color: '#34D399', fontFamily: 'monospace', fontWeight: 600 }}>
-                {formData.latitude.toFixed(5)}, {formData.longitude.toFixed(5)}
-              </div>
-            </div>
-          )
-        })()}
 
         {photos.length > 0 && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>

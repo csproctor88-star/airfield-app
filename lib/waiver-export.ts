@@ -1,4 +1,5 @@
 import type { WaiverRow, WaiverCriteriaRow, WaiverReviewRow } from '@/lib/supabase/waivers'
+import { createStyledWorkbook, addStyledSheet, saveWorkbook, titleCase, type ColumnDef } from '@/lib/excel-export'
 
 type BaseInfo = { name: string; icao: string }
 
@@ -8,96 +9,123 @@ export async function generateWaiverExcel(
   reviews: WaiverReviewRow[],
   baseInfo: BaseInfo
 ) {
-  const XLSX = await import('xlsx')
-
-  const wb = XLSX.utils.book_new()
+  const wb = await createStyledWorkbook()
 
   // Sheet 1: Waiver Register
-  const registerData = waivers.map(w => ({
-    'Waiver Number': w.waiver_number,
-    'Classification': w.classification,
-    'Status': w.status,
-    'Hazard Rating': w.hazard_rating || '',
-    'Description': w.description,
-    'Criteria Impact': w.criteria_impact || '',
-    'Corrective Action': w.corrective_action || '',
-    'Proponent': w.proponent || '',
-    'Project Number': w.project_number || '',
-    'Program FY': w.program_fy || '',
-    'Estimated Cost': w.estimated_cost || '',
-    'Project Status': w.project_status || '',
-    'Period Valid': w.period_valid || '',
-    'Date Submitted': w.date_submitted || '',
-    'Date Approved': w.date_approved || '',
-    'Expiration Date': w.expiration_date || '',
-    'Last Reviewed': w.last_reviewed_date || '',
-    'Next Review Due': w.next_review_due || '',
-    'Location': w.location_description || '',
-    'FAA Case #': w.faa_case_number || '',
+  const registerCols: ColumnDef[] = [
+    { header: 'Waiver Number', key: 'waiver_number', width: 18 },
+    { header: 'Classification', key: 'classification', width: 14 },
+    { header: 'Status', key: 'status', width: 10 },
+    { header: 'Hazard Rating', key: 'hazard_rating', width: 14 },
+    { header: 'Description', key: 'description', width: 50 },
+    { header: 'Criteria Impact', key: 'criteria_impact', width: 25 },
+    { header: 'Corrective Action', key: 'corrective_action', width: 30 },
+    { header: 'Proponent', key: 'proponent', width: 16 },
+    { header: 'Project Number', key: 'project_number', width: 14 },
+    { header: 'Program FY', key: 'program_fy', width: 10 },
+    { header: 'Estimated Cost', key: 'estimated_cost', width: 14 },
+    { header: 'Project Status', key: 'project_status', width: 20 },
+    { header: 'Period Valid', key: 'period_valid', width: 16 },
+    { header: 'Date Submitted', key: 'date_submitted', width: 14 },
+    { header: 'Date Approved', key: 'date_approved', width: 14 },
+    { header: 'Expiration Date', key: 'expiration_date', width: 14 },
+    { header: 'Last Reviewed', key: 'last_reviewed', width: 14 },
+    { header: 'Next Review Due', key: 'next_review_due', width: 14 },
+    { header: 'Location', key: 'location', width: 20 },
+    { header: 'FAA Case #', key: 'faa_case', width: 18 },
+  ]
+
+  const registerRows = waivers.map(w => ({
+    waiver_number: w.waiver_number,
+    classification: titleCase(w.classification),
+    status: titleCase(w.status),
+    hazard_rating: w.hazard_rating || '',
+    description: w.description,
+    criteria_impact: w.criteria_impact || '',
+    corrective_action: w.corrective_action || '',
+    proponent: w.proponent || '',
+    project_number: w.project_number || '',
+    program_fy: w.program_fy || '',
+    estimated_cost: w.estimated_cost || '',
+    project_status: w.project_status || '',
+    period_valid: w.period_valid || '',
+    date_submitted: w.date_submitted || '',
+    date_approved: w.date_approved || '',
+    expiration_date: w.expiration_date || '',
+    last_reviewed: w.last_reviewed_date || '',
+    next_review_due: w.next_review_due || '',
+    location: w.location_description || '',
+    faa_case: w.faa_case_number || '',
   }))
 
-  const ws1 = XLSX.utils.json_to_sheet(registerData)
-  // Set column widths
-  ws1['!cols'] = [
-    { wch: 18 }, { wch: 14 }, { wch: 10 }, { wch: 14 },
-    { wch: 50 }, { wch: 25 }, { wch: 30 }, { wch: 16 },
-    { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 20 },
-    { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
-    { wch: 14 }, { wch: 14 }, { wch: 20 }, { wch: 18 },
-  ]
-  XLSX.utils.book_append_sheet(wb, ws1, 'Waiver Register')
+  addStyledSheet(wb, 'Waiver Register', registerCols, registerRows)
 
   // Sheet 2: Criteria & Standards
   if (criteria.length > 0) {
-    const criteriaData = criteria.map(c => {
+    const critCols: ColumnDef[] = [
+      { header: 'Waiver Number', key: 'waiver_number', width: 18 },
+      { header: 'Criteria Source', key: 'criteria_source', width: 18 },
+      { header: 'Reference', key: 'reference', width: 25 },
+      { header: 'Description', key: 'description', width: 60 },
+    ]
+    const critRows = criteria.map(c => {
       const waiver = waivers.find(w => w.id === c.waiver_id)
       return {
-        'Waiver Number': waiver?.waiver_number || '',
-        'Criteria Source': (c.criteria_source || '').replace(/_/g, ' ').toUpperCase(),
-        'Reference': c.reference || '',
-        'Description': c.description || '',
+        waiver_number: waiver?.waiver_number || '',
+        criteria_source: (c.criteria_source || '').replace(/_/g, ' ').toUpperCase(),
+        reference: c.reference || '',
+        description: c.description || '',
       }
     })
-    const wsCriteria = XLSX.utils.json_to_sheet(criteriaData)
-    wsCriteria['!cols'] = [
-      { wch: 18 }, { wch: 18 }, { wch: 25 }, { wch: 60 },
-    ]
-    XLSX.utils.book_append_sheet(wb, wsCriteria, 'Criteria & Standards')
+    addStyledSheet(wb, 'Criteria & Standards', critCols, critRows)
   }
 
   // Sheet 3: Annual Review
   const reviewYears = Array.from(new Set(reviews.map(r => r.review_year))).sort()
   if (reviewYears.length > 0) {
-    const reviewData = waivers.map(w => {
+    const reviewCols: ColumnDef[] = [
+      { header: 'Waiver Number', key: 'waiver_number', width: 18 },
+      { header: 'Classification', key: 'classification', width: 14 },
+      { header: 'Description', key: 'description', width: 50 },
+    ]
+    for (const yr of reviewYears) {
+      reviewCols.push({ header: `${yr} Reviewed`, key: `${yr}_reviewed`, width: 12 })
+      reviewCols.push({ header: `${yr} Recommendation`, key: `${yr}_recommendation`, width: 20 })
+    }
+    const reviewRows = waivers.map(w => {
       const row: Record<string, unknown> = {
-        'Waiver Number': w.waiver_number,
-        'Classification': w.classification,
-        'Description': w.description.slice(0, 80),
+        waiver_number: w.waiver_number,
+        classification: titleCase(w.classification),
+        description: w.description.slice(0, 80),
       }
       for (const yr of reviewYears) {
         const rev = reviews.find(r => r.waiver_id === w.id && r.review_year === yr)
-        row[`${yr} Reviewed`] = rev ? 'Yes' : ''
-        row[`${yr} Recommendation`] = rev?.recommendation || ''
+        row[`${yr}_reviewed`] = rev ? 'Yes' : ''
+        row[`${yr}_recommendation`] = rev?.recommendation || ''
       }
       return row
     })
-    const ws2 = XLSX.utils.json_to_sheet(reviewData)
-    XLSX.utils.book_append_sheet(wb, ws2, 'Annual Review')
+    addStyledSheet(wb, 'Annual Review', reviewCols, reviewRows)
   }
 
-  // Sheet 4: Coordination Status (placeholder — data from coordination table)
-  const coordData = waivers.map(w => ({
-    'Waiver Number': w.waiver_number,
-    'Classification': w.classification,
-    'Status': w.status,
-    'Description': w.description.slice(0, 60),
+  // Sheet 4: Coordination Status
+  const coordCols: ColumnDef[] = [
+    { header: 'Waiver Number', key: 'waiver_number', width: 18 },
+    { header: 'Classification', key: 'classification', width: 14 },
+    { header: 'Status', key: 'status', width: 10 },
+    { header: 'Description', key: 'description', width: 60 },
+  ]
+  const coordRows = waivers.map(w => ({
+    waiver_number: w.waiver_number,
+    classification: titleCase(w.classification),
+    status: titleCase(w.status),
+    description: w.description.slice(0, 60),
   }))
-  const ws3 = XLSX.utils.json_to_sheet(coordData)
-  XLSX.utils.book_append_sheet(wb, ws3, 'Coordination Status')
+  addStyledSheet(wb, 'Coordination Status', coordCols, coordRows)
 
   // Download
   const filename = `${baseInfo.icao}_Waiver_Register_${new Date().toISOString().split('T')[0]}.xlsx`
-  XLSX.writeFile(wb, filename)
+  await saveWorkbook(wb, filename)
 }
 
 export async function generateAnnualReviewExcel(
@@ -106,41 +134,51 @@ export async function generateAnnualReviewExcel(
   year: number,
   baseInfo: BaseInfo
 ) {
-  const XLSX = await import('xlsx')
+  const wb = await createStyledWorkbook()
 
-  const wb = XLSX.utils.book_new()
+  const columns: ColumnDef[] = [
+    { header: 'Waiver Number', key: 'waiver_number', width: 18 },
+    { header: 'Classification', key: 'classification', width: 14 },
+    { header: 'Hazard Rating', key: 'hazard_rating', width: 14 },
+    { header: 'Description', key: 'description', width: 50 },
+    { header: 'Date Approved', key: 'date_approved', width: 14 },
+    { header: 'Period Valid', key: 'period_valid', width: 16 },
+    { header: 'Reviewed', key: 'reviewed', width: 10 },
+    { header: 'Review Date', key: 'review_date', width: 14 },
+    { header: 'Recommendation', key: 'recommendation', width: 16 },
+    { header: 'Mitigation Verified', key: 'mitigation_verified', width: 16 },
+    { header: 'Project Status Update', key: 'project_status_update', width: 25 },
+    { header: 'Notes', key: 'notes', width: 30 },
+    { header: 'Board Briefed', key: 'board_briefed', width: 12 },
+    { header: 'Board Date', key: 'board_date', width: 14 },
+    { header: 'Corrective Action', key: 'corrective_action', width: 30 },
+    { header: 'Project Status', key: 'project_status', width: 20 },
+  ]
 
-  const data = waivers.map(w => {
+  const rows = waivers.map(w => {
     const rev = reviews.find(r => r.waiver_id === w.id && r.review_year === year)
     return {
-      'Waiver Number': w.waiver_number,
-      'Classification': w.classification,
-      'Hazard Rating': w.hazard_rating || '',
-      'Description': w.description,
-      'Date Approved': w.date_approved || '',
-      'Period Valid': w.period_valid || '',
-      'Reviewed': rev ? 'Yes' : 'No',
-      'Review Date': rev?.review_date || '',
-      'Recommendation': rev?.recommendation || '',
-      'Mitigation Verified': rev?.mitigation_verified ? 'Yes' : '',
-      'Project Status Update': rev?.project_status_update || '',
-      'Notes': rev?.notes || '',
-      'Board Briefed': rev?.presented_to_facilities_board ? 'Yes' : '',
-      'Board Date': rev?.facilities_board_date || '',
-      'Corrective Action': w.corrective_action || '',
-      'Project Status': w.project_status || '',
+      waiver_number: w.waiver_number,
+      classification: titleCase(w.classification),
+      hazard_rating: w.hazard_rating || '',
+      description: w.description,
+      date_approved: w.date_approved || '',
+      period_valid: w.period_valid || '',
+      reviewed: rev ? 'Yes' : 'No',
+      review_date: rev?.review_date || '',
+      recommendation: rev?.recommendation || '',
+      mitigation_verified: rev?.mitigation_verified ? 'Yes' : '',
+      project_status_update: rev?.project_status_update || '',
+      notes: rev?.notes || '',
+      board_briefed: rev?.presented_to_facilities_board ? 'Yes' : '',
+      board_date: rev?.facilities_board_date || '',
+      corrective_action: w.corrective_action || '',
+      project_status: w.project_status || '',
     }
   })
 
-  const ws = XLSX.utils.json_to_sheet(data)
-  ws['!cols'] = [
-    { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 50 },
-    { wch: 14 }, { wch: 16 }, { wch: 10 }, { wch: 14 },
-    { wch: 16 }, { wch: 16 }, { wch: 25 }, { wch: 30 },
-    { wch: 12 }, { wch: 14 }, { wch: 30 }, { wch: 20 },
-  ]
-  XLSX.utils.book_append_sheet(wb, ws, `${year} Annual Review`)
+  addStyledSheet(wb, `${year} Annual Review`, columns, rows)
 
   const filename = `${baseInfo.icao}_Annual_Review_${year}.xlsx`
-  XLSX.writeFile(wb, filename)
+  await saveWorkbook(wb, filename)
 }

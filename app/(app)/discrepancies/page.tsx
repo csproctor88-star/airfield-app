@@ -115,29 +115,74 @@ export default function DiscrepanciesPage() {
   }
 
   const handleExportExcel = async () => {
-    const XLSX = await import('xlsx')
-    const items = filtered.map(d => ({
-      'Display ID': d.display_id,
-      'Title': d.title,
-      'Type': getTypeLabel(d.type),
-      'Severity': d.severity,
-      'Status': d.status,
-      'Current Status': getCurrentStatusLabel(d.current_status),
-      'Location': d.location_text,
-      'Assigned Shop': d.assigned_shop || '',
-      'Work Order #': d.work_order_number || '',
-      'Days Open': usingDemo ? (d as typeof DEMO_DISCREPANCIES[number]).days_open : daysOpen(d.created_at),
-      'Created At': new Date(d.created_at).toLocaleDateString('en-US'),
-    }))
-    const ws = XLSX.utils.json_to_sheet(items)
-    ws['!cols'] = [
-      { wch: 16 }, { wch: 36 }, { wch: 22 }, { wch: 10 }, { wch: 12 },
-      { wch: 30 }, { wch: 12 }, { wch: 20 }, { wch: 16 }, { wch: 10 }, { wch: 14 },
+    const { createStyledWorkbook, addStyledSheet, saveWorkbook, titleCase } = await import('@/lib/excel-export')
+
+    // Fetch photo counts (live mode only)
+    const photoInfo: Record<string, { count: number; files: string[] }> = {}
+    if (!usingDemo) {
+      const supabase = createClient()
+      if (supabase) {
+        const ids = filtered.map(d => d.id)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: photoRows } = await (supabase as any)
+          .from('photos')
+          .select('entity_id, file_name')
+          .eq('entity_type', 'discrepancy')
+          .in('entity_id', ids)
+        if (photoRows) {
+          for (const row of photoRows) {
+            if (!photoInfo[row.entity_id]) photoInfo[row.entity_id] = { count: 0, files: [] }
+            photoInfo[row.entity_id].count++
+            if (row.file_name) photoInfo[row.entity_id].files.push(row.file_name)
+          }
+        }
+      }
+    }
+
+    const hasPhotos = Object.keys(photoInfo).length > 0
+    const columns = [
+      { header: 'Display ID', key: 'display_id', width: 16 },
+      { header: 'Title', key: 'title', width: 36 },
+      { header: 'Type', key: 'type', width: 22 },
+      { header: 'Severity', key: 'severity', width: 10 },
+      { header: 'Status', key: 'status', width: 12 },
+      { header: 'Current Status', key: 'current_status', width: 30 },
+      { header: 'Location', key: 'location', width: 12 },
+      { header: 'Assigned Shop', key: 'assigned_shop', width: 20 },
+      { header: 'Work Order #', key: 'work_order', width: 16 },
+      { header: 'Days Open', key: 'days_open', width: 10 },
+      { header: 'Created At', key: 'created_at', width: 14 },
+      ...(hasPhotos ? [
+        { header: 'Photo Count', key: 'photo_count', width: 12 },
+        { header: 'Photo Files', key: 'photo_files', width: 30 },
+      ] : []),
     ]
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Discrepancies')
+
+    const rows = filtered.map(d => {
+      const info = photoInfo[d.id]
+      return {
+        display_id: d.display_id,
+        title: d.title,
+        type: getTypeLabel(d.type),
+        severity: titleCase(d.severity),
+        status: titleCase(d.status),
+        current_status: getCurrentStatusLabel(d.current_status),
+        location: d.location_text,
+        assigned_shop: d.assigned_shop || '',
+        work_order: d.work_order_number || '',
+        days_open: usingDemo ? (d as typeof DEMO_DISCREPANCIES[number]).days_open : daysOpen(d.created_at),
+        created_at: new Date(d.created_at).toLocaleDateString('en-US'),
+        ...(hasPhotos ? {
+          photo_count: info?.count || 0,
+          photo_files: info?.files.join(', ') || '',
+        } : {}),
+      }
+    })
+
+    const wb = await createStyledWorkbook()
+    addStyledSheet(wb, 'Discrepancies', columns, rows)
     const dateStr = new Date().toISOString().split('T')[0]
-    XLSX.writeFile(wb, `Discrepancies_${dateStr}.xlsx`)
+    await saveWorkbook(wb, `Discrepancies_${dateStr}.xlsx`)
   }
 
   const handleExportPdf = async () => {
@@ -148,6 +193,57 @@ export default function DiscrepanciesPage() {
     const pageHeight = doc.internal.pageSize.getHeight()
     const margin = 12
     let y = margin
+
+    // ── Fetch photos for all filtered discrepancies (live mode only) ──
+    const PHOTO_THUMB_W = 20
+    const PHOTO_THUMB_H = 15
+    const PHOTO_GAP = 1.5
+    const PHOTO_PAD = 2
+    const photoMap: Record<string, string[]> = {} // discrepancy_id → data URL[]
+
+    if (!usingDemo) {
+      const supabase = createClient()
+      if (supabase) {
+        const ids = filtered.map(d => d.id)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: photoRows } = await (supabase as any)
+          .from('photos')
+          .select('entity_id, storage_path')
+          .eq('entity_type', 'discrepancy')
+          .in('entity_id', ids)
+        if (photoRows && photoRows.length > 0) {
+          // Resolve storage paths to data URLs
+          for (const row of photoRows) {
+            try {
+              let dataUrl: string | null = null
+              if (row.storage_path.startsWith('data:')) {
+                dataUrl = row.storage_path
+              } else {
+                const { data: urlData } = supabase.storage.from('photos').getPublicUrl(row.storage_path)
+                if (urlData?.publicUrl) {
+                  const resp = await fetch(urlData.publicUrl)
+                  if (resp.ok) {
+                    const blob = await resp.blob()
+                    dataUrl = await new Promise<string>((resolve, reject) => {
+                      const reader = new FileReader()
+                      reader.onloadend = () => resolve(reader.result as string)
+                      reader.onerror = reject
+                      reader.readAsDataURL(blob)
+                    })
+                  }
+                }
+              }
+              if (dataUrl) {
+                if (!photoMap[row.entity_id]) photoMap[row.entity_id] = []
+                photoMap[row.entity_id].push(dataUrl)
+              }
+            } catch { /* skip failed photo */ }
+          }
+        }
+      }
+    }
+
+    const hasAnyPhotos = Object.keys(photoMap).length > 0
 
     // Header
     doc.setFontSize(8)
@@ -161,7 +257,7 @@ export default function DiscrepanciesPage() {
     doc.setFontSize(14)
     doc.setTextColor(0)
     doc.setFont('helvetica', 'bold')
-    doc.text('DISCREPANCY REGISTER', margin, y)
+    doc.text('DISCREPANCY REPORT', margin, y)
     y += 6
 
     doc.setFontSize(9)
@@ -174,21 +270,33 @@ export default function DiscrepanciesPage() {
     y += 7
 
     // Table
-    const tableBody = filtered.map(d => [
-      d.display_id,
-      d.title,
-      getTypeLabel(d.type),
-      d.severity,
-      d.status,
-      d.location_text,
-      d.work_order_number || '',
-      String(usingDemo ? (d as typeof DEMO_DISCREPANCIES[number]).days_open : daysOpen(d.created_at)),
-    ])
+    const headRow = ['ID', 'Title', 'Type', 'Severity', 'Status', 'Location', 'Work Order', 'Days']
+    if (hasAnyPhotos) headRow.push('Photos')
+
+    const tableBody = filtered.map(d => {
+      const row = [
+        d.display_id,
+        d.title,
+        getTypeLabel(d.type),
+        d.severity,
+        d.status,
+        d.location_text,
+        d.work_order_number || '',
+        String(usingDemo ? (d as typeof DEMO_DISCREPANCIES[number]).days_open : daysOpen(d.created_at)),
+      ]
+      if (hasAnyPhotos) {
+        const count = photoMap[d.id]?.length || 0
+        row.push(count > 0 ? `${count} photo${count > 1 ? 's' : ''}` : '')
+      }
+      return row
+    })
+
+    const photoColIdx = hasAnyPhotos ? 8 : -1
 
     autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
-      head: [['ID', 'Title', 'Type', 'Severity', 'Status', 'Location', 'Work Order', 'Days']],
+      head: [headRow],
       body: tableBody,
       styles: { fontSize: 7, cellPadding: 1.5, textColor: [0, 0, 0] },
       headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
@@ -197,6 +305,50 @@ export default function DiscrepanciesPage() {
         0: { cellWidth: 20 },
         1: { cellWidth: 40 },
         7: { cellWidth: 12, halign: 'center' },
+        ...(hasAnyPhotos ? { 8: { cellWidth: 30 } } : {}),
+      },
+      didParseCell: (data: { section: string; column: { index: number }; row: { index: number }; cell: { styles: { minCellHeight?: number } } }) => {
+        if (data.section === 'body' && data.column.index === photoColIdx) {
+          const d = filtered[data.row.index]
+          const photos = d ? (photoMap[d.id] || []) : []
+          if (photos.length > 0) {
+            const available = 30 - PHOTO_PAD * 2
+            const thumbsPerRow = Math.max(1, Math.floor(available / (PHOTO_THUMB_W + PHOTO_GAP)))
+            const rows = Math.ceil(photos.length / thumbsPerRow)
+            const needed = PHOTO_PAD * 2 + rows * PHOTO_THUMB_H + Math.max(0, rows - 1) * PHOTO_GAP
+            data.cell.styles.minCellHeight = Math.max(needed, 8)
+          }
+        }
+      },
+      didDrawCell: (data: { section: string; column: { index: number }; row: { index: number }; cell: { x: number; y: number; width: number } }) => {
+        if (data.section === 'body' && data.column.index === photoColIdx) {
+          const d = filtered[data.row.index]
+          const photos = d ? (photoMap[d.id] || []) : []
+          if (photos.length === 0) return
+
+          const cellX = data.cell.x
+          const cellY = data.cell.y
+          const cellW = data.cell.width
+          const avail = cellW - PHOTO_PAD * 2
+          const thumbsPerRow = Math.max(1, Math.floor(avail / (PHOTO_THUMB_W + PHOTO_GAP)))
+          let xOff = cellX + PHOTO_PAD
+          let yOff = cellY + PHOTO_PAD
+
+          for (let i = 0; i < photos.length; i++) {
+            if (i > 0 && i % thumbsPerRow === 0) {
+              yOff += PHOTO_THUMB_H + PHOTO_GAP
+              xOff = cellX + PHOTO_PAD
+            }
+            try {
+              const fmt = photos[i].includes('image/png') ? 'PNG' : 'JPEG'
+              doc.addImage(photos[i], fmt, xOff, yOff, PHOTO_THUMB_W, PHOTO_THUMB_H)
+            } catch {
+              doc.setDrawColor(180)
+              doc.rect(xOff, yOff, PHOTO_THUMB_W, PHOTO_THUMB_H)
+            }
+            xOff += PHOTO_THUMB_W + PHOTO_GAP
+          }
+        }
       },
     })
 
@@ -211,7 +363,7 @@ export default function DiscrepanciesPage() {
     }
 
     const dateStr = now.toISOString().split('T')[0]
-    doc.save(`Discrepancy_Register_${dateStr}.pdf`)
+    doc.save(`Discrepancy_Report_${dateStr}.pdf`)
   }
 
   return (

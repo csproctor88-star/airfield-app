@@ -192,7 +192,7 @@ export const AIRFIELD_INSPECTION_SECTIONS: InspectionSection[] = [
   {
     id: 'af-8',
     title: 'Section 8 — Pre or Post Construction Inspection',
-    conditional: 'Construction meeting inspection',
+    conditional: 'Construction Meeting Inspection',
     items: [
       { id: 'af-41', itemNumber: 41, item: 'CE, Wing Safety' },
     ],

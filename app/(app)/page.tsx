@@ -12,7 +12,6 @@ import { useInstallation } from '@/lib/installation-context'
 import { logActivity } from '@/lib/supabase/activity'
 import { fetchActivityLog } from '@/lib/supabase/activity-queries'
 import LoginActivityDialog from '@/components/login-activity-dialog'
-import { AirfieldDiagramButton } from '@/components/ui/airfield-diagram-viewer'
 
 // --- Weather emoji mapping ---
 function weatherEmoji(conditions: string): string {
@@ -826,7 +825,6 @@ export default function HomePage() {
             </span>
           </Link>
         ))}
-        <AirfieldDiagramButton />
       </div>
 
       {/* ===== Recent Activity ===== */}

@@ -104,28 +104,34 @@ export default function ActivityPage() {
     if (entries.length === 0) return
     setExporting(true)
     try {
-      const XLSX = await import('xlsx')
+      const { createStyledWorkbook, addStyledSheet, saveWorkbook, titleCase } = await import('@/lib/excel-export')
+      const columns = [
+        { header: 'Date/Time', key: 'datetime', width: 22 },
+        { header: 'User', key: 'user', width: 22 },
+        { header: 'Action', key: 'action', width: 40 },
+        { header: 'Entity Type', key: 'entity_type', width: 18 },
+        { header: 'Reference ID', key: 'ref_id', width: 14 },
+        { header: 'Notes', key: 'notes', width: 40 },
+      ]
       const rows = entries.map((a) => {
         const d = new Date(a.created_at)
         const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
         const notes = a.metadata?.notes ? String(a.metadata.notes) : ''
         return {
-          'Date/Time': d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-          'User': userName,
-          'Action': formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined),
-          'Entity Type': a.entity_type.replace(/_/g, ' '),
-          'Reference ID': a.entity_display_id || '',
-          'Notes': notes,
+          datetime: d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          user: userName,
+          action: formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined),
+          entity_type: titleCase(a.entity_type),
+          ref_id: a.entity_display_id || '',
+          notes,
         }
       })
-      const ws = XLSX.utils.json_to_sheet(rows)
-      ws['!cols'] = [{ wch: 22 }, { wch: 22 }, { wch: 40 }, { wch: 18 }, { wch: 14 }, { wch: 40 }]
-      const wb = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb, ws, 'Activity Log')
+      const wb = await createStyledWorkbook()
+      addStyledSheet(wb, 'Activity Log', columns, rows)
       const { start, end } = getDateRange()
       const startLabel = start.split('T')[0]
       const endLabel = end.split('T')[0]
-      XLSX.writeFile(wb, `Activity_Log_${startLabel}_to_${endLabel}.xlsx`)
+      await saveWorkbook(wb, `Activity_Log_${startLabel}_to_${endLabel}.xlsx`)
     } catch (e) {
       console.error('Export failed:', e)
     }
