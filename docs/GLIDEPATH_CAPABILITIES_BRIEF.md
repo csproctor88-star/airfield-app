@@ -40,9 +40,9 @@
 
 ## 1. EXECUTIVE SUMMARY
 
-**Glidepath** is a mobile-first Progressive Web Application (PWA) purpose-built for managing airfield operations across U.S. military installations. It consolidates the fragmented, paper-based, and spreadsheet-driven workflows that Airfield Management (AM) personnel use daily into a single, unified digital platform accessible from any phone, tablet, or computer.
+**Glidepath** is a mobile-first Progressive Web Application (PWA) purpose-built for managing airfield operations across U.S. military installations. It consolidates the fragmented, paper-based, and spreadsheet-driven workflows that Airfield Management personnel use daily into a single, unified digital platform accessible from any phone, tablet, or computer.
 
-The application covers the full spectrum of AM duties as defined in **DAFI 13-213**, **DAFMAN 13-204 (Volumes 1-3)**, and **UFC 3-260-01**: discrepancy tracking, airfield checks (7 types), daily inspections, obstruction evaluations, waiver lifecycle management, NOTAM monitoring, operational reporting, regulatory reference access, and a 1,000+ aircraft database with pavement loading analysis.
+The application covers the full spectrum of Airfield Management duties as defined in **DAFMAN 13-204 (Volumes 1-3)** and **UFC 3-260-01**: discrepancy tracking, airfield checks (7 types), daily inspections, obstruction evaluations, waiver lifecycle management, NOTAM monitoring, operational reporting, regulatory reference access, and an aircraft database with pavement loading analysis.
 
 **By the numbers:**
 
@@ -52,7 +52,7 @@ The application covers the full spectrum of AM duties as defined in **DAFI 13-21
 | Source Files | 130+ |
 | Database Tables | 25+ |
 | Database Migrations | 49 |
-| Aircraft Records | 1,000+ |
+| Aircraft Records | Hundreds |
 | Regulatory References | 70 |
 | Military Installations in Directory | 155 |
 | Airfield Check Types | 7 |
@@ -83,14 +83,14 @@ This fragmentation creates:
 2. **Lost institutional knowledge** — personnel rotate every 2-4 years; paper records do not transfer cleanly
 3. **Compliance risk** — missed inspection deadlines, overdue waiver reviews, and undocumented discrepancies
 4. **Redundant data entry** — the same information entered into multiple systems
-5. **No operational visibility** — leadership cannot see real-time airfield posture without calling the AM desk
+5. **No operational visibility** — leadership cannot see real-time airfield posture without calling the Airfield Management desk
 6. **Training gaps** — new personnel have no centralized reference for procedures and standards
 
 ---
 
 ## 3. SOLUTION OVERVIEW
 
-Glidepath replaces all of the above with a single application that runs on any device with a web browser. Personnel open the app, authenticate, and immediately see the live airfield posture — runway status, weather, advisories, NAVAID conditions, and recent activity. From there, every AM function is two taps away.
+Glidepath replaces all of the above with a single application that runs on any device with a web browser. Personnel open the app, authenticate, and immediately see the live airfield posture — runway status, weather, advisories, NAVAID conditions, and recent activity. From there, every Airfield Management function is two taps away.
 
 **Core design principles:**
 
@@ -100,7 +100,7 @@ Glidepath replaces all of the above with a single application that runs on any d
 - **Role-based** — Nine roles in a three-tier hierarchy control who can view, create, and manage data
 - **Audited** — Every action logged to an activity trail with user, timestamp, and entity reference
 - **Exportable** — PDF reports and Excel spreadsheets generated in-browser for command briefings and record-keeping
-- **Standards-compliant** — Built directly from DAFI 13-213, DAFMAN 13-204, UFC 3-260-01, and AF Form 505
+- **Standards-compliant** — Built directly from DAFMAN 13-204, UFC 3-260-01, and AF Form 505
 
 ---
 
@@ -114,25 +114,25 @@ Glidepath replaces all of the above with a single application that runs on any d
                     |  (Phone / Tablet / PC)     |
                     |                            |
                     |  +----------------------+  |
-                    |  | Next.js PWA (React)  |  |
-                    |  | TypeScript + Tailwind|  |
+                    |  |   Glidepath PWA      |  |
+                    |  |   (Web Application)  |  |
                     |  +----------+-----------+  |
                     |             |               |
                     |  +----------+-----------+  |
-                    |  |   IndexedDB Cache    |  |
-                    |  |  (Offline Storage)   |  |
+                    |  |   Offline Cache      |  |
+                    |  |  (Local Storage)     |  |
                     |  +----------------------+  |
                     +-------------|---------------+
                                   |
                     +-------------|---------------+
-                    |        Supabase Cloud       |
-                    |  +---------+-----------+    |
-                    |  | PostgreSQL Database  |    |
-                    |  | (25+ tables, RLS)    |    |
+                    |        Cloud Backend        |
                     |  +---------------------+    |
-                    |  | Auth (JWT, Email)    |    |
+                    |  | Database             |    |
+                    |  | (25+ tables)         |    |
                     |  +---------------------+    |
-                    |  | Storage (Photos,     |    |
+                    |  | Authentication       |    |
+                    |  +---------------------+    |
+                    |  | File Storage (Photos,|    |
                     |  |  PDFs, Diagrams)     |    |
                     |  +---------------------+    |
                     +-----------------------------+
@@ -140,27 +140,25 @@ Glidepath replaces all of the above with a single application that runs on any d
               +-------------------|-------------------+
               |                   |                   |
     +---------+------+  +--------+-------+  +---------+------+
-    | Open-Meteo API |  | FAA NOTAM API  |  | Open-Elevation |
-    | (Weather)      |  | (notams.aim)   |  | API (MSL)      |
+    |   Weather API  |  | FAA NOTAM API  |  |   Elevation    |
+    |   (Open-Meteo) |  | (notams.aim)   |  |   API (MSL)    |
     +----------------+  +----------------+  +----------------+
               |
     +---------+------+
-    | Mapbox GL JS   |
+    |   Mapbox Maps  |
     | (Maps/Sat Img) |
     +----------------+
 ```
 
-### Key Architectural Decisions
+### Key Design Decisions
 
 | Decision | Rationale |
 |----------|-----------|
-| **Next.js App Router** | Server-side rendering for auth pages, client components for interactive features, API routes for server-side operations |
-| **Supabase (PostgreSQL)** | Open-source Firebase alternative; SQL database with built-in auth, storage, and real-time capabilities; no vendor lock-in |
 | **Progressive Web App** | Installable on any device without app store approval; works offline; auto-updates |
+| **Cloud-hosted database** | Secure, scalable PostgreSQL with built-in auth, storage, and real-time capabilities |
 | **Client-side PDF/Excel** | Reports generated in-browser — no server load, works offline, instant delivery |
-| **Multi-base data isolation** | Every table has a `base_id` foreign key; queries scoped at the application layer |
-| **Demo mode** | App runs fully offline with mock data when Supabase is not configured — zero setup for training and demos |
-| **TypeScript strict mode** | Zero compile errors; full type safety across 130+ files |
+| **Multi-base data isolation** | Every table scoped by installation; data from one base never visible to another |
+| **Demo mode** | App runs fully offline with mock data when not connected — zero setup for training and demos |
 
 ---
 
@@ -172,7 +170,7 @@ The dashboard is the first screen users see after login. It provides a complete 
 
 **Live Clock & Weather**
 - Real-time clock updating every second
-- Open-Meteo weather API integration (no API key required): temperature, conditions, wind speed/direction, visibility
+- Weather integration (no API key required): temperature, conditions, wind speed/direction, visibility
 - Dynamic weather icons based on current conditions
 
 **Installation Context**
@@ -181,7 +179,7 @@ The dashboard is the first screen users see after login. It provides a complete 
 
 **Advisory System**
 - Three alert tiers: INFO (blue), CAUTION (yellow), WARNING (red)
-- Custom advisory text set by airfield management
+- Custom advisory text set by Airfield Management
 - Persistent banner visible across the app
 
 **Active Runway Control**
@@ -203,14 +201,14 @@ The dashboard is the first screen users see after login. It provides a complete 
 - Changes saved to database immediately
 
 **Quick Actions**
-- "Begin Inspection" — jumps to inspection workspace
-- "Begin Check" — opens check type selector
+- "Airfield Inspections" — jumps to inspection workspace
+- "Airfield Checks" — opens check type selector
 - "New Discrepancy" — opens discrepancy creation form
 - Large touch targets designed for gloved/field use
 
 **User Presence**
 - Shows who is online, away, or inactive
-- Heartbeat updates every 5 minutes via `last_seen_at` field
+- Heartbeat updates every 5 minutes
 
 **Activity Feed**
 - Real-time stream of all airfield actions
@@ -237,7 +235,7 @@ Full-lifecycle tracking of airfield deficiencies from discovery to resolution.
 | Vegetation Encroachment | CE Grounds | Low |
 | Wildlife Hazard | Airfield Management | High |
 | Airfield Obstruction | CE / AFM | Critical |
-| NAVAID Deficiency | CE Electrical / FAA | Critical |
+| NAVAID Deficiency | RAWS | Critical |
 | Other | Unspecified | Medium |
 
 **Lifecycle Workflow:**
@@ -268,19 +266,22 @@ Created → Submitted to AFM → Submitted to CES → Awaiting CES Action
 
 Seven check types unified in a single form-based system for routine and emergency airfield surveillance.
 
-**1. FOD Walk**
+**1. FOD Check**
 - Route selection from base areas (multi-select)
 - Items found count and description
 - Clear / Not Clear determination
 
 **2. RSC (Runway Surface Condition) Check**
-- Contaminant type: Dry, Wet, Slush, Ice, Patchy Ice, Snow
+
+- Runway condition: Wet or Dry
+- Observation notes and remarks
+
+**2. RCR (Runway Condition Readings) Check**
+- Mu friction coefficient readings at three points: Rollout, Midpoint, Departure
+- Contaminant type: Slush, Ice, Patchy Ice, Snow, etc.
 - Contaminant depth (inches) and coverage (%)
 - Braking action: Excellent, Good, Fair, Poor, Unacceptable
 - Treatment applied (deicing agent, friction course, etc.)
-
-**3. RCR (Runway Condition Readings) Check**
-- Mu friction coefficient readings at three points: Rollout, Midpoint, Departure
 - Equipment type (RT3, ASIPT, other)
 - Surface temperature
 
@@ -290,8 +291,7 @@ Seven check types unified in a single form-based system for routine and emergenc
 - Damage assessment and injuries
 
 **5. Ground Emergency**
-- 12-item Airfield Management action checklist (Notify ATC, Activate Crash Phone, Coordinate ARFF, Sweep Runway, etc.)
-- 9 agency notification tracker (SOF, Fire Chief, Wing Safety, MOC, Command Post, ATC, CE, Security Forces, Medical)
+- 12-item Airfield Management action checklist covering all required notifications and response actions (Notify ATC, Activate Crash Phone, Coordinate ARFF, Notify SOF, Fire Chief, Wing Safety, MOC, Command Post, CE, Security Forces, Medical, Sweep Runway, etc.)
 - Incident narrative and findings
 
 **6. Heavy Aircraft**
@@ -320,9 +320,12 @@ Seven check types unified in a single form-based system for routine and emergenc
 
 ### 5.4 Daily Inspections
 
-Combined Airfield Inspection Report covering both Airfield and Lighting halves, per DAFI 13-213 requirements.
+Combined Airfield Inspection Report covering both Airfield and Lighting halves.
 
-**Airfield Half — 9 Sections, 42 Items:**
+**Fully Tailorable Checklists:**
+The inspection templates are fully customizable per base. Base administrators configure their installation's specific checklist sections and items through the Base Configuration settings. This means no two installations need to share the same checklist — each base's template reflects its unique airfield layout, infrastructure, and operational requirements. New bases can clone from a default template and then customize as needed.
+
+**Default Airfield Half — 9 Sections, 42 Items:**
 1. Obstacle Clearance Criteria (8 items) — runway surfaces, clear zones, graded areas
 2. Signs & Lights (8 items) — holding positions, elevation signs, windcone, FOD indicators
 3. Construction (6 items) — site parking, lighting compliance, FOD control
@@ -333,7 +336,7 @@ Combined Airfield Inspection Report covering both Airfield and Lighting halves, 
 8. Pre/Post Construction Inspection (1 item) — triggered when construction active
 9. Joint Monthly Inspection (1 item) — triggered for monthly coordination
 
-**Lighting Half — 5 Sections, 32 Items:**
+**Default Lighting Half — 5 Sections, 32 Items:**
 1. Runway 01 Lighting (5 items) — edge lights, approach system, threshold, PAPI, hammerhead
 2. Runway 19 Lighting (4 items) — threshold, PAPI, REILs, intensity
 3. Taxiway & Apron Lighting (13 items) — all taxiways, ramps, stadium lights
@@ -347,7 +350,7 @@ Combined Airfield Inspection Report covering both Airfield and Lighting halves, 
 - BWC items use four-state toggle: LOW / MOD / SEV / PROHIB
 
 **Workflow:**
-1. **Draft** — Inspector works through checklist; auto-saved to localStorage and database
+1. **Draft** — Inspector works through checklist; auto-saved to local storage and database
 2. **Mark All Pass** — Bulk toggle per section for routine inspections
 3. **Complete** — Inspector marks their half as done
 4. **File** — Filer combines Airfield + Lighting halves into the official daily report
@@ -370,14 +373,14 @@ Four operational report types designed for command briefings, shift turnover, an
 - Inspections completed, checks performed, status changes, new discrepancies, obstruction evaluations
 - Embedded check location maps and photos
 - Chronological timeline with activity types
-- PDF export: `KMTC_Daily_Ops_2026-02-27.pdf`
+- PDF export with installation branding
 
 **B. Open Discrepancies Report**
 - Current snapshot of all open airfield deficiencies
 - Breakdown by severity, type, assigned shop, and airfield area
 - Average days open, top problem areas
 - Embedded photos and satellite map thumbnails per discrepancy
-- PDF export: `KMTC_Open_Discrepancies_2026-02-27.pdf`
+- PDF export with installation branding
 
 **C. Discrepancy Trends**
 - Historical trend analysis over configurable periods (30d / 90d / 6mo / 1yr)
@@ -385,13 +388,13 @@ Four operational report types designed for command briefings, shift turnover, an
 - Trend direction indicators (backlog growing/shrinking/flat)
 - Top 5 areas and types by volume
 - Closure rate percentage and average resolution time
-- PDF export: `KMTC_Discrepancy_Trends_2026-02-27.pdf`
+- PDF export with installation branding
 
 **D. Aging Discrepancies**
 - Open items grouped by age: 0-7d, 8-14d, 15-30d, 31-60d, 61-90d, 90+ days
 - Per-tier breakdown by severity and responsible shop
 - Identifies critical backlog and SLA risk items
-- PDF export: `KMTC_Aging_Discrepancies_2026-02-27.pdf`
+- PDF export with installation branding
 
 All reports include branded headers, page numbers, generation timestamps, and embedded imagery.
 
@@ -416,15 +419,15 @@ UFC 3-260-01 Class B Imaginary Surface analysis with multi-runway support — re
 | 9 | APZ I | DoD Inst 4165.57 | 3,000-8,000 ft from threshold, land-use restriction |
 | 10 | APZ II | DoD Inst 4165.57 | 8,000-15,000 ft from threshold, land-use restriction |
 
-**Computational Engine (797 lines of geodesic math):**
-- Haversine great-circle distance calculations
+**Computational Engine:**
+- Geodesic great-circle distance calculations
 - Cross-track and along-track distance from runway centerline
-- Stadium-shaped boundary geometry (Minkowski sum)
+- Stadium-shaped boundary geometry
 - Slope calculations for approach-departure (50:1), transitional (7:1), and conical (20:1) surfaces
-- Open-Elevation API integration for ground MSL height
+- Elevation API integration for ground MSL height
 - Multi-runway simultaneous evaluation — reports controlling surface per runway
 
-**Interactive Mapbox Visualization:**
+**Interactive Map Visualization:**
 - Color-coded surface overlay polygons
 - Per-runway toggles in the legend
 - Click-to-place obstruction on map
@@ -446,11 +449,9 @@ UFC 3-260-01 Class B Imaginary Surface analysis with multi-runway support — re
 
 ### 5.7 Aircraft Database & Pavement Analysis
 
-Reference database of 1,000+ military and civilian aircraft for airfield planning and load analysis.
+Reference database of hundreds of military and civilian aircraft for airfield planning and load analysis.
 
-**Data sourced from:**
-- USACE TSC 13-2 (Military Aircraft)
-- USACE TSC 13-3 (Commercial Aircraft)
+**Data sourced from:** Open source web search
 
 **Per-Aircraft Data Points:**
 - Name, designation, manufacturer
@@ -466,7 +467,7 @@ Reference database of 1,000+ military and civilian aircraft for airfield plannin
 - Real-time search by name, manufacturer, or type designation
 - Sort by weight, wingspan, or ACN values
 - Filter by military vs. commercial
-- Favorites system (persistent to localStorage)
+- Favorites system (persistent across sessions)
 - **ACN/PCN Comparison Panel** — compare aircraft pavement loading against runway PCN values to determine if an aircraft is safe, marginal, or unsuitable for a given runway
 - Aircraft images where available
 
@@ -486,7 +487,7 @@ Comprehensive regulatory reference with 70 entries, in-app PDF viewing, and full
 | Source | Count | Coverage |
 |--------|-------|----------|
 | DAFMAN 13-204 Vol 1 | ~20 | Airfield Planning & Operations |
-| DAFMAN 13-204 Vol 2 | ~20 | Airfield Management |
+| DAFMAN 13-204 Vol 2 | ~20 | Airfield Management & Operations |
 | DAFMAN 13-204 Vol 3 | ~10 | Special Operations |
 | UFC 3-260-01 | ~15 | Military Airfield Design |
 | Cross-References (FAA, DoD, CFR) | ~5 | External standards |
@@ -499,16 +500,15 @@ Comprehensive regulatory reference with 70 entries, in-app PDF viewing, and full
 - Full-text search across titles, descriptions, and tags
 - Category and publication type filter dropdowns
 - Favorites system with toggle for "show favorites only" default view
-- In-app PDF viewer with pinch-to-zoom, page navigation, and touch gestures (react-pdf / PDF.js)
-- Offline PDF caching via IndexedDB — "Cache All" button downloads all PDFs for offline use
+- In-app PDF viewer with pinch-to-zoom, page navigation, and touch gestures
+- Offline PDF caching — "Cache All" button downloads all PDFs for offline use
 - Admin controls: Add Reference (with PDF upload) and Delete Reference (sys_admin only)
-- Signed URL access for private-bucket PDFs (1-hour expiry)
 
 **My Documents Tab:**
-- Upload personal PDFs, JPGs, and PNGs (50 MB max)
-- Client-side text extraction from PDFs for full-text search
+- Upload personal PDFs, JPGs, and PNGs (50 MB max per document)
+- Text extraction from PDFs for full-text search
 - Per-document offline caching
-- Supabase Storage integration for cross-device access
+- Cross-device access — documents available on any device where the user logs in
 - Delete and manage uploaded documents
 
 ---
@@ -551,7 +551,7 @@ All status transitions require a mandatory comment explaining the change, saved 
 - Typed categories: Photo, Site Map, Risk Assessment, UFC Excerpt, FAA Report, Coordination Sheet, AF Form 505, Other
 - Captions per attachment
 
-**Annual Review Module (`/waivers/annual-review`):**
+**Annual Review Module:**
 - Year-by-year review selector with prev/next navigation
 - Per-waiver review form: recommendation, mitigation verified, project status update, notes
 - Facilities Board presentation tracking (date and status)
@@ -560,7 +560,7 @@ All status transitions require a mandatory comment explaining the change, saved 
 
 **Export:**
 - Individual Waiver PDF — branded, all fields, criteria, coordination stamps, embedded photos
-- Waiver Register Excel — multi-sheet workbook (Register, Criteria, Coordination) via SheetJS
+- Waiver Register Excel — multi-sheet workbook (Register, Criteria, Coordination)
 
 **Seed Data:** 17 real Selfridge ANGB (KMTC) historical waivers with criteria references, coordination records, and 2025 review history.
 
@@ -571,7 +571,7 @@ All status transitions require a mandatory comment explaining the change, saved 
 Real-time NOTAM monitoring integrated directly from the FAA's public NOTAM Search.
 
 **Live Feed:**
-- API proxy to `notams.aim.faa.gov/notamSearch/search` — no API key required
+- Connects to the FAA's public NOTAM Search — no API key required
 - Auto-fetches NOTAMs for the current installation's ICAO code on page load
 - Manual ICAO search input for querying any airport worldwide
 - Feed status indicator (green/red/gray) with last-fetched timestamp
@@ -588,7 +588,7 @@ Real-time NOTAM monitoring integrated directly from the FAA's public NOTAM Searc
 
 **Local NOTAM Drafting:** Create LOCAL NOTAMs with title, full text, and effective dates for base-specific notices.
 
-**Demo Mode Fallback:** Falls back to 5 sample NOTAMs when Supabase is not configured.
+**Demo Mode Fallback:** Falls back to 5 sample NOTAMs when not connected to the server.
 
 ---
 
@@ -600,7 +600,7 @@ Comprehensive audit trail logging every action taken in the system.
 - Date-range filtering: Today, Last 7 Days, Last 30 Days, Custom Range
 - Entries grouped by date with color-coded action dots
 - Clickable items link directly to source entity (discrepancy, check, inspection, waiver, etc.)
-- Visual indicators (cyan text + arrow) for linked items
+- Visual indicators for linked items
 
 **Tracked Actions:**
 - Entity creation (discrepancy, check, inspection, evaluation, waiver, NOTAM)
@@ -610,8 +610,6 @@ Comprehensive audit trail logging every action taken in the system.
 - User login activity
 
 **Export:** Excel export with styled formatting (Date, Time, User, Rank, Action, Entity, Details)
-
-**Database:** `activity_log` table with user_id, action, entity_type, entity_id, display_id, metadata (JSONB), and timestamp.
 
 ---
 
@@ -637,13 +635,13 @@ Admin interface for the complete user lifecycle: invite, configure, monitor, dea
 **User Invitation:**
 - Admin sends email invitation with rank, name, role, and installation assignment
 - Invited user receives branded email with setup link
-- Account setup page (`/setup-account`) for password creation
+- Account setup page for password creation
 - Profile status transitions from `pending` to `active` on completion
 
 **Password Management:**
 - Admin-initiated password reset via "Reset Password" button
 - Self-service "Forgot Password?" on login page
-- Secure email-based recovery flow with OTP/PKCE token exchange
+- Secure email-based recovery flow
 
 **Account Lifecycle:**
 - Deactivate/Reactivate toggle (deactivated users see "Account deactivated" on login)
@@ -660,14 +658,14 @@ Per-installation configuration hub for runways, NAVAIDs, areas, inspection templ
 
 **Installation Management** — View current base; sys_admin can switch or add installations
 
-**Base Configuration (`/settings/base-setup`):**
+**Base Configuration:**
 - **Runways** — Add/edit/delete runways with full metadata: length, width, surface type, heading, runway class (B/Army_B), endpoint coordinates, designators, approach lighting, threshold elevations
 - **NAVAIDs** — Add/delete navigation aids with sort order; auto-creates status tracking rows
 - **Areas** — Manage airfield area names used across checks, discrepancies, and inspections
 - **CE Shops** — Manage Civil Engineering shop list for discrepancy assignment
-- **Airfield Diagram** — Upload installation diagram image, stored in Supabase Storage for cross-device access
+- **Airfield Diagram** — Upload installation diagram image, available across all devices for the same installation
 
-**Inspection Templates (`/settings/templates`):**
+**Inspection Templates:**
 - Customize Airfield and Lighting inspection checklists per base
 - Add, edit, remove, and reorder sections and items
 - Toggle item type between Pass/Fail and BWC (four-state)
@@ -686,13 +684,12 @@ Per-installation configuration hub for runways, NAVAIDs, areas, inspection templ
 Glidepath is engineered from the ground up for multi-installation deployment.
 
 **Database-Level Isolation:**
-- Every operational table carries a `base_id` foreign key
-- All queries are scoped to the user's current installation at the application layer
-- `base_members` join table links users to installations with role assignments
+- Every operational table scoped by installation
+- All queries filtered to the user's current installation
 - Users can belong to multiple bases (e.g., IG inspectors, MAJCOM staff)
 
 **Base Directory:**
-- Static directory of 155+ U.S. military installations with ICAO codes
+- Built-in directory of 155+ U.S. military installations with ICAO codes
 - Includes AFBs, ANGBs, Joint Bases, Space Force stations
 - Used for base selection during signup and installation switching
 
@@ -704,9 +701,12 @@ Glidepath is engineered from the ground up for multi-installation deployment.
 **Seeded Installations:**
 - Selfridge ANG Base (KMTC) — fully configured with runways, NAVAIDs, templates, and 17 seed waivers
 - Andersen AFB (PGUA) — dual-runway seed as proof of multi-base support
+- Mountain Home AFB (KMUO) — seeded installation data
+- Bradley International Airport, Connecticut ANG (KBDL) — seeded installation data
 
 **Scaling Path:**
-- Add any installation from the 155-base directory
+- Add any installation from the 155-base directory via the admin UI
+- If a base is not on the built-in list, it can be manually added — the system will automatically create the base site structure, and the user can manually input all configuration data (runways, NAVAIDs, areas, templates) or contact a system administrator for bulk data import
 - Configure runways and templates via the admin UI
 - No code changes required to onboard new bases
 
@@ -718,27 +718,19 @@ Glidepath is designed for use on the flightline where connectivity is unreliable
 
 **Progressive Web App (PWA):**
 - Installable on iOS, Android, and desktop home screens — no app store required
-- Service worker caches the entire application shell
+- Caches the entire application for offline use
 - Auto-updates when connectivity is restored
-
-**IndexedDB Offline Storage (6 Object Stores):**
-1. `blobs` — Regulation PDFs cached for offline viewing
-2. `meta` — Regulation metadata and favorites
-3. `text_pages` — Extracted PDF text for offline full-text search
-4. `text_meta` — Text extraction status tracking
-5. `user_blobs` — User-uploaded personal documents
-6. `user_text` — User document extracted text
 
 **Offline Capabilities:**
 - All 70 regulation PDFs downloadable for offline access ("Cache All" button)
-- Inspection draft auto-saved to localStorage — recoverable if browser closes
+- Inspection draft auto-saved locally — recoverable if browser closes
 - Airfield diagrams cached locally
 - Aircraft database available offline (static data, no server required)
 - Demo mode operates with zero network calls
 
 **Demo Mode:**
-- Activates automatically when Supabase credentials are missing
-- Full app with mock data: 6 discrepancies, 5 NOTAMs, 17 waivers, 1,000+ aircraft, 70 regulations
+- Activates automatically when server credentials are not configured
+- Full app with mock data: 6 discrepancies, 5 NOTAMs, 17 waivers, hundreds of aircraft, 70 regulations
 - All features functional (create, edit, view, export)
 - Ideal for training environments, demos, and evaluation without infrastructure setup
 
@@ -748,7 +740,7 @@ Glidepath is designed for use on the flightline where connectivity is unreliable
 
 Every operational module produces exportable records for command briefings, compliance documentation, and archival.
 
-**PDF Reports (Generated in-browser via jsPDF):**
+**PDF Reports:**
 
 | Report | Content | Embedded Media |
 |--------|---------|----------------|
@@ -762,13 +754,13 @@ Every operational module produces exportable records for command briefings, comp
 
 **PDF Features:**
 - Branded headers with installation name and ICAO code
-- Mapbox Static Images API satellite map thumbnails (300x200px)
-- Base64-embedded photos
-- Professional table formatting via jspdf-autotable
+- Satellite map thumbnails embedded per record
+- Photo embedding
+- Professional table formatting
 - Page numbers and generation timestamps
 - Print-optimized styling
 
-**Excel Exports (Generated in-browser via SheetJS):**
+**Excel Exports:**
 
 | Export | Sheets |
 |--------|--------|
@@ -787,13 +779,14 @@ Every operational module produces exportable records for command briefings, comp
 ## 9. SECURITY & ACCESS CONTROL
 
 **Authentication:**
-- Email/password via Supabase Auth (JWT tokens, HTTP-only cookies)
-- Server-side session validation on every request via Next.js middleware
+- Email/password login with secure session management
 - Account invitation with email verification
-- Password reset with secure recovery flow (OTP + PKCE)
+- Password reset with secure email-based recovery flow
 - Account deactivation blocks login immediately
 
 **Authorization — Nine Roles:**
+
+The application implements nine roles across a three-tier hierarchy. As Glidepath moves to production, these roles will be refined so that each role's permissions align precisely with the responsibilities of each section involved in airfield operations — ensuring Airfield Management, Civil Engineering, Safety, ATC, and other offices each have access appropriate to their mission.
 
 | Role | Create | Edit | Delete | Manage Users | Config Base | View Reports |
 |------|--------|------|--------|-------------|-------------|-------------|
@@ -806,13 +799,6 @@ Every operational module produces exportable records for command briefings, comp
 | safety | No | No | No | No | No | All |
 | atc | No | No | No | No | No | Limited |
 | read_only | No | No | No | No | No | View only |
-
-**Enforcement Layers:**
-1. **Middleware** — Route-level auth guard redirects unauthenticated users
-2. **API Routes** — Admin endpoints use Supabase service role with caller role verification
-3. **Application Layer** — Guard functions (`isSysAdmin()`, `isBaseAdmin()`, `isAdmin()`) enforce permissions
-4. **UI Layer** — Conditional rendering hides unauthorized actions
-5. **Storage** — RLS policies on Supabase Storage `photos` bucket
 
 **Escalation Prevention:**
 - Base admins cannot assign admin-tier roles
@@ -828,9 +814,8 @@ Glidepath is built directly from and in support of the following governing regul
 
 | Regulation | Full Title | How Glidepath Supports It |
 |-----------|-----------|--------------------------|
-| **DAFI 13-213** | Airfield Management | Dashboard, checks, inspections, discrepancy tracking — all core AM duties digitized |
 | **DAFMAN 13-204 Vol 1** | Airfield Management: Airfield Planning and Operations | Reference library with indexed entries; inspection templates aligned to Vol 1 standards |
-| **DAFMAN 13-204 Vol 2** | Airfield Management: Airfield Operations | Check types, emergency response checklists, BASH procedures, RSC/RCR methodology |
+| **DAFMAN 13-204 Vol 2** | Airfield Management: Airfield Operations | Dashboard, checks, inspections, discrepancy tracking — all core Airfield Management duties digitized; check types, emergency response checklists, BASH procedures, RSC/RCR methodology |
 | **DAFMAN 13-204 Vol 3** | Airfield Management: Special Operations | Reference library entries; extensible template system for specialized inspections |
 | **UFC 3-260-01** | Airfield and Heliport Planning and Design | 10-surface obstruction evaluation engine with geodesic math, multi-runway analysis, and exact UFC table references |
 | **AF Form 505** | Airfield Waiver Template | Waiver module captures all AF-505 fields with lifecycle tracking, coordination workflow, and annual review |
@@ -842,58 +827,40 @@ Glidepath is built directly from and in support of the following governing regul
 
 ## 11. TECHNOLOGY STACK
 
-| Layer | Technology | Version | Purpose |
-|-------|-----------|---------|---------|
-| Framework | Next.js (App Router) | 14.2.35 | React-based web framework with SSR, API routes, PWA support |
-| Language | TypeScript (strict mode) | 5.9.3 | Full type safety, zero compile errors |
-| Styling | Tailwind CSS | 3.4.19 | Utility-first CSS with light/dark/auto theme system |
-| Backend | Supabase | SSR 0.8.0 | PostgreSQL database, authentication, file storage |
-| Maps | Mapbox GL JS | 3.18.1 | Interactive maps, satellite imagery, surface overlays |
-| PDF Viewing | react-pdf (PDF.js) | 10.3.0 | In-app regulation PDF viewer with pinch-to-zoom |
-| PDF Generation | jsPDF + jspdf-autotable | 4.1.0 | Browser-based report PDF creation |
-| Excel Export | SheetJS (xlsx) | 0.18.5 | Browser-based spreadsheet generation |
-| Validation | Zod | 3.25.76 | TypeScript-first schema validation for all forms |
-| Offline Storage | IndexedDB | Native | PDF caching, text search index, draft persistence |
-| Icons | Lucide React | 0.563.0 | Consistent icon library |
-| Notifications | Sonner | 1.7.4 | Toast notifications |
-| PWA | @ducanh2912/next-pwa | 10.2.9 | Service worker, installability, offline caching |
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| Framework | Next.js (App Router) | Web framework with server-side rendering, API routes, PWA support |
+| Language | TypeScript (strict mode) | Full type safety, zero compile errors |
+| Styling | Tailwind CSS | Utility-first CSS with light/dark/auto theme system |
+| Backend | Supabase (PostgreSQL) | Database, authentication, file storage |
+| Maps | Mapbox GL JS | Interactive maps, satellite imagery, surface overlays |
+| PDF Viewing | react-pdf | In-app regulation PDF viewer with pinch-to-zoom |
+| PDF Generation | jsPDF | Browser-based report PDF creation |
+| Excel Export | SheetJS | Browser-based spreadsheet generation |
+| Validation | Zod | Schema validation for all forms |
+| Offline Storage | IndexedDB | PDF caching, text search index, draft persistence |
+| PWA | next-pwa | Service worker, installability, offline caching |
 
 **External APIs (All Free / No Key Required):**
 - Open-Meteo — Weather data
 - FAA NOTAM Search — Live NOTAM feed
 - Open-Elevation — Ground elevation MSL lookup
-- Mapbox Static Images — Satellite map thumbnails for PDF export (requires token)
+- Mapbox — Maps and satellite map thumbnails (requires token)
 
 ---
 
 ## 12. DEPLOYMENT & SCALABILITY
 
-**Deployment Target:** Vercel (Next.js native hosting) or any Node.js-compatible platform
+**Deployment Target:** Cloud-hosted (Vercel or any compatible platform)
 
 **Infrastructure Requirements:**
 - Supabase project (free tier supports development; Pro tier for production)
 - Mapbox account (free tier: 50,000 map loads/month)
 - No other paid services required — weather, NOTAMs, and elevation APIs are free
 
-**Environment Variables:**
-```
-NEXT_PUBLIC_SUPABASE_URL       — Supabase project URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY  — Supabase anonymous key
-SUPABASE_SERVICE_ROLE_KEY      — Server-side admin key
-NEXT_PUBLIC_MAPBOX_TOKEN       — Mapbox GL token
-NEXT_PUBLIC_APP_URL            — Application URL
-```
-
-**Scaling Characteristics:**
-- Supabase PostgreSQL scales vertically (compute) and horizontally (read replicas)
-- Next.js on Vercel scales automatically with serverless functions
-- Client-side PDF/Excel generation — zero server load for exports
-- IndexedDB offloads data to client devices
-- PWA service worker reduces server requests via caching
-
 **Onboarding a New Base:**
-1. Admin creates installation from the 155-base directory
-2. Configures runways, NAVAIDs, areas, and CE shops via the UI
+1. Admin selects an installation from the 155-base directory — or manually adds a base not on the list (the system auto-creates the base site structure)
+2. Configures runways, NAVAIDs, areas, and CE shops via the admin UI — or contacts a system administrator for bulk data import
 3. Initializes inspection templates (clone from default or customize)
 4. Invites users with appropriate roles
 5. No code deployment required — fully configuration-driven
@@ -912,7 +879,7 @@ NEXT_PUBLIC_APP_URL            — Application URL
 | Daily Inspections | Complete |
 | Reports (4 types) | Complete |
 | Obstruction Evaluations | Complete |
-| Aircraft Database (1,000+) | Complete |
+| Aircraft Database | Complete |
 | Regulations Library (70 refs) | Complete |
 | Waiver Management (full lifecycle) | Complete |
 | NOTAMs (live FAA feed) | Complete |
@@ -935,7 +902,6 @@ NEXT_PUBLIC_APP_URL            — Application URL
 | Server-Side Email Delivery | Branded email for inspection reports (vs. client-side PDF) | Medium |
 | Offline Sync Queue | Store mutations while offline; auto-sync when connectivity returns | Medium |
 | Unit & Integration Testing | Automated test suite for all modules | Medium |
-| Type Generation | Regenerate Supabase types to eliminate ~170 `as any` casts | Medium |
 
 ### Long-Term Vision
 
@@ -943,10 +909,9 @@ NEXT_PUBLIC_APP_URL            — Application URL
 |-----------|-------------|
 | CAC/PKI Authentication | Smart card login for DoD network compliance |
 | IMDS / ACES Integration | Bi-directional sync with maintenance tracking systems |
-| NASA DIP API | Automated NOTAM filing |
 | RT3 Hardware Integration | Direct import from runway friction testers |
 | Native Mobile App | React Native wrapper for enhanced offline and camera capabilities |
-| Real-Time Collaboration | Supabase real-time subscriptions for live multi-user updates |
+| Real-Time Collaboration | Live multi-user updates across devices |
 | AI-Assisted Analysis | Trend detection, predictive maintenance, and anomaly alerting |
 
 ---
@@ -955,7 +920,7 @@ NEXT_PUBLIC_APP_URL            — Application URL
 
 ### For the Airfield Manager
 
-- **Single pane of glass** for all AM duties — no more switching between paper, spreadsheets, email, and websites
+- **Single pane of glass** for all Airfield Management duties — no more switching between paper, spreadsheets, email, and websites
 - **Instant operational picture** — open the app and see runway status, weather, advisories, and recent activity
 - **Audit-ready** — every action logged with user, timestamp, and entity reference; export any report as PDF
 - **Waiver management** — replace filing cabinets with a searchable, tracked, exportable waiver register with annual review workflow
@@ -971,13 +936,12 @@ NEXT_PUBLIC_APP_URL            — Application URL
 
 ### For AFWERX / Spark Tank
 
-- **Built by the warfighter, for the warfighter** — developed by active-duty AM personnel who live the problem daily
-- **Zero infrastructure cost to evaluate** — demo mode runs with no server; `npm install && npm run dev` is all that is needed
+- **Built by the warfighter, for the warfighter** — developed by active-duty Airfield Management personnel who live the problem daily
+- **Zero infrastructure cost to evaluate** — demo mode runs with no server; install and run is all that is needed
 - **Immediate ROI** — eliminates paper logs, reduces data entry, accelerates response times, and creates institutional memory that survives PCS cycles
-- **155-base ready** — architecture supports every USAF, ANG, and AFRC installation without code changes
-- **Modern tech stack** — TypeScript, React, PostgreSQL, PWA — maintainable by any web developer; no proprietary dependencies
-- **Open-source backend** — Supabase is open-source; no vendor lock-in; can be self-hosted on DoD infrastructure
-- **Proven regulatory alignment** — built directly from DAFI 13-213, DAFMAN 13-204, UFC 3-260-01, and AF Form 505
+- **155-base ready** — architecture supports every USAF, ANG, and AFRC installation without code changes; additional bases can be manually added at any time
+- **Modern, maintainable technology** — built on industry-standard open-source tools with no proprietary dependencies or vendor lock-in
+- **Proven regulatory alignment** — built directly from DAFMAN 13-204, UFC 3-260-01, and AF Form 505
 
 ---
 
