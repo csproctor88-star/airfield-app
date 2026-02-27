@@ -34,7 +34,7 @@ export function BottomNav() {
         borderTop: '1px solid var(--color-border)',
         display: 'flex',
         justifyContent: 'space-around',
-        padding: '6px 0 20px',
+        padding: '6px 0 calc(20px + env(safe-area-inset-bottom, 0px))',
         zIndex: 100,
         backdropFilter: 'blur(24px)',
       }}

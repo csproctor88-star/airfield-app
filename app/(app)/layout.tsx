@@ -13,7 +13,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         fontFamily: "'Outfit', -apple-system, sans-serif",
         background: 'var(--color-bg)',
         color: 'var(--color-text-1)',
-        minHeight: '100vh',
+        minHeight: '100dvh',
         maxWidth: 480,
         margin: '0 auto',
       }}
