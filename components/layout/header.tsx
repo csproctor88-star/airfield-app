@@ -138,10 +138,10 @@ export function Header() {
           )}
         </div>
 
-        {/* User name + presence — bottom right */}
+        {/* User status + name — bottom right */}
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)' }}>{userDisplay.name}</div>
           <div style={{ fontSize: 10, color: presence.color, fontWeight: 600 }}>{presence.label}</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)' }}>{userDisplay.name}</div>
         </div>
       </div>
     </div>
