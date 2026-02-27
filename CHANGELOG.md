@@ -11,10 +11,72 @@ All notable changes to the Airfield OPS Management Suite.
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
 - Sync & Data module (offline queue, export, import)
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate `as any` casts
-- Clean up dead files (validators.ts, installation.ts, lib/supabase/middleware.ts, unused UI components)
-- Refactor duplicate Supabase server auth initialization into shared utility
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate ~170 `as any` casts
+- Clean up 8 dead files (validators.ts, installation.ts, lib/supabase/middleware.ts, pdfTextCache.ts, card.tsx, input.tsx, loading-skeleton.tsx, page-header.tsx)
+- Convert PDFLibrary.jsx to TypeScript (.tsx)
+- Remove ~12MB of unused public image assets (glidepath.png, icon.png, logo_motto.png, glidepath-logo.png)
 - Add database-level role enforcement for `read_only` and other non-admin roles (currently app-layer only)
+- Construction Meeting & Joint Monthly standalone inspection tabs (planned in Component 9)
+
+---
+
+## [2.6.0] — 2026-02-27
+
+### Branding, PDF Improvements, UX Polish & Production Prep
+
+This release adds custom branding throughout the app, embeds photos and satellite maps in all PDF exports, adds clickable activity items, and includes numerous UX improvements in preparation for production deployment.
+
+#### Branding & UI
+- **Header**: Centered `glidepath2.png` logo (72px) replacing emoji + text
+- **Login page**: `glidepath2.png` with "GUIDING YOU TO MISSION SUCCESS" motto
+- **PWA home screen icon**: Custom circular badge icon (`icon.png`) for iOS/Android
+- **More page**: Profile section always expanded at top, all modules shown as flat list (no accordion), removed About card
+- **Settings About**: Version, environment, and website info (removed redundant logo)
+- **Installation name + ICAO**: Moved from header to dashboard clock/user section with dropdown switcher for multi-base users
+
+#### PDF Export — Embedded Photos & Maps
+- **Discrepancy Report PDF**: Photos and Mapbox satellite map thumbnails embedded inline in table "Photos" column per discrepancy
+- **Inspection PDF**: Location maps embedded for failed items with GPS coordinates
+- **Daily Ops Report PDF**: Check location maps embedded alongside check photos
+- **Mapbox Static Images API**: Satellite map thumbnails (300x200px) fetched as data URLs for all PDF exports
+- **Photo URL fix**: Corrected query to use `discrepancy_id` FK column (not `entity_id`/`entity_type`)
+
+#### Activity Log
+- **Clickable items**: Activity entries on dashboard and `/activity` page link to their source entity (discrepancy, check, inspection, obstruction)
+- **Visual indicators**: Linked items show cyan text with arrow indicator
+
+#### UX Improvements
+- **Discrepancy type labels**: Fixed display for multi-type discrepancies (split on comma, resolve each individually)
+- **Type dropdown**: Click-outside-to-close on new discrepancy form
+- **Check History**: Removed duplicate button from top of checks page (kept bottom link)
+- **Middleware**: Excluded `.png`/`.jpg`/`.svg` from auth checks so login page images load correctly
+- **Logo transparency**: Removed baked-in gray background from `logo_motto.png` using Pillow
+
+#### Renamed
+- **Discrepancy Register → Discrepancy Report**: Updated PDF title and filename
+
+#### Files Added
+- `public/glidepath2.png` — Stylized "GLIDEPATH" text logo for header and login
+- `public/icon.png` — Circular badge icon
+- `public/glidepath.png` — Full logo (currently unused, candidate for cleanup)
+- `public/logo_motto.png` — Badge + motto logo (currently unused, candidate for cleanup)
+
+#### Files Modified
+- `components/layout/header.tsx` — Simplified to centered logo only
+- `app/(app)/page.tsx` — Added installation name/ICAO + switcher dropdown to clock section
+- `app/(app)/more/page.tsx` — Profile expanded, flat module list, removed About card
+- `app/(app)/activity/page.tsx` — Clickable activity items with entity linking
+- `app/(app)/discrepancies/page.tsx` — PDF photos via `discrepancy_id`, multi-type label fix, renamed to "Report"
+- `app/(app)/discrepancies/new/page.tsx` — Click-outside-to-close on type dropdown
+- `app/(app)/checks/page.tsx` — Removed duplicate Check History button
+- `app/(app)/inspections/page.tsx` — Location data passed to `halfDraftToItems` for map embedding
+- `app/(app)/inspections/[id]/page.tsx` — Photo lat/lon merged into items for PDF export
+- `app/(app)/settings/page.tsx` — Removed logo from About, kept version/env/website
+- `app/login/page.tsx` — glidepath2 logo + motto text
+- `lib/inspection-draft.ts` — `halfDraftToItems` accepts optional `itemLocations` parameter
+- `lib/reports/daily-ops-data.ts` — Map image fetching for checks with coordinates
+- `lib/supabase/activity-queries.ts` — Added `entity_id` to type and query
+- `middleware.ts` — Excluded image files from auth middleware
 
 ---
 

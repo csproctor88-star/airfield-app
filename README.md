@@ -2,7 +2,7 @@
 
 Mobile-first web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.5.0 | **Build:** Clean | **41 routes** | **130+ source files** | **48 migrations**
+**Version:** 2.6.0 | **Build:** Clean | **41 routes** | **130+ source files** | **48 migrations**
 
 ## Tech Stack
 
@@ -135,8 +135,11 @@ Admin-only module for managing users across installations. System admins see all
 - **Account lifecycle**: Deactivate/reactivate users, delete accounts (sys_admin only)
 - **Three-tier role hierarchy**: sys_admin > base_admin/AFM/NAMO > regular roles
 
+### Activity Log (`/activity`)
+Full audit trail with date-range filtering (Today, 7 Days, 30 Days, Custom). Entries grouped by date with color-coded action dots. Clickable items link to source entity (discrepancy, check, inspection). Excel export with styled formatting.
+
 ### More Menu (`/more`)
-Module directory linking to all features. Includes coming-soon placeholder page for Sync & Data.
+Module directory linking to all features. Profile section always expanded at top showing name, email, installation, and role. All modules visible as a flat list.
 
 ## Project Structure
 
