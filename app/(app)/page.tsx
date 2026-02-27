@@ -11,7 +11,6 @@ import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
 import { logActivity } from '@/lib/supabase/activity'
 import { fetchActivityLog } from '@/lib/supabase/activity-queries'
-import { ChevronDown } from 'lucide-react'
 import LoginActivityDialog from '@/components/login-activity-dialog'
 
 // --- Weather emoji mapping ---
@@ -28,15 +27,6 @@ function weatherEmoji(conditions: string): string {
   if (c.includes('partly cloudy')) return '⛅'
   if (c.includes('mostly clear')) return '🌤️'
   return '☀️'
-}
-
-// --- User presence helpers ---
-function presenceLabel(lastSeen: string | null): { label: string; color: string } {
-  if (!lastSeen) return { label: 'Offline', color: 'var(--color-text-3)' }
-  const diff = Date.now() - new Date(lastSeen).getTime()
-  if (diff < 15 * 60 * 1000) return { label: 'Online', color: 'var(--color-success)' }
-  if (diff < 60 * 60 * 1000) return { label: 'Away', color: 'var(--color-warning)' }
-  return { label: 'Inactive', color: 'var(--color-text-3)' }
 }
 
 // --- Quick Actions (KPI badges) ---
@@ -135,11 +125,10 @@ type CurrentStatusData = {
 export default function HomePage() {
   const router = useRouter()
   const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway } = useDashboard()
-  const { installationId, currentInstallation, allInstallations, switchInstallation, userRole, runways } = useInstallation()
+  const { installationId, runways } = useInstallation()
   const [time, setTime] = useState('')
   const [weather, setWeather] = useState<WeatherResult | null>(null)
   const [weatherLoaded, setWeatherLoaded] = useState(false)
-  const [userDisplay, setUserDisplay] = useState<{ name: string; lastSeen: string | null }>({ name: '—', lastSeen: null })
   const [navaids, setNavaids] = useState<NavaidStatus[]>([])
   const [navaidNotes, setNavaidNotes] = useState<Record<string, string>>({})
   const [activity, setActivity] = useState<ActivityEntry[]>([])
@@ -148,9 +137,6 @@ export default function HomePage() {
   })
   const [showRscTime, setShowRscTime] = useState(false)
   const [showBwcTime, setShowBwcTime] = useState(false)
-  const [showInstSwitcher, setShowInstSwitcher] = useState(false)
-  const canSwitchInstallation = allInstallations.length > 1
-    && (userRole === 'airfield_manager' || userRole === 'sys_admin')
   const [advisoryDialogOpen, setAdvisoryDialogOpen] = useState(false)
   const [advisoryDraftType, setAdvisoryDraftType] = useState<'INFO' | 'CAUTION' | 'WARNING'>('INFO')
   const [advisoryDraftText, setAdvisoryDraftText] = useState('')
@@ -161,38 +147,6 @@ export default function HomePage() {
     update()
     const t = setInterval(update, 1000)
     return () => clearInterval(t)
-  }, [])
-
-  // --- Load user profile + update last_seen_at ---
-  useEffect(() => {
-    async function loadUser() {
-      const supabase = createClient()
-      if (!supabase) return
-
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-
-        // Update last_seen_at
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any).from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', user.id)
-
-        // Fetch profile
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: profile } = await (supabase as any).from('profiles').select('name, rank, last_seen_at').eq('id', user.id).single()
-
-        if (profile) {
-          const displayName = profile.rank ? `${profile.rank} ${profile.name}` : profile.name
-          setUserDisplay({ name: displayName, lastSeen: profile.last_seen_at })
-        }
-      } catch {
-        // No auth — keep default
-      }
-    }
-    loadUser()
-    // Update presence every 5 min
-    const interval = setInterval(loadUser, 5 * 60 * 1000)
-    return () => clearInterval(interval)
   }, [])
 
   // --- Load weather ---
@@ -371,57 +325,12 @@ export default function HomePage() {
     logActivity('updated', 'navaid_status', navaid.id, navaid.navaid_name, { notes }, installationId)
   }
 
-  const presence = presenceLabel(userDisplay.lastSeen)
-
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
       <LoginActivityDialog />
-      {/* ===== Clock + Installation + User ===== */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+      {/* ===== Clock ===== */}
+      <div style={{ marginBottom: 10 }}>
         <span style={{ fontSize: 22, fontWeight: 800 }}>{time || '--:--'}</span>
-        <div style={{ textAlign: 'right', position: 'relative' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3, marginBottom: 1 }}>
-            <span style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em' }}>
-              {currentInstallation?.name ? `${currentInstallation.name.toUpperCase()}${currentInstallation.icao ? ` \u2022 ${currentInstallation.icao}` : ''}` : 'AIRFIELD OPS'}
-            </span>
-            {canSwitchInstallation && (
-              <button
-                onClick={() => setShowInstSwitcher(!showInstSwitcher)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
-              >
-                <ChevronDown size={10} color="var(--color-text-3)" />
-              </button>
-            )}
-          </div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)' }}>{userDisplay.name}</div>
-          <div style={{ fontSize: 10, color: presence.color, fontWeight: 600 }}>{presence.label}</div>
-          {showInstSwitcher && canSwitchInstallation && (
-            <div style={{
-              position: 'absolute', top: '100%', right: 0, zIndex: 100, marginTop: 4,
-              background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-mid)',
-              borderRadius: 8, overflow: 'hidden', minWidth: 200,
-            }}>
-              {allInstallations.map((inst) => (
-                <button
-                  key={inst.id}
-                  onClick={() => { switchInstallation(inst.id); setShowInstSwitcher(false) }}
-                  style={{
-                    display: 'block', width: '100%', padding: '10px 14px',
-                    background: inst.id === currentInstallation?.id ? 'rgba(56,189,248,0.08)' : 'transparent',
-                    border: 'none', borderBottom: '1px solid var(--color-border)',
-                    cursor: 'pointer', textAlign: 'left',
-                    color: inst.id === currentInstallation?.id ? 'var(--color-accent)' : 'var(--color-text-2)',
-                    fontSize: 13, fontWeight: inst.id === currentInstallation?.id ? 700 : 500,
-                    fontFamily: 'inherit',
-                  }}
-                >
-                  {inst.name}
-                  {inst.icao && <span style={{ fontSize: 10, marginLeft: 8, opacity: 0.6 }}>{inst.icao}</span>}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* ===== Weather Strip ===== */}
