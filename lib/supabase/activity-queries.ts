@@ -4,6 +4,7 @@ export type ActivityEntry = {
   id: string
   action: string
   entity_type: string
+  entity_id: string | null
   entity_display_id: string | null
   metadata: Record<string, unknown> | null
   created_at: string
@@ -25,7 +26,7 @@ export async function fetchActivityLog(options: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query = (supabase as any)
     .from('activity_log')
-    .select('id, action, entity_type, entity_display_id, metadata, created_at, user_id, profiles:user_id(name, rank)')
+    .select('id, action, entity_type, entity_id, entity_display_id, metadata, created_at, user_id, profiles:user_id(name, rank)')
     .order('created_at', { ascending: false })
     .limit(limit)
 

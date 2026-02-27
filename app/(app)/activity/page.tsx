@@ -34,6 +34,17 @@ function formatAction(action: string, entityType: string, displayId?: string): s
   return `${label} ${entity}${id}`
 }
 
+function getEntityLink(entityType: string, entityId: string | null): string | null {
+  if (!entityId) return null
+  switch (entityType) {
+    case 'discrepancy': return `/discrepancies/${entityId}`
+    case 'check': return `/checks/${entityId}`
+    case 'inspection': return `/inspections/${entityId}`
+    case 'obstruction_evaluation': return `/obstructions`
+    default: return null
+  }
+}
+
 const STATUS_HEX: Record<string, string> = {
   green: '#34D399',
   yellow: '#FBBF24',
@@ -255,15 +266,18 @@ export default function ActivityPage() {
                   const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
                   const navaidNoteText = a.entity_type === 'navaid_status' && a.metadata?.notes ? String(a.metadata.notes) : null
                   const navaidStatusVal = a.entity_type === 'navaid_status' && a.metadata?.status ? String(a.metadata.status) : null
+                  const link = getEntityLink(a.entity_type, a.entity_id)
 
                   return (
                     <div
                       key={a.id}
+                      onClick={link ? () => router.push(link) : undefined}
                       style={{
                         display: 'flex',
                         gap: 8,
                         padding: '8px 0',
                         borderBottom: i < arr.length - 1 ? '1px solid var(--color-border)' : 'none',
+                        cursor: link ? 'pointer' : 'default',
                       }}
                     >
                       <div
@@ -282,8 +296,11 @@ export default function ActivityPage() {
                           </span>
                           <span style={{ fontSize: 10, color: 'var(--color-text-3)' }}>{timeStr}</span>
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--color-text-2)' }}>
+                        <div style={{ fontSize: 11, color: link ? 'var(--color-cyan)' : 'var(--color-text-2)' }}>
                           {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined)}
+                          {link && (
+                            <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.6 }}>→</span>
+                          )}
                           {navaidStatusVal && (
                             <span style={{ marginLeft: 6, width: 8, height: 8, borderRadius: '50%', display: 'inline-block', background: STATUS_HEX[navaidStatusVal] || '#64748B' }} />
                           )}
