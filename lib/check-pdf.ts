@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import { CHECK_TYPE_CONFIG } from '@/lib/constants'
 import type { CheckCommentRow } from '@/lib/supabase/checks'
+import { fetchMapImageDataUrl } from '@/lib/utils'
 
 interface CheckPdfInput {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -239,23 +240,11 @@ export async function generateCheckPdf(input: CheckPdfInput) {
     y += 5
 
     // Embed static satellite map image
-    const mapToken = typeof window !== 'undefined' ? process.env.NEXT_PUBLIC_MAPBOX_TOKEN : null
-    if (mapToken && mapToken !== 'your-mapbox-token-here') {
+    const mapDataUrl = await fetchMapImageDataUrl(lat, lng)
+    if (mapDataUrl) {
       try {
-        const mapUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${lng},${lat})/${lng},${lat},16,0/600x300@2x?access_token=${mapToken}`
-        const res = await fetch(mapUrl)
-        if (res.ok) {
-          const blob = await res.blob()
-          const dataUrl = await new Promise<string>((resolve) => {
-            const reader = new FileReader()
-            reader.onloadend = () => resolve(reader.result as string)
-            reader.readAsDataURL(blob)
-          })
-          doc.addImage(dataUrl, 'PNG', margin, y, 80, 40)
-          y += 44
-        } else {
-          y += 4
-        }
+        doc.addImage(mapDataUrl, 'PNG', margin, y, 80, 40)
+        y += 44
       } catch {
         y += 4
       }

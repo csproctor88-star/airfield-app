@@ -57,3 +57,24 @@ export function isMapboxConfigured(): boolean {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   return !!(token && token !== 'your-mapbox-token-here')
 }
+
+/** Fetch a Mapbox static satellite map as a data URL for PDF embedding.
+ *  Returns null if Mapbox is not configured or fetch fails. */
+export async function fetchMapImageDataUrl(lat: number, lng: number): Promise<string | null> {
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+  if (!token || token === 'your-mapbox-token-here') return null
+  try {
+    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${lng},${lat})/${lng},${lat},16,0/600x300@2x?access_token=${token}`
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const blob = await res.blob()
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return null
+  }
+}

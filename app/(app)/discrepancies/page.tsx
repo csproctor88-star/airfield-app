@@ -8,6 +8,7 @@ import { DEMO_DISCREPANCIES } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
+import { fetchMapImageDataUrl } from '@/lib/utils'
 
 const FILTERS = ['open', 'completed', 'cancelled', 'all'] as const
 const FILTER_LABELS: Record<string, string> = {
@@ -373,6 +374,59 @@ export default function DiscrepanciesPage() {
         }
       },
     })
+
+    // ── Location Maps Section ──
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const discWithCoords = filtered.filter(d => (d as any).latitude != null && (d as any).longitude != null)
+    if (discWithCoords.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const finalY = (doc as any).lastAutoTable?.finalY || y + 10
+      let mapY = finalY + 8
+
+      const checkMapPageBreak = (needed: number) => {
+        if (mapY + needed > pageHeight - 20) {
+          doc.addPage()
+          mapY = margin
+        }
+      }
+
+      checkMapPageBreak(10)
+      doc.setFontSize(11)
+      doc.setTextColor(0)
+      doc.setFont('helvetica', 'bold')
+      doc.text('LOCATION MAPS', margin, mapY)
+      mapY += 6
+
+      for (const d of discWithCoords) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const lat = Number((d as any).latitude)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const lng = Number((d as any).longitude)
+        checkMapPageBreak(52)
+
+        doc.setFontSize(8)
+        doc.setTextColor(0)
+        doc.setFont('helvetica', 'bold')
+        doc.text(`${d.display_id} — ${d.title}`, margin, mapY)
+        mapY += 4
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(7)
+        doc.setTextColor(80)
+        doc.text(`Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}`, margin, mapY)
+        mapY += 4
+
+        const mapDataUrl = await fetchMapImageDataUrl(lat, lng)
+        if (mapDataUrl) {
+          try {
+            doc.addImage(mapDataUrl, 'PNG', margin, mapY, 80, 40)
+            mapY += 44
+          } catch {
+            mapY += 2
+          }
+        }
+        mapY += 4
+      }
+    }
 
     // Footer — page numbers
     const totalPages = doc.getNumberOfPages()

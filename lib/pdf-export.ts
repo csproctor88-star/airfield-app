@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import type { InspectionItem } from '@/lib/supabase/types'
+import { fetchMapImageDataUrl } from '@/lib/utils'
 
 /** Convert a blob to a data URL for embedding in PDF */
 async function blobToDataUrl(blob: Blob): Promise<string> {
@@ -241,6 +242,25 @@ export async function generateInspectionPdf(inspection: InspectionData, baseInfo
         y += noteLines.length * 3.5
       }
 
+      // Location map for failed items
+      if (item.response === 'fail' && item.location) {
+        const loc = item.location as { lat: number; lon: number }
+        checkPageBreak(48)
+        doc.setFontSize(7)
+        doc.setTextColor(100)
+        doc.text(`Location: ${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`, margin + 4, y)
+        y += 3.5
+        const mapDataUrl = await fetchMapImageDataUrl(loc.lat, loc.lon)
+        if (mapDataUrl) {
+          try {
+            doc.addImage(mapDataUrl, 'PNG', margin + 4, y, 60, 30)
+            y += 34
+          } catch {
+            y += 2
+          }
+        }
+      }
+
       // Embedded photos for failed items
       if (item.response === 'fail' && photoMap && photoMap[item.id]?.length > 0) {
         for (const dataUrl of photoMap[item.id]) {
@@ -302,14 +322,14 @@ export async function generateInspectionPdf(inspection: InspectionData, baseInfo
  * Render a single inspection's sections into an existing jsPDF document.
  * Returns the updated y position.
  */
-function renderInspectionSections(
+async function renderInspectionSections(
   doc: jsPDF,
   inspection: InspectionData,
   startY: number,
   margin: number,
   contentWidth: number,
   photoMap?: PdfPhotoMap,
-): number {
+): Promise<number> {
   let y = startY
 
   const checkPageBreak = (needed: number) => {
@@ -374,6 +394,25 @@ function renderInspectionSections(
         const noteLines = doc.splitTextToSize(`Note: ${item.notes}`, contentWidth - 10)
         doc.text(noteLines, margin + 4, y)
         y += noteLines.length * 3.5
+      }
+
+      // Location map for failed items
+      if (item.response === 'fail' && item.location) {
+        const loc = item.location as { lat: number; lon: number }
+        checkPageBreak(48)
+        doc.setFontSize(7)
+        doc.setTextColor(100)
+        doc.text(`Location: ${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`, margin + 4, y)
+        y += 3.5
+        const mapDataUrl = await fetchMapImageDataUrl(loc.lat, loc.lon)
+        if (mapDataUrl) {
+          try {
+            doc.addImage(mapDataUrl, 'PNG', margin + 4, y, 60, 30)
+            y += 34
+          } catch {
+            y += 2
+          }
+        }
       }
 
       // Embedded photos for failed items
@@ -622,7 +661,7 @@ export async function generateCombinedInspectionPdf(inspections: InspectionData[
     doc.text(`Completed by: ${inspCompletedBy}${inspCompletedTime ? ` @ ${inspCompletedTime}` : ''}`, margin, y)
     y += 5
 
-    y = renderInspectionSections(doc, insp, y, margin, contentWidth, photoMap)
+    y = await renderInspectionSections(doc, insp, y, margin, contentWidth, photoMap)
 
     y += 4
   }
