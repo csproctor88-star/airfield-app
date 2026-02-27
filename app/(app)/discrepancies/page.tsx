@@ -106,8 +106,11 @@ export default function DiscrepanciesPage() {
   // --- Export helpers ---
 
   const getTypeLabel = (typeVal: string) => {
-    const t = DISCREPANCY_TYPES.find(dt => dt.value === typeVal)
-    return t ? t.label : typeVal
+    // Handle multiple types stored as comma-separated values
+    return typeVal.split(',').map(v => {
+      const t = DISCREPANCY_TYPES.find(dt => dt.value === v.trim())
+      return t ? t.label : v.trim()
+    }).join(', ')
   }
 
   const getCurrentStatusLabel = (cs: string) => {
