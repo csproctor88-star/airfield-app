@@ -72,12 +72,12 @@ export function Header() {
         top: 0,
         zIndex: 50,
         display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
+        flexDirection: 'column',
+        alignItems: 'center',
       }}
     >
-      {/* Logo — left-aligned, slightly smaller */}
-      <Link href="/" style={{ textDecoration: 'none', flexShrink: 0, alignSelf: 'flex-start' }}>
+      {/* Logo — centered */}
+      <Link href="/" style={{ textDecoration: 'none' }}>
         <img
           src={resolvedTheme === 'dark' ? '/glidepathdarkmode3.png' : '/glidepath2.png'}
           alt="Glidepath"
@@ -89,58 +89,60 @@ export function Header() {
         />
       </Link>
 
-      {/* Installation + User info — right-aligned, vertically centered */}
-      <div style={{ textAlign: 'right', position: 'relative', alignSelf: 'center' }}>
-        {/* Line 1: Installation name + ICAO + chevron */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3, marginBottom: 1 }}>
-          <span style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em' }}>
-            {currentInstallation?.name
-              ? `${currentInstallation.name.toUpperCase()}${currentInstallation.icao ? ` \u2022 ${currentInstallation.icao}` : ''}`
-              : 'AIRFIELD OPS'}
-          </span>
-          {canSwitchInstallation && (
-            <button
-              onClick={() => setShowInstSwitcher(!showInstSwitcher)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
-            >
-              <ChevronDown size={10} color="var(--color-text-3)" />
-            </button>
+      {/* Bottom row: installation (left) + user (right) */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%', marginTop: 6 }}>
+        {/* Installation name + ICAO + dropdown — bottom left */}
+        <div style={{ position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <span style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em' }}>
+              {currentInstallation?.name
+                ? `${currentInstallation.name.toUpperCase()}${currentInstallation.icao ? ` \u2022 ${currentInstallation.icao}` : ''}`
+                : 'AIRFIELD OPS'}
+            </span>
+            {canSwitchInstallation && (
+              <button
+                onClick={() => setShowInstSwitcher(!showInstSwitcher)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+              >
+                <ChevronDown size={10} color="var(--color-text-3)" />
+              </button>
+            )}
+          </div>
+
+          {/* Installation switcher dropdown */}
+          {showInstSwitcher && canSwitchInstallation && (
+            <div style={{
+              position: 'absolute', top: '100%', left: 0, zIndex: 100, marginTop: 4,
+              background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-mid)',
+              borderRadius: 8, overflow: 'hidden', minWidth: 200,
+            }}>
+              {allInstallations.map((inst) => (
+                <button
+                  key={inst.id}
+                  onClick={() => { switchInstallation(inst.id); setShowInstSwitcher(false) }}
+                  style={{
+                    display: 'block', width: '100%', padding: '10px 14px',
+                    background: inst.id === currentInstallation?.id ? 'rgba(56,189,248,0.08)' : 'transparent',
+                    border: 'none', borderBottom: '1px solid var(--color-border)',
+                    cursor: 'pointer', textAlign: 'left',
+                    color: inst.id === currentInstallation?.id ? 'var(--color-accent)' : 'var(--color-text-2)',
+                    fontSize: 13, fontWeight: inst.id === currentInstallation?.id ? 700 : 500,
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  {inst.name}
+                  {inst.icao && <span style={{ fontSize: 10, marginLeft: 8, opacity: 0.6 }}>{inst.icao}</span>}
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
-        {/* Line 2: User rank + name */}
-        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)' }}>{userDisplay.name}</div>
-
-        {/* Line 3: Presence status */}
-        <div style={{ fontSize: 10, color: presence.color, fontWeight: 600 }}>{presence.label}</div>
-
-        {/* Installation switcher dropdown */}
-        {showInstSwitcher && canSwitchInstallation && (
-          <div style={{
-            position: 'absolute', top: '100%', right: 0, zIndex: 100, marginTop: 4,
-            background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-mid)',
-            borderRadius: 8, overflow: 'hidden', minWidth: 200,
-          }}>
-            {allInstallations.map((inst) => (
-              <button
-                key={inst.id}
-                onClick={() => { switchInstallation(inst.id); setShowInstSwitcher(false) }}
-                style={{
-                  display: 'block', width: '100%', padding: '10px 14px',
-                  background: inst.id === currentInstallation?.id ? 'rgba(56,189,248,0.08)' : 'transparent',
-                  border: 'none', borderBottom: '1px solid var(--color-border)',
-                  cursor: 'pointer', textAlign: 'left',
-                  color: inst.id === currentInstallation?.id ? 'var(--color-accent)' : 'var(--color-text-2)',
-                  fontSize: 13, fontWeight: inst.id === currentInstallation?.id ? 700 : 500,
-                  fontFamily: 'inherit',
-                }}
-              >
-                {inst.name}
-                {inst.icao && <span style={{ fontSize: 10, marginLeft: 8, opacity: 0.6 }}>{inst.icao}</span>}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* User name + presence — bottom right */}
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)' }}>{userDisplay.name}</div>
+          <div style={{ fontSize: 10, color: presence.color, fontWeight: 600 }}>{presence.label}</div>
+        </div>
       </div>
     </div>
   )

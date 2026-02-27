@@ -126,7 +126,6 @@ export default function HomePage() {
   const router = useRouter()
   const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway } = useDashboard()
   const { installationId, runways } = useInstallation()
-  const [time, setTime] = useState('')
   const [weather, setWeather] = useState<WeatherResult | null>(null)
   const [weatherLoaded, setWeatherLoaded] = useState(false)
   const [navaids, setNavaids] = useState<NavaidStatus[]>([])
@@ -140,14 +139,6 @@ export default function HomePage() {
   const [advisoryDialogOpen, setAdvisoryDialogOpen] = useState(false)
   const [advisoryDraftType, setAdvisoryDraftType] = useState<'INFO' | 'CAUTION' | 'WARNING'>('INFO')
   const [advisoryDraftText, setAdvisoryDraftText] = useState('')
-
-  // --- Clock ---
-  useEffect(() => {
-    const update = () => setTime(new Date().toTimeString().slice(0, 5))
-    update()
-    const t = setInterval(update, 1000)
-    return () => clearInterval(t)
-  }, [])
 
   // --- Load weather ---
   useEffect(() => {
@@ -328,10 +319,6 @@ export default function HomePage() {
   return (
     <div style={{ padding: 16, paddingBottom: 100 }}>
       <LoginActivityDialog />
-      {/* ===== Clock ===== */}
-      <div style={{ marginBottom: 10 }}>
-        <span style={{ fontSize: 22, fontWeight: 800 }}>{time || '--:--'}</span>
-      </div>
 
       {/* ===== Weather Strip ===== */}
       <div
