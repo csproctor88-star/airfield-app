@@ -11,11 +11,75 @@ All notable changes to the Airfield OPS Management Suite.
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
 - Sync & Data module (offline queue, export, import)
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate ~134 `as any` casts
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate ~184 `as any` casts
 - Convert PDFLibrary.jsx to TypeScript (.tsx)
-- Remove ~41MB unused `public/aircraft_images/` directory
-- Consolidate dark mode logo variants (3 files, 4.6MB)
 - Add database-level role enforcement for `read_only` and other non-admin roles (currently app-layer only)
+
+---
+
+## [2.9.0] — 2026-02-28
+
+### Activity Log Overhaul, Header Consolidation & Login UX
+
+Major enhancements to the activity log with manual entry support and full CRUD, header consolidation replacing the InfoBar component, user presence tracking, and login quality-of-life improvements.
+
+#### Activity Log
+- **Manual text entries** — Free-text notes for events not captured by the system. Input bar with "Add" button above the activity table. Inserts with `action: 'noted'`, `entity_type: 'manual'`
+- **Edit/delete entries** — Modal dialog with Date, Time (Zulu), and Notes fields. Delete button in modal with confirmation. RLS policies added for update/delete operations
+- **Columnar table display** — Time (Z), User, Action, Details columns grouped by date header rows, replacing the previous card-based layout
+- **Column search filters** — Per-column text filters in table headers for narrowing results
+- **Editable Zulu time** — Time displayed and editable in UTC (HH:MM Z format)
+- **Enriched entity details** — Action and details show full context in both UI and Excel export
+- **Proper action labels** — `manual: 'Manual Entry'`, `noted: 'Logged'`, `airfield_status: 'Runway'` across activity log, dashboard, and login dialog
+
+#### Header Consolidation
+- **InfoBar merged into header** — Installation name+ICAO (left) and user name+status (right) now live in the header. `InfoBar` component removed from layout
+- **Installation switcher** — Dropdown in header for users with access to multiple installations (ChevronDown icon, dark-themed menu)
+- **User presence tracking** — Online/Away/Inactive status based on `last_seen_at` with 5-minute polling interval
+- **Styling refinements** — Reduced installation text size (`fs-sm`), compact dropdown padding, removed role badge, theme-aware username color (`var(--color-text-1)`)
+
+#### Login Improvements
+- **Remember me** — Checkbox on login page saves email to localStorage for next session
+- **Login notification dialog** — Restructured from dot+card format to columnar table (Time Z, User, Action, Details) with date group headers. Proper capitalization for all action/entity labels. Fetches `metadata` for Details column
+
+#### User Management
+- **User deletion cascade** — Nullifies all FK references (12 columns across 10 tables) before deleting profile and auth record, preserving historical data
+- **ON DELETE SET NULL migration** — `2026022802_user_delete_set_null.sql` drops NOT NULL constraints and adds ON DELETE SET NULL to all profile FK columns
+- **Installation dropdown for all admins** — Invite user modal now shows full installation list for base_admin/AFM/NAMO, not just sys_admin
+
+#### Reports & Dashboard
+- **KPI badges** — Responsive badge grid across all report pages (daily, aging, trends, open discrepancies) with centered alignment
+- **Clickable discrepancies** — Aging report discrepancies link to detail pages
+- **Dashboard formatAction** — Added missing labels for manual entries, runway status, and noted actions
+- **Navaid status styling** — Reduced from bold white (`fs-xl/700`) to muted (`fs-base/500/color-text-2`)
+
+#### Responsive Fixes
+- Collapsible sidebar behavior on iPad
+- KPI badge overflow prevention
+- Aircraft card layout wrapping fix
+
+#### Migrations Added
+- `2026022801_activity_log_update_delete_policies.sql` — RLS policies for activity log edit/delete
+- `2026022802_user_delete_set_null.sql` — ON DELETE SET NULL for all profile FK columns
+
+#### Files Changed (25+)
+- `app/(app)/activity/page.tsx` — Manual entry, edit modal, columnar display, column filters
+- `app/(app)/page.tsx` — Dashboard formatAction, navaid styling, KPI badges
+- `app/(app)/layout.tsx` — Removed InfoBar
+- `app/login/page.tsx` — Remember me checkbox
+- `components/layout/header.tsx` — Installation switcher, presence tracking, styling
+- `components/login-activity-dialog.tsx` — Columnar table, proper labels, metadata
+- `components/admin/invite-user-modal.tsx` — Installation dropdown for all admins
+- `lib/supabase/activity.ts` — logManualEntry, updateActivityEntry, deleteActivityEntry
+- `app/api/admin/users/[id]/route.ts` — FK nullification before user deletion
+- `app/(app)/reports/aging/page.tsx` — KPI badges, clickable discrepancies
+- `app/(app)/reports/daily/page.tsx` — KPI badges
+- `app/(app)/reports/discrepancies/page.tsx` — KPI badges
+- `app/(app)/reports/trends/page.tsx` — KPI badges
+- Multiple other pages — responsive fixes, font adjustments
+
+#### Version Sync
+- Updated version to 2.9.0 in package.json, login/page.tsx, settings/page.tsx
 
 ---
 

@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.8.0 | **Build:** Clean | **41 routes** | **130+ source files** | **49 migrations**
+**Version:** 2.9.0 | **Build:** Clean | **48 routes** | **130+ source files** | **56 migrations**
 
 ## Tech Stack
 
@@ -52,7 +52,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 Apply the schema and migrations to a Supabase project:
 
 1. Run `supabase/schema.sql` to create the base tables and sequences
-2. Apply the 49 migrations in order from `supabase/migrations/`
+2. Apply the 56 migrations in order from `supabase/migrations/`
 
 See [BASE-ONBOARDING.md](./BASE-ONBOARDING.md) for adding new installations.
 
@@ -76,7 +76,7 @@ Key responsive features:
 ## Modules
 
 ### Dashboard (`/`)
-Real-time operational hub. Live clock, Open-Meteo weather with conditions/wind/visibility, advisory system (INFO/CAUTION/WARNING), Active Runway toggle with Open/Suspended/Closed status (color-coded card, persisted to DB with audit log), Current Status panel (RSC, BWC, Last Check), side-by-side NAVAID status panels with G/Y/R toggles and notes, quick actions (Begin Inspection, Begin Check, New Discrepancy), user presence tracking, and expandable activity feed.
+Real-time operational hub. Live clock, Open-Meteo weather with conditions/wind/visibility, advisory system (INFO/CAUTION/WARNING), Active Runway toggle with Open/Suspended/Closed status (color-coded card, persisted to DB with audit log), Current Status panel (RSC, BWC, Last Check), side-by-side NAVAID status panels with G/Y/R toggles and notes, quick actions (Begin Inspection, Begin Check, New Discrepancy), user presence tracking (Online/Away/Inactive), installation switcher in header for multi-base users, and expandable activity feed with enriched action labels.
 
 ### Discrepancies (`/discrepancies`)
 Track and resolve airfield issues. 11 discrepancy types (FOD, pavement, lighting, markings, signage, drainage, vegetation, wildlife, equipment, security, other). Full lifecycle: Open → Submitted to AFM → Submitted to CES → Work Completed → Closed/Cancelled. Photo uploads, Mapbox location pinning, notes history with timestamps, work order tracking, linked NOTAMs.
@@ -154,7 +154,7 @@ Admin-only module for managing users across installations. System admins see all
 - **Three-tier role hierarchy**: sys_admin > base_admin/AFM/NAMO > regular roles
 
 ### Activity Log (`/activity`)
-Full audit trail with date-range filtering (Today, 7 Days, 30 Days, Custom). Entries grouped by date with color-coded action dots. Clickable items link to source entity (discrepancy, check, inspection). Excel export with styled formatting.
+Full audit trail with date-range filtering (Today, 7 Days, 30 Days, Custom). Columnar table display (Time Z, User, Action, Details) grouped by date headers with per-column search filters. Manual text entry for events not captured by the system. Edit/delete entries via modal dialog with Zulu time editing. Clickable items link to source entity (discrepancy, check, inspection). Excel export with styled formatting.
 
 ### More Menu (`/more`)
 Module directory linking to all features. All modules visible as a flat list with role-gated visibility (admin-only modules hidden for non-admin users).
@@ -172,7 +172,7 @@ airfield-app/
 │   ├── reset-password/page.tsx          # Password reset form
 │   ├── setup-account/page.tsx           # Invited user account setup
 │   └── (app)/                            # Authenticated app shell
-│       ├── layout.tsx                    # Header + InfoBar + sidebar + bottom nav
+│       ├── layout.tsx                    # Header + sidebar + bottom nav
 │       ├── page.tsx                      # Dashboard
 │       ├── checks/                       # Check form, history, detail
 │       ├── discrepancies/                # List, create, detail
@@ -191,16 +191,16 @@ airfield-app/
 │       └── users/page.tsx                # User Management (admin)
 ├── components/
 │   ├── admin/                            # User management components (9 files)
-│   ├── layout/                           # Header, InfoBar, sidebar, bottom-nav, page-header
+│   ├── layout/                           # Header (with installation switcher + presence), sidebar, bottom-nav
 │   ├── discrepancies/                    # Cards, location map, modals
 │   ├── obstructions/                     # Airfield map with surface overlays
 │   ├── ui/                               # Badge, button, card, input, skeleton, photo-picker
 │   ├── RegulationPDFViewer.tsx          # In-app PDF viewer with zoom/touch
-│   └── PDFLibrary.jsx                   # Admin PDF library component
+│   ├── login-activity-dialog.tsx         # Login notification with activity table
+│   └── PDFLibrary.jsx                   # Admin PDF library component (needs TSX conversion)
 ├── lib/
 │   ├── constants.ts                      # Checklists, types, regulation categories
 │   ├── aircraft-data.ts                 # 1,000+ aircraft reference entries
-│   ├── validators.ts                     # Zod schemas for all forms
 │   ├── utils.ts                          # Helpers (formatters, config checks)
 │   ├── demo-data.ts                      # Offline mock data
 │   ├── weather.ts                        # Open-Meteo weather fetching
@@ -272,20 +272,17 @@ airfield-app/
 
 | Item | Priority | Notes |
 |------|----------|-------|
-| `~134 as any` casts | Medium | Regenerate Supabase types to eliminate |
-| `PDFLibrary.jsx` | Low | Convert to TypeScript (.tsx) |
-| `public/aircraft_images/` (~41MB) | Low | Consider moving to Supabase Storage or CDN |
-| `sidebar-context.tsx` unused hooks | Low | `useSidebar()` hook is never called; provider wraps app but toggle/close methods unused since sidebar became permanent |
-| `page-header.tsx` orphaned | Low | Component defined but never imported anywhere |
-| Weather API stub | Medium | `/api/weather` returns placeholder; Open-Meteo used client-side |
-| RLS enforcement | High | Currently app-layer only for most tables |
+| RLS enforcement | High | Currently app-layer only for most tables (except storage.objects, activity_log) |
 | No test suite | High | No unit or integration tests |
+| ~184 `as any` casts | Medium | Regenerate Supabase types (`supabase gen types typescript`) to eliminate |
+| Weather API stub | Medium | `/api/weather` returns placeholder; Open-Meteo used client-side |
+| `PDFLibrary.jsx` | Low | Only JSX file — convert to TypeScript (.tsx) |
 
 ## Current Status
 
 **Build**: TypeScript compiles clean (`tsc --noEmit` passes with zero errors)
 
-**Complete modules**: Dashboard, Discrepancies, Airfield Checks, Daily Inspections, NOTAMs (live FAA feed), Obstruction Evaluations, References (with My Documents), Reports (4 types), Aircraft Database, Waivers (full lifecycle with annual review, PDF/Excel export), Settings (with Base Setup and Templates), User Management, Activity Log, More hub
+**Complete modules**: Dashboard (with installation switcher + presence tracking), Discrepancies, Airfield Checks, Daily Inspections, NOTAMs (live FAA feed), Obstruction Evaluations, References (with My Documents), Reports (4 types with KPI badges), Aircraft Database, Waivers (full lifecycle with annual review, PDF/Excel export), Settings (with Base Setup and Templates), User Management (with delete cascade), Activity Log (manual entries, edit/delete, columnar display), More hub
 
 **Placeholder modules**: Sync & Data
 

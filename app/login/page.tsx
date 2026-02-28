@@ -579,7 +579,7 @@ export default function LoginPage() {
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: 24 }}>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-4)' }}>
-            Glidepath v2.6
+            Glidepath v2.9
           </div>
         </div>
       </div>
