@@ -244,6 +244,30 @@ html, body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   Scalable Element Classes — Base sizes (mobile-first)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Action button — base sizing (scaled up at tablet/desktop via media queries) */
+.action-button {
+  font-size: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  min-height: 44px;
+}
+
+/* Badge pill — base sizing */
+.badge-pill {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  line-height: 16px;
+  display: inline-block;
+}
+
+/* ═══════════════════════════════════════════════════════════════
    Responsive Utility Classes — Per-Page Content
    ═══════════════════════════════════════════════════════════════ */
 
@@ -409,6 +433,37 @@ html, body {
     display: none !important;
   }
 
+  /* ── Element scaling ── */
+  .card {
+    padding: 18px;
+    border-radius: 12px;
+  }
+  .section-label {
+    font-size: 11px;
+    margin-bottom: 10px;
+  }
+  .input-dark {
+    padding: 10px 14px;
+    font-size: 14px;
+    border-radius: 8px;
+  }
+  .btn-primary {
+    padding: 14px;
+    font-size: 15px;
+    border-radius: 10px;
+  }
+  .action-button {
+    font-size: 13px;
+    padding: 12px;
+    border-radius: 10px;
+    min-height: 48px;
+  }
+  .badge-pill {
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 5px;
+  }
+
   /* ── Responsive utility overrides ── */
   .page-container {
     padding: 24px;
@@ -470,7 +525,38 @@ html, body {
 /* ── Desktop (1024px+) ── */
 @media (min-width: 1024px) {
   .app-content {
-    max-width: 960px;
+    max-width: 1000px;
+  }
+
+  /* ── Element scaling ── */
+  .card {
+    padding: 22px;
+    border-radius: 14px;
+  }
+  .section-label {
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+  .input-dark {
+    padding: 12px 16px;
+    font-size: 15px;
+    border-radius: 10px;
+  }
+  .btn-primary {
+    padding: 16px;
+    font-size: 16px;
+    border-radius: 12px;
+  }
+  .action-button {
+    font-size: 14px;
+    padding: 14px;
+    border-radius: 12px;
+    min-height: 52px;
+  }
+  .badge-pill {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 6px;
   }
 
   .page-container {
@@ -512,7 +598,7 @@ html, body {
 /* ── Large desktop (1280px+) ── */
 @media (min-width: 1280px) {
   .app-content {
-    max-width: 1100px;
+    max-width: 1200px;
   }
 }
 

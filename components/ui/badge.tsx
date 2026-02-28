@@ -12,17 +12,10 @@ interface BadgeProps {
 export function Badge({ label, color, bg }: BadgeProps) {
   return (
     <span
+      className="badge-pill"
       style={{
         background: bg || `${color}1A`,
         color,
-        padding: '2px 7px',
-        borderRadius: 4,
-        fontSize: 10,
-        fontWeight: 700,
-        letterSpacing: '0.04em',
-        whiteSpace: 'nowrap',
-        lineHeight: '16px',
-        display: 'inline-block',
       }}
     >
       {label}

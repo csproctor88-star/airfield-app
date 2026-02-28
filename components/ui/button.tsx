@@ -14,17 +14,14 @@ export const ActionButton = forwardRef<HTMLButtonElement, ActionButtonProps>(
     return (
       <button
         ref={ref}
+        className="action-button"
         style={{
           background: `${color}14`,
           border: `1px solid ${color}33`,
-          borderRadius: 8,
-          padding: '10px',
           color,
-          fontSize: 12,
           fontWeight: 600,
           cursor: 'pointer',
           fontFamily: 'inherit',
-          minHeight: 44,
           ...style,
         }}
         {...props}
