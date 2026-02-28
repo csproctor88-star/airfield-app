@@ -437,8 +437,9 @@ html, body {
 
 /* Badge grid — auto-fill responsive */
 .badge-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
 }
 

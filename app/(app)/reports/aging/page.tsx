@@ -88,19 +88,19 @@ export default function AgingDiscrepanciesPage() {
       </div>
 
       {/* KPI Row */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <div className="kpi-badge" style={{ flex: 1 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
+        <div className="kpi-badge" style={{ flex: '1 1 0', maxWidth: 200 }}>
           <div className="kpi-value" style={{ color: 'var(--color-text-1)' }}>{summary.total}</div>
           <div className="kpi-label">Total Open</div>
         </div>
         {summary.avgDaysOpen !== null && (
-          <div className="kpi-badge" style={{ flex: 1 }}>
+          <div className="kpi-badge" style={{ flex: '1 1 0', maxWidth: 200 }}>
             <div className="kpi-value" style={{ color: 'var(--color-warning)' }}>{summary.avgDaysOpen}</div>
             <div className="kpi-label">Avg Days</div>
           </div>
         )}
         {summary.oldest && (
-          <div className="kpi-badge" style={{ flex: 1 }}>
+          <div className="kpi-badge" style={{ flex: '1 1 0', maxWidth: 200 }}>
             <div className="kpi-value" style={{ color: 'var(--color-danger)' }}>{summary.oldest.days_open}</div>
             <div className="kpi-label">Oldest</div>
           </div>

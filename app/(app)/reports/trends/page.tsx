@@ -132,23 +132,23 @@ export default function DiscrepancyTrendsPage() {
       </div>
 
       {/* KPI Row */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <div className="kpi-badge" style={{ flex: 1 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
+        <div className="kpi-badge" style={{ flex: '1 1 0', maxWidth: 200 }}>
           <div className="kpi-value" style={{ color: '#EF4444' }}>{summary.totalOpened}</div>
           <div className="kpi-label">Opened</div>
         </div>
-        <div className="kpi-badge" style={{ flex: 1 }}>
+        <div className="kpi-badge" style={{ flex: '1 1 0', maxWidth: 200 }}>
           <div className="kpi-value" style={{ color: '#22C55E' }}>{summary.totalClosed}</div>
           <div className="kpi-label">Closed</div>
         </div>
-        <div className="kpi-badge" style={{ flex: 1 }}>
+        <div className="kpi-badge" style={{ flex: '1 1 0', maxWidth: 200 }}>
           <div className="kpi-value" style={{ color: summary.net > 0 ? '#EF4444' : summary.net < 0 ? '#22C55E' : '#94A3B8' }}>
             {summary.net >= 0 ? '+' : ''}{summary.net}
           </div>
           <div className="kpi-label">Net</div>
         </div>
         {summary.avgDaysToClose !== null && (
-          <div className="kpi-badge" style={{ flex: 1 }}>
+          <div className="kpi-badge" style={{ flex: '1 1 0', maxWidth: 200 }}>
             <div className="kpi-value" style={{ color: 'var(--color-purple)' }}>{summary.avgDaysToClose}</div>
             <div className="kpi-label">Avg Days</div>
           </div>
