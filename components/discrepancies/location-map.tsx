@@ -19,6 +19,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
   const map = useRef<mapboxgl.Map | null>(null)
   const marker = useRef<mapboxgl.Marker | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const { runways } = useInstallation()
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
@@ -139,18 +140,49 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
     )
   }
 
+  const handleToggleExpand = useCallback(() => {
+    setExpanded(prev => !prev)
+    // Resize map after the container height changes
+    setTimeout(() => { map.current?.resize() }, 50)
+  }, [])
+
   return (
     <div style={{ position: 'relative' }}>
       <div
         ref={mapContainer}
         style={{
           width: '100%',
-          height: 280,
+          height: expanded ? 'var(--map-height-expanded)' : 'var(--map-height)',
           borderRadius: 10,
           overflow: 'hidden',
           border: '1px solid var(--color-border-mid)',
+          transition: 'height 0.3s ease',
         }}
       />
+      {/* Expand / Collapse toggle */}
+      {mapLoaded && (
+        <button
+          onClick={handleToggleExpand}
+          style={{
+            position: 'absolute',
+            top: 8,
+            right: 48,
+            background: 'rgba(4, 7, 12, 0.88)',
+            border: '1px solid rgba(148, 163, 184, 0.2)',
+            borderRadius: 6,
+            padding: '4px 10px',
+            fontSize: 'var(--fs-sm)',
+            color: '#94A3B8',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+          }}
+        >
+          {expanded ? '⊖ Collapse' : '⊕ Expand'}
+        </button>
+      )}
       {!selectedLat && mapLoaded && (
         <div
           style={{
