@@ -67,7 +67,7 @@ export function Header() {
           ? 'linear-gradient(180deg, var(--color-bg-header-start), var(--color-bg-header-end))'
           : '#ffffff',
         borderBottom: resolvedTheme === 'dark' ? 'none' : '2px solid var(--color-header-border)',
-        padding: 'var(--header-padding)',
+        padding: 0,
         position: 'sticky',
         top: 0,
         zIndex: 50,
@@ -76,8 +76,8 @@ export function Header() {
         alignItems: 'center',
       }}
     >
-      {/* Logo — centered */}
-      <Link href="/" style={{ textDecoration: 'none' }}>
+      {/* Logo — centered, no padding */}
+      <Link href="/" style={{ textDecoration: 'none', lineHeight: 0 }}>
         <img
           src="/glidepathdarkmode2.png"
           alt="Glidepath"
@@ -90,7 +90,7 @@ export function Header() {
       </Link>
 
       {/* Bottom row: menu toggle + installation (left) + user (right) */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%', marginTop: 'var(--header-row-gap)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%', padding: 'var(--header-padding)', paddingTop: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {/* Installation name + ICAO + dropdown */}
           <div style={{ position: 'relative' }}>
