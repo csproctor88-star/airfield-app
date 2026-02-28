@@ -83,7 +83,7 @@ export function Header() {
           alt="Glidepath"
           style={{
             display: 'block',
-            height: resolvedTheme === 'dark' ? 'var(--header-logo-height-dark)' : 'var(--header-logo-height)',
+            height: 'var(--header-logo-height)',
             objectFit: 'contain',
           }}
         />
