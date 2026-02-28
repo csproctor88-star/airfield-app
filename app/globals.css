@@ -66,7 +66,7 @@
 
   /* ── Header scaling ── */
   --header-padding: 8px 16px;
-  --header-logo-height: 160px;
+  --header-logo-height: 80px;
   --header-icon-size: 20px;
   --header-row-gap: 6px;
 
@@ -467,7 +467,7 @@ html, body {
     --obs-map-height-expanded: 92vh;
 
     --header-padding: 12px 24px;
-    --header-logo-height: 200px;
+    --header-logo-height: 100px;
     --header-icon-size: 22px;
     --header-row-gap: 8px;
 
@@ -636,7 +636,7 @@ html, body {
     --obs-map-height-expanded: 95vh;
 
     --header-padding: 14px 32px;
-    --header-logo-height: 230px;
+    --header-logo-height: 115px;
     --header-icon-size: 24px;
     --header-row-gap: 10px;
 
