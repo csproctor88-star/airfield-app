@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useInstallation } from '@/lib/installation-context'
-import { fetchActivityLog, type ActivityEntry } from '@/lib/supabase/activity-queries'
+import { fetchActivityLog, fetchEntityDetails, type ActivityEntry, type EntityDetails } from '@/lib/supabase/activity-queries'
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'custom'
 
@@ -45,6 +45,28 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
   }
 }
 
+function buildDetailsString(a: ActivityEntry, detailsMap: Map<string, EntityDetails>): string {
+  if (a.entity_type === 'navaid_status' || a.entity_type === 'airfield_status') {
+    const parts: string[] = []
+    if (a.metadata?.status) parts.push(`Status: ${String(a.metadata.status)}`)
+    if (a.metadata?.active_runway) parts.push(`Active RWY: ${String(a.metadata.active_runway)}`)
+    if (a.metadata?.active_end) parts.push(`Active End: ${String(a.metadata.active_end)}`)
+    if (a.metadata?.notes) parts.push(String(a.metadata.notes))
+    return parts.join(' | ')
+  }
+  if (a.entity_id && detailsMap.has(a.entity_id)) {
+    const ed = detailsMap.get(a.entity_id)!
+    const parts: string[] = []
+    if (ed.title) parts.push(ed.title)
+    if (ed.description) parts.push(ed.description)
+    if (ed.notes) parts.push(ed.notes)
+    if (ed.extra) parts.push(ed.extra)
+    return parts.join(' | ')
+  }
+  if (a.metadata?.notes) return String(a.metadata.notes)
+  return ''
+}
+
 const STATUS_HEX: Record<string, string> = {
   green: '#34D399',
   yellow: '#FBBF24',
@@ -60,6 +82,7 @@ export default function ActivityPage() {
   const [customStart, setCustomStart] = useState(today)
   const [customEnd, setCustomEnd] = useState(today)
   const [entries, setEntries] = useState<ActivityEntry[]>([])
+  const [detailsMap, setDetailsMap] = useState<Map<string, EntityDetails>>(new Map())
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
 
@@ -93,6 +116,8 @@ export default function ActivityPage() {
       const { start, end } = getDateRange()
       const { data } = await fetchActivityLog({ baseId: installationId, startDate: start, endDate: end, limit: 500 })
       setEntries(data)
+      const details = await fetchEntityDetails(data)
+      setDetailsMap(details)
       setLoading(false)
     }
     load()
@@ -116,26 +141,24 @@ export default function ActivityPage() {
     if (entries.length === 0) return
     setExporting(true)
     try {
-      const { createStyledWorkbook, addStyledSheet, saveWorkbook, titleCase } = await import('@/lib/excel-export')
+      const { createStyledWorkbook, addStyledSheet, saveWorkbook } = await import('@/lib/excel-export')
+
       const columns = [
-        { header: 'Date/Time', key: 'datetime', width: 22 },
-        { header: 'User', key: 'user', width: 22 },
+        { header: 'Date', key: 'date', width: 14 },
+        { header: 'Time', key: 'time', width: 10 },
+        { header: 'User', key: 'user', width: 24 },
         { header: 'Action', key: 'action', width: 40 },
-        { header: 'Entity Type', key: 'entity_type', width: 18 },
-        { header: 'Reference ID', key: 'ref_id', width: 14 },
-        { header: 'Notes', key: 'notes', width: 40 },
+        { header: 'Details', key: 'details', width: 60 },
       ]
       const rows = entries.map((a) => {
         const d = new Date(a.created_at)
         const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
-        const notes = a.metadata?.notes ? String(a.metadata.notes) : ''
         return {
-          datetime: d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          time: d.toTimeString().slice(0, 5),
           user: userName,
           action: formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined),
-          entity_type: titleCase(a.entity_type),
-          ref_id: a.entity_display_id || '',
-          notes,
+          details: buildDetailsString(a, detailsMap),
         }
       })
       const wb = await createStyledWorkbook()
@@ -264,8 +287,8 @@ export default function ActivityPage() {
                   const date = new Date(a.created_at)
                   const timeStr = date.toTimeString().slice(0, 5)
                   const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
-                  const navaidNoteText = a.entity_type === 'navaid_status' && a.metadata?.notes ? String(a.metadata.notes) : null
                   const navaidStatusVal = a.entity_type === 'navaid_status' && a.metadata?.status ? String(a.metadata.status) : null
+                  const detailsText = buildDetailsString(a, detailsMap)
                   const link = getEntityLink(a.entity_type, a.entity_id)
 
                   return (
@@ -305,9 +328,9 @@ export default function ActivityPage() {
                             <span style={{ marginLeft: 6, width: 8, height: 8, borderRadius: '50%', display: 'inline-block', background: STATUS_HEX[navaidStatusVal] || '#64748B' }} />
                           )}
                         </div>
-                        {navaidNoteText && (
-                          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 2 }}>
-                            &ldquo;{navaidNoteText}&rdquo;
+                        {detailsText && (
+                          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2, lineHeight: 1.4 }}>
+                            {detailsText}
                           </div>
                         )}
                       </div>

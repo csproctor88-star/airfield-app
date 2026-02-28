@@ -305,7 +305,7 @@ export default function HomePage() {
     const ok = await updateNavaidStatus(navaid.id, newStatus, notes)
     if (ok) {
       loadNavaids()
-      logActivity('updated', 'navaid_status', navaid.id, navaid.navaid_name, { status: newStatus }, installationId)
+      logActivity('updated', 'navaid_status', navaid.id, navaid.navaid_name, { status: newStatus, notes }, installationId)
     }
   }
 

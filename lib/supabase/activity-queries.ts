@@ -80,3 +80,155 @@ export async function fetchActivityLog(options: {
 
   return { data: [], error: null }
 }
+
+export type EntityDetails = {
+  title?: string
+  description?: string
+  notes?: string
+  extra?: string
+}
+
+/**
+ * Batch-fetch entity details for activity log export enrichment.
+ * Groups entries by entity_type, issues one query per type, returns Map<entity_id, EntityDetails>.
+ */
+export async function fetchEntityDetails(entries: ActivityEntry[]): Promise<Map<string, EntityDetails>> {
+  const supabase = createClient()
+  if (!supabase) return new Map()
+
+  // Group entity IDs by type (skip types whose context lives in metadata)
+  const groups: Record<string, string[]> = {}
+  for (const e of entries) {
+    if (!e.entity_id) continue
+    if (e.entity_type === 'airfield_status' || e.entity_type === 'navaid_status') continue
+    if (!groups[e.entity_type]) groups[e.entity_type] = []
+    if (!groups[e.entity_type].includes(e.entity_id)) {
+      groups[e.entity_type].push(e.entity_id)
+    }
+  }
+
+  const result = new Map<string, EntityDetails>()
+
+  // Discrepancies
+  if (groups['discrepancy']?.length) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
+        .from('discrepancies')
+        .select('id, title, description, resolution_notes')
+        .in('id', groups['discrepancy'])
+      if (data) {
+        for (const r of data as { id: string; title?: string; description?: string; resolution_notes?: string }[]) {
+          result.set(r.id, { title: r.title || undefined, description: r.description || undefined, notes: r.resolution_notes || undefined })
+        }
+      }
+    } catch { /* deleted entities */ }
+  }
+
+  // Obstruction evaluations
+  if (groups['obstruction_evaluation']?.length) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
+        .from('obstruction_evaluations')
+        .select('id, description, notes')
+        .in('id', groups['obstruction_evaluation'])
+      if (data) {
+        for (const r of data as { id: string; description?: string; notes?: string }[]) {
+          result.set(r.id, { description: r.description || undefined, notes: r.notes || undefined })
+        }
+      }
+    } catch { /* deleted entities */ }
+  }
+
+  // Airfield checks + comments
+  if (groups['check']?.length) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
+        .from('airfield_checks')
+        .select('id, check_type')
+        .in('id', groups['check'])
+      if (data) {
+        for (const r of data as { id: string; check_type?: string }[]) {
+          result.set(r.id, { title: r.check_type?.toUpperCase() || undefined })
+        }
+      }
+      // Fetch comments separately
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: comments } = await (supabase as any)
+        .from('check_comments')
+        .select('check_id, comment')
+        .in('check_id', groups['check'])
+      if (comments) {
+        const commentsByCheck: Record<string, string[]> = {}
+        for (const c of comments as { check_id: string; comment: string }[]) {
+          if (!commentsByCheck[c.check_id]) commentsByCheck[c.check_id] = []
+          commentsByCheck[c.check_id].push(c.comment)
+        }
+        for (const [checkId, msgs] of Object.entries(commentsByCheck)) {
+          const existing = result.get(checkId)
+          if (existing) {
+            existing.notes = msgs.join('; ')
+          } else {
+            result.set(checkId, { notes: msgs.join('; ') })
+          }
+        }
+      }
+    } catch { /* deleted entities */ }
+  }
+
+  // Inspections
+  if (groups['inspection']?.length) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
+        .from('inspections')
+        .select('id, notes, weather_conditions, inspection_type')
+        .in('id', groups['inspection'])
+      if (data) {
+        for (const r of data as { id: string; notes?: string; weather_conditions?: string; inspection_type?: string }[]) {
+          result.set(r.id, {
+            title: r.inspection_type || undefined,
+            notes: r.notes || undefined,
+            extra: r.weather_conditions ? `Weather: ${r.weather_conditions}` : undefined,
+          })
+        }
+      }
+    } catch { /* deleted entities */ }
+  }
+
+  // Waivers
+  if (groups['waiver']?.length) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
+        .from('waivers')
+        .select('id, waiver_number, description')
+        .in('id', groups['waiver'])
+      if (data) {
+        for (const r of data as { id: string; waiver_number?: string; description?: string }[]) {
+          result.set(r.id, { title: r.waiver_number || undefined, description: r.description || undefined })
+        }
+      }
+    } catch { /* deleted entities */ }
+  }
+
+  // Waiver reviews
+  if (groups['waiver_review']?.length) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
+        .from('waiver_reviews')
+        .select('id, notes')
+        .in('id', groups['waiver_review'])
+      if (data) {
+        for (const r of data as { id: string; notes?: string }[]) {
+          result.set(r.id, { notes: r.notes || undefined })
+        }
+      }
+    } catch { /* deleted entities */ }
+  }
+
+  return result
+}
