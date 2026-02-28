@@ -187,7 +187,8 @@ export async function DELETE(
       nullify('navaid_statuses', 'updated_by'),
       nullify('obstruction_evaluations', 'evaluated_by'),
       nullify('activity_log', 'user_id'),
-      nullify('waiver_reviews', 'updated_by'),
+      nullify('status_updates', 'updated_by'),
+      nullify('waiver_reviews', 'reviewed_by'),
       nullify('runway_status_log', 'changed_by'),
     ]).catch((err) => {
       console.warn('[admin/users/DELETE] Some FK nullify failed (run migration 2026022802):', err)
