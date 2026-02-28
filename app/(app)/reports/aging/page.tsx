@@ -181,13 +181,18 @@ export default function AgingDiscrepanciesPage() {
             {tier.label} ({tier.discrepancies.length})
           </div>
           {tier.discrepancies.map((d) => (
-            <div key={d.id} style={{
-              padding: '6px 0',
-              borderBottom: '1px solid rgba(148,163,184,0.1)',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            }}>
+            <div
+              key={d.id}
+              onClick={() => router.push(`/discrepancies/${d.id}`)}
+              style={{
+                padding: '6px 0',
+                borderBottom: '1px solid rgba(148,163,184,0.1)',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                cursor: 'pointer',
+              }}
+            >
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-cyan)' }}>
                   {d.display_id} — {d.title}
                 </div>
                 <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)' }}>
