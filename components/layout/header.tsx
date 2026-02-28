@@ -1,36 +1,38 @@
 'use client'
 
 import Link from 'next/link'
-import { useTheme } from '@/lib/theme-context'
 
 // Header: logo only, centered
 export function Header() {
-  const { resolvedTheme } = useTheme()
-
   return (
     <div
       style={{
-        background: resolvedTheme === 'dark'
-          ? 'linear-gradient(180deg, var(--color-bg-header-start), var(--color-bg-header-end))'
-          : '#ffffff',
-        borderBottom: resolvedTheme === 'dark' ? 'none' : '2px solid var(--color-header-border)',
+        background: 'transparent',
+        borderBottom: 'none',
         padding: 0,
+        margin: 0,
         position: 'sticky',
         top: 0,
         zIndex: 50,
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
+        overflow: 'hidden',
+        lineHeight: 0,
+        fontSize: 0,
       }}
     >
-      <Link href="/" style={{ textDecoration: 'none', lineHeight: 0 }}>
+      <Link href="/" style={{ textDecoration: 'none', lineHeight: 0, display: 'block', margin: 0, padding: 0 }}>
         <img
           src="/glidepathdarkmode2.png"
           alt="Glidepath"
           style={{
             display: 'block',
             height: 'var(--header-logo-height)',
-            objectFit: 'contain',
+            width: 'auto',
+            margin: 0,
+            padding: 0,
+            verticalAlign: 'top',
           }}
         />
       </Link>
