@@ -79,7 +79,7 @@ export function Header() {
       {/* Logo — centered */}
       <Link href="/" style={{ textDecoration: 'none' }}>
         <img
-          src="/glidepath2.png"
+          src="/glidepath_vector.svg"
           alt="Glidepath"
           style={{
             display: 'block',
