@@ -171,20 +171,17 @@ export default function WaiversPage() {
           return (
             <div
               key={k.label}
+              className="kpi-badge"
               onClick={() => { setKpiFilter(active ? null : k.key); setFilter('all') }}
               style={{
-                background: active ? `${k.color}14` : 'var(--color-bg-surface)',
+                background: active ? `${k.color}14` : undefined,
                 border: `1px solid ${active ? `${k.color}44` : 'var(--color-border)'}`,
-                borderRadius: 10,
-                padding: '10px 6px',
-                textAlign: 'center',
-                cursor: 'pointer',
               }}
             >
-              <div style={{ fontSize: 'var(--fs-xs)', color: active ? k.color : 'var(--color-text-3)', letterSpacing: '0.08em', fontWeight: 600 }}>
+              <div className="kpi-label" style={{ color: active ? k.color : 'var(--color-text-3)' }}>
                 {k.label}
               </div>
-              <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: k.color }}>{k.value}</div>
+              <div className="kpi-value" style={{ color: k.color }}>{k.value}</div>
             </div>
           )
         })}

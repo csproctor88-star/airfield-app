@@ -449,8 +449,8 @@ export default function DiscrepanciesPage() {
         </div>
       </div>
 
-      {/* Row 1: OPEN + > 30 DAYS */}
-      <div className="kpi-grid-2" style={{ marginBottom: 6 }}>
+      {/* Row 1: OPEN + > 30 DAYS (larger) */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 6 }}>
         {[
           { label: 'OPEN', value: openCount, color: '#FBBF24', active: filter === 'open' && !over30Only && !currentStatusFilter,
             onClick: () => { setFilter('open'); setOver30Only(false); setCurrentStatusFilter(null) } },
@@ -459,31 +459,30 @@ export default function DiscrepanciesPage() {
         ].map((k) => (
           <div
             key={k.label}
+            className="kpi-badge kpi-badge-lg"
             onClick={k.onClick}
             style={{
-              background: 'var(--color-bg-surface)',
               border: `1px solid ${k.active ? k.color + '44' : 'var(--color-border)'}`,
-              borderRadius: 10,
-              padding: '10px 6px',
-              textAlign: 'center',
-              cursor: 'pointer',
+              flex: '1 1 0',
+              maxWidth: 260,
             }}
           >
-            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', letterSpacing: '0.08em', fontWeight: 600 }}>
+            <div className="kpi-label kpi-label-lg" style={{ color: 'var(--color-text-3)' }}>
               {k.label}
             </div>
-            <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: k.color }}>{k.value}</div>
+            <div className="kpi-value kpi-value-lg" style={{ color: k.color }}>{k.value}</div>
           </div>
         ))}
       </div>
 
-      {/* Row 2: AFM / CES / AMOPS */}
-      <div className="kpi-grid-3" style={{ marginBottom: 12 }}>
+      {/* Row 2: AFM / CES / AMOPS (smaller) */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 12 }}>
         {KPI_DEFS.map((kpi) => {
           const active = currentStatusFilter === kpi.key
           return (
             <div
               key={kpi.key}
+              className="kpi-badge"
               onClick={() => {
                 if (active) {
                   setCurrentStatusFilter(null)
@@ -494,18 +493,15 @@ export default function DiscrepanciesPage() {
                 }
               }}
               style={{
-                background: 'var(--color-bg-surface)',
                 border: `1px solid ${active ? kpi.color + '44' : 'var(--color-border)'}`,
-                borderRadius: 10,
-                padding: '10px 6px',
-                textAlign: 'center',
-                cursor: 'pointer',
+                flex: '0 1 auto',
+                minWidth: 70,
               }}
             >
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', letterSpacing: '0.08em', fontWeight: 600 }}>
+              <div className="kpi-label" style={{ color: 'var(--color-text-3)' }}>
                 {kpi.label}
               </div>
-              <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: kpi.color }}>{kpiCounts[kpi.key]}</div>
+              <div className="kpi-value kpi-value-sm" style={{ color: kpi.color }}>{kpiCounts[kpi.key]}</div>
             </div>
           )
         })}

@@ -341,6 +341,39 @@ html, body {
   gap: 6px;
 }
 
+/* ── Responsive KPI badges ── */
+.kpi-badge {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 8px 6px;
+  text-align: center;
+  cursor: pointer;
+}
+.kpi-badge-lg {
+  padding: 12px 10px;
+}
+.kpi-value {
+  font-weight: 800;
+  font-size: 1.25rem;
+  line-height: 1.15;
+}
+.kpi-value-lg {
+  font-size: 1.6rem;
+}
+.kpi-value-sm {
+  font-size: 1.1rem;
+}
+.kpi-label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--color-text-3);
+}
+.kpi-label-lg {
+  font-size: 0.7rem;
+}
+
 /* Card list — vertical stack on mobile, grid on tablet+ */
 .card-list {
   display: flex;
@@ -582,6 +615,14 @@ html, body {
   .kpi-grid-2 { gap: 10px; }
   .kpi-grid-3 { gap: 10px; }
 
+  .kpi-badge { padding: 12px 10px; }
+  .kpi-badge-lg { padding: 16px 16px; }
+  .kpi-value { font-size: 1.75rem; }
+  .kpi-value-lg { font-size: 2.5rem; }
+  .kpi-value-sm { font-size: 1.4rem; }
+  .kpi-label { font-size: 0.7rem; }
+  .kpi-label-lg { font-size: 0.8rem; }
+
   .card-list {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -728,6 +769,14 @@ html, body {
     grid-template-columns: repeat(4, 1fr);
     gap: 12px;
   }
+
+  .kpi-badge { padding: 16px 14px; border-radius: 12px; }
+  .kpi-badge-lg { padding: 20px 20px; border-radius: 14px; }
+  .kpi-value { font-size: 2.25rem; }
+  .kpi-value-lg { font-size: 3rem; }
+  .kpi-value-sm { font-size: 1.75rem; }
+  .kpi-label { font-size: 0.8rem; }
+  .kpi-label-lg { font-size: 0.9rem; }
 
   .card-list { gap: 14px; }
   .actions-row { gap: 12px; }

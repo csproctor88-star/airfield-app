@@ -133,24 +133,24 @@ export default function DiscrepancyTrendsPage() {
 
       {/* KPI Row */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <div className="card" style={{ flex: 1, textAlign: 'center', padding: '12px 8px' }}>
-          <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: '#EF4444' }}>{summary.totalOpened}</div>
-          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-2)', fontWeight: 600 }}>Opened</div>
+        <div className="kpi-badge" style={{ flex: 1 }}>
+          <div className="kpi-value" style={{ color: '#EF4444' }}>{summary.totalOpened}</div>
+          <div className="kpi-label">Opened</div>
         </div>
-        <div className="card" style={{ flex: 1, textAlign: 'center', padding: '12px 8px' }}>
-          <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: '#22C55E' }}>{summary.totalClosed}</div>
-          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-2)', fontWeight: 600 }}>Closed</div>
+        <div className="kpi-badge" style={{ flex: 1 }}>
+          <div className="kpi-value" style={{ color: '#22C55E' }}>{summary.totalClosed}</div>
+          <div className="kpi-label">Closed</div>
         </div>
-        <div className="card" style={{ flex: 1, textAlign: 'center', padding: '12px 8px' }}>
-          <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: summary.net > 0 ? '#EF4444' : summary.net < 0 ? '#22C55E' : '#94A3B8' }}>
+        <div className="kpi-badge" style={{ flex: 1 }}>
+          <div className="kpi-value" style={{ color: summary.net > 0 ? '#EF4444' : summary.net < 0 ? '#22C55E' : '#94A3B8' }}>
             {summary.net >= 0 ? '+' : ''}{summary.net}
           </div>
-          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-2)', fontWeight: 600 }}>Net</div>
+          <div className="kpi-label">Net</div>
         </div>
         {summary.avgDaysToClose !== null && (
-          <div className="card" style={{ flex: 1, textAlign: 'center', padding: '12px 8px' }}>
-            <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-purple)' }}>{summary.avgDaysToClose}</div>
-            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-2)', fontWeight: 600 }}>Avg Days</div>
+          <div className="kpi-badge" style={{ flex: 1 }}>
+            <div className="kpi-value" style={{ color: 'var(--color-purple)' }}>{summary.avgDaysToClose}</div>
+            <div className="kpi-label">Avg Days</div>
           </div>
         )}
       </div>

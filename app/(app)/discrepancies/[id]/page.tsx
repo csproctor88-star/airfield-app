@@ -4,7 +4,7 @@ import { useRef, useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { StatusBadge, Badge } from '@/components/ui/badge'
 import { ActionButton } from '@/components/ui/button'
-import { fetchDiscrepancy, fetchDiscrepancyPhotos, uploadDiscrepancyPhoto, fetchStatusUpdates, type DiscrepancyRow, type PhotoRow, type StatusUpdateRow } from '@/lib/supabase/discrepancies'
+import { fetchDiscrepancy, fetchDiscrepancyPhotos, uploadDiscrepancyPhoto, fetchStatusUpdates, deleteDiscrepancy, type DiscrepancyRow, type PhotoRow, type StatusUpdateRow } from '@/lib/supabase/discrepancies'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
@@ -20,7 +20,7 @@ type ModalType = 'edit' | 'status' | 'workorder' | null
 export default function DiscrepancyDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { installationId } = useInstallation()
+  const { installationId, userRole } = useInstallation()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const [dbPhotos, setDbPhotos] = useState<PhotoRow[]>([])
@@ -30,6 +30,8 @@ export default function DiscrepancyDetailPage() {
   const [usingDemo, setUsingDemo] = useState(false)
   const [activeModal, setActiveModal] = useState<ModalType>(null)
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
+  const [actionLoading, setActionLoading] = useState(false)
+  const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
 
   const loadData = useCallback(async () => {
     const supabase = createClient()
@@ -262,6 +264,29 @@ export default function DiscrepancyDetailPage() {
         <ActionButton color="#FBBF24" onClick={() => setActiveModal('status')}>🔄 Status</ActionButton>
         <ActionButton color="#34D399" onClick={() => setActiveModal('workorder')}>📋 Work Order</ActionButton>
       </div>
+
+      {/* Admin: Delete Discrepancy */}
+      {isAdmin && !usingDemo && (
+        <div style={{ marginBottom: 8 }}>
+          <ActionButton
+            color="#EF4444"
+            onClick={async () => {
+              if (!confirm('Permanently delete this discrepancy and all associated photos, status updates? This cannot be undone.')) return
+              setActionLoading(true)
+              const { error } = await deleteDiscrepancy(d.id)
+              if (error) {
+                toast.error(error)
+                setActionLoading(false)
+              } else {
+                toast.success('Discrepancy deleted')
+                router.push('/discrepancies')
+              }
+            }}
+          >
+            {actionLoading ? 'Deleting...' : '🗑️ Delete Discrepancy'}
+          </ActionButton>
+        </div>
+      )}
 
       {linkedNotam && (
         <Link

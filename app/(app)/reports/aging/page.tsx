@@ -89,20 +89,20 @@ export default function AgingDiscrepanciesPage() {
 
       {/* KPI Row */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <div className="card" style={{ flex: 1, textAlign: 'center', padding: '12px 8px' }}>
-          <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>{summary.total}</div>
-          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-2)', fontWeight: 600 }}>Total Open</div>
+        <div className="kpi-badge" style={{ flex: 1 }}>
+          <div className="kpi-value" style={{ color: 'var(--color-text-1)' }}>{summary.total}</div>
+          <div className="kpi-label">Total Open</div>
         </div>
         {summary.avgDaysOpen !== null && (
-          <div className="card" style={{ flex: 1, textAlign: 'center', padding: '12px 8px' }}>
-            <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-warning)' }}>{summary.avgDaysOpen}</div>
-            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-2)', fontWeight: 600 }}>Avg Days</div>
+          <div className="kpi-badge" style={{ flex: 1 }}>
+            <div className="kpi-value" style={{ color: 'var(--color-warning)' }}>{summary.avgDaysOpen}</div>
+            <div className="kpi-label">Avg Days</div>
           </div>
         )}
         {summary.oldest && (
-          <div className="card" style={{ flex: 1, textAlign: 'center', padding: '12px 8px' }}>
-            <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-danger)' }}>{summary.oldest.days_open}</div>
-            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-2)', fontWeight: 600 }}>Oldest</div>
+          <div className="kpi-badge" style={{ flex: 1 }}>
+            <div className="kpi-value" style={{ color: 'var(--color-danger)' }}>{summary.oldest.days_open}</div>
+            <div className="kpi-label">Oldest</div>
           </div>
         )}
       </div>

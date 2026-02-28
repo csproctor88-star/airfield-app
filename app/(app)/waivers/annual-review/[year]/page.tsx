@@ -208,15 +208,15 @@ export default function AnnualReviewYearPage() {
           return (
             <div
               key={k.label}
+              className="kpi-badge"
               onClick={() => setKpiFilter(active ? null : k.key)}
               style={{
-                background: active ? `${k.color}14` : 'var(--color-bg-surface)',
+                background: active ? `${k.color}14` : undefined,
                 border: `1px solid ${active ? `${k.color}44` : 'var(--color-border)'}`,
-                borderRadius: 10, padding: '8px 4px', textAlign: 'center', cursor: 'pointer',
               }}
             >
-              <div style={{ fontSize: 'var(--fs-2xs)', color: active ? k.color : 'var(--color-text-3)', letterSpacing: '0.08em', fontWeight: 600 }}>{k.label}</div>
-              <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: k.color }}>{k.value}</div>
+              <div className="kpi-label" style={{ color: active ? k.color : 'var(--color-text-3)' }}>{k.label}</div>
+              <div className="kpi-value" style={{ color: k.color }}>{k.value}</div>
             </div>
           )
         })}

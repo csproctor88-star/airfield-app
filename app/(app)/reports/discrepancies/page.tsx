@@ -105,14 +105,13 @@ export default function OpenDiscrepanciesPage() {
         </div>
         <div className="badge-grid">
           {areaEntries.map(([area, count]) => (
-            <div key={area} style={{
+            <div key={area} className="kpi-badge" style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',
-              padding: '8px 14px', borderRadius: 10,
               background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)',
               minWidth: 64,
             }}>
-              <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-accent)' }}>{count}</div>
-              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-2)', fontWeight: 600, textAlign: 'center', marginTop: 2 }}>{area}</div>
+              <div className="kpi-value" style={{ color: 'var(--color-accent)' }}>{count}</div>
+              <div className="kpi-label" style={{ color: 'var(--color-text-2)', marginTop: 2 }}>{area}</div>
             </div>
           ))}
         </div>
@@ -125,14 +124,13 @@ export default function OpenDiscrepanciesPage() {
         </div>
         <div className="badge-grid">
           {typeEntries.map(([type, count]) => (
-            <div key={type} style={{
+            <div key={type} className="kpi-badge" style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',
-              padding: '8px 14px', borderRadius: 10,
               background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.15)',
               minWidth: 64,
             }}>
-              <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-warning)' }}>{count}</div>
-              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-2)', fontWeight: 600, textAlign: 'center', marginTop: 2 }}>{formatDiscrepancyType(type)}</div>
+              <div className="kpi-value" style={{ color: 'var(--color-warning)' }}>{count}</div>
+              <div className="kpi-label" style={{ color: 'var(--color-text-2)', marginTop: 2 }}>{formatDiscrepancyType(type)}</div>
             </div>
           ))}
         </div>
