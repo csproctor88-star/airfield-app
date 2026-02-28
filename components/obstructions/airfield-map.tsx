@@ -252,6 +252,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
   const marker = useRef<mapboxgl.Marker | null>(null)
   const numRunwaysRef = useRef(1)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const [visibility, setVisibility] = useState<Record<ToggleKey, boolean>>(getDefaultVisibility)
   const [runwayVisibility, setRunwayVisibility] = useState<Record<number, boolean>>({})
   const [legendOpen, setLegendOpen] = useState(false)
@@ -571,18 +572,48 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
     )
   }
 
+  const handleToggleExpand = useCallback(() => {
+    setExpanded(prev => !prev)
+    setTimeout(() => { map.current?.resize() }, 50)
+  }, [])
+
   return (
     <div style={{ position: 'relative' }}>
       <div
         ref={mapContainer}
         style={{
           width: '100%',
-          height: 500,
+          height: expanded ? 'var(--obs-map-height-expanded)' : 'var(--obs-map-height)',
           borderRadius: 10,
           overflow: 'hidden',
           border: '1px solid var(--color-border-mid)',
+          transition: 'height 0.3s ease',
         }}
       />
+      {/* Expand / Collapse toggle */}
+      {mapLoaded && (
+        <button
+          onClick={handleToggleExpand}
+          style={{
+            position: 'absolute',
+            top: 8,
+            right: 48,
+            background: 'rgba(4, 7, 12, 0.88)',
+            border: '1px solid rgba(148, 163, 184, 0.2)',
+            borderRadius: 6,
+            padding: '4px 10px',
+            fontSize: 'var(--fs-sm)',
+            color: '#94A3B8',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+          }}
+        >
+          {expanded ? '⊖ Collapse' : '⊕ Expand'}
+        </button>
+      )}
       {/* Collapsible surface legend with toggles */}
       <div
         style={{

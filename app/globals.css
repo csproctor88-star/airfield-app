@@ -80,8 +80,12 @@
   --advisory-dialog-padding: 20px;
 
   /* ── Map height scaling ── */
-  --map-height: 280px;
-  --map-height-expanded: 500px;
+  --map-height: 420px;
+  --map-height-expanded: 90vh;
+
+  /* ── Obstruction map height scaling ── */
+  --obs-map-height: 600px;
+  --obs-map-height-expanded: 90vh;
 
   /* ── Active RWY card scaling ── */
   --rwy-card-padding: 10px 12px;
@@ -457,8 +461,11 @@ html, body {
     --fs-4xl: 22px;
     --fs-5xl: 28px;
 
-    --map-height: 360px;
-    --map-height-expanded: 600px;
+    --map-height: 70vh;
+    --map-height-expanded: 90vh;
+
+    --obs-map-height: 80vh;
+    --obs-map-height-expanded: 92vh;
 
     --header-padding: 12px 24px;
     --header-logo-height: 56px;
@@ -624,8 +631,11 @@ html, body {
     --fs-4xl: 28px;
     --fs-5xl: 34px;
 
-    --map-height: 440px;
-    --map-height-expanded: 75vh;
+    --map-height: 80vh;
+    --map-height-expanded: 93vh;
+
+    --obs-map-height: 85vh;
+    --obs-map-height-expanded: 95vh;
 
     --header-padding: 14px 32px;
     --header-logo-height: 64px;
