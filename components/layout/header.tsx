@@ -183,28 +183,12 @@ export function Header() {
             )}
           </div>
 
-          {/* Right: status + user + role */}
+          {/* Right: status + user */}
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 'var(--fs-2xs)', color: presence.color, fontWeight: 600, marginBottom: 2 }}>
               {presence.label}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
-              {userName && <span>{userName}</span>}
-              {roleLabel && (
-                <span style={{
-                  fontSize: 'var(--fs-2xs)',
-                  padding: '1px 6px',
-                  borderRadius: 4,
-                  background: 'rgba(34,211,238,0.1)',
-                  border: '1px solid rgba(34,211,238,0.2)',
-                  color: 'var(--color-cyan)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                }}>
-                  {roleLabel}
-                </span>
-              )}
-            </div>
+            {userName && <div style={{ color: '#FFFFFF', fontWeight: 700 }}>{userName}</div>}
           </div>
         </div>
       )}
