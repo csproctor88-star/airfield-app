@@ -181,26 +181,24 @@ export function InviteUserModal({
             <input type="hidden" value="read_only" />
           )}
 
-          {/* Installation — sys admin sees dropdown, base admin auto-set */}
-          {isSysAdmin ? (
-            <div style={{ marginBottom: 12 }}>
-              <span className="section-label">Installation</span>
-              <select
-                className="input-dark"
-                value={installationId}
-                onChange={(e) => setInstallationId(e.target.value)}
-                required
-                style={{ width: '100%' }}
-              >
-                <option value="">Select installation...</option>
-                {installations.map((inst) => (
-                  <option key={inst.id} value={inst.id}>
-                    {inst.name} · {inst.icao}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
+          {/* Installation */}
+          <div style={{ marginBottom: 12 }}>
+            <span className="section-label">Installation</span>
+            <select
+              className="input-dark"
+              value={installationId}
+              onChange={(e) => setInstallationId(e.target.value)}
+              required
+              style={{ width: '100%' }}
+            >
+              <option value="">Select installation...</option>
+              {installations.map((inst) => (
+                <option key={inst.id} value={inst.id}>
+                  {inst.name} · {inst.icao}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {error && (
             <div

@@ -188,7 +188,7 @@ export function Header() {
             <div style={{ fontSize: 'var(--fs-2xs)', color: presence.color, fontWeight: 600, marginBottom: 2 }}>
               {presence.label}
             </div>
-            {userName && <div style={{ color: '#FFFFFF', fontWeight: 700 }}>{userName}</div>}
+            {userName && <div style={{ color: 'var(--color-text-1)', fontWeight: 700 }}>{userName}</div>}
           </div>
         </div>
       )}
