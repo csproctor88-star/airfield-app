@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { useSidebar } from '@/lib/sidebar-context'
 import { useTheme } from '@/lib/theme-context'
 import { createClient } from '@/lib/supabase/client'
 import { USER_ROLES } from '@/lib/constants'
@@ -23,7 +22,6 @@ import {
   Settings,
   Users,
   Activity,
-  X,
 } from 'lucide-react'
 
 // All navigation items — organized by section
@@ -51,7 +49,6 @@ const bottomItems = [
 ]
 
 export function SidebarNav() {
-  const { isOpen, close } = useSidebar()
   const pathname = usePathname()
   const { resolvedTheme } = useTheme()
   const [canManageUsers, setCanManageUsers] = useState(false)
@@ -102,7 +99,6 @@ export function SidebarNav() {
       <Link
         key={item.href}
         href={item.href}
-        onClick={close}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -128,68 +124,38 @@ export function SidebarNav() {
   )
 
   return (
-    <>
-      {/* Backdrop */}
-      {isOpen && (
-        <div
-          className="sidebar-backdrop"
-          onClick={close}
-        />
-      )}
+    <nav className="sidebar-drawer">
+      {/* Header with logo */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        padding: '16px 16px 12px',
+        borderBottom: '1px solid var(--color-border)',
+      }}>
+        <Link href="/" style={{ textDecoration: 'none' }}>
+          <img
+            src={resolvedTheme === 'dark' ? '/glidepathdarkmode3.png' : '/glidepath2.png'}
+            alt="Glidepath"
+            style={{ height: 40, objectFit: 'contain', display: 'block' }}
+          />
+        </Link>
+      </div>
 
-      {/* Drawer */}
-      <nav
-        className={`sidebar-drawer${isOpen ? ' open' : ''}`}
-      >
-        {/* Header with logo and close button */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '16px 16px 12px',
-          borderBottom: '1px solid var(--color-border)',
-        }}>
-          <Link href="/" onClick={close} style={{ textDecoration: 'none' }}>
-            <img
-              src={resolvedTheme === 'dark' ? '/glidepathdarkmode3.png' : '/glidepath2.png'}
-              alt="Glidepath"
-              style={{ height: 40, objectFit: 'contain', display: 'block' }}
-            />
-          </Link>
-          <button
-            onClick={close}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 8,
-              color: 'var(--color-text-3)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            aria-label="Close navigation"
-          >
-            <X size={20} />
-          </button>
-        </div>
+      {/* Navigation items */}
+      <div style={{ flex: 1, padding: '8px 0', overflowY: 'auto' }}>
+        {mainItems.map(renderNavItem)}
 
-        {/* Navigation items */}
-        <div style={{ flex: 1, padding: '8px 0', overflowY: 'auto' }}>
-          {mainItems.map(renderNavItem)}
+        {/* Admin section — role-gated */}
+        {loaded && canManageUsers && (
+          <>
+            {separator('admin-sep')}
+            {adminItems.map(renderNavItem)}
+          </>
+        )}
 
-          {/* Admin section — role-gated */}
-          {loaded && canManageUsers && (
-            <>
-              {separator('admin-sep')}
-              {adminItems.map(renderNavItem)}
-            </>
-          )}
-
-          {separator('bottom-sep')}
-          {bottomItems.map(renderNavItem)}
-        </div>
-      </nav>
-    </>
+        {separator('bottom-sep')}
+        {bottomItems.map(renderNavItem)}
+      </div>
+    </nav>
   )
 }

@@ -414,40 +414,28 @@ html, body {
 /* Content area — no constraint on mobile (parent is already 480px) */
 .app-content {}
 
-/* Sidebar toggle button — hidden on mobile */
+/* Sidebar toggle button — hidden everywhere now (sidebar is permanent on tablet+) */
 .sidebar-toggle {
   display: none !important;
-  align-items: center;
-  justify-content: center;
 }
 
-/* Sidebar backdrop */
+/* Sidebar backdrop — hidden on mobile, not needed on tablet+ */
 .sidebar-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 200;
+  display: none;
 }
 
-/* Sidebar drawer */
+/* Sidebar drawer — hidden on mobile */
 .sidebar-drawer {
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 280px;
+  display: none;
+  flex-direction: column;
   background: var(--color-bg-surface-solid);
   border-right: 1px solid var(--color-border);
-  z-index: 201;
-  transform: translateX(-100%);
-  transition: transform 0.3s ease;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
 }
 
-.sidebar-drawer.open {
-  transform: translateX(0);
+/* Close button inside sidebar — hidden on tablet+ (no longer needed) */
+.sidebar-close {
+  display: none;
 }
 
 /* ── Tablet (768px+) ── */
@@ -485,21 +473,34 @@ html, body {
     --rwy-select-padding: 5px 14px;
   }
 
-  /* Remove mobile constraint — full width */
+  /* Remove mobile constraint — flex layout with sidebar */
   .app-shell {
     max-width: 100%;
     margin: 0;
+    display: flex;
+    min-height: 100dvh;
+  }
+
+  /* Sidebar — permanently visible as static side panel */
+  .sidebar-drawer {
+    display: flex;
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    width: 260px;
+    flex-shrink: 0;
+  }
+
+  /* Main column — header + content */
+  .app-main {
+    flex: 1;
+    min-width: 0;
   }
 
   /* Constrain and center content */
   .app-content {
     max-width: 768px;
     margin: 0 auto;
-  }
-
-  /* Show sidebar toggle */
-  .sidebar-toggle {
-    display: flex !important;
   }
 
   /* Hide mobile bottom nav */

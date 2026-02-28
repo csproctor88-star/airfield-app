@@ -21,14 +21,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     >
       <SidebarProvider>
         <InstallationProvider>
-          <Header />
           <SidebarNav />
-          <DashboardProvider>
-            <main className="app-content">
-              {children}
-            </main>
-          </DashboardProvider>
-          <BottomNav />
+          <div className="app-main">
+            <Header />
+            <DashboardProvider>
+              <main className="app-content">
+                {children}
+              </main>
+            </DashboardProvider>
+            <BottomNav />
+          </div>
         </InstallationProvider>
       </SidebarProvider>
     </div>
