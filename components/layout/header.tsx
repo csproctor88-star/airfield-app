@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useTheme } from '@/lib/theme-context'
 
-// Header: logo only, centered
+// Header: gradient bg, logo centered
 export function Header() {
   const { resolvedTheme } = useTheme()
 
@@ -14,7 +14,7 @@ export function Header() {
           ? 'linear-gradient(180deg, var(--color-bg-header-start), var(--color-bg-header-end))'
           : '#ffffff',
         borderBottom: resolvedTheme === 'dark' ? 'none' : '2px solid var(--color-header-border)',
-        padding: 0,
+        padding: 'var(--header-padding)',
         position: 'sticky',
         top: 0,
         zIndex: 50,
@@ -23,13 +23,13 @@ export function Header() {
         alignItems: 'center',
       }}
     >
-      <Link href="/" style={{ textDecoration: 'none', lineHeight: 0 }}>
+      <Link href="/" style={{ textDecoration: 'none' }}>
         <img
-          src="/glidepathdarkmode2.png"
+          src={resolvedTheme === 'dark' ? '/glidepathdarkmode3.png' : '/glidepath2.png'}
           alt="Glidepath"
           style={{
             display: 'block',
-            height: 'var(--header-logo-height)',
+            height: resolvedTheme === 'dark' ? 'var(--header-logo-height-dark)' : 'var(--header-logo-height)',
             objectFit: 'contain',
           }}
         />
