@@ -752,7 +752,7 @@ export default function HomePage() {
 
       {/* ===== Quick Actions ===== */}
       <span className="section-label">Quick Actions</span>
-      <div style={{ display: 'flex', flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+      <div className="actions-row" style={{ marginBottom: 20 }}>
         {QUICK_ACTIONS.map((q) => (
           <Link
             key={q.label}
