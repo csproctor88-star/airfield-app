@@ -1,5 +1,5 @@
 import { Header } from '@/components/layout/header'
-import { InfoBar } from '@/components/layout/info-bar'
+
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { SidebarNav } from '@/components/layout/sidebar-nav'
 import { DashboardProvider } from '@/lib/dashboard-context'
@@ -25,7 +25,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <SidebarNav />
           <div className="app-main">
             <Header />
-            <InfoBar />
+
             <DashboardProvider>
               <main className="app-content">
                 {children}
