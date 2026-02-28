@@ -535,8 +535,8 @@ export default function HomePage() {
               const c = getColors(rwy.status)
               return (
                 <div key={rwy.label} className="card" style={{
-                  padding: '10px 12px',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                  padding: 'var(--rwy-card-padding)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--rwy-card-gap)',
                   background: c.bg, border: `1px solid ${c.border}`,
                 }}>
                   <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>Active RWY</div>
@@ -557,7 +557,7 @@ export default function HomePage() {
                       }
                     }}
                     style={{
-                      padding: '6px 28px', borderRadius: 6, fontSize: 'var(--fs-4xl)', fontWeight: 800,
+                      padding: 'var(--rwy-btn-padding)', borderRadius: 8, fontSize: 'var(--rwy-btn-font)', fontWeight: 800,
                       cursor: 'pointer', color: c.color,
                       border: `2px solid ${c.btnBorder}`,
                       background: c.btnBg,
@@ -576,7 +576,7 @@ export default function HomePage() {
                       }
                     }}
                     style={{
-                      padding: '3px 10px', borderRadius: 5, fontSize: 'var(--fs-base)', fontWeight: 700,
+                      padding: 'var(--rwy-select-padding)', borderRadius: 6, fontSize: 'var(--fs-md)', fontWeight: 700,
                       cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', outline: 'none',
                       color: c.color, background: 'var(--color-bg-inset)',
                       border: `1px solid ${c.selectBorder}`,

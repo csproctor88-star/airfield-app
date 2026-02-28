@@ -63,6 +63,13 @@
   --fs-3xl: 18px;
   --fs-4xl: 20px;
   --fs-5xl: 24px;
+
+  /* ── Active RWY card scaling ── */
+  --rwy-card-padding: 10px 12px;
+  --rwy-card-gap: 6px;
+  --rwy-btn-padding: 6px 28px;
+  --rwy-btn-font: 20px;
+  --rwy-select-padding: 3px 10px;
 }
 
 [data-theme="light"] {
@@ -435,6 +442,12 @@ html, body {
     --fs-3xl: 20px;
     --fs-4xl: 22px;
     --fs-5xl: 28px;
+
+    --rwy-card-padding: 14px 18px;
+    --rwy-card-gap: 8px;
+    --rwy-btn-padding: 10px 36px;
+    --rwy-btn-font: 28px;
+    --rwy-select-padding: 5px 14px;
   }
 
   /* Remove mobile constraint — full width */
@@ -563,6 +576,12 @@ html, body {
     --fs-3xl: 24px;
     --fs-4xl: 28px;
     --fs-5xl: 34px;
+
+    --rwy-card-padding: 18px 24px;
+    --rwy-card-gap: 10px;
+    --rwy-btn-padding: 14px 48px;
+    --rwy-btn-font: 36px;
+    --rwy-select-padding: 6px 18px;
   }
 
   .app-content {
