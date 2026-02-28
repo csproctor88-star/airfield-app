@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
 import { fetchActivityLog, fetchEntityDetails, type ActivityEntry, type EntityDetails } from '@/lib/supabase/activity-queries'
+import { logManualEntry } from '@/lib/supabase/activity'
+import { createClient } from '@/lib/supabase/client'
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'custom'
 
@@ -15,6 +18,7 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     obstruction_evaluation: 'Obstruction Eval',
     navaid_status: 'NAVAID',
     airfield_status: 'Runway',
+    manual: 'Manual Entry',
   }
   const entity = typeLabel[entityType] || entityType
   const id = displayId ? ` ${displayId}` : ''
@@ -29,6 +33,7 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     resumed: 'Resumed',
     reviewed: 'Reviewed',
     waiver_review_deleted: 'Deleted review for',
+    noted: 'Logged',
   }
   const label = actionLabel[action] || (action.charAt(0).toUpperCase() + action.slice(1).replace(/_/g, ' '))
   return `${label} ${entity}${id}`
@@ -67,12 +72,6 @@ function buildDetailsString(a: ActivityEntry, detailsMap: Map<string, EntityDeta
   return ''
 }
 
-const STATUS_HEX: Record<string, string> = {
-  green: '#34D399',
-  yellow: '#FBBF24',
-  red: '#EF4444',
-}
-
 export default function ActivityPage() {
   const router = useRouter()
   const { installationId } = useInstallation()
@@ -85,6 +84,8 @@ export default function ActivityPage() {
   const [detailsMap, setDetailsMap] = useState<Map<string, EntityDetails>>(new Map())
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [manualText, setManualText] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   const getDateRange = useCallback((): { start: string; end: string } => {
     const now = new Date()
@@ -110,20 +111,21 @@ export default function ActivityPage() {
     }
   }, [period, today, customStart, customEnd])
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true)
-      const { start, end } = getDateRange()
-      const { data } = await fetchActivityLog({ baseId: installationId, startDate: start, endDate: end, limit: 500 })
-      setEntries(data)
-      const details = await fetchEntityDetails(data)
-      setDetailsMap(details)
-      setLoading(false)
-    }
-    load()
-  }, [installationId, period, customStart, customEnd, getDateRange])
+  const loadEntries = useCallback(async () => {
+    setLoading(true)
+    const { start, end } = getDateRange()
+    const { data } = await fetchActivityLog({ baseId: installationId, startDate: start, endDate: end, limit: 500 })
+    setEntries(data)
+    const details = await fetchEntityDetails(data)
+    setDetailsMap(details)
+    setLoading(false)
+  }, [installationId, getDateRange])
 
-  // Group entries by date
+  useEffect(() => {
+    loadEntries()
+  }, [loadEntries])
+
+  // Group entries by date for table section headers
   const grouped: { date: string; label: string; items: ActivityEntry[] }[] = []
   for (const entry of entries) {
     const d = new Date(entry.created_at)
@@ -135,6 +137,27 @@ export default function ActivityPage() {
     } else {
       grouped.push({ date: dateKey, label: dateLabel, items: [entry] })
     }
+  }
+
+  const handleManualSubmit = async () => {
+    if (!manualText.trim()) return
+    setSubmitting(true)
+    const supabase = createClient()
+    if (!supabase) {
+      toast.success('Entry logged (demo mode)')
+      setManualText('')
+      setSubmitting(false)
+      return
+    }
+    const { error } = await logManualEntry(manualText.trim(), installationId)
+    if (error) {
+      toast.error(error)
+    } else {
+      toast.success('Entry logged')
+      setManualText('')
+      await loadEntries()
+    }
+    setSubmitting(false)
   }
 
   const handleExport = async () => {
@@ -180,11 +203,38 @@ export default function ActivityPage() {
     { value: 'custom', label: 'Custom' },
   ]
 
+  const COL = {
+    time: { width: 52, label: 'Time' },
+    user: { width: 120, label: 'User' },
+    action: { label: 'Action' },
+    details: { label: 'Details' },
+  }
+
+  const thStyle: React.CSSProperties = {
+    padding: '6px 8px',
+    fontSize: 'var(--fs-xs)',
+    fontWeight: 700,
+    color: 'var(--color-text-3)',
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase',
+    textAlign: 'left',
+    whiteSpace: 'nowrap',
+    borderBottom: '2px solid var(--color-border)',
+  }
+
+  const tdStyle: React.CSSProperties = {
+    padding: '6px 8px',
+    fontSize: 'var(--fs-sm)',
+    color: 'var(--color-text-2)',
+    verticalAlign: 'top',
+    borderBottom: '1px solid var(--color-border)',
+  }
+
   return (
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-          ← Back
+          &larr; Back
         </button>
         <button
           onClick={handleExport}
@@ -201,6 +251,37 @@ export default function ActivityPage() {
       </div>
 
       <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 12 }}>Activity Log</div>
+
+      {/* Manual Entry Bar */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+        <input
+          type="text"
+          className="input-dark"
+          placeholder="Add manual log entry..."
+          value={manualText}
+          onChange={(e) => setManualText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              handleManualSubmit()
+            }
+          }}
+          style={{ flex: 1 }}
+        />
+        <button
+          onClick={handleManualSubmit}
+          disabled={!manualText.trim() || submitting}
+          style={{
+            padding: '0 16px', borderRadius: 8, border: 'none',
+            background: manualText.trim() ? 'var(--color-cyan)' : 'var(--color-bg-elevated)',
+            color: manualText.trim() ? 'var(--color-bg-surface-solid)' : 'var(--color-text-4)',
+            fontSize: 'var(--fs-base)', fontWeight: 700, cursor: manualText.trim() ? 'pointer' : 'default',
+            fontFamily: 'inherit', whiteSpace: 'nowrap',
+          }}
+        >
+          {submitting ? '...' : 'Add'}
+        </button>
+      </div>
 
       {/* Period Presets */}
       <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-text-4)', marginBottom: 12 }}>
@@ -261,85 +342,74 @@ export default function ActivityPage() {
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 8 }}>
             {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
           </div>
-          {grouped.map((group) => (
-            <div key={group.date} style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                {group.label}
-              </div>
-              <div className="card" style={{ padding: '4px 12px' }}>
-                {group.items.map((a, i, arr) => {
-                  const actionColor: Record<string, string> = {
-                    created: 'var(--color-success)',
-                    completed: 'var(--color-cyan)',
-                    updated: 'var(--color-warning)',
-                    status_updated: 'var(--color-purple)',
-                    deleted: 'var(--color-danger)',
-                  }
-                  const actionDotBg: Record<string, string> = {
-                    created: 'rgba(52,211,153,0.07)',
-                    completed: 'rgba(34,211,238,0.07)',
-                    updated: 'rgba(251,191,36,0.07)',
-                    status_updated: 'rgba(167,139,250,0.07)',
-                    deleted: 'rgba(239,68,68,0.07)',
-                  }
-                  const color = actionColor[a.action] || 'var(--color-text-3)'
-                  const dotBg = actionDotBg[a.action] || 'rgba(100,116,139,0.07)'
-                  const date = new Date(a.created_at)
-                  const timeStr = date.toTimeString().slice(0, 5)
-                  const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
-                  const navaidStatusVal = a.entity_type === 'navaid_status' && a.metadata?.status ? String(a.metadata.status) : null
-                  const detailsText = buildDetailsString(a, detailsMap)
-                  const link = getEntityLink(a.entity_type, a.entity_id)
 
-                  return (
-                    <div
-                      key={a.id}
-                      onClick={link ? () => router.push(link) : undefined}
-                      style={{
-                        display: 'flex',
-                        gap: 8,
-                        padding: '8px 0',
-                        borderBottom: i < arr.length - 1 ? '1px solid var(--color-border)' : 'none',
-                        cursor: link ? 'pointer' : 'default',
-                      }}
-                    >
-                      <div
+          {/* Columnar Table */}
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
+              <thead>
+                <tr>
+                  <th style={{ ...thStyle, width: COL.time.width }}>{COL.time.label}</th>
+                  <th style={{ ...thStyle, width: COL.user.width }}>{COL.user.label}</th>
+                  <th style={thStyle}>{COL.action.label}</th>
+                  <th style={thStyle}>{COL.details.label}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {grouped.map((group) => (
+                  <>
+                    {/* Date header row */}
+                    <tr key={`date-${group.date}`}>
+                      <td
+                        colSpan={4}
                         style={{
-                          width: 24, height: 24, borderRadius: 6, background: dotBg,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 'var(--fs-sm)', flexShrink: 0, color,
+                          padding: '10px 8px 4px',
+                          fontSize: 'var(--fs-sm)',
+                          fontWeight: 700,
+                          color: 'var(--color-text-3)',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                          borderBottom: '1px solid var(--color-border)',
+                          background: 'var(--color-bg-inset)',
                         }}
                       >
-                        &bull;
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                          <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-cyan)' }}>
+                        {group.label}
+                      </td>
+                    </tr>
+                    {/* Entry rows */}
+                    {group.items.map((a) => {
+                      const d = new Date(a.created_at)
+                      const timeStr = d.toTimeString().slice(0, 5)
+                      const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
+                      const detailsText = buildDetailsString(a, detailsMap)
+                      const link = getEntityLink(a.entity_type, a.entity_id)
+
+                      return (
+                        <tr
+                          key={a.id}
+                          onClick={link ? () => router.push(link) : undefined}
+                          style={{ cursor: link ? 'pointer' : 'default' }}
+                        >
+                          <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>
+                            {timeStr}
+                          </td>
+                          <td style={{ ...tdStyle, fontWeight: 600, color: 'var(--color-cyan)', whiteSpace: 'nowrap', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {userName}
-                          </span>
-                          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{timeStr}</span>
-                        </div>
-                        <div style={{ fontSize: 'var(--fs-sm)', color: link ? 'var(--color-cyan)' : 'var(--color-text-2)' }}>
-                          {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined)}
-                          {link && (
-                            <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>→</span>
-                          )}
-                          {navaidStatusVal && (
-                            <span style={{ marginLeft: 6, width: 8, height: 8, borderRadius: '50%', display: 'inline-block', background: STATUS_HEX[navaidStatusVal] || '#64748B' }} />
-                          )}
-                        </div>
-                        {detailsText && (
-                          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2, lineHeight: 1.4 }}>
-                            {detailsText}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
+                          </td>
+                          <td style={{ ...tdStyle, color: link ? 'var(--color-cyan)' : 'var(--color-text-2)', whiteSpace: 'nowrap' }}>
+                            {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined)}
+                            {link && <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>&rarr;</span>}
+                          </td>
+                          <td style={{ ...tdStyle, color: 'var(--color-text-3)', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {detailsText || '\u2014'}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </div>

@@ -137,6 +137,7 @@ export default function WaiverDetailPage() {
   }, [attachments])
 
   const isManager = !userRole || userRole === 'airfield_manager' || userRole === 'sys_admin'
+  const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
 
   const toggleSection = (key: string) => {
     setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }))
@@ -985,6 +986,18 @@ export default function WaiverDetailPage() {
           </ActionButton>
         )}
       </div>
+
+      {/* Admin Actions */}
+      {isAdmin && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
+          <ActionButton color="#3B82F6" onClick={() => router.push(`/waivers/${params.id}/edit`)} disabled={actionLoading}>
+            Edit Waiver
+          </ActionButton>
+          <ActionButton color="#EF4444" onClick={handleDelete} disabled={actionLoading}>
+            Delete Waiver
+          </ActionButton>
+        </div>
+      )}
 
       {/* ─── MODALS ─── */}
 

@@ -27,3 +27,31 @@ export async function logActivity(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (supabase as any).from('activity_log').insert(row)
 }
+
+export async function logManualEntry(text: string, baseId?: string | null): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const row: Record<string, unknown> = {
+    user_id: user.id,
+    action: 'noted',
+    entity_type: 'manual',
+    entity_id: null,
+    entity_display_id: null,
+    metadata: { notes: text },
+  }
+  if (baseId) row.base_id = baseId
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any).from('activity_log').insert(row)
+
+  if (error) {
+    console.error('Manual activity entry failed:', error.message)
+    return { error: error.message }
+  }
+
+  return { error: null }
+}

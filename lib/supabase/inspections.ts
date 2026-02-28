@@ -582,3 +582,26 @@ export async function deleteInspection(id: string): Promise<{ error: string | nu
 
   return { error: null }
 }
+
+export async function updateInspectionNotes(id: string, notes: string | null): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: existing } = await (supabase as any).from('inspections').select('display_id, base_id').eq('id', id).single()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from('inspections')
+    .update({ notes })
+    .eq('id', id)
+
+  if (error) {
+    console.error('Update inspection notes failed:', error.message)
+    return { error: error.message }
+  }
+
+  logActivity('updated', 'inspection', id, existing?.display_id, { field: 'notes' }, existing?.base_id)
+
+  return { error: null }
+}

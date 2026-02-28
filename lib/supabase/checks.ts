@@ -242,6 +242,31 @@ export async function deleteCheck(id: string): Promise<{ error: string | null }>
   return { error: null }
 }
 
+export async function updateCheckNotes(id: string, notes: string | null): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: existing } = await (supabase as any).from('airfield_checks').select('display_id, data, base_id').eq('id', id).single()
+  const currentData = (existing?.data as Record<string, unknown>) || {}
+  const updatedData = { ...currentData, notes }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from('airfield_checks')
+    .update({ data: updatedData })
+    .eq('id', id)
+
+  if (error) {
+    console.error('Update check notes failed:', error.message)
+    return { error: error.message }
+  }
+
+  logActivity('updated', 'check', id, existing?.display_id, { field: 'notes' }, existing?.base_id)
+
+  return { error: null }
+}
+
 export async function uploadCheckPhoto(
   checkId: string,
   file: File,

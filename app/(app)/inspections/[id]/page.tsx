@@ -5,21 +5,27 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { DEMO_INSPECTIONS } from '@/lib/demo-data'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { fetchInspection, fetchDailyGroup, fetchInspectionPhotos, type InspectionRow, type InspectionPhotoRow } from '@/lib/supabase/inspections'
+import { fetchInspection, fetchDailyGroup, fetchInspectionPhotos, deleteInspection, updateInspectionNotes, type InspectionRow, type InspectionPhotoRow } from '@/lib/supabase/inspections'
 import type { InspectionItem } from '@/lib/supabase/types'
 import { useInstallation } from '@/lib/installation-context'
+import { ActionButton } from '@/components/ui/button'
 import type { PdfBaseInfo, PdfPhotoMap, PdfGeneralPhotos } from '@/lib/pdf-export'
 import { PhotoViewerModal } from '@/components/discrepancies/modals'
 
 export default function InspectionDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { currentInstallation } = useInstallation()
+  const { currentInstallation, userRole } = useInstallation()
+  const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
   const [inspections, setInspections] = useState<InspectionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
   const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false)
+  const [editingNotes, setEditingNotes] = useState(false)
+  const [notesText, setNotesText] = useState('')
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ airfield: false, lighting: false })
   const [showFailedItems, setShowFailedItems] = useState(false)
 
@@ -615,12 +621,62 @@ export default function InspectionDetailPage() {
           )}
 
           {/* Comments */}
-          {primary.notes && (
+          {(primary.notes || (isAdmin && editingNotes)) && (
             <div className="card" style={{ marginBottom: 10, borderRadius: 12, padding: '14px' }}>
-              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
-                Comments
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                  Comments
+                </div>
+                {isAdmin && !editingNotes && (
+                  <button
+                    onClick={() => { setNotesText(primary.notes || ''); setEditingNotes(true) }}
+                    style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+                  >
+                    Edit
+                  </button>
+                )}
               </div>
-              <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{primary.notes}</div>
+              {editingNotes ? (
+                <div>
+                  <textarea
+                    className="input-dark"
+                    rows={3}
+                    style={{ resize: 'vertical', width: '100%', boxSizing: 'border-box', marginBottom: 8 }}
+                    value={notesText}
+                    onChange={(e) => setNotesText(e.target.value)}
+                  />
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <ActionButton
+                      color="#10B981"
+                      onClick={async () => {
+                        if (usingDemo) {
+                          toast.success('Notes updated (demo mode)')
+                          setEditingNotes(false)
+                          return
+                        }
+                        setActionLoading(true)
+                        const { error } = await updateInspectionNotes(primary.id, notesText.trim() || null)
+                        if (error) {
+                          toast.error(error)
+                        } else {
+                          toast.success('Notes updated')
+                          await loadData()
+                        }
+                        setActionLoading(false)
+                        setEditingNotes(false)
+                      }}
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? 'Saving...' : 'Save'}
+                    </ActionButton>
+                    <ActionButton color="#9CA3AF" onClick={() => setEditingNotes(false)}>
+                      Cancel
+                    </ActionButton>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{primary.notes}</div>
+              )}
             </div>
           )}
 
@@ -870,6 +926,41 @@ export default function InspectionDetailPage() {
           All Inspections
         </Link>
       </div>
+
+      {/* Admin Actions */}
+      {isAdmin && (
+        <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12, marginTop: 8, display: 'flex', gap: 8 }}>
+          <ActionButton
+            color="#3B82F6"
+            onClick={() => { setNotesText(primary.notes || ''); setEditingNotes(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+          >
+            Edit Notes
+          </ActionButton>
+          <ActionButton
+            color="#EF4444"
+            onClick={async () => {
+              if (usingDemo) {
+                toast.success('Inspection deleted (demo mode)')
+                router.push('/inspections?view=history')
+                return
+              }
+              if (!confirm('Delete this inspection? This cannot be undone.')) return
+              setActionLoading(true)
+              const { error } = await deleteInspection(primary.id)
+              if (error) {
+                toast.error(error)
+                setActionLoading(false)
+              } else {
+                toast.success('Inspection deleted')
+                router.push('/inspections?view=history')
+              }
+            }}
+            disabled={actionLoading}
+          >
+            Delete Record
+          </ActionButton>
+        </div>
+      )}
 
       {/* Photo Viewer Modal */}
       {viewerPhotos && (
