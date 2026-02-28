@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
@@ -89,6 +89,16 @@ export default function ActivityPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
   const [saving, setSaving] = useState(false)
+  const editRef = useRef<HTMLTextAreaElement>(null)
+
+  // Auto-resize the edit textarea to fit content
+  useEffect(() => {
+    const el = editRef.current
+    if (el) {
+      el.style.height = 'auto'
+      el.style.height = el.scrollHeight + 'px'
+    }
+  }, [editingId, editText])
 
   const getDateRange = useCallback((): { start: string; end: string } => {
     const now = new Date()
@@ -448,15 +458,16 @@ export default function ActivityPage() {
                             {isEditing ? (
                               <div style={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
                                 <textarea
+                                  ref={editRef}
                                   className="input-dark"
-                                  rows={2}
+                                  rows={1}
                                   value={editText}
                                   onChange={(e) => setEditText(e.target.value)}
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditSave() }
                                     if (e.key === 'Escape') setEditingId(null)
                                   }}
-                                  style={{ flex: 1, fontSize: 'var(--fs-sm)', resize: 'vertical', minWidth: 0 }}
+                                  style={{ flex: 1, fontSize: 'var(--fs-sm)', resize: 'none', minWidth: 0, overflow: 'hidden' }}
                                   autoFocus
                                 />
                                 <button onClick={handleEditSave} disabled={saving} style={{ ...iconBtnStyle, color: 'var(--color-success)' }} title="Save">

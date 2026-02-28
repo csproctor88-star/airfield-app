@@ -82,14 +82,18 @@ export async function deleteActivityEntry(id: string): Promise<{ error: string |
   if (!supabase) return { error: 'Supabase not configured' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { data, error } = await (supabase as any)
     .from('activity_log')
     .delete()
     .eq('id', id)
+    .select('id')
 
   if (error) {
     console.error('Delete activity entry failed:', error.message)
     return { error: error.message }
+  }
+  if (!data || data.length === 0) {
+    return { error: 'Delete failed — row not found or permission denied' }
   }
   return { error: null }
 }
