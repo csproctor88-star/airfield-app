@@ -2,10 +2,13 @@
 
 import Link from 'next/link'
 import { useTheme } from '@/lib/theme-context'
+import { useSidebar } from '@/lib/sidebar-context'
+import { PanelLeftOpen } from 'lucide-react'
 
-// Header: gradient bg, logo centered
+// Header: gradient bg, logo centered, sidebar toggle when collapsed
 export function Header() {
   const { resolvedTheme } = useTheme()
+  const { isOpen, toggle } = useSidebar()
 
   return (
     <div
@@ -23,6 +26,27 @@ export function Header() {
         alignItems: 'center',
       }}
     >
+      {/* Sidebar expand button — visible on tablet+ when sidebar is collapsed */}
+      <button
+        onClick={toggle}
+        className={`sidebar-toggle${!isOpen ? ' sidebar-toggle-visible' : ''}`}
+        title="Expand sidebar"
+        style={{
+          position: 'absolute',
+          left: 16,
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          color: 'var(--color-text-3)',
+          padding: 6,
+          borderRadius: 6,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <PanelLeftOpen size={20} />
+      </button>
+
       <Link href="/" style={{ textDecoration: 'none' }}>
         <img
           src={resolvedTheme === 'dark' ? '/glidepathdarkmode3.png' : '/glidepath2.png'}

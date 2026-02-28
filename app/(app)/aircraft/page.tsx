@@ -800,7 +800,7 @@ export default function AircraftPage() {
       </div>
 
       {/* Aircraft List */}
-      <div className="card-list">
+      <div className="card-list card-list-single">
         {filtered.length === 0 && (
           <div className="card" style={{ textAlign: 'center', padding: 32 }}>
             <Search size={24} color="var(--color-text-4)" style={{ margin: '0 auto 8px' }} />

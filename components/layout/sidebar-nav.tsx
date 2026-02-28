@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { USER_ROLES } from '@/lib/constants'
+import { useSidebar } from '@/lib/sidebar-context'
 import type { UserRole } from '@/lib/supabase/types'
 import {
   Home,
@@ -21,6 +22,8 @@ import {
   Settings,
   Users,
   Activity,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react'
 
 // All navigation items — organized by section
@@ -49,6 +52,7 @@ const bottomItems = [
 
 export function SidebarNav() {
   const pathname = usePathname()
+  const { isOpen, toggle } = useSidebar()
   const [canManageUsers, setCanManageUsers] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
@@ -97,11 +101,13 @@ export function SidebarNav() {
       <Link
         key={item.href}
         href={item.href}
+        title={!isOpen ? item.name : undefined}
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 12,
-          padding: '10px 20px',
+          justifyContent: isOpen ? undefined : 'center',
+          gap: isOpen ? 12 : 0,
+          padding: isOpen ? '10px 20px' : '10px 0',
           textDecoration: 'none',
           color: active ? 'var(--color-accent)' : 'var(--color-text-2)',
           background: active ? 'var(--color-accent-glow)' : 'transparent',
@@ -109,10 +115,12 @@ export function SidebarNav() {
           fontSize: 'var(--fs-lg)',
           fontWeight: active ? 700 : 500,
           transition: 'background 0.15s, color 0.15s',
+          overflow: 'hidden',
+          whiteSpace: 'nowrap',
         }}
       >
         <Icon size={18} style={{ flexShrink: 0 }} />
-        <span>{item.name}</span>
+        {isOpen && <span>{item.name}</span>}
       </Link>
     )
   }
@@ -122,22 +130,49 @@ export function SidebarNav() {
   )
 
   return (
-    <nav className="sidebar-drawer">
-      {/* Header with tagline */}
+    <nav className={`sidebar-drawer${isOpen ? '' : ' sidebar-collapsed'}`}>
+      {/* Header with tagline + collapse toggle */}
       <div style={{
-        padding: '20px 20px 16px',
+        padding: isOpen ? '20px 20px 16px' : '16px 0',
         borderBottom: '1px solid var(--color-border)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: isOpen ? 'space-between' : 'center',
+        gap: 8,
       }}>
-        <div style={{
-          fontSize: 'var(--fs-lg)',
-          fontWeight: 300,
-          fontStyle: 'italic',
-          color: 'var(--color-text-2)',
-          letterSpacing: '0.04em',
-          lineHeight: 1.4,
-        }}>
-          Guiding You to Mission Success
-        </div>
+        {isOpen && (
+          <div style={{
+            fontSize: 'var(--fs-lg)',
+            fontWeight: 300,
+            fontStyle: 'italic',
+            color: 'var(--color-text-2)',
+            letterSpacing: '0.04em',
+            lineHeight: 1.4,
+            flex: 1,
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
+          }}>
+            Guiding You to Mission Success
+          </div>
+        )}
+        <button
+          onClick={toggle}
+          title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'var(--color-text-3)',
+            padding: 6,
+            borderRadius: 6,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          {isOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+        </button>
       </div>
 
       {/* Navigation items */}

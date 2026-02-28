@@ -769,7 +769,7 @@ export default function HomePage() {
               justifyContent: 'center',
               gap: 10,
               flex: 1,
-              whiteSpace: 'nowrap',
+              minWidth: 0,
             }}
           >
             <span style={{ fontSize: 'var(--fs-5xl)' }}>{q.icon}</span>

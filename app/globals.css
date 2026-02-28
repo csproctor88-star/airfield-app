@@ -348,6 +348,13 @@ html, body {
   gap: 8px;
 }
 
+/* Single-column card list — stays single column at all breakpoints */
+.card-list-single {
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-columns: unset !important;
+}
+
 /* Actions row — vertical on mobile, horizontal on tablet+ */
 .actions-row {
   display: flex;
@@ -422,7 +429,7 @@ html, body {
 /* Content area — no constraint on mobile (parent is already 480px) */
 .app-content {}
 
-/* Sidebar toggle button — hidden everywhere now (sidebar is permanent on tablet+) */
+/* Sidebar toggle in header — hidden on mobile, shown on tablet+ when sidebar collapsed */
 .sidebar-toggle {
   display: none !important;
 }
@@ -439,6 +446,7 @@ html, body {
   background: var(--color-bg-surface-solid);
   border-right: 1px solid var(--color-border);
   overflow-y: auto;
+  transition: width 0.2s ease;
 }
 
 /* Close button inside sidebar — hidden on tablet+ (no longer needed) */
@@ -503,6 +511,17 @@ html, body {
     height: 100dvh;
     width: 300px;
     flex-shrink: 0;
+    transition: width 0.2s ease;
+  }
+
+  /* Collapsed sidebar — icons only */
+  .sidebar-drawer.sidebar-collapsed {
+    width: 64px;
+  }
+
+  /* Show header toggle button when sidebar is collapsed */
+  .sidebar-toggle.sidebar-toggle-visible {
+    display: flex !important;
   }
 
   /* Main column — header + content */
@@ -572,6 +591,10 @@ html, body {
   .actions-row {
     flex-direction: row;
     gap: 10px;
+  }
+
+  .actions-row > * {
+    min-width: 0;
   }
 
   .form-row {
