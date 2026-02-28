@@ -593,11 +593,11 @@ export default function HomePage() {
         )
       })()}
       <div className="card" style={{ marginBottom: 12, padding: '14px 12px' }}>
-        <div className="kpi-grid-2" style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 12 }}>
           <div
             title={currentStatus.rscTime ? `Last checked: ${currentStatus.rscTime}` : undefined}
             onClick={() => setShowRscTime(p => !p)}
-            style={{ padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+            style={{ flex: '0 1 200px', padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textAlign: 'center' }}
           >
             <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6 }}>RSC</div>
             <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: 'var(--color-accent)' }}>
@@ -610,7 +610,7 @@ export default function HomePage() {
           <div
             title={currentStatus.bwcTime ? `Last checked: ${currentStatus.bwcTime}` : undefined}
             onClick={() => setShowBwcTime(p => !p)}
-            style={{ padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+            style={{ flex: '0 1 200px', padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textAlign: 'center' }}
           >
             <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6 }}>BWC</div>
             <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: currentStatus.bwc === 'SEV' || currentStatus.bwc === 'PROHIB' ? 'var(--color-danger)' : currentStatus.bwc === 'MOD' ? 'var(--color-warning)' : 'var(--color-success)' }}>
@@ -651,28 +651,26 @@ export default function HomePage() {
         const NAVAID_CYCLE: ('green' | 'yellow' | 'red')[] = ['green', 'yellow', 'red']
         const NAVAID_LABELS: Record<string, string> = { green: 'G', yellow: 'Y', red: 'R' }
         const renderNavaidItem = (n: NavaidStatus) => (
-          <div key={n.id} style={{ marginBottom: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
-                {getNavaidDisplayName(n.navaid_name)}
-              </span>
-              <button
-                onClick={() => {
-                  const idx = NAVAID_CYCLE.indexOf(n.status as 'green' | 'yellow' | 'red')
-                  const next = NAVAID_CYCLE[(idx + 1) % NAVAID_CYCLE.length]
-                  handleNavaidToggle(n, next)
-                }}
-                style={{
-                  width: 36, height: 28, borderRadius: 6,
-                  border: `2px solid ${STATUS_COLORS[n.status]}`,
-                  background: `${STATUS_HEX[n.status]}20`,
-                  cursor: 'pointer', fontSize: 'var(--fs-base)', fontWeight: 700,
-                  color: STATUS_COLORS[n.status], textTransform: 'uppercase', padding: 0,
-                }}
-              >
-                {NAVAID_LABELS[n.status] || 'G'}
-              </button>
-            </div>
+          <div key={n.id} style={{ marginBottom: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+              {getNavaidDisplayName(n.navaid_name)}
+            </span>
+            <button
+              onClick={() => {
+                const idx = NAVAID_CYCLE.indexOf(n.status as 'green' | 'yellow' | 'red')
+                const next = NAVAID_CYCLE[(idx + 1) % NAVAID_CYCLE.length]
+                handleNavaidToggle(n, next)
+              }}
+              style={{
+                width: 36, height: 28, borderRadius: 6,
+                border: `2px solid ${STATUS_COLORS[n.status]}`,
+                background: `${STATUS_HEX[n.status]}20`,
+                cursor: 'pointer', fontSize: 'var(--fs-base)', fontWeight: 700,
+                color: STATUS_COLORS[n.status], textTransform: 'uppercase', padding: 0,
+              }}
+            >
+              {NAVAID_LABELS[n.status] || 'G'}
+            </button>
           </div>
         )
         const allFlagged = navaids.filter(n => n.status === 'yellow' || n.status === 'red')
@@ -752,7 +750,7 @@ export default function HomePage() {
 
       {/* ===== Quick Actions ===== */}
       <span className="section-label">Quick Actions</span>
-      <div className="actions-row" style={{ marginBottom: 20 }}>
+      <div className="actions-row" style={{ marginBottom: 20, alignItems: 'center' }}>
         {QUICK_ACTIONS.map((q) => (
           <Link
             key={q.label}
@@ -768,6 +766,8 @@ export default function HomePage() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: 10,
+              width: '100%',
+              maxWidth: 320,
             }}
           >
             <span style={{ fontSize: 'var(--fs-5xl)' }}>{q.icon}</span>
