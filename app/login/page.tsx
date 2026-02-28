@@ -18,6 +18,7 @@ const RANK_OPTIONS = [
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [rank, setRank] = useState('')
@@ -34,6 +35,17 @@ export default function LoginPage() {
   const [newInstallationIcao, setNewInstallationIcao] = useState('')
   const installationRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+
+  // Load remembered email on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('glidepath_remember_email')
+      if (saved) {
+        setEmail(saved)
+        setRememberMe(true)
+      }
+    } catch { /* noop */ }
+  }, [])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -182,6 +194,15 @@ export default function LoginPage() {
           .update({ last_seen_at: new Date().toISOString() })
           .eq('id', signInData.user.id)
       }
+
+      // Save or clear remembered email
+      try {
+        if (rememberMe) {
+          localStorage.setItem('glidepath_remember_email', email)
+        } else {
+          localStorage.removeItem('glidepath_remember_email')
+        }
+      } catch { /* noop */ }
 
       router.push('/')
       router.refresh()
@@ -463,7 +484,16 @@ export default function LoginPage() {
             </div>
 
             {mode === 'signin' && (
-              <div style={{ textAlign: 'right', marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    style={{ accentColor: 'var(--color-cyan)' }}
+                  />
+                  Remember me
+                </label>
                 <button
                   type="button"
                   onClick={handleForgotPassword}

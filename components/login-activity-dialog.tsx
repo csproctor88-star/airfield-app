@@ -13,6 +13,7 @@ type ActivityEntry = {
   created_at: string
   user_name: string
   user_rank: string | null
+  metadata: Record<string, unknown> | null
 }
 
 function formatAction(action: string, entityType: string, displayId?: string): string {
@@ -21,6 +22,10 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     check: 'Check',
     inspection: 'Inspection',
     obstruction_evaluation: 'Obstruction Eval',
+    manual: 'Manual Entry',
+    airfield_status: 'Runway',
+    waiver: 'Waiver',
+    navaid: 'NAVAID',
   }
   const entity = typeLabel[entityType] || entityType
   const id = displayId ? ` ${displayId}` : ''
@@ -29,9 +34,22 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     updated: 'Updated',
     deleted: 'Deleted',
     completed: 'Completed',
-    status_updated: 'Status changed on',
+    status_updated: 'Status Changed',
+    noted: 'Logged',
   }
   return `${actionLabel[action] || action} ${entity}${id}`
+}
+
+function buildDetails(entry: ActivityEntry): string {
+  const meta = entry.metadata
+  if (!meta) return ''
+  if (meta.notes) return meta.notes as string
+  if (meta.status) return `Status: ${meta.status}`
+  if (meta.changes) {
+    const c = meta.changes as Record<string, unknown>
+    return Object.entries(c).map(([k, v]) => `${k}: ${v}`).join(', ')
+  }
+  return ''
 }
 
 export default function LoginActivityDialog() {
@@ -56,7 +74,7 @@ export default function LoginActivityDialog() {
 
       let query = (supabase as any)
         .from('activity_log')
-        .select('id, action, entity_type, entity_display_id, created_at, user_id, profiles:user_id(name, rank)')
+        .select('id, action, entity_type, entity_display_id, created_at, metadata, user_id, profiles:user_id(name, rank)')
         .gt('created_at', previousLoginAt)
         .order('created_at', { ascending: false })
         .limit(50)
@@ -87,6 +105,7 @@ export default function LoginActivityDialog() {
             created_at: r.created_at as string,
             user_name: 'Unknown',
             user_rank: null,
+            metadata: (r.metadata as Record<string, unknown>) || null,
           })))
           setOpen(true)
         }
@@ -102,6 +121,7 @@ export default function LoginActivityDialog() {
           created_at: r.created_at as string,
           user_name: (r.profiles as { name?: string } | null)?.name || 'Unknown',
           user_rank: (r.profiles as { rank?: string } | null)?.rank || null,
+          metadata: (r.metadata as Record<string, unknown>) || null,
         })))
         setOpen(true)
       }
@@ -112,19 +132,25 @@ export default function LoginActivityDialog() {
 
   if (!open || entries.length === 0) return null
 
-  const actionColor: Record<string, string> = {
-    created: 'var(--color-success)',
-    completed: 'var(--color-cyan)',
-    updated: 'var(--color-warning)',
-    status_updated: 'var(--color-purple)',
-    deleted: 'var(--color-danger)',
-  }
-  const actionDotBg: Record<string, string> = {
-    created: 'rgba(52,211,153,0.07)',
-    completed: 'rgba(34,211,238,0.07)',
-    updated: 'rgba(251,191,36,0.07)',
-    status_updated: 'rgba(167,139,250,0.07)',
-    deleted: 'rgba(239,68,68,0.07)',
+  // Group entries by date for date header rows
+  const grouped: { date: string; items: ActivityEntry[] }[] = []
+  entries.forEach((e) => {
+    const d = new Date(e.created_at)
+    const dateKey = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    const last = grouped[grouped.length - 1]
+    if (last && last.date === dateKey) {
+      last.items.push(e)
+    } else {
+      grouped.push({ date: dateKey, items: [e] })
+    }
+  })
+
+  const cellStyle: React.CSSProperties = {
+    padding: '5px 8px',
+    fontSize: 'var(--fs-sm)',
+    color: 'var(--color-text-2)',
+    whiteSpace: 'nowrap',
+    verticalAlign: 'top',
   }
 
   return (
@@ -145,7 +171,7 @@ export default function LoginActivityDialog() {
         className="card"
         style={{
           width: '100%',
-          maxWidth: 400,
+          maxWidth: 600,
           maxHeight: '80vh',
           display: 'flex',
           flexDirection: 'column',
@@ -178,56 +204,73 @@ export default function LoginActivityDialog() {
           </button>
         </div>
 
-        {/* Scrollable activity list */}
-        <div style={{ overflowY: 'auto', padding: '8px 20px' }}>
-          {entries.map((a, i, arr) => {
-            const color = actionColor[a.action] || 'var(--color-text-3)'
-            const dotBg = actionDotBg[a.action] || 'rgba(100,116,139,0.07)'
-            const date = new Date(a.created_at)
-            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-            const timeStr = date.toTimeString().slice(0, 5)
-            const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
+        {/* Scrollable columnar table */}
+        <div style={{ overflowY: 'auto', overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                {['Time (Z)', 'User', 'Action', 'Details'].map((h) => (
+                  <th
+                    key={h}
+                    style={{
+                      padding: '8px 8px',
+                      fontSize: 'var(--fs-xs)',
+                      fontWeight: 700,
+                      color: 'var(--color-text-3)',
+                      textAlign: 'left',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                    }}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {grouped.map((group) => (
+                <>
+                  {/* Date header row */}
+                  <tr key={`date-${group.date}`}>
+                    <td
+                      colSpan={4}
+                      style={{
+                        padding: '8px 8px 4px',
+                        fontSize: 'var(--fs-sm)',
+                        fontWeight: 700,
+                        color: 'var(--color-cyan)',
+                        background: 'var(--color-bg-surface)',
+                      }}
+                    >
+                      {group.date}
+                    </td>
+                  </tr>
+                  {group.items.map((a) => {
+                    const d = new Date(a.created_at)
+                    const timeZ = d.toISOString().slice(11, 16)
+                    const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
+                    const details = buildDetails(a)
 
-            return (
-              <div
-                key={a.id}
-                style={{
-                  display: 'flex',
-                  gap: 8,
-                  padding: '7px 0',
-                  borderBottom: i < arr.length - 1 ? '1px solid var(--color-border)' : 'none',
-                }}
-              >
-                <div
-                  style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: 6,
-                    background: dotBg,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 'var(--fs-sm)',
-                    flexShrink: 0,
-                    color,
-                  }}
-                >
-                  &bull;
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-cyan)' }}>
-                      {userName}
-                    </span>
-                    <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{dateStr} {timeStr}</span>
-                  </div>
-                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-                    {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined)}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+                    return (
+                      <tr
+                        key={a.id}
+                        style={{ borderBottom: '1px solid var(--color-border)' }}
+                      >
+                        <td style={cellStyle}>{timeZ}</td>
+                        <td style={cellStyle}>{userName}</td>
+                        <td style={cellStyle}>
+                          {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined)}
+                        </td>
+                        <td style={{ ...cellStyle, whiteSpace: 'normal', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {details}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         {/* Acknowledge All button */}

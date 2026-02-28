@@ -59,6 +59,8 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     inspection: 'Inspection',
     obstruction_evaluation: 'Obstruction Eval',
     navaid_status: 'NAVAID',
+    airfield_status: 'Runway',
+    manual: 'Manual Entry',
   }
   const entity = typeLabel[entityType] || entityType
   const id = displayId ? ` ${displayId}` : ''
@@ -72,6 +74,7 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     filed: 'Filed',
     resumed: 'Resumed',
     reviewed: 'Reviewed',
+    noted: 'Logged',
     waiver_review_deleted: 'Deleted review for',
   }
   const label = actionLabel[action] || (action.charAt(0).toUpperCase() + action.slice(1).replace(/_/g, ' '))

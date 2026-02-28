@@ -297,17 +297,6 @@ export default function ActivityPage() {
     borderBottom: '1px solid var(--color-border)',
   }
 
-  const iconBtnStyle: React.CSSProperties = {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: '2px 4px',
-    fontSize: 'var(--fs-xs)',
-    fontFamily: 'inherit',
-    fontWeight: 600,
-    lineHeight: 1,
-  }
-
   return (
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -516,14 +505,14 @@ export default function ActivityPage() {
                           <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleEdit(a) }}
-                              style={{ ...iconBtnStyle, color: '#3B82F6' }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: '#3B82F6' }}
                               title="Edit entry"
                             >
                               Edit
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleDelete(a) }}
-                              style={{ ...iconBtnStyle, color: '#EF4444', marginLeft: 2 }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: '#EF4444', marginLeft: 2 }}
                               title="Delete entry"
                             >
                               Del
@@ -613,7 +602,7 @@ export default function ActivityPage() {
             </div>
 
             {/* Buttons */}
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
               <button
                 onClick={handleEditSave}
                 disabled={saving}
@@ -638,6 +627,20 @@ export default function ActivityPage() {
                 Cancel
               </button>
             </div>
+            <button
+              onClick={() => {
+                const entry = entries.find((e) => e.id === editingId)
+                if (entry) { setEditingId(null); handleDelete(entry) }
+              }}
+              style={{
+                width: '100%', padding: '8px 0', borderRadius: 8,
+                border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)',
+                color: '#EF4444', fontSize: 'var(--fs-sm)', fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Delete Entry
+            </button>
           </div>
         </div>
       )}
