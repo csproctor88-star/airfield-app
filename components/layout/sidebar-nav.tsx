@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { useTheme } from '@/lib/theme-context'
 import { createClient } from '@/lib/supabase/client'
 import { USER_ROLES } from '@/lib/constants'
 import type { UserRole } from '@/lib/supabase/types'
@@ -50,7 +49,6 @@ const bottomItems = [
 
 export function SidebarNav() {
   const pathname = usePathname()
-  const { resolvedTheme } = useTheme()
   const [canManageUsers, setCanManageUsers] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
@@ -125,20 +123,21 @@ export function SidebarNav() {
 
   return (
     <nav className="sidebar-drawer">
-      {/* Header with logo */}
+      {/* Header with tagline */}
       <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        padding: '16px 16px 12px',
+        padding: '20px 20px 16px',
         borderBottom: '1px solid var(--color-border)',
       }}>
-        <Link href="/" style={{ textDecoration: 'none' }}>
-          <img
-            src={resolvedTheme === 'dark' ? '/glidepathdarkmode3.png' : '/glidepath2.png'}
-            alt="Glidepath"
-            style={{ height: 40, objectFit: 'contain', display: 'block' }}
-          />
-        </Link>
+        <div style={{
+          fontSize: 'var(--fs-lg)',
+          fontWeight: 300,
+          fontStyle: 'italic',
+          color: 'var(--color-text-2)',
+          letterSpacing: '0.04em',
+          lineHeight: 1.4,
+        }}>
+          Guiding You to Mission Success
+        </div>
       </div>
 
       {/* Navigation items */}
