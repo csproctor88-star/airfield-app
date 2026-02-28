@@ -678,15 +678,15 @@ export default function HomePage() {
         const allFlagged = navaids.filter(n => n.status === 'yellow' || n.status === 'red')
         return (
           <>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: allFlagged.length > 0 ? 8 : 16 }}>
+          <div className="navaid-grid" style={{ marginBottom: allFlagged.length > 0 ? 8 : 16 }}>
             {endGroups.filter(group => group.items.length > 0).map(group => (
-              <div key={group.designator} className="card" style={{ padding: '10px 14px 4px', flex: '1 1 calc(50% - 10px)', maxWidth: 'calc(50% - 5px)' }}>
+              <div key={group.designator} className="card" style={{ padding: '10px 14px 4px' }}>
                 <div style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY {group.designator}</div>
                 {group.items.map(renderNavaidItem)}
               </div>
             ))}
             {otherNavaids.length > 0 && (
-              <div className="card" style={{ padding: '10px 14px 4px', flex: '1 1 calc(50% - 10px)', maxWidth: 'calc(50% - 5px)' }}>
+              <div className="card" style={{ padding: '10px 14px 4px' }}>
                 <div style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>OTHER</div>
                 {otherNavaids.map(renderNavaidItem)}
               </div>

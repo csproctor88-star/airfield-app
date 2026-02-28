@@ -287,6 +287,13 @@ html, body {
   display: inline-block;
 }
 
+/* NAVAID grid — 2-col default, 3-col on tablet+ */
+.navaid-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    Responsive Utility Classes — Per-Page Content
    ═══════════════════════════════════════════════════════════════ */
@@ -535,6 +542,10 @@ html, body {
     gap: 6px;
     overflow-x: visible;
     padding-bottom: 0;
+  }
+
+  .navaid-grid {
+    grid-template-columns: 1fr 1fr 1fr;
   }
 
   .photo-grid { gap: 8px; }
