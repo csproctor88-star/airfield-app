@@ -68,14 +68,18 @@ export async function updateActivityEntry(id: string, notes: string, createdAt?:
   if (createdAt) updates.created_at = createdAt
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { data, error } = await (supabase as any)
     .from('activity_log')
     .update(updates)
     .eq('id', id)
+    .select('id')
 
   if (error) {
     console.error('Update activity entry failed:', error.message)
     return { error: error.message }
+  }
+  if (!data || data.length === 0) {
+    return { error: 'Update failed — permission denied. Run the activity_log RLS migration.' }
   }
   return { error: null }
 }

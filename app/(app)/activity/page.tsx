@@ -229,7 +229,7 @@ export default function ActivityPage() {
 
       const columns = [
         { header: 'Date', key: 'date', width: 14 },
-        { header: 'Time', key: 'time', width: 10 },
+        { header: 'Time (Z)', key: 'time', width: 10 },
         { header: 'User', key: 'user', width: 24 },
         { header: 'Action', key: 'action', width: 40 },
         { header: 'Details', key: 'details', width: 60 },
@@ -239,7 +239,7 @@ export default function ActivityPage() {
         const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
         return {
           date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          time: d.toTimeString().slice(0, 5),
+          time: d.toISOString().slice(11, 16),
           user: userName,
           action: formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined),
           details: buildDetailsString(a, detailsMap),
@@ -458,11 +458,25 @@ export default function ActivityPage() {
                                   style={{ fontSize: 'var(--fs-2xs)', padding: '2px 4px', width: 110 }}
                                 />
                                 <input
-                                  type="time"
+                                  type="text"
                                   className="input-dark"
                                   value={editTime}
-                                  onChange={(e) => setEditTime(e.target.value)}
-                                  style={{ fontSize: 'var(--fs-2xs)', padding: '2px 4px', width: 80 }}
+                                  onChange={(e) => {
+                                    const v = e.target.value.replace(/[^0-9:]/g, '')
+                                    if (v.length <= 5) setEditTime(v)
+                                  }}
+                                  onBlur={() => {
+                                    // Auto-format: "1430" → "14:30", "9" → "09:00"
+                                    let v = editTime.replace(/[^0-9]/g, '')
+                                    if (v.length <= 2) v = v.padStart(2, '0') + '00'
+                                    else if (v.length === 3) v = '0' + v
+                                    const hh = Math.min(23, parseInt(v.slice(0, 2))).toString().padStart(2, '0')
+                                    const mm = Math.min(59, parseInt(v.slice(2, 4))).toString().padStart(2, '0')
+                                    setEditTime(`${hh}:${mm}`)
+                                  }}
+                                  placeholder="HH:MM"
+                                  maxLength={5}
+                                  style={{ fontSize: 'var(--fs-2xs)', padding: '2px 4px', width: 60, fontFamily: 'monospace' }}
                                 />
                               </div>
                             ) : timeStr}
