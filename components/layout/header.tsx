@@ -69,7 +69,7 @@ export function Header() {
           ? 'linear-gradient(180deg, var(--color-bg-header-start), var(--color-bg-header-end))'
           : '#ffffff',
         borderBottom: resolvedTheme === 'dark' ? 'none' : '2px solid var(--color-header-border)',
-        padding: '8px 16px',
+        padding: 'var(--header-padding)',
         position: 'sticky',
         top: 0,
         zIndex: 50,
@@ -85,14 +85,14 @@ export function Header() {
           alt="Glidepath"
           style={{
             display: 'block',
-            height: resolvedTheme === 'dark' ? 64 : 48,
+            height: resolvedTheme === 'dark' ? 'var(--header-logo-height-dark)' : 'var(--header-logo-height)',
             objectFit: 'contain',
           }}
         />
       </Link>
 
       {/* Bottom row: menu toggle + installation (left) + user (right) */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%', marginTop: 6 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%', marginTop: 'var(--header-row-gap)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {/* Sidebar toggle — visible on tablet+ only (CSS controlled) */}
           <button

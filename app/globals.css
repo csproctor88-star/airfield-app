@@ -64,6 +64,21 @@
   --fs-4xl: 20px;
   --fs-5xl: 24px;
 
+  /* ── Header scaling ── */
+  --header-padding: 8px 16px;
+  --header-logo-height: 48px;
+  --header-logo-height-dark: 64px;
+  --header-icon-size: 20px;
+  --header-row-gap: 6px;
+
+  /* ── Weather / Advisory scaling ── */
+  --weather-padding: 10px 14px;
+  --weather-gap: 8px;
+  --weather-emoji-size: 22px;
+  --advisory-padding: 8px 12px;
+  --advisory-dialog-width: 340px;
+  --advisory-dialog-padding: 20px;
+
   /* ── Active RWY card scaling ── */
   --rwy-card-padding: 10px 12px;
   --rwy-card-gap: 6px;
@@ -450,6 +465,19 @@ html, body {
     --fs-4xl: 22px;
     --fs-5xl: 28px;
 
+    --header-padding: 12px 24px;
+    --header-logo-height: 56px;
+    --header-logo-height-dark: 76px;
+    --header-icon-size: 22px;
+    --header-row-gap: 8px;
+
+    --weather-padding: 14px 20px;
+    --weather-gap: 12px;
+    --weather-emoji-size: 28px;
+    --advisory-padding: 12px 16px;
+    --advisory-dialog-width: 420px;
+    --advisory-dialog-padding: 24px;
+
     --rwy-card-padding: 14px 18px;
     --rwy-card-gap: 8px;
     --rwy-btn-padding: 10px 36px;
@@ -587,6 +615,19 @@ html, body {
     --fs-3xl: 24px;
     --fs-4xl: 28px;
     --fs-5xl: 34px;
+
+    --header-padding: 14px 32px;
+    --header-logo-height: 64px;
+    --header-logo-height-dark: 88px;
+    --header-icon-size: 24px;
+    --header-row-gap: 10px;
+
+    --weather-padding: 16px 24px;
+    --weather-gap: 14px;
+    --weather-emoji-size: 32px;
+    --advisory-padding: 14px 20px;
+    --advisory-dialog-width: 480px;
+    --advisory-dialog-padding: 28px;
 
     --rwy-card-padding: 18px 24px;
     --rwy-card-gap: 10px;

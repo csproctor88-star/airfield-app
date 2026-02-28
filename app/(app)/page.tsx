@@ -324,7 +324,7 @@ export default function HomePage() {
       <div
         className="card"
         style={{
-          padding: '10px 14px',
+          padding: 'var(--weather-padding)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -336,7 +336,7 @@ export default function HomePage() {
         {weatherLoaded ? (
           weather ? (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--weather-gap)' }}>
                 <span style={{ fontSize: 'var(--fs-3xl)' }}>{weatherEmoji(weather.conditions)}</span>
                 <div>
                   <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700 }}>
@@ -365,7 +365,7 @@ export default function HomePage() {
             </>
           ) : (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--weather-gap)' }}>
                 <span style={{ fontSize: 'var(--fs-3xl)' }}>❓</span>
                 <div>
                   <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-3)' }}>UNKWN</div>
@@ -399,7 +399,7 @@ export default function HomePage() {
         <div
           onClick={() => setAdvisoryDialogOpen(true)}
           style={{
-            padding: '8px 12px',
+            padding: 'var(--advisory-padding)',
             marginBottom: 12,
             borderRadius: 10,
             background: ADVISORY_COLORS[advisory.type].bg,
@@ -424,7 +424,7 @@ export default function HomePage() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 20, width: '100%', maxWidth: 340,
+              background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 'var(--advisory-dialog-padding)', width: '100%', maxWidth: 'var(--advisory-dialog-width)',
               border: '1px solid var(--color-border-mid)',
             }}
           >
