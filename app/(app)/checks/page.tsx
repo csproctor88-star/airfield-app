@@ -297,13 +297,13 @@ export default function AirfieldChecksPage() {
     <div className="page-container">
       {/* Header */}
       <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 16, fontWeight: 800 }}>Airfield Check</div>
-        <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>DAFI 13-213 / UFC 3-260-01</div>
+        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Airfield Check</div>
+        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>DAFI 13-213 / UFC 3-260-01</div>
       </div>
 
       {/* Check Type Dropdown */}
       <div className="card" style={{ marginBottom: 8 }}>
-        <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
           Check Type
         </div>
         <select
@@ -319,7 +319,7 @@ export default function AirfieldChecksPage() {
               setAreas(installationAreas.filter(a => a.toUpperCase().startsWith('RWY')))
             }
           }}
-          style={{ fontSize: 14 }}
+          style={{ fontSize: 'var(--fs-lg)' }}
         >
           <option value="">Select check type...</option>
           {Object.entries(CHECK_TYPE_CONFIG).map(([key, cfg]) => (
@@ -332,7 +332,7 @@ export default function AirfieldChecksPage() {
         {typeConfig && (
           <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 8, height: 8, borderRadius: 4, background: typeConfig.color }} />
-            <span style={{ fontSize: 12, color: typeConfig.color, fontWeight: 600 }}>{typeConfig.label}</span>
+            <span style={{ fontSize: 'var(--fs-base)', color: typeConfig.color, fontWeight: 600 }}>{typeConfig.label}</span>
           </div>
         )}
       </div>
@@ -340,7 +340,7 @@ export default function AirfieldChecksPage() {
       {/* Recent Checks — shown when no check type selected */}
       {!checkType && recentChecks.length > 0 && (
         <div style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
             Recent Checks
           </div>
           {recentChecks.map((rc) => {
@@ -358,10 +358,10 @@ export default function AirfieldChecksPage() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span>{cfg?.icon}</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{rc.display_id}</span>
-                  <span style={{ fontSize: 11, color: 'var(--color-text-2)' }}>{cfg?.label}</span>
+                  <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{rc.display_id}</span>
+                  <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>{cfg?.label}</span>
                 </div>
-                <span style={{ fontSize: 10, color: 'var(--color-text-3)' }}>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
                   {rc.completed_at ? new Date(rc.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
                 </span>
               </Link>
@@ -371,7 +371,7 @@ export default function AirfieldChecksPage() {
             href="/checks/history"
             style={{
               display: 'block', textAlign: 'center', padding: '10px',
-              fontSize: 12, fontWeight: 600, color: 'var(--color-cyan)',
+              fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-cyan)',
               textDecoration: 'none',
             }}
           >
@@ -383,14 +383,14 @@ export default function AirfieldChecksPage() {
       {/* Dynamic Fields Based on Check Type */}
       {checkType && (
         <div className="card" style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
             {typeConfig?.label} Details
           </div>
 
           {/* RSC */}
           {checkType === 'rsc' && (
             <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 4 }}>Runway Surface Condition</div>
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 4 }}>Runway Surface Condition</div>
               <div style={{ display: 'flex', gap: 8 }}>
                 {RSC_CONDITIONS.map((c) => (
                   <button
@@ -398,7 +398,7 @@ export default function AirfieldChecksPage() {
                     type="button"
                     onClick={() => setRscCondition(c)}
                     style={{
-                      flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 14, fontWeight: 700,
+                      flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-lg)', fontWeight: 700,
                       cursor: 'pointer', fontFamily: 'inherit',
                       border: rscCondition === c
                         ? `1.5px solid ${c === 'Dry' ? 'var(--color-success)' : 'var(--color-accent)'}`
@@ -422,18 +422,18 @@ export default function AirfieldChecksPage() {
           {checkType === 'rcr' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 4 }}>RCR Value</div>
+                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 4 }}>RCR Value</div>
                 <input
                   className="input-dark"
                   type="number"
                   placeholder="e.g., 23"
                   value={rcrValue}
                   onChange={(e) => setRcrValue(e.target.value)}
-                  style={{ fontSize: 18, fontWeight: 700, fontFamily: 'monospace', textAlign: 'center' }}
+                  style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, fontFamily: 'monospace', textAlign: 'center' }}
                 />
               </div>
               <div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 4 }}>Condition Type</div>
+                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 4 }}>Condition Type</div>
                 <select
                   className="input-dark"
                   value={rcrConditionType}
@@ -452,7 +452,7 @@ export default function AirfieldChecksPage() {
           {checkType === 'bash' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 4 }}>Condition Code</div>
+                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 4 }}>Condition Code</div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {BASH_CONDITION_CODES.map((code) => {
                     const colors: Record<string, string> = { LOW: 'var(--color-success)', MODERATE: 'var(--color-warning)', SEVERE: 'var(--color-danger)', PROHIBITED: '#DC2626' }
@@ -464,7 +464,7 @@ export default function AirfieldChecksPage() {
                         type="button"
                         onClick={() => setBashCondition(code)}
                         style={{
-                          flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                          flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-sm)', fontWeight: 700,
                           cursor: 'pointer', fontFamily: 'inherit',
                           border: active ? `1.5px solid ${colors[code]}` : '1.5px solid var(--color-border-mid)',
                           background: active ? bgColors[code] : 'var(--color-bg-elevated)',
@@ -478,7 +478,7 @@ export default function AirfieldChecksPage() {
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 4 }}>Species Observed</div>
+                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 4 }}>Species Observed</div>
                 <textarea
                   className="input-dark"
                   rows={2}
@@ -496,23 +496,23 @@ export default function AirfieldChecksPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div className="form-row">
                 <div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 4 }}>Aircraft Type</div>
+                  <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 4 }}>Aircraft Type</div>
                   <input className="input-dark" placeholder="e.g., KC-135R" value={aircraftType}
                     onChange={(e) => setAircraftType(e.target.value)} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 4 }}>Callsign</div>
+                  <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 4 }}>Callsign</div>
                   <input className="input-dark" placeholder="e.g., BOLT 31" value={callsign}
                     onChange={(e) => setCallsign(e.target.value)} />
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 4 }}>Nature of Emergency</div>
+                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 4 }}>Nature of Emergency</div>
                 <input className="input-dark" placeholder="Describe the emergency..."
                   value={emergencyNature} onChange={(e) => setEmergencyNature(e.target.value)} />
               </div>
               <div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 6 }}>AM Action Checklist</div>
+                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 6 }}>AM Action Checklist</div>
                 <div className="checklist-grid">
                   {EMERGENCY_ACTIONS.map((action) => {
                     const checked = checkedActions.includes(action)
@@ -525,7 +525,7 @@ export default function AirfieldChecksPage() {
                           display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
                           borderRadius: 6, border: checked ? '1.5px solid var(--color-success)' : '1.5px solid var(--color-border-mid)',
                           cursor: 'pointer', fontFamily: 'inherit',
-                          fontSize: 12, textAlign: 'left',
+                          fontSize: 'var(--fs-base)', textAlign: 'left',
                           background: checked ? 'rgba(34,197,94,0.07)' : 'var(--color-bg-elevated)',
                           color: checked ? 'var(--color-success)' : 'var(--color-text-2)',
                         }}
@@ -535,7 +535,7 @@ export default function AirfieldChecksPage() {
                           border: checked ? '2px solid var(--color-success)' : '2px solid var(--color-text-4)',
                           background: checked ? 'rgba(34,197,94,0.13)' : 'transparent',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 13, fontWeight: 700,
+                          fontSize: 'var(--fs-md)', fontWeight: 700,
                         }}>
                           {checked ? '✓' : ''}
                         </span>
@@ -552,17 +552,17 @@ export default function AirfieldChecksPage() {
           {checkType === 'ground_emergency' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 4 }}>Aircraft Type (if applicable)</div>
+                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 4 }}>Aircraft Type (if applicable)</div>
                 <input className="input-dark" placeholder="e.g., A-10C" value={aircraftType}
                   onChange={(e) => setAircraftType(e.target.value)} />
               </div>
               <div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 4 }}>Nature of Emergency</div>
+                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 4 }}>Nature of Emergency</div>
                 <input className="input-dark" placeholder="Describe the emergency..."
                   value={emergencyNature} onChange={(e) => setEmergencyNature(e.target.value)} />
               </div>
               <div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 6 }}>AM Action Checklist</div>
+                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 6 }}>AM Action Checklist</div>
                 <div className="checklist-grid">
                   {EMERGENCY_ACTIONS.map((action) => {
                     const checked = checkedActions.includes(action)
@@ -575,7 +575,7 @@ export default function AirfieldChecksPage() {
                           display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
                           borderRadius: 6, border: checked ? '1.5px solid var(--color-success)' : '1.5px solid var(--color-border-mid)',
                           cursor: 'pointer', fontFamily: 'inherit',
-                          fontSize: 12, textAlign: 'left',
+                          fontSize: 'var(--fs-base)', textAlign: 'left',
                           background: checked ? 'rgba(34,197,94,0.07)' : 'var(--color-bg-elevated)',
                           color: checked ? 'var(--color-success)' : 'var(--color-text-2)',
                         }}
@@ -585,7 +585,7 @@ export default function AirfieldChecksPage() {
                           border: checked ? '2px solid var(--color-success)' : '2px solid var(--color-text-4)',
                           background: checked ? 'rgba(34,197,94,0.13)' : 'transparent',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 13, fontWeight: 700,
+                          fontSize: 'var(--fs-md)', fontWeight: 700,
                         }}>
                           {checked ? '✓' : ''}
                         </span>
@@ -601,7 +601,7 @@ export default function AirfieldChecksPage() {
           {/* Heavy Aircraft */}
           {checkType === 'heavy_aircraft' && (
             <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 4 }}>Aircraft Type / MDS</div>
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 4 }}>Aircraft Type / MDS</div>
               <input className="input-dark" placeholder="e.g., C-17A Globemaster III"
                 value={heavyAircraftType} onChange={(e) => setHeavyAircraftType(e.target.value)} />
             </div>
@@ -609,7 +609,7 @@ export default function AirfieldChecksPage() {
 
           {/* FOD */}
           {checkType === 'fod' && (
-            <div style={{ fontSize: 12, color: 'var(--color-text-3)', fontStyle: 'italic' }}>
+            <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>
               Document FOD items found in the remarks section below.
             </div>
           )}
@@ -623,11 +623,11 @@ export default function AirfieldChecksPage() {
           : installationAreas
         return (
         <div className="card" style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
             {checkType === 'rsc' ? 'Runway Areas Checked' : 'Areas Checked'}
           </div>
           {displayAreas.length === 0 && (
-            <div style={{ fontSize: 12, color: 'var(--color-text-3)', fontStyle: 'italic' }}>
+            <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>
               No runway areas configured for this installation.
             </div>
           )}
@@ -640,7 +640,7 @@ export default function AirfieldChecksPage() {
                   type="button"
                   onClick={() => toggleArea(area)}
                   style={{
-                    padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                    padding: '8px 14px', borderRadius: 8, fontSize: 'var(--fs-base)', fontWeight: 600,
                     cursor: 'pointer', fontFamily: 'inherit',
                     border: selected ? '1.5px solid var(--color-cyan)' : '1.5px solid var(--color-border-mid)',
                     background: selected ? 'rgba(34,211,238,0.09)' : 'var(--color-bg-elevated)',
@@ -653,7 +653,7 @@ export default function AirfieldChecksPage() {
             })}
           </div>
           {areas.length > 0 && (
-            <div style={{ marginTop: 8, fontSize: 11, color: 'var(--color-text-2)' }}>
+            <div style={{ marginTop: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
               {areas.length} area{areas.length !== 1 ? 's' : ''} selected
             </div>
           )}
@@ -670,10 +670,10 @@ export default function AirfieldChecksPage() {
             width: '100%', padding: '12px', marginBottom: 8, borderRadius: 10,
             border: '1px dashed var(--color-text-4)', background: 'var(--color-bg-surface-solid)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            color: 'var(--color-text-2)', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+            color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600, fontFamily: 'inherit',
           }}
         >
-          <span style={{ fontSize: 18 }}>🗺️</span>
+          <span style={{ fontSize: 'var(--fs-3xl)' }}>🗺️</span>
           View Airfield Diagram
         </button>
       )}
@@ -694,7 +694,7 @@ export default function AirfieldChecksPage() {
           style={{
             width: '100%', padding: '12px 14px', marginBottom: 8, borderRadius: 10,
             display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
-            fontFamily: 'inherit', fontSize: 14, fontWeight: 700,
+            fontFamily: 'inherit', fontSize: 'var(--fs-lg)', fontWeight: 700,
             border: issueFound ? '2px solid var(--color-danger)' : '2px solid var(--color-text-4)',
             background: issueFound ? 'rgba(239,68,68,0.08)' : 'var(--color-bg-surface-solid)',
             color: issueFound ? 'var(--color-danger)' : 'var(--color-text-2)',
@@ -705,7 +705,7 @@ export default function AirfieldChecksPage() {
             border: issueFound ? '2px solid var(--color-danger)' : '2px solid var(--color-text-3)',
             background: issueFound ? 'var(--color-danger)' : 'transparent',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 15, fontWeight: 800, color: '#FFFFFF',
+            fontSize: 'var(--fs-xl)', fontWeight: 800, color: '#FFFFFF',
           }}>
             {issueFound ? '✓' : ''}
           </span>
@@ -716,7 +716,7 @@ export default function AirfieldChecksPage() {
       {/* Pin Location on Map — only when issue found */}
       {checkType && issueFound && (
         <div className="card" style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
             Pin Location on Map
           </div>
           <CheckLocationMap
@@ -738,7 +738,7 @@ export default function AirfieldChecksPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             width: '100%', padding: '10px 16px', marginBottom: 8, borderRadius: 8,
             border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
-            color: 'var(--color-accent)', fontSize: 13, fontWeight: 600,
+            color: 'var(--color-accent)', fontSize: 'var(--fs-md)', fontWeight: 600,
             cursor: gpsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
             opacity: gpsLoading ? 0.6 : 1,
           }}
@@ -754,7 +754,7 @@ export default function AirfieldChecksPage() {
       {/* Remarks Section */}
       {checkType && (
         <div className="card" style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
             Remarks
           </div>
 
@@ -781,7 +781,7 @@ export default function AirfieldChecksPage() {
                 padding: '0 14px', borderRadius: 8, border: 'none',
                 background: remarkText.trim() ? 'var(--color-cyan)' : 'var(--color-bg-elevated)',
                 color: remarkText.trim() ? 'var(--color-bg-surface-solid)' : 'var(--color-text-4)',
-                fontSize: 12, fontWeight: 700, cursor: remarkText.trim() ? 'pointer' : 'default',
+                fontSize: 'var(--fs-base)', fontWeight: 700, cursor: remarkText.trim() ? 'pointer' : 'default',
                 fontFamily: 'inherit', alignSelf: 'flex-end', height: 36,
               }}
             >
@@ -793,14 +793,14 @@ export default function AirfieldChecksPage() {
             <div style={{ borderTop: '1px solid var(--color-bg-elevated)', paddingTop: 10 }}>
               {remarks.map((remark) => (
                 <div key={remark.id} style={{ borderLeft: '2px solid var(--color-text-4)', paddingLeft: 10, marginBottom: 10 }}>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 2 }}>
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 2 }}>
                     <span style={{ fontWeight: 600, color: 'var(--color-accent)' }}>{remark.user_name}</span>
                     {' — '}
                     {new Date(remark.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     {' '}
                     {new Date(remark.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-1)', lineHeight: 1.4 }}>{remark.comment}</div>
+                  <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.4 }}>{remark.comment}</div>
                 </div>
               ))}
             </div>
@@ -811,7 +811,7 @@ export default function AirfieldChecksPage() {
       {/* Photos Section — only when issue found */}
       {checkType && issueFound && (
         <div className="card" style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
             Photos
           </div>
 
@@ -825,7 +825,7 @@ export default function AirfieldChecksPage() {
                     onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))}
                     style={{
                       position: 'absolute', top: 2, right: 2, background: 'var(--color-overlay)', border: 'none',
-                      color: '#EF4444', fontSize: 13, width: 20, height: 20, borderRadius: '50%', cursor: 'pointer',
+                      color: '#EF4444', fontSize: 'var(--fs-md)', width: 20, height: 20, borderRadius: '50%', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
                     }}
                   >
@@ -854,7 +854,7 @@ export default function AirfieldChecksPage() {
           disabled={saving || !checkType || areas.length === 0}
           style={{
             width: '100%', opacity: saving ? 0.7 : 1,
-            background: 'var(--color-success)', fontSize: 15, fontWeight: 800,
+            background: 'var(--color-success)', fontSize: 'var(--fs-xl)', fontWeight: 800,
             padding: '14px', borderRadius: 10,
           }}
         >
@@ -863,7 +863,7 @@ export default function AirfieldChecksPage() {
       )}
 
       {checkType && (
-        <div style={{ textAlign: 'center', marginTop: 8, fontSize: 11, color: 'var(--color-text-3)' }}>
+        <div style={{ textAlign: 'center', marginTop: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
           Will be recorded as completed by <span style={{ color: 'var(--color-accent)', fontWeight: 600 }}>{currentUser}</span>
         </div>
       )}
@@ -885,7 +885,7 @@ export default function AirfieldChecksPage() {
             style={{
               position: 'fixed', top: 12, right: 12, zIndex: 10000,
               background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8,
-              padding: '10px 18px', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+              padding: '10px 18px', color: '#fff', fontSize: 'var(--fs-xl)', fontWeight: 700, cursor: 'pointer',
               backdropFilter: 'blur(8px)',
             }}
           >Close</button>

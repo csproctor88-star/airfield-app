@@ -52,7 +52,7 @@ export function UserCard({ user, showInstallation, onSelect }: UserCardProps) {
     >
       {/* Row 1: Name + Role badge */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-1)' }}>
+        <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>
           {displayName || 'Unnamed User'}
         </div>
         <RoleBadge role={user.role} />
@@ -60,7 +60,7 @@ export function UserCard({ user, showInstallation, onSelect }: UserCardProps) {
 
       {/* Row 2: Email + Status badge */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
+        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
           {user.email}
         </div>
         <UserStatusBadge status={user.status || 'active'} />
@@ -69,13 +69,13 @@ export function UserCard({ user, showInstallation, onSelect }: UserCardProps) {
       {/* Row 3: Installation + Last active */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         {showInstallation && user.bases ? (
-          <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
             {user.bases.name} · {user.bases.icao}
           </div>
         ) : (
           <div />
         )}
-        <div style={{ fontSize: 10, color: 'var(--color-text-4)' }}>
+        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)' }}>
           Last Seen: {lastActive}
         </div>
       </div>

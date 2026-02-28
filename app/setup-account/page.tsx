@@ -118,7 +118,7 @@ export default function SetupAccountPage() {
           </div>
           <div
             style={{
-              fontSize: 20,
+              fontSize: 'var(--fs-4xl)',
               fontWeight: 800,
               letterSpacing: '-0.02em',
               background: 'linear-gradient(135deg, var(--color-logo-start), var(--color-logo-end))',
@@ -129,7 +129,7 @@ export default function SetupAccountPage() {
           >
             GLIDEPATH
           </div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em' }}>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em' }}>
             WELCOME — SET UP YOUR ACCOUNT
           </div>
         </div>
@@ -143,7 +143,7 @@ export default function SetupAccountPage() {
                   border: '1px solid rgba(34,197,94,0.2)',
                   borderRadius: 6,
                   padding: '12px 16px',
-                  fontSize: 13,
+                  fontSize: 'var(--fs-md)',
                   color: '#22C55E',
                   marginBottom: 12,
                 }}
@@ -155,7 +155,7 @@ export default function SetupAccountPage() {
             <>
               <div
                 style={{
-                  fontSize: 15,
+                  fontSize: 'var(--fs-xl)',
                   fontWeight: 700,
                   marginBottom: 6,
                   color: 'var(--color-text-1)',
@@ -165,7 +165,7 @@ export default function SetupAccountPage() {
               </div>
               <div
                 style={{
-                  fontSize: 12,
+                  fontSize: 'var(--fs-base)',
                   color: 'var(--color-text-3)',
                   marginBottom: 16,
                 }}
@@ -212,7 +212,7 @@ export default function SetupAccountPage() {
                       borderRadius: 6,
                       padding: '8px 12px',
                       marginBottom: 12,
-                      fontSize: 12,
+                      fontSize: 'var(--fs-base)',
                       color: 'var(--color-danger)',
                     }}
                   >

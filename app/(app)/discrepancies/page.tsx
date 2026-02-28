@@ -396,7 +396,7 @@ export default function DiscrepanciesPage() {
   return (
     <div className="page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-        <div style={{ fontSize: 16, fontWeight: 800 }}>Discrepancies</div>
+        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Discrepancies</div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <button
             onClick={handleExportExcel}
@@ -406,7 +406,7 @@ export default function DiscrepanciesPage() {
               borderRadius: 8,
               padding: '7px 10px',
               color: '#A855F7',
-              fontSize: 12,
+              fontSize: 'var(--fs-base)',
               fontWeight: 700,
               cursor: 'pointer',
               fontFamily: 'inherit',
@@ -422,7 +422,7 @@ export default function DiscrepanciesPage() {
               borderRadius: 8,
               padding: '7px 10px',
               color: '#A855F7',
-              fontSize: 12,
+              fontSize: 'var(--fs-base)',
               fontWeight: 700,
               cursor: 'pointer',
               fontFamily: 'inherit',
@@ -438,7 +438,7 @@ export default function DiscrepanciesPage() {
               borderRadius: 8,
               padding: '7px 12px',
               color: '#fff',
-              fontSize: 12,
+              fontSize: 'var(--fs-base)',
               fontWeight: 700,
               cursor: 'pointer',
               textDecoration: 'none',
@@ -469,10 +469,10 @@ export default function DiscrepanciesPage() {
               cursor: 'pointer',
             }}
           >
-            <div style={{ fontSize: 10, color: 'var(--color-text-3)', letterSpacing: '0.08em', fontWeight: 600 }}>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', letterSpacing: '0.08em', fontWeight: 600 }}>
               {k.label}
             </div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: k.color }}>{k.value}</div>
+            <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: k.color }}>{k.value}</div>
           </div>
         ))}
       </div>
@@ -502,10 +502,10 @@ export default function DiscrepanciesPage() {
                 cursor: 'pointer',
               }}
             >
-              <div style={{ fontSize: 10, color: 'var(--color-text-3)', letterSpacing: '0.08em', fontWeight: 600 }}>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', letterSpacing: '0.08em', fontWeight: 600 }}>
                 {kpi.label}
               </div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: kpi.color }}>{kpiCounts[kpi.key]}</div>
+              <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: kpi.color }}>{kpiCounts[kpi.key]}</div>
             </div>
           )
         })}
@@ -522,7 +522,7 @@ export default function DiscrepanciesPage() {
               borderRadius: 5,
               padding: '4px 8px',
               color: filter === v ? 'var(--color-cyan)' : 'var(--color-text-3)',
-              fontSize: 10,
+              fontSize: 'var(--fs-xs)',
               fontWeight: 700,
               cursor: 'pointer',
               fontFamily: 'inherit',
@@ -547,7 +547,7 @@ export default function DiscrepanciesPage() {
           border: '1px solid var(--color-search-border)',
           borderRadius: 8,
           color: 'var(--color-text-1)',
-          fontSize: 13,
+          fontSize: 'var(--fs-md)',
           fontFamily: 'inherit',
           outline: 'none',
           boxSizing: 'border-box',
@@ -555,7 +555,7 @@ export default function DiscrepanciesPage() {
       />
 
       {loading ? (
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 13 }}>
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
           Loading...
         </div>
       ) : usingDemo ? (
@@ -597,7 +597,7 @@ export default function DiscrepanciesPage() {
       )}
 
       {!loading && filtered.length === 0 && (
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 13 }}>
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
           No discrepancies match this filter
         </div>
       )}

@@ -23,7 +23,7 @@ export function PageHeader({ title, backHref, action }: PageHeaderProps) {
             background: 'none',
             border: 'none',
             color: 'var(--color-cyan)',
-            fontSize: 13,
+            fontSize: 'var(--fs-md)',
             fontWeight: 600,
             cursor: 'pointer',
             padding: 0,
@@ -42,7 +42,7 @@ export function PageHeader({ title, backHref, action }: PageHeaderProps) {
           marginBottom: action ? 4 : 12,
         }}
       >
-        <div style={{ fontSize: 16, fontWeight: 800 }}>{title}</div>
+        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>{title}</div>
         {action}
       </div>
     </div>

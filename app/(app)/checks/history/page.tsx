@@ -64,14 +64,14 @@ export default function CheckHistoryPage() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 800 }}>Check History</div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>{checks.length} completed check{checks.length !== 1 ? 's' : ''}</div>
+          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Check History</div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{checks.length} completed check{checks.length !== 1 ? 's' : ''}</div>
         </div>
         <Link
           href="/checks"
           style={{
             background: '#22C55E14', border: '1px solid #22C55E33', borderRadius: 8,
-            padding: '8px 14px', color: '#22C55E', fontSize: 12, fontWeight: 600,
+            padding: '8px 14px', color: '#22C55E', fontSize: 'var(--fs-base)', fontWeight: 600,
             textDecoration: 'none', fontFamily: 'inherit',
           }}
         >
@@ -85,7 +85,7 @@ export default function CheckHistoryPage() {
           type="button"
           onClick={() => setTypeFilter('all')}
           style={{
-            padding: '6px 12px', borderRadius: 16, fontSize: 11, fontWeight: 600,
+            padding: '6px 12px', borderRadius: 16, fontSize: 'var(--fs-sm)', fontWeight: 600,
             cursor: 'pointer', fontFamily: 'inherit', border: 'none', whiteSpace: 'nowrap',
             background: typeFilter === 'all' ? '#22D3EE22' : 'var(--color-bg-elevated)',
             color: typeFilter === 'all' ? 'var(--color-cyan)' : 'var(--color-text-3)',
@@ -102,7 +102,7 @@ export default function CheckHistoryPage() {
               type="button"
               onClick={() => setTypeFilter(active ? 'all' : key)}
               style={{
-                padding: '6px 12px', borderRadius: 16, fontSize: 11, fontWeight: 600,
+                padding: '6px 12px', borderRadius: 16, fontSize: 'var(--fs-sm)', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit', border: 'none', whiteSpace: 'nowrap',
                 background: active ? `${cfg.color}22` : 'var(--color-bg-elevated)',
                 color: active ? cfg.color : 'var(--color-text-3)',
@@ -120,7 +120,7 @@ export default function CheckHistoryPage() {
         placeholder="Search checks..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        style={{ marginBottom: 10, fontSize: 13 }}
+        style={{ marginBottom: 10, fontSize: 'var(--fs-md)' }}
       />
 
       {/* Loading */}
@@ -161,14 +161,14 @@ export default function CheckHistoryPage() {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <span style={{ fontSize: 13, fontWeight: 800, fontFamily: 'monospace', color: 'var(--color-cyan)' }}>
+              <span style={{ fontSize: 'var(--fs-md)', fontWeight: 800, fontFamily: 'monospace', color: 'var(--color-cyan)' }}>
                 {check.display_id}
               </span>
               <Badge label={cfg?.label || check.check_type} color={cfg?.color || 'var(--color-text-3)'} />
             </div>
 
             {summary && (
-              <div style={{ fontSize: 12, color: 'var(--color-text-1)', marginBottom: 6, lineHeight: 1.4 }}>
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', marginBottom: 6, lineHeight: 1.4 }}>
                 {summary}
               </div>
             )}
@@ -176,14 +176,14 @@ export default function CheckHistoryPage() {
             {/* Areas */}
             <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 6 }}>
               {(check.areas || []).map((area: string) => (
-                <span key={area} style={{ fontSize: 10, color: 'var(--color-text-3)', background: 'var(--color-bg-elevated)', padding: '2px 6px', borderRadius: 4 }}>
+                <span key={area} style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', background: 'var(--color-bg-elevated)', padding: '2px 6px', borderRadius: 4 }}>
                   {area}
                 </span>
               ))}
             </div>
 
             {/* Footer */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'var(--color-text-3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span>{check.completed_by || 'Unknown'}</span>
                 {check.photo_count > 0 && (

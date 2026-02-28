@@ -40,7 +40,7 @@ export function UserFilters({
           placeholder="Search by name, email, rank..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
-          style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 32, fontSize: 13 }}
+          style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 32, fontSize: 'var(--fs-md)' }}
         />
       </div>
 
@@ -50,7 +50,7 @@ export function UserFilters({
           className="input-dark"
           value={roleFilter}
           onChange={(e) => onRoleFilterChange(e.target.value)}
-          style={{ flex: 1, fontSize: 12 }}
+          style={{ flex: 1, fontSize: 'var(--fs-base)' }}
         >
           <option value="">All Roles</option>
           <option value="sys_admin">System Admin</option>
@@ -68,7 +68,7 @@ export function UserFilters({
           className="input-dark"
           value={statusFilter}
           onChange={(e) => onStatusFilterChange(e.target.value)}
-          style={{ flex: 1, fontSize: 12 }}
+          style={{ flex: 1, fontSize: 'var(--fs-base)' }}
         >
           <option value="">All Status</option>
           <option value="active">Active</option>
@@ -78,7 +78,7 @@ export function UserFilters({
       </div>
 
       {/* Count */}
-      <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontWeight: 600 }}>
+      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600 }}>
         {filteredCount === totalCount
           ? `Showing ${totalCount} users`
           : `Showing ${filteredCount} of ${totalCount} users`}

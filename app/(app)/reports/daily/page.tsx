@@ -102,8 +102,8 @@ export default function DailyOpsPage() {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 800 }}>Daily Operations Summary</div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>Select a date to generate the report</div>
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Daily Operations Summary</div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>Select a date to generate the report</div>
           </div>
         </div>
 
@@ -117,7 +117,7 @@ export default function DailyOpsPage() {
                 flex: 1, padding: '10px 0', border: 'none',
                 background: dateMode === mode ? 'var(--color-accent-secondary)' : 'transparent',
                 color: dateMode === mode ? '#FFF' : 'var(--color-text-2)',
-                fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
               {mode === 'single' ? 'Single Date' : 'Date Range'}
@@ -129,7 +129,7 @@ export default function DailyOpsPage() {
         <div className="card" style={{ marginBottom: 14, padding: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <Calendar size={16} color="var(--color-accent-secondary)" />
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-2)' }}>
+            <span style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)' }}>
               {dateMode === 'single' ? 'Date' : 'Start Date'}
             </span>
           </div>
@@ -144,7 +144,7 @@ export default function DailyOpsPage() {
             style={{
               width: '100%', padding: '10px 12px', borderRadius: 8,
               border: '1px solid var(--color-text-4)', background: 'var(--color-bg-surface-solid)', color: 'var(--color-text-1)',
-              fontSize: 14, fontFamily: 'inherit',
+              fontSize: 'var(--fs-lg)', fontFamily: 'inherit',
             }}
           />
 
@@ -152,7 +152,7 @@ export default function DailyOpsPage() {
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, marginTop: 14 }}>
                 <Calendar size={16} color="var(--color-accent-secondary)" />
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-2)' }}>End Date</span>
+                <span style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)' }}>End Date</span>
               </div>
               <input
                 type="date"
@@ -163,7 +163,7 @@ export default function DailyOpsPage() {
                 style={{
                   width: '100%', padding: '10px 12px', borderRadius: 8,
                   border: '1px solid var(--color-text-4)', background: 'var(--color-bg-surface-solid)', color: 'var(--color-text-1)',
-                  fontSize: 14, fontFamily: 'inherit',
+                  fontSize: 'var(--fs-lg)', fontFamily: 'inherit',
                 }}
               />
             </>
@@ -176,7 +176,7 @@ export default function DailyOpsPage() {
           style={{
             width: '100%', padding: '14px 0', borderRadius: 10, border: 'none',
             background: 'linear-gradient(135deg, #0EA5E9, #22D3EE)',
-            color: '#FFF', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+            color: '#FFF', fontSize: 'var(--fs-xl)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
           }}
         >
           Generate Report
@@ -193,11 +193,11 @@ export default function DailyOpsPage() {
           <button onClick={() => setViewState('picker')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>
             <ArrowLeft size={20} />
           </button>
-          <div style={{ fontSize: 16, fontWeight: 800 }}>Daily Operations Summary</div>
+          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Daily Operations Summary</div>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
           <Loader2 size={32} color="var(--color-accent-secondary)" style={{ animation: 'spin 1s linear infinite' }} />
-          <div style={{ fontSize: 13, color: 'var(--color-text-2)', marginTop: 12 }}>Fetching report data for {dateLabel}...</div>
+          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', marginTop: 12 }}>Fetching report data for {dateLabel}...</div>
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       </div>
@@ -296,16 +296,16 @@ export default function DailyOpsPage() {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 800 }}>Daily Operations Summary</div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>{dateLabel}</div>
+          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Daily Operations Summary</div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{dateLabel}</div>
         </div>
       </div>
 
       {/* Report Icon */}
       <div className="card" style={{ textAlign: 'center', padding: '16px 20px', marginBottom: 12 }}>
         <FileText size={28} color="var(--color-accent-secondary)" style={{ marginBottom: 8 }} />
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-1)' }}>Report Preview</div>
-        <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>Generated by {generatorName}</div>
+        <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>Report Preview</div>
+        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>Generated by {generatorName}</div>
       </div>
 
       {/* Section Summary Cards */}
@@ -320,13 +320,13 @@ export default function DailyOpsPage() {
               width: 32, height: 32, borderRadius: 8,
               background: `${s.color}14`, border: `1px solid ${s.color}33`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 14, fontWeight: 800, color: s.color,
+              fontSize: 'var(--fs-lg)', fontWeight: 800, color: s.color,
             }}>
               {s.count}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)' }}>{s.label}</div>
-              <div style={{ fontSize: 10, color: 'var(--color-text-3)' }}>{s.detail}</div>
+              <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)' }}>{s.label}</div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{s.detail}</div>
             </div>
           </div>
         ))}
@@ -340,7 +340,7 @@ export default function DailyOpsPage() {
           width: '100%', padding: '14px 0', borderRadius: 10,
           border: '1px solid rgba(34,197,94,0.4)',
           background: 'rgba(34,197,94,0.1)',
-          color: '#22C55E', fontSize: 15, fontWeight: 700,
+          color: '#22C55E', fontSize: 'var(--fs-xl)', fontWeight: 700,
           cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
           opacity: exporting ? 0.7 : 1,
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,

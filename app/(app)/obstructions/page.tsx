@@ -469,7 +469,7 @@ function ObstructionsContent() {
           background: 'none',
           border: 'none',
           color: 'var(--color-cyan)',
-          fontSize: 13,
+          fontSize: 'var(--fs-md)',
           fontWeight: 600,
           cursor: 'pointer',
           padding: 0,
@@ -480,7 +480,7 @@ function ObstructionsContent() {
         ← Back
       </button>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
-        <div style={{ fontSize: 16, fontWeight: 800, flex: 1 }}>
+        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, flex: 1 }}>
           {editId ? 'Edit Evaluation' : 'Obstruction Evaluation'}
         </div>
         <button
@@ -489,7 +489,7 @@ function ObstructionsContent() {
             background: 'none',
             border: 'none',
             color: 'var(--color-accent)',
-            fontSize: 12,
+            fontSize: 'var(--fs-base)',
             fontWeight: 600,
             cursor: 'pointer',
             fontFamily: 'inherit',
@@ -500,7 +500,7 @@ function ObstructionsContent() {
           History →
         </button>
       </div>
-      <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 10 }}>
+      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 10 }}>
         UFC 3-260-01, Chapter 3 — Imaginary Surface Analysis
       </div>
 
@@ -529,7 +529,7 @@ function ObstructionsContent() {
           border: '1px solid var(--color-border-active)',
           background: 'var(--color-border)',
           color: 'var(--color-accent)',
-          fontSize: 13,
+          fontSize: 'var(--fs-md)',
           fontWeight: 600,
           cursor: gpsLoading ? 'wait' : 'pointer',
           fontFamily: 'inherit',
@@ -547,22 +547,22 @@ function ObstructionsContent() {
       {pointInfo && (
         <div className="card" style={{ marginTop: 10 }}>
           <span className="section-label">Selected Location</span>
-          <div className="detail-grid-2" style={{ fontSize: 12 }}>
+          <div className="detail-grid-2" style={{ fontSize: 'var(--fs-base)' }}>
             <div>
               <span style={{ color: 'var(--color-text-3)' }}>Coordinates</span>
-              <div style={{ fontFamily: 'monospace', color: 'var(--color-text-1)', fontSize: 11, marginTop: 2 }}>
+              <div style={{ fontFamily: 'monospace', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', marginTop: 2 }}>
                 {pointInfo.point.lat.toFixed(5)}°N, {Math.abs(pointInfo.point.lon).toFixed(5)}°W
               </div>
             </div>
             <div>
               <span style={{ color: 'var(--color-text-3)' }}>From Centerline</span>
-              <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 11, marginTop: 2 }}>
+              <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 'var(--fs-sm)', marginTop: 2 }}>
                 {pointInfo.distFromCenterline.toFixed(0)} ft
               </div>
             </div>
             <div>
               <span style={{ color: 'var(--color-text-3)' }}>From Nearest Threshold</span>
-              <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 11, marginTop: 2 }}>
+              <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 'var(--fs-sm)', marginTop: 2 }}>
                 {pointInfo.distFromThreshold.toFixed(0)} ft (RWY {pointInfo.nearerEnd === 'end1'
                   ? (runways[pointInfo.closestRunwayIndex]?.end1_designator ?? '01')
                   : (runways[pointInfo.closestRunwayIndex]?.end2_designator ?? '19')})
@@ -570,7 +570,7 @@ function ObstructionsContent() {
             </div>
             <div>
               <span style={{ color: 'var(--color-text-3)' }}>Ground Elevation</span>
-              <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 11, marginTop: 2 }}>
+              <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 'var(--fs-sm)', marginTop: 2 }}>
                 {pointInfo.loadingElev
                   ? 'Fetching...'
                   : `${(pointInfo.groundElevMSL ?? airfieldElevMSL).toFixed(0)} ft MSL`}
@@ -581,7 +581,7 @@ function ObstructionsContent() {
               <div
                 style={{
                   color: 'var(--color-text-1)',
-                  fontSize: 11,
+                  fontSize: 'var(--fs-sm)',
                   marginTop: 2,
                   fontWeight: 600,
                 }}
@@ -600,7 +600,7 @@ function ObstructionsContent() {
               return (
                 <div>
                   <span style={{ color: 'var(--color-text-3)' }}>Nearest Threshold Elev</span>
-                  <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 11, marginTop: 2 }}>
+                  <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 'var(--fs-sm)', marginTop: 2 }}>
                     {thresholdElev != null
                       ? `${thresholdElev.toLocaleString('en-US', { maximumFractionDigits: 1 })} ft MSL (RWY ${designator})`
                       : `Not set (using ${airfieldElevMSL} ft airfield elev)`}
@@ -617,7 +617,7 @@ function ObstructionsContent() {
         <span className="section-label">Obstruction Details</span>
 
         <div style={{ marginBottom: 10 }}>
-          <label style={{ fontSize: 11, color: 'var(--color-text-2)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+          <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
             Obstruction Height (ft AGL) *
           </label>
           <input
@@ -632,7 +632,7 @@ function ObstructionsContent() {
         </div>
 
         <div style={{ marginBottom: 10 }}>
-          <label style={{ fontSize: 11, color: 'var(--color-text-2)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+          <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
             Obstruction Description
           </label>
           <textarea
@@ -696,7 +696,7 @@ function ObstructionsContent() {
                       background: 'var(--color-overlay)',
                       border: '1px solid rgba(255,255,255,0.2)',
                       color: '#fff',
-                      fontSize: 11,
+                      fontSize: 'var(--fs-sm)',
                       lineHeight: '16px',
                       textAlign: 'center',
                       cursor: 'pointer',
@@ -752,7 +752,7 @@ function ObstructionsContent() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 16,
+                  fontSize: 'var(--fs-2xl)',
                   flexShrink: 0,
                 }}
               >
@@ -761,14 +761,14 @@ function ObstructionsContent() {
               <div>
                 <div
                   style={{
-                    fontSize: 14,
+                    fontSize: 'var(--fs-lg)',
                     fontWeight: 800,
                     color: multiAnalysis.hasViolation ? '#EF4444' : '#22C55E',
                   }}
                 >
                   {multiAnalysis.hasViolation ? 'VIOLATION DETECTED' : 'NO VIOLATION'}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--color-text-2)' }}>
+                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
                   {multiAnalysis.controllingSurface
                     ? `Controlling surface: ${multiAnalysis.controllingSurface.surfaceName}${multiAnalysis.controllingSurface.runwayLabel ? ` (RWY ${multiAnalysis.controllingSurface.runwayLabel})` : ''}`
                     : 'Outside all imaginary surfaces'}
@@ -782,7 +782,7 @@ function ObstructionsContent() {
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr 1fr',
                 gap: 6,
-                fontSize: 11,
+                fontSize: 'var(--fs-sm)',
                 marginTop: 4,
               }}
             >
@@ -827,7 +827,7 @@ function ObstructionsContent() {
                     borderRadius: 6,
                     padding: '3px 8px',
                     color: showVerify ? '#fff' : 'var(--color-text-2)',
-                    fontSize: 10,
+                    fontSize: 'var(--fs-xs)',
                     fontWeight: 600,
                     cursor: 'pointer',
                     fontFamily: 'inherit',
@@ -862,13 +862,13 @@ function ObstructionsContent() {
                             flexShrink: 0,
                           }}
                         />
-                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)', flex: 1 }}>
+                        <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)', flex: 1 }}>
                           {s.surfaceName}
                         </span>
                         {isLandUseZone ? (
                           <span
                             style={{
-                              fontSize: 10,
+                              fontSize: 'var(--fs-xs)',
                               fontWeight: 800,
                               padding: '2px 6px',
                               borderRadius: 4,
@@ -881,7 +881,7 @@ function ObstructionsContent() {
                         ) : (
                           <span
                             style={{
-                              fontSize: 10,
+                              fontSize: 'var(--fs-xs)',
                               fontWeight: 800,
                               padding: '2px 6px',
                               borderRadius: 4,
@@ -894,17 +894,17 @@ function ObstructionsContent() {
                         )}
                       </div>
                       {isLandUseZone ? (
-                        <div style={{ fontSize: 11, color: 'var(--color-text-2)', lineHeight: 1.5 }}>
+                        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>
                           {s.ufcCriteria}
                         </div>
                       ) : (
                         <>
-                          <div style={{ fontSize: 11, color: 'var(--color-text-2)', lineHeight: 1.4 }}>
+                          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.4 }}>
                             Max allowable: <strong style={{ color: 'var(--color-text-1)' }}>{s.maxAllowableHeightMSL.toFixed(0)} ft MSL</strong>
                             {' '}({s.maxAllowableHeightAGL.toFixed(0)} ft AGL)
                           </div>
                           {s.baselineLabel && (
-                            <div style={{ fontSize: 10, color: 'var(--color-text-2)', marginTop: 2 }}>
+                            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', marginTop: 2 }}>
                               Baseline: {s.baselineLabel}{s.baselineElevation != null ? ` (${s.baselineElevation.toLocaleString('en-US', { maximumFractionDigits: 1 })} ft MSL)` : ''}
                             </div>
                           )}
@@ -918,13 +918,13 @@ function ObstructionsContent() {
                                 borderRadius: 6,
                               }}
                             >
-                              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 3 }}>
+                              <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 3 }}>
                                 Verify the numbers
                               </div>
-                              <div style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--color-text-1)', lineHeight: 1.5 }}>
+                              <div style={{ fontSize: 'var(--fs-sm)', fontFamily: 'monospace', color: 'var(--color-text-1)', lineHeight: 1.5 }}>
                                 {s.calculationBreakdown}
                               </div>
-                              <div style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--color-text-2)', marginTop: 2 }}>
+                              <div style={{ fontSize: 'var(--fs-xs)', fontFamily: 'monospace', color: 'var(--color-text-2)', marginTop: 2 }}>
                                 Obstruction top: {s.obstructionTopMSL.toFixed(1)} ft MSL
                                 {s.violated
                                   ? ` — exceeds by ${s.penetrationFt.toFixed(1)} ft`
@@ -934,7 +934,7 @@ function ObstructionsContent() {
                           )}
                         </>
                       )}
-                      <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 4, fontStyle: 'italic' }}>
+                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4, fontStyle: 'italic' }}>
                         {s.ufcReference}
                       </div>
                     </div>
@@ -944,7 +944,7 @@ function ObstructionsContent() {
               {/* Surfaces the point is NOT within */}
               {rwyAnalysis.surfaces.filter((s) => !s.isWithinBounds).length > 0 && (
                 <div style={{ marginTop: 6 }}>
-                  <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4 }}>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4 }}>
                     NOT APPLICABLE AT THIS LOCATION:
                   </div>
                   {rwyAnalysis.surfaces
@@ -953,7 +953,7 @@ function ObstructionsContent() {
                       <div
                         key={s.surfaceKey}
                         style={{
-                          fontSize: 11,
+                          fontSize: 'var(--fs-sm)',
                           color: 'var(--color-text-3)',
                           display: 'flex',
                           alignItems: 'center',
@@ -995,13 +995,13 @@ function ObstructionsContent() {
                     marginBottom: 6,
                   }}
                 >
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
+                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
                     {vs.ufcReference}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-1)', lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', lineHeight: 1.4 }}>
                     {vs.surfaceName}{vs.runwayLabel ? ` (RWY ${vs.runwayLabel})` : ''} — {vs.penetrationFt.toFixed(1)} ft penetration
                   </div>
-                  <div style={{ fontSize: 10, color: 'var(--color-text-2)', marginTop: 4, fontStyle: 'italic', lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', marginTop: 4, fontStyle: 'italic', lineHeight: 1.4 }}>
                     {vs.ufcCriteria}
                   </div>
                 </div>

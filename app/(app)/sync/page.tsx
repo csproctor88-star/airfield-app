@@ -5,7 +5,7 @@ import { RefreshCw } from 'lucide-react'
 export default function SyncDataPage() {
   return (
     <div className="page-container">
-      <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Sync & Data</div>
+      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>Sync & Data</div>
       <div
         className="card"
         style={{
@@ -32,10 +32,10 @@ export default function SyncDataPage() {
           <RefreshCw size={28} color="var(--color-cyan)" />
         </div>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
+          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
             Coming Soon
           </div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-3)', lineHeight: 1.5 }}>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', lineHeight: 1.5 }}>
             Sync & Data will be available in a future update.
             This module will allow managing data synchronization and exports.
           </div>

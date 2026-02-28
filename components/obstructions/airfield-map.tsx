@@ -558,14 +558,14 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
           textAlign: 'center',
         }}
       >
-        <div style={{ fontSize: 24, marginBottom: 8 }}>🗺️</div>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 8 }}>
+        <div style={{ fontSize: 'var(--fs-5xl)', marginBottom: 8 }}>🗺️</div>
+        <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 8 }}>
           Mapbox Token Required
         </div>
-        <div style={{ fontSize: 12, color: 'var(--color-text-3)', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', lineHeight: 1.5 }}>
           Add your Mapbox access token to <code style={{ color: 'var(--color-accent)' }}>.env.local</code>
           <br />
-          <code style={{ color: 'var(--color-accent)', fontSize: 11 }}>NEXT_PUBLIC_MAPBOX_TOKEN=pk.xxx</code>
+          <code style={{ color: 'var(--color-accent)', fontSize: 'var(--fs-sm)' }}>NEXT_PUBLIC_MAPBOX_TOKEN=pk.xxx</code>
         </div>
       </div>
     )
@@ -591,7 +591,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
           left: 8,
           background: 'rgba(4, 7, 12, 0.88)',
           borderRadius: 8,
-          fontSize: 12,
+          fontSize: 'var(--fs-base)',
           maxWidth: 200,
           userSelect: 'none',
         }}
@@ -608,12 +608,12 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
             fontWeight: 600,
           }}
         >
-          <span style={{ fontSize: 11 }}>Layers</span>
+          <span style={{ fontSize: 'var(--fs-sm)' }}>Layers</span>
           {legendOpen && (
             <span
               onClick={(e) => { e.stopPropagation(); toggleAll() }}
               style={{
-                fontSize: 9,
+                fontSize: 'var(--fs-2xs)',
                 marginLeft: 'auto',
                 marginRight: 6,
                 color: '#38BDF8',
@@ -624,7 +624,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
               {allVisible ? 'Hide All' : 'Show All'}
             </span>
           )}
-          <span style={{ fontSize: 9, marginLeft: legendOpen ? 0 : 'auto' }}>{legendOpen ? '▲' : '▼'}</span>
+          <span style={{ fontSize: 'var(--fs-2xs)', marginLeft: legendOpen ? 0 : 'auto' }}>{legendOpen ? '▲' : '▼'}</span>
         </div>
         {legendOpen && (
           <div
@@ -638,7 +638,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
             {/* Runway toggles (multi-runway only) */}
             {isMultiRunway && (
               <div style={{ paddingBottom: 5, marginBottom: 5, borderBottom: '1px solid rgba(148,163,184,0.15)' }}>
-                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <div style={{ fontSize: 'var(--fs-2xs)', color: '#64748B', fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   Runways
                 </div>
                 {runwayLabels.map((label, i) => (
@@ -671,7 +671,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
             )}
             {/* Surface type toggles */}
             {isMultiRunway && (
-              <div style={{ fontSize: 9, color: '#64748B', fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <div style={{ fontSize: 'var(--fs-2xs)', color: '#64748B', fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Surfaces
               </div>
             )}
@@ -714,7 +714,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
             background: 'rgba(4, 7, 12, 0.88)',
             borderRadius: 6,
             padding: '4px 10px',
-            fontSize: 11,
+            fontSize: 'var(--fs-sm)',
             color: '#94A3B8',
             fontWeight: 600,
             whiteSpace: 'nowrap',

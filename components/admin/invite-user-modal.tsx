@@ -90,7 +90,7 @@ export function InviteUserModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-1)' }}>
+          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
             Invite User
           </div>
           <button
@@ -210,7 +210,7 @@ export function InviteUserModal({
                 borderRadius: 6,
                 padding: '8px 12px',
                 marginBottom: 12,
-                fontSize: 12,
+                fontSize: 'var(--fs-base)',
                 color: 'var(--color-danger)',
               }}
             >
@@ -228,7 +228,7 @@ export function InviteUserModal({
               border: 'none',
               background: loading ? 'rgba(6,182,212,0.5)' : '#06B6D4',
               color: '#fff',
-              fontSize: 13,
+              fontSize: 'var(--fs-md)',
               fontWeight: 700,
               cursor: loading ? 'not-allowed' : 'pointer',
               fontFamily: 'inherit',

@@ -207,10 +207,10 @@ export default function TemplateManagementPage() {
   if (!canEdit) {
     return (
       <div style={{ padding: 24 }}>
-        <Link href="/settings" style={{ color: 'var(--color-primary)', fontSize: 13, textDecoration: 'none' }}>
+        <Link href="/settings" style={{ color: 'var(--color-primary)', fontSize: 'var(--fs-md)', textDecoration: 'none' }}>
           &larr; Settings
         </Link>
-        <h1 style={{ marginTop: 16, fontSize: 20, fontWeight: 700, color: 'var(--color-text-1)' }}>
+        <h1 style={{ marginTop: 16, fontSize: 'var(--fs-4xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
           Inspection Templates
         </h1>
         <p style={{ color: 'var(--color-text-3)', marginTop: 8 }}>
@@ -223,13 +223,13 @@ export default function TemplateManagementPage() {
   return (
     <div className="page-container" style={{ maxWidth: 800, margin: '0 auto' }}>
       {/* Header */}
-      <Link href="/settings" style={{ color: 'var(--color-primary)', fontSize: 13, textDecoration: 'none' }}>
+      <Link href="/settings" style={{ color: 'var(--color-primary)', fontSize: 'var(--fs-md)', textDecoration: 'none' }}>
         &larr; Settings
       </Link>
-      <h1 style={{ marginTop: 12, fontSize: 20, fontWeight: 700, color: 'var(--color-text-1)' }}>
+      <h1 style={{ marginTop: 12, fontSize: 'var(--fs-4xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
         Inspection Templates
       </h1>
-      <p style={{ color: 'var(--color-text-3)', fontSize: 13, marginTop: 4 }}>
+      <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginTop: 4 }}>
         {currentInstallation?.name ?? 'Current Base'} — Customize checklist items for airfield and lighting inspections.
       </p>
 
@@ -246,7 +246,7 @@ export default function TemplateManagementPage() {
                 borderRadius: 8,
                 border: isActive ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
                 cursor: 'pointer',
-                fontSize: 13,
+                fontSize: 'var(--fs-md)',
                 fontWeight: 700,
                 fontFamily: 'inherit',
                 background: isActive ? 'rgba(56,189,248,0.12)' : 'var(--color-surface-2)',
@@ -290,13 +290,13 @@ export default function TemplateManagementPage() {
                 onClick={() => toggleSection(section.id)}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-                  <span style={{ fontSize: 12, color: 'var(--color-text-3)' }}>
+                  <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>
                     {expandedSections.has(section.id) ? '▼' : '▶'}
                   </span>
-                  <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--color-text-1)' }}>
+                  <span style={{ fontWeight: 600, fontSize: 'var(--fs-md)', color: 'var(--color-text-1)' }}>
                     {section.title}
                   </span>
-                  <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
+                  <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
                     ({section.items.length} items)
                   </span>
                 </div>
@@ -309,7 +309,7 @@ export default function TemplateManagementPage() {
                       border: 'none',
                       color: sectionIndex === 0 ? 'var(--color-text-4)' : 'var(--color-text-2)',
                       cursor: sectionIndex === 0 ? 'default' : 'pointer',
-                      fontSize: 16,
+                      fontSize: 'var(--fs-2xl)',
                       padding: '2px 6px',
                       minWidth: 32,
                       minHeight: 32,
@@ -329,7 +329,7 @@ export default function TemplateManagementPage() {
                       border: 'none',
                       color: sectionIndex === sections.length - 1 ? 'var(--color-text-4)' : 'var(--color-text-2)',
                       cursor: sectionIndex === sections.length - 1 ? 'default' : 'pointer',
-                      fontSize: 16,
+                      fontSize: 'var(--fs-2xl)',
                       padding: '2px 6px',
                       minWidth: 32,
                       minHeight: 32,
@@ -348,7 +348,7 @@ export default function TemplateManagementPage() {
                       border: 'none',
                       color: 'var(--color-danger)',
                       cursor: 'pointer',
-                      fontSize: 12,
+                      fontSize: 'var(--fs-base)',
                       padding: '2px 8px',
                     }}
                   >
@@ -359,7 +359,7 @@ export default function TemplateManagementPage() {
 
               {/* Section guidance */}
               {expandedSections.has(section.id) && section.guidance && (
-                <div style={{ padding: '6px 14px', fontSize: 11, color: 'var(--color-text-3)', borderBottom: '1px solid var(--color-border)' }}>
+                <div style={{ padding: '6px 14px', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', borderBottom: '1px solid var(--color-border)' }}>
                   {section.guidance}
                 </div>
               )}
@@ -376,7 +376,7 @@ export default function TemplateManagementPage() {
                         gap: 8,
                         padding: '6px 0',
                         borderBottom: '1px solid var(--color-border)',
-                        fontSize: 13,
+                        fontSize: 'var(--fs-md)',
                       }}
                     >
                       {/* Reorder arrows */}
@@ -389,7 +389,7 @@ export default function TemplateManagementPage() {
                             border: 'none',
                             color: itemIndex === 0 ? 'var(--color-text-4)' : 'var(--color-text-2)',
                             cursor: itemIndex === 0 ? 'default' : 'pointer',
-                            fontSize: 10,
+                            fontSize: 'var(--fs-xs)',
                             padding: 0,
                             lineHeight: 1,
                             minWidth: 24,
@@ -410,7 +410,7 @@ export default function TemplateManagementPage() {
                             border: 'none',
                             color: itemIndex === section.items.length - 1 ? 'var(--color-text-4)' : 'var(--color-text-2)',
                             cursor: itemIndex === section.items.length - 1 ? 'default' : 'pointer',
-                            fontSize: 10,
+                            fontSize: 'var(--fs-xs)',
                             padding: 0,
                             lineHeight: 1,
                             minWidth: 24,
@@ -425,7 +425,7 @@ export default function TemplateManagementPage() {
                         </button>
                       </div>
 
-                      <span style={{ width: 28, textAlign: 'right', color: 'var(--color-text-3)', fontSize: 11, flexShrink: 0 }}>
+                      <span style={{ width: 28, textAlign: 'right', color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', flexShrink: 0 }}>
                         {item.item_number}.
                       </span>
 
@@ -443,7 +443,7 @@ export default function TemplateManagementPage() {
                             border: '1px solid var(--color-primary)',
                             background: 'var(--color-surface-2)',
                             color: 'var(--color-text-1)',
-                            fontSize: 13,
+                            fontSize: 'var(--fs-md)',
                           }}
                         />
                       ) : (
@@ -459,7 +459,7 @@ export default function TemplateManagementPage() {
                       <button
                         onClick={() => handleToggleType(item)}
                         style={{
-                          fontSize: 10,
+                          fontSize: 'var(--fs-xs)',
                           padding: '2px 6px',
                           borderRadius: 4,
                           border: '1px solid var(--color-border)',
@@ -480,7 +480,7 @@ export default function TemplateManagementPage() {
                           border: 'none',
                           color: 'var(--color-danger)',
                           cursor: 'pointer',
-                          fontSize: 14,
+                          fontSize: 'var(--fs-lg)',
                           flexShrink: 0,
                           padding: '0 4px',
                         }}
@@ -507,7 +507,7 @@ export default function TemplateManagementPage() {
                           border: '1px solid var(--color-border)',
                           background: 'var(--color-surface-2)',
                           color: 'var(--color-text-1)',
-                          fontSize: 13,
+                          fontSize: 'var(--fs-md)',
                         }}
                       />
                       <button
@@ -519,7 +519,7 @@ export default function TemplateManagementPage() {
                           background: 'var(--color-primary)',
                           color: '#fff',
                           cursor: 'pointer',
-                          fontSize: 12,
+                          fontSize: 'var(--fs-base)',
                           fontWeight: 600,
                         }}
                       >
@@ -534,7 +534,7 @@ export default function TemplateManagementPage() {
                           background: 'var(--color-surface-2)',
                           color: 'var(--color-text-2)',
                           cursor: 'pointer',
-                          fontSize: 12,
+                          fontSize: 'var(--fs-base)',
                         }}
                       >
                         Cancel
@@ -551,7 +551,7 @@ export default function TemplateManagementPage() {
                         background: 'none',
                         color: 'var(--color-primary)',
                         cursor: 'pointer',
-                        fontSize: 12,
+                        fontSize: 'var(--fs-base)',
                         width: '100%',
                       }}
                     >
@@ -584,7 +584,7 @@ export default function TemplateManagementPage() {
                   border: '1px solid var(--color-border)',
                   background: 'var(--color-surface-2)',
                   color: 'var(--color-text-1)',
-                  fontSize: 13,
+                  fontSize: 'var(--fs-md)',
                 }}
               />
               <button
@@ -596,7 +596,7 @@ export default function TemplateManagementPage() {
                   background: 'var(--color-primary)',
                   color: '#fff',
                   cursor: 'pointer',
-                  fontSize: 12,
+                  fontSize: 'var(--fs-base)',
                   fontWeight: 600,
                 }}
               >
@@ -611,7 +611,7 @@ export default function TemplateManagementPage() {
                   background: 'var(--color-surface-2)',
                   color: 'var(--color-text-2)',
                   cursor: 'pointer',
-                  fontSize: 12,
+                  fontSize: 'var(--fs-base)',
                 }}
               >
                 Cancel
@@ -627,7 +627,7 @@ export default function TemplateManagementPage() {
                 background: 'none',
                 color: 'var(--color-primary)',
                 cursor: 'pointer',
-                fontSize: 13,
+                fontSize: 'var(--fs-md)',
                 fontWeight: 600,
               }}
             >
@@ -681,10 +681,10 @@ function EmptyTemplateState({
         {activeType === 'airfield' ? '📋' : '💡'}
       </div>
       <div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
+        <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
           No {activeType} template configured
         </div>
-        <div style={{ fontSize: 13, color: 'var(--color-text-3)' }}>
+        <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)' }}>
           Initialize from the default template to get started, then customize as needed.
         </div>
       </div>
@@ -697,7 +697,7 @@ function EmptyTemplateState({
           border: 'none',
           background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
           color: '#fff',
-          fontSize: 14,
+          fontSize: 'var(--fs-lg)',
           fontWeight: 700,
           cursor: creating ? 'wait' : 'pointer',
           fontFamily: 'inherit',

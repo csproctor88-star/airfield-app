@@ -23,7 +23,7 @@ import type { UserRole } from '@/lib/supabase/types'
 export default function SettingsPage() {
   return (
     <div className="page-container">
-      <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Settings</div>
+      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>Settings</div>
       <CollapsibleSection label="PROFILE" icon={User} defaultOpen>
         <ProfileSectionContent />
       </CollapsibleSection>
@@ -171,7 +171,7 @@ function ProfileSectionContent() {
 
   if (!profile) {
     return (
-      <div className="card" style={{ padding: 16, color: 'var(--color-text-3)', fontSize: 13 }}>Loading...</div>
+      <div className="card" style={{ padding: 16, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>Loading...</div>
     )
   }
 
@@ -182,33 +182,33 @@ function ProfileSectionContent() {
     <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
       {/* Name */}
         <div>
-          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 2 }}>NAME</div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-1)' }}>{displayName || 'Not set'}</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 2 }}>NAME</div>
+          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>{displayName || 'Not set'}</div>
         </div>
 
         {/* Email */}
         <div>
-          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 2 }}>EMAIL</div>
-          <div style={{ fontSize: 13, color: 'var(--color-text-2)' }}>{profile.email}</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 2 }}>EMAIL</div>
+          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)' }}>{profile.email}</div>
         </div>
 
         {/* Installation */}
         {profile.installationName && (
           <div>
-            <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 2 }}>INSTALLATION</div>
-            <div style={{ fontSize: 13, color: 'var(--color-text-2)' }}>{profile.installationName}</div>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 2 }}>INSTALLATION</div>
+            <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)' }}>{profile.installationName}</div>
           </div>
         )}
 
         {/* Role */}
         <div>
-          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>ROLE</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>ROLE</div>
           <span style={{
             background: 'rgba(56,189,248,0.1)',
             color: 'var(--color-accent)',
             padding: '3px 8px',
             borderRadius: 4,
-            fontSize: 11,
+            fontSize: 'var(--fs-sm)',
             fontWeight: 700,
             letterSpacing: '0.04em',
           }}>
@@ -234,7 +234,7 @@ function ThemeSectionContent() {
 
   return (
       <div className="card" style={{ padding: 14 }}>
-        <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 8 }}>THEME</div>
+        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 8 }}>THEME</div>
         <div style={{ display: 'flex', gap: 8 }}>
           {options.map(({ value, label, icon: Icon }) => (
             <button
@@ -255,7 +255,7 @@ function ThemeSectionContent() {
                   : 'transparent',
                 color: theme === value ? 'var(--color-accent)' : 'var(--color-text-2)',
                 fontWeight: theme === value ? 700 : 500,
-                fontSize: 12,
+                fontSize: 'var(--fs-base)',
               }}
             >
               <Icon size={20} />
@@ -263,7 +263,7 @@ function ThemeSectionContent() {
             </button>
           ))}
         </div>
-        <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 8 }}>
+        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 8 }}>
           {theme === 'auto' ? 'Follows your device settings' : theme === 'light' ? 'Light theme active' : 'Dark theme active'}
         </div>
       </div>
@@ -346,8 +346,8 @@ function InstallationSectionContent() {
       <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* Current installation display */}
         <div>
-          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>CURRENT INSTALLATION</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-1)' }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>CURRENT INSTALLATION</div>
+          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
             {currentInstallation
               ? `${currentInstallation.name}${currentInstallation.icao ? ` (${currentInstallation.icao})` : ''}`
               : 'Not set'}
@@ -361,7 +361,7 @@ function InstallationSectionContent() {
         {/* Switch installation dropdown */}
         {!addingNew ? (
           <div ref={dropdownRef} style={{ position: 'relative' }}>
-            <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>CHANGE INSTALLATION</div>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>CHANGE INSTALLATION</div>
             <button
               type="button"
               onClick={() => setShowDropdown(!showDropdown)}
@@ -374,7 +374,7 @@ function InstallationSectionContent() {
                 opacity: saving ? 0.6 : 1,
               }}
             >
-              <span style={{ color: 'var(--color-text-2)', fontSize: 13 }}>
+              <span style={{ color: 'var(--color-text-2)', fontSize: 'var(--fs-md)' }}>
                 {saving ? 'Switching...' : 'Select a different installation...'}
               </span>
               <ChevronDown size={14} color="var(--color-text-3)" />
@@ -396,12 +396,12 @@ function InstallationSectionContent() {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="input-dark"
-                    style={{ width: '100%', boxSizing: 'border-box', fontSize: 12 }}
+                    style={{ width: '100%', boxSizing: 'border-box', fontSize: 'var(--fs-base)' }}
                     autoFocus
                   />
                 </div>
                 {filtered.length === 0 ? (
-                  <div style={{ padding: '12px 14px', fontSize: 12, color: 'var(--color-text-3)' }}>
+                  <div style={{ padding: '12px 14px', fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>
                     No installations found
                   </div>
                 ) : (
@@ -417,12 +417,12 @@ function InstallationSectionContent() {
                         borderBottom: '1px solid rgba(56,189,248,0.04)',
                         cursor: 'pointer', textAlign: 'left',
                         color: entry.name === currentInstallation?.name ? 'var(--color-accent)' : 'var(--color-text-1)',
-                        fontSize: 13, fontFamily: 'inherit',
+                        fontSize: 'var(--fs-md)', fontFamily: 'inherit',
                         fontWeight: entry.name === currentInstallation?.name ? 700 : 500,
                       }}
                     >
                       {entry.name}
-                      {entry.icao && <span style={{ fontSize: 10, marginLeft: 8, opacity: 0.5 }}>{entry.icao}</span>}
+                      {entry.icao && <span style={{ fontSize: 'var(--fs-xs)', marginLeft: 8, opacity: 0.5 }}>{entry.icao}</span>}
                     </button>
                   ))
                 )}
@@ -440,7 +440,7 @@ function InstallationSectionContent() {
                     borderTop: '1px solid rgba(56,189,248,0.1)',
                     cursor: 'pointer', textAlign: 'left',
                     color: 'var(--color-accent)',
-                    fontSize: 13, fontFamily: 'inherit',
+                    fontSize: 'var(--fs-md)', fontFamily: 'inherit',
                     fontWeight: 600,
                   }}
                 >
@@ -451,7 +451,7 @@ function InstallationSectionContent() {
           </div>
         ) : (
           <div>
-            <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>ADD NEW INSTALLATION</div>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>ADD NEW INSTALLATION</div>
             <input
               type="text"
               className="input-dark"
@@ -479,7 +479,7 @@ function InstallationSectionContent() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
                   border: 'none', borderRadius: 8, padding: '10px 16px',
-                  color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                  color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer',
                   fontFamily: 'inherit',
                   opacity: saving || !newName.trim() ? 0.5 : 1,
                 }}
@@ -493,7 +493,7 @@ function InstallationSectionContent() {
                 style={{
                   padding: '10px 16px',
                   background: 'var(--color-border)', border: '1px solid var(--color-border-mid)',
-                  borderRadius: 8, color: 'var(--color-text-2)', fontSize: 13, fontWeight: 700,
+                  borderRadius: 8, color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
@@ -508,7 +508,7 @@ function InstallationSectionContent() {
           <>
             <div style={{ borderTop: '1px solid var(--color-border)' }} />
             <div>
-              <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 8 }}>YOUR INSTALLATIONS</div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 8 }}>YOUR INSTALLATIONS</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {allInstallations.map(inst => {
                   const isCurrent = inst.id === currentInstallation?.id
@@ -526,16 +526,16 @@ function InstallationSectionContent() {
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
-                          fontSize: 13,
+                          fontSize: 'var(--fs-md)',
                           fontWeight: isCurrent ? 700 : 500,
                           color: isCurrent ? 'var(--color-accent)' : 'var(--color-text-1)',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
                           {inst.name}
-                          {inst.icao && <span style={{ fontSize: 10, marginLeft: 6, opacity: 0.5 }}>{inst.icao}</span>}
+                          {inst.icao && <span style={{ fontSize: 'var(--fs-xs)', marginLeft: 6, opacity: 0.5 }}>{inst.icao}</span>}
                         </div>
                         {isCurrent && (
-                          <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 1 }}>Current</div>
+                          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 1 }}>Current</div>
                         )}
                       </div>
                       {!isCurrent && (
@@ -635,8 +635,8 @@ function BaseConfigSectionContent() {
   return (
       <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-1)' }}>Runways, Areas & NAVAIDs</div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 2 }}>Configure base infrastructure and CE shops</div>
+          <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)' }}>Runways, Areas & NAVAIDs</div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Configure base infrastructure and CE shops</div>
         </div>
         <a
           href="/settings/base-setup"
@@ -644,7 +644,7 @@ function BaseConfigSectionContent() {
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             padding: '10px 16px', borderRadius: 8,
             background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-            color: '#fff', fontSize: 13, fontWeight: 700,
+            color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',
           }}
         >
@@ -654,8 +654,8 @@ function BaseConfigSectionContent() {
         <div style={{ borderTop: '1px solid var(--color-border)' }} />
 
         <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-1)' }}>Inspection Templates</div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 2 }}>Customize checklist items for airfield and lighting inspections</div>
+          <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)' }}>Inspection Templates</div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Customize checklist items for airfield and lighting inspections</div>
         </div>
         <a
           href="/settings/templates"
@@ -663,7 +663,7 @@ function BaseConfigSectionContent() {
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             padding: '10px 16px', borderRadius: 8,
             background: 'linear-gradient(135deg, #7C3AED, #8B5CF6)',
-            color: '#fff', fontSize: 13, fontWeight: 700,
+            color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',
           }}
         >
@@ -674,8 +674,8 @@ function BaseConfigSectionContent() {
 
         {/* Airfield Diagram */}
         <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-1)' }}>Airfield Diagram</div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 2 }}>
+          <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)' }}>Airfield Diagram</div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
             Upload an airfield diagram image for quick reference across the app
           </div>
         </div>
@@ -712,7 +712,7 @@ function BaseConfigSectionContent() {
                 : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
               border: diagramUrl ? '1px solid var(--color-border-mid)' : 'none',
               color: diagramUrl ? 'var(--color-text-1)' : '#fff',
-              fontSize: 13, fontWeight: 700,
+              fontSize: 'var(--fs-md)', fontWeight: 700,
               cursor: uploading ? 'not-allowed' : 'pointer',
               fontFamily: 'inherit',
               opacity: uploading ? 0.6 : 1,
@@ -728,7 +728,7 @@ function BaseConfigSectionContent() {
                 background: 'rgba(239,68,68,0.1)',
                 border: '1px solid rgba(239,68,68,0.3)',
                 color: '#F87171',
-                fontSize: 13, fontWeight: 700,
+                fontSize: 'var(--fs-md)', fontWeight: 700,
                 cursor: 'pointer',
                 fontFamily: 'inherit',
                 display: 'flex', alignItems: 'center', gap: 4,
@@ -878,8 +878,8 @@ function RegulationsSectionContent() {
         {/* Favorites toggle */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-1)' }}>Show favorites by default</div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 2 }}>Open References tab filtered to favorites</div>
+            <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)' }}>Show favorites by default</div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Open References tab filtered to favorites</div>
           </div>
           <button
             onClick={toggleFavDefault}
@@ -902,8 +902,8 @@ function RegulationsSectionContent() {
 
         {/* Cache status */}
         <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>Cached for offline use</div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-2)' }}>
+          <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>Cached for offline use</div>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)' }}>
             {cachedCount !== null
               ? <><span style={{ color: 'var(--color-text-1)', fontWeight: 600 }}>{cachedCount}</span> of {totalCount || regulations.length} cached for offline use</>
               : 'Checking cache...'}
@@ -925,7 +925,7 @@ function RegulationsSectionContent() {
               }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
                 {cacheProgress.done} of {cacheProgress.total} downloaded
                 {cacheProgress.errors > 0 && <span style={{ color: '#F97316', marginLeft: 8 }}>{cacheProgress.errors} unavailable</span>}
               </div>
@@ -936,7 +936,7 @@ function RegulationsSectionContent() {
                   background: 'transparent',
                   border: '1px solid rgba(239,68,68,0.3)',
                   borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
-                  color: '#F87171', fontSize: 11, fontWeight: 700, fontFamily: 'inherit',
+                  color: '#F87171', fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
                 }}
               >
                 <X size={10} />
@@ -958,7 +958,7 @@ function RegulationsSectionContent() {
                   ? '1px solid rgba(52,211,153,0.3)' : 'none',
                 borderRadius: 8, padding: '10px 16px', cursor: 'pointer',
                 color: (cachedCount === totalCount && totalCount > 0) ? '#34D399' : '#fff',
-                fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+                fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
                 opacity: (cachedCount === totalCount && totalCount > 0) ? 0.8 : 1,
               }}
             >
@@ -974,7 +974,7 @@ function RegulationsSectionContent() {
                   background: 'transparent',
                   border: '1px solid rgba(239,68,68,0.3)',
                   borderRadius: 8, padding: '10px 16px', cursor: 'pointer',
-                  color: '#F87171', fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+                  color: '#F87171', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
                 }}
               >
                 <Trash2 size={14} />
@@ -1071,8 +1071,8 @@ function StorageSectionContent() {
       <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* Overall storage */}
         <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 2 }}>Estimated Storage Used</div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-2)' }}>
+          <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 2 }}>Estimated Storage Used</div>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)' }}>
             {storageSupported && storageEstimate
               ? <>Using <span style={{ color: 'var(--color-text-1)', fontWeight: 600 }}>{storageEstimate.usageMB} MB</span> of {storageEstimate.quotaMB} MB available</>
               : 'Storage estimate unavailable'}
@@ -1084,9 +1084,9 @@ function StorageSectionContent() {
         {/* Regulation PDFs */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-2)' }}>Regulation PDFs</div>
+            <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)' }}>Regulation PDFs</div>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-1)', fontWeight: 600 }}>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', fontWeight: 600 }}>
             {regCount} cached{regSizeMB ? ` (~${regSizeMB} MB)` : ''}
           </div>
         </div>
@@ -1094,9 +1094,9 @@ function StorageSectionContent() {
         {/* Personal Documents */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-2)' }}>Personal Documents</div>
+            <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)' }}>Personal Documents</div>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-1)', fontWeight: 600 }}>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', fontWeight: 600 }}>
             {userDocCount} cached{userDocSizeMB ? ` (~${userDocSizeMB} MB)` : ''}
           </div>
         </div>
@@ -1112,7 +1112,7 @@ function StorageSectionContent() {
             background: 'transparent',
             border: '1px solid rgba(239,68,68,0.3)',
             borderRadius: 8, padding: '10px 16px', cursor: 'pointer',
-            color: '#F87171', fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+            color: '#F87171', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
             opacity: (regCount === 0 && userDocCount === 0) ? 0.4 : 1,
           }}
         >
@@ -1145,21 +1145,21 @@ function AboutSectionContent() {
     <>
       <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 12, color: 'var(--color-text-3)' }}>Version</span>
-          <span style={{ fontSize: 12, color: 'var(--color-text-1)', fontWeight: 600 }}>2.6.0</span>
+          <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>Version</span>
+          <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', fontWeight: 600 }}>2.6.0</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 12, color: 'var(--color-text-3)' }}>Environment</span>
-          <span style={{ fontSize: 12, color: 'var(--color-text-1)', fontWeight: 600 }}>{env}</span>
+          <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>Environment</span>
+          <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', fontWeight: 600 }}>{env}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 12, color: 'var(--color-text-3)' }}>Website</span>
+          <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>Website</span>
           <a
             href="https://glidepathops.com"
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              fontSize: 12, color: 'var(--color-accent)', fontWeight: 600,
+              fontSize: 'var(--fs-base)', color: 'var(--color-accent)', fontWeight: 600,
               textDecoration: 'none',
               display: 'flex', alignItems: 'center', gap: 4,
             }}
@@ -1203,7 +1203,7 @@ function SignOutSection() {
         borderRadius: 8,
         cursor: signingOut ? 'not-allowed' : 'pointer',
         color: '#EF4444',
-        fontSize: 15,
+        fontSize: 'var(--fs-xl)',
         fontWeight: 700,
         fontFamily: 'inherit',
         display: 'flex',
@@ -1256,8 +1256,8 @@ function ConfirmDialog({
         onClick={e => e.stopPropagation()}
       >
         <div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 6 }}>{title}</div>
-          <div style={{ fontSize: 13, color: 'var(--color-text-2)', lineHeight: 1.5 }}>{message}</div>
+          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 6 }}>{title}</div>
+          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>{message}</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
@@ -1265,7 +1265,7 @@ function ConfirmDialog({
             style={{
               flex: 1, padding: '10px 16px',
               background: 'var(--color-border)', border: '1px solid var(--color-border-mid)',
-              borderRadius: 8, color: 'var(--color-text-2)', fontSize: 13, fontWeight: 700,
+              borderRadius: 8, color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 700,
               cursor: 'pointer', fontFamily: 'inherit',
             }}
           >
@@ -1276,7 +1276,7 @@ function ConfirmDialog({
             style={{
               flex: 1, padding: '10px 16px',
               background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
-              borderRadius: 8, color: '#F87171', fontSize: 13, fontWeight: 700,
+              borderRadius: 8, color: '#F87171', fontSize: 'var(--fs-md)', fontWeight: 700,
               cursor: 'pointer', fontFamily: 'inherit',
             }}
           >

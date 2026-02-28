@@ -262,7 +262,7 @@ export default function NotamsPage() {
           marginBottom: 12,
         }}
       >
-        <div style={{ fontSize: 16, fontWeight: 800 }}>NOTAMs</div>
+        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>NOTAMs</div>
         <button
           onClick={handleExportPdf}
           style={{
@@ -271,7 +271,7 @@ export default function NotamsPage() {
             borderRadius: 8,
             padding: '7px 14px',
             color: '#A855F7',
-            fontSize: 13,
+            fontSize: 'var(--fs-md)',
             fontWeight: 700,
             cursor: 'pointer',
             fontFamily: 'inherit',
@@ -303,7 +303,7 @@ export default function NotamsPage() {
               border: '1px solid var(--color-bg-elevated)',
               borderRadius: 8,
               padding: '8px 12px',
-              fontSize: 14,
+              fontSize: 'var(--fs-lg)',
               fontWeight: 600,
               fontFamily: 'inherit',
               color: 'var(--color-text-1)',
@@ -317,7 +317,7 @@ export default function NotamsPage() {
               background: 'var(--color-bg-elevated)',
               border: '1px solid var(--color-text-4)',
               color: 'var(--color-text-1)',
-              fontSize: 13,
+              fontSize: 'var(--fs-md)',
               fontWeight: 700,
               padding: '8px 16px',
               borderRadius: 8,
@@ -358,7 +358,7 @@ export default function NotamsPage() {
                   : 'none',
             }}
           />
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-1)' }}>
+          <span style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)' }}>
             {isDemoMode
               ? 'Demo Mode'
               : feedConnected
@@ -372,7 +372,7 @@ export default function NotamsPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {fetchedAt && !isDemoMode && (
-            <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
+            <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
               Last: {formatTime(fetchedAt)}
             </span>
           )}
@@ -384,7 +384,7 @@ export default function NotamsPage() {
                 background: 'none',
                 border: 'none',
                 color: 'var(--color-text-3)',
-                fontSize: 16,
+                fontSize: 'var(--fs-2xl)',
                 cursor: loading || !activeIcao ? 'not-allowed' : 'pointer',
                 padding: '0 4px',
                 opacity: loading ? 0.4 : 1,
@@ -408,7 +408,7 @@ export default function NotamsPage() {
             borderRadius: 10,
             padding: '10px 14px',
             marginBottom: 12,
-            fontSize: 13,
+            fontSize: 'var(--fs-md)',
             color: '#F87171',
           }}
         >
@@ -426,7 +426,7 @@ export default function NotamsPage() {
               background: filter === f.key ? 'var(--color-bg-elevated)' : 'transparent',
               border: `1px solid ${filter === f.key ? 'var(--color-text-4)' : 'var(--color-bg-elevated)'}`,
               color: filter === f.key ? 'var(--color-text-1)' : 'var(--color-text-3)',
-              fontSize: 12,
+              fontSize: 'var(--fs-base)',
               fontWeight: 600,
               padding: '5px 12px',
               borderRadius: 20,
@@ -446,7 +446,7 @@ export default function NotamsPage() {
             textAlign: 'center',
             padding: 32,
             color: 'var(--color-text-3)',
-            fontSize: 13,
+            fontSize: 'var(--fs-md)',
           }}
         >
           <div
@@ -513,11 +513,11 @@ export default function NotamsPage() {
                 {/* NOTAM number + Effective dates */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   {notam.notam_number && (
-                    <span style={{ fontSize: 11, color: 'var(--color-text-3)', fontFamily: 'monospace' }}>
+                    <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontFamily: 'monospace' }}>
                       {notam.notam_number}
                     </span>
                   )}
-                  <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
+                  <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
                     {formatDate(notam.effective_start)} — {formatDate(notam.effective_end)}
                   </span>
                 </div>
@@ -526,7 +526,7 @@ export default function NotamsPage() {
                 {notam.full_text && (
                   <div
                     style={{
-                      fontSize: 12,
+                      fontSize: 'var(--fs-base)',
                       fontFamily: 'monospace',
                       color: 'var(--color-text-2)',
                       whiteSpace: 'pre-wrap',
@@ -547,7 +547,7 @@ export default function NotamsPage() {
                 textAlign: 'center',
                 padding: 24,
                 color: 'var(--color-text-3)',
-                fontSize: 13,
+                fontSize: 'var(--fs-md)',
               }}
             >
               {!activeIcao && !isDemoMode

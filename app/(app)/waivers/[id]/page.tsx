@@ -485,7 +485,7 @@ export default function WaiverDetailPage() {
   if (!w) {
     return (
       <div className="page-container">
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
           &larr; Back
         </button>
         <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>Waiver not found</div>
@@ -512,26 +512,26 @@ export default function WaiverDetailPage() {
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
         padding: '10px 0', background: 'none', border: 'none',
-        color: 'var(--color-text-1)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+        color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
         marginBottom: expandedSections[key] ? 8 : 0,
       }}
     >
       <span>{title}{count !== undefined ? ` (${count})` : ''}</span>
-      <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>{expandedSections[key] ? '▲' : '▼'}</span>
+      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{expandedSections[key] ? '▲' : '▼'}</span>
     </button>
   )
 
   const fieldRow = (label: string, value: string | number | null | undefined) => (
     <div>
-      <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{label}</div>
-      <div style={{ fontSize: 12, fontWeight: 500, marginTop: 2, color: 'var(--color-text-2)' }}>{value || 'N/A'}</div>
+      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ fontSize: 'var(--fs-base)', fontWeight: 500, marginTop: 2, color: 'var(--color-text-2)' }}>{value || 'N/A'}</div>
     </div>
   )
 
   return (
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
           &larr; Back
         </button>
         <div style={{ display: 'flex', gap: 6 }}>
@@ -540,7 +540,7 @@ export default function WaiverDetailPage() {
             disabled={exporting}
             style={{
               background: '#10B98114', border: '1px solid #10B98133', borderRadius: 8, padding: '6px 12px',
-              color: '#10B981', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+              color: '#10B981', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
               opacity: exporting ? 0.6 : 1,
             }}
           >
@@ -551,7 +551,7 @@ export default function WaiverDetailPage() {
               href={`/waivers/${params.id}/edit`}
               style={{
                 background: '#3B82F614', border: '1px solid #3B82F633', borderRadius: 8, padding: '6px 12px',
-                color: '#3B82F6', fontSize: 12, fontWeight: 600, textDecoration: 'none',
+                color: '#3B82F6', fontSize: 'var(--fs-base)', fontWeight: 600, textDecoration: 'none',
               }}
             >
               Edit
@@ -563,7 +563,7 @@ export default function WaiverDetailPage() {
       {/* Header Card */}
       <div className="card" style={{ marginBottom: 8 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{w.waiver_number}</span>
+          <span style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{w.waiver_number}</span>
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
             {statusConf && <Badge label={statusConf.label} color={statusConf.color} bg={statusConf.bg} />}
           </div>
@@ -572,7 +572,7 @@ export default function WaiverDetailPage() {
           {classInfo && <Badge label={`${classInfo.emoji} ${classInfo.label}`} color="#64748B" />}
           {hazardConf && <Badge label={hazardConf.label} color={hazardConf.color} bg={hazardConf.bg} />}
         </div>
-        <div style={{ fontSize: 12, color: 'var(--color-text-2)', lineHeight: 1.6 }}>{w.description}</div>
+        <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.6 }}>{w.description}</div>
       </div>
 
       {/* Photo Carousel */}
@@ -609,7 +609,7 @@ export default function WaiverDetailPage() {
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
               ) : (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-3)', fontSize: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-3)', fontSize: 'var(--fs-base)' }}>
                   Loading photo...
                 </div>
               )}
@@ -617,7 +617,7 @@ export default function WaiverDetailPage() {
                 <div style={{
                   position: 'absolute', bottom: 0, left: 0, right: 0,
                   background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', padding: '16px 12px 8px',
-                  fontSize: 12, color: '#fff',
+                  fontSize: 'var(--fs-base)', color: '#fff',
                 }}>
                   {currentPhoto.caption}
                 </div>
@@ -666,14 +666,14 @@ export default function WaiverDetailPage() {
             {fieldRow('FAA Case #', w.faa_case_number)}
             {w.justification && (
               <div style={{ gridColumn: '1 / -1' }}>
-                <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Justification</div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-2)', lineHeight: 1.5, marginTop: 2 }}>{w.justification}</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Justification</div>
+                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.5, marginTop: 2 }}>{w.justification}</div>
               </div>
             )}
             {w.corrective_action && (
               <div style={{ gridColumn: '1 / -1' }}>
-                <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Corrective Action</div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-2)', lineHeight: 1.5, marginTop: 2 }}>{w.corrective_action}</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Corrective Action</div>
+                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.5, marginTop: 2 }}>{w.corrective_action}</div>
               </div>
             )}
           </div>
@@ -686,7 +686,7 @@ export default function WaiverDetailPage() {
         {expandedSections.criteria && (
           <>
             {demoCriteria.length === 0 ? (
-              <div style={{ fontSize: 12, color: 'var(--color-text-3)', padding: '8px 0' }}>No criteria recorded</div>
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', padding: '8px 0' }}>No criteria recorded</div>
             ) : (
               demoCriteria.map((c, i) => {
                 const sourceInfo = WAIVER_CRITERIA_SOURCES.find(s => s.value === c.criteria_source)
@@ -694,21 +694,21 @@ export default function WaiverDetailPage() {
                   <div key={c.id || i} style={{ padding: '8px 10px', background: 'var(--color-bg-elevated)', borderRadius: 8, border: '1px solid var(--color-border)', marginBottom: 6 }}>
                     <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
                       <Badge label={sourceInfo?.label || c.criteria_source} color="#3B82F6" />
-                      {c.reference && <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-2)' }}>{c.reference}</span>}
+                      {c.reference && <span style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)' }}>{c.reference}</span>}
                     </div>
-                    {c.description && <div style={{ fontSize: 12, color: 'var(--color-text-3)', lineHeight: 1.4 }}>{c.description}</div>}
+                    {c.description && <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', lineHeight: 1.4 }}>{c.description}</div>}
                   </div>
                 )
               })
             )}
             {w.risk_assessment_summary && (
               <div style={{ marginTop: 8, padding: '8px 10px', background: '#F59E0B11', border: '1px solid #F59E0B33', borderRadius: 8 }}>
-                <div style={{ fontSize: 10, color: '#F59E0B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Risk Assessment Summary</div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-2)', lineHeight: 1.5 }}>{w.risk_assessment_summary}</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: '#F59E0B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Risk Assessment Summary</div>
+                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>{w.risk_assessment_summary}</div>
               </div>
             )}
             {w.criteria_impact && (
-              <div style={{ marginTop: 6, fontSize: 12, color: 'var(--color-text-3)' }}>
+              <div style={{ marginTop: 6, fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>
                 <strong>Criteria Impact:</strong> {w.criteria_impact}
               </div>
             )}
@@ -722,7 +722,7 @@ export default function WaiverDetailPage() {
         {expandedSections.coordination && (
           <>
             {demoCoordination.length === 0 ? (
-              <div style={{ fontSize: 12, color: 'var(--color-text-3)', padding: '8px 0' }}>No coordination entries</div>
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', padding: '8px 0' }}>No coordination entries</div>
             ) : (
               demoCoordination.map((c, i) => {
                 const officeInfo = WAIVER_COORDINATION_OFFICES.find(o => o.value === c.office)
@@ -731,24 +731,24 @@ export default function WaiverDetailPage() {
                   <div key={c.id || i} style={{ padding: '8px 0', borderBottom: i < demoCoordination.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-1)' }}>{officeInfo?.label || c.office_label || c.office}</div>
-                        <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
+                        <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)' }}>{officeInfo?.label || c.office_label || c.office}</div>
+                        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
                           {c.coordinator_name && <span>{c.coordinator_name}</span>}
                           {c.coordinated_date && <span> &bull; {formatDate(c.coordinated_date)}</span>}
                         </div>
-                        {c.comments && <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 2 }}>{c.comments}</div>}
+                        {c.comments && <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 2 }}>{c.comments}</div>}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                         <Badge label={c.status === 'non_concur' ? 'Non-Concur' : titleCase(c.status)} color={statusColor} />
                         <button
                           onClick={() => handleEditCoordination(c)}
-                          style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
+                          style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => handleDeleteCoordination(c.id)}
-                          style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
+                          style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
                         >
                           Delete
                         </button>
@@ -763,7 +763,7 @@ export default function WaiverDetailPage() {
               onClick={() => { setEditingCoordId(null); setCoordOffice('civil_engineer'); setCoordLabel(''); setCoordStatus('concur'); setCoordComments(''); setActiveModal('coordination') }}
               style={{
                 marginTop: 8, width: '100%', padding: 8, borderRadius: 6, border: '1px dashed var(--color-border)',
-                background: 'transparent', color: 'var(--color-cyan)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                background: 'transparent', color: 'var(--color-cyan)', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
               + Add Coordination Entry
@@ -781,23 +781,23 @@ export default function WaiverDetailPage() {
               const files = allAttachments.filter(a => !a.mime_type?.startsWith('image/'))
               const photoCount = allAttachments.filter(a => a.mime_type?.startsWith('image/')).length
               if (files.length === 0 && photoCount === 0) {
-                return <div style={{ fontSize: 12, color: 'var(--color-text-3)', padding: '8px 0' }}>No attachments</div>
+                return <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', padding: '8px 0' }}>No attachments</div>
               }
               return (
                 <>
                   {photoCount > 0 && files.length === 0 && (
-                    <div style={{ fontSize: 12, color: 'var(--color-text-3)', padding: '8px 0' }}>
+                    <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', padding: '8px 0' }}>
                       {photoCount} photo{photoCount > 1 ? 's' : ''} shown above
                     </div>
                   )}
                   {files.map((a, i) => (
                     <div key={a.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < files.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.file_name}</div>
-                        <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
+                        <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.file_name}</div>
+                        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
                           {titleCase(a.file_type)} {a.file_size ? `\u2022 ${(a.file_size / 1024).toFixed(0)} KB` : ''}
                         </div>
-                        {a.caption && <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontStyle: 'italic' }}>{a.caption}</div>}
+                        {a.caption && <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>{a.caption}</div>}
                       </div>
                       <button
                         onClick={() => {
@@ -805,7 +805,7 @@ export default function WaiverDetailPage() {
                           if (url) window.open(url, '_blank')
                         }}
                         style={{
-                          marginLeft: 8, padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+                          marginLeft: 8, padding: '5px 12px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 600,
                           background: '#3B82F614', border: '1px solid #3B82F633', color: '#3B82F6',
                           cursor: attachmentUrls[a.id] ? 'pointer' : 'default', fontFamily: 'inherit',
                           opacity: attachmentUrls[a.id] ? 1 : 0.5, flexShrink: 0,
@@ -824,7 +824,7 @@ export default function WaiverDetailPage() {
               onClick={() => setActiveModal('attachment')}
               style={{
                 marginTop: 8, width: '100%', padding: 8, borderRadius: 6, border: '1px dashed var(--color-border)',
-                background: 'transparent', color: 'var(--color-cyan)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                background: 'transparent', color: 'var(--color-cyan)', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
               + Upload Attachment
@@ -839,7 +839,7 @@ export default function WaiverDetailPage() {
         {expandedSections.reviews && (
           <>
             {demoReviews.length === 0 ? (
-              <div style={{ fontSize: 12, color: 'var(--color-text-3)', padding: '8px 0' }}>No reviews recorded</div>
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', padding: '8px 0' }}>No reviews recorded</div>
             ) : (
               demoReviews.map((r, i) => {
                 const recInfo = WAIVER_REVIEW_RECOMMENDATIONS.find(rec => rec.value === r.recommendation)
@@ -847,25 +847,25 @@ export default function WaiverDetailPage() {
                 return (
                   <div key={r.id || i} style={{ padding: '8px 10px', background: 'var(--color-bg-elevated)', borderRadius: 8, border: '1px solid var(--color-border)', marginBottom: 6 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-1)' }}>{r.review_year} Review</span>
+                      <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>{r.review_year} Review</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         {recInfo && <Badge label={recInfo.label} color={recColor} />}
                         <button
                           onClick={() => handleDeleteReview(r.id, w.id, r.review_year)}
                           disabled={actionLoading}
-                          style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 10, fontWeight: 600, cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
+                          style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
                         >
                           Remove
                         </button>
                       </div>
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
+                    <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
                       {r.review_date && <span>Reviewed {formatDate(r.review_date)}</span>}
                       {r.mitigation_verified && <span> &bull; Mitigation verified</span>}
                       {r.presented_to_facilities_board && <span> &bull; Presented to board {r.facilities_board_date ? formatDate(r.facilities_board_date) : ''}</span>}
                     </div>
-                    {r.project_status_update && <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 2 }}>Project: {r.project_status_update}</div>}
-                    {r.notes && <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 2 }}>{r.notes}</div>}
+                    {r.project_status_update && <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Project: {r.project_status_update}</div>}
+                    {r.notes && <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 2 }}>{r.notes}</div>}
                   </div>
                 )
               })
@@ -876,7 +876,7 @@ export default function WaiverDetailPage() {
                 onClick={() => setActiveModal('review')}
                 style={{
                   marginTop: 8, width: '100%', padding: 8, borderRadius: 6, border: '1px dashed var(--color-border)',
-                  background: 'transparent', color: 'var(--color-cyan)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                  background: 'transparent', color: 'var(--color-cyan)', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
                 + Add Review
@@ -891,7 +891,7 @@ export default function WaiverDetailPage() {
         <div className="card" style={{ marginBottom: 8 }}>
           {sectionHeader('notes', 'Notes')}
           {expandedSections.notes && (
-            <div style={{ fontSize: 12, color: 'var(--color-text-2)', lineHeight: 1.6 }}>{w.notes}</div>
+            <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.6 }}>{w.notes}</div>
           )}
         </div>
       )}
@@ -992,7 +992,7 @@ export default function WaiverDetailPage() {
       {activeModal === 'approve' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ background: 'var(--color-bg-surface)', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Approve Waiver</div>
+            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, marginBottom: 12 }}>Approve Waiver</div>
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">Date Approved</span>
               <input type="date" className="input-dark" value={approveDate} onChange={(e) => setApproveDate(e.target.value)} />
@@ -1002,7 +1002,7 @@ export default function WaiverDetailPage() {
               <input type="date" className="input-dark" value={approveExpiration} onChange={(e) => setApproveExpiration(e.target.value)} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <button onClick={() => setActiveModal(null)} style={{ padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={() => setActiveModal(null)} style={{ padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Cancel
               </button>
               <button
@@ -1027,8 +1027,8 @@ export default function WaiverDetailPage() {
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
             <div style={{ background: 'var(--color-bg-surface)', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)' }}>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{config.title}</div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginBottom: 12, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, marginBottom: 4 }}>{config.title}</div>
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', marginBottom: 12, lineHeight: 1.5 }}>
                 {config.description} A comment is required to document this change.
               </div>
               <div style={{ marginBottom: 16 }}>
@@ -1037,7 +1037,7 @@ export default function WaiverDetailPage() {
                   value={statusChangeComments} onChange={(e) => setStatusChangeComments(e.target.value)} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <button onClick={() => { setActiveModal(null); setStatusChangeComments('') }} style={{ padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                <button onClick={() => { setActiveModal(null); setStatusChangeComments('') }} style={{ padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                   Cancel
                 </button>
                 <button
@@ -1058,7 +1058,7 @@ export default function WaiverDetailPage() {
       {activeModal === 'coordination' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ background: 'var(--color-bg-surface)', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>{editingCoordId ? 'Edit Coordination' : 'Add Coordination'}</div>
+            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, marginBottom: 12 }}>{editingCoordId ? 'Edit Coordination' : 'Add Coordination'}</div>
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">Office</span>
               <select className="input-dark" value={coordOffice} onChange={(e) => setCoordOffice(e.target.value as WaiverCoordinationOffice)} style={{ width: '100%' }}>
@@ -1079,7 +1079,7 @@ export default function WaiverDetailPage() {
                 {(['concur', 'non_concur', 'pending'] as const).map(s => (
                   <button key={s} type="button" onClick={() => setCoordStatus(s)}
                     style={{
-                      flex: 1, padding: '8px 4px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                      flex: 1, padding: '8px 4px', borderRadius: 6, fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                       background: coordStatus === s ? (s === 'concur' ? '#10B98122' : s === 'non_concur' ? '#EF444422' : '#F59E0B22') : 'transparent',
                       border: `1px solid ${coordStatus === s ? (s === 'concur' ? '#10B981' : s === 'non_concur' ? '#EF4444' : '#F59E0B') : 'var(--color-border)'}`,
                       color: coordStatus === s ? (s === 'concur' ? '#10B981' : s === 'non_concur' ? '#EF4444' : '#F59E0B') : 'var(--color-text-3)',
@@ -1095,7 +1095,7 @@ export default function WaiverDetailPage() {
               <textarea className="input-dark" rows={2} style={{ resize: 'vertical' }} value={coordComments} onChange={(e) => setCoordComments(e.target.value)} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <button onClick={() => { setActiveModal(null); setEditingCoordId(null) }} style={{ padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={() => { setActiveModal(null); setEditingCoordId(null) }} style={{ padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Cancel
               </button>
               <button className="btn-primary" onClick={handleSaveCoordination} disabled={actionLoading}>
@@ -1110,7 +1110,7 @@ export default function WaiverDetailPage() {
       {activeModal === 'review' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ background: 'var(--color-bg-surface)', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>{new Date().getFullYear()} Annual Review</div>
+            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, marginBottom: 12 }}>{new Date().getFullYear()} Annual Review</div>
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">Recommendation</span>
               <select className="input-dark" value={reviewRecommendation} onChange={(e) => setReviewRecommendation(e.target.value as WaiverReviewRecommendation)} style={{ width: '100%' }}>
@@ -1120,7 +1120,7 @@ export default function WaiverDetailPage() {
               </select>
             </div>
             <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--color-text-2)', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', cursor: 'pointer' }}>
                 <input type="checkbox" checked={reviewMitigation} onChange={(e) => setReviewMitigation(e.target.checked)} />
                 Mitigation measures verified
               </label>
@@ -1134,7 +1134,7 @@ export default function WaiverDetailPage() {
               <textarea className="input-dark" rows={2} style={{ resize: 'vertical' }} value={reviewNotes} onChange={(e) => setReviewNotes(e.target.value)} />
             </div>
             <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--color-text-2)', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', cursor: 'pointer' }}>
                 <input type="checkbox" checked={reviewBoard} onChange={(e) => setReviewBoard(e.target.checked)} />
                 Presented to Facilities Board
               </label>
@@ -1146,7 +1146,7 @@ export default function WaiverDetailPage() {
               </div>
             )}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <button onClick={() => setActiveModal(null)} style={{ padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={() => setActiveModal(null)} style={{ padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Cancel
               </button>
               <button className="btn-primary" onClick={handleAddReview} disabled={actionLoading}>
@@ -1188,7 +1188,7 @@ export default function WaiverDetailPage() {
                 position: 'absolute', top: 16, right: 16, zIndex: 201,
                 background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%',
                 width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#fff', fontSize: 20, cursor: 'pointer',
+                color: '#fff', fontSize: 'var(--fs-4xl)', cursor: 'pointer',
               }}
             >
               &times;
@@ -1200,7 +1200,7 @@ export default function WaiverDetailPage() {
               style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
             />
             {currentPhoto?.caption && (
-              <div style={{ marginTop: 8, fontSize: 13, color: 'rgba(255,255,255,0.8)', textAlign: 'center', padding: '0 16px' }}>
+              <div style={{ marginTop: 8, fontSize: 'var(--fs-md)', color: 'rgba(255,255,255,0.8)', textAlign: 'center', padding: '0 16px' }}>
                 {currentPhoto.caption}
               </div>
             )}
@@ -1228,10 +1228,10 @@ export default function WaiverDetailPage() {
       {activeModal === 'attachment' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ background: 'var(--color-bg-surface)', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Upload Attachment</div>
+            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, marginBottom: 12 }}>Upload Attachment</div>
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">File</span>
-              <input type="file" accept="image/*,.pdf,.docx" onChange={(e) => setAttachFile(e.target.files?.[0] || null)} style={{ fontSize: 12, color: 'var(--color-text-2)' }} />
+              <input type="file" accept="image/*,.pdf,.docx" onChange={(e) => setAttachFile(e.target.files?.[0] || null)} style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)' }} />
             </div>
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">Type</span>
@@ -1255,7 +1255,7 @@ export default function WaiverDetailPage() {
               <input type="text" className="input-dark" placeholder="Optional caption..." value={attachCaption} onChange={(e) => setAttachCaption(e.target.value)} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <button onClick={() => setActiveModal(null)} style={{ padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={() => setActiveModal(null)} style={{ padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Cancel
               </button>
               <button className="btn-primary" onClick={handleUploadAttachment} disabled={actionLoading || !attachFile}>

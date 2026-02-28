@@ -174,11 +174,11 @@ export default function AnnualReviewYearPage() {
   return (
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <Link href="/waivers" style={{ color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+        <Link href="/waivers" style={{ color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, textDecoration: 'none' }}>
           &larr; Waivers
         </Link>
         <button onClick={handleExport}
-          style={{ background: '#10B98114', border: '1px solid #10B98133', borderRadius: 8, padding: '6px 10px', color: '#10B981', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+          style={{ background: '#10B98114', border: '1px solid #10B98133', borderRadius: 8, padding: '6px 10px', color: '#10B981', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
           Export Year Review
         </button>
       </div>
@@ -186,12 +186,12 @@ export default function AnnualReviewYearPage() {
       {/* Year Header with Nav */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, justifyContent: 'center' }}>
         <button onClick={() => { router.push(`/waivers/annual-review/${year - 1}`); setKpiFilter(null) }}
-          style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '6px 10px', color: 'var(--color-text-2)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+          style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '6px 10px', color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', cursor: 'pointer', fontFamily: 'inherit' }}>
           &larr;
         </button>
-        <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{year} Review</span>
+        <span style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{year} Review</span>
         <button onClick={() => { router.push(`/waivers/annual-review/${year + 1}`); setKpiFilter(null) }} disabled={year >= currentYear}
-          style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '6px 10px', color: year >= currentYear ? 'var(--color-text-4)' : 'var(--color-text-2)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+          style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '6px 10px', color: year >= currentYear ? 'var(--color-text-4)' : 'var(--color-text-2)', fontSize: 'var(--fs-md)', cursor: 'pointer', fontFamily: 'inherit' }}>
           &rarr;
         </button>
       </div>
@@ -215,23 +215,23 @@ export default function AnnualReviewYearPage() {
                 borderRadius: 10, padding: '8px 4px', textAlign: 'center', cursor: 'pointer',
               }}
             >
-              <div style={{ fontSize: 9, color: active ? k.color : 'var(--color-text-3)', letterSpacing: '0.08em', fontWeight: 600 }}>{k.label}</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: k.color }}>{k.value}</div>
+              <div style={{ fontSize: 'var(--fs-2xs)', color: active ? k.color : 'var(--color-text-3)', letterSpacing: '0.08em', fontWeight: 600 }}>{k.label}</div>
+              <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: k.color }}>{k.value}</div>
             </div>
           )
         })}
       </div>
 
-      <div style={{ fontSize: 11, color: 'var(--color-text-3)', textAlign: 'center', marginBottom: 12 }}>
+      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', textAlign: 'center', marginBottom: 12 }}>
         {reviewedCount} of {activeWaivers.length} waivers reviewed
       </div>
 
       {loading ? (
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 13 }}>Loading...</div>
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>Loading...</div>
       ) : (
         <>
           {filteredWaivers.length === 0 && (
-            <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 13 }}>
+            <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
               {activeWaivers.length === 0 ? 'No active waivers for review' : 'No waivers match this filter'}
             </div>
           )}
@@ -251,32 +251,32 @@ export default function AnnualReviewYearPage() {
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', textAlign: 'left' }}
                 >
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{w.waiver_number}</div>
+                    <div style={{ fontSize: 'var(--fs-base)', fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{w.waiver_number}</div>
                     <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
                       {classInfo && <Badge label={`${classInfo.emoji} ${classInfo.label}`} color="#64748B" />}
                       <Badge label={reviewed ? 'Reviewed' : 'Not Reviewed'} color={reviewed ? '#22C55E' : '#EF4444'} />
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 4, maxWidth: 280 }}>
+                    <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4, maxWidth: 280 }}>
                       {w.description.slice(0, 100)}{w.description.length > 100 ? '...' : ''}
                     </div>
                     {review && !isExpanded && (
-                      <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 4 }}>
+                      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4 }}>
                         Recommendation: {review.recommendation ? review.recommendation.charAt(0).toUpperCase() + review.recommendation.slice(1) : ''} {review.presented_to_facilities_board ? '\u2022 Board briefed' : ''}
                       </div>
                     )}
                   </div>
-                  <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>{isExpanded ? '\u25B2' : '\u25BC'}</span>
+                  <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{isExpanded ? '\u25B2' : '\u25BC'}</span>
                 </button>
 
                 {isExpanded && (
                   <div style={{ marginTop: 12, borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
                     {reviewed && (
-                      <div style={{ marginBottom: 8, padding: '6px 8px', background: '#22C55E11', borderRadius: 6, fontSize: 11, color: '#22C55E', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ marginBottom: 8, padding: '6px 8px', background: '#22C55E11', borderRadius: 6, fontSize: 'var(--fs-sm)', color: '#22C55E', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span>Reviewed for {year}</span>
                         <button
                           onClick={() => review && handleDeleteReview(review.id, w.id)}
                           disabled={saving === w.id}
-                          style={{ background: '#EF444414', border: '1px solid #EF444433', borderRadius: 4, padding: '2px 8px', color: '#EF4444', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                          style={{ background: '#EF444414', border: '1px solid #EF444433', borderRadius: 4, padding: '2px 8px', color: '#EF4444', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
                         >
                           Remove Review
                         </button>
@@ -296,7 +296,7 @@ export default function AnnualReviewYearPage() {
                         </div>
 
                         <div style={{ marginBottom: 12 }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--color-text-2)', cursor: 'pointer' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', cursor: 'pointer' }}>
                             <input type="checkbox" checked={form.mitigation_verified}
                               onChange={(e) => updateForm(w.id, 'mitigation_verified', e.target.checked)} />
                             Mitigation measures verified
@@ -318,7 +318,7 @@ export default function AnnualReviewYearPage() {
                         </div>
 
                         <div style={{ marginBottom: 12 }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--color-text-2)', cursor: 'pointer' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', cursor: 'pointer' }}>
                             <input type="checkbox" checked={form.presented_to_facilities_board}
                               onChange={(e) => updateForm(w.id, 'presented_to_facilities_board', e.target.checked)} />
                             Presented to Facilities Board
@@ -337,7 +337,7 @@ export default function AnnualReviewYearPage() {
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                       <Link href={`/waivers/${w.id}`}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', color: 'var(--color-text-2)', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', color: 'var(--color-text-2)', fontSize: 'var(--fs-base)', fontWeight: 600, textDecoration: 'none' }}>
                         View Detail
                       </Link>
                       {!reviewed && (

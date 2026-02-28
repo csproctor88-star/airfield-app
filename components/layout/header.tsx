@@ -113,7 +113,7 @@ export function Header() {
           {/* Installation name + ICAO + dropdown */}
           <div style={{ position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <span style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em' }}>
+            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em' }}>
               {currentInstallation?.name
                 ? `${currentInstallation.name.toUpperCase()}${currentInstallation.icao ? ` \u2022 ${currentInstallation.icao}` : ''}`
                 : 'AIRFIELD OPS'}
@@ -145,12 +145,12 @@ export function Header() {
                     border: 'none', borderBottom: '1px solid var(--color-border)',
                     cursor: 'pointer', textAlign: 'left',
                     color: inst.id === currentInstallation?.id ? 'var(--color-accent)' : 'var(--color-text-2)',
-                    fontSize: 13, fontWeight: inst.id === currentInstallation?.id ? 700 : 500,
+                    fontSize: 'var(--fs-md)', fontWeight: inst.id === currentInstallation?.id ? 700 : 500,
                     fontFamily: 'inherit',
                   }}
                 >
                   {inst.name}
-                  {inst.icao && <span style={{ fontSize: 10, marginLeft: 8, opacity: 0.6 }}>{inst.icao}</span>}
+                  {inst.icao && <span style={{ fontSize: 'var(--fs-xs)', marginLeft: 8, opacity: 0.6 }}>{inst.icao}</span>}
                 </button>
               ))}
             </div>
@@ -160,8 +160,8 @@ export function Header() {
 
         {/* User status + name — bottom right */}
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 10, color: presence.color, fontWeight: 600 }}>{presence.label}</div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)' }}>{userDisplay.name}</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: presence.color, fontWeight: 600 }}>{presence.label}</div>
+          <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)' }}>{userDisplay.name}</div>
         </div>
       </div>
     </div>

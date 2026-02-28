@@ -126,14 +126,14 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
           textAlign: 'center',
         }}
       >
-        <div style={{ fontSize: 24, marginBottom: 8 }}>🗺️</div>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 8 }}>
+        <div style={{ fontSize: 'var(--fs-5xl)', marginBottom: 8 }}>🗺️</div>
+        <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 8 }}>
           Mapbox Token Required
         </div>
-        <div style={{ fontSize: 12, color: 'var(--color-text-3)', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', lineHeight: 1.5 }}>
           Add your Mapbox access token to <code style={{ color: 'var(--color-accent)' }}>.env.local</code>
           <br />
-          <code style={{ color: 'var(--color-accent)', fontSize: 11 }}>NEXT_PUBLIC_MAPBOX_TOKEN=pk.xxx</code>
+          <code style={{ color: 'var(--color-accent)', fontSize: 'var(--fs-sm)' }}>NEXT_PUBLIC_MAPBOX_TOKEN=pk.xxx</code>
         </div>
       </div>
     )
@@ -161,7 +161,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
             background: 'rgba(4, 7, 12, 0.88)',
             borderRadius: 6,
             padding: '4px 10px',
-            fontSize: 11,
+            fontSize: 'var(--fs-sm)',
             color: '#94A3B8',
             fontWeight: 600,
             whiteSpace: 'nowrap',
@@ -179,7 +179,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
             background: 'rgba(4, 7, 12, 0.88)',
             borderRadius: 6,
             padding: '4px 8px',
-            fontSize: 11,
+            fontSize: 'var(--fs-sm)',
             color: '#34D399',
             fontWeight: 600,
             fontFamily: 'monospace',

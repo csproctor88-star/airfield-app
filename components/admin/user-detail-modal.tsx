@@ -161,7 +161,7 @@ export function UserDetailModal({
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-1)' }}>
+            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
               Edit Profile
             </div>
             <RoleBadge role={user.role} />
@@ -227,7 +227,7 @@ export function UserDetailModal({
             <div
               style={{
                 padding: '8px 12px',
-                fontSize: 13,
+                fontSize: 'var(--fs-md)',
                 color: 'var(--color-text-2)',
                 background: 'var(--color-bg-elevated)',
                 border: '1px solid var(--color-border)',
@@ -260,7 +260,7 @@ export function UserDetailModal({
               <div
                 style={{
                   padding: '8px 12px',
-                  fontSize: 13,
+                  fontSize: 'var(--fs-md)',
                   color: 'var(--color-text-2)',
                   background: 'var(--color-bg-elevated)',
                   border: '1px solid var(--color-border)',
@@ -288,7 +288,7 @@ export function UserDetailModal({
                   opacity: anyLoading ? 0.6 : 1,
                 }}
               >
-                <span style={{ color: baseId ? 'var(--color-text-1)' : 'var(--color-text-3)', fontSize: 13 }}>
+                <span style={{ color: baseId ? 'var(--color-text-1)' : 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
                   {baseId
                     ? (() => { const inst = installations.find(i => i.id === baseId); return inst ? `${inst.name} · ${inst.icao}` : 'Select installation...' })()
                     : 'Select installation...'}
@@ -312,7 +312,7 @@ export function UserDetailModal({
                       value={instSearch}
                       onChange={(e) => setInstSearch(e.target.value)}
                       className="input-dark"
-                      style={{ width: '100%', boxSizing: 'border-box', fontSize: 12 }}
+                      style={{ width: '100%', boxSizing: 'border-box', fontSize: 'var(--fs-base)' }}
                       autoFocus
                     />
                   </div>
@@ -330,16 +330,16 @@ export function UserDetailModal({
                           borderBottom: '1px solid rgba(56,189,248,0.04)',
                           cursor: 'pointer', textAlign: 'left',
                           color: inst.id === baseId ? 'var(--color-accent)' : 'var(--color-text-1)',
-                          fontSize: 13, fontFamily: 'inherit',
+                          fontSize: 'var(--fs-md)', fontFamily: 'inherit',
                           fontWeight: inst.id === baseId ? 700 : 500,
                         }}
                       >
                         {inst.name}
-                        {inst.icao && <span style={{ fontSize: 10, marginLeft: 8, opacity: 0.5 }}>{inst.icao}</span>}
+                        {inst.icao && <span style={{ fontSize: 'var(--fs-xs)', marginLeft: 8, opacity: 0.5 }}>{inst.icao}</span>}
                       </button>
                     ))}
                   {installations.filter(inst => !instSearch || `${inst.name} ${inst.icao}`.toLowerCase().includes(instSearch.toLowerCase())).length === 0 && (
-                    <div style={{ padding: '12px 14px', fontSize: 12, color: 'var(--color-text-3)' }}>
+                    <div style={{ padding: '12px 14px', fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>
                       No installations found
                     </div>
                   )}
@@ -352,7 +352,7 @@ export function UserDetailModal({
               <div
                 style={{
                   padding: '8px 12px',
-                  fontSize: 13,
+                  fontSize: 'var(--fs-md)',
                   color: 'var(--color-text-2)',
                   background: 'var(--color-bg-elevated)',
                   border: '1px solid var(--color-border)',
@@ -368,13 +368,13 @@ export function UserDetailModal({
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             <div>
               <span className="section-label">Date Joined</span>
-              <div style={{ fontSize: 12, color: 'var(--color-text-3)' }}>
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>
                 {new Date(user.created_at).toLocaleDateString()}
               </div>
             </div>
             <div>
               <span className="section-label">Last Active</span>
-              <div style={{ fontSize: 12, color: 'var(--color-text-3)' }}>
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>
                 {user.last_seen_at ? formatRelativeTime(user.last_seen_at) : 'Never'}
               </div>
             </div>
@@ -390,7 +390,7 @@ export function UserDetailModal({
               borderRadius: 6,
               padding: '8px 12px',
               marginTop: 12,
-              fontSize: 12,
+              fontSize: 'var(--fs-base)',
               color: '#22C55E',
             }}
           >
@@ -405,7 +405,7 @@ export function UserDetailModal({
               borderRadius: 6,
               padding: '8px 12px',
               marginTop: 12,
-              fontSize: 12,
+              fontSize: 'var(--fs-base)',
               color: 'var(--color-danger)',
             }}
           >
@@ -425,7 +425,7 @@ export function UserDetailModal({
             border: 'none',
             background: anyLoading ? 'rgba(6,182,212,0.5)' : '#06B6D4',
             color: '#fff',
-            fontSize: 13,
+            fontSize: 'var(--fs-md)',
             fontWeight: 700,
             cursor: anyLoading ? 'not-allowed' : 'pointer',
             fontFamily: 'inherit',
@@ -462,7 +462,7 @@ export function UserDetailModal({
               border: '1px solid var(--color-border)',
               background: 'transparent',
               color: 'var(--color-text-2)',
-              fontSize: 12,
+              fontSize: 'var(--fs-base)',
               fontWeight: 600,
               cursor: anyLoading ? 'not-allowed' : 'pointer',
               fontFamily: 'inherit',
@@ -490,7 +490,7 @@ export function UserDetailModal({
                 border: '1px solid #22C55E',
                 background: 'transparent',
                 color: '#4ADE80',
-                fontSize: 12,
+                fontSize: 'var(--fs-base)',
                 fontWeight: 600,
                 cursor: anyLoading ? 'not-allowed' : 'pointer',
                 fontFamily: 'inherit',
@@ -520,7 +520,7 @@ export function UserDetailModal({
                 border: '1px solid #EF4444',
                 background: 'transparent',
                 color: '#F87171',
-                fontSize: 12,
+                fontSize: 'var(--fs-base)',
                 fontWeight: 600,
                 cursor: anyLoading ? 'not-allowed' : 'pointer',
                 fontFamily: 'inherit',
@@ -549,7 +549,7 @@ export function UserDetailModal({
                 border: 'none',
                 background: anyLoading ? 'rgba(220,38,38,0.3)' : '#DC2626',
                 color: '#fff',
-                fontSize: 12,
+                fontSize: 'var(--fs-base)',
                 fontWeight: 600,
                 cursor: anyLoading ? 'not-allowed' : 'pointer',
                 fontFamily: 'inherit',

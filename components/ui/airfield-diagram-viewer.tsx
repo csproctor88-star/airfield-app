@@ -37,8 +37,8 @@ export function AirfieldDiagramButton() {
           width: '100%',
         }}
       >
-        <span style={{ fontSize: 24 }}>🗺️</span>
-        <span style={{ fontSize: 15, color: 'var(--color-cyan)', letterSpacing: '0.04em', fontWeight: 700 }}>
+        <span style={{ fontSize: 'var(--fs-5xl)' }}>🗺️</span>
+        <span style={{ fontSize: 'var(--fs-xl)', color: 'var(--color-cyan)', letterSpacing: '0.04em', fontWeight: 700 }}>
           Airfield Diagram
         </span>
       </button>
@@ -59,7 +59,7 @@ export function AirfieldDiagramButton() {
             style={{
               position: 'fixed', top: 12, right: 12, zIndex: 10000,
               background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8,
-              padding: '10px 18px', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+              padding: '10px 18px', color: '#fff', fontSize: 'var(--fs-xl)', fontWeight: 700, cursor: 'pointer',
               backdropFilter: 'blur(8px)',
             }}
           >Close</button>

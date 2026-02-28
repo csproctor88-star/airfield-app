@@ -160,7 +160,7 @@ export default function ActivityPage() {
   return (
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
           ← Back
         </button>
         <button
@@ -168,7 +168,7 @@ export default function ActivityPage() {
           disabled={exporting || entries.length === 0}
           style={{
             background: '#A78BFA14', border: '1px solid #A78BFA33', borderRadius: 8,
-            padding: '6px 12px', color: '#A78BFA', fontSize: 12, fontWeight: 600,
+            padding: '6px 12px', color: '#A78BFA', fontSize: 'var(--fs-base)', fontWeight: 600,
             cursor: exporting || entries.length === 0 ? 'default' : 'pointer',
             fontFamily: 'inherit', opacity: exporting || entries.length === 0 ? 0.5 : 1,
           }}
@@ -177,7 +177,7 @@ export default function ActivityPage() {
         </button>
       </div>
 
-      <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>Activity Log</div>
+      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 12 }}>Activity Log</div>
 
       {/* Period Presets */}
       <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-text-4)', marginBottom: 12 }}>
@@ -186,7 +186,7 @@ export default function ActivityPage() {
             key={p.value}
             onClick={() => setPeriod(p.value)}
             style={{
-              flex: 1, padding: '8px 0', border: 'none', fontSize: 12, fontWeight: 600,
+              flex: 1, padding: '8px 0', border: 'none', fontSize: 'var(--fs-base)', fontWeight: 600,
               cursor: 'pointer', fontFamily: 'inherit',
               background: period === p.value ? 'var(--color-cyan)' : 'transparent',
               color: period === p.value ? '#0F172A' : 'var(--color-text-2)',
@@ -227,20 +227,20 @@ export default function ActivityPage() {
       {/* Results */}
       {loading ? (
         <div className="card" style={{ textAlign: 'center', padding: 24 }}>
-          <div style={{ fontSize: 12, color: 'var(--color-text-3)' }}>Loading activity...</div>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>Loading activity...</div>
         </div>
       ) : entries.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: 24 }}>
-          <div style={{ fontSize: 12, color: 'var(--color-text-3)' }}>No activity found for this date range</div>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>No activity found for this date range</div>
         </div>
       ) : (
         <>
-          <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 8 }}>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 8 }}>
             {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
           </div>
           {grouped.map((group) => (
             <div key={group.date} style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-3)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 {group.label}
               </div>
               <div className="card" style={{ padding: '4px 12px' }}>
@@ -284,29 +284,29 @@ export default function ActivityPage() {
                         style={{
                           width: 24, height: 24, borderRadius: 6, background: dotBg,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 11, flexShrink: 0, color,
+                          fontSize: 'var(--fs-sm)', flexShrink: 0, color,
                         }}
                       >
                         &bull;
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-cyan)' }}>
+                          <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-cyan)' }}>
                             {userName}
                           </span>
-                          <span style={{ fontSize: 10, color: 'var(--color-text-3)' }}>{timeStr}</span>
+                          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{timeStr}</span>
                         </div>
-                        <div style={{ fontSize: 11, color: link ? 'var(--color-cyan)' : 'var(--color-text-2)' }}>
+                        <div style={{ fontSize: 'var(--fs-sm)', color: link ? 'var(--color-cyan)' : 'var(--color-text-2)' }}>
                           {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined)}
                           {link && (
-                            <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.6 }}>→</span>
+                            <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>→</span>
                           )}
                           {navaidStatusVal && (
                             <span style={{ marginLeft: 6, width: 8, height: 8, borderRadius: '50%', display: 'inline-block', background: STATUS_HEX[navaidStatusVal] || '#64748B' }} />
                           )}
                         </div>
                         {navaidNoteText && (
-                          <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 2 }}>
+                          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 2 }}>
                             &ldquo;{navaidNoteText}&rdquo;
                           </div>
                         )}

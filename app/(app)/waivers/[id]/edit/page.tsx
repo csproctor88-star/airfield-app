@@ -171,12 +171,12 @@ export default function EditWaiverPage() {
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
         padding: '10px 0', background: 'none', border: 'none', borderBottom: '1px solid var(--color-border)',
-        color: 'var(--color-text-1)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+        color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
         marginBottom: expanded ? 12 : 0,
       }}
     >
       <span>{title}</span>
-      <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>{expanded ? '▲' : '▼'}</span>
+      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{expanded ? '▲' : '▼'}</span>
     </button>
   )
 
@@ -191,12 +191,12 @@ export default function EditWaiverPage() {
   return (
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
           &larr; Back
         </button>
       </div>
-      <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Edit Waiver</div>
-      <div style={{ fontSize: 12, color: 'var(--color-cyan)', fontFamily: 'monospace', marginBottom: 12 }}>{formData.waiver_number}</div>
+      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 4 }}>Edit Waiver</div>
+      <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-cyan)', fontFamily: 'monospace', marginBottom: 12 }}>{formData.waiver_number}</div>
 
       {/* Section 1: Basic Info */}
       <div className="card" style={{ marginBottom: 8 }}>
@@ -210,13 +210,13 @@ export default function EditWaiverPage() {
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                   {selectedClassInfo ? `${selectedClassInfo.emoji} ${selectedClassInfo.label}` : 'Select classification...'}
                 </span>
-                <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--color-text-3)' }}>{classDropdownOpen ? '▲' : '▼'}</span>
+                <span style={{ marginLeft: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{classDropdownOpen ? '▲' : '▼'}</span>
               </button>
               {classDropdownOpen && (
                 <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-text-4)', borderRadius: 8, marginTop: 4, maxHeight: 280, overflowY: 'auto' }}>
                   {WAIVER_CLASSIFICATIONS.map(c => (
                     <button key={c.value} type="button" onClick={() => { setFormData(p => ({ ...p, classification: c.value })); setClassDropdownOpen(false) }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px', background: formData.classification === c.value ? 'var(--color-text-4)' : 'transparent', border: 'none', color: 'var(--color-text-1)', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px', background: formData.classification === c.value ? 'var(--color-text-4)' : 'transparent', border: 'none', color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
                       <span>{c.emoji} {c.label}</span>
                     </button>
                   ))}
@@ -228,7 +228,7 @@ export default function EditWaiverPage() {
               <div style={{ display: 'flex', gap: 6 }}>
                 {['new', 'extension', 'amendment'].map(a => (
                   <button key={a} type="button" onClick={() => setFormData(p => ({ ...p, action_requested: a }))}
-                    style={{ flex: 1, padding: '8px 4px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                    style={{ flex: 1, padding: '8px 4px', borderRadius: 6, fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                       background: formData.action_requested === a ? 'rgba(34,211,238,0.12)' : 'transparent',
                       border: `1px solid ${formData.action_requested === a ? 'rgba(34,211,238,0.3)' : 'var(--color-border)'}`,
                       color: formData.action_requested === a ? 'var(--color-cyan)' : 'var(--color-text-3)',
@@ -262,9 +262,9 @@ export default function EditWaiverPage() {
             {criteria.map((c, i) => (
               <div key={i} style={{ marginBottom: 12, padding: 10, background: 'var(--color-bg-elevated)', borderRadius: 8, border: '1px solid var(--color-border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-3)' }}>Criteria #{i + 1}</span>
+                  <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)' }}>Criteria #{i + 1}</span>
                   {criteria.length > 1 && (
-                    <button type="button" onClick={() => removeCriteria(i)} style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>Remove</button>
+                    <button type="button" onClick={() => removeCriteria(i)} style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>Remove</button>
                   )}
                 </div>
                 <div style={{ marginBottom: 8 }}>
@@ -284,7 +284,7 @@ export default function EditWaiverPage() {
               </div>
             ))}
             <button type="button" onClick={addCriteria}
-              style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px dashed var(--color-border)', background: 'transparent', color: 'var(--color-cyan)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px dashed var(--color-border)', background: 'transparent', color: 'var(--color-cyan)', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
               + Add Criteria
             </button>
           </>
@@ -301,7 +301,7 @@ export default function EditWaiverPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                 {WAIVER_HAZARD_RATINGS.map(h => (
                   <button key={h.value} type="button" onClick={() => setFormData(p => ({ ...p, hazard_rating: p.hazard_rating === h.value ? '' : h.value }))}
-                    style={{ padding: '8px 4px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                    style={{ padding: '8px 4px', borderRadius: 6, fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                       background: formData.hazard_rating === h.value ? h.bg : 'transparent',
                       border: `1px solid ${formData.hazard_rating === h.value ? h.color : 'var(--color-border)'}`,
                       color: formData.hazard_rating === h.value ? h.color : 'var(--color-text-3)',
@@ -374,13 +374,13 @@ export default function EditWaiverPage() {
               <button type="button" className="input-dark" onClick={() => setLocationDropdownOpen(v => !v)}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{formData.location_description || 'Select location...'}</span>
-                <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--color-text-3)' }}>{locationDropdownOpen ? '▲' : '▼'}</span>
+                <span style={{ marginLeft: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{locationDropdownOpen ? '▲' : '▼'}</span>
               </button>
               {locationDropdownOpen && (
                 <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-text-4)', borderRadius: 8, marginTop: 4, maxHeight: 240, overflowY: 'auto' }}>
                   {installationAreas.map(area => (
                     <button key={area} type="button" onClick={() => { setFormData(p => ({ ...p, location_description: area })); setLocationDropdownOpen(false) }}
-                      style={{ display: 'flex', width: '100%', padding: '10px 12px', background: formData.location_description === area ? 'var(--color-text-4)' : 'transparent', border: 'none', color: 'var(--color-text-1)', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                      style={{ display: 'flex', width: '100%', padding: '10px 12px', background: formData.location_description === area ? 'var(--color-text-4)' : 'transparent', border: 'none', color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
                       {area}
                     </button>
                   ))}

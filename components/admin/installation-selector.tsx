@@ -23,7 +23,7 @@ export function InstallationSelector({
     return (
       <div
         style={{
-          fontSize: 13,
+          fontSize: 'var(--fs-md)',
           fontWeight: 600,
           color: 'var(--color-text-2)',
           padding: '8px 12px',
@@ -48,7 +48,7 @@ export function InstallationSelector({
         onChange={(e) => onChange(e.target.value === '__all__' ? null : e.target.value)}
         style={{
           width: '100%',
-          fontSize: 13,
+          fontSize: 'var(--fs-md)',
           fontWeight: 600,
           appearance: 'none',
           paddingRight: 28,

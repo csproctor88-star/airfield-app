@@ -219,7 +219,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <img src="/glidepath2.png" alt="Glidepath" style={{ display: 'block', width: '100%', maxWidth: 340, height: 'auto', objectFit: 'contain', margin: '0 auto' }} />
-          <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginTop: 8 }}>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginTop: 8 }}>
             GUIDING YOU TO MISSION SUCCESS
           </div>
         </div>
@@ -228,7 +228,7 @@ export default function LoginPage() {
         <div className="card" style={{ padding: 20 }}>
           <div
             style={{
-              fontSize: 15,
+              fontSize: 'var(--fs-xl)',
               fontWeight: 700,
               marginBottom: 16,
               color: 'var(--color-text-1)',
@@ -324,12 +324,12 @@ export default function LoginPage() {
                               value={installationSearch}
                               onChange={(e) => setInstallationSearch(e.target.value)}
                               className="input-dark"
-                              style={{ width: '100%', boxSizing: 'border-box', fontSize: 12 }}
+                              style={{ width: '100%', boxSizing: 'border-box', fontSize: 'var(--fs-base)' }}
                               autoFocus
                             />
                           </div>
                           {filteredBases.length === 0 ? (
-                            <div style={{ padding: '12px 14px', fontSize: 12, color: 'var(--color-text-3)' }}>
+                            <div style={{ padding: '12px 14px', fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>
                               No installations found
                             </div>
                           ) : (
@@ -349,12 +349,12 @@ export default function LoginPage() {
                                   borderBottom: '1px solid var(--color-border)',
                                   cursor: 'pointer', textAlign: 'left',
                                   color: entry.name === selectedBase.name ? 'var(--color-accent)' : 'var(--color-text-1)',
-                                  fontSize: 13, fontFamily: 'inherit',
+                                  fontSize: 'var(--fs-md)', fontFamily: 'inherit',
                                   fontWeight: entry.name === selectedBase.name ? 700 : 500,
                                 }}
                               >
                                 {entry.name}
-                                {entry.icao && <span style={{ fontSize: 10, marginLeft: 8, opacity: 0.5 }}>{entry.icao}</span>}
+                                {entry.icao && <span style={{ fontSize: 'var(--fs-xs)', marginLeft: 8, opacity: 0.5 }}>{entry.icao}</span>}
                               </button>
                             ))
                           )}
@@ -373,7 +373,7 @@ export default function LoginPage() {
                               borderTop: '1px solid var(--color-border-mid)',
                               cursor: 'pointer', textAlign: 'left',
                               color: 'var(--color-accent)',
-                              fontSize: 13, fontFamily: 'inherit',
+                              fontSize: 'var(--fs-md)', fontFamily: 'inherit',
                               fontWeight: 600,
                             }}
                           >
@@ -411,7 +411,7 @@ export default function LoginPage() {
                         }}
                         style={{
                           background: 'none', border: 'none', cursor: 'pointer',
-                          color: 'var(--color-text-3)', fontSize: 11, padding: 0,
+                          color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', padding: 0,
                         }}
                       >
                         Cancel — select from list
@@ -472,7 +472,7 @@ export default function LoginPage() {
                     background: 'none',
                     border: 'none',
                     color: 'var(--color-accent)',
-                    fontSize: 11,
+                    fontSize: 'var(--fs-sm)',
                     cursor: 'pointer',
                     padding: 0,
                   }}
@@ -490,7 +490,7 @@ export default function LoginPage() {
                   borderRadius: 6,
                   padding: '8px 12px',
                   marginBottom: 12,
-                  fontSize: 12,
+                  fontSize: 'var(--fs-base)',
                   color: 'var(--color-danger)',
                 }}
               >
@@ -506,7 +506,7 @@ export default function LoginPage() {
                   borderRadius: 6,
                   padding: '8px 12px',
                   marginBottom: 12,
-                  fontSize: 12,
+                  fontSize: 'var(--fs-base)',
                   color: '#22C55E',
                 }}
               >
@@ -534,7 +534,7 @@ export default function LoginPage() {
                 background: 'none',
                 border: 'none',
                 color: 'var(--color-accent)',
-                fontSize: 12,
+                fontSize: 'var(--fs-base)',
                 cursor: 'pointer',
                 padding: 0,
               }}
@@ -548,7 +548,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: 24 }}>
-          <div style={{ fontSize: 11, color: 'var(--color-text-4)' }}>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-4)' }}>
             Glidepath v2.6
           </div>
         </div>

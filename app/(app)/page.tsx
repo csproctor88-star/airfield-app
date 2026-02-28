@@ -337,12 +337,12 @@ export default function HomePage() {
           weather ? (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 18 }}>{weatherEmoji(weather.conditions)}</span>
+                <span style={{ fontSize: 'var(--fs-3xl)' }}>{weatherEmoji(weather.conditions)}</span>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 700 }}>
+                  <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700 }}>
                     {weather.temperature_f}&deg;F &bull; {weather.conditions}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
                     Wind {weather.wind_speed_mph} mph &bull; Vis {weather.visibility_miles} SM
                   </div>
                 </div>
@@ -355,21 +355,21 @@ export default function HomePage() {
                 }}
                 style={{ textAlign: 'right', cursor: 'pointer', minWidth: 60 }}
               >
-                <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Advisory</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Advisory</div>
                 {advisory ? (
-                  <div style={{ fontSize: 12, fontWeight: 700, color: ADVISORY_COLORS[advisory.type].text }}>{advisory.type}</div>
+                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: ADVISORY_COLORS[advisory.type].text }}>{advisory.type}</div>
                 ) : (
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-3)' }}>None</div>
+                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-3)' }}>None</div>
                 )}
               </div>
             </>
           ) : (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 18 }}>❓</span>
+                <span style={{ fontSize: 'var(--fs-3xl)' }}>❓</span>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-3)' }}>UNKWN</div>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>Weather data unavailable</div>
+                  <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-3)' }}>UNKWN</div>
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>Weather data unavailable</div>
                 </div>
               </div>
               <div
@@ -380,17 +380,17 @@ export default function HomePage() {
                 }}
                 style={{ textAlign: 'right', cursor: 'pointer', minWidth: 60 }}
               >
-                <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Advisory</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Advisory</div>
                 {advisory ? (
-                  <div style={{ fontSize: 12, fontWeight: 700, color: ADVISORY_COLORS[advisory.type].text }}>{advisory.type}</div>
+                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: ADVISORY_COLORS[advisory.type].text }}>{advisory.type}</div>
                 ) : (
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-3)' }}>None</div>
+                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-3)' }}>None</div>
                 )}
               </div>
             </>
           )
         ) : (
-          <div style={{ fontSize: 12, color: 'var(--color-text-3)' }}>Loading weather...</div>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>Loading weather...</div>
         )}
       </div>
 
@@ -407,8 +407,8 @@ export default function HomePage() {
             cursor: 'pointer',
           }}
         >
-          <div style={{ fontSize: 12, fontWeight: 800, color: ADVISORY_COLORS[advisory.type].text, marginBottom: 2 }}>{advisory.type}</div>
-          <div style={{ fontSize: 13, color: 'var(--color-text-1)', lineHeight: 1.4 }}>{advisory.text}</div>
+          <div style={{ fontSize: 'var(--fs-base)', fontWeight: 800, color: ADVISORY_COLORS[advisory.type].text, marginBottom: 2 }}>{advisory.type}</div>
+          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: 1.4 }}>{advisory.text}</div>
         </div>
       )}
 
@@ -428,14 +428,14 @@ export default function HomePage() {
               border: '1px solid var(--color-border-mid)',
             }}
           >
-            <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>Set Advisory</div>
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>Set Advisory</div>
             <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
               {(['INFO', 'CAUTION', 'WARNING'] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setAdvisoryDraftType(t)}
                   style={{
-                    flex: 1, padding: '8px 4px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                    flex: 1, padding: '8px 4px', borderRadius: 8, fontSize: 'var(--fs-base)', fontWeight: 700,
                     cursor: 'pointer', textAlign: 'center',
                     border: advisoryDraftType === t
                       ? `2px solid ${ADVISORY_COLORS[t].text}`
@@ -454,7 +454,7 @@ export default function HomePage() {
               style={{
                 width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8,
                 background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
-                color: 'var(--color-text-1)', fontSize: 14, outline: 'none', marginBottom: 14,
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none', marginBottom: 14,
                 fontFamily: 'inherit',
               }}
             />
@@ -467,7 +467,7 @@ export default function HomePage() {
                     setAdvisoryDialogOpen(false)
                   }}
                   style={{
-                    flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                    flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
                     cursor: 'pointer', border: '1px solid rgba(239,68,68,0.3)',
                     background: 'rgba(239,68,68,0.1)', color: 'var(--color-danger)',
                   }}
@@ -481,7 +481,7 @@ export default function HomePage() {
                   setAdvisoryDialogOpen(false)
                 }}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', border: '1px solid rgba(52,211,153,0.3)',
                   background: 'rgba(52,211,153,0.15)', color: 'var(--color-success)',
                 }}
@@ -489,7 +489,7 @@ export default function HomePage() {
               <button
                 onClick={() => setAdvisoryDialogOpen(false)}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', border: '1px solid var(--color-border-mid)',
                   background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
                 }}
@@ -539,7 +539,7 @@ export default function HomePage() {
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                   background: c.bg, border: `1px solid ${c.border}`,
                 }}>
-                  <div style={{ fontSize: 14, color: 'var(--color-text-3)', fontWeight: 600 }}>Active RWY</div>
+                  <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>Active RWY</div>
                   <button
                     onClick={() => {
                       // Toggle between the two ends of this runway
@@ -557,7 +557,7 @@ export default function HomePage() {
                       }
                     }}
                     style={{
-                      padding: '6px 28px', borderRadius: 6, fontSize: 20, fontWeight: 800,
+                      padding: '6px 28px', borderRadius: 6, fontSize: 'var(--fs-4xl)', fontWeight: 800,
                       cursor: 'pointer', color: c.color,
                       border: `2px solid ${c.btnBorder}`,
                       background: c.btnBg,
@@ -576,7 +576,7 @@ export default function HomePage() {
                       }
                     }}
                     style={{
-                      padding: '3px 10px', borderRadius: 5, fontSize: 12, fontWeight: 700,
+                      padding: '3px 10px', borderRadius: 5, fontSize: 'var(--fs-base)', fontWeight: 700,
                       cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', outline: 'none',
                       color: c.color, background: 'var(--color-bg-inset)',
                       border: `1px solid ${c.selectBorder}`,
@@ -599,12 +599,12 @@ export default function HomePage() {
             onClick={() => setShowRscTime(p => !p)}
             style={{ padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
           >
-            <div style={{ fontSize: 14, color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6 }}>RSC</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-accent)' }}>
+            <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6 }}>RSC</div>
+            <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: 'var(--color-accent)' }}>
               {currentStatus.rscCondition || 'No Data'}
             </div>
             {showRscTime && currentStatus.rscTime && (
-              <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 4 }}>@ {currentStatus.rscTime}</div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>@ {currentStatus.rscTime}</div>
             )}
           </div>
           <div
@@ -612,12 +612,12 @@ export default function HomePage() {
             onClick={() => setShowBwcTime(p => !p)}
             style={{ padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
           >
-            <div style={{ fontSize: 14, color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6 }}>BWC</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: currentStatus.bwc === 'SEV' || currentStatus.bwc === 'PROHIB' ? 'var(--color-danger)' : currentStatus.bwc === 'MOD' ? 'var(--color-warning)' : 'var(--color-success)' }}>
+            <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6 }}>BWC</div>
+            <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: currentStatus.bwc === 'SEV' || currentStatus.bwc === 'PROHIB' ? 'var(--color-danger)' : currentStatus.bwc === 'MOD' ? 'var(--color-warning)' : 'var(--color-success)' }}>
               {currentStatus.bwc || 'No Data'}
             </div>
             {showBwcTime && currentStatus.bwcTime && (
-              <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 4 }}>@ {currentStatus.bwcTime}</div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>@ {currentStatus.bwcTime}</div>
             )}
           </div>
         </div>
@@ -627,7 +627,7 @@ export default function HomePage() {
       <span className="section-label">NAVAID Status</span>
       {navaids.length === 0 ? (
         <div className="card" style={{ marginBottom: 16, padding: 12 }}>
-          <div style={{ fontSize: 12, color: 'var(--color-text-3)', textAlign: 'center' }}>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', textAlign: 'center' }}>
             Loading NAVAID statuses...
           </div>
         </div>
@@ -653,7 +653,7 @@ export default function HomePage() {
         const renderNavaidItem = (n: NavaidStatus) => (
           <div key={n.id} style={{ marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-1)' }}>
+              <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
                 {getNavaidDisplayName(n.navaid_name)}
               </span>
               <button
@@ -666,7 +666,7 @@ export default function HomePage() {
                   width: 36, height: 28, borderRadius: 6,
                   border: `2px solid ${STATUS_COLORS[n.status]}`,
                   background: `${STATUS_HEX[n.status]}20`,
-                  cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                  cursor: 'pointer', fontSize: 'var(--fs-base)', fontWeight: 700,
                   color: STATUS_COLORS[n.status], textTransform: 'uppercase', padding: 0,
                 }}
               >
@@ -681,23 +681,23 @@ export default function HomePage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: allFlagged.length > 0 ? 8 : 16 }}>
             {endGroups.filter(group => group.items.length > 0).map(group => (
               <div key={group.designator} className="card" style={{ padding: '10px 14px 4px' }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY {group.designator}</div>
+                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY {group.designator}</div>
                 {group.items.map(renderNavaidItem)}
               </div>
             ))}
             {otherNavaids.length > 0 && (
               <div className="card" style={{ padding: '10px 14px 4px' }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>OTHER</div>
+                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>OTHER</div>
                 {otherNavaids.map(renderNavaidItem)}
               </div>
             )}
           </div>
           {allFlagged.length > 0 && (
             <div className="card" style={{ padding: '10px 14px', marginBottom: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-warning)', marginBottom: 6, letterSpacing: '0.04em' }}>NAVAID NOTES</div>
+              <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-warning)', marginBottom: 6, letterSpacing: '0.04em' }}>NAVAID NOTES</div>
               {allFlagged.map(n => (
                 <div key={n.id} style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: STATUS_COLORS[n.status], marginBottom: 2 }}>
+                  <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: STATUS_COLORS[n.status], marginBottom: 2 }}>
                     {n.navaid_name}
                   </div>
                   <textarea
@@ -711,7 +711,7 @@ export default function HomePage() {
                       width: '100%', boxSizing: 'border-box',
                       background: 'var(--color-bg-inset)',
                       border: `1px solid ${STATUS_HEX[n.status]}40`,
-                      borderRadius: 6, padding: '6px 10px', fontSize: 14,
+                      borderRadius: 6, padding: '6px 10px', fontSize: 'var(--fs-lg)',
                       color: 'var(--color-text-1)', outline: 'none',
                       resize: 'none', overflow: 'hidden',
                       fontFamily: 'inherit',
@@ -741,8 +741,8 @@ export default function HomePage() {
       {/* ===== Last Check Completed ===== */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div style={{ padding: 12, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', textAlign: 'center' }}>
-          <div style={{ fontSize: 13, color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4 }}>Last Check Completed</div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-cyan)' }}>
+          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4 }}>Last Check Completed</div>
+          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-cyan)' }}>
             {currentStatus.lastCheckType && currentStatus.lastCheckTime
               ? `${currentStatus.lastCheckType} @ ${currentStatus.lastCheckTime}`
               : 'No Data'}
@@ -770,8 +770,8 @@ export default function HomePage() {
               gap: 10,
             }}
           >
-            <span style={{ fontSize: 24 }}>{q.icon}</span>
-            <span style={{ fontSize: 15, color: q.color, letterSpacing: '0.04em', fontWeight: 700 }}>
+            <span style={{ fontSize: 'var(--fs-5xl)' }}>{q.icon}</span>
+            <span style={{ fontSize: 'var(--fs-xl)', color: q.color, letterSpacing: '0.04em', fontWeight: 700 }}>
               {q.label}
             </span>
           </Link>
@@ -783,14 +783,14 @@ export default function HomePage() {
         <span className="section-label" style={{ marginBottom: 0 }}>Recent Activity</span>
         <button
           onClick={() => router.push('/activity')}
-          style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+          style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
         >
           View All →
         </button>
       </div>
       {activity.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--color-text-3)' }}>No activity recorded yet</div>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>No activity recorded yet</div>
         </div>
       ) : (
         <>
@@ -840,7 +840,7 @@ export default function HomePage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 11,
+                    fontSize: 'var(--fs-sm)',
                     flexShrink: 0,
                     color,
                   }}
@@ -849,22 +849,22 @@ export default function HomePage() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-cyan)' }}>
+                    <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-cyan)' }}>
                       {userName}
                     </span>
-                    <span style={{ fontSize: 10, color: 'var(--color-text-3)' }}>{dateStr} {timeStr}</span>
+                    <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{dateStr} {timeStr}</span>
                   </div>
-                  <div style={{ fontSize: 11, color: link ? 'var(--color-cyan)' : 'var(--color-text-2)' }}>
+                  <div style={{ fontSize: 'var(--fs-sm)', color: link ? 'var(--color-cyan)' : 'var(--color-text-2)' }}>
                     {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined)}
                     {link && (
-                      <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.6 }}>→</span>
+                      <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>→</span>
                     )}
                     {navaidStatusVal && (
                       <span style={{ marginLeft: 6, width: 8, height: 8, borderRadius: '50%', display: 'inline-block', background: STATUS_HEX[navaidStatusVal] || '#64748B' }} />
                     )}
                   </div>
                   {navaidNoteText && (
-                    <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 2 }}>
+                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 2 }}>
                       &ldquo;{navaidNoteText}&rdquo;
                     </div>
                   )}

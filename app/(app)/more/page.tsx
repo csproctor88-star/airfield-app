@@ -72,7 +72,7 @@ export default function MorePage() {
 
   return (
     <div className="page-container">
-      <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>More</div>
+      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>More</div>
 
       {/* Modules */}
       <div style={{
@@ -106,17 +106,17 @@ export default function MorePage() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 16,
+                fontSize: 'var(--fs-2xl)',
                 flexShrink: 0,
               }}
             >
               {m.icon}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>{m.name}</div>
+              <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700 }}>{m.name}</div>
             </div>
             {m.badge && <Badge label={m.badge} color={m.color} />}
-            <span style={{ color: 'var(--color-text-4)', fontSize: 14 }}>›</span>
+            <span style={{ color: 'var(--color-text-4)', fontSize: 'var(--fs-lg)' }}>›</span>
           </Link>
         ))}
       </div>

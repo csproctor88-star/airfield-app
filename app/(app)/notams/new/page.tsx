@@ -13,13 +13,13 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 8,
   padding: '10px 12px',
   color: 'var(--color-text-1)',
-  fontSize: 14,
+  fontSize: 'var(--fs-lg)',
   fontFamily: 'inherit',
   outline: 'none',
 }
 
 const labelStyle: React.CSSProperties = {
-  fontSize: 12,
+  fontSize: 'var(--fs-base)',
   fontWeight: 600,
   color: 'var(--color-text-2)',
   marginBottom: 6,
@@ -54,7 +54,7 @@ export default function NewNotamPage() {
           background: 'none',
           border: 'none',
           color: 'var(--color-cyan)',
-          fontSize: 13,
+          fontSize: 'var(--fs-md)',
           fontWeight: 600,
           cursor: 'pointer',
           padding: 0,
@@ -65,7 +65,7 @@ export default function NewNotamPage() {
         ← Back
       </button>
 
-      <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Draft NOTAM</div>
+      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 16 }}>Draft NOTAM</div>
 
       {/* Type select */}
       <div style={{ marginBottom: 14 }}>
@@ -150,7 +150,7 @@ export default function NewNotamPage() {
           border: 'none',
           background: 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-cyan))',
           color: '#FFF',
-          fontSize: 15,
+          fontSize: 'var(--fs-xl)',
           fontWeight: 700,
           cursor: 'pointer',
           marginTop: 8,

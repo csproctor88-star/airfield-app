@@ -14,7 +14,7 @@ export function UserStatusBadge({ status }: { status: string }) {
       style={{
         padding: '1px 6px',
         borderRadius: 4,
-        fontSize: 9,
+        fontSize: 'var(--fs-2xs)',
         fontWeight: 700,
         letterSpacing: '0.04em',
         whiteSpace: 'nowrap',

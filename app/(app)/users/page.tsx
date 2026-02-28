@@ -298,7 +298,7 @@ export default function UserManagementPage() {
   if (!initialized) {
     return (
       <div className="page-container">
-        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>User Management</div>
+        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>User Management</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[1, 2, 3].map((i) => (
             <div
@@ -323,7 +323,7 @@ export default function UserManagementPage() {
           marginBottom: 14,
         }}
       >
-        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-text-1)' }}>
+        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>
           User Management
         </div>
         <button
@@ -338,7 +338,7 @@ export default function UserManagementPage() {
             border: 'none',
             background: '#06B6D4',
             color: '#fff',
-            fontSize: 12,
+            fontSize: 'var(--fs-base)',
             fontWeight: 700,
             cursor: 'pointer',
             fontFamily: 'inherit',
@@ -384,7 +384,7 @@ export default function UserManagementPage() {
             borderRadius: 8,
             padding: '10px 14px',
             marginBottom: 12,
-            fontSize: 12,
+            fontSize: 'var(--fs-base)',
             color: '#F87171',
           }}
         >

@@ -52,7 +52,7 @@ export function UserList({ users, loading, showInstallation, onSelectUser }: Use
           textAlign: 'center',
           padding: '32px 20px',
           color: 'var(--color-text-3)',
-          fontSize: 13,
+          fontSize: 'var(--fs-md)',
         }}
       >
         No users found matching your search.

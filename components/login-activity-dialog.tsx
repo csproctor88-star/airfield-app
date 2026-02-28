@@ -162,10 +162,10 @@ export default function LoginActivityDialog() {
           borderBottom: '1px solid var(--color-border)',
         }}>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--color-text-1)' }}>
+            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>
               Activity Since Last Login
             </div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 2 }}>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
               {entries.length} {entries.length === 1 ? 'update' : 'updates'} while you were away
             </div>
           </div>
@@ -207,7 +207,7 @@ export default function LoginActivityDialog() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 11,
+                    fontSize: 'var(--fs-sm)',
                     flexShrink: 0,
                     color,
                   }}
@@ -216,12 +216,12 @@ export default function LoginActivityDialog() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-cyan)' }}>
+                    <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-cyan)' }}>
                       {userName}
                     </span>
-                    <span style={{ fontSize: 10, color: 'var(--color-text-3)' }}>{dateStr} {timeStr}</span>
+                    <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{dateStr} {timeStr}</span>
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-2)' }}>
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
                     {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined)}
                   </div>
                 </div>
@@ -242,7 +242,7 @@ export default function LoginActivityDialog() {
               border: 'none',
               background: '#06B6D4',
               color: '#fff',
-              fontSize: 13,
+              fontSize: 'var(--fs-md)',
               fontWeight: 700,
               cursor: 'pointer',
               fontFamily: 'inherit',

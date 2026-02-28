@@ -225,23 +225,23 @@ export default function NewWaiverPage() {
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
         padding: '10px 0', background: 'none', border: 'none', borderBottom: '1px solid var(--color-border)',
-        color: 'var(--color-text-1)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+        color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
         marginBottom: expanded ? 12 : 0,
       }}
     >
       <span>{title}{count !== undefined && count > 0 ? ` (${count})` : ''}</span>
-      <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>{expanded ? '▲' : '▼'}</span>
+      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{expanded ? '▲' : '▼'}</span>
     </button>
   )
 
   return (
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
           &larr; Back
         </button>
       </div>
-      <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>New Waiver</div>
+      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 12 }}>New Waiver</div>
 
       {/* Section 1: Basic Info */}
       <div className="card" style={{ marginBottom: 8 }}>
@@ -260,7 +260,7 @@ export default function NewWaiverPage() {
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                   {selectedClassInfo ? `${selectedClassInfo.emoji} ${selectedClassInfo.label}` : 'Select classification...'}
                 </span>
-                <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--color-text-3)' }}>{classDropdownOpen ? '▲' : '▼'}</span>
+                <span style={{ marginLeft: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{classDropdownOpen ? '▲' : '▼'}</span>
               </button>
               {classDropdownOpen && (
                 <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-text-4)', borderRadius: 8, marginTop: 4, maxHeight: 280, overflowY: 'auto' }}>
@@ -272,11 +272,11 @@ export default function NewWaiverPage() {
                       style={{
                         display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px',
                         background: formData.classification === c.value ? 'var(--color-text-4)' : 'transparent', border: 'none', color: 'var(--color-text-1)',
-                        fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                        fontSize: 'var(--fs-lg)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
                       }}
                     >
                       <span>{c.emoji} {c.label}</span>
-                      <span style={{ fontSize: 11, color: 'var(--color-text-3)', marginLeft: 'auto' }}>{c.description}</span>
+                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginLeft: 'auto' }}>{c.description}</span>
                     </button>
                   ))}
                 </div>
@@ -293,7 +293,7 @@ export default function NewWaiverPage() {
                     type="button"
                     onClick={() => setFormData(p => ({ ...p, action_requested: a }))}
                     style={{
-                      flex: 1, padding: '8px 4px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                      flex: 1, padding: '8px 4px', borderRadius: 6, fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                       background: formData.action_requested === a ? 'rgba(34,211,238,0.12)' : 'transparent',
                       border: `1px solid ${formData.action_requested === a ? 'rgba(34,211,238,0.3)' : 'var(--color-border)'}`,
                       color: formData.action_requested === a ? 'var(--color-cyan)' : 'var(--color-text-3)',
@@ -309,7 +309,7 @@ export default function NewWaiverPage() {
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">Waiver Number</span>
               <input type="text" className="input-dark" placeholder={previewNumber} value={formData.waiver_number} onChange={(e) => setFormData(p => ({ ...p, waiver_number: e.target.value }))} />
-              <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 2 }}>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
                 Leave blank for auto-generated ({previewNumber}), or enter legacy format (e.g., VGLZ050224001)
               </div>
             </div>
@@ -337,9 +337,9 @@ export default function NewWaiverPage() {
             {criteria.map((c, i) => (
               <div key={i} style={{ marginBottom: 12, padding: 10, background: 'var(--color-bg-elevated)', borderRadius: 8, border: '1px solid var(--color-border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-3)' }}>Criteria #{i + 1}</span>
+                  <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)' }}>Criteria #{i + 1}</span>
                   {criteria.length > 1 && (
-                    <button type="button" onClick={() => removeCriteria(i)} style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+                    <button type="button" onClick={() => removeCriteria(i)} style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
                       Remove
                     </button>
                   )}
@@ -372,7 +372,7 @@ export default function NewWaiverPage() {
               onClick={addCriteria}
               style={{
                 width: '100%', padding: 8, borderRadius: 6, border: '1px dashed var(--color-border)',
-                background: 'transparent', color: 'var(--color-cyan)', fontSize: 12, fontWeight: 600,
+                background: 'transparent', color: 'var(--color-cyan)', fontSize: 'var(--fs-base)', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
@@ -396,7 +396,7 @@ export default function NewWaiverPage() {
                     type="button"
                     onClick={() => setFormData(p => ({ ...p, hazard_rating: p.hazard_rating === h.value ? '' : h.value }))}
                     style={{
-                      padding: '8px 4px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                      padding: '8px 4px', borderRadius: 6, fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                       background: formData.hazard_rating === h.value ? h.bg : 'transparent',
                       border: `1px solid ${formData.hazard_rating === h.value ? h.color : 'var(--color-border)'}`,
                       color: formData.hazard_rating === h.value ? h.color : 'var(--color-text-3)',
@@ -476,7 +476,7 @@ export default function NewWaiverPage() {
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                   {formData.location_description || 'Select or type location...'}
                 </span>
-                <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--color-text-3)' }}>{locationDropdownOpen ? '▲' : '▼'}</span>
+                <span style={{ marginLeft: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{locationDropdownOpen ? '▲' : '▼'}</span>
               </button>
               {locationDropdownOpen && (
                 <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-text-4)', borderRadius: 8, marginTop: 4, maxHeight: 240, overflowY: 'auto' }}>
@@ -488,7 +488,7 @@ export default function NewWaiverPage() {
                       style={{
                         display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px',
                         background: formData.location_description === area ? 'var(--color-text-4)' : 'transparent', border: 'none', color: 'var(--color-text-1)',
-                        fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                        fontSize: 'var(--fs-lg)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
                       }}
                     >
                       {area}
@@ -543,7 +543,7 @@ export default function NewWaiverPage() {
                       onClick={() => removePhoto(i)}
                       style={{
                         position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: '50%',
-                        background: 'rgba(0,0,0,0.6)', border: 'none', color: '#fff', fontSize: 14,
+                        background: 'rgba(0,0,0,0.6)', border: 'none', color: '#fff', fontSize: 'var(--fs-lg)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', lineHeight: 1,
                       }}
                     >
@@ -569,23 +569,23 @@ export default function NewWaiverPage() {
         {expandedSections.attachments && (
           <>
             {pendingAttachments.length === 0 ? (
-              <div style={{ fontSize: 12, color: 'var(--color-text-3)', padding: '8px 0' }}>No attachments added yet</div>
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', padding: '8px 0' }}>No attachments added yet</div>
             ) : (
               pendingAttachments.map((att, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < pendingAttachments.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {att.file.name}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
+                    <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
                       {titleCase(att.type)} {att.file.size ? `\u2022 ${(att.file.size / 1024).toFixed(0)} KB` : ''}
                     </div>
-                    {att.caption && <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontStyle: 'italic' }}>{att.caption}</div>}
+                    {att.caption && <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>{att.caption}</div>}
                   </div>
                   <button
                     type="button"
                     onClick={() => removeAttachment(i)}
-                    style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: '2px 8px', fontFamily: 'inherit', flexShrink: 0 }}
+                    style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', padding: '2px 8px', fontFamily: 'inherit', flexShrink: 0 }}
                   >
                     Remove
                   </button>
@@ -597,7 +597,7 @@ export default function NewWaiverPage() {
               onClick={() => setShowAttachModal(true)}
               style={{
                 marginTop: 8, width: '100%', padding: 8, borderRadius: 6, border: '1px dashed var(--color-border)',
-                background: 'transparent', color: 'var(--color-cyan)', fontSize: 12, fontWeight: 600,
+                background: 'transparent', color: 'var(--color-cyan)', fontSize: 'var(--fs-base)', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
@@ -619,7 +619,7 @@ export default function NewWaiverPage() {
             borderRadius: 8,
             padding: '12px',
             color: '#9CA3AF',
-            fontSize: 13,
+            fontSize: 'var(--fs-md)',
             fontWeight: 700,
             cursor: 'pointer',
             fontFamily: 'inherit',
@@ -643,12 +643,12 @@ export default function NewWaiverPage() {
       {showAttachModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ background: 'var(--color-bg-surface)', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Add Attachment</div>
+            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, marginBottom: 12 }}>Add Attachment</div>
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">File</span>
               <input type="file" accept=".pdf,.docx,.xlsx,.xls,.doc,.pptx,.ppt,.csv,.txt,.jpg,.jpeg,.png"
                 onChange={(e) => setAttachFile(e.target.files?.[0] || null)}
-                style={{ fontSize: 12, color: 'var(--color-text-2)' }} />
+                style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)' }} />
             </div>
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">Type</span>
@@ -672,7 +672,7 @@ export default function NewWaiverPage() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <button onClick={() => { setShowAttachModal(false); setAttachFile(null); setAttachCaption('') }}
-                style={{ padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                style={{ padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Cancel
               </button>
               <button className="btn-primary" onClick={addAttachment} disabled={!attachFile}>

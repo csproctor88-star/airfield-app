@@ -149,14 +149,14 @@ export default function NewDiscrepancyPage() {
   return (
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
           ← Back
         </button>
-        <button onClick={() => router.push('/discrepancies')} style={{ background: '#FBBF2414', border: '1px solid #FBBF2433', borderRadius: 8, padding: '6px 12px', color: '#FBBF24', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+        <button onClick={() => router.push('/discrepancies')} style={{ background: '#FBBF2414', border: '1px solid #FBBF2433', borderRadius: 8, padding: '6px 12px', color: '#FBBF24', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
           ⚠️ View All Discrepancies
         </button>
       </div>
-      <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>New Discrepancy</div>
+      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 12 }}>New Discrepancy</div>
 
       <div className="card">
         <div style={{ marginBottom: 12, position: 'relative' }}>
@@ -170,7 +170,7 @@ export default function NewDiscrepancyPage() {
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
               {formData.location_text || 'Select location...'}
             </span>
-            <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--color-text-3)' }}>{locationDropdownOpen ? '▲' : '▼'}</span>
+            <span style={{ marginLeft: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{locationDropdownOpen ? '▲' : '▼'}</span>
           </button>
           {locationDropdownOpen && (
             <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-text-4)', borderRadius: 8, marginTop: 4, maxHeight: 240, overflowY: 'auto' }}>
@@ -182,7 +182,7 @@ export default function NewDiscrepancyPage() {
                   style={{
                     display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px',
                     background: formData.location_text === area ? 'var(--color-text-4)' : 'transparent', border: 'none', color: 'var(--color-text-1)',
-                    fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                    fontSize: 'var(--fs-lg)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
                   }}
                 >
                   <span>{area}</span>
@@ -208,7 +208,7 @@ export default function NewDiscrepancyPage() {
                     return t ? `${t.emoji} ${t.label}` : v
                   }).join(', ')}
             </span>
-            <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--color-text-3)' }}>{typeDropdownOpen ? '▲' : '▼'}</span>
+            <span style={{ marginLeft: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{typeDropdownOpen ? '▲' : '▼'}</span>
           </button>
           {typeDropdownOpen && (
             <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-text-4)', borderRadius: 8, marginTop: 4, maxHeight: 240, overflowY: 'auto' }}>
@@ -222,10 +222,10 @@ export default function NewDiscrepancyPage() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px',
                       background: selected ? 'var(--color-text-4)' : 'transparent', border: 'none', color: 'var(--color-text-1)',
-                      fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                      fontSize: 'var(--fs-lg)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
                     }}
                   >
-                    <span style={{ width: 20, height: 20, borderRadius: 4, border: `2px solid ${selected ? 'var(--color-cyan)' : 'var(--color-text-3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0, background: selected ? '#22D3EE22' : 'transparent', color: 'var(--color-cyan)' }}>
+                    <span style={{ width: 20, height: 20, borderRadius: 4, border: `2px solid ${selected ? 'var(--color-cyan)' : 'var(--color-text-3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fs-md)', flexShrink: 0, background: selected ? '#22D3EE22' : 'transparent', color: 'var(--color-cyan)' }}>
                       {selected ? '✓' : ''}
                     </span>
                     <span>{t.emoji} {t.label}</span>
@@ -277,7 +277,7 @@ export default function NewDiscrepancyPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             width: '100%', padding: '10px 16px', marginBottom: 8, borderRadius: 8,
             border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
-            color: 'var(--color-accent)', fontSize: 13, fontWeight: 600,
+            color: 'var(--color-accent)', fontSize: 'var(--fs-md)', fontWeight: 600,
             cursor: gpsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
             opacity: gpsLoading ? 0.6 : 1,
           }}
@@ -294,7 +294,7 @@ export default function NewDiscrepancyPage() {
             {photos.map((p, i) => (
               <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid #38BDF833' }}>
                 <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <button type="button" onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: 'var(--color-overlay)', border: 'none', color: 'var(--color-danger)', fontSize: 13, width: 20, height: 20, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
+                <button type="button" onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: 'var(--color-overlay)', border: 'none', color: 'var(--color-danger)', fontSize: 'var(--fs-md)', width: 20, height: 20, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
               </div>
             ))}
           </div>

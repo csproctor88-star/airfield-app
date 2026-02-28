@@ -21,10 +21,10 @@ export default function BaseSetupPage() {
   if (!canEdit) {
     return (
       <div style={{ padding: 24 }}>
-        <Link href="/settings" style={{ color: 'var(--color-primary)', fontSize: 13, textDecoration: 'none' }}>
+        <Link href="/settings" style={{ color: 'var(--color-primary)', fontSize: 'var(--fs-md)', textDecoration: 'none' }}>
           &larr; Settings
         </Link>
-        <h1 style={{ marginTop: 16, fontSize: 20, fontWeight: 700, color: 'var(--color-text-1)' }}>Base Configuration</h1>
+        <h1 style={{ marginTop: 16, fontSize: 'var(--fs-4xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>Base Configuration</h1>
         <p style={{ color: 'var(--color-text-3)', marginTop: 8 }}>
           Only Airfield Managers and System Admins can configure base settings.
         </p>
@@ -42,13 +42,13 @@ export default function BaseSetupPage() {
 
   return (
     <div className="page-container" style={{ maxWidth: 800, margin: '0 auto' }}>
-      <Link href="/settings" style={{ color: 'var(--color-primary)', fontSize: 13, textDecoration: 'none' }}>
+      <Link href="/settings" style={{ color: 'var(--color-primary)', fontSize: 'var(--fs-md)', textDecoration: 'none' }}>
         &larr; Settings
       </Link>
-      <h1 style={{ marginTop: 12, fontSize: 20, fontWeight: 700, color: 'var(--color-text-1)' }}>
+      <h1 style={{ marginTop: 12, fontSize: 'var(--fs-4xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
         Base Configuration
       </h1>
-      <p style={{ color: 'var(--color-text-3)', fontSize: 13, marginTop: 4 }}>
+      <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginTop: 4 }}>
         {currentInstallation?.name ?? 'Current Base'} ({currentInstallation?.icao ?? '—'})
       </p>
 
@@ -65,7 +65,7 @@ export default function BaseSetupPage() {
                 borderRadius: 8,
                 border: isActive ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
                 cursor: 'pointer',
-                fontSize: 13,
+                fontSize: 'var(--fs-md)',
                 fontWeight: 700,
                 fontFamily: 'inherit',
                 background: isActive ? 'rgba(56,189,248,0.12)' : 'var(--color-surface-2)',
@@ -104,7 +104,7 @@ export default function BaseSetupPage() {
           borderRadius: 10,
           border: showPreview ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
           cursor: 'pointer',
-          fontSize: 14,
+          fontSize: 'var(--fs-lg)',
           fontWeight: 700,
           fontFamily: 'inherit',
           background: showPreview ? 'rgba(56,189,248,0.08)' : 'var(--color-surface-1)',
@@ -224,7 +224,7 @@ function RunwayTab({
     border: '1px solid var(--color-border)',
     background: 'var(--color-surface-2)',
     color: 'var(--color-text-1)',
-    fontSize: 13,
+    fontSize: 'var(--fs-md)',
     fontFamily: 'inherit',
     width: '100%',
     boxSizing: 'border-box' as const,
@@ -232,10 +232,10 @@ function RunwayTab({
 
   return (
     <div>
-      <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 12 }}>Runways</h3>
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 12 }}>Runways</h3>
 
       {runways.length === 0 && !adding && (
-        <p style={{ color: 'var(--color-text-3)', fontSize: 13, marginBottom: 12 }}>No runways configured yet.</p>
+        <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 12 }}>No runways configured yet.</p>
       )}
 
       {runways.map(rwy => (
@@ -250,16 +250,16 @@ function RunwayTab({
           gap: 8,
         }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-text-1)' }}>
+            <div style={{ fontWeight: 700, fontSize: 'var(--fs-lg)', color: 'var(--color-text-1)' }}>
               {rwy.runway_id} — {rwy.runway_class === 'Army_B' ? 'Army Class B' : `Class ${rwy.runway_class}`}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginTop: 4 }}>
+            <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginTop: 4 }}>
               {rwy.length_ft} ft x {rwy.width_ft} ft | {rwy.surface} | Heading {rwy.true_heading}°
             </div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 4, fontFamily: 'monospace' }}>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4, fontFamily: 'monospace' }}>
               {rwy.end1_designator}: {rwy.end1_latitude?.toFixed(5)}°N, {rwy.end1_longitude ? Math.abs(rwy.end1_longitude).toFixed(5) : '—'}°W{rwy.end1_elevation_msl != null ? ` | ${rwy.end1_elevation_msl} ft MSL` : ''}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 2, fontFamily: 'monospace' }}>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2, fontFamily: 'monospace' }}>
               {rwy.end2_designator}: {rwy.end2_latitude?.toFixed(5)}°N, {rwy.end2_longitude ? Math.abs(rwy.end2_longitude).toFixed(5) : '—'}°W{rwy.end2_elevation_msl != null ? ` | ${rwy.end2_elevation_msl} ft MSL` : ''}
             </div>
           </div>
@@ -268,7 +268,7 @@ function RunwayTab({
             style={{
               background: 'none', border: 'none',
               color: 'var(--color-danger)', cursor: 'pointer',
-              fontSize: 18, padding: '0 4px', flexShrink: 0,
+              fontSize: 'var(--fs-3xl)', padding: '0 4px', flexShrink: 0,
             }}
             title="Delete runway"
           >
@@ -287,7 +287,7 @@ function RunwayTab({
           flexDirection: 'column',
           gap: 10,
         }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>Add Runway</div>
+          <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>Add Runway</div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             <div>
@@ -327,7 +327,7 @@ function RunwayTab({
             </select>
           </div>
 
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-2)', marginTop: 4 }}>End 1</div>
+          <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)', marginTop: 4 }}>End 1</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
             <div>
               <label style={labelStyle}>Designator</label>
@@ -347,7 +347,7 @@ function RunwayTab({
             </div>
           </div>
 
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-2)', marginTop: 4 }}>End 2</div>
+          <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)', marginTop: 4 }}>End 2</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
             <div>
               <label style={labelStyle}>Designator</label>
@@ -375,7 +375,7 @@ function RunwayTab({
                 flex: 1,
                 padding: '10px 16px', borderRadius: 8, border: 'none',
                 background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-                color: '#fff', fontSize: 13, fontWeight: 700,
+                color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
                 cursor: saving ? 'wait' : 'pointer', fontFamily: 'inherit',
                 opacity: saving || !newRunway.runway_id.trim() ? 0.5 : 1,
               }}
@@ -389,7 +389,7 @@ function RunwayTab({
                 border: '1px solid var(--color-border)',
                 background: 'var(--color-surface-2)',
                 color: 'var(--color-text-2)',
-                fontSize: 13, fontWeight: 600,
+                fontSize: 'var(--fs-md)', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
@@ -408,7 +408,7 @@ function RunwayTab({
             background: 'none',
             color: 'var(--color-accent)',
             cursor: 'pointer',
-            fontSize: 13,
+            fontSize: 'var(--fs-md)',
             fontWeight: 600,
             fontFamily: 'inherit',
             width: '100%',
@@ -418,7 +418,7 @@ function RunwayTab({
         </button>
       )}
 
-      <p style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 12 }}>
+      <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 12 }}>
         Runway coordinates are used for obstruction evaluations and weather lookups.
         Ensure latitude/longitude values are accurate for your runway endpoints.
       </p>
@@ -428,7 +428,7 @@ function RunwayTab({
 
 const labelStyle: React.CSSProperties = {
   display: 'block',
-  fontSize: 10,
+  fontSize: 'var(--fs-xs)',
   fontWeight: 600,
   color: 'var(--color-text-3)',
   letterSpacing: '0.06em',
@@ -519,7 +519,7 @@ function NavaidTab({ installationId }: { installationId: string | null }) {
   }
 
   if (loading) {
-    return <p style={{ color: 'var(--color-text-3)', fontSize: 13 }}>Loading NAVAIDs...</p>
+    return <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>Loading NAVAIDs...</p>
   }
 
   // Build a lookup of status by name
@@ -534,13 +534,13 @@ function NavaidTab({ installationId }: { installationId: string | null }) {
 
   return (
     <div>
-      <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>NAVAIDs</h3>
-      <p style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 12 }}>
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>NAVAIDs</h3>
+      <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12 }}>
         NAVAIDs added here will appear on the dashboard for status tracking.
       </p>
 
       {navaids.length === 0 && (
-        <p style={{ color: 'var(--color-text-3)', fontSize: 13, marginBottom: 8 }}>No NAVAIDs configured.</p>
+        <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 8 }}>No NAVAIDs configured.</p>
       )}
 
       {navaids.map(navaid => {
@@ -552,7 +552,7 @@ function NavaidTab({ installationId }: { installationId: string | null }) {
             justifyContent: 'space-between',
             padding: '8px 0',
             borderBottom: '1px solid var(--color-border)',
-            fontSize: 13,
+            fontSize: 'var(--fs-md)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {status && (
@@ -564,14 +564,14 @@ function NavaidTab({ installationId }: { installationId: string | null }) {
               )}
               <span style={{ color: 'var(--color-text-1)', fontWeight: 600 }}>{navaid.navaid_name}</span>
               {status && (
-                <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
+                <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
                   ({status.status})
                 </span>
               )}
             </div>
             <button
               onClick={() => handleDelete(navaid)}
-              style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 18, padding: '0 4px' }}
+              style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-3xl)', padding: '0 4px' }}
             >
               &times;
             </button>
@@ -589,7 +589,7 @@ function NavaidTab({ installationId }: { installationId: string | null }) {
             flex: 1, padding: '8px 10px', borderRadius: 6,
             border: '1px solid var(--color-border)',
             background: 'var(--color-surface-2)',
-            color: 'var(--color-text-1)', fontSize: 13,
+            color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
           }}
         />
         <button
@@ -599,7 +599,7 @@ function NavaidTab({ installationId }: { installationId: string | null }) {
             padding: '8px 16px', borderRadius: 6, border: 'none',
             background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
             color: '#fff',
-            cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+            cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
             opacity: !newItem.trim() ? 0.5 : 1,
           }}
         >
@@ -668,9 +668,9 @@ function SimpleListTab({
 
   return (
     <div>
-      <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>{title}</h3>
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>{title}</h3>
       {list.length === 0 && (
-        <p style={{ color: 'var(--color-text-3)', fontSize: 13, marginBottom: 8 }}>No items configured.</p>
+        <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 8 }}>No items configured.</p>
       )}
       {list.map(item => (
         <div key={item} style={{
@@ -679,12 +679,12 @@ function SimpleListTab({
           justifyContent: 'space-between',
           padding: '8px 0',
           borderBottom: '1px solid var(--color-border)',
-          fontSize: 13,
+          fontSize: 'var(--fs-md)',
         }}>
           <span style={{ color: 'var(--color-text-1)' }}>{item}</span>
           <button
             onClick={() => handleDelete(item)}
-            style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 18, padding: '0 4px' }}
+            style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-3xl)', padding: '0 4px' }}
           >
             &times;
           </button>
@@ -700,7 +700,7 @@ function SimpleListTab({
             flex: 1, padding: '8px 10px', borderRadius: 6,
             border: '1px solid var(--color-border)',
             background: 'var(--color-surface-2)',
-            color: 'var(--color-text-1)', fontSize: 13,
+            color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
           }}
         />
         <button
@@ -710,7 +710,7 @@ function SimpleListTab({
             padding: '8px 16px', borderRadius: 6, border: 'none',
             background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
             color: '#fff',
-            cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+            cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
             opacity: !newItem.trim() ? 0.5 : 1,
           }}
         >
@@ -764,19 +764,19 @@ function ShopsTab({ shops, installationId }: { shops: string[]; installationId: 
 
   return (
     <div>
-      <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>CE Shops</h3>
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>CE Shops</h3>
       {list.length === 0 && (
-        <p style={{ color: 'var(--color-text-3)', fontSize: 13, marginBottom: 8 }}>No CE shops configured.</p>
+        <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 8 }}>No CE shops configured.</p>
       )}
       {list.map(shop => (
         <div key={shop} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 0', borderBottom: '1px solid var(--color-border)', fontSize: 13,
+          padding: '8px 0', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-md)',
         }}>
           <span style={{ color: 'var(--color-text-1)' }}>{shop}</span>
           <button
             onClick={() => handleDelete(shop)}
-            style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 18, padding: '0 4px' }}
+            style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-3xl)', padding: '0 4px' }}
           >
             &times;
           </button>
@@ -792,7 +792,7 @@ function ShopsTab({ shops, installationId }: { shops: string[]; installationId: 
             flex: 1, padding: '8px 10px', borderRadius: 6,
             border: '1px solid var(--color-border)',
             background: 'var(--color-surface-2)',
-            color: 'var(--color-text-1)', fontSize: 13,
+            color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
           }}
         />
         <button
@@ -802,7 +802,7 @@ function ShopsTab({ shops, installationId }: { shops: string[]; installationId: 
             padding: '8px 16px', borderRadius: 6, border: 'none',
             background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
             color: '#fff',
-            cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+            cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
             opacity: !newShop.trim() ? 0.5 : 1,
           }}
         >
@@ -850,27 +850,27 @@ function TemplatesTab({ installationId }: { installationId: string | null }) {
 
   return (
     <div>
-      <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
         Inspection Templates
       </h3>
-      <p style={{ fontSize: 13, color: 'var(--color-text-2)', marginBottom: 12 }}>
+      <p style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', marginBottom: 12 }}>
         Manage checklist items for airfield and lighting inspections.
       </p>
 
       {/* Status indicators */}
       {hasAirfield !== null && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fs-md)' }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: hasAirfield ? 'var(--color-success)' : 'var(--color-danger)' }} />
             <span style={{ color: 'var(--color-text-1)' }}>Airfield template</span>
-            <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
+            <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
               {hasAirfield ? 'Configured' : 'Not configured'}
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fs-md)' }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: hasLighting ? 'var(--color-success)' : 'var(--color-danger)' }} />
             <span style={{ color: 'var(--color-text-1)' }}>Lighting template</span>
-            <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>
+            <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
               {hasLighting ? 'Configured' : 'Not configured'}
             </span>
           </div>
@@ -884,7 +884,7 @@ function TemplatesTab({ installationId }: { installationId: string | null }) {
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             padding: '10px 16px', borderRadius: 8,
             background: 'linear-gradient(135deg, #7C3AED, #8B5CF6)',
-            color: '#fff', fontSize: 13, fontWeight: 700,
+            color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',
           }}
         >
@@ -899,7 +899,7 @@ function TemplatesTab({ installationId }: { installationId: string | null }) {
               border: 'none',
               background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
               color: '#fff',
-              fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+              fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
               cursor: cloning ? 'wait' : 'pointer',
               opacity: cloning ? 0.5 : 1,
             }}
@@ -975,7 +975,7 @@ function DashboardPreview({
 
   if (loading) {
     return (
-      <div style={{ marginTop: 16, textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 13 }}>
+      <div style={{ marginTop: 16, textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
         Loading preview...
       </div>
     )
@@ -997,19 +997,19 @@ function DashboardPreview({
         alignItems: 'center',
         justifyContent: 'space-between',
       }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-accent)' }}>
+        <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-accent)' }}>
           Dashboard Preview
         </div>
-        <span style={{ fontSize: 11, color: 'var(--color-text-3)' }}>Live data from database</span>
+        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>Live data from database</span>
       </div>
 
       <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Base name */}
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--color-text-1)' }}>
+          <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>
             {currentInstallation?.name ?? 'Unnamed Base'}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginTop: 2 }}>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', marginTop: 2 }}>
             {currentInstallation?.icao ?? 'No ICAO'} | {runwayCount} runway{runwayCount !== 1 ? 's' : ''}
           </div>
         </div>
@@ -1017,7 +1017,7 @@ function DashboardPreview({
         {/* NAVAIDs section — mirrors dashboard */}
         <div>
           <div style={{
-            fontSize: 10, fontWeight: 600, color: 'var(--color-text-3)',
+            fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)',
             letterSpacing: '0.06em', marginBottom: 8,
           }}>
             NAVAID STATUS ({navaidStatuses.length})
@@ -1026,7 +1026,7 @@ function DashboardPreview({
             <div style={{
               padding: 12, borderRadius: 8,
               border: '1px dashed var(--color-border)',
-              color: 'var(--color-text-3)', fontSize: 12, textAlign: 'center',
+              color: 'var(--color-text-3)', fontSize: 'var(--fs-base)', textAlign: 'center',
             }}>
               No NAVAIDs configured — add them in the NAVAIDs tab
             </div>
@@ -1040,11 +1040,11 @@ function DashboardPreview({
                   border: `1px solid ${STATUS_COLORS[n.status]}40`,
                   textAlign: 'center',
                 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-1)' }}>
+                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)' }}>
                     {n.navaid_name}
                   </div>
                   <div style={{
-                    fontSize: 10, fontWeight: 600, marginTop: 2,
+                    fontSize: 'var(--fs-xs)', fontWeight: 600, marginTop: 2,
                     color: STATUS_COLORS[n.status],
                     textTransform: 'uppercase',
                   }}>
@@ -1059,7 +1059,7 @@ function DashboardPreview({
         {/* Areas section */}
         <div>
           <div style={{
-            fontSize: 10, fontWeight: 600, color: 'var(--color-text-3)',
+            fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)',
             letterSpacing: '0.06em', marginBottom: 8,
           }}>
             AIRFIELD AREAS ({areas.length})
@@ -1068,7 +1068,7 @@ function DashboardPreview({
             <div style={{
               padding: 12, borderRadius: 8,
               border: '1px dashed var(--color-border)',
-              color: 'var(--color-text-3)', fontSize: 12, textAlign: 'center',
+              color: 'var(--color-text-3)', fontSize: 'var(--fs-base)', textAlign: 'center',
             }}>
               No areas configured — add them in the Areas tab
             </div>
@@ -1080,7 +1080,7 @@ function DashboardPreview({
                   borderRadius: 6,
                   background: 'var(--color-surface-2)',
                   border: '1px solid var(--color-border)',
-                  fontSize: 12,
+                  fontSize: 'var(--fs-base)',
                   color: 'var(--color-text-1)',
                 }}>
                   {a}
@@ -1093,7 +1093,7 @@ function DashboardPreview({
         {/* Templates section */}
         <div>
           <div style={{
-            fontSize: 10, fontWeight: 600, color: 'var(--color-text-3)',
+            fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)',
             letterSpacing: '0.06em', marginBottom: 8,
           }}>
             INSPECTION TEMPLATES
@@ -1106,10 +1106,10 @@ function DashboardPreview({
                 border: `1px solid ${templateStatus.airfield > 0 ? 'rgba(52,211,153,0.3)' : 'rgba(239,68,68,0.3)'}`,
                 textAlign: 'center',
               }}>
-                <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--color-text-1)' }}>
+                <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>
                   {templateStatus.airfield}
                 </div>
-                <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 2 }}>Airfield items</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>Airfield items</div>
               </div>
               <div style={{
                 flex: 1, padding: 10, borderRadius: 8,
@@ -1117,10 +1117,10 @@ function DashboardPreview({
                 border: `1px solid ${templateStatus.lighting > 0 ? 'rgba(52,211,153,0.3)' : 'rgba(239,68,68,0.3)'}`,
                 textAlign: 'center',
               }}>
-                <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--color-text-1)' }}>
+                <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>
                   {templateStatus.lighting}
                 </div>
-                <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 2 }}>Lighting items</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>Lighting items</div>
               </div>
             </div>
           )}

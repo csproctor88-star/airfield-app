@@ -116,12 +116,12 @@ export default function InspectionDetailPage() {
   if (hasInProgress && !usingDemo) {
     return (
       <div className="page-container">
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
           &larr; Back
         </button>
         <div className="card" style={{ textAlign: 'center', padding: 24 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#3B82F6', marginBottom: 8 }}>Inspection In Progress</div>
-          <div style={{ fontSize: 13, color: 'var(--color-text-2)', marginBottom: 16, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: '#3B82F6', marginBottom: 8 }}>Inspection In Progress</div>
+          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', marginBottom: 16, lineHeight: 1.5 }}>
             This inspection has not been filed yet. You can resume it from the inspections page.
           </div>
           <button
@@ -129,7 +129,7 @@ export default function InspectionDetailPage() {
             style={{
               padding: '10px 20px', borderRadius: 8, border: 'none',
               background: 'linear-gradient(135deg, #3B82F6, #6366F1)',
-              color: '#FFF', fontSize: 13, fontWeight: 700,
+              color: '#FFF', fontSize: 'var(--fs-md)', fontWeight: 700,
               cursor: 'pointer', fontFamily: 'inherit',
             }}
           >
@@ -146,7 +146,7 @@ export default function InspectionDetailPage() {
   if (allInspections.length === 0) {
     return (
       <div className="page-container">
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
           &larr; Back
         </button>
         <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>Inspection not found</div>
@@ -331,16 +331,16 @@ export default function InspectionDetailPage() {
         >
           {/* Section header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: failCount > 0 ? '#FBBF24' : passCount === sectionTotal ? '#22C55E' : 'var(--color-text-2)' }}>
+            <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: failCount > 0 ? '#FBBF24' : passCount === sectionTotal ? '#22C55E' : 'var(--color-text-2)' }}>
               {sectionTitle}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {failCount > 0 && (
-                <span style={{ fontSize: 10, fontWeight: 700, color: '#EF4444', background: 'rgba(239,68,68,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EF4444', background: 'rgba(239,68,68,0.1)', padding: '2px 6px', borderRadius: 4 }}>
                   {failCount} fail
                 </span>
               )}
-              <span style={{ fontSize: 11, color: 'var(--color-text-3)', fontWeight: 600 }}>
+              <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600 }}>
                 {passCount}/{sectionTotal}
               </span>
             </div>
@@ -390,7 +390,7 @@ export default function InspectionDetailPage() {
                 </span>
                 <div style={{ flex: 1 }}>
                   <div style={{
-                    fontSize: 12,
+                    fontSize: 'var(--fs-base)',
                     color: item.response === 'na' ? 'var(--color-text-3)' : 'var(--color-text-1)',
                     textDecoration: item.response === 'na' ? 'line-through' : 'none',
                     lineHeight: 1.4,
@@ -399,7 +399,7 @@ export default function InspectionDetailPage() {
                   </div>
                   {item.notes && isFail && (
                     <div style={{
-                      fontSize: 11, color: '#FBBF24', marginTop: 4, fontStyle: 'italic',
+                      fontSize: 'var(--fs-sm)', color: '#FBBF24', marginTop: 4, fontStyle: 'italic',
                       padding: '4px 8px', background: 'rgba(251,191,36,0.06)', borderRadius: 4,
                     }}>
                       {item.notes}
@@ -423,7 +423,7 @@ export default function InspectionDetailPage() {
                             }}
                           />
                         )}
-                        <div style={{ fontSize: 10, color: 'var(--color-text-3)' }}>
+                        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
                           Location: {loc.lat.toFixed(5)}, {loc.lon.toFixed(5)}
                         </div>
                       </div>
@@ -443,12 +443,12 @@ export default function InspectionDetailPage() {
     <div style={{ padding: '8px 16px 100px' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
           &larr; Back
         </button>
         <Link
           href="/inspections?view=history"
-          style={{ color: 'var(--color-cyan)', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}
+          style={{ color: 'var(--color-cyan)', fontSize: 'var(--fs-base)', fontWeight: 600, textDecoration: 'none' }}
         >
           All Inspections
         </Link>
@@ -464,7 +464,7 @@ export default function InspectionDetailPage() {
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <span style={{ fontSize: 16, fontWeight: 800, color: typeColor }}>
+          <span style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: typeColor }}>
             {isSpecialType ? specialLabel : isDaily ? 'Airfield Inspection Report' : primary.display_id}
           </span>
           <Badge label="COMPLETED" color="#22C55E" />
@@ -475,7 +475,7 @@ export default function InspectionDetailPage() {
           <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
             {allInspections.map((insp: { id: string; display_id: string }) => (
               <span key={insp.id} style={{
-                fontSize: 11, fontFamily: 'monospace', padding: '3px 8px', borderRadius: 6,
+                fontSize: 'var(--fs-sm)', fontFamily: 'monospace', padding: '3px 8px', borderRadius: 6,
                 background: 'var(--color-border)', color: 'var(--color-text-2)',
               }}>
                 {insp.display_id}
@@ -487,7 +487,7 @@ export default function InspectionDetailPage() {
         {/* Display ID for special types */}
         {isSpecialType && (
           <div style={{
-            marginBottom: 12, fontSize: 11, fontFamily: 'monospace', padding: '3px 8px',
+            marginBottom: 12, fontSize: 'var(--fs-sm)', fontFamily: 'monospace', padding: '3px 8px',
             borderRadius: 6, background: 'var(--color-border)', color: 'var(--color-text-2)',
             display: 'inline-block',
           }}>
@@ -503,8 +503,8 @@ export default function InspectionDetailPage() {
               padding: '5px 12px', borderRadius: 8,
               background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
             }}>
-              <span style={{ fontSize: 14 }}>{primary.inspection_type === 'construction_meeting' ? '🏗️' : '📋'}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#A78BFA' }}>
+              <span style={{ fontSize: 'var(--fs-lg)' }}>{primary.inspection_type === 'construction_meeting' ? '🏗️' : '📋'}</span>
+              <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: '#A78BFA' }}>
                 {primary.inspection_type === 'construction_meeting' ? 'Construction Meeting' : 'Joint Monthly'}
               </span>
             </div>
@@ -516,8 +516,8 @@ export default function InspectionDetailPage() {
                   padding: '5px 12px', borderRadius: 8,
                   background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)',
                 }}>
-                  <span style={{ fontSize: 14 }}>📋</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#34D399' }}>Airfield</span>
+                  <span style={{ fontSize: 'var(--fs-lg)' }}>📋</span>
+                  <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: '#34D399' }}>Airfield</span>
                 </div>
               )}
               {lightingInsp && (
@@ -526,8 +526,8 @@ export default function InspectionDetailPage() {
                   padding: '5px 12px', borderRadius: 8,
                   background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)',
                 }}>
-                  <span style={{ fontSize: 14 }}>💡</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#FBBF24' }}>Lighting</span>
+                  <span style={{ fontSize: 'var(--fs-lg)' }}>💡</span>
+                  <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: '#FBBF24' }}>Lighting</span>
                 </div>
               )}
             </>
@@ -536,20 +536,20 @@ export default function InspectionDetailPage() {
 
         {/* Info Grid */}
         <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 12, marginBottom: 14,
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 'var(--fs-base)', marginBottom: 14,
           padding: '12px', borderRadius: 10, background: 'var(--color-border)', border: '1px solid var(--color-border-mid)',
         }}>
           <div>
-            <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>Filed By</div>
+            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>Filed By</div>
             <div style={{ fontWeight: 600, color: 'var(--color-accent)' }}>{primary.filed_by_name || primary.inspector_name || 'Unknown'}</div>
             {primary.filed_at && (
-              <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 1 }}>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 1 }}>
                 {new Date(primary.filed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
               </div>
             )}
           </div>
           <div>
-            <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>Date</div>
+            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>Date</div>
             <div style={{ fontWeight: 500 }}>
               {primary.completed_at
                 ? `${new Date(primary.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${new Date(primary.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
@@ -558,13 +558,13 @@ export default function InspectionDetailPage() {
           </div>
           {primary.weather_conditions && (
             <div>
-              <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>Weather</div>
+              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>Weather</div>
               <div style={{ fontWeight: 500 }}>{primary.weather_conditions}</div>
             </div>
           )}
           {primary.temperature_f != null && (
             <div>
-              <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>Temperature</div>
+              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>Temperature</div>
               <div style={{ fontWeight: 500 }}>{primary.temperature_f}°F</div>
             </div>
           )}
@@ -577,11 +577,11 @@ export default function InspectionDetailPage() {
           const bwcBg = bwc === 'LOW' ? 'rgba(34,197,94,0.12)' : bwc === 'MOD' ? 'rgba(234,179,8,0.12)' : bwc === 'SEV' ? 'rgba(249,115,22,0.12)' : 'rgba(239,68,68,0.12)'
           return (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                 Bird Watch Condition
               </div>
               <span style={{
-                padding: '4px 14px', borderRadius: 8, fontSize: 12, fontWeight: 800,
+                padding: '4px 14px', borderRadius: 8, fontSize: 'var(--fs-base)', fontWeight: 800,
                 color: bwcColor, background: bwcBg, border: `1px solid ${bwcColor}33`,
               }}>
                 {bwc}
@@ -597,13 +597,13 @@ export default function InspectionDetailPage() {
           {/* Personnel */}
           {primary.personnel && primary.personnel.length > 0 && (
             <div className="card" style={{ marginBottom: 10, borderRadius: 12, padding: '14px' }}>
-              <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
                 Personnel / Offices Present
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {primary.personnel.map((person: string) => (
                   <span key={person} style={{
-                    fontSize: 12, padding: '5px 12px', borderRadius: 8, fontWeight: 600,
+                    fontSize: 'var(--fs-base)', padding: '5px 12px', borderRadius: 8, fontWeight: 600,
                     background: 'rgba(167,139,250,0.1)', color: '#A78BFA',
                     border: '1px solid rgba(167,139,250,0.2)',
                   }}>
@@ -617,17 +617,17 @@ export default function InspectionDetailPage() {
           {/* Comments */}
           {primary.notes && (
             <div className="card" style={{ marginBottom: 10, borderRadius: 12, padding: '14px' }}>
-              <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
+              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
                 Comments
               </div>
-              <div style={{ fontSize: 13, color: 'var(--color-text-1)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{primary.notes}</div>
+              <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{primary.notes}</div>
             </div>
           )}
 
           {/* General photos for special types */}
           {generalPhotos.length > 0 && (
             <div className="card" style={{ marginBottom: 10, borderRadius: 12, padding: '14px' }}>
-              <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
                 Photos ({generalPhotos.length})
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -655,7 +655,7 @@ export default function InspectionDetailPage() {
         <>
           {/* ═══ Results Card ═══ */}
           <div className="card" style={{ marginBottom: 10, borderRadius: 12, padding: '14px 14px 16px' }}>
-            <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
               {isDaily ? 'Combined Results' : 'Results'}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
@@ -663,8 +663,8 @@ export default function InspectionDetailPage() {
                 textAlign: 'center', padding: '10px 6px', borderRadius: 10,
                 background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
               }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#22C55E' }}>{totalPassed}</div>
-                <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.05em', marginTop: 2 }}>PASS</div>
+                <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: '#22C55E' }}>{totalPassed}</div>
+                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.05em', marginTop: 2 }}>PASS</div>
               </div>
               <button
                 onClick={() => totalFailed > 0 && setShowFailedItems((p) => !p)}
@@ -677,31 +677,31 @@ export default function InspectionDetailPage() {
                   boxShadow: totalFailed > 0 ? '0 0 8px rgba(239,68,68,0.15)' : 'none',
                 }}
               >
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#EF4444' }}>{totalFailed}</div>
-                <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.05em', marginTop: 2 }}>FAIL {totalFailed > 0 ? (showFailedItems ? '▴' : '▾') : ''}</div>
+                <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: '#EF4444' }}>{totalFailed}</div>
+                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.05em', marginTop: 2 }}>FAIL {totalFailed > 0 ? (showFailedItems ? '▴' : '▾') : ''}</div>
               </button>
               <div style={{
                 textAlign: 'center', padding: '10px 6px', borderRadius: 10,
                 background: 'rgba(100,116,139,0.08)', border: '1px solid rgba(100,116,139,0.2)',
               }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-text-3)' }}>{totalNa}</div>
-                <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.05em', marginTop: 2 }}>N/A</div>
+                <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-text-3)' }}>{totalNa}</div>
+                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.05em', marginTop: 2 }}>N/A</div>
               </div>
               <div style={{
                 textAlign: 'center', padding: '10px 6px', borderRadius: 10,
                 background: 'var(--color-border)', border: '1px solid var(--color-border-active)',
               }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-accent)' }}>{totalItems}</div>
-                <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.05em', marginTop: 2 }}>TOTAL</div>
+                <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-accent)' }}>{totalItems}</div>
+                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.05em', marginTop: 2 }}>TOTAL</div>
               </div>
             </div>
 
             {/* Compliance bar */}
             <div style={{ marginTop: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600 }}>Compliance Rate</span>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600 }}>Compliance Rate</span>
                 <span style={{
-                  fontSize: 13, fontWeight: 800,
+                  fontSize: 'var(--fs-md)', fontWeight: 800,
                   color: complianceRate >= 95 ? '#22C55E' : complianceRate >= 80 ? '#FBBF24' : '#EF4444',
                 }}>
                   {complianceRate}%
@@ -724,7 +724,7 @@ export default function InspectionDetailPage() {
           {/* Combined Failed Items — toggled by Fail button */}
           {showFailedItems && allFailedItems.length > 0 && (
             <div className="card" style={{ marginBottom: 10, borderRadius: 12, borderLeft: '3px solid #EF4444', padding: '14px' }}>
-              <div style={{ fontSize: 9, color: '#EF4444', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+              <div style={{ fontSize: 'var(--fs-2xs)', color: '#EF4444', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
                 Failed Items ({allFailedItems.length})
               </div>
               {allFailedItems.map((item, idx) => (
@@ -733,14 +733,14 @@ export default function InspectionDetailPage() {
                   paddingBottom: idx < allFailedItems.length - 1 ? 10 : 0,
                   borderBottom: idx < allFailedItems.length - 1 ? '1px solid var(--color-border)' : 'none',
                 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-1)', lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', lineHeight: 1.4 }}>
                     {item.item}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
                     {item.section}
                     {isDaily && (
                       <span style={{
-                        fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4,
+                        fontSize: 'var(--fs-xs)', fontWeight: 600, padding: '1px 6px', borderRadius: 4,
                         color: item.fromType === 'airfield' ? '#34D399' : '#FBBF24',
                         background: item.fromType === 'airfield' ? 'rgba(52,211,153,0.1)' : 'rgba(251,191,36,0.1)',
                       }}>
@@ -750,7 +750,7 @@ export default function InspectionDetailPage() {
                   </div>
                   {item.notes && (
                     <div style={{
-                      fontSize: 12, color: '#FBBF24', marginTop: 4, fontStyle: 'italic',
+                      fontSize: 'var(--fs-base)', color: '#FBBF24', marginTop: 4, fontStyle: 'italic',
                       padding: '4px 8px', background: 'rgba(251,191,36,0.06)', borderRadius: 4,
                     }}>
                       {item.notes}
@@ -791,13 +791,13 @@ export default function InspectionDetailPage() {
                   }}
                 >
                   <div style={{
-                    fontSize: 13, fontWeight: 800, color,
+                    fontSize: 'var(--fs-md)', fontWeight: 800, color,
                     display: 'flex', alignItems: 'center', gap: 8,
                   }}>
                     <span>{insp.inspection_type === 'airfield' ? '📋' : '💡'}</span>
                     {insp.inspection_type === 'airfield' ? 'Airfield Inspection' : 'Lighting Inspection'}
                     <span style={{
-                      fontSize: 11, fontWeight: 600, color: 'var(--color-text-3)', marginLeft: 2,
+                      fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-3)', marginLeft: 2,
                       background: 'var(--color-border)', padding: '2px 8px', borderRadius: 6,
                     }}>
                       {insp.passed_count}/{insp.total_items}
@@ -805,7 +805,7 @@ export default function InspectionDetailPage() {
                     </span>
                   </div>
                   <span style={{
-                    fontSize: 15, color,
+                    fontSize: 'var(--fs-xl)', color,
                     transition: 'transform 0.2s ease',
                     transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
                     display: 'inline-block',
@@ -816,7 +816,7 @@ export default function InspectionDetailPage() {
 
                 {/* Completed by info */}
                 {isExpanded && (
-                  <div style={{ fontSize: 11, color: 'var(--color-text-2)', marginBottom: 8, paddingLeft: 6 }}>
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginBottom: 8, paddingLeft: 6 }}>
                     Completed by <span style={{ color: 'var(--color-accent)', fontWeight: 600 }}>{completedBy}</span>
                     {completedTime && <span> at {completedTime}</span>}
                   </div>
@@ -829,10 +829,10 @@ export default function InspectionDetailPage() {
 
                     {insp.notes && (
                       <div className="card" style={{ marginBottom: 10, borderRadius: 12, padding: '14px' }}>
-                        <div style={{ fontSize: 9, color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
+                        <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
                           {isDaily ? `${insp.inspection_type === 'airfield' ? 'Airfield' : 'Lighting'} Notes` : 'Notes'}
                         </div>
-                        <div style={{ fontSize: 12, color: 'var(--color-text-1)', lineHeight: 1.6 }}>{insp.notes}</div>
+                        <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.6 }}>{insp.notes}</div>
                       </div>
                     )}
                   </>
@@ -851,7 +851,7 @@ export default function InspectionDetailPage() {
           style={{
             flex: 1, padding: '12px', borderRadius: 12, textAlign: 'center',
             background: '#A78BFA14', border: '1px solid #A78BFA33',
-            color: '#A78BFA', fontSize: 13, fontWeight: 700,
+            color: '#A78BFA', fontSize: 'var(--fs-md)', fontWeight: 700,
             fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
             opacity: generatingPdf ? 0.7 : 1,
           }}
@@ -863,7 +863,7 @@ export default function InspectionDetailPage() {
           style={{
             flex: 1, padding: '12px', borderRadius: 12, textAlign: 'center',
             background: '#22C55E14', border: '1px solid #22C55E33',
-            color: '#22C55E', fontSize: 13, fontWeight: 700,
+            color: '#22C55E', fontSize: 'var(--fs-md)', fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',
           }}
         >

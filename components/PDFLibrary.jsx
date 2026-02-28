@@ -268,7 +268,7 @@ function LazyPage({ pageNumber, scale, searchTerm }) {
     <div ref={ref} style={{ marginBottom: 12, position: "relative" }} id={`pdf-page-${pageNumber}`}>
       <div style={{
         position: "absolute", top: 6, right: 10, zIndex: 10,
-        fontSize: 10, fontWeight: 700, color: "var(--color-text-3)",
+        fontSize: 'var(--fs-xs)', fontWeight: 700, color: "var(--color-text-3)",
         background: "rgba(15,23,42,0.85)", padding: "2px 8px",
         borderRadius: 4, fontFamily: "'JetBrains Mono', monospace",
       }}>
@@ -291,7 +291,7 @@ function LazyPage({ pageNumber, scale, searchTerm }) {
           alignItems: "center",
           justifyContent: "center",
           color: "var(--color-text-3)",
-          fontSize: 12,
+          fontSize: 'var(--fs-base)',
         }}>
           Page {pageNumber}
         </div>
@@ -796,8 +796,8 @@ export default function PDFLibrary() {
           {globalResults.length > 0 && globalSearch.length >= 2 && (
             <div style={S.globalResults}>
               <div style={S.globalHeader}>
-                <span style={{ fontWeight: 700, color: "var(--color-text-1)", fontSize: 13 }}>Search Results</span>
-                <span style={{ color: "var(--color-text-3)", fontSize: 12 }}>{globalResults.length} match{globalResults.length !== 1 ? "es" : ""} across regulations</span>
+                <span style={{ fontWeight: 700, color: "var(--color-text-1)", fontSize: 'var(--fs-md)' }}>Search Results</span>
+                <span style={{ color: "var(--color-text-3)", fontSize: 'var(--fs-base)' }}>{globalResults.length} match{globalResults.length !== 1 ? "es" : ""} across regulations</span>
               </div>
               <div style={S.globalList}>
                 {globalResults.slice(0, 30).map((r, i) => (
@@ -806,7 +806,7 @@ export default function PDFLibrary() {
                     <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
                       <span style={S.gBadge}>p.{r.page}</span>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-1)", marginBottom: 2 }}>{r.fileName}</div>
+                        <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: "var(--color-text-1)", marginBottom: 2 }}>{r.fileName}</div>
                         <div style={S.gSnippet}>{renderSnippet(r.snippet, globalSearch)}</div>
                       </div>
                     </div>
@@ -862,7 +862,7 @@ export default function PDFLibrary() {
                     }} style={S.cb}>+</button>
                     {touchScale > 1.05 && (
                       <button onClick={() => transformRef.current && transformRef.current.resetTransform()}
-                        style={Object.assign({}, S.cb, { fontSize: 11, width: "auto", padding: "0 8px" })}
+                        style={Object.assign({}, S.cb, { fontSize: 'var(--fs-sm)', width: "auto", padding: "0 8px" })}
                         title="Reset zoom">1:1</button>
                     )}
                   </>
@@ -906,7 +906,7 @@ export default function PDFLibrary() {
             {/* Viewer body */}
             <div ref={viewerBodyRef} style={S.vBody}>
               {pdfLoading && <div style={S.ctr}><span style={S.spin} /><span style={{ color: "var(--color-text-3)", marginLeft: 8 }}>Loading&hellip;</span></div>}
-              {pdfError && <div style={S.ctr}><div style={S.eBox}><strong style={{ color: "#EF4444" }}>PDF Unavailable</strong><p style={{ margin: "8px 0 0", fontSize: 13 }}>{pdfError}</p></div></div>}
+              {pdfError && <div style={S.ctr}><div style={S.eBox}><strong style={{ color: "#EF4444" }}>PDF Unavailable</strong><p style={{ margin: "8px 0 0", fontSize: 'var(--fs-md)' }}>{pdfError}</p></div></div>}
 
               {!pdfLoading && !pdfError && viewMode === "native" && blobUrl && (
 <div style={{ flex: 1, position: 'relative', minHeight: 0, width: '100%' }}>
@@ -981,7 +981,7 @@ export default function PDFLibrary() {
                     </button>
                     <div style={S.fAct}>
                       {cached && <span style={{ color: "#34D399", display: "flex" }} title="Cached"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg></span>}
-                      {extracted && <span style={{ color: "#FACC15", display: "flex", fontSize: 14 }} title="Text indexed">{"\u2699"}</span>}
+                      {extracted && <span style={{ color: "#FACC15", display: "flex", fontSize: 'var(--fs-lg)' }} title="Text indexed">{"\u2699"}</span>}
                       {!cached && isOnline && !isDl && <button onClick={() => downloadAndCache(file.name)} style={S.aBtn}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg></button>}
                       {isDl && <span style={S.spin} />}
                       {cached && <button onClick={() => removeFromCache(file.name)} style={Object.assign({}, S.aBtn, { color: "var(--color-text-3)" })} title="Remove"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg></button>}
@@ -1009,16 +1009,16 @@ var S = {
   headerRow: { maxWidth: 960, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" },
   hLeft: { display: "flex", alignItems: "center", gap: 14 },
   logo: { width: 38, height: 38, borderRadius: 10, background: "linear-gradient(135deg, var(--color-accent), #818CF8)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  title: { margin: 0, fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "var(--color-text-1)" },
-  sub: { margin: 0, fontSize: 13, color: "var(--color-text-3)" },
-  badge: { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, padding: "4px 12px", borderRadius: 20, border: "1px solid" },
+  title: { margin: 0, fontSize: 'var(--fs-3xl)', fontWeight: 700, letterSpacing: "-0.02em", color: "var(--color-text-1)" },
+  sub: { margin: 0, fontSize: 'var(--fs-md)', color: "var(--color-text-3)" },
+  badge: { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 'var(--fs-base)', fontWeight: 600, padding: "4px 12px", borderRadius: 20, border: "1px solid" },
   badgeOn: { color: "#34D399", borderColor: "rgba(52,211,153,0.2)", background: "rgba(52,211,153,0.08)" },
   badgeOff: { color: "#FBBF24", borderColor: "rgba(251,191,36,0.2)", background: "rgba(251,191,36,0.08)" },
 
   toolbar: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "14px 24px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", boxSizing: "border-box" },
   sWrap: { position: "relative", flex: "1 1 220px", minWidth: 180 },
-  sInput: { width: "100%", boxSizing: "border-box", padding: "9px 12px 9px 34px", background: "var(--color-bg-elevated)", border: "1px solid var(--color-text-4)", borderRadius: 8, color: "var(--color-text-1)", fontSize: 14, fontFamily: "inherit", outline: "none" },
-  btn: { display: "inline-flex", alignItems: "center", gap: 5, padding: "8px 14px", borderRadius: 8, border: "1px solid", fontSize: 13, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", lineHeight: 1, whiteSpace: "nowrap" },
+  sInput: { width: "100%", boxSizing: "border-box", padding: "9px 12px 9px 34px", background: "var(--color-bg-elevated)", border: "1px solid var(--color-text-4)", borderRadius: 8, color: "var(--color-text-1)", fontSize: 'var(--fs-lg)', fontFamily: "inherit", outline: "none" },
+  btn: { display: "inline-flex", alignItems: "center", gap: 5, padding: "8px 14px", borderRadius: 8, border: "1px solid", fontSize: 'var(--fs-md)', fontWeight: 600, fontFamily: "inherit", cursor: "pointer", lineHeight: 1, whiteSpace: "nowrap" },
   btnA: { background: "var(--color-border-mid)", borderColor: "rgba(56,189,248,0.25)", color: "var(--color-accent)" },
   btnG: { background: "rgba(241,245,249,0.04)", borderColor: "var(--color-text-4)", color: "var(--color-text-2)" },
   btnE: { background: "rgba(250,204,21,0.12)", borderColor: "rgba(250,204,21,0.25)", color: "#FACC15" },
@@ -1026,17 +1026,17 @@ var S = {
 
   progressBar: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "0 24px", boxSizing: "border-box" },
   progressFill: { height: 3, background: "linear-gradient(90deg, var(--color-accent), #818CF8)", borderRadius: 2, transition: "width 0.3s" },
-  progressText: { fontSize: 11, color: "var(--color-text-3)", marginTop: 4, display: "block", fontFamily: "'JetBrains Mono', monospace" },
+  progressText: { fontSize: 'var(--fs-sm)', color: "var(--color-text-3)", marginTop: 4, display: "block", fontFamily: "'JetBrains Mono', monospace" },
 
   globalResults: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "0 24px", boxSizing: "border-box" },
   globalHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--color-bg-elevated)" },
   globalList: { maxHeight: 400, overflowY: "auto" },
   globalItem: { display: "flex", padding: "10px 0", background: "none", border: "none", borderBottom: "1px solid var(--color-bg-elevated)", color: "inherit", cursor: "pointer", textAlign: "left", width: "100%", fontFamily: "inherit" },
-  gBadge: { flexShrink: 0, fontSize: 10, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: "var(--color-accent)", background: "var(--color-border-mid)", padding: "2px 6px", borderRadius: 4, marginTop: 2 },
-  gSnippet: { fontSize: 12, lineHeight: 1.5, color: "var(--color-text-2)" },
+  gBadge: { flexShrink: 0, fontSize: 'var(--fs-xs)', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: "var(--color-accent)", background: "var(--color-border-mid)", padding: "2px 6px", borderRadius: 4, marginTop: 2 },
+  gSnippet: { fontSize: 'var(--fs-base)', lineHeight: 1.5, color: "var(--color-text-2)" },
 
-  err: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "10px 24px", boxSizing: "border-box", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, color: "#F87171", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "space-between" },
-  errX: { background: "none", border: "none", color: "#F87171", cursor: "pointer", fontSize: 16, padding: 4 },
+  err: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "10px 24px", boxSizing: "border-box", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, color: "#F87171", fontSize: 'var(--fs-md)', display: "flex", alignItems: "center", justifyContent: "space-between" },
+  errX: { background: "none", border: "none", color: "#F87171", cursor: "pointer", fontSize: 'var(--fs-2xl)', padding: 4 },
 
   main: { flex: 1, maxWidth: 960, margin: "0 auto", width: "100%", padding: "0 24px 24px", boxSizing: "border-box" },
 
@@ -1045,30 +1045,30 @@ var S = {
   fBtn: { display: "flex", alignItems: "center", gap: 12, flex: 1, padding: "8px 4px", background: "none", border: "none", color: "inherit", cursor: "pointer", textAlign: "left", fontFamily: "inherit", minWidth: 0 },
   fIco: { width: 38, height: 38, borderRadius: 8, border: "1px solid", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "var(--color-bg-surface)" },
   fInf: { display: "flex", flexDirection: "column", gap: 2, minWidth: 0 },
-  fNm: { fontSize: 14, fontWeight: 500, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  fMt: { fontSize: 12, color: "var(--color-text-3)", fontFamily: "'JetBrains Mono', monospace" },
+  fNm: { fontSize: 'var(--fs-lg)', fontWeight: 500, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  fMt: { fontSize: 'var(--fs-base)', color: "var(--color-text-3)", fontFamily: "'JetBrains Mono', monospace" },
   fAct: { display: "flex", alignItems: "center", gap: 4, flexShrink: 0 },
   aBtn: { display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 6, background: "none", border: "none", color: "var(--color-text-2)", cursor: "pointer" },
 
   viewer: { display: "flex", flexDirection: "column", height: "calc(100vh - 140px)", minHeight: 500, background: "var(--color-bg-elevated)", borderRadius: 12, border: "1px solid var(--color-text-4)", overflow: "hidden" },
   vBar: { display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderBottom: "1px solid var(--color-text-4)", background: "var(--color-bg-surface-solid)", flexWrap: "wrap" },
-  back: { padding: "6px 12px", borderRadius: 6, background: "rgba(241,245,249,0.05)", border: "1px solid var(--color-text-4)", color: "var(--color-text-2)", fontSize: 13, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" },
-  vName: { flex: 1, fontSize: 14, fontWeight: 500, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 },
+  back: { padding: "6px 12px", borderRadius: 6, background: "rgba(241,245,249,0.05)", border: "1px solid var(--color-text-4)", color: "var(--color-text-2)", fontSize: 'var(--fs-md)', fontWeight: 600, fontFamily: "inherit", cursor: "pointer" },
+  vName: { flex: 1, fontSize: 'var(--fs-lg)', fontWeight: 500, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 },
   vCtrls: { display: "flex", alignItems: "center", gap: 4, flexShrink: 0, flexWrap: "wrap" },
-  cb: { width: 30, height: 30, borderRadius: 6, background: "rgba(241,245,249,0.05)", border: "1px solid var(--color-text-4)", color: "var(--color-text-2)", fontSize: 16, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
-  zoom: { fontSize: 12, color: "var(--color-text-3)", fontFamily: "'JetBrains Mono', monospace", minWidth: 40, textAlign: "center" },
+  cb: { width: 30, height: 30, borderRadius: 6, background: "rgba(241,245,249,0.05)", border: "1px solid var(--color-text-4)", color: "var(--color-text-2)", fontSize: 'var(--fs-2xl)', fontWeight: 600, fontFamily: "inherit", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
+  zoom: { fontSize: 'var(--fs-base)', color: "var(--color-text-3)", fontFamily: "'JetBrains Mono', monospace", minWidth: 40, textAlign: "center" },
   div: { width: 1, height: 20, background: "var(--color-text-4)", margin: "0 4px" },
 
   sPanel: { borderBottom: "1px solid var(--color-text-4)", background: "var(--color-bg-surface-solid)" },
   sPanelRow: { display: "flex", alignItems: "center", gap: 8, padding: "8px 16px" },
-  sPanelIn: { flex: 1, padding: "6px 8px", background: "var(--color-bg-elevated)", border: "1px solid var(--color-text-4)", borderRadius: 6, color: "var(--color-text-1)", fontSize: 13, fontFamily: "inherit", outline: "none", minWidth: 120 },
-  mc: { fontSize: 12, color: "var(--color-text-2)", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" },
-  nb: { width: 26, height: 26, borderRadius: 5, background: "rgba(241,245,249,0.05)", border: "1px solid var(--color-text-4)", color: "var(--color-text-2)", fontSize: 13, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
+  sPanelIn: { flex: 1, padding: "6px 8px", background: "var(--color-bg-elevated)", border: "1px solid var(--color-text-4)", borderRadius: 6, color: "var(--color-text-1)", fontSize: 'var(--fs-md)', fontFamily: "inherit", outline: "none", minWidth: 120 },
+  mc: { fontSize: 'var(--fs-base)', color: "var(--color-text-2)", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" },
+  nb: { width: 26, height: 26, borderRadius: 5, background: "rgba(241,245,249,0.05)", border: "1px solid var(--color-text-4)", color: "var(--color-text-2)", fontSize: 'var(--fs-md)', fontWeight: 600, fontFamily: "inherit", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
   mList: { maxHeight: 200, overflowY: "auto", borderTop: "1px solid var(--color-bg-elevated)" },
-  mItem: { display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 16px", background: "none", border: "none", borderBottom: "1px solid var(--color-bg-elevated)", color: "var(--color-text-1)", fontSize: 12, fontFamily: "inherit", cursor: "pointer", textAlign: "left", width: "100%", boxSizing: "border-box" },
+  mItem: { display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 16px", background: "none", border: "none", borderBottom: "1px solid var(--color-bg-elevated)", color: "var(--color-text-1)", fontSize: 'var(--fs-base)', fontFamily: "inherit", cursor: "pointer", textAlign: "left", width: "100%", boxSizing: "border-box" },
   mItemA: { background: "var(--color-border)" },
-  mBadge: { flexShrink: 0, fontSize: 10, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: "var(--color-accent)", background: "var(--color-border-mid)", padding: "2px 6px", borderRadius: 4, marginTop: 1 },
-  mSnip: { fontSize: 12, lineHeight: 1.5, color: "var(--color-text-2)", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" },
+  mBadge: { flexShrink: 0, fontSize: 'var(--fs-xs)', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: "var(--color-accent)", background: "var(--color-border-mid)", padding: "2px 6px", borderRadius: 4, marginTop: 1 },
+  mSnip: { fontSize: 'var(--fs-base)', lineHeight: 1.5, color: "var(--color-text-2)", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" },
 
   vBody: { flex: 1, overflow: "auto", display: "flex", flexDirection: "column", justifyContent: "flex-start", alignItems: "center", padding: 16, background: "var(--color-bg-surface-solid)", minHeight: 0 },
 
@@ -1076,8 +1076,8 @@ var S = {
   spin: { display: "inline-block", width: 16, height: 16, border: "2px solid var(--color-text-4)", borderTopColor: "var(--color-accent)", borderRadius: "50%", animation: "spin 0.6s linear infinite" },
   miniSpin: { display: "inline-block", width: 12, height: 12, border: "2px solid var(--color-text-4)", borderTopColor: "#FACC15", borderRadius: "50%", animation: "spin 0.6s linear infinite", flexShrink: 0 },
   eBox: { maxWidth: 500, padding: 20, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, color: "var(--color-text-1)" },
-  code: { background: "var(--color-border-mid)", padding: "2px 6px", borderRadius: 4, color: "var(--color-accent)", fontSize: 11, fontFamily: "'JetBrains Mono', monospace" },
-  foot: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "14px 24px", boxSizing: "border-box", borderTop: "1px solid var(--color-bg-elevated)", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, fontSize: 11, color: "var(--color-text-3)", fontFamily: "'JetBrains Mono', monospace" },
+  code: { background: "var(--color-border-mid)", padding: "2px 6px", borderRadius: 4, color: "var(--color-accent)", fontSize: 'var(--fs-sm)', fontFamily: "'JetBrains Mono', monospace" },
+  foot: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "14px 24px", boxSizing: "border-box", borderTop: "1px solid var(--color-bg-elevated)", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, fontSize: 'var(--fs-sm)', color: "var(--color-text-3)", fontFamily: "'JetBrains Mono', monospace" },
 };
 
 if (typeof document !== "undefined") {

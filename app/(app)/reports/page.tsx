@@ -37,7 +37,7 @@ const REPORT_CARDS = [
 export default function ReportsPage() {
   return (
     <div className="page-container">
-      <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Reports</div>
+      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>Reports</div>
 
       <div className="card-list">
         {REPORT_CARDS.map((card) => (
@@ -73,14 +73,14 @@ export default function ReportsPage() {
                 <card.icon size={22} color={card.color} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
+                <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
                   {card.title}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--color-text-3)', lineHeight: 1.5 }}>
+                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', lineHeight: 1.5 }}>
                   {card.description}
                 </div>
               </div>
-              <span style={{ color: 'var(--color-text-3)', fontSize: 16, alignSelf: 'center' }}>›</span>
+              <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-2xl)', alignSelf: 'center' }}>›</span>
             </div>
           </Link>
         ))}

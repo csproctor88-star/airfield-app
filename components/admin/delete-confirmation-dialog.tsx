@@ -41,7 +41,7 @@ export function DeleteConfirmationDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#F87171' }}>
+          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: '#F87171' }}>
             Delete User
           </div>
           <button
@@ -53,7 +53,7 @@ export function DeleteConfirmationDialog({
           </button>
         </div>
 
-        <div style={{ fontSize: 13, color: 'var(--color-text-2)', marginBottom: 16, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', marginBottom: 16, lineHeight: 1.5 }}>
           Permanently delete <strong>{userName}</strong>? This action cannot be undone.
           All associated data will be removed.
         </div>
@@ -82,7 +82,7 @@ export function DeleteConfirmationDialog({
               border: '1px solid var(--color-border)',
               background: 'transparent',
               color: 'var(--color-text-2)',
-              fontSize: 13,
+              fontSize: 'var(--fs-md)',
               fontWeight: 600,
               cursor: 'pointer',
               fontFamily: 'inherit',
@@ -101,7 +101,7 @@ export function DeleteConfirmationDialog({
               border: 'none',
               background: isMatch && !loading ? '#DC2626' : 'rgba(220,38,38,0.3)',
               color: '#fff',
-              fontSize: 13,
+              fontSize: 'var(--fs-md)',
               fontWeight: 600,
               cursor: isMatch && !loading ? 'pointer' : 'not-allowed',
               opacity: isMatch && !loading ? 1 : 0.5,

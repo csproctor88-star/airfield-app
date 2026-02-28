@@ -33,13 +33,13 @@ export function PhotoPickerButton({ onUpload, onCapture, disabled, variant = 'fu
         onClick={() => setOpen((v) => !v)}
         disabled={disabled}
         style={isCompact ? {
-          padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+          padding: '5px 10px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 600,
           border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.08)',
           color: 'var(--color-accent-secondary)', cursor: disabled ? 'default' : 'pointer',
           fontFamily: 'inherit', opacity: disabled ? 0.7 : 1,
           display: 'flex', alignItems: 'center', gap: 4,
         } : {
-          width: '100%', padding: 10, borderRadius: 8, fontSize: 12, fontWeight: 600,
+          width: '100%', padding: 10, borderRadius: 8, fontSize: 'var(--fs-base)', fontWeight: 600,
           border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
           color: 'var(--color-accent)', cursor: disabled ? 'default' : 'pointer',
           fontFamily: 'inherit', opacity: disabled ? 0.7 : 1, minHeight: 44,
@@ -66,7 +66,7 @@ export function PhotoPickerButton({ onUpload, onCapture, disabled, variant = 'fu
             onClick={() => { setOpen(false); onUpload() }}
             style={{
               width: '100%', padding: '12px 14px', border: 'none', background: 'transparent',
-              color: 'var(--color-text-1)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer',
               fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10,
               borderBottom: '1px solid var(--color-border)',
             }}
@@ -83,7 +83,7 @@ export function PhotoPickerButton({ onUpload, onCapture, disabled, variant = 'fu
             onClick={() => { setOpen(false); onCapture() }}
             style={{
               width: '100%', padding: '12px 14px', border: 'none', background: 'transparent',
-              color: 'var(--color-text-1)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer',
               fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10,
             }}
           >

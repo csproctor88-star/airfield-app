@@ -112,7 +112,7 @@ export function SidebarNav() {
           color: active ? 'var(--color-accent)' : 'var(--color-text-2)',
           background: active ? 'var(--color-accent-glow)' : 'transparent',
           borderRight: active ? '3px solid var(--color-accent)' : '3px solid transparent',
-          fontSize: 14,
+          fontSize: 'var(--fs-lg)',
           fontWeight: active ? 700 : 500,
           transition: 'background 0.15s, color 0.15s',
         }}
