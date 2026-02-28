@@ -1,7 +1,7 @@
 # GLIDEPATH — Beta Tester Overview
 
 **Airfield OPS Management Suite**
-**Version 2.6.0 | February 2026**
+**Version 2.9.0 | February 2026**
 **"Guiding You to Mission Success"**
 
 ---
@@ -36,6 +36,7 @@ When you log in, the **Dashboard** is your home base. At a glance you can see:
 - **Current conditions** — RSC, BWC, and last check completed
 - **Quick action buttons** — jump straight to Airfield Inspections, Airfield Checks, or New Discrepancy
 - **Who's online** — see which team members are currently active
+- **Installation switcher** — switch between bases if you're assigned to more than one (shown in the header)
 - **Activity feed** — a live stream of everything happening on the airfield (tap any item to see details)
 
 ---
@@ -205,12 +206,15 @@ See live NOTAMs for your installation pulled directly from the FAA.
 
 ### Activity Log
 
-See a complete history of every action taken in the app.
+See a complete history of every action taken in the app — plus add your own notes.
 
 - Filter by time period: Today, Last 7 Days, Last 30 Days, or a custom date range
-- Entries grouped by date with color-coded dots by action type
+- Columnar table showing Time (Z), User, Action, and Details for each entry
+- **Add manual entries** — type free-text notes for events not captured by the system (phone calls, verbal orders, meetings)
+- **Edit or delete** any entry via a modal dialog with editable date, time, and notes
 - Tap any entry to jump to the related discrepancy, check, inspection, or waiver
 - Export the full log to Excel
+- **Login notification** — when you log in, a dialog shows all activity since your last session so you never miss what happened while you were away
 
 ---
 
@@ -301,5 +305,5 @@ Please report any issues, suggestions, or feedback to the Glidepath development 
 
 ---
 
-*Glidepath v2.6.0 — Beta Testing Program*
+*Glidepath v2.9.0 — Beta Testing Program*
 *Thank you for helping us improve Airfield Management operations.*

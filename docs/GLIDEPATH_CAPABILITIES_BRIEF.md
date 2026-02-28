@@ -1,7 +1,7 @@
 # GLIDEPATH — Comprehensive Capabilities Brief
 
 **Airfield OPS Management Suite**
-**Version 2.6.0 | February 2026**
+**Version 2.9.0 | February 2026**
 **"Guiding You to Mission Success"**
 
 ---
@@ -48,11 +48,11 @@ The application covers the full spectrum of Airfield Management duties as define
 
 | Metric | Value |
 |--------|-------|
-| Application Routes | 41 |
+| Application Routes | 48 |
 | Source Files | 130+ |
 | Database Tables | 25+ |
-| Database Migrations | 49 |
-| Aircraft Records | Hundreds |
+| Database Migrations | 56 |
+| Aircraft Records | 1,000+ |
 | Regulatory References | 70 |
 | Military Installations in Directory | 155 |
 | Airfield Check Types | 7 |
@@ -60,6 +60,7 @@ The application covers the full spectrum of Airfield Management duties as define
 | Waiver Seed Records (Real KMTC Data) | 17 |
 | User Roles | 9 |
 | Report Types | 4 |
+| Export Types (PDF + Excel) | 10 |
 | TypeScript Errors | 0 |
 
 ---
@@ -94,7 +95,7 @@ Glidepath replaces all of the above with a single application that runs on any d
 
 **Core design principles:**
 
-- **Mobile-first** — Designed for iPads and phones used in the field (480px optimized layout, 44px+ touch targets)
+- **Responsive** — Adapts across mobile (480px), tablet (768px), and desktop (1024px+) breakpoints with permanent sidebar navigation on wider screens. 44px+ touch targets for field use
 - **Works offline** — Progressive Web App with IndexedDB caching; full demo mode with no server required
 - **Multi-base ready** — Every data table scoped by installation; supports 155+ military bases out of the box
 - **Role-based** — Nine roles in a three-tier hierarchy control who can view, create, and manage data
@@ -207,14 +208,24 @@ The dashboard is the first screen users see after login. It provides a complete 
 - Large touch targets designed for gloved/field use
 
 **User Presence**
-- Shows who is online, away, or inactive
+- Shows who is online, away, or inactive based on last_seen_at tracking
 - Heartbeat updates every 5 minutes
+- Presence status displayed in the header alongside the user's name
 
 **Activity Feed**
-- Real-time stream of all airfield actions
-- Color-coded action dots by entity type
+- Real-time stream of all airfield actions with enriched action labels
 - Clickable items link directly to the source record
 - Expandable to show full history
+- Supports manual entry, runway status, NAVAID, waiver, and all other entity types
+
+**Installation Switcher**
+- Header displays current installation name and ICAO code
+- Users assigned to multiple installations see a dropdown to switch between them
+- Switching reloads all data for the selected installation
+
+**Login Experience:**
+- "Remember me" checkbox saves email to local storage for returning users
+- Activity notification dialog on login shows all changes since last session
 
 ---
 
@@ -594,20 +605,34 @@ Real-time NOTAM monitoring integrated directly from the FAA's public NOTAM Searc
 
 ### 5.11 Activity Log & Audit Trail
 
-Comprehensive audit trail logging every action taken in the system.
+Comprehensive audit trail logging every action taken in the system with full CRUD capabilities.
 
-**Features:**
-- Date-range filtering: Today, Last 7 Days, Last 30 Days, Custom Range
-- Entries grouped by date with color-coded action dots
+**Display:**
+- Columnar table layout: Time (Z), User, Action, Details — grouped by date header rows
+- Per-column search filters for narrowing results
 - Clickable items link directly to source entity (discrepancy, check, inspection, waiver, etc.)
-- Visual indicators for linked items
+
+**Manual Entries:**
+- Free-text input bar for logging events not captured automatically (e.g., phone calls, meetings, verbal orders)
+- Manual entries appear in the log as "Logged Manual Entry" with the notes in the Details column
+
+**Edit & Delete:**
+- Edit any entry via modal dialog with editable Date, Time (Zulu), and Notes fields
+- Delete entries with confirmation
+- RLS policies enforce row-level permissions on update and delete operations
 
 **Tracked Actions:**
 - Entity creation (discrepancy, check, inspection, evaluation, waiver, NOTAM)
 - Status changes (runway, NAVAID, discrepancy lifecycle)
 - Edits and updates
 - Deletions
+- Manual entries (noted)
 - User login activity
+
+**Login Notification:**
+- On login, users see a dialog showing all activity since their last session
+- Columnar table format: Time (Z), User, Action, Details
+- Acknowledge All button to dismiss
 
 **Export:** Excel export with styled formatting (Date, Time, User, Rank, Action, Entity, Details)
 
@@ -647,6 +672,11 @@ Admin interface for the complete user lifecycle: invite, configure, monitor, dea
 - Deactivate/Reactivate toggle (deactivated users see "Account deactivated" on login)
 - Delete account (sys_admin only, requires type-to-confirm with user's last name)
 - Escalation prevention: only sys_admin can assign admin-tier roles
+
+**User Deletion Cascade:**
+- Deleting a user nullifies all foreign key references across 10 tables (12 columns), preserving historical records
+- Historical data (discrepancies, inspections, checks, activity log entries) remains intact with the user reference set to null
+- ON DELETE SET NULL enforced at the database level via migration
 
 ---
 
@@ -869,7 +899,7 @@ Glidepath is built directly from and in support of the following governing regul
 
 ## 13. CURRENT MATURITY & ROADMAP
 
-### Current Status (v2.6.0)
+### Current Status (v2.9.0)
 
 | Component | Status |
 |-----------|--------|
@@ -884,13 +914,17 @@ Glidepath is built directly from and in support of the following governing regul
 | Waiver Management (full lifecycle) | Complete |
 | NOTAMs (live FAA feed) | Complete |
 | Activity Log / Audit Trail | Complete |
-| User Management (invite/edit/reset) | Complete |
+| Manual Activity Entries | Complete |
+| User Management (invite/edit/reset/delete) | Complete |
 | Settings & Base Configuration | Complete |
 | PDF Export (7 report types) | Complete |
 | Excel Export (3 types) | Complete |
 | Light/Dark/Auto Theme | Complete |
 | PWA / Offline Capability | Complete |
 | Multi-Base Architecture | Complete |
+| Responsive Layout (mobile/tablet/desktop) | Complete |
+| User Presence Tracking | Complete |
+| Installation Switcher | Complete |
 | TypeScript Build | Clean (0 errors) |
 
 ### Near-Term Roadmap
@@ -898,8 +932,8 @@ Glidepath is built directly from and in support of the following governing regul
 | Enhancement | Description | Priority |
 |------------|-------------|----------|
 | METAR Weather Integration | Live aviation weather from aviationweather.gov replacing Open-Meteo | High |
-| Row-Level Security (RLS) | Database-level enforcement on all tables (currently app-layer only) | High |
 | Server-Side Email Delivery | Branded email for inspection reports (vs. client-side PDF) | Medium |
+| Row-Level Security (RLS) | Full database-level enforcement (partially implemented on storage.objects and activity_log) | Medium |
 | Offline Sync Queue | Store mutations while offline; auto-sync when connectivity returns | Medium |
 | Unit & Integration Testing | Automated test suite for all modules | Medium |
 
@@ -945,5 +979,5 @@ Glidepath is built directly from and in support of the following governing regul
 
 ---
 
-*Document generated from Glidepath v2.6.0 codebase analysis — February 2026*
+*Document generated from Glidepath v2.9.0 codebase analysis — February 2026*
 *For questions or demonstrations, contact the Glidepath development team.*
