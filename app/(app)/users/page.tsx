@@ -51,8 +51,6 @@ async function loadUsers(
       return { users: [], error: null }
     }
 
-    console.log(`[UserMgmt] Loaded ${data.length} profiles, baseFilter=${baseId || 'ALL'}`)
-
     const mapped: UserCardData[] = data.map((u: Record<string, unknown>) => {
       // Parse name — handle both first_name/last_name and legacy name column
       const firstName = (u.first_name as string) || null

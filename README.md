@@ -1,8 +1,8 @@
-# Airfield OPS Management Suite
+# Glidepath — Airfield OPS Management Suite
 
-Mobile-first web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
+Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.7.0 | **Build:** Clean | **41 routes** | **130+ source files** | **49 migrations**
+**Version:** 2.8.0 | **Build:** Clean | **41 routes** | **130+ source files** | **49 migrations**
 
 ## Tech Stack
 
@@ -10,12 +10,12 @@ Mobile-first web application for managing airfield operations across U.S. milita
 |-------|-----------|---------|
 | Framework | Next.js (App Router) | 14.2.35 |
 | Language | TypeScript (strict mode) | 5.9.3 |
-| Styling | Tailwind CSS — light/dark/auto theme | 3.4.19 |
+| Styling | Tailwind CSS + CSS custom properties — light/dark/auto theme | 3.4.19 |
 | Backend | Supabase (PostgreSQL, Auth, Storage) | SSR 0.8.0 |
 | Maps | Mapbox GL JS | 3.18.1 |
 | PDF Viewing | react-pdf (PDF.js) | 10.3.0 |
 | PDF Export | jsPDF + jspdf-autotable | 4.1.0 |
-| Excel Export | SheetJS (xlsx) | 0.18.5 |
+| Excel Export | SheetJS (xlsx) + ExcelJS | 0.18.5 / 4.4.0 |
 | Validation | Zod | 3.25.76 |
 | Offline Storage | IndexedDB (6 object stores) | — |
 | Icons | Lucide React | 0.563.0 |
@@ -55,6 +55,23 @@ Apply the schema and migrations to a Supabase project:
 2. Apply the 49 migrations in order from `supabase/migrations/`
 
 See [BASE-ONBOARDING.md](./BASE-ONBOARDING.md) for adding new installations.
+
+## Responsive Layout
+
+The app adapts across three breakpoints while preserving mobile-first design:
+
+| Breakpoint | Width | Layout |
+|-----------|-------|--------|
+| Mobile | < 768px | Bottom nav, 480px max-width, stacked layouts |
+| Tablet | 768px+ | Permanent 300px sidebar, content up to 768px, 2-col grids |
+| Desktop | 1024px+ | Sidebar + content up to 1000px, 4-col grids, larger maps |
+
+Key responsive features:
+- **Permanent sidebar** on tablet/desktop with full descriptive nav labels
+- **Font scaling** via 11 CSS custom properties (`--fs-2xs` through `--fs-5xl`)
+- **Element scaling** for cards, inputs, buttons, badges at each breakpoint
+- **Map components** scale from 420px to 80vh with expand/collapse toggle
+- **Obstruction map** scales from 600px to 85vh with expand/collapse toggle
 
 ## Modules
 
@@ -97,6 +114,7 @@ UFC 3-260-01 Class B imaginary surface analysis with multi-runway support:
 - Evaluates against ALL base runways simultaneously
 - Geodesic calculations (Haversine, cross-track/along-track), Open-Elevation API for MSL heights
 - Multiple photos per evaluation, violation detection with UFC table references
+- Responsive map with expand/collapse toggle
 
 ### Aircraft Database (`/aircraft`)
 1,000+ military and civilian aircraft reference entries. Search by name, type, manufacturer, or branch. Sort by weight, wingspan, or ACN values. Favorites system. ACN/PCN comparison panel for pavement loading analysis.
@@ -109,7 +127,7 @@ Comprehensive regulatory reference library with two tabs:
 **My Documents tab** — Upload personal PDFs, JPGs, and PNGs. Client-side text extraction for search. Per-document offline caching. Supabase Storage integration.
 
 ### Waivers (`/waivers`)
-Full airfield waiver lifecycle management modeled after AF Form 505 and the AFCEC Playbook Appendix B. Six classification types (permanent, temporary, construction, event, extension, amendment), seven status values with mandatory comment dialogs for status transitions. Waiver detail pages include criteria & standards references, coordination tracking by office, photo attachments with camera capture, and annual review history. Individual waiver PDF export with embedded photos. Excel export of the full waiver register with criteria and coordination sheets. Annual review mode (`/waivers/annual-review`) with year-by-year review forms, KPIs, and board presentation tracking. Seeded with 17 real Selfridge ANGB (KMTC) historical waivers.
+Full airfield waiver lifecycle management modeled after AF Form 505 and the AFCEC Playbook Appendix B. Six classification types (permanent, temporary, construction, event, extension, amendment), seven status values with mandatory comment dialogs for status transitions. Waiver detail pages include criteria & standards references, coordination tracking by office, photo attachments with camera capture, and annual review history. Individual waiver PDF export with embedded photos. Excel export of the full waiver register with criteria and coordination sheets. Annual review mode (`/waivers/annual-review`) with year-by-year review forms, KPIs, and board presentation tracking.
 
 ### NOTAMs (`/notams`)
 Live FAA NOTAM feed via `notams.aim.faa.gov` — no API key required. Auto-fetches NOTAMs for the current installation's ICAO code on page load. ICAO search input for querying any airport. Full NOTAM text displayed on each card in monospace. Feed status indicator, refresh button, loading/error states. Filter chips (All/FAA/LOCAL/Active/Expired). Falls back to demo data when Supabase is not configured. Draft creation for local NOTAMs.
@@ -147,22 +165,14 @@ Module directory linking to all features. All modules visible as a flat list wit
 airfield-app/
 ├── app/
 │   ├── layout.tsx                        # Root layout (metadata, PWA manifest, toasts)
-│   ├── globals.css                       # Light/dark theme CSS custom properties
+│   ├── globals.css                       # Responsive CSS: themes, utility classes, breakpoints
 │   ├── login/page.tsx                    # Auth page (email/password + demo bypass)
-│   ├── api/
-│   │   ├── weather/route.ts             # Weather API (stub — SRS §11.2)
-│   │   ├── notams/sync/route.ts         # FAA NOTAM Search proxy (live)
-│   │   ├── airfield-status/route.ts     # Airfield status GET/PATCH
-│   │   ├── installations/route.ts       # Installation management POST/DELETE
-│   │   └── admin/                        # Admin API routes (service role)
-│   │       ├── invite/route.ts          # User invitation
-│   │       ├── reset-password/route.ts  # Password reset email
-│   │       └── users/[id]/route.ts      # Profile update + user deletion
+│   ├── api/                              # Server-side API routes (7 endpoints)
 │   ├── auth/confirm/route.ts            # OTP/PKCE token exchange for email links
 │   ├── reset-password/page.tsx          # Password reset form
 │   ├── setup-account/page.tsx           # Invited user account setup
 │   └── (app)/                            # Authenticated app shell
-│       ├── layout.tsx                    # Header + bottom nav, 480px max-width
+│       ├── layout.tsx                    # Header + InfoBar + sidebar + bottom nav
 │       ├── page.tsx                      # Dashboard
 │       ├── checks/                       # Check form, history, detail
 │       ├── discrepancies/                # List, create, detail
@@ -172,72 +182,40 @@ airfield-app/
 │       ├── regulations/page.tsx          # Reference library + My Documents
 │       ├── library/page.tsx              # Admin PDF library management
 │       ├── aircraft/page.tsx             # Aircraft database with ACN/PCN
-│       ├── reports/                      # Hub + 4 report pages (daily, discrepancies, trends, aging)
+│       ├── reports/                      # Hub + 4 report pages
 │       ├── settings/                     # Hub + base-setup + templates
-│       ├── waivers/                       # List, create, detail, edit, annual review
+│       ├── waivers/                      # List, create, detail, edit, annual review
+│       ├── activity/page.tsx             # Audit trail with date filtering
 │       ├── more/page.tsx                 # Module directory
-│       ├── sync/page.tsx                 # Coming soon
+│       ├── sync/page.tsx                 # Data sync (coming soon)
 │       └── users/page.tsx                # User Management (admin)
 ├── components/
-│   ├── admin/                            # User management components
-│   │   ├── role-badge.tsx               # Color-coded role badge
-│   │   ├── status-badge.tsx             # Color-coded status badge
-│   │   ├── user-card.tsx                # User card with badges
-│   │   ├── user-list.tsx                # Scrollable card list
-│   │   ├── user-filters.tsx             # Search + filter dropdowns
-│   │   ├── user-detail-modal.tsx        # Edit profile slide-up modal
-│   │   ├── invite-user-modal.tsx        # Invite user form modal
-│   │   ├── installation-selector.tsx    # Base dropdown selector
-│   │   └── delete-confirmation-dialog.tsx  # Type-to-confirm delete
-│   ├── layout/                           # Header, bottom-nav, page-header
-│   ├── discrepancies/                    # Cards, badges, map, modals
+│   ├── admin/                            # User management components (9 files)
+│   ├── layout/                           # Header, InfoBar, sidebar, bottom-nav, page-header
+│   ├── discrepancies/                    # Cards, location map, modals
 │   ├── obstructions/                     # Airfield map with surface overlays
+│   ├── ui/                               # Badge, button, card, input, skeleton, photo-picker
 │   ├── RegulationPDFViewer.tsx          # In-app PDF viewer with zoom/touch
-│   ├── PDFLibrary.jsx                   # Admin PDF library component
-│   └── ui/                               # Badge, button, card, input, skeleton
+│   └── PDFLibrary.jsx                   # Admin PDF library component
 ├── lib/
 │   ├── constants.ts                      # Checklists, types, regulation categories
-│   ├── base-directory.ts                # 155 military installations with ICAO codes
 │   ├── aircraft-data.ts                 # 1,000+ aircraft reference entries
 │   ├── validators.ts                     # Zod schemas for all forms
-│   ├── utils.ts                          # Class merge, relative time, display IDs
+│   ├── utils.ts                          # Helpers (formatters, config checks)
 │   ├── demo-data.ts                      # Offline mock data
 │   ├── weather.ts                        # Open-Meteo weather fetching
-│   ├── inspection-draft.ts              # localStorage draft persistence
-│   ├── pdf-export.ts                     # jsPDF report generation
-│   ├── waiver-pdf.ts                    # Individual waiver PDF export
-│   ├── waiver-export.ts                 # Waiver register Excel export (SheetJS)
-│   ├── regulations-data.ts              # 70 regulation entries (static seed data)
-│   ├── idb.ts                            # Shared IndexedDB helpers (6 stores)
-│   ├── pdfTextCache.ts                  # PDF text search cache (offline/server hybrid)
-│   ├── userDocuments.ts                 # User document upload/cache/search service
+│   ├── *-context.tsx                     # React context (installation, dashboard, theme, sidebar)
+│   ├── idb.ts                            # IndexedDB wrapper (6 stores)
 │   ├── calculations/                     # UFC 3-260-01 geometry + obstruction analysis
-│   │   ├── obstructions.ts             # Multi-runway surface evaluation engine
-│   │   ├── surface-criteria.ts          # Class B and Army_B surface dimensions
-│   │   └── geometry.ts                  # Geodesic math and polygon generation
-│   ├── admin/                             # User management server utilities
-│   │   ├── role-checks.ts              # isSysAdmin, isBaseAdmin, isAdmin, permission guards
-│   │   └── user-management.ts          # Client-side API wrappers for admin routes
-│   └── supabase/                         # Client, server, types, CRUD modules
-│       ├── types.ts                     # Full TypeScript types for all tables
-│       ├── client.ts / server.ts        # Browser and SSR Supabase clients
-│       ├── discrepancies.ts             # CRUD + KPI queries + photos
-│       ├── checks.ts                    # CRUD + photos + comments
-│       ├── inspections.ts               # CRUD for inspections
-│       ├── inspection-templates.ts      # Template CRUD for base config
-│       ├── obstructions.ts              # Obstruction evaluation CRUD + photos
-│       ├── navaids.ts                   # NAVAID status read/update
-│       ├── waivers.ts                   # Waiver CRUD, reviews, coordination, attachments
-│       ├── regulations.ts              # Regulation CRUD + search
-│       └── activity.ts                  # Activity log write
+│   ├── reports/                          # PDF export data + generators (4 types)
+│   ├── admin/                            # RBAC utilities + user management
+│   └── supabase/                         # Client, server, types, CRUD modules (15 files)
 ├── supabase/
 │   ├── schema.sql                        # Full database schema
 │   ├── migrations/                       # 49 migration files
 │   └── functions/                        # Edge functions (PDF text extraction)
 ├── middleware.ts                          # Auth guard + demo mode bypass
-├── public/
-│   ├── manifest.json                    # PWA manifest
-│   └── pdf.worker.min.mjs              # PDF.js worker for react-pdf
+├── public/                               # Static assets, PWA manifest, aircraft images
 └── docs/                                 # Integration guides, reference scripts
 ```
 
@@ -253,7 +231,7 @@ airfield-app/
 | `base_navaids` | Navigation aids per base |
 | `base_areas` | Airfield areas per base |
 | `base_ce_shops` | Civil Engineering shops per base |
-| `base_members` | User ↔ base membership join table |
+| `base_members` | User-base membership join table |
 | `discrepancies` | Airfield issues with full lifecycle tracking |
 | `airfield_checks` | 7 check types with JSONB data |
 | `check_comments` | Remarks timeline for checks |
@@ -281,30 +259,43 @@ airfield-app/
 
 1. **Multi-Base Architecture** — All data tables carry a `base_id` foreign key. Users belong to installations via `base_members`. Queries are scoped to the user's current installation at the application layer.
 2. **Demo Mode** — App runs fully offline with mock data when Supabase env vars are missing. No setup required for development or demos.
-3. **Mobile-First** — 480px max-width layout, bottom navigation, 44px+ touch targets. Designed for iPad/phone use in the field.
+3. **Responsive Layout** — Three breakpoints (mobile/tablet/desktop) with permanent sidebar on wider screens. CSS custom properties drive font and element scaling. Mobile bottom nav preserved for phone usage.
 4. **Theme System** — Light/Dark/Auto modes via CSS custom properties. Auto follows `prefers-color-scheme`.
 5. **Configurable Templates** — Inspection checklists are stored in the database per base, not hardcoded. New bases clone from a default template.
 6. **Client-Side PDF** — jsPDF generates reports in the browser. Server-side email delivery planned for a future phase.
-7. **RLS Partially Enabled** — RLS policies active on `storage.objects` for the `photos` bucket. Role-based write restrictions enforced at application layer (API routes + UI). Full database-level role enforcement planned for production hardening.
-8. **Hybrid Offline** — IndexedDB caches PDF blobs, extracted text, and demo-mode airfield diagrams. PWA service worker caches app shell. Full offline reference viewing supported. Airfield diagrams stored in Supabase Storage for cross-device access.
+7. **RLS Partially Enabled** — RLS policies active on `storage.objects` for the `photos` bucket. Role-based write restrictions enforced at application layer. Full database-level role enforcement planned for production hardening.
+8. **Hybrid Offline** — IndexedDB caches PDF blobs, extracted text, and demo-mode airfield diagrams. PWA service worker caches app shell.
 9. **Admin-Gated CRUD** — Base configuration and reference management require `airfield_manager` or `sys_admin` role.
 10. **Three-Tier Admin Hierarchy** — `sys_admin` has full access; `base_admin`, `airfield_manager`, and `namo` have base-scoped admin capabilities; all other roles are standard users.
+
+## Known Tech Debt
+
+| Item | Priority | Notes |
+|------|----------|-------|
+| `~134 as any` casts | Medium | Regenerate Supabase types to eliminate |
+| `PDFLibrary.jsx` | Low | Convert to TypeScript (.tsx) |
+| `public/aircraft_images/` (~41MB) | Low | Consider moving to Supabase Storage or CDN |
+| `sidebar-context.tsx` unused hooks | Low | `useSidebar()` hook is never called; provider wraps app but toggle/close methods unused since sidebar became permanent |
+| `page-header.tsx` orphaned | Low | Component defined but never imported anywhere |
+| Weather API stub | Medium | `/api/weather` returns placeholder; Open-Meteo used client-side |
+| RLS enforcement | High | Currently app-layer only for most tables |
+| No test suite | High | No unit or integration tests |
 
 ## Current Status
 
 **Build**: TypeScript compiles clean (`tsc --noEmit` passes with zero errors)
 
-**Complete modules**: Dashboard, Discrepancies, Airfield Checks, Daily Inspections, NOTAMs (live FAA feed), Obstruction Evaluations, References (with My Documents), Reports (4 types), Aircraft Database, Waivers (full lifecycle with annual review, PDF/Excel export), Settings (with Base Setup and Templates), User Management (invite, edit, reset password, roles), More hub
+**Complete modules**: Dashboard, Discrepancies, Airfield Checks, Daily Inspections, NOTAMs (live FAA feed), Obstruction Evaluations, References (with My Documents), Reports (4 types), Aircraft Database, Waivers (full lifecycle with annual review, PDF/Excel export), Settings (with Base Setup and Templates), User Management, Activity Log, More hub
 
-**Placeholder modules** (coming soon pages): Sync & Data
+**Placeholder modules**: Sync & Data
 
-**API stubs** (not yet implemented): Weather METAR (`/api/weather`)
+**API stubs**: Weather METAR (`/api/weather`)
 
 See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 
 ## Reference Documents
 
-- `SRS.md` — Software Requirements Specification (1,291 lines, the definitive blueprint)
+- `SRS.md` — Software Requirements Specification
 - `BASE-ONBOARDING.md` — Guide for adding new installations
 - `SCALING-ASSESSMENT.md` — Multi-base architecture assessment
 - `PROJECT_STATUS.md` — Architecture details and tech debt audit
