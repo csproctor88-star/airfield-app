@@ -145,7 +145,7 @@ export function Header() {
               style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: canSwitchInstallation ? 'pointer' : 'default' }}
               onClick={canSwitchInstallation ? () => setShowInstSwitcher(!showInstSwitcher) : undefined}
             >
-              <span style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', fontWeight: 700, letterSpacing: '0.08em' }}>
+              <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', fontWeight: 700, letterSpacing: '0.08em' }}>
                 {baseName
                   ? `${baseName.toUpperCase()}${baseIcao ? ` \u2022 ${baseIcao}` : ''}`
                   : ''}
@@ -159,19 +159,19 @@ export function Header() {
               <div style={{
                 position: 'absolute', top: '100%', left: 0, zIndex: 100, marginTop: 4,
                 background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-mid)',
-                borderRadius: 8, overflow: 'hidden', minWidth: 200,
+                borderRadius: 6, overflow: 'hidden', minWidth: 180,
               }}>
                 {allInstallations.map((inst) => (
                   <button
                     key={inst.id}
                     onClick={() => { switchInstallation(inst.id); setShowInstSwitcher(false) }}
                     style={{
-                      display: 'block', width: '100%', padding: '10px 14px',
+                      display: 'block', width: '100%', padding: '6px 10px',
                       background: inst.id === currentInstallation?.id ? 'rgba(56,189,248,0.08)' : 'transparent',
                       border: 'none', borderBottom: '1px solid var(--color-border)',
                       cursor: 'pointer', textAlign: 'left',
                       color: inst.id === currentInstallation?.id ? 'var(--color-accent)' : 'var(--color-text-2)',
-                      fontSize: 'var(--fs-md)', fontWeight: inst.id === currentInstallation?.id ? 700 : 500,
+                      fontSize: 'var(--fs-sm)', fontWeight: inst.id === currentInstallation?.id ? 700 : 500,
                       fontFamily: 'inherit',
                     }}
                   >
