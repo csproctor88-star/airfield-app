@@ -27,16 +27,16 @@ import {
 // All navigation items — organized by section
 const mainItems = [
   { name: 'Dashboard', icon: Home, href: '/' },
-  { name: 'Airfield Checks', icon: ClipboardCheck, href: '/checks' },
+  { name: 'Activity Log', icon: Activity, href: '/activity' },
   { name: 'Daily Inspections', icon: ClipboardList, href: '/inspections' },
+  { name: 'Airfield Checks', icon: ClipboardCheck, href: '/checks' },
+  { name: 'NOTAMs', icon: FileText, href: '/notams' },
   { name: 'Airfield Discrepancies', icon: AlertTriangle, href: '/discrepancies' },
   { name: 'Obstruction Evaluation Tool', icon: MapPin, href: '/obstructions' },
-  { name: 'NOTAMs', icon: FileText, href: '/notams' },
+  { name: 'Reference Library', icon: BookOpen, href: '/regulations' },
+  { name: 'Aircraft Database', icon: Plane, href: '/aircraft' },
   { name: 'Airfield Waivers', icon: Shield, href: '/waivers' },
   { name: 'Reports & Analytics', icon: BarChart3, href: '/reports' },
-  { name: 'Aircraft Database', icon: Plane, href: '/aircraft' },
-  { name: 'Reference Library', icon: BookOpen, href: '/regulations' },
-  { name: 'Activity Log', icon: Activity, href: '/activity' },
 ]
 
 const adminItems = [
