@@ -178,8 +178,8 @@ export async function DELETE(
       admin.from(table).update({ [column]: null } as Record<string, unknown>).eq(column, targetId).then(() => {})
 
     await Promise.all([
-      nullify('checks', 'created_by'),
-      nullify('checks', 'cancelled_by'),
+      nullify('waivers', 'created_by'),
+      nullify('waivers', 'updated_by'),
       nullify('inspections', 'inspector_id'),
       nullify('discrepancies', 'assigned_to'),
       nullify('discrepancies', 'reported_by'),

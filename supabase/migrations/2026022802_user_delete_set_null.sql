@@ -1,5 +1,5 @@
 -- Allow user deletion by changing FK references to ON DELETE SET NULL.
--- This preserves historical records (discrepancies, checks, activity, etc.)
+-- This preserves historical records (discrepancies, waivers, activity, etc.)
 -- while allowing the profile to be removed.
 
 -- 1. Drop NOT NULL constraints on FK columns that reference profiles(id)
@@ -12,15 +12,15 @@ ALTER TABLE activity_log ALTER COLUMN user_id DROP NOT NULL;
 
 -- 2. Replace FK constraints with ON DELETE SET NULL
 
--- checks.created_by
-ALTER TABLE checks DROP CONSTRAINT IF EXISTS checks_created_by_fkey;
-ALTER TABLE checks ADD CONSTRAINT checks_created_by_fkey
+-- waivers.created_by
+ALTER TABLE waivers DROP CONSTRAINT IF EXISTS waivers_created_by_fkey;
+ALTER TABLE waivers ADD CONSTRAINT waivers_created_by_fkey
   FOREIGN KEY (created_by) REFERENCES profiles(id) ON DELETE SET NULL;
 
--- checks.cancelled_by
-ALTER TABLE checks DROP CONSTRAINT IF EXISTS checks_cancelled_by_fkey;
-ALTER TABLE checks ADD CONSTRAINT checks_cancelled_by_fkey
-  FOREIGN KEY (cancelled_by) REFERENCES profiles(id) ON DELETE SET NULL;
+-- waivers.updated_by
+ALTER TABLE waivers DROP CONSTRAINT IF EXISTS waivers_updated_by_fkey;
+ALTER TABLE waivers ADD CONSTRAINT waivers_updated_by_fkey
+  FOREIGN KEY (updated_by) REFERENCES profiles(id) ON DELETE SET NULL;
 
 -- inspections.inspector_id
 ALTER TABLE inspections DROP CONSTRAINT IF EXISTS inspections_inspector_id_fkey;
