@@ -652,7 +652,7 @@ export default function HomePage() {
         const NAVAID_LABELS: Record<string, string> = { green: 'G', yellow: 'Y', red: 'R' }
         const renderNavaidItem = (n: NavaidStatus) => (
           <div key={n.id} style={{ marginBottom: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
               <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
                 {getNavaidDisplayName(n.navaid_name)}
               </span>
@@ -678,7 +678,7 @@ export default function HomePage() {
         const allFlagged = navaids.filter(n => n.status === 'yellow' || n.status === 'red')
         return (
           <>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: allFlagged.length > 0 ? 8 : 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: allFlagged.length > 0 ? 8 : 16, maxWidth: 500, marginLeft: 'auto', marginRight: 'auto' }}>
             {endGroups.filter(group => group.items.length > 0).map(group => (
               <div key={group.designator} className="card" style={{ padding: '10px 14px 4px' }}>
                 <div style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY {group.designator}</div>
@@ -752,7 +752,7 @@ export default function HomePage() {
 
       {/* ===== Quick Actions ===== */}
       <span className="section-label">Quick Actions</span>
-      <div style={{ display: 'flex', flexDirection: 'row', gap: 8, marginBottom: 20, maxWidth: 720, marginLeft: 'auto', marginRight: 'auto' }}>
+      <div style={{ display: 'flex', flexDirection: 'row', gap: 8, marginBottom: 20 }}>
         {QUICK_ACTIONS.map((q) => (
           <Link
             key={q.label}
@@ -769,6 +769,7 @@ export default function HomePage() {
               justifyContent: 'center',
               gap: 10,
               flex: 1,
+              whiteSpace: 'nowrap',
             }}
           >
             <span style={{ fontSize: 'var(--fs-5xl)' }}>{q.icon}</span>
