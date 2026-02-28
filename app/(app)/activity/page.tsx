@@ -88,6 +88,8 @@ export default function ActivityPage() {
   const [submitting, setSubmitting] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
+  const [editDate, setEditDate] = useState('')
+  const [editTime, setEditTime] = useState('')
   const [saving, setSaving] = useState(false)
   const editRef = useRef<HTMLTextAreaElement>(null)
 
@@ -174,8 +176,11 @@ export default function ActivityPage() {
 
   const handleEdit = (a: ActivityEntry) => {
     const notes = a.metadata?.notes ? String(a.metadata.notes) : ''
+    const d = new Date(a.created_at)
     setEditingId(a.id)
     setEditText(notes)
+    setEditDate(d.toISOString().slice(0, 10))
+    setEditTime(d.toISOString().slice(11, 16))
   }
 
   const handleEditSave = async () => {
@@ -188,7 +193,8 @@ export default function ActivityPage() {
       setSaving(false)
       return
     }
-    const { error } = await updateActivityEntry(editingId, editText.trim())
+    const newTimestamp = editDate && editTime ? `${editDate}T${editTime}:00.000Z` : undefined
+    const { error } = await updateActivityEntry(editingId, editText.trim(), newTimestamp)
     if (error) {
       toast.error(error)
     } else {
@@ -402,9 +408,9 @@ export default function ActivityPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
               <thead>
                 <tr>
-                  <th style={{ ...thStyle, width: 52 }}>Time</th>
-                  <th style={{ ...thStyle, width: 120 }}>User</th>
-                  <th style={thStyle}>Action</th>
+                  <th style={{ ...thStyle, width: 52 }}>Time (Z)</th>
+                  <th style={{ ...thStyle, width: 160 }}>User</th>
+                  <th style={{ ...thStyle, width: 140 }}>Action</th>
                   <th style={thStyle}>Details</th>
                   <th style={{ ...thStyle, width: 60, textAlign: 'right' }}></th>
                 </tr>
@@ -433,7 +439,7 @@ export default function ActivityPage() {
                     {/* Entry rows */}
                     {group.items.map((a) => {
                       const d = new Date(a.created_at)
-                      const timeStr = d.toTimeString().slice(0, 5)
+                      const timeStr = d.toISOString().slice(11, 16)
                       const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
                       const detailsText = buildDetailsString(a, detailsMap)
                       const link = getEntityLink(a.entity_type, a.entity_id)
@@ -442,9 +448,26 @@ export default function ActivityPage() {
                       return (
                         <tr key={a.id}>
                           <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>
-                            {timeStr}
+                            {isEditing ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                <input
+                                  type="date"
+                                  className="input-dark"
+                                  value={editDate}
+                                  onChange={(e) => setEditDate(e.target.value)}
+                                  style={{ fontSize: 'var(--fs-2xs)', padding: '2px 4px', width: 110 }}
+                                />
+                                <input
+                                  type="time"
+                                  className="input-dark"
+                                  value={editTime}
+                                  onChange={(e) => setEditTime(e.target.value)}
+                                  style={{ fontSize: 'var(--fs-2xs)', padding: '2px 4px', width: 80 }}
+                                />
+                              </div>
+                            ) : timeStr}
                           </td>
-                          <td style={{ ...tdStyle, fontWeight: 600, color: 'var(--color-cyan)', whiteSpace: 'nowrap', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <td style={{ ...tdStyle, fontWeight: 600, color: 'var(--color-cyan)', whiteSpace: 'nowrap' }}>
                             {userName}
                           </td>
                           <td

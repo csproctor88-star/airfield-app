@@ -56,7 +56,7 @@ export async function logManualEntry(text: string, baseId?: string | null): Prom
   return { error: null }
 }
 
-export async function updateActivityEntry(id: string, notes: string): Promise<{ error: string | null }> {
+export async function updateActivityEntry(id: string, notes: string, createdAt?: string): Promise<{ error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
@@ -64,10 +64,13 @@ export async function updateActivityEntry(id: string, notes: string): Promise<{ 
   const { data: existing } = await (supabase as any).from('activity_log').select('metadata').eq('id', id).single()
   const currentMeta = (existing?.metadata as Record<string, unknown>) || {}
 
+  const updates: Record<string, unknown> = { metadata: { ...currentMeta, notes } }
+  if (createdAt) updates.created_at = createdAt
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)
     .from('activity_log')
-    .update({ metadata: { ...currentMeta, notes } })
+    .update(updates)
     .eq('id', id)
 
   if (error) {
