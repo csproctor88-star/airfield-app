@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
 import { fetchActivityLog, fetchEntityDetails, type ActivityEntry, type EntityDetails } from '@/lib/supabase/activity-queries'
-import { logManualEntry } from '@/lib/supabase/activity'
+import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/supabase/activity'
 import { createClient } from '@/lib/supabase/client'
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'custom'
@@ -86,6 +86,9 @@ export default function ActivityPage() {
   const [exporting, setExporting] = useState(false)
   const [manualText, setManualText] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editText, setEditText] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const getDateRange = useCallback((): { start: string; end: string } => {
     const now = new Date()
@@ -104,7 +107,6 @@ export default function ActivityPage() {
       d.setDate(d.getDate() - 30)
       return { start: d.toISOString(), end: endISO }
     }
-    // custom
     return {
       start: new Date(`${customStart}T00:00:00`).toISOString(),
       end: new Date(`${customEnd}T23:59:59.999`).toISOString(),
@@ -125,7 +127,7 @@ export default function ActivityPage() {
     loadEntries()
   }, [loadEntries])
 
-  // Group entries by date for table section headers
+  // Group entries by date
   const grouped: { date: string; label: string; items: ActivityEntry[] }[] = []
   for (const entry of entries) {
     const d = new Date(entry.created_at)
@@ -158,6 +160,49 @@ export default function ActivityPage() {
       await loadEntries()
     }
     setSubmitting(false)
+  }
+
+  const handleEdit = (a: ActivityEntry) => {
+    const notes = a.metadata?.notes ? String(a.metadata.notes) : ''
+    setEditingId(a.id)
+    setEditText(notes)
+  }
+
+  const handleEditSave = async () => {
+    if (!editingId) return
+    setSaving(true)
+    const supabase = createClient()
+    if (!supabase) {
+      toast.success('Entry updated (demo mode)')
+      setEditingId(null)
+      setSaving(false)
+      return
+    }
+    const { error } = await updateActivityEntry(editingId, editText.trim())
+    if (error) {
+      toast.error(error)
+    } else {
+      toast.success('Entry updated')
+      setEditingId(null)
+      await loadEntries()
+    }
+    setSaving(false)
+  }
+
+  const handleDelete = async (a: ActivityEntry) => {
+    const supabase = createClient()
+    if (!supabase) {
+      toast.success('Entry deleted (demo mode)')
+      return
+    }
+    if (!confirm('Delete this activity log entry? This cannot be undone.')) return
+    const { error } = await deleteActivityEntry(a.id)
+    if (error) {
+      toast.error(error)
+    } else {
+      toast.success('Entry deleted')
+      await loadEntries()
+    }
   }
 
   const handleExport = async () => {
@@ -203,13 +248,6 @@ export default function ActivityPage() {
     { value: 'custom', label: 'Custom' },
   ]
 
-  const COL = {
-    time: { width: 52, label: 'Time' },
-    user: { width: 120, label: 'User' },
-    action: { label: 'Action' },
-    details: { label: 'Details' },
-  }
-
   const thStyle: React.CSSProperties = {
     padding: '6px 8px',
     fontSize: 'var(--fs-xs)',
@@ -228,6 +266,17 @@ export default function ActivityPage() {
     color: 'var(--color-text-2)',
     verticalAlign: 'top',
     borderBottom: '1px solid var(--color-border)',
+  }
+
+  const iconBtnStyle: React.CSSProperties = {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '2px 4px',
+    fontSize: 'var(--fs-xs)',
+    fontFamily: 'inherit',
+    fontWeight: 600,
+    lineHeight: 1,
   }
 
   return (
@@ -252,35 +301,43 @@ export default function ActivityPage() {
 
       <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 12 }}>Activity Log</div>
 
-      {/* Manual Entry Bar */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-        <input
-          type="text"
-          className="input-dark"
-          placeholder="Add manual log entry..."
-          value={manualText}
-          onChange={(e) => setManualText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              handleManualSubmit()
-            }
-          }}
-          style={{ flex: 1 }}
-        />
-        <button
-          onClick={handleManualSubmit}
-          disabled={!manualText.trim() || submitting}
-          style={{
-            padding: '0 16px', borderRadius: 8, border: 'none',
-            background: manualText.trim() ? 'var(--color-cyan)' : 'var(--color-bg-elevated)',
-            color: manualText.trim() ? 'var(--color-bg-surface-solid)' : 'var(--color-text-4)',
-            fontSize: 'var(--fs-base)', fontWeight: 700, cursor: manualText.trim() ? 'pointer' : 'default',
-            fontFamily: 'inherit', whiteSpace: 'nowrap',
-          }}
-        >
-          {submitting ? '...' : 'Add'}
-        </button>
+      {/* Manual Entry Section */}
+      <div className="card" style={{ marginBottom: 16, padding: '14px', border: '1px solid rgba(34,211,238,0.2)', background: 'rgba(34,211,238,0.04)' }}>
+        <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-cyan)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 8 }}>
+          New Log Entry
+        </div>
+        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 10, lineHeight: 1.4 }}>
+          Record notes, observations, or events not captured automatically by the system.
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <textarea
+            className="input-dark"
+            placeholder="What happened? e.g. FOD walk completed, runway sweep performed, VIP arrival coordination..."
+            value={manualText}
+            onChange={(e) => setManualText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleManualSubmit()
+              }
+            }}
+            rows={2}
+            style={{ flex: 1, resize: 'vertical', fontSize: 'var(--fs-base)' }}
+          />
+          <button
+            onClick={handleManualSubmit}
+            disabled={!manualText.trim() || submitting}
+            style={{
+              padding: '0 20px', borderRadius: 8, border: 'none', alignSelf: 'flex-end', height: 40,
+              background: manualText.trim() ? 'var(--color-cyan)' : 'var(--color-bg-elevated)',
+              color: manualText.trim() ? 'var(--color-bg-surface-solid)' : 'var(--color-text-4)',
+              fontSize: 'var(--fs-md)', fontWeight: 700, cursor: manualText.trim() ? 'pointer' : 'default',
+              fontFamily: 'inherit', whiteSpace: 'nowrap',
+            }}
+          >
+            {submitting ? '...' : 'Log'}
+          </button>
+        </div>
       </div>
 
       {/* Period Presets */}
@@ -306,24 +363,11 @@ export default function ActivityPage() {
         <div className="form-row" style={{ marginBottom: 12 }}>
           <div style={{ flex: 1 }}>
             <span className="section-label">Start</span>
-            <input
-              type="date"
-              className="input-dark"
-              value={customStart}
-              max={today}
-              onChange={(e) => setCustomStart(e.target.value)}
-            />
+            <input type="date" className="input-dark" value={customStart} max={today} onChange={(e) => setCustomStart(e.target.value)} />
           </div>
           <div style={{ flex: 1 }}>
             <span className="section-label">End</span>
-            <input
-              type="date"
-              className="input-dark"
-              value={customEnd}
-              max={today}
-              min={customStart}
-              onChange={(e) => setCustomEnd(e.target.value)}
-            />
+            <input type="date" className="input-dark" value={customEnd} max={today} min={customStart} onChange={(e) => setCustomEnd(e.target.value)} />
           </div>
         </div>
       )}
@@ -345,13 +389,14 @@ export default function ActivityPage() {
 
           {/* Columnar Table */}
           <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
               <thead>
                 <tr>
-                  <th style={{ ...thStyle, width: COL.time.width }}>{COL.time.label}</th>
-                  <th style={{ ...thStyle, width: COL.user.width }}>{COL.user.label}</th>
-                  <th style={thStyle}>{COL.action.label}</th>
-                  <th style={thStyle}>{COL.details.label}</th>
+                  <th style={{ ...thStyle, width: 52 }}>Time</th>
+                  <th style={{ ...thStyle, width: 120 }}>User</th>
+                  <th style={thStyle}>Action</th>
+                  <th style={thStyle}>Details</th>
+                  <th style={{ ...thStyle, width: 60, textAlign: 'right' }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -360,7 +405,7 @@ export default function ActivityPage() {
                     {/* Date header row */}
                     <tr key={`date-${group.date}`}>
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         style={{
                           padding: '10px 8px 4px',
                           fontSize: 'var(--fs-sm)',
@@ -382,25 +427,70 @@ export default function ActivityPage() {
                       const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
                       const detailsText = buildDetailsString(a, detailsMap)
                       const link = getEntityLink(a.entity_type, a.entity_id)
+                      const isEditing = editingId === a.id
 
                       return (
-                        <tr
-                          key={a.id}
-                          onClick={link ? () => router.push(link) : undefined}
-                          style={{ cursor: link ? 'pointer' : 'default' }}
-                        >
+                        <tr key={a.id}>
                           <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>
                             {timeStr}
                           </td>
                           <td style={{ ...tdStyle, fontWeight: 600, color: 'var(--color-cyan)', whiteSpace: 'nowrap', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {userName}
                           </td>
-                          <td style={{ ...tdStyle, color: link ? 'var(--color-cyan)' : 'var(--color-text-2)', whiteSpace: 'nowrap' }}>
+                          <td
+                            onClick={link ? () => router.push(link) : undefined}
+                            style={{ ...tdStyle, color: link ? 'var(--color-cyan)' : 'var(--color-text-2)', whiteSpace: 'nowrap', cursor: link ? 'pointer' : 'default' }}
+                          >
                             {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined)}
                             {link && <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>&rarr;</span>}
                           </td>
-                          <td style={{ ...tdStyle, color: 'var(--color-text-3)', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {detailsText || '\u2014'}
+                          <td style={{ ...tdStyle, color: 'var(--color-text-3)', maxWidth: 300 }}>
+                            {isEditing ? (
+                              <div style={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
+                                <textarea
+                                  className="input-dark"
+                                  rows={2}
+                                  value={editText}
+                                  onChange={(e) => setEditText(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditSave() }
+                                    if (e.key === 'Escape') setEditingId(null)
+                                  }}
+                                  style={{ flex: 1, fontSize: 'var(--fs-sm)', resize: 'vertical', minWidth: 0 }}
+                                  autoFocus
+                                />
+                                <button onClick={handleEditSave} disabled={saving} style={{ ...iconBtnStyle, color: 'var(--color-success)' }} title="Save">
+                                  {saving ? '...' : 'Save'}
+                                </button>
+                                <button onClick={() => setEditingId(null)} style={{ ...iconBtnStyle, color: 'var(--color-text-3)' }} title="Cancel">
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                                {detailsText || '\u2014'}
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            {!isEditing && (
+                              <>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleEdit(a) }}
+                                  style={{ ...iconBtnStyle, color: '#3B82F6' }}
+                                  title="Edit entry"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDelete(a) }}
+                                  style={{ ...iconBtnStyle, color: '#EF4444', marginLeft: 2 }}
+                                  title="Delete entry"
+                                >
+                                  Del
+                                </button>
+                              </>
+                            )}
                           </td>
                         </tr>
                       )
