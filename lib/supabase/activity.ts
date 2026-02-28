@@ -39,7 +39,7 @@ export async function logManualEntry(text: string, baseId?: string | null): Prom
     user_id: user.id,
     action: 'noted',
     entity_type: 'manual',
-    entity_id: 'manual',
+    entity_id: crypto.randomUUID(),
     entity_display_id: 'Manual',
     metadata: { notes: text },
   }
