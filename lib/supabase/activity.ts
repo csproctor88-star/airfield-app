@@ -39,8 +39,8 @@ export async function logManualEntry(text: string, baseId?: string | null): Prom
     user_id: user.id,
     action: 'noted',
     entity_type: 'manual',
-    entity_id: null,
-    entity_display_id: null,
+    entity_id: 'manual',
+    entity_display_id: 'Manual',
     metadata: { notes: text },
   }
   if (baseId) row.base_id = baseId
