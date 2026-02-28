@@ -171,6 +171,34 @@ export async function DELETE(
       return NextResponse.json({ error: 'You cannot delete your own account' }, { status: 400 })
     }
 
+    // Unlink all foreign key references so historical data is preserved.
+    // After running migration 2026022802, these columns allow NULL and have ON DELETE SET NULL,
+    // so Postgres handles it automatically. These explicit updates are a safety net.
+    const nullify = (table: string, column: string) =>
+      admin.from(table).update({ [column]: null } as Record<string, unknown>).eq(column, targetId).then(() => {})
+
+    await Promise.all([
+      nullify('checks', 'created_by'),
+      nullify('checks', 'cancelled_by'),
+      nullify('inspections', 'inspector_id'),
+      nullify('discrepancies', 'assigned_to'),
+      nullify('discrepancies', 'reported_by'),
+      nullify('photos', 'uploaded_by'),
+      nullify('navaid_statuses', 'updated_by'),
+      nullify('obstruction_evaluations', 'evaluated_by'),
+      nullify('activity_log', 'user_id'),
+      nullify('waiver_reviews', 'updated_by'),
+      nullify('runway_status_log', 'changed_by'),
+    ]).catch((err) => {
+      console.warn('[admin/users/DELETE] Some FK nullify failed (run migration 2026022802):', err)
+    })
+
+    // Delete from base_members
+    await admin.from('base_members').delete().eq('user_id', targetId)
+
+    // Delete from user_regulation_pdfs (has ON DELETE CASCADE but be explicit)
+    await admin.from('user_regulation_pdfs').delete().eq('user_id', targetId)
+
     // Delete from profiles table
     const { error: profileDeleteError } = await admin
       .from('profiles')
@@ -181,12 +209,6 @@ export async function DELETE(
       console.error('[admin/users/DELETE] Profile delete error:', profileDeleteError)
       return NextResponse.json({ error: profileDeleteError.message }, { status: 500 })
     }
-
-    // Delete from base_members
-    await admin
-      .from('base_members')
-      .delete()
-      .eq('user_id', targetId)
 
     // Delete from Supabase auth
     const { error: authDeleteError } = await admin.auth.admin.deleteUser(targetId)

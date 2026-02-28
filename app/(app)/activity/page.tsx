@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
@@ -94,16 +94,6 @@ export default function ActivityPage() {
   const [filterUser, setFilterUser] = useState('')
   const [filterAction, setFilterAction] = useState('')
   const [filterDetails, setFilterDetails] = useState('')
-  const editRef = useRef<HTMLTextAreaElement>(null)
-
-  // Auto-resize the edit textarea to fit content
-  useEffect(() => {
-    const el = editRef.current
-    if (el) {
-      el.style.height = 'auto'
-      el.style.height = el.scrollHeight + 'px'
-    }
-  }, [editingId, editText])
 
   const getDateRange = useCallback((): { start: string; end: string } => {
     const now = new Date()
@@ -502,43 +492,11 @@ export default function ActivityPage() {
                       const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
                       const detailsText = buildDetailsString(a, detailsMap)
                       const link = getEntityLink(a.entity_type, a.entity_id)
-                      const isEditing = editingId === a.id
 
                       return (
                         <tr key={a.id}>
                           <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>
-                            {isEditing ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                <input
-                                  type="date"
-                                  className="input-dark"
-                                  value={editDate}
-                                  onChange={(e) => setEditDate(e.target.value)}
-                                  style={{ fontSize: 'var(--fs-2xs)', padding: '2px 4px', width: 110 }}
-                                />
-                                <input
-                                  type="text"
-                                  className="input-dark"
-                                  value={editTime}
-                                  onChange={(e) => {
-                                    const v = e.target.value.replace(/[^0-9:]/g, '')
-                                    if (v.length <= 5) setEditTime(v)
-                                  }}
-                                  onBlur={() => {
-                                    // Auto-format: "1430" → "14:30", "9" → "09:00"
-                                    let v = editTime.replace(/[^0-9]/g, '')
-                                    if (v.length <= 2) v = v.padStart(2, '0') + '00'
-                                    else if (v.length === 3) v = '0' + v
-                                    const hh = Math.min(23, parseInt(v.slice(0, 2))).toString().padStart(2, '0')
-                                    const mm = Math.min(59, parseInt(v.slice(2, 4))).toString().padStart(2, '0')
-                                    setEditTime(`${hh}:${mm}`)
-                                  }}
-                                  placeholder="HH:MM"
-                                  maxLength={5}
-                                  style={{ fontSize: 'var(--fs-2xs)', padding: '2px 4px', width: 60, fontFamily: 'monospace' }}
-                                />
-                              </div>
-                            ) : timeStr}
+                            {timeStr}
                           </td>
                           <td style={{ ...tdStyle, fontWeight: 600, color: 'var(--color-cyan)', whiteSpace: 'nowrap' }}>
                             {userName}
@@ -551,53 +509,25 @@ export default function ActivityPage() {
                             {link && <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>&rarr;</span>}
                           </td>
                           <td style={{ ...tdStyle, color: 'var(--color-text-3)', maxWidth: 300 }}>
-                            {isEditing ? (
-                              <div style={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
-                                <textarea
-                                  ref={editRef}
-                                  className="input-dark"
-                                  rows={1}
-                                  value={editText}
-                                  onChange={(e) => setEditText(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditSave() }
-                                    if (e.key === 'Escape') setEditingId(null)
-                                  }}
-                                  style={{ flex: 1, fontSize: 'var(--fs-sm)', resize: 'none', minWidth: 0, overflow: 'hidden' }}
-                                  autoFocus
-                                />
-                                <button onClick={handleEditSave} disabled={saving} style={{ ...iconBtnStyle, color: 'var(--color-success)' }} title="Save">
-                                  {saving ? '...' : 'Save'}
-                                </button>
-                                <button onClick={() => setEditingId(null)} style={{ ...iconBtnStyle, color: 'var(--color-text-3)' }} title="Cancel">
-                                  Cancel
-                                </button>
-                              </div>
-                            ) : (
-                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
-                                {detailsText || '\u2014'}
-                              </span>
-                            )}
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                              {detailsText || '\u2014'}
+                            </span>
                           </td>
                           <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                            {!isEditing && (
-                              <>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleEdit(a) }}
-                                  style={{ ...iconBtnStyle, color: '#3B82F6' }}
-                                  title="Edit entry"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDelete(a) }}
-                                  style={{ ...iconBtnStyle, color: '#EF4444', marginLeft: 2 }}
-                                  title="Delete entry"
-                                >
-                                  Del
-                                </button>
-                              </>
-                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleEdit(a) }}
+                              style={{ ...iconBtnStyle, color: '#3B82F6' }}
+                              title="Edit entry"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDelete(a) }}
+                              style={{ ...iconBtnStyle, color: '#EF4444', marginLeft: 2 }}
+                              title="Delete entry"
+                            >
+                              Del
+                            </button>
                           </td>
                         </tr>
                       )
@@ -608,6 +538,108 @@ export default function ActivityPage() {
             </table>
           </div>
         </>
+      )}
+
+      {/* Edit Entry Modal */}
+      {editingId && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 16, background: 'rgba(0,0,0,0.6)',
+          }}
+          onClick={() => setEditingId(null)}
+        >
+          <div
+            className="card"
+            style={{ width: '100%', maxWidth: 420, padding: 20 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 16 }}>
+              Edit Entry
+            </div>
+
+            {/* Date & Time */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+              <div>
+                <span className="section-label">Date (Z)</span>
+                <input
+                  type="date"
+                  className="input-dark"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  style={{ width: '100%', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <span className="section-label">Time (Z)</span>
+                <input
+                  type="text"
+                  className="input-dark"
+                  value={editTime}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/[^0-9:]/g, '')
+                    if (v.length <= 5) setEditTime(v)
+                  }}
+                  onBlur={() => {
+                    let v = editTime.replace(/[^0-9]/g, '')
+                    if (v.length <= 2) v = v.padStart(2, '0') + '00'
+                    else if (v.length === 3) v = '0' + v
+                    const hh = Math.min(23, parseInt(v.slice(0, 2))).toString().padStart(2, '0')
+                    const mm = Math.min(59, parseInt(v.slice(2, 4))).toString().padStart(2, '0')
+                    setEditTime(`${hh}:${mm}`)
+                  }}
+                  placeholder="HH:MM"
+                  maxLength={5}
+                  style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'monospace' }}
+                />
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div style={{ marginBottom: 16 }}>
+              <span className="section-label">Notes</span>
+              <textarea
+                className="input-dark"
+                rows={4}
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditSave() }
+                }}
+                style={{ width: '100%', boxSizing: 'border-box', fontSize: 'var(--fs-base)', resize: 'vertical' }}
+                autoFocus
+              />
+            </div>
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={handleEditSave}
+                disabled={saving}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
+                  background: saving ? 'rgba(6,182,212,0.5)' : '#06B6D4',
+                  color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+              <button
+                onClick={() => setEditingId(null)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8,
+                  border: '1px solid var(--color-border)', background: 'transparent',
+                  color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
