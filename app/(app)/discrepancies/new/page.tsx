@@ -147,7 +147,7 @@ export default function NewDiscrepancyPage() {
   }
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
           ← Back
@@ -290,7 +290,7 @@ export default function NewDiscrepancyPage() {
         </button>
 
         {photos.length > 0 && (
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+          <div className="photo-grid" style={{ marginBottom: 12 }}>
             {photos.map((p, i) => (
               <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid #38BDF833' }}>
                 <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

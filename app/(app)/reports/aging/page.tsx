@@ -51,7 +51,7 @@ export default function AgingDiscrepanciesPage() {
   // ── Loading View ──
   if (loading) {
     return (
-      <div style={{ padding: 16, paddingBottom: 100 }}>
+      <div className="page-container">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <button onClick={() => router.push('/reports')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>
             <ArrowLeft size={20} />
@@ -75,7 +75,7 @@ export default function AgingDiscrepanciesPage() {
   const sevEntries = Object.entries(summary.bySeverity).sort((a, b) => b[1] - a[1])
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
         <button onClick={() => router.push('/reports')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>
@@ -112,7 +112,7 @@ export default function AgingDiscrepanciesPage() {
         <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
           By Aging Tier
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <div className="badge-grid">
           {tiers.map((tier) => (
             <div key={tier.label} style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -133,7 +133,7 @@ export default function AgingDiscrepanciesPage() {
           <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
             By Severity
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div className="badge-grid">
             {sevEntries.map(([sev, count]) => {
               const sevColor = sev === 'critical' ? '#DC2626' : sev === 'high' ? '#EF4444' : sev === 'medium' ? '#FBBF24' : '#22C55E'
               return (
@@ -158,7 +158,7 @@ export default function AgingDiscrepanciesPage() {
           <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
             By Shop
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div className="badge-grid">
             {summary.byShop.map((s) => (
               <div key={s.shop} style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',

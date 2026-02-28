@@ -22,7 +22,7 @@ import type { UserRole } from '@/lib/supabase/types'
 
 export default function SettingsPage() {
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Settings</div>
       <CollapsibleSection label="PROFILE" icon={User} defaultOpen>
         <ProfileSectionContent />

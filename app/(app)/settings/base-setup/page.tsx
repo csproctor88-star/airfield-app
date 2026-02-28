@@ -41,7 +41,7 @@ export default function BaseSetupPage() {
   ]
 
   return (
-    <div style={{ padding: 24, maxWidth: 800, margin: '0 auto', paddingBottom: 100 }}>
+    <div className="page-container" style={{ maxWidth: 800, margin: '0 auto' }}>
       <Link href="/settings" style={{ color: 'var(--color-primary)', fontSize: 13, textDecoration: 'none' }}>
         &larr; Settings
       </Link>

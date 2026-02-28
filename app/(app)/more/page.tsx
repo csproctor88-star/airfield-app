@@ -71,7 +71,7 @@ export default function MorePage() {
     : modules.filter((m) => !m.adminOnly && !m.sysAdminOnly)
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>More</div>
 
       {/* Modules */}

@@ -93,7 +93,7 @@ export default function RegulationsPage() {
   }
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div style={{ fontSize: 16, fontWeight: 800 }}>References</div>

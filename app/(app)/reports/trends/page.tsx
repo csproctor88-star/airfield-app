@@ -51,7 +51,7 @@ export default function DiscrepancyTrendsPage() {
   // ── Picker View ──
   if (viewState === 'picker') {
     return (
-      <div style={{ padding: 16, paddingBottom: 100 }}>
+      <div className="page-container">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <button onClick={() => router.push('/reports')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>
             <ArrowLeft size={20} />
@@ -97,7 +97,7 @@ export default function DiscrepancyTrendsPage() {
   // ── Loading View ──
   if (viewState === 'loading') {
     return (
-      <div style={{ padding: 16, paddingBottom: 100 }}>
+      <div className="page-container">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <button onClick={() => setViewState('picker')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>
             <ArrowLeft size={20} />
@@ -119,7 +119,7 @@ export default function DiscrepancyTrendsPage() {
   const { summary, buckets } = data
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
         <button onClick={() => setViewState('picker')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>
@@ -203,7 +203,7 @@ export default function DiscrepancyTrendsPage() {
           <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
             Top Areas
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div className="badge-grid">
             {summary.topAreas.map((a) => (
               <div key={a.area} style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -225,7 +225,7 @@ export default function DiscrepancyTrendsPage() {
           <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
             Top Types
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div className="badge-grid">
             {summary.topTypes.map((t) => (
               <div key={t.type} style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',

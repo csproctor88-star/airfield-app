@@ -297,7 +297,7 @@ export default function UserManagementPage() {
   // Show skeleton while initializing
   if (!initialized) {
     return (
-      <div style={{ padding: 16, paddingBottom: 100 }}>
+      <div className="page-container">
         <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>User Management</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[1, 2, 3].map((i) => (
@@ -313,7 +313,7 @@ export default function UserManagementPage() {
   }
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       {/* Page Header */}
       <div
         style={{

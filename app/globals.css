@@ -243,6 +243,279 @@ html, body {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   Responsive Utility Classes — Per-Page Content
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Page container — replaces inline padding: 16, paddingBottom: 100 */
+.page-container {
+  padding: 16px;
+  padding-bottom: 100px;
+}
+
+/* KPI grid — 2-col base (Open/30+ Days style) */
+.kpi-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+/* KPI grid — 3-col base (AFM/CES/AMOPS style) */
+.kpi-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}
+
+/* Card list — vertical stack on mobile, grid on tablet+ */
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Actions row — vertical on mobile, horizontal on tablet+ */
+.actions-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Form row — stacked on mobile, side-by-side on tablet+ */
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Filter bar — scrollable on mobile, wraps on tablet+ */
+.filter-bar {
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+/* Photo grid — 64px thumbs mobile, scales up */
+.photo-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.photo-grid > * {
+  width: 64px;
+  height: 64px;
+}
+
+/* Detail grid — 2-col metadata */
+.detail-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* Checklist grid — 1-col on mobile */
+.checklist-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Badge grid — auto-fill responsive */
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
+}
+
+/* Spec grid — aircraft detail sections */
+.spec-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Responsive Layout — Mobile / Tablet / Desktop
+   ═══════════════════════════════════════════════════════════════ */
+
+/* App shell — mobile default (preserves existing 480px behavior) */
+.app-shell {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* Content area — no constraint on mobile (parent is already 480px) */
+.app-content {}
+
+/* Sidebar toggle button — hidden on mobile */
+.sidebar-toggle {
+  display: none !important;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Sidebar backdrop */
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+}
+
+/* Sidebar drawer */
+.sidebar-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  background: var(--color-bg-surface-solid);
+  border-right: 1px solid var(--color-border);
+  z-index: 201;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-drawer.open {
+  transform: translateX(0);
+}
+
+/* ── Tablet (768px+) ── */
+@media (min-width: 768px) {
+  /* Remove mobile constraint — full width */
+  .app-shell {
+    max-width: 100%;
+    margin: 0;
+  }
+
+  /* Constrain and center content */
+  .app-content {
+    max-width: 768px;
+    margin: 0 auto;
+  }
+
+  /* Show sidebar toggle */
+  .sidebar-toggle {
+    display: flex !important;
+  }
+
+  /* Hide mobile bottom nav */
+  .bottom-nav,
+  .bottom-nav::after {
+    display: none !important;
+  }
+
+  /* ── Responsive utility overrides ── */
+  .page-container {
+    padding: 24px;
+    padding-bottom: 32px;
+  }
+
+  .kpi-grid-2 { gap: 10px; }
+  .kpi-grid-3 { gap: 10px; }
+
+  .card-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .actions-row {
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  .form-row {
+    flex-direction: row;
+    gap: 12px;
+  }
+  .form-row > * { flex: 1; }
+
+  .filter-bar {
+    flex-wrap: wrap;
+    gap: 6px;
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
+
+  .photo-grid { gap: 8px; }
+  .photo-grid > * {
+    width: 80px;
+    height: 80px;
+  }
+
+  .detail-grid-2 {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+
+  .checklist-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .badge-grid { gap: 10px; }
+
+  .spec-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+}
+
+/* ── Desktop (1024px+) ── */
+@media (min-width: 1024px) {
+  .app-content {
+    max-width: 960px;
+  }
+
+  .page-container {
+    padding: 32px 40px;
+    padding-bottom: 40px;
+  }
+
+  .kpi-grid-2 {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .kpi-grid-3 {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  .card-list { gap: 14px; }
+  .actions-row { gap: 12px; }
+
+  .photo-grid { gap: 10px; }
+  .photo-grid > * {
+    width: 96px;
+    height: 96px;
+  }
+
+  .detail-grid-2 {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+
+  .badge-grid { gap: 12px; }
+
+  .spec-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+}
+
+/* ── Large desktop (1280px+) ── */
+@media (min-width: 1280px) {
+  .app-content {
+    max-width: 1100px;
+  }
+}
+
 /* ── Light-theme badge overrides ── */
 [data-theme="light"] .badge-status-active {
   background: #DCFCE7;

@@ -106,7 +106,7 @@ export default function InspectionDetailPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: 16, paddingBottom: 100 }}>
+      <div className="page-container">
         <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>Loading...</div>
       </div>
     )
@@ -115,7 +115,7 @@ export default function InspectionDetailPage() {
   const hasInProgress = inspections.some((i) => i.status === 'in_progress')
   if (hasInProgress && !usingDemo) {
     return (
-      <div style={{ padding: 16, paddingBottom: 100 }}>
+      <div className="page-container">
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
           &larr; Back
         </button>
@@ -145,7 +145,7 @@ export default function InspectionDetailPage() {
 
   if (allInspections.length === 0) {
     return (
-      <div style={{ padding: 16, paddingBottom: 100 }}>
+      <div className="page-container">
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
           &larr; Back
         </button>

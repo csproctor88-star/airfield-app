@@ -95,7 +95,7 @@ export default function DailyOpsPage() {
   // ── Picker View ──
   if (viewState === 'picker') {
     return (
-      <div style={{ padding: 16, paddingBottom: 100 }}>
+      <div className="page-container">
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <button onClick={() => router.push('/reports')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>
@@ -188,7 +188,7 @@ export default function DailyOpsPage() {
   // ── Loading View ──
   if (viewState === 'loading') {
     return (
-      <div style={{ padding: 16, paddingBottom: 100 }}>
+      <div className="page-container">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <button onClick={() => setViewState('picker')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>
             <ArrowLeft size={20} />
@@ -289,7 +289,7 @@ export default function DailyOpsPage() {
   ]
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
         <button onClick={() => setViewState('picker')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>

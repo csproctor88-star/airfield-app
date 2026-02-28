@@ -105,7 +105,7 @@ export default function WaiversPage() {
   }
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
         <div style={{ fontSize: 16, fontWeight: 800 }}>Waivers</div>
         <div style={{ display: 'flex', gap: 6 }}>
@@ -160,7 +160,7 @@ export default function WaiversPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
+      <div className="kpi-grid-2" style={{ marginBottom: 12 }}>
         {[
           { label: 'PERMANENT', key: 'permanent', value: permanentCount, color: '#8B5CF6' },
           { label: 'TEMPORARY', key: 'temporary', value: temporaryCount, color: '#3B82F6' },
@@ -190,7 +190,7 @@ export default function WaiversPage() {
         })}
       </div>
 
-      <div style={{ display: 'flex', gap: 3, marginBottom: 12, overflowX: 'auto', paddingBottom: 4 }}>
+      <div className="filter-bar" style={{ marginBottom: 12 }}>
         {FILTERS.map((v) => (
           <button
             key={v}

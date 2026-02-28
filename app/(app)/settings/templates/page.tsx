@@ -221,7 +221,7 @@ export default function TemplateManagementPage() {
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 800, margin: '0 auto' }}>
+    <div className="page-container" style={{ maxWidth: 800, margin: '0 auto' }}>
       {/* Header */}
       <Link href="/settings" style={{ color: 'var(--color-primary)', fontSize: 13, textDecoration: 'none' }}>
         &larr; Settings

@@ -172,7 +172,7 @@ export default function AnnualReviewYearPage() {
   const getClassInfo = (c: string) => WAIVER_CLASSIFICATIONS.find(t => t.value === c)
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <Link href="/waivers" style={{ color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
           &larr; Waivers

@@ -461,7 +461,7 @@ function ObstructionsContent() {
     : pointInfo?.surfaceName ?? null
 
   return (
-    <div style={{ padding: 16, paddingBottom: 120 }}>
+    <div className="page-container" style={{ paddingBottom: 120 }}>
       {/* Header */}
       <button
         onClick={() => router.back()}
@@ -547,7 +547,7 @@ function ObstructionsContent() {
       {pointInfo && (
         <div className="card" style={{ marginTop: 10 }}>
           <span className="section-label">Selected Location</span>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, fontSize: 12 }}>
+          <div className="detail-grid-2" style={{ fontSize: 12 }}>
             <div>
               <span style={{ color: 'var(--color-text-3)' }}>Coordinates</span>
               <div style={{ fontFamily: 'monospace', color: 'var(--color-text-1)', fontSize: 11, marginTop: 2 }}>
@@ -668,7 +668,7 @@ function ObstructionsContent() {
             onCapture={() => cameraInputRef.current?.click()}
           />
           {photos.length > 0 && (
-            <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+            <div className="photo-grid" style={{ marginTop: 8 }}>
               {photos.map((p, i) => (
                 <div
                   key={i}

@@ -158,7 +158,7 @@ export default function ActivityPage() {
   ]
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
           ← Back
@@ -199,7 +199,7 @@ export default function ActivityPage() {
 
       {/* Custom Date Range */}
       {period === 'custom' && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <div className="form-row" style={{ marginBottom: 12 }}>
           <div style={{ flex: 1 }}>
             <span className="section-label">Start</span>
             <input

@@ -294,7 +294,7 @@ export default function AirfieldChecksPage() {
   const typeConfig = checkType ? CHECK_TYPE_CONFIG[checkType] : null
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       {/* Header */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 16, fontWeight: 800 }}>Airfield Check</div>
@@ -494,7 +494,7 @@ export default function AirfieldChecksPage() {
           {/* IFE */}
           {checkType === 'ife' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div className="form-row">
                 <div>
                   <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 4 }}>Aircraft Type</div>
                   <input className="input-dark" placeholder="e.g., KC-135R" value={aircraftType}
@@ -513,7 +513,7 @@ export default function AirfieldChecksPage() {
               </div>
               <div>
                 <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 6 }}>AM Action Checklist</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div className="checklist-grid">
                   {EMERGENCY_ACTIONS.map((action) => {
                     const checked = checkedActions.includes(action)
                     return (
@@ -563,7 +563,7 @@ export default function AirfieldChecksPage() {
               </div>
               <div>
                 <div style={{ fontSize: 12, color: 'var(--color-text-2)', marginBottom: 6 }}>AM Action Checklist</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div className="checklist-grid">
                   {EMERGENCY_ACTIONS.map((action) => {
                     const checked = checkedActions.includes(action)
                     return (
@@ -816,7 +816,7 @@ export default function AirfieldChecksPage() {
           </div>
 
           {photos.length > 0 && (
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+            <div className="photo-grid" style={{ marginBottom: 8 }}>
               {photos.map((p, i) => (
                 <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border-active)' }}>
                   <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

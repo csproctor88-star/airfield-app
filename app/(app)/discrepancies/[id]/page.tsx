@@ -93,7 +93,7 @@ export default function DiscrepancyDetailPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: 16, paddingBottom: 100 }}>
+      <div className="page-container">
         <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>
           Loading...
         </div>
@@ -107,7 +107,7 @@ export default function DiscrepancyDetailPage() {
 
   if (!d) {
     return (
-      <div style={{ padding: 16, paddingBottom: 100 }}>
+      <div className="page-container">
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
           ← Back
         </button>
@@ -147,7 +147,7 @@ export default function DiscrepancyDetailPage() {
     : null
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
         ← Back
       </button>
@@ -164,7 +164,7 @@ export default function DiscrepancyDetailPage() {
 
         <div style={{ fontSize: 12, color: 'var(--color-text-2)', lineHeight: 1.6, marginBottom: 12 }}>{d.description}</div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
+        <div className="detail-grid-2" style={{ fontSize: 12 }}>
           {([
             ['Location', (() => { const loc = LOCATION_OPTIONS.find(l => l.value === d.location_text); return loc ? `${loc.emoji} ${loc.label}` : d.location_text })()],
             ['Type', (() => { return d.type.split(', ').map(v => { const t = DISCREPANCY_TYPES.find(dt => dt.value === v); return t ? `${t.emoji} ${t.label}` : v }).join(', ') })()],
@@ -234,7 +234,7 @@ export default function DiscrepancyDetailPage() {
 
       {/* Photo thumbnails — tap to view full screen */}
       {allPhotos.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+        <div className="photo-grid" style={{ marginBottom: 8 }}>
           {allPhotos.map((p, i) => (
             <div
               key={i}

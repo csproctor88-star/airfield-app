@@ -49,7 +49,7 @@ export default function OpenDiscrepanciesPage() {
   // ── Loading View ──
   if (loading) {
     return (
-      <div style={{ padding: 16, paddingBottom: 100 }}>
+      <div className="page-container">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <button onClick={() => router.push('/reports')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>
             <ArrowLeft size={20} />
@@ -73,7 +73,7 @@ export default function OpenDiscrepanciesPage() {
   const typeEntries = Object.entries(summary.byType).sort((a, b) => b[1] - a[1])
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
         <button onClick={() => router.push('/reports')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>
@@ -103,7 +103,7 @@ export default function OpenDiscrepanciesPage() {
         <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
           By Area
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <div className="badge-grid">
           {areaEntries.map(([area, count]) => (
             <div key={area} style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -123,7 +123,7 @@ export default function OpenDiscrepanciesPage() {
         <div style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
           By Type
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <div className="badge-grid">
           {typeEntries.map(([type, count]) => (
             <div key={type} style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',

@@ -46,7 +46,7 @@ export default function NewNotamPage() {
   }
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       {/* Back button */}
       <button
         onClick={() => router.back()}

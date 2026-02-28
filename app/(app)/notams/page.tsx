@@ -252,7 +252,7 @@ export default function NotamsPage() {
   }
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       {/* Header row */}
       <div
         style={{
@@ -417,7 +417,7 @@ export default function NotamsPage() {
       )}
 
       {/* Filter chips */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
+      <div className="filter-bar" style={{ marginBottom: 14 }}>
         {FILTERS.map((f) => (
           <button
             key={f.key}
@@ -467,7 +467,7 @@ export default function NotamsPage() {
 
       {/* NOTAM cards */}
       {!loading && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="card-list">
           {filtered.map((notam) => {
             const isExpired = notam.status === 'expired'
             const bg = cardBackground(notam.notam_number)

@@ -36,10 +36,10 @@ const REPORT_CARDS = [
 
 export default function ReportsPage() {
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Reports</div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="card-list">
         {REPORT_CARDS.map((card) => (
           <Link
             key={card.href}

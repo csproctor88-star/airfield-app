@@ -69,7 +69,7 @@ export default function ObstructionHistoryPage() {
     : evaluations
 
   return (
-    <div style={{ padding: 16, paddingBottom: 120 }}>
+    <div className="page-container" style={{ paddingBottom: 120 }}>
       {/* Header */}
       <button
         onClick={() => router.push('/obstructions')}
@@ -307,7 +307,7 @@ export default function ObstructionHistoryPage() {
 
               {/* Photo thumbnails */}
               {parsePhotoPaths(ev.photo_storage_path).length > 0 && (
-                <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                <div className="photo-grid" style={{ marginTop: 6, alignItems: 'center' }}>
                   {parsePhotoPaths(ev.photo_storage_path).slice(0, 4).map((url, pi) => (
                     <div
                       key={pi}
@@ -382,7 +382,7 @@ export default function ObstructionHistoryPage() {
               border: '1px solid var(--color-border-mid)',
               borderRadius: 12,
               padding: 24,
-              maxWidth: 320,
+              maxWidth: 'min(90vw, 400px)',
               width: '100%',
             }}
             onClick={(e) => e.stopPropagation()}

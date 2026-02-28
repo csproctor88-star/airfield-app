@@ -317,7 +317,7 @@ export default function HomePage() {
   }
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       <LoginActivityDialog />
 
       {/* ===== Weather Strip ===== */}
@@ -593,7 +593,7 @@ export default function HomePage() {
         )
       })()}
       <div className="card" style={{ marginBottom: 12, padding: '14px 12px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <div className="kpi-grid-2" style={{ marginBottom: 12 }}>
           <div
             title={currentStatus.rscTime ? `Last checked: ${currentStatus.rscTime}` : undefined}
             onClick={() => setShowRscTime(p => !p)}
@@ -752,7 +752,7 @@ export default function HomePage() {
 
       {/* ===== Quick Actions ===== */}
       <span className="section-label">Quick Actions</span>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+      <div className="actions-row" style={{ marginBottom: 20 }}>
         {QUICK_ACTIONS.map((q) => (
           <Link
             key={q.label}

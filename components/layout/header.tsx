@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { useTheme } from '@/lib/theme-context'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Menu } from 'lucide-react'
+import { useSidebar } from '@/lib/sidebar-context'
 
 // --- User presence helpers ---
 function presenceLabel(lastSeen: string | null): { label: string; color: string } {
@@ -19,6 +20,7 @@ function presenceLabel(lastSeen: string | null): { label: string; color: string 
 // Header: gradient bg, logo left, installation/user info right
 export function Header() {
   const { currentInstallation, allInstallations, installationId, switchInstallation, userRole } = useInstallation()
+  const { toggle: toggleSidebar } = useSidebar()
   const { resolvedTheme } = useTheme()
   const [userDisplay, setUserDisplay] = useState<{ name: string; lastSeen: string | null }>({ name: '—', lastSeen: null })
   const [showInstSwitcher, setShowInstSwitcher] = useState(false)
@@ -89,10 +91,27 @@ export function Header() {
         />
       </Link>
 
-      {/* Bottom row: installation (left) + user (right) */}
+      {/* Bottom row: menu toggle + installation (left) + user (right) */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%', marginTop: 6 }}>
-        {/* Installation name + ICAO + dropdown — bottom left */}
-        <div style={{ position: 'relative' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Sidebar toggle — visible on tablet+ only (CSS controlled) */}
+          <button
+            className="sidebar-toggle"
+            onClick={toggleSidebar}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 4,
+              color: 'var(--color-text-2)',
+            }}
+            aria-label="Toggle navigation menu"
+          >
+            <Menu size={20} />
+          </button>
+
+          {/* Installation name + ICAO + dropdown */}
+          <div style={{ position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             <span style={{ fontSize: 10, color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em' }}>
               {currentInstallation?.name
@@ -136,6 +155,7 @@ export function Header() {
               ))}
             </div>
           )}
+        </div>
         </div>
 
         {/* User status + name — bottom right */}

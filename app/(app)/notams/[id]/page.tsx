@@ -48,7 +48,7 @@ export default function NotamDetailPage() {
 
   if (!notam) {
     return (
-      <div style={{ padding: 16, paddingBottom: 100 }}>
+      <div className="page-container">
         <button
           onClick={() => router.back()}
           style={{
@@ -75,7 +75,7 @@ export default function NotamDetailPage() {
   const isLocal = notam.source === 'local'
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       {/* Back button */}
       <button
         onClick={() => router.back()}

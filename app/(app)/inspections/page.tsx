@@ -1019,7 +1019,7 @@ export default function InspectionsPage() {
   // ── Don't render until draft state is known ──
   if (!draftLoaded) {
     return (
-      <div style={{ padding: 16, paddingBottom: 100 }}>
+      <div className="page-container">
         <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>Loading...</div>
       </div>
     )
@@ -1031,7 +1031,7 @@ export default function InspectionsPage() {
   if (draft && !showHistory) {
 
     return (
-      <div style={{ padding: 16, paddingBottom: 120 }}>
+      <div className="page-container">
         {/* ── Header ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div>
@@ -1247,7 +1247,7 @@ export default function InspectionsPage() {
 
               {/* Thumbnails */}
               {specialPhotos.length > 0 && (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                <div className="photo-grid" style={{ marginBottom: 8 }}>
                   {specialPhotos.map((photo, idx) => (
                     <div key={idx} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border-mid)' }}>
                       <img src={photo.url} alt={photo.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -1432,7 +1432,7 @@ export default function InspectionsPage() {
 
                             {/* Photo thumbnails for this item */}
                             {itemPhotos[item.id] && itemPhotos[item.id].length > 0 && (
-                              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
+                              <div className="photo-grid" style={{ marginTop: 6 }}>
                                 {itemPhotos[item.id].map((photo, pi) => (
                                   <div key={pi} style={{ position: 'relative', width: 56, height: 56, borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(239,68,68,0.3)' }}>
                                     <img src={photo.url} alt={photo.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -1690,7 +1690,7 @@ export default function InspectionsPage() {
   // ══  HISTORY VIEW (no active draft)         ══
   // ══════════════════════════════════════════════
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>

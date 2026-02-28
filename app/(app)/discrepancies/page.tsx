@@ -394,7 +394,7 @@ export default function DiscrepanciesPage() {
   }
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
         <div style={{ fontSize: 16, fontWeight: 800 }}>Discrepancies</div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -450,7 +450,7 @@ export default function DiscrepanciesPage() {
       </div>
 
       {/* Row 1: OPEN + > 30 DAYS */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
+      <div className="kpi-grid-2" style={{ marginBottom: 6 }}>
         {[
           { label: 'OPEN', value: openCount, color: '#FBBF24', active: filter === 'open' && !over30Only && !currentStatusFilter,
             onClick: () => { setFilter('open'); setOver30Only(false); setCurrentStatusFilter(null) } },
@@ -478,7 +478,7 @@ export default function DiscrepanciesPage() {
       </div>
 
       {/* Row 2: AFM / CES / AMOPS */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
+      <div className="kpi-grid-3" style={{ marginBottom: 12 }}>
         {KPI_DEFS.map((kpi) => {
           const active = currentStatusFilter === kpi.key
           return (
@@ -511,7 +511,7 @@ export default function DiscrepanciesPage() {
         })}
       </div>
 
-      <div style={{ display: 'flex', gap: 3, marginBottom: 12, overflowX: 'auto', paddingBottom: 4 }}>
+      <div className="filter-bar" style={{ marginBottom: 12 }}>
         {FILTERS.map((v) => (
           <button
             key={v}
@@ -559,7 +559,7 @@ export default function DiscrepanciesPage() {
           Loading...
         </div>
       ) : usingDemo ? (
-        <>
+        <div className="card-list">
           {demoFiltered.map((d) => (
             <DiscrepancyCard
               key={d.id}
@@ -575,9 +575,9 @@ export default function DiscrepanciesPage() {
               workOrderNumber={d.work_order_number}
             />
           ))}
-        </>
+        </div>
       ) : (
-        <>
+        <div className="card-list">
           {(liveFiltered as DiscrepancyRow[]).map((d) => (
             <DiscrepancyCard
               key={d.id}
@@ -593,7 +593,7 @@ export default function DiscrepanciesPage() {
               workOrderNumber={d.work_order_number}
             />
           ))}
-        </>
+        </div>
       )}
 
       {!loading && filtered.length === 0 && (

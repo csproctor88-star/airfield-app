@@ -558,7 +558,7 @@ function DetailSection({ title, children }: { title: string; children: React.Rea
 
 function DetailGrid({ items }: { items: { label: string; value: string }[] }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4 }}>
+    <div className="spec-grid" style={{ gap: 4 }}>
       {items.map(({ label, value }) => (
         <div key={label} style={{
           padding: '5px 8px',
@@ -640,7 +640,7 @@ export default function AircraftPage() {
   }, [search, category, sortField, sortDesc, favorites, showFavoritesOnly])
 
   return (
-    <div style={{ padding: 16, paddingBottom: 100 }}>
+    <div className="page-container">
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
         <div>
@@ -800,7 +800,7 @@ export default function AircraftPage() {
       </div>
 
       {/* Aircraft List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="card-list">
         {filtered.length === 0 && (
           <div className="card" style={{ textAlign: 'center', padding: 32 }}>
             <Search size={24} color="var(--color-text-4)" style={{ margin: '0 auto 8px' }} />
