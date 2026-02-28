@@ -113,7 +113,7 @@ export function Header() {
           {/* Installation name + ICAO + dropdown */}
           <div style={{ position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em' }}>
+            <span style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', fontWeight: 700, letterSpacing: '0.08em' }}>
               {currentInstallation?.name
                 ? `${currentInstallation.name.toUpperCase()}${currentInstallation.icao ? ` \u2022 ${currentInstallation.icao}` : ''}`
                 : 'AIRFIELD OPS'}
