@@ -91,6 +91,9 @@ export default function ActivityPage() {
   const [editDate, setEditDate] = useState('')
   const [editTime, setEditTime] = useState('')
   const [saving, setSaving] = useState(false)
+  const [filterUser, setFilterUser] = useState('')
+  const [filterAction, setFilterAction] = useState('')
+  const [filterDetails, setFilterDetails] = useState('')
   const editRef = useRef<HTMLTextAreaElement>(null)
 
   // Auto-resize the edit textarea to fit content
@@ -139,9 +142,29 @@ export default function ActivityPage() {
     loadEntries()
   }, [loadEntries])
 
-  // Group entries by date
+  // Filter entries by search terms
+  const fu = filterUser.toLowerCase()
+  const fa = filterAction.toLowerCase()
+  const fd = filterDetails.toLowerCase()
+  const filtered = entries.filter((a) => {
+    if (fu) {
+      const userName = (a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name).toLowerCase()
+      if (!userName.includes(fu)) return false
+    }
+    if (fa) {
+      const actionStr = formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined).toLowerCase()
+      if (!actionStr.includes(fa)) return false
+    }
+    if (fd) {
+      const detailsStr = buildDetailsString(a, detailsMap).toLowerCase()
+      if (!detailsStr.includes(fd)) return false
+    }
+    return true
+  })
+
+  // Group filtered entries by date
   const grouped: { date: string; label: string; items: ActivityEntry[] }[] = []
-  for (const entry of entries) {
+  for (const entry of filtered) {
     const d = new Date(entry.created_at)
     const dateKey = d.toISOString().split('T')[0]
     const dateLabel = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
@@ -400,7 +423,9 @@ export default function ActivityPage() {
       ) : (
         <>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 8 }}>
-            {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
+            {filtered.length === entries.length
+              ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`
+              : `${filtered.length} of ${entries.length} entries`}
           </div>
 
           {/* Columnar Table */}
@@ -413,6 +438,40 @@ export default function ActivityPage() {
                   <th style={{ ...thStyle, width: 140 }}>Action</th>
                   <th style={thStyle}>Details</th>
                   <th style={{ ...thStyle, width: 60, textAlign: 'right' }}></th>
+                </tr>
+                <tr>
+                  <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}></th>
+                  <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}>
+                    <input
+                      type="text"
+                      className="input-dark"
+                      placeholder="Search users..."
+                      value={filterUser}
+                      onChange={(e) => setFilterUser(e.target.value)}
+                      style={{ width: '100%', fontSize: 'var(--fs-2xs)', padding: '3px 6px' }}
+                    />
+                  </th>
+                  <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}>
+                    <input
+                      type="text"
+                      className="input-dark"
+                      placeholder="Search actions..."
+                      value={filterAction}
+                      onChange={(e) => setFilterAction(e.target.value)}
+                      style={{ width: '100%', fontSize: 'var(--fs-2xs)', padding: '3px 6px' }}
+                    />
+                  </th>
+                  <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}>
+                    <input
+                      type="text"
+                      className="input-dark"
+                      placeholder="Search details..."
+                      value={filterDetails}
+                      onChange={(e) => setFilterDetails(e.target.value)}
+                      style={{ width: '100%', fontSize: 'var(--fs-2xs)', padding: '3px 6px' }}
+                    />
+                  </th>
+                  <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}></th>
                 </tr>
               </thead>
               <tbody>
