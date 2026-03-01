@@ -20,9 +20,8 @@ const TYPE_EMOJI: Record<string, string> = Object.fromEntries(
 )
 
 function getTypeEmoji(typeStr: string): string {
-  // Handle multi-type (comma-separated) — use the first type's emoji
   const first = typeStr.split(',')[0]?.trim()
-  return TYPE_EMOJI[first] || '\u{1F4CB}' // 📋 fallback
+  return TYPE_EMOJI[first] || '\u{1F4CB}'
 }
 
 function getTypeLabel(typeStr: string): string {
@@ -35,12 +34,17 @@ function getTypeLabel(typeStr: string): string {
     .join(', ')
 }
 
+function getTypes(typeStr: string): string[] {
+  return typeStr.split(',').map((v) => v.trim())
+}
+
 export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
   const [mapLoaded, setMapLoaded] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [activeTypeFilter, setActiveTypeFilter] = useState<string | null>(null)
   const { runways } = useInstallation()
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
@@ -51,6 +55,11 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
     (d) => d.latitude != null && d.longitude != null,
   )
 
+  // Apply type filter from legend
+  const visibleDiscrepancies = activeTypeFilter
+    ? geoDiscrepancies.filter((d) => getTypes(d.type).includes(activeTypeFilter))
+    : geoDiscrepancies
+
   const noGeoCount = discrepancies.length - geoDiscrepancies.length
 
   // Initialize map
@@ -60,7 +69,6 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
 
     mapboxgl.accessToken = token
 
-    // Center on first runway or default
     const rwy = runways[0]
     const centerLat = rwy
       ? ((rwy.end1_latitude ?? 0) + (rwy.end2_latitude ?? 0)) / 2
@@ -76,6 +84,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
       zoom: 13,
       pitch: 0,
       bearing: 0,
+      attributionControl: false,
     })
 
     m.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-right')
@@ -93,7 +102,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token])
 
-  // Add/update markers when discrepancies or map changes
+  // Add/update markers when discrepancies, type filter, or map changes
   useEffect(() => {
     if (!map.current || !mapLoaded) return
 
@@ -101,8 +110,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
     markersRef.current.forEach((m) => m.remove())
     markersRef.current = []
 
-    // Add markers for each geo-located discrepancy
-    geoDiscrepancies.forEach((d) => {
+    visibleDiscrepancies.forEach((d) => {
       const lat = d.latitude!
       const lng = d.longitude!
       const emoji = getTypeEmoji(d.type)
@@ -110,7 +118,6 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
       const days = daysOpenFn(d.created_at)
       const photoUrl = photoMap?.[d.id]
 
-      // Create marker element with emoji icon
       const el = document.createElement('div')
       el.style.width = '30px'
       el.style.height = '30px'
@@ -134,7 +141,6 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
         el.style.transform = 'scale(1)'
       })
 
-      // Build popup HTML
       const photoHtml = photoUrl
         ? `<img src="${photoUrl}" alt="photo" style="width:100%;max-height:120px;object-fit:cover;border-radius:6px;margin-bottom:6px;display:block;" onerror="this.style.display='none'" />`
         : ''
@@ -159,7 +165,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
       const popup = new mapboxgl.Popup({
         offset: 18,
         closeButton: true,
-        closeOnClick: false,
+        closeOnClick: true,
         maxWidth: '280px',
         className: 'discrepancy-map-popup',
       }).setHTML(popupHtml)
@@ -172,28 +178,32 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
       markersRef.current.push(marker)
     })
 
-    // Fit bounds if we have multiple points
-    if (geoDiscrepancies.length > 1) {
+    // Fit bounds
+    if (visibleDiscrepancies.length > 1) {
       const bounds = new mapboxgl.LngLatBounds()
-      geoDiscrepancies.forEach((d) => {
+      visibleDiscrepancies.forEach((d) => {
         bounds.extend([d.longitude!, d.latitude!])
       })
       map.current.fitBounds(bounds, { padding: 60, maxZoom: 15, duration: 800 })
-    } else if (geoDiscrepancies.length === 1) {
+    } else if (visibleDiscrepancies.length === 1) {
       map.current.flyTo({
-        center: [geoDiscrepancies[0].longitude!, geoDiscrepancies[0].latitude!],
+        center: [visibleDiscrepancies[0].longitude!, visibleDiscrepancies[0].latitude!],
         zoom: 14,
         duration: 800,
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapLoaded, discrepancies, photoMap])
+  }, [mapLoaded, discrepancies, photoMap, activeTypeFilter])
 
   const handleToggleExpand = useCallback(() => {
     setExpanded((prev) => !prev)
     setTimeout(() => {
       map.current?.resize()
     }, 50)
+  }, [])
+
+  const handleLegendClick = useCallback((typeValue: string) => {
+    setActiveTypeFilter((prev) => (prev === typeValue ? null : typeValue))
   }, [])
 
   if (!mapboxReady) {
@@ -241,9 +251,9 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
     )
   }
 
-  // Build legend entries from the discrepancy types actually present
+  // Build legend entries from the discrepancy types actually present in the data
   const presentTypes = new Set(
-    geoDiscrepancies.flatMap((d) => d.type.split(',').map((v) => v.trim())),
+    geoDiscrepancies.flatMap((d) => getTypes(d.type)),
   )
   const legendItems = DISCREPANCY_TYPES.filter((t) => presentTypes.has(t.value))
 
@@ -284,31 +294,67 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
           {expanded ? '\u2296 Collapse' : '\u2295 Expand'}
         </button>
       )}
-      {/* Legend — type icons */}
+      {/* Legend — top-left, clickable type filter */}
       {mapLoaded && legendItems.length > 0 && (
         <div
           style={{
             position: 'absolute',
-            bottom: 8,
+            top: 8,
             left: 8,
             background: 'rgba(4, 7, 12, 0.88)',
             border: '1px solid rgba(148, 163, 184, 0.2)',
             borderRadius: 6,
-            padding: '6px 10px',
+            padding: '6px 8px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 2,
+            gap: 1,
           }}
         >
-          <div style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Type
+          <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Filter by Type
           </div>
-          {legendItems.map((t) => (
-            <div key={t.value} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ fontSize: '12px', flexShrink: 0, width: 16, textAlign: 'center' }}>{t.emoji}</span>
-              <span style={{ fontSize: '10px', color: '#CBD5E1', fontWeight: 600 }}>{t.label}</span>
+          {legendItems.map((t) => {
+            const isActive = activeTypeFilter === t.value
+            const isDimmed = activeTypeFilter !== null && !isActive
+            return (
+              <div
+                key={t.value}
+                onClick={() => handleLegendClick(t.value)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '2px 4px',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  background: isActive ? 'rgba(34, 211, 238, 0.12)' : 'transparent',
+                  opacity: isDimmed ? 0.4 : 1,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span style={{ fontSize: '12px', flexShrink: 0, width: 16, textAlign: 'center' }}>{t.emoji}</span>
+                <span style={{ fontSize: '10px', color: isActive ? '#22D3EE' : '#CBD5E1', fontWeight: 600 }}>{t.label}</span>
+              </div>
+            )
+          })}
+          {activeTypeFilter && (
+            <div
+              onClick={() => setActiveTypeFilter(null)}
+              style={{
+                fontSize: '9px',
+                fontWeight: 700,
+                color: '#94A3B8',
+                cursor: 'pointer',
+                textAlign: 'center',
+                marginTop: 2,
+                padding: '2px 4px',
+                borderRadius: 4,
+                borderTop: '1px solid rgba(148,163,184,0.15)',
+              }}
+            >
+              Show All
             </div>
-          ))}
+          )}
         </div>
       )}
       {/* Stats badge */}
@@ -327,14 +373,14 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
             fontWeight: 600,
           }}
         >
-          {geoDiscrepancies.length} pinned
+          {visibleDiscrepancies.length}{activeTypeFilter ? ` / ${geoDiscrepancies.length}` : ''} pinned
           {noGeoCount > 0 && (
             <span style={{ color: '#64748B' }}> &bull; {noGeoCount} no GPS</span>
           )}
         </div>
       )}
 
-      {/* Popup dark-theme CSS override */}
+      {/* Popup dark-theme CSS + hide Mapbox branding */}
       <style jsx global>{`
         .discrepancy-map-popup .mapboxgl-popup-content {
           background: rgba(15, 23, 42, 0.95) !important;
@@ -355,6 +401,10 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
         }
         .discrepancy-map-popup .mapboxgl-popup-tip {
           border-top-color: rgba(15, 23, 42, 0.95) !important;
+        }
+        .mapboxgl-ctrl-logo,
+        .mapboxgl-ctrl-attrib {
+          display: none !important;
         }
       `}</style>
     </div>
