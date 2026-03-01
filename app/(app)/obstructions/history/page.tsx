@@ -1,10 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { fetchObstructionEvaluations, deleteObstructionEvaluation, parsePhotoPaths, type ObstructionRow } from '@/lib/supabase/obstructions'
 import { useInstallation } from '@/lib/installation-context'
 import { formatDistanceToNow } from 'date-fns'
+import { Map, List } from 'lucide-react'
+
+const ObstructionMapView = lazy(() => import('@/components/obstructions/obstruction-map-view'))
 
 function matchesSearch(ev: ObstructionRow, query: string): boolean {
   const q = query.toLowerCase()
@@ -35,6 +38,7 @@ export default function ObstructionHistoryPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('map')
 
   useEffect(() => {
     async function load() {
@@ -107,53 +111,88 @@ export default function ObstructionHistoryPage() {
         )}
       </div>
 
-      {/* Search */}
+      {/* Search + Map/List toggle */}
       {!loading && evaluations.length > 0 && (
-        <div style={{ position: 'relative', marginBottom: 12 }}>
-          <input
-            type="text"
-            className="input-dark"
-            placeholder="Search evaluations..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ paddingLeft: 32, paddingRight: search ? 32 : undefined }}
-          />
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--color-text-3)"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          {search && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'stretch' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <input
+              type="text"
+              className="input-dark"
+              placeholder="Search evaluations..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ paddingLeft: 32, paddingRight: search ? 32 : undefined, height: '100%' }}
+            />
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--color-text-3)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                style={{
+                  position: 'absolute',
+                  right: 8,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--color-text-3)',
+                  fontSize: 'var(--fs-2xl)',
+                  cursor: 'pointer',
+                  padding: '0 4px',
+                  lineHeight: 1,
+                  fontFamily: 'inherit',
+                }}
+              >
+                ×
+              </button>
+            )}
+          </div>
+          <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
             <button
-              type="button"
-              onClick={() => setSearch('')}
+              onClick={() => setViewMode('map')}
+              title="Map view"
               style={{
-                position: 'absolute',
-                right: 8,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
+                background: viewMode === 'map' ? 'rgba(34,211,238,0.15)' : 'transparent',
                 border: 'none',
-                color: 'var(--color-text-3)',
-                fontSize: 'var(--fs-2xl)',
+                borderRight: '1px solid var(--color-border)',
+                padding: '4px 8px',
+                color: viewMode === 'map' ? 'var(--color-cyan)' : 'var(--color-text-3)',
                 cursor: 'pointer',
-                padding: '0 4px',
-                lineHeight: 1,
-                fontFamily: 'inherit',
+                display: 'flex',
+                alignItems: 'center',
               }}
             >
-              ×
+              <Map size={14} />
             </button>
-          )}
+            <button
+              onClick={() => setViewMode('list')}
+              title="List view"
+              style={{
+                background: viewMode === 'list' ? 'rgba(34,211,238,0.15)' : 'transparent',
+                border: 'none',
+                padding: '4px 8px',
+                color: viewMode === 'list' ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <List size={14} />
+            </button>
+          </div>
         </div>
       )}
 
@@ -163,7 +202,7 @@ export default function ObstructionHistoryPage() {
         </div>
       ) : evaluations.length === 0 ? (
         <div style={{ textAlign: 'center', paddingTop: 40 }}>
-          <div style={{ fontSize: 'var(--fs-5xl)', marginBottom: 8 }}>🗺️</div>
+          <div style={{ fontSize: 'var(--fs-5xl)', marginBottom: 8 }}>&#x1F5FA;&#xFE0F;</div>
           <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)', marginBottom: 4 }}>
             No evaluations yet
           </div>
@@ -171,30 +210,52 @@ export default function ObstructionHistoryPage() {
             Saved obstruction evaluations will appear here.
           </div>
         </div>
-      ) : filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', paddingTop: 40 }}>
-          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)', marginBottom: 4 }}>
-            No evaluations match &ldquo;{search.trim()}&rdquo;
-          </div>
-          <button
-            type="button"
-            onClick={() => setSearch('')}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--color-accent)',
-              fontSize: 'var(--fs-base)',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              padding: 0,
-            }}
-          >
-            Clear search
-          </button>
-        </div>
       ) : (
-        filtered.map((ev) => {
+        <>
+          {/* Map view */}
+          {viewMode === 'map' && (
+            <Suspense
+              fallback={
+                <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
+                  Loading map...
+                </div>
+              }
+            >
+              <ObstructionMapView evaluations={filtered} />
+            </Suspense>
+          )}
+
+          {/* List heading when map is shown */}
+          {viewMode === 'map' && filtered.length > 0 && (
+            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', marginTop: 12, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              All Evaluations ({filtered.length})
+            </div>
+          )}
+
+          {filtered.length === 0 ? (
+            <div style={{ textAlign: 'center', paddingTop: 40 }}>
+              <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)', marginBottom: 4 }}>
+                No evaluations match &ldquo;{search.trim()}&rdquo;
+              </div>
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--color-accent)',
+                  fontSize: 'var(--fs-base)',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  padding: 0,
+                }}
+              >
+                Clear search
+              </button>
+            </div>
+          ) : (
+            filtered.map((ev) => {
           const createdAt = new Date(ev.created_at)
           const violatedCount = (ev.violated_surfaces || []).length
 
@@ -359,6 +420,8 @@ export default function ObstructionHistoryPage() {
             </button>
           )
         })
+          )}
+        </>
       )}
 
       {/* Delete confirmation dialog */}
