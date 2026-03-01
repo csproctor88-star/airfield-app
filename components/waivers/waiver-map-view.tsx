@@ -132,20 +132,20 @@ export default function WaiverMapView({ waivers }: Props) {
         : ''
 
       const popupHtml = `
-        <div style="font-family:system-ui,-apple-system,sans-serif;max-width:260px;line-height:1.4;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-            <span style="font-size:11px;font-weight:800;color:#F59E0B;font-family:monospace;">${w.waiver_number}</span>
-            ${statusBadge}
+        <div style="font-family:system-ui,-apple-system,sans-serif;min-width:240px;max-width:340px;line-height:1.4;">
+          <div style="margin-bottom:6px;">
+            <span style="font-size:13px;font-weight:800;color:#F59E0B;font-family:monospace;display:block;margin-bottom:4px;">${w.waiver_number}</span>
+            <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
+              ${statusBadge}
+              <span style="font-size:11px;font-weight:600;color:#CBD5E1;background:rgba(148,163,184,0.12);border:1px solid rgba(148,163,184,0.2);border-radius:4px;padding:1px 6px;">${emoji} ${classLabel}</span>
+            </div>
           </div>
-          <div style="display:flex;gap:4px;margin-bottom:4px;">
-            <span style="font-size:10px;font-weight:600;color:#CBD5E1;background:rgba(148,163,184,0.12);border:1px solid rgba(148,163,184,0.2);border-radius:4px;padding:1px 6px;">${emoji} ${classLabel}</span>
-          </div>
-          <div style="font-size:13px;font-weight:700;color:#F1F5F9;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${w.description}</div>
-          <div style="font-size:11px;color:#94A3B8;">
+          <div style="font-size:14px;font-weight:700;color:#F1F5F9;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4;">${w.description}</div>
+          <div style="font-size:12px;color:#94A3B8;">
             ${w.location_description || ''}${w.proponent ? ' &bull; ' + w.proponent : ''}
           </div>
-          ${w.criteria_impact ? `<div style="font-size:10px;color:#F59E0B;margin-top:2px;">${w.criteria_impact}</div>` : ''}
-          <a href="/waivers/${w.id}" style="display:inline-block;margin-top:6px;font-size:11px;font-weight:700;color:#22D3EE;text-decoration:none;">
+          ${w.criteria_impact ? `<div style="font-size:11px;color:#F59E0B;margin-top:3px;">${w.criteria_impact}</div>` : ''}
+          <a href="/waivers/${w.id}" style="display:inline-block;margin-top:8px;font-size:12px;font-weight:700;color:#22D3EE;text-decoration:none;">
             View Details &rarr;
           </a>
         </div>
@@ -155,7 +155,7 @@ export default function WaiverMapView({ waivers }: Props) {
         offset: 18,
         closeButton: true,
         closeOnClick: true,
-        maxWidth: '280px',
+        maxWidth: '360px',
         className: 'waiver-map-popup',
       }).setHTML(popupHtml)
 
@@ -250,7 +250,7 @@ export default function WaiverMapView({ waivers }: Props) {
         ref={mapContainer}
         style={{
           width: '100%',
-          height: expanded ? '70vh' : '380px',
+          height: expanded ? 'var(--map-height-expanded)' : 'var(--map-height)',
           borderRadius: 10,
           overflow: 'hidden',
           border: '1px solid var(--color-border-mid)',
