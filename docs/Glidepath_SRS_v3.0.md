@@ -1,7 +1,7 @@
 # GLIDEPATH — Software Requirements Specification
 ## Version 3.0 | February 2026
 
-**Application:** Glidepath — Airfield OPS Management Suite
+**Application:** Glidepath
 **Current Release:** v2.6.0
 **Stack:** Next.js 14.2 (App Router) · TypeScript 5.9 · Tailwind CSS · Supabase · Mapbox GL JS
 **Primary Regulation:** DAFMAN 13-204 (Volumes 1–3) — Airfield Management

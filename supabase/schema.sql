@@ -1,4 +1,4 @@
--- Airfield OPS Management Suite — Supabase Schema
+-- Glidepath — Supabase Schema
 -- Source: SRS Section 5
 -- Run this in Supabase SQL Editor to create all tables
 

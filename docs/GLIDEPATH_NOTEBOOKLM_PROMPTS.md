@@ -8,21 +8,29 @@ This file contains structured prompts designed for Google NotebookLM. Each promp
 2. **Infographics** -- Visual one-pagers and data-driven graphics
 3. **Slide Decks** -- Presentation-ready briefing materials
 
-### How to Use
+### NotebookLM Setup
 
-1. Open [NotebookLM](https://notebooklm.google.com/).
-2. Create a new notebook (or use an existing Glidepath notebook with source documents loaded).
-3. Copy the desired prompt from this file.
-4. Paste it into the NotebookLM chat input.
-5. NotebookLM will generate the requested artifact using the prompt context and any loaded sources.
+**Notebook Organization — Use One Master Notebook:**
+Create a single notebook called **"Glidepath"** and load all source documents into it. Since every prompt references the same brand guide, statistics, and module inventory, one notebook ensures consistent context across all artifact types. You do not need separate notebooks per section.
 
-For best results, load the following source documents into your notebook before running prompts:
+**Custom Notebook Settings:**
+No custom notebook-level settings are required. Each prompt below is self-contained with all necessary style, tone, and content guidance. NotebookLM will use both the uploaded sources and the prompt instructions to generate output.
+
+**Source Documents — Upload All of These:**
 
 - `docs/GLIDEPATH_CAPABILITIES_BRIEF.md`
 - `docs/Glidepath_AFWERX_Spark_Proposal.md`
 - `docs/GLIDEPATH_BETA_TESTER_OVERVIEW.md`
 - `docs/Glidepath_SRS_v3.0.md`
 - This file itself (for the Brand & Style Guide section)
+
+### Where Each Prompt Goes
+
+| Section | Artifact Type | Where to Paste the Prompt |
+|---------|--------------|--------------------------|
+| Section 1 | Video Overview | **Audio Overview** — Click "Generate" under Audio Overview, select "Customize," and paste the prompt into the custom instructions field. NotebookLM generates an audio briefing from your sources and the prompt guidance. |
+| Section 2 | Infographic | **Notebook Chat** — Paste the prompt directly into the chat input. NotebookLM generates a structured content outline matching the layout and data specs. Use the output as a content brief for your design tool (Canva, Figma, etc.). |
+| Section 3 | Slide Deck | **Notebook Chat** — Paste the prompt directly into the chat input. NotebookLM generates slide-by-slide content with titles, bullets, and presenter notes. Use the output to build the deck in Google Slides, PowerPoint, or your preferred tool. |
 
 ---
 
@@ -35,7 +43,7 @@ Every artifact generated from these prompts must adhere to the following brand s
 | Field | Value |
 |---|---|
 | Product Name | **Glidepath** |
-| Full Title | Glidepath -- Airfield OPS Management Suite |
+| Full Name | **Glidepath** (no subtitle) |
 | Version | 2.9.0 (February 2026) |
 | Tagline | "Guiding You to Mission Success" |
 | Builder | MSgt Chris Proctor, 1C7X1 Airfield Manager |
@@ -127,8 +135,8 @@ AFWERX Spark endorsement, introduction to Platform One for enterprise deployment
 **Tone**: Briefing a senior officer -- concise, mission-focused, data-driven
 
 ```
-Generate an audio overview briefing script (2-3 minutes when read aloud) about
-Glidepath, the Airfield OPS Management Suite.
+Create a video overview artifact (2-3 minutes when read aloud) about
+Glidepath.
 
 TARGET AUDIENCE: Wing Commanders, Group Commanders, MAJCOM A3 staff, and senior
 military leaders who need to understand what this tool does and why it matters --
@@ -198,7 +206,7 @@ STYLE GUIDANCE:
 **Tone**: NCO-to-NCO -- knowledgeable, practical, relatable
 
 ```
-Generate an audio overview briefing script (3-4 minutes when read aloud) about
+Create a video overview artifact (3-4 minutes when read aloud) about
 Glidepath, aimed at fellow Airfield Managers and Airfield Operations Flight
 personnel.
 
@@ -286,9 +294,8 @@ STYLE GUIDANCE:
 **Tone**: Engineer-to-engineer -- precise, technically fluent, no hand-waving
 
 ```
-Generate an audio overview briefing script (3-4 minutes when read aloud) about
-the technical architecture and development approach behind Glidepath, the
-Airfield OPS Management Suite.
+Create a video overview artifact (3-4 minutes when read aloud) about
+the technical architecture and development approach behind Glidepath.
 
 TARGET AUDIENCE: Platform One engineers, DoD software factory teams, DevSecOps
 personnel, AFWERX technical evaluators, and any developer assessing this
@@ -388,7 +395,7 @@ STYLE GUIDANCE:
 **Tone**: Spark pitch format -- structured, compelling, operator-credible
 
 ```
-Generate an audio overview briefing script (2-3 minutes when read aloud)
+Create a video overview artifact (2-3 minutes when read aloud)
 structured as an AFWERX Spark pitch for Glidepath, the Airfield OPS Management
 Suite.
 
@@ -467,8 +474,7 @@ STYLE GUIDANCE:
 **Format**: Portrait 8.5x11 or digital equivalent
 
 ```
-Create a one-page capabilities overview infographic for Glidepath, the Airfield
-OPS Management Suite (v2.9.0, February 2026).
+Create an infographic artifact -- a one-page capabilities overview for Glidepath (v2.9.0, February 2026).
 
 LAYOUT AND VISUAL DESIGN:
 - Dark background (#0B1120) with white (#FFFFFF) primary text and slate (#94A3B8)
@@ -481,7 +487,7 @@ LAYOUT AND VISUAL DESIGN:
 
 HEADER (top 15% of page):
 - "GLIDEPATH" in large bold text with cyan accent.
-- Subtitle: "Airfield OPS Management Suite"
+- Subtitle: "Guiding You to Mission Success"
 - Tagline: "Guiding You to Mission Success"
 - Version badge: "v2.9.0 | February 2026"
 - One-line description: "A production-ready PWA consolidating every DAFMAN 13-204
@@ -542,7 +548,7 @@ FOOTER:
 **Format**: Landscape or tall portrait
 
 ```
-Create a "Before & After" comparison infographic for Glidepath, showing the
+Create an infographic artifact -- a "Before & After" comparison for Glidepath, showing the
 current fragmented state of Airfield Management operations versus the Glidepath
 solution.
 
@@ -625,7 +631,7 @@ FOOTER:
 **Format**: Large format (poster or multi-section digital graphic)
 
 ```
-Create a detailed module map infographic for Glidepath v2.9.0, showing every
+Create an infographic artifact -- a detailed module map for Glidepath v2.9.0, showing every
 module with its sub-features and capabilities.
 
 VISUAL DESIGN:
@@ -759,7 +765,7 @@ FOOTER STATS:
 **Format**: Horizontal timeline
 
 ```
-Create a deployment roadmap timeline infographic for Glidepath, showing the
+Create an infographic artifact -- a deployment roadmap timeline for Glidepath, showing the
 journey from initial development through enterprise deployment.
 
 VISUAL DESIGN:
@@ -849,8 +855,8 @@ FOOTER:
 **Format**: Data-focused single page
 
 ```
-Create a return-on-investment and quantifiable benefits infographic for
-Glidepath, the Airfield OPS Management Suite.
+Create an infographic artifact -- a return-on-investment and quantifiable benefits overview for
+Glidepath.
 
 VISUAL DESIGN:
 - Dark background (#0B1120). Cyan (#06B6D4) accents. White text. Slate (#94A3B8)
@@ -944,8 +950,7 @@ FOOTER:
 **Duration**: 15-20 minute briefing
 
 ```
-Create a 10-slide leadership briefing deck for Glidepath, the Airfield OPS
-Management Suite (v2.9.0).
+Create a slide deck artifact -- a 10-slide leadership briefing for Glidepath (v2.9.0).
 
 TARGET AUDIENCE: Wing Commander, Operations Group Commander, Mission Support
 Group Commander, and senior leadership.
@@ -961,7 +966,7 @@ VISUAL STYLE FOR ALL SLIDES:
 
 SLIDE 1: TITLE SLIDE
 - "GLIDEPATH" (large, cyan)
-- "Airfield OPS Management Suite"
+- "Guiding You to Mission Success"
 - "Guiding You to Mission Success"
 - Version: 2.9.0 | February 2026
 - Presented by: MSgt Chris Proctor, 1C7X1
@@ -1071,8 +1076,7 @@ slide.
 **Duration**: 25-30 minute presentation with Q&A
 
 ```
-Create a 15-slide AFWERX Spark Cell presentation for Glidepath, the Airfield OPS
-Management Suite (v2.9.0).
+Create a slide deck artifact -- a 15-slide AFWERX Spark Cell presentation for Glidepath (v2.9.0).
 
 TARGET AUDIENCE: AFWERX Spark Cell evaluators, base and MAJCOM innovation leads,
 Spark Tank review panels.
@@ -1086,7 +1090,7 @@ VISUAL STYLE FOR ALL SLIDES:
 - Every slide should feel like it belongs in the same deck as the others.
 
 SLIDE 1: TITLE
-- "GLIDEPATH -- Airfield OPS Management Suite"
+- "GLIDEPATH -- Guiding You to Mission Success"
 - "AFWERX Spark Cell Submission"
 - Tagline: "Guiding You to Mission Success"
 - v2.9.0 | February 2026
@@ -1240,8 +1244,7 @@ on the slide. Notes should anticipate likely questions from Spark evaluators.
 **Duration**: 10-15 minute briefing
 
 ```
-Create an 8-slide Career Field Manager briefing for Glidepath, the Airfield OPS
-Management Suite (v2.9.0).
+Create a slide deck artifact -- an 8-slide Career Field Manager briefing for Glidepath (v2.9.0).
 
 TARGET AUDIENCE: The 1C7X1 Career Field Manager (CFM), functional managers, and
 AFCFM staff who oversee Airfield Management training, standards, and force
@@ -1252,7 +1255,7 @@ VISUAL STYLE:
   (#1E293B) cards. Consistent header with "GLIDEPATH" branding.
 
 SLIDE 1: TITLE
-- "GLIDEPATH -- Airfield OPS Management Suite"
+- "GLIDEPATH -- Guiding You to Mission Success"
 - "Career Field Manager Briefing"
 - "Guiding You to Mission Success"
 - v2.9.0 | February 2026
@@ -1344,8 +1347,7 @@ implications.
 **Duration**: 20-25 minute walkthrough
 
 ```
-Create a 12-slide beta tester onboarding deck for Glidepath, the Airfield OPS
-Management Suite (v2.9.0).
+Create a slide deck artifact -- a 12-slide beta tester onboarding deck for Glidepath (v2.9.0).
 
 TARGET AUDIENCE: 1C7X1 Airfield Managers and Airfield Operations Flight personnel
 at beta test sites who will be using the application for the first time.
@@ -1357,7 +1359,7 @@ VISUAL STYLE:
 
 SLIDE 1: WELCOME
 - "Welcome to the Glidepath Beta"
-- "Airfield OPS Management Suite v2.9.0"
+- "Glidepath v2.9.0"
 - "Guiding You to Mission Success"
 - "Thank you for helping test and improve this tool for the career field"
 - Built by MSgt Chris Proctor, 1C7X1 | 127th Wing, Selfridge ANGB
@@ -1477,8 +1479,7 @@ Title: "Thank You"
 **Duration**: 15-20 minute technical briefing
 
 ```
-Create a 10-slide technical architecture overview for Glidepath, the Airfield OPS
-Management Suite (v2.9.0).
+Create a slide deck artifact -- a 10-slide technical architecture overview for Glidepath (v2.9.0).
 
 TARGET AUDIENCE: Platform One engineers, DoD software factory teams, DevSecOps
 personnel, and technical architects evaluating Glidepath for enterprise
@@ -1493,7 +1494,7 @@ VISUAL STYLE:
 
 SLIDE 1: TITLE
 - "GLIDEPATH -- Technical Architecture"
-- "Airfield OPS Management Suite v2.9.0"
+- "Glidepath v2.9.0"
 - "Stack Overview, Patterns, and Deployment Readiness"
 - February 2026
 
@@ -1651,7 +1652,7 @@ connection pooling, horizontal scaling, and security posture.
 When generating any artifact from these prompts, verify the following for brand consistency:
 
 - [ ] Product name is "Glidepath" (one word, capital G)
-- [ ] Full title uses em dash: "Glidepath -- Airfield OPS Management Suite"
+- [ ] Product name is always just "Glidepath" -- no subtitle or "OPS Management Suite"
 - [ ] Tagline is exactly: "Guiding You to Mission Success"
 - [ ] Version is 2.9.0 (February 2026)
 - [ ] Builder is MSgt Chris Proctor, 1C7X1, 127th Wing, Selfridge ANGB

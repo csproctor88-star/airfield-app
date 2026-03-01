@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Airfield OPS Management Suite.
+All notable changes to Glidepath.
 
 ## [Unreleased]
 

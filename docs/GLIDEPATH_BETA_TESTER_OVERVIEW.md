@@ -1,6 +1,5 @@
 # GLIDEPATH — Beta Tester Overview
 
-**Airfield OPS Management Suite**
 **Version 2.9.0 | February 2026**
 **"Guiding You to Mission Success"**
 
