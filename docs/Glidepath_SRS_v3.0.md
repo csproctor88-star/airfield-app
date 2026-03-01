@@ -1,9 +1,9 @@
 # GLIDEPATH — Software Requirements Specification
-## Version 3.0 | February 2026
+## Version 3.0 | March 2026
 
 **Application:** Glidepath
-**Current Release:** v2.6.0
-**Stack:** Next.js 14.2 (App Router) · TypeScript 5.9 · Tailwind CSS · Supabase · Mapbox GL JS
+**Current Release:** v2.10.0
+**Stack:** Next.js 14.2 (App Router) · TypeScript 5.9 · CSS Custom Properties + Tailwind · Supabase · Mapbox GL JS
 **Primary Regulation:** DAFMAN 13-204 (Volumes 1–3) — Airfield Management
 **Target Installation:** 127th Wing, Selfridge ANGB (KMTC), Michigan
 **Multi-Base Support:** 155+ U.S. military installations
@@ -64,10 +64,10 @@ The application covers the full spectrum of Airfield Management duties as define
 
 | Metric | Value |
 |--------|-------|
-| Application Routes | 41 |
+| Application Routes | 48 |
 | Source Files | 130+ |
 | Database Tables | 25+ |
-| Database Migrations | 49 |
+| Database Migrations | 60 |
 | Aircraft Records | 1,000+ |
 | Regulatory References | 70 |
 | Military Installations | 155 |
@@ -127,7 +127,7 @@ This fragmentation creates delayed response times, lost institutional knowledge 
 
 ### 3.2 In Scope (Built)
 
-All 13 modules listed in the Executive Summary are implemented and functional as of v2.6.0.
+All 13 modules listed in the Executive Summary are implemented and functional as of v2.10.0.
 
 ### 3.3 Out of Scope (Future)
 
@@ -204,7 +204,7 @@ All 13 modules listed in the Executive Summary are implemented and functional as
 |-------|-----------|---------|
 | Framework | Next.js (App Router) | 14.2.35 |
 | Language | TypeScript (strict mode) | 5.9.3 |
-| Styling | Tailwind CSS (light/dark/auto theme) | 3.4.19 |
+| Styling | CSS custom properties + Tailwind (light/dark/auto theme) | 3.4.19 |
 | Backend | Supabase (PostgreSQL, Auth, Storage) | SSR 0.8.0 |
 | Maps | Mapbox GL JS | 3.18.1 |
 | PDF Viewing | react-pdf (PDF.js) | 10.3.0 |
@@ -262,7 +262,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 | `inspection_template_sections` | Per-base inspection template sections (customizable) |
 | `inspection_template_items` | Per-base inspection checklist items (customizable) |
 | `notams` | FAA and LOCAL NOTAM tracking (display_id `N-YYYY-NNNN`) |
-| `photos` | Photos for discrepancies, checks, inspections, evaluations (entity_type + entity_id) |
+| `photos` | Photos for discrepancies, checks, inspections, evaluations (entity-specific FK columns: `discrepancy_id`, `check_id`, `inspection_id`, `evaluation_id`) |
 | `obstruction_evaluations` | UFC 3-260-01 surface analysis with JSONB results (display_id `OBS-YYYY-NNNN`) |
 
 **Waiver System (5 tables):**
@@ -309,18 +309,13 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 | Bucket | Access | Purpose |
 |--------|--------|---------|
 | `regulation-pdfs` | Public read policy | Official regulation PDF files |
-| `user-uploads` | Per-user (RLS planned) | User-uploaded personal documents |
-| `discrepancy-photos` | Authenticated read/write | Discrepancy photo uploads |
-| `check-photos` | Authenticated read/write | Check photo uploads |
-| `obstruction-photos` | Authenticated read/write | Obstruction evaluation photos |
-| `waiver-attachments` | Authenticated, 50MB limit | Waiver photos and documents |
-| `photos` | RLS active (INSERT/SELECT/UPDATE/DELETE) | Airfield diagrams, shared photos |
+| `photos` | RLS active (INSERT/SELECT/UPDATE/DELETE) | All entity photos, airfield diagrams |
 
 ### 6.4 Schema Artifacts
 
 The complete database schema is maintained in the repository:
 - `supabase/schema.sql` — Base table definitions and sequences
-- `supabase/migrations/` — 49 migration files applied in order
+- `supabase/migrations/` — 60 migration files applied in order
 - `lib/supabase/types.ts` — Full TypeScript type definitions for all tables
 
 ---
@@ -359,6 +354,7 @@ The complete database schema is maintained in the repository:
 | FR-DISC-010 | Days-open aging counter | ✅ |
 | FR-DISC-011 | Searchable, filterable list with clickable KPI counters | ✅ |
 | FR-DISC-012 | Auto-generated display ID: `D-YYYY-NNNN` | ✅ |
+| FR-DISC-013 | Common Operating Picture (COP) map view: Mapbox satellite map with severity-colored pins, hover popups, auto-fit bounds, list/map toggle | ✅ |
 
 ### 7.3 Airfield Checks (`/checks`)
 
@@ -417,6 +413,7 @@ The complete database schema is maintained in the repository:
 | FR-OBS-009 | Violation detection with penetration depth and exact UFC table references | ✅ |
 | FR-OBS-010 | Multiple photos per evaluation | ✅ |
 | FR-OBS-011 | Evaluation history with search and detail view | ✅ |
+| FR-OBS-012 | Obstruction history map view with list/map toggle | ✅ |
 
 ### 7.7 Aircraft Database (`/aircraft`)
 
@@ -456,6 +453,8 @@ The complete database schema is maintained in the repository:
 | FR-WAV-008 | Individual Waiver PDF export with embedded photos, criteria, coordination | ✅ |
 | FR-WAV-009 | Waiver Register Excel export (multi-sheet: Register, Criteria, Coordination) | ✅ |
 | FR-WAV-010 | 17 real KMTC historical waivers seeded as demonstration data | ✅ |
+| FR-WAV-011 | Waiver map view: Mapbox satellite map with emoji markers by classification, clickable type filter in legend, status badges in popups, list/map toggle | ✅ |
+| FR-WAV-012 | GPS location picker: click-to-place map for waiver create/edit forms with coordinate display | ✅ |
 
 ### 7.10 NOTAMs (`/notams`)
 
@@ -514,13 +513,11 @@ The complete database schema is maintained in the repository:
 | ID | Requirement | Priority |
 |----|-------------|----------|
 | FR-PLAN-001 | METAR weather integration from aviationweather.gov replacing Open-Meteo | High |
-| FR-PLAN-002 | Row-Level Security (RLS) enforcement on all tables (currently app-layer only) | High |
-| FR-PLAN-003 | Server-side email delivery for inspection reports (branded sender address) | Medium |
-| FR-PLAN-004 | Offline sync queue: store mutations while offline, auto-sync on reconnect | Medium |
-| FR-PLAN-005 | Unit and integration testing suite | Medium |
-| FR-PLAN-006 | NOTAM persistence (draft form save to DB) | Medium |
-| FR-PLAN-007 | Regenerate Supabase types to eliminate ~170 `as any` casts | Medium |
-| FR-PLAN-008 | Clean up dead files and unused image assets (~12MB) | Low |
+| FR-PLAN-002 | Server-side email delivery for inspection reports (branded sender address) | Medium |
+| FR-PLAN-003 | Offline sync queue: store mutations while offline, auto-sync on reconnect | Medium |
+| FR-PLAN-004 | Unit and integration testing suite | Medium |
+| FR-PLAN-005 | NOTAM persistence (draft form save to DB) | Medium |
+| FR-PLAN-006 | Regenerate Supabase types to eliminate ~182 `as any` casts | Medium |
 
 ### 8.2 Long-Term Vision
 
@@ -617,8 +614,9 @@ SOF, Fire Chief / ARFF, Wing Safety, MOC, Command Post, ATC / Tower, CE, Securit
 
 ### Mobile-First Layout
 
-- 480px max-width container
-- Bottom navigation (5 tabs): Home, Discrepancies, Checks, Obstruction Eval, More
+- Responsive sidebar layout with collapsible navigation
+- Mobile: bottom tab bar (5 tabs); Tablet/Desktop: left sidebar with grouped nav sections
+- Breakpoints: 480px (phone), 768px (tablet), 1024px (desktop)
 - 44px+ minimum touch targets for all interactive elements
 - Designed for iPad and phone use in the field (gloved hands)
 
@@ -808,7 +806,7 @@ All PDFs include branded headers with installation name/ICAO, page numbers, and 
 | Responsiveness | Mobile-first (480px), tablet (768px), desktop (1024px) | ✅ |
 | Security | All data over HTTPS | ✅ |
 | Security | RLS on storage buckets | ✅ |
-| Security | Full database RLS | ⏳ Planned |
+| Security | Full database RLS with role-based policies | ✅ |
 | Data Integrity | All mutations via server actions/API routes | ✅ |
 | Browser Support | Chrome 90+, Safari 15+, Edge 90+, Firefox 90+ | ✅ |
 | Offline | PWA installable, static assets cached, regulation PDFs cached | ✅ |
@@ -825,15 +823,18 @@ All PDFs include branded headers with installation name/ICAO, page numbers, and 
 - Email/password authentication via Supabase Auth
 - Session management with HTTP-only cookies
 - Account deactivation blocks login immediately
-- Three-tier role hierarchy with escalation prevention
+- Five-tier role hierarchy with escalation prevention (sys_admin → base_admin/airfield_manager/namo → amops → ces/safety/atc → read_only)
+- Row-Level Security (RLS) enabled on all database tables with role-based policies
+- Three SECURITY DEFINER helper functions: `user_has_base_access()`, `user_can_write()`, `user_is_admin()`
+- Base-scoped data isolation — users can only access data from their assigned base
+- sys_admin bypass for cross-base administration
 - RLS policies active on `storage.objects` for photos bucket
-- Role-based write restrictions at application layer (API routes + UI guards)
+- Role-based write restrictions at both database (RLS) and application layer (API routes + UI guards)
 - Admin API routes use Supabase service role key with server-side permission checks
 
 ### Production Hardening Path
 
-1. **Re-enable RLS** on all database tables with role-based policies
-2. **CAC/PKI authentication** via DoD identity provider
+1. **CAC/PKI authentication** via DoD identity provider
 3. **GCC High migration** (Azure Government or AWS GovCloud)
 4. **Platform One deployment** via Party Bus (see Section 19)
 5. **STIG compliance** audit against DoD security baselines
@@ -967,6 +968,10 @@ Platform One (P1) is the DoD's enterprise DevSecOps platform. It provides secure
 | 2.4.0 | 2026-02-25 | Waiver enhancements (status workflow, PDF export, annual review) |
 | 2.5.0 | 2026-02-26 | User management, auth flows, role system |
 | 2.6.0 | 2026-02-27 | Branding, PDF photos/maps, activity linking, diagram storage |
+| 2.7.0 | 2026-02-27 | Bug fixes, PWA hardening, code quality |
+| 2.8.0 | 2026-02-28 | Responsive layout overhaul (sidebar, breakpoints, font scaling) |
+| 2.9.0 | 2026-02-28 | Activity log overhaul, header consolidation, login UX, user delete cascade |
+| 2.10.0 | 2026-03-01 | Row-Level Security (RLS) on all tables, map views (discrepancy/waiver/obstruction), project cleanup |
 
 ### Development Approach
 
@@ -1029,7 +1034,7 @@ Built iteratively using Claude Code (AI coding agent) with the developer (MSgt C
 | Artifact | Location | Description |
 |----------|----------|-------------|
 | Database Schema | `supabase/schema.sql` | Complete table definitions |
-| Migrations | `supabase/migrations/` | 49 migration files |
+| Migrations | `supabase/migrations/` | 60 migration files |
 | TypeScript Types | `lib/supabase/types.ts` | Full type definitions for all tables |
 | Capabilities Brief | `GLIDEPATH_CAPABILITIES_BRIEF.md` | Detailed module-by-module capabilities |
 | Changelog | `CHANGELOG.md` | Complete version history |
@@ -1040,6 +1045,6 @@ Built iteratively using Claude Code (AI coding agent) with the developer (MSgt C
 
 ---
 
-*Glidepath SRS v3.0 — February 2026*
+*Glidepath SRS v3.0 — March 2026*
 *Built by MSgt Chris Proctor, 127th Wing Airfield Management, Selfridge ANGB (KMTC)*
 *"Guiding You to Mission Success"*

@@ -1,6 +1,6 @@
 # GLIDEPATH — Comprehensive Capabilities Brief
 
-**Version 2.9.0 | February 2026**
+**Version 2.10.0 | March 2026**
 **"Guiding You to Mission Success"**
 
 ---
@@ -50,7 +50,7 @@ The application covers the full spectrum of Airfield Management duties as define
 | Application Routes | 48 |
 | Source Files | 130+ |
 | Database Tables | 25+ |
-| Database Migrations | 56 |
+| Database Migrations | 60 |
 | Aircraft Records | 1,000+ |
 | Regulatory References | 70 |
 | Military Installations in Directory | 155 |
@@ -120,7 +120,7 @@ Glidepath replaces all of the above with a single application that runs on any d
                     |             |               |
                     |  +----------+-----------+  |
                     |  |   Offline Cache      |  |
-                    |  |  (Local Storage)     |  |
+                    |  |  (IndexedDB)         |  |
                     |  +----------------------+  |
                     +-------------|---------------+
                                   |
@@ -267,6 +267,7 @@ Created → Submitted to AFM → Submitted to CES → Awaiting CES Action
 - Severity-coded badges (Critical/High/Medium/Low)
 - Searchable, filterable list with KPI counters
 - Clickable KPI badges filter the list instantly
+- **Common Operating Picture (COP) Map View** — Mapbox satellite map with severity-colored pins (critical=red, high=orange, medium=yellow, low=blue), hover popups with work order, title, type, severity, location, assigned shop, days open; auto-fit bounds; list/map toggle in page header; severity legend overlay with counts
 
 **Display ID Format:** `D-2026-0042` (auto-generated sequence)
 
@@ -286,7 +287,7 @@ Seven check types unified in a single form-based system for routine and emergenc
 - Runway condition: Wet or Dry
 - Observation notes and remarks
 
-**2. RCR (Runway Condition Readings) Check**
+**3. RCR (Runway Condition Readings) Check**
 - Mu friction coefficient readings at three points: Rollout, Midpoint, Departure
 - Contaminant type: Slush, Ice, Patchy Ice, Snow, etc.
 - Contaminant depth (inches) and coverage (%)
@@ -454,6 +455,7 @@ UFC 3-260-01 Class B Imaginary Surface analysis with multi-runway support — re
 - Multiple photos per evaluation
 - Linked discrepancies and NOTAMs
 - Full evaluation history with search
+- **Obstruction History Map View** — Mapbox satellite map with evaluation markers, list/map toggle
 
 ---
 
@@ -571,6 +573,10 @@ All status transitions require a mandatory comment explaining the change, saved 
 **Export:**
 - Individual Waiver PDF — branded, all fields, criteria, coordination stamps, embedded photos
 - Waiver Register Excel — multi-sheet workbook (Register, Criteria, Coordination)
+
+**Map Views:**
+- **Waiver Map View** — Mapbox satellite map with emoji markers by classification type, clickable type filter in legend, status badges in popups, list/map toggle in page header
+- **GPS Location Picker** — Click-to-place map on waiver create/edit forms for recording exact GPS coordinates with coordinate display
 
 **Seed Data:** 17 real Selfridge ANGB (KMTC) historical waivers with criteria references, coordination records, and 2025 review history.
 
@@ -815,7 +821,7 @@ Every operational module produces exportable records for command briefings, comp
 
 **Authorization — Nine Roles:**
 
-The application implements nine roles across a three-tier hierarchy. As Glidepath moves to production, these roles will be refined so that each role's permissions align precisely with the responsibilities of each section involved in airfield operations — ensuring Airfield Management, Civil Engineering, Safety, ATC, and other offices each have access appropriate to their mission.
+The application implements nine roles across a five-tier hierarchy, enforced at both the database level (Row-Level Security) and the application layer (UI guards + API route checks). Each role's permissions align with the responsibilities of each section involved in airfield operations.
 
 | Role | Create | Edit | Delete | Manage Users | Config Base | View Reports |
 |------|--------|------|--------|-------------|-------------|-------------|
@@ -834,6 +840,14 @@ The application implements nine roles across a three-tier hierarchy. As Glidepat
 - Base admins cannot change user installations
 - Only sys_admin can delete accounts
 - Delete requires type-to-confirm dialog
+
+**Database-Level Enforcement (Row-Level Security):**
+- RLS enabled on all operational tables with role-based policies
+- Three SECURITY DEFINER helper functions: `user_has_base_access()`, `user_can_write()`, `user_is_admin()`
+- Base-scoped data isolation — users can only query data from their assigned base
+- sys_admin bypass for cross-base administration
+- Storage bucket policies on `photos` for file access control
+- Defense-in-depth: database rejects unauthorized operations even if app layer is bypassed
 
 ---
 
@@ -860,7 +874,7 @@ Glidepath is built directly from and in support of the following governing regul
 |-------|-----------|---------|
 | Framework | Next.js (App Router) | Web framework with server-side rendering, API routes, PWA support |
 | Language | TypeScript (strict mode) | Full type safety, zero compile errors |
-| Styling | Tailwind CSS | Utility-first CSS with light/dark/auto theme system |
+| Styling | CSS Custom Properties + Tailwind | Dark-theme design system with CSS variables (--color-cyan, --color-bg-surface, etc.) plus Tailwind utilities; light/dark/auto theme |
 | Backend | Supabase (PostgreSQL) | Database, authentication, file storage |
 | Maps | Mapbox GL JS | Interactive maps, satellite imagery, surface overlays |
 | PDF Viewing | react-pdf | In-app regulation PDF viewer with pinch-to-zoom |
@@ -898,7 +912,7 @@ Glidepath is built directly from and in support of the following governing regul
 
 ## 13. CURRENT MATURITY & ROADMAP
 
-### Current Status (v2.9.0)
+### Current Status (v2.10.0)
 
 | Component | Status |
 |-----------|--------|
@@ -924,6 +938,8 @@ Glidepath is built directly from and in support of the following governing regul
 | Responsive Layout (mobile/tablet/desktop) | Complete |
 | User Presence Tracking | Complete |
 | Installation Switcher | Complete |
+| Map Views (Discrepancy COP, Waiver, Obstruction) | Complete |
+| Row-Level Security (all tables) | Complete |
 | TypeScript Build | Clean (0 errors) |
 
 ### Near-Term Roadmap
@@ -932,7 +948,7 @@ Glidepath is built directly from and in support of the following governing regul
 |------------|-------------|----------|
 | METAR Weather Integration | Live aviation weather from aviationweather.gov replacing Open-Meteo | High |
 | Server-Side Email Delivery | Branded email for inspection reports (vs. client-side PDF) | Medium |
-| Row-Level Security (RLS) | Full database-level enforcement (partially implemented on storage.objects and activity_log) | Medium |
+| Regenerate Supabase Types | Eliminate ~182 `as any` casts by regenerating `lib/supabase/types.ts` | Medium |
 | Offline Sync Queue | Store mutations while offline; auto-sync when connectivity returns | Medium |
 | Unit & Integration Testing | Automated test suite for all modules | Medium |
 
@@ -978,5 +994,5 @@ Glidepath is built directly from and in support of the following governing regul
 
 ---
 
-*Document generated from Glidepath v2.9.0 codebase analysis — February 2026*
+*Document generated from Glidepath v2.10.0 codebase analysis — March 2026*
 *For questions or demonstrations, contact the Glidepath development team.*
