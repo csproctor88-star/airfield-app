@@ -40,6 +40,13 @@ Database-level role-based access control across all operational tables, replacin
 - Created and ran 7-test automated suite verifying: write restriction (CES blocked), write permission (AMOPS allowed), cross-base isolation, sys_admin bypass, comment special case, admin-vs-writable distinction
 - All 7 tests passed. Results and full 50+ test checklist saved in `docs/RLS_TEST_CHECKLIST.md`
 
+#### Map Views (Merged Feature Branches)
+- **Discrepancy map view** — Satellite map with severity-colored pins, hover popups, List/Map toggle, severity legend, expand/collapse. New component: `discrepancy-map-view.tsx`
+- **Obstruction map view** — Map view for obstruction history page. New component: `obstruction-map-view.tsx`
+- **Waiver map view** — Map view with emoji markers by classification, clickable type filter. New component: `waiver-map-view.tsx`
+- **Waiver location picker** — Click-to-place GPS picker for waiver create/edit/detail. New component: `waivers/location-map.tsx`
+- **Zoom tuning** — Widened default zoom across all maps (discrepancies, waivers, obstructions)
+
 #### Project Cleanup
 - Moved `SESSION-HANDOFF-v2.8.0.md` to `docs/`
 - Moved `rename-regulations.mjs` from `app/` to `scripts/`

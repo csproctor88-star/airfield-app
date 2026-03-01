@@ -63,7 +63,32 @@ Full 50+ test checklist saved in `docs/RLS_TEST_CHECKLIST.md`.
 - `public/001_pdf_text_search.sql` (SQL in public/)
 - `001_pdf_text_search.sql` (duplicate at root)
 
-### 4. Documentation Updates
+### 4. Map Views Merged (From Feature Branches)
+
+Three feature branches created in earlier Claude Code sessions were reviewed and merged:
+
+**Discrepancy Map View** (already on remote main via PR #29)
+- New component: `components/discrepancies/discrepancy-map-view.tsx` — Mapbox satellite map with severity-colored pins (critical=red, high=orange, medium=yellow, low=blue), hover popups with work order, title, type, severity, location, assigned shop, days open, "View Details" link
+- List/Map toggle in discrepancies page header
+- Severity legend overlay with counts, expand/collapse, auto-fit bounds
+- Dark + light theme popup CSS
+
+**Obstruction Map View** (already on remote main via PR #29)
+- `components/obstructions/obstruction-map-view.tsx` — map view for obstruction history page
+
+**Waiver Map + Location Picker** (merged from `claude/add-waiver-map-function-dZM0B`)
+- New component: `components/waivers/waiver-map-view.tsx` (399 lines) — map view for waiver list with emoji markers by classification, clickable type filter in legend, status badges in popups
+- New component: `components/waivers/location-map.tsx` (223 lines) — click-to-place GPS location picker for waiver create/edit forms
+- List/Map toggle on waiver list page
+- Location map on waiver new, edit, and detail pages
+- Widened default zoom across all maps (discrepancies, waivers, obstructions)
+
+**Branches cleaned up:**
+- `claude/discrepancy-map-view-0NOwK` — empty, deleted
+- `claude/discrepancy-map-view-YsG2U` — superseded by PR #29, deleted
+- `claude/add-waiver-map-function-dZM0B` — merged into main, deleted
+
+### 5. Documentation Updates
 
 - **CHANGELOG.md** — Added v2.10.0 entry with full RLS details, cleanup list, and role hierarchy table. Updated Unreleased section (removed completed RLS items)
 - **README.md** — Updated version to 2.10.0, migration count to 60, fixed RLS status from "Partially Enabled" to "Fully Enabled", updated tech debt table (removed RLS, added large files), updated project structure migration count
