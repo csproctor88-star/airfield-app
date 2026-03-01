@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { fetchWaivers, fetchAllWaiverCriteria, fetchAllWaiverReviews, type WaiverRow } from '@/lib/supabase/waivers'
@@ -8,6 +8,9 @@ import { DEMO_WAIVERS, DEMO_WAIVER_CRITERIA, DEMO_WAIVER_REVIEWS } from '@/lib/d
 import { WAIVER_STATUS_CONFIG, WAIVER_CLASSIFICATIONS } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
+import { Map, List } from 'lucide-react'
+
+const WaiverMapView = lazy(() => import('@/components/waivers/waiver-map-view'))
 
 const FILTERS = ['all', 'draft', 'pending', 'approved', 'active', 'completed', 'expired', 'cancelled'] as const
 const FILTER_LABELS: Record<string, string> = {
@@ -26,6 +29,7 @@ export default function WaiversPage() {
   const [filter, setFilter] = useState<string>('all')
   const [kpiFilter, setKpiFilter] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
   const [waivers, setWaivers] = useState<WaiverRow[]>([])
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
@@ -187,27 +191,62 @@ export default function WaiversPage() {
         })}
       </div>
 
-      <div className="filter-bar" style={{ marginBottom: 12 }}>
-        {FILTERS.map((v) => (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <div className="filter-bar" style={{ flex: 1 }}>
+          {FILTERS.map((v) => (
+            <button
+              key={v}
+              onClick={() => { setFilter(v); setKpiFilter(null) }}
+              style={{
+                background: filter === v ? 'rgba(34,211,238,0.12)' : 'transparent',
+                border: `1px solid ${filter === v ? 'rgba(34,211,238,0.3)' : 'var(--color-border)'}`,
+                borderRadius: 5,
+                padding: '4px 8px',
+                color: filter === v ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                fontSize: 'var(--fs-xs)',
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {FILTER_LABELS[v]}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
           <button
-            key={v}
-            onClick={() => { setFilter(v); setKpiFilter(null) }}
+            onClick={() => setViewMode('map')}
+            title="Map view"
             style={{
-              background: filter === v ? 'rgba(34,211,238,0.12)' : 'transparent',
-              border: `1px solid ${filter === v ? 'rgba(34,211,238,0.3)' : 'var(--color-border)'}`,
-              borderRadius: 5,
+              background: viewMode === 'map' ? 'rgba(34,211,238,0.15)' : 'transparent',
+              border: 'none',
+              borderRight: '1px solid var(--color-border)',
               padding: '4px 8px',
-              color: filter === v ? 'var(--color-cyan)' : 'var(--color-text-3)',
-              fontSize: 'var(--fs-xs)',
-              fontWeight: 700,
+              color: viewMode === 'map' ? 'var(--color-cyan)' : 'var(--color-text-3)',
               cursor: 'pointer',
-              fontFamily: 'inherit',
-              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
             }}
           >
-            {FILTER_LABELS[v]}
+            <Map size={14} />
           </button>
-        ))}
+          <button
+            onClick={() => setViewMode('list')}
+            title="List view"
+            style={{
+              background: viewMode === 'list' ? 'rgba(34,211,238,0.15)' : 'transparent',
+              border: 'none',
+              padding: '4px 8px',
+              color: viewMode === 'list' ? 'var(--color-cyan)' : 'var(--color-text-3)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <List size={14} />
+          </button>
+        </div>
       </div>
 
       <input
@@ -236,6 +275,25 @@ export default function WaiversPage() {
         </div>
       ) : (
         <>
+          {/* Map — shown when viewMode is 'map' */}
+          {viewMode === 'map' && (
+            <Suspense
+              fallback={
+                <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
+                  Loading map...
+                </div>
+              }
+            >
+              <WaiverMapView waivers={filtered} />
+            </Suspense>
+          )}
+
+          {/* Card list — always shown (below map when in map mode) */}
+          {viewMode === 'map' && filtered.length > 0 && (
+            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', marginTop: 12, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              All Waivers ({filtered.length})
+            </div>
+          )}
           {filtered.map((w) => {
             const classInfo = getClassInfo(w.classification)
             const statusConf = getStatusConfig(w.status)
