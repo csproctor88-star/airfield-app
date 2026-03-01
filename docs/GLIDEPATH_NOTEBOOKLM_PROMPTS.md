@@ -104,7 +104,7 @@ Use these colors for all visual artifacts to maintain brand coherence with the a
 4. Daily Inspections (configurable per-base templates, Airfield + Lighting halves)
 5. Reports & Analytics (4 report types with PDF export)
 6. Obstruction Evaluations (UFC 3-260-01, 10 surfaces, multi-runway, geodesic math)
-7. Aircraft Database (1,000+ aircraft with ACN/PCN analysis)
+7. Aircraft Database (200+ aircraft with ACN/PCN analysis)
 8. Regulations Library (70 references with offline PDF caching)
 9. Waiver Management (AF Form 505 lifecycle, annual review, Excel export)
 10. NOTAMs (live FAA feed)
