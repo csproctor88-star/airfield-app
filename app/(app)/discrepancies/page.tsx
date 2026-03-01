@@ -38,7 +38,8 @@ export default function DiscrepanciesPage() {
   const [discrepancies, setDiscrepancies] = useState<DiscrepancyRow[]>([])
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('map')
+  const [discrepancyPhotoMap, setDiscrepancyPhotoMap] = useState<Record<string, string>>({})
 
   useEffect(() => {
     async function load() {
@@ -57,6 +58,33 @@ export default function DiscrepanciesPage() {
         setDiscrepancies(data)
       }
       setLoading(false)
+
+      // Fetch first photo per discrepancy for map popups
+      if (data.length > 0 && supabase) {
+        try {
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
+          const ids = data.map(d => d.id)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: photoRows } = await (supabase as any)
+            .from('photos')
+            .select('discrepancy_id, storage_path')
+            .in('discrepancy_id', ids)
+            .order('created_at', { ascending: true })
+          if (photoRows && photoRows.length > 0) {
+            const pMap: Record<string, string> = {}
+            for (const row of photoRows) {
+              // Only keep the first photo per discrepancy
+              if (pMap[row.discrepancy_id]) continue
+              if (row.storage_path.startsWith('data:')) {
+                pMap[row.discrepancy_id] = row.storage_path
+              } else if (supabaseUrl) {
+                pMap[row.discrepancy_id] = `${supabaseUrl}/storage/v1/object/public/photos/${row.storage_path}`
+              }
+            }
+            setDiscrepancyPhotoMap(pMap)
+          }
+        } catch { /* photo fetch is best-effort */ }
+      }
     }
     load()
   }, [installationId])
@@ -402,40 +430,6 @@ export default function DiscrepanciesPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
         <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Discrepancies</div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          {/* List / Map toggle */}
-          <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
-            <button
-              onClick={() => setViewMode('list')}
-              title="List view"
-              style={{
-                background: viewMode === 'list' ? 'rgba(34,211,238,0.15)' : 'transparent',
-                border: 'none',
-                borderRight: '1px solid var(--color-border)',
-                padding: '6px 10px',
-                color: viewMode === 'list' ? 'var(--color-cyan)' : 'var(--color-text-3)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-              }}
-            >
-              <List size={16} />
-            </button>
-            <button
-              onClick={() => setViewMode('map')}
-              title="Map view"
-              style={{
-                background: viewMode === 'map' ? 'rgba(34,211,238,0.15)' : 'transparent',
-                border: 'none',
-                padding: '6px 10px',
-                color: viewMode === 'map' ? 'var(--color-cyan)' : 'var(--color-text-3)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-              }}
-            >
-              <Map size={16} />
-            </button>
-          </div>
           <button
             onClick={handleExportExcel}
             style={{
@@ -545,27 +539,62 @@ export default function DiscrepanciesPage() {
         })}
       </div>
 
-      <div className="filter-bar" style={{ marginBottom: 12 }}>
-        {FILTERS.map((v) => (
+      <div className="filter-bar" style={{ marginBottom: 12, justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {FILTERS.map((v) => (
+            <button
+              key={v}
+              onClick={() => { setFilter(v); setOver30Only(false); setCurrentStatusFilter(null) }}
+              style={{
+                background: filter === v ? 'rgba(34,211,238,0.12)' : 'transparent',
+                border: `1px solid ${filter === v ? 'rgba(34,211,238,0.3)' : 'var(--color-border)'}`,
+                borderRadius: 5,
+                padding: '4px 8px',
+                color: filter === v ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                fontSize: 'var(--fs-xs)',
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {FILTER_LABELS[v]}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
           <button
-            key={v}
-            onClick={() => { setFilter(v); setOver30Only(false); setCurrentStatusFilter(null) }}
+            onClick={() => setViewMode('map')}
+            title="Map view"
             style={{
-              background: filter === v ? 'rgba(34,211,238,0.12)' : 'transparent',
-              border: `1px solid ${filter === v ? 'rgba(34,211,238,0.3)' : 'var(--color-border)'}`,
-              borderRadius: 5,
+              background: viewMode === 'map' ? 'rgba(34,211,238,0.15)' : 'transparent',
+              border: 'none',
+              borderRight: '1px solid var(--color-border)',
               padding: '4px 8px',
-              color: filter === v ? 'var(--color-cyan)' : 'var(--color-text-3)',
-              fontSize: 'var(--fs-xs)',
-              fontWeight: 700,
+              color: viewMode === 'map' ? 'var(--color-cyan)' : 'var(--color-text-3)',
               cursor: 'pointer',
-              fontFamily: 'inherit',
-              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
             }}
           >
-            {FILTER_LABELS[v]}
+            <Map size={14} />
           </button>
-        ))}
+          <button
+            onClick={() => setViewMode('list')}
+            title="List view"
+            style={{
+              background: viewMode === 'list' ? 'rgba(34,211,238,0.15)' : 'transparent',
+              border: 'none',
+              padding: '4px 8px',
+              color: viewMode === 'list' ? 'var(--color-cyan)' : 'var(--color-text-3)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <List size={14} />
+          </button>
+        </div>
       </div>
 
       <input
@@ -592,61 +621,71 @@ export default function DiscrepanciesPage() {
         <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
           Loading...
         </div>
-      ) : viewMode === 'map' ? (
-        <Suspense
-          fallback={
-            <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
-              Loading map...
-            </div>
-          }
-        >
-          <DiscrepancyMapView
-            discrepancies={filtered as DiscrepancyRow[]}
-            daysOpenFn={daysOpen}
-          />
-        </Suspense>
-      ) : usingDemo ? (
-        <div className="card-list">
-          {demoFiltered.map((d) => (
-            <DiscrepancyCard
-              key={d.id}
-              id={d.id}
-              displayId={d.display_id}
-              title={d.title}
-              severity={d.severity}
-              status={d.status}
-              locationText={d.location_text}
-              assignedShop={d.assigned_shop}
-              daysOpen={d.days_open}
-              photoCount={d.photo_count}
-              workOrderNumber={d.work_order_number}
-            />
-          ))}
-        </div>
       ) : (
-        <div className="card-list">
-          {(liveFiltered as DiscrepancyRow[]).map((d) => (
-            <DiscrepancyCard
-              key={d.id}
-              id={d.id}
-              displayId={d.display_id}
-              title={d.title}
-              severity={d.severity}
-              status={d.status}
-              locationText={d.location_text}
-              assignedShop={d.assigned_shop}
-              daysOpen={daysOpen(d.created_at)}
-              photoCount={d.photo_count}
-              workOrderNumber={d.work_order_number}
-            />
-          ))}
-        </div>
-      )}
+        <>
+          {/* Map — shown when viewMode is 'map' */}
+          {viewMode === 'map' && (
+            <Suspense
+              fallback={
+                <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
+                  Loading map...
+                </div>
+              }
+            >
+              <DiscrepancyMapView
+                discrepancies={filtered as DiscrepancyRow[]}
+                daysOpenFn={daysOpen}
+                photoMap={discrepancyPhotoMap}
+              />
+            </Suspense>
+          )}
 
-      {!loading && viewMode === 'list' && filtered.length === 0 && (
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
-          No discrepancies match this filter
-        </div>
+          {/* Card list — always shown (below map when in map mode) */}
+          {viewMode === 'map' && filtered.length > 0 && (
+            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', marginTop: 12, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              All Discrepancies ({filtered.length})
+            </div>
+          )}
+          <div className="card-list">
+            {usingDemo
+              ? demoFiltered.map((d) => (
+                  <DiscrepancyCard
+                    key={d.id}
+                    id={d.id}
+                    displayId={d.display_id}
+                    title={d.title}
+                    severity={d.severity}
+                    status={d.status}
+                    locationText={d.location_text}
+                    assignedShop={d.assigned_shop}
+                    daysOpen={d.days_open}
+                    photoCount={d.photo_count}
+                    workOrderNumber={d.work_order_number}
+                  />
+                ))
+              : (liveFiltered as DiscrepancyRow[]).map((d) => (
+                  <DiscrepancyCard
+                    key={d.id}
+                    id={d.id}
+                    displayId={d.display_id}
+                    title={d.title}
+                    severity={d.severity}
+                    status={d.status}
+                    locationText={d.location_text}
+                    assignedShop={d.assigned_shop}
+                    daysOpen={daysOpen(d.created_at)}
+                    photoCount={d.photo_count}
+                    workOrderNumber={d.work_order_number}
+                  />
+                ))}
+          </div>
+
+          {filtered.length === 0 && (
+            <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
+              No discrepancies match this filter
+            </div>
+          )}
+        </>
       )}
     </div>
   )
