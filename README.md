@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.9.0 | **Build:** Clean | **48 routes** | **130+ source files** | **56 migrations**
+**Version:** 2.10.0 | **Build:** Clean | **48 routes** | **129 source files** | **60 migrations**
 
 ## Tech Stack
 
@@ -52,7 +52,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 Apply the schema and migrations to a Supabase project:
 
 1. Run `supabase/schema.sql` to create the base tables and sequences
-2. Apply the 56 migrations in order from `supabase/migrations/`
+2. Apply the 60 migrations in order from `supabase/migrations/`
 
 See [BASE-ONBOARDING.md](./BASE-ONBOARDING.md) for adding new installations.
 
@@ -212,7 +212,7 @@ airfield-app/
 │   └── supabase/                         # Client, server, types, CRUD modules (15 files)
 ├── supabase/
 │   ├── schema.sql                        # Full database schema
-│   ├── migrations/                       # 49 migration files
+│   ├── migrations/                       # 60 migration files
 │   └── functions/                        # Edge functions (PDF text extraction)
 ├── middleware.ts                          # Auth guard + demo mode bypass
 ├── public/                               # Static assets, PWA manifest, aircraft images
@@ -263,7 +263,7 @@ airfield-app/
 4. **Theme System** — Light/Dark/Auto modes via CSS custom properties. Auto follows `prefers-color-scheme`.
 5. **Configurable Templates** — Inspection checklists are stored in the database per base, not hardcoded. New bases clone from a default template.
 6. **Client-Side PDF** — jsPDF generates reports in the browser. Server-side email delivery planned for a future phase.
-7. **RLS Partially Enabled** — RLS policies active on `storage.objects` for the `photos` bucket. Role-based write restrictions enforced at application layer. Full database-level role enforcement planned for production hardening.
+7. **RLS Fully Enabled** — Role-based RLS policies on all tables via 3 helper functions (`user_has_base_access`, `user_can_write`, `user_is_admin`). Five-tier role hierarchy: sys_admin > base_admin/AFM/NAMO > amops > CES/safety/ATC > read_only. Storage bucket policies on `storage.objects`.
 8. **Hybrid Offline** — IndexedDB caches PDF blobs, extracted text, and demo-mode airfield diagrams. PWA service worker caches app shell.
 9. **Admin-Gated CRUD** — Base configuration and reference management require `airfield_manager` or `sys_admin` role.
 10. **Three-Tier Admin Hierarchy** — `sys_admin` has full access; `base_admin`, `airfield_manager`, and `namo` have base-scoped admin capabilities; all other roles are standard users.
@@ -272,11 +272,11 @@ airfield-app/
 
 | Item | Priority | Notes |
 |------|----------|-------|
-| RLS enforcement | High | Currently app-layer only for most tables (except storage.objects, activity_log) |
 | No test suite | High | No unit or integration tests |
-| ~184 `as any` casts | Medium | Regenerate Supabase types (`supabase gen types typescript`) to eliminate |
+| ~182 `as any` casts | Medium | Regenerate Supabase types (`supabase gen types typescript`) to eliminate |
 | Weather API stub | Medium | `/api/weather` returns placeholder; Open-Meteo used client-side |
 | `PDFLibrary.jsx` | Low | Only JSX file — convert to TypeScript (.tsx) |
+| 30 files > 500 lines | Low | Largest: `inspections/page.tsx` (1,929), `regulations/page.tsx` (1,638) |
 
 ## Current Status
 

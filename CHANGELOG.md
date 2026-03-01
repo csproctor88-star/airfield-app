@@ -7,13 +7,52 @@ All notable changes to Glidepath.
 ### Planned
 - Server-side email delivery for inspection reports (branded sender address)
 - METAR weather API integration (aviationweather.gov)
-- Role-based access control (re-enable RLS policies with role-based enforcement)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
 - Sync & Data module (offline queue, export, import)
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate ~184 `as any` casts
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate ~182 `as any` casts
 - Convert PDFLibrary.jsx to TypeScript (.tsx)
-- Add database-level role enforcement for `read_only` and other non-admin roles (currently app-layer only)
+
+---
+
+## [2.10.0] — 2026-03-01
+
+### Row-Level Security & Project Cleanup
+
+Database-level role-based access control across all operational tables, replacing the previous app-layer-only enforcement. Also includes a comprehensive project audit and file cleanup.
+
+#### RLS Implementation (4 Phased Migrations)
+- **Phase 1** (`2026030100`) — Fixed `user_has_base_access()` with sys_admin bypass. Added `user_can_write()` and `user_is_admin()` helper functions. Policies for config tables (`bases`, `base_runways`, `base_navaids`, `base_areas`), `profiles`, `regulations`, `user_regulation_pdfs`
+- **Phase 2** (`2026030101`) — Role-aware policies for 6 core operational tables: `discrepancies`, `inspections`, `airfield_checks`, `obstruction_evaluations`, `notams`, `waivers`
+- **Phase 3** (`2026030102`) — Policies for `photos`, `status_updates`, `navaid_statuses`, `airfield_status`, `runway_status_log`, `base_members`. Special cases: `check_comments` (all base members can INSERT), `activity_log` (all can INSERT, own+admin can UPDATE/DELETE)
+- **Phase 4** (`2026030103`) — FK-based access for waiver child tables (`waiver_criteria`, `waiver_attachments`, `waiver_reviews`, `waiver_coordination`), inspection template chain (`base_inspection_templates` → `base_inspection_sections` → `base_inspection_items`). Fixed `update_airfield_status()` RPC with `p_base_id` parameter
+
+#### Role Hierarchy Enforced
+| Tier | Roles | SELECT | INSERT/UPDATE/DELETE |
+|------|-------|--------|----------------------|
+| Super Admin | `sys_admin` | All bases | All bases |
+| Base Admin | `base_admin`, `airfield_manager`, `namo` | Own base | Own base |
+| Power User | `amops` | Own base | Own base |
+| Specialist | `ces`, `safety`, `atc` | Own base | Comments only |
+| Viewer | `read_only` | Own base | No |
+
+#### Automated Smoke Tests
+- Created and ran 7-test automated suite verifying: write restriction (CES blocked), write permission (AMOPS allowed), cross-base isolation, sys_admin bypass, comment special case, admin-vs-writable distinction
+- All 7 tests passed. Results and full 50+ test checklist saved in `docs/RLS_TEST_CHECKLIST.md`
+
+#### Project Cleanup
+- Moved `SESSION-HANDOFF-v2.8.0.md` to `docs/`
+- Moved `rename-regulations.mjs` from `app/` to `scripts/`
+- Moved `scrape_aircraft_images.py` to `scripts/`
+- Moved `migration_aircraft_characteristics.sql` to `scripts/`
+- Moved `AOMS_Regulation_Database_v4.docx` to `docs/`
+- Deleted duplicate files: `AOMS_Regulation_Database_v4 (1).docx`, `app/AOMS_Regulation_Database_v4.docx`, `public/commercial_aircraft (1).json`, `public/military_aircraft (1).json`, `public/001_pdf_text_search.sql`, root `001_pdf_text_search.sql`
+
+#### Migrations Added
+- `2026030100_rls_phase1_helpers_and_config.sql`
+- `2026030101_rls_phase2_operational_tables.sql`
+- `2026030102_rls_phase3_supporting_tables.sql`
+- `2026030103_rls_phase4_children_and_templates.sql`
 
 ---
 
