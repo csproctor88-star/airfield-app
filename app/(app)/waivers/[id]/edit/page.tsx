@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { WAIVER_CLASSIFICATIONS, WAIVER_HAZARD_RATINGS, WAIVER_CRITERIA_SOURCES } from '@/lib/constants'
 import { fetchWaiver, fetchWaiverCriteria, updateWaiver, upsertWaiverCriteria, type WaiverRow, type WaiverCriteriaRow } from '@/lib/supabase/waivers'
 import { createClient } from '@/lib/supabase/client'
@@ -9,6 +10,11 @@ import { DEMO_WAIVERS, DEMO_WAIVER_CRITERIA } from '@/lib/demo-data'
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
 import type { WaiverClassification, WaiverCriteriaSource } from '@/lib/supabase/types'
+
+const WaiverLocationMap = dynamic(
+  () => import('@/components/waivers/location-map'),
+  { ssr: false },
+)
 
 type CriteriaEntry = { criteria_source: WaiverCriteriaSource; reference: string; description: string }
 
@@ -19,6 +25,7 @@ export default function EditWaiverPage() {
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
+  const [gpsLoading, setGpsLoading] = useState(false)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     basic: true, criteria: true, risk: false, project: false, location: false,
   })
@@ -27,7 +34,9 @@ export default function EditWaiverPage() {
     classification: '', action_requested: 'new', waiver_number: '', description: '', justification: '',
     hazard_rating: '', risk_assessment_summary: '', criteria_impact: '', faa_case_number: '',
     proponent: '', project_number: '', program_fy: '', estimated_cost: '', project_status: '',
-    corrective_action: '', location_description: '', period_valid: '', date_submitted: '',
+    corrective_action: '', location_description: '',
+    location_lat: null as number | null, location_lng: null as number | null,
+    period_valid: '', date_submitted: '',
     expiration_date: '', notes: '',
   })
 
@@ -91,6 +100,8 @@ export default function EditWaiverPage() {
       project_status: w.project_status || '',
       corrective_action: w.corrective_action || '',
       location_description: w.location_description || '',
+      location_lat: w.location_lat ?? null,
+      location_lng: w.location_lng ?? null,
       period_valid: w.period_valid || '',
       date_submitted: w.date_submitted || '',
       expiration_date: w.expiration_date || '',
@@ -107,6 +118,44 @@ export default function EditWaiverPage() {
   }
 
   const selectedClassInfo = WAIVER_CLASSIFICATIONS.find(c => c.value === formData.classification)
+
+  const handlePointSelected = useCallback((lat: number, lng: number) => {
+    setFormData((prev) => ({ ...prev, location_lat: lat, location_lng: lng }))
+    toast.success(`Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+  }, [])
+
+  const captureLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser')
+      return
+    }
+    setGpsLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setFormData((prev) => ({
+          ...prev,
+          location_lat: position.coords.latitude,
+          location_lng: position.coords.longitude,
+        }))
+        setGpsLoading(false)
+        toast.success(`Location: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`)
+      },
+      (error) => {
+        setGpsLoading(false)
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            toast.error('Location access denied. Enable in browser settings.')
+            break
+          case error.POSITION_UNAVAILABLE:
+            toast.error('Location information unavailable.')
+            break
+          default:
+            toast.error('Unable to get location.')
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    )
+  }, [])
 
   const handleSubmit = async () => {
     if (!formData.classification || !formData.description) {
@@ -138,6 +187,8 @@ export default function EditWaiverPage() {
       project_status: formData.project_status || null,
       corrective_action: formData.corrective_action || null,
       location_description: formData.location_description || null,
+      location_lat: formData.location_lat,
+      location_lng: formData.location_lng,
       period_valid: formData.period_valid || null,
       date_submitted: formData.date_submitted || null,
       expiration_date: formData.expiration_date || null,
@@ -388,6 +439,38 @@ export default function EditWaiverPage() {
               )}
               <input type="text" className="input-dark" style={{ marginTop: 6 }} placeholder="Or type custom location..." value={formData.location_description} onChange={(e) => setFormData(p => ({ ...p, location_description: e.target.value }))} />
             </div>
+
+            {/* Location Map */}
+            <div style={{ marginBottom: 12 }}>
+              <span className="section-label">Pin Location on Map</span>
+              <WaiverLocationMap
+                onPointSelected={handlePointSelected}
+                selectedLat={formData.location_lat}
+                selectedLng={formData.location_lng}
+              />
+            </div>
+
+            {/* GPS Use My Location */}
+            <button
+              type="button"
+              onClick={captureLocation}
+              disabled={gpsLoading}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                width: '100%', padding: '10px 16px', marginBottom: 12, borderRadius: 8,
+                border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
+                color: 'var(--color-accent)', fontSize: 'var(--fs-md)', fontWeight: 600,
+                cursor: gpsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
+                opacity: gpsLoading ? 0.6 : 1,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+              </svg>
+              {gpsLoading ? 'Getting Location...' : 'Use My Location'}
+            </button>
+
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">Period Valid</span>
               <input type="text" className="input-dark" value={formData.period_valid} onChange={(e) => setFormData(p => ({ ...p, period_valid: e.target.value }))} />

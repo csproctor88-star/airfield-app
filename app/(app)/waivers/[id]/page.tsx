@@ -681,6 +681,35 @@ export default function WaiverDetailPage() {
         )}
       </div>
 
+      {/* Pinned Location Map */}
+      {(() => {
+        const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+        const lat = w.location_lat
+        const lng = w.location_lng
+        const staticMapUrl = lat != null && lng != null && mapboxToken && mapboxToken !== 'your-mapbox-token-here'
+          ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+f59e0b(${lng},${lat})/${lng},${lat},15,0/600x300@2x?access_token=${mapboxToken}`
+          : null
+
+        if (!staticMapUrl) return null
+
+        return (
+          <div className="card" style={{ marginBottom: 8, padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '8px 12px 4px', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              Pinned Location
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={staticMapUrl}
+              alt="Waiver location on map"
+              style={{ width: '100%', display: 'block', borderRadius: '0 0 10px 10px' }}
+            />
+            <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-sm)', color: '#F59E0B', fontFamily: 'monospace', fontWeight: 600 }}>
+              {lat!.toFixed(5)}, {lng!.toFixed(5)}
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Criteria & Standards */}
       <div className="card" style={{ marginBottom: 8 }}>
         {sectionHeader('criteria', 'Criteria & Standards', demoCriteria.length)}

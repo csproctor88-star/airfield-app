@@ -1,13 +1,19 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { WAIVER_CLASSIFICATIONS, WAIVER_HAZARD_RATINGS, WAIVER_CRITERIA_SOURCES } from '@/lib/constants'
 import { createWaiver, upsertWaiverCriteria, uploadWaiverAttachment } from '@/lib/supabase/waivers'
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 import type { WaiverStatus, WaiverClassification, WaiverCriteriaSource, WaiverAttachmentType } from '@/lib/supabase/types'
+
+const WaiverLocationMap = dynamic(
+  () => import('@/components/waivers/location-map'),
+  { ssr: false },
+)
 
 type CriteriaEntry = { criteria_source: WaiverCriteriaSource; reference: string; description: string }
 type PendingPhoto = { file: File; preview: string }
@@ -27,6 +33,7 @@ export default function NewWaiverPage() {
     attachments: false,
   })
 
+  const [gpsLoading, setGpsLoading] = useState(false)
   const [formData, setFormData] = useState({
     classification: '' as string,
     action_requested: 'new' as string,
@@ -44,6 +51,8 @@ export default function NewWaiverPage() {
     project_status: '',
     corrective_action: '',
     location_description: '',
+    location_lat: null as number | null,
+    location_lng: null as number | null,
     period_valid: '',
     date_submitted: '',
     expiration_date: '',
@@ -102,6 +111,44 @@ export default function NewWaiverPage() {
     return `${prefix}-VGLZ-${yy}-####`
   })()
 
+  const handlePointSelected = useCallback((lat: number, lng: number) => {
+    setFormData((prev) => ({ ...prev, location_lat: lat, location_lng: lng }))
+    toast.success(`Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+  }, [])
+
+  const captureLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser')
+      return
+    }
+    setGpsLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setFormData((prev) => ({
+          ...prev,
+          location_lat: position.coords.latitude,
+          location_lng: position.coords.longitude,
+        }))
+        setGpsLoading(false)
+        toast.success(`Location: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`)
+      },
+      (error) => {
+        setGpsLoading(false)
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            toast.error('Location access denied. Enable in browser settings.')
+            break
+          case error.POSITION_UNAVAILABLE:
+            toast.error('Location information unavailable.')
+            break
+          default:
+            toast.error('Unable to get location.')
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    )
+  }, [])
+
   const handlePhotoSelected = (files: FileList | null) => {
     if (!files) return
     const newPhotos: PendingPhoto[] = Array.from(files).map(file => ({
@@ -156,6 +203,8 @@ export default function NewWaiverPage() {
       project_status: formData.project_status || undefined,
       corrective_action: formData.corrective_action || undefined,
       location_description: formData.location_description || undefined,
+      location_lat: formData.location_lat,
+      location_lng: formData.location_lng,
       period_valid: formData.period_valid || undefined,
       date_submitted: formData.date_submitted || (status === 'pending' ? new Date().toISOString().split('T')[0] : null),
       expiration_date: formData.expiration_date || null,
@@ -498,6 +547,38 @@ export default function NewWaiverPage() {
               )}
               <input type="text" className="input-dark" style={{ marginTop: 6 }} placeholder="Or type custom location..." value={formData.location_description} onChange={(e) => setFormData(p => ({ ...p, location_description: e.target.value }))} />
             </div>
+
+            {/* Location Map */}
+            <div style={{ marginBottom: 12 }}>
+              <span className="section-label">Pin Location on Map</span>
+              <WaiverLocationMap
+                onPointSelected={handlePointSelected}
+                selectedLat={formData.location_lat}
+                selectedLng={formData.location_lng}
+              />
+            </div>
+
+            {/* GPS Use My Location */}
+            <button
+              type="button"
+              onClick={captureLocation}
+              disabled={gpsLoading}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                width: '100%', padding: '10px 16px', marginBottom: 12, borderRadius: 8,
+                border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
+                color: 'var(--color-accent)', fontSize: 'var(--fs-md)', fontWeight: 600,
+                cursor: gpsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
+                opacity: gpsLoading ? 0.6 : 1,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+              </svg>
+              {gpsLoading ? 'Getting Location...' : 'Use My Location'}
+            </button>
+
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">Period Valid</span>
               <input type="text" className="input-dark" placeholder='e.g., "Indefinite", "8-Years", "Duration of Construction"' value={formData.period_valid} onChange={(e) => setFormData(p => ({ ...p, period_valid: e.target.value }))} />

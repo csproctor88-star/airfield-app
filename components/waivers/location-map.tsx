@@ -14,7 +14,7 @@ type Props = {
   flyToPoint?: { lat: number; lng: number } | null
 }
 
-export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, selectedLng, promptText, flyToPoint }: Props) {
+export default function WaiverLocationMap({ onPointSelected, selectedLat, selectedLng, promptText, flyToPoint }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const marker = useRef<mapboxgl.Marker | null>(null)
@@ -100,7 +100,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
       el.style.height = '28px'
       el.style.borderRadius = '50%'
       el.style.border = '3px solid #FFFFFF'
-      el.style.background = '#EF4444'
+      el.style.background = '#F59E0B'
       el.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)'
       el.style.cursor = 'pointer'
 
@@ -127,7 +127,6 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
           textAlign: 'center',
         }}
       >
-        <div style={{ fontSize: 'var(--fs-5xl)', marginBottom: 8 }}>🗺️</div>
         <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 8 }}>
           Mapbox Token Required
         </div>
@@ -142,7 +141,6 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
 
   const handleToggleExpand = useCallback(() => {
     setExpanded(prev => !prev)
-    // Resize map after the container height changes
     setTimeout(() => { map.current?.resize() }, 50)
   }, [])
 
@@ -180,7 +178,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
             gap: 4,
           }}
         >
-          {expanded ? '⊖ Collapse' : '⊕ Expand'}
+          {expanded ? '\u2296 Collapse' : '\u2295 Expand'}
         </button>
       )}
       {!selectedLat && mapLoaded && (
@@ -199,7 +197,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
             whiteSpace: 'nowrap',
           }}
         >
-          {promptText || 'Tap map to mark location'}
+          {promptText || 'Tap map to mark waiver location'}
         </div>
       )}
       {selectedLat != null && selectedLng != null && (
@@ -212,7 +210,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
             borderRadius: 6,
             padding: '4px 8px',
             fontSize: 'var(--fs-sm)',
-            color: '#34D399',
+            color: '#F59E0B',
             fontWeight: 600,
             fontFamily: 'monospace',
           }}

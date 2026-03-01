@@ -316,7 +316,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-v9',
       center: defaultCenter,
-      zoom: 13,
+      zoom: 12,
       pitch: 0,
       bearing: 0,
     })
@@ -522,7 +522,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
   // Fly to a point when flyToPoint changes (GPS location)
   useEffect(() => {
     if (!map.current || !mapLoaded || !flyToPoint) return
-    map.current.flyTo({ center: [flyToPoint.lon, flyToPoint.lat], zoom: 16, duration: 1500 })
+    map.current.flyTo({ center: [flyToPoint.lon, flyToPoint.lat], zoom: 15, duration: 1500 })
   }, [flyToPoint, mapLoaded])
 
   const toggleLayer = (key: ToggleKey) => {

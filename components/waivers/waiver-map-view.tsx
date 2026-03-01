@@ -5,43 +5,49 @@ import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { useInstallation } from '@/lib/installation-context'
 import { isMapboxConfigured } from '@/lib/utils'
-import { parsePhotoPaths, type ObstructionRow } from '@/lib/supabase/obstructions'
-import { formatDistanceToNow } from 'date-fns'
+import { WAIVER_CLASSIFICATIONS, WAIVER_STATUS_CONFIG } from '@/lib/constants'
+import type { WaiverRow } from '@/lib/supabase/waivers'
 
 type Props = {
-  evaluations: ObstructionRow[]
+  waivers: WaiverRow[]
 }
 
-type StatusFilter = 'all' | 'violation' | 'clear'
+const CLASS_EMOJI: Record<string, string> = Object.fromEntries(
+  WAIVER_CLASSIFICATIONS.map((c) => [c.value, c.emoji]),
+)
 
-export default function ObstructionMapView({ evaluations }: Props) {
+function getClassEmoji(classification: string): string {
+  return CLASS_EMOJI[classification] || '\uD83D\uDCCB'
+}
+
+function getClassLabel(classification: string): string {
+  const c = WAIVER_CLASSIFICATIONS.find((t) => t.value === classification)
+  return c ? c.label : classification
+}
+
+export default function WaiverMapView({ waivers }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
   const [mapLoaded, setMapLoaded] = useState(false)
   const [expanded, setExpanded] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [activeClassFilter, setActiveClassFilter] = useState<string | null>(null)
   const { runways } = useInstallation()
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const mapboxReady = isMapboxConfigured()
 
-  // Filter evaluations with GPS coordinates
-  const geoEvaluations = evaluations.filter(
-    (e) => e.latitude != null && e.longitude != null,
+  // Filter waivers with GPS coordinates
+  const geoWaivers = waivers.filter(
+    (w) => w.location_lat != null && w.location_lng != null,
   )
 
-  // Apply status filter
-  const visibleEvaluations =
-    statusFilter === 'all'
-      ? geoEvaluations
-      : statusFilter === 'violation'
-        ? geoEvaluations.filter((e) => e.has_violation)
-        : geoEvaluations.filter((e) => !e.has_violation)
+  // Apply classification filter from legend
+  const visibleWaivers = activeClassFilter
+    ? geoWaivers.filter((w) => w.classification === activeClassFilter)
+    : geoWaivers
 
-  const noGeoCount = evaluations.length - geoEvaluations.length
-  const violationCount = geoEvaluations.filter((e) => e.has_violation).length
-  const clearCount = geoEvaluations.length - violationCount
+  const noGeoCount = waivers.length - geoWaivers.length
 
   // Initialize map
   useEffect(() => {
@@ -83,37 +89,36 @@ export default function ObstructionMapView({ evaluations }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token])
 
-  // Add/update markers
+  // Add/update markers when waivers, classification filter, or map changes
   useEffect(() => {
     if (!map.current || !mapLoaded) return
 
+    // Remove existing markers
     markersRef.current.forEach((m) => m.remove())
     markersRef.current = []
 
-    visibleEvaluations.forEach((ev) => {
-      const lat = ev.latitude!
-      const lng = ev.longitude!
-      const isViolation = ev.has_violation
-      const violatedCount = (ev.violated_surfaces || []).length
-      const photos = parsePhotoPaths(ev.photo_storage_path)
-      const firstPhoto = photos[0]
+    visibleWaivers.forEach((w) => {
+      const lat = w.location_lat!
+      const lng = w.location_lng!
+      const emoji = getClassEmoji(w.classification)
+      const classLabel = getClassLabel(w.classification)
+      const statusConf = WAIVER_STATUS_CONFIG[w.status as keyof typeof WAIVER_STATUS_CONFIG]
 
-      // Marker element
       const el = document.createElement('div')
-      el.style.width = '26px'
-      el.style.height = '26px'
+      el.style.width = '30px'
+      el.style.height = '30px'
       el.style.borderRadius = '50%'
-      el.style.border = '2.5px solid #FFFFFF'
-      el.style.background = isViolation ? '#EF4444' : '#22C55E'
+      el.style.border = '2px solid #FFFFFF'
+      el.style.background = 'rgba(15, 23, 42, 0.85)'
       el.style.boxShadow = '0 0 8px rgba(0,0,0,0.5)'
       el.style.cursor = 'pointer'
       el.style.transition = 'transform 0.15s ease'
       el.style.display = 'flex'
       el.style.alignItems = 'center'
       el.style.justifyContent = 'center'
-      el.style.fontSize = '13px'
+      el.style.fontSize = '15px'
       el.style.lineHeight = '1'
-      el.textContent = isViolation ? '\u26A0' : '\u2713'
+      el.textContent = emoji
 
       el.addEventListener('mouseenter', () => {
         el.style.transform = 'scale(1.3)'
@@ -122,55 +127,36 @@ export default function ObstructionMapView({ evaluations }: Props) {
         el.style.transform = 'scale(1)'
       })
 
-      // Photo HTML
-      const photoHtml = firstPhoto
-        ? `<img src="${firstPhoto}" alt="photo" style="width:100%;max-height:110px;object-fit:cover;border-radius:6px;margin-bottom:6px;display:block;" onerror="this.style.display='none'" />`
+      const statusBadge = statusConf
+        ? `<span style="font-size:10px;font-weight:800;padding:1px 6px;border-radius:4px;background:${statusConf.bg};color:${statusConf.color};">${statusConf.label}</span>`
         : ''
 
-      // Violated surfaces badges
-      const violatedHtml =
-        isViolation && ev.violated_surfaces && ev.violated_surfaces.length > 0
-          ? `<div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:4px;">
-              ${ev.violated_surfaces
-                .map(
-                  (s) =>
-                    `<span style="font-size:9px;background:#EF444414;color:#EF4444;padding:1px 5px;border-radius:3px;border:1px solid #EF444422;">${s}</span>`,
-                )
-                .join('')}
-            </div>`
-          : ''
-
-      const statusBadge = isViolation
-        ? `<span style="font-size:10px;font-weight:800;padding:1px 6px;border-radius:4px;background:#EF444422;color:#EF4444;">VIOLATION</span>`
-        : `<span style="font-size:10px;font-weight:800;padding:1px 6px;border-radius:4px;background:#22C55E22;color:#22C55E;">CLEAR</span>`
-
       const popupHtml = `
-        <div style="font-family:system-ui,-apple-system,sans-serif;max-width:260px;line-height:1.4;">
-          ${photoHtml}
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-            <span style="font-size:11px;font-weight:700;color:#94A3B8;font-family:monospace;">${ev.display_id}</span>
-            ${statusBadge}
+        <div style="font-family:system-ui,-apple-system,sans-serif;min-width:240px;max-width:340px;line-height:1.4;">
+          <div style="margin-bottom:6px;">
+            <span style="font-size:13px;font-weight:800;color:#F59E0B;font-family:monospace;display:block;margin-bottom:4px;">${w.waiver_number}</span>
+            <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
+              ${statusBadge}
+              <span style="font-size:11px;font-weight:600;color:#CBD5E1;background:rgba(148,163,184,0.12);border:1px solid rgba(148,163,184,0.2);border-radius:4px;padding:1px 6px;">${emoji} ${classLabel}</span>
+            </div>
           </div>
-          ${ev.notes ? `<div style="font-size:13px;font-weight:700;color:#F1F5F9;margin-bottom:4px;">${ev.notes}</div>` : ''}
-          <div style="font-size:11px;color:#94A3B8;">
-            <strong style="color:#CBD5E1;">${ev.object_height_agl}</strong> ft AGL
-            &bull; <strong style="color:#CBD5E1;">${ev.distance_from_centerline_ft?.toFixed(0) ?? '\u2014'}</strong> ft from CL
-            ${isViolation ? ` &bull; <span style="color:#EF4444;">${violatedCount} violated</span>` : ''}
+          <div style="font-size:14px;font-weight:700;color:#F1F5F9;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4;">${w.description}</div>
+          <div style="font-size:12px;color:#94A3B8;">
+            ${w.location_description || ''}${w.proponent ? ' &bull; ' + w.proponent : ''}
           </div>
-          ${ev.controlling_surface ? `<div style="font-size:10px;color:#64748B;margin-top:2px;">Controlling: ${ev.controlling_surface}</div>` : ''}
-          ${violatedHtml}
-          <a href="/obstructions/${ev.id}" style="display:inline-block;margin-top:6px;font-size:11px;font-weight:700;color:#22D3EE;text-decoration:none;">
+          ${w.criteria_impact ? `<div style="font-size:11px;color:#F59E0B;margin-top:3px;">${w.criteria_impact}</div>` : ''}
+          <a href="/waivers/${w.id}" style="display:inline-block;margin-top:8px;font-size:12px;font-weight:700;color:#22D3EE;text-decoration:none;">
             View Details &rarr;
           </a>
         </div>
       `
 
       const popup = new mapboxgl.Popup({
-        offset: 16,
+        offset: 18,
         closeButton: true,
         closeOnClick: true,
-        maxWidth: '280px',
-        className: 'obstruction-map-popup',
+        maxWidth: '360px',
+        className: 'waiver-map-popup',
       }).setHTML(popupHtml)
 
       const marker = new mapboxgl.Marker({ element: el })
@@ -182,21 +168,21 @@ export default function ObstructionMapView({ evaluations }: Props) {
     })
 
     // Fit bounds
-    if (visibleEvaluations.length > 1) {
+    if (visibleWaivers.length > 1) {
       const bounds = new mapboxgl.LngLatBounds()
-      visibleEvaluations.forEach((e) => {
-        bounds.extend([e.longitude!, e.latitude!])
+      visibleWaivers.forEach((w) => {
+        bounds.extend([w.location_lng!, w.location_lat!])
       })
       map.current.fitBounds(bounds, { padding: 60, maxZoom: 15, duration: 800 })
-    } else if (visibleEvaluations.length === 1) {
+    } else if (visibleWaivers.length === 1) {
       map.current.flyTo({
-        center: [visibleEvaluations[0].longitude!, visibleEvaluations[0].latitude!],
+        center: [visibleWaivers[0].location_lng!, visibleWaivers[0].location_lat!],
         zoom: 13,
         duration: 800,
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapLoaded, evaluations, statusFilter])
+  }, [mapLoaded, waivers, activeClassFilter])
 
   const handleToggleExpand = useCallback(() => {
     setExpanded((prev) => !prev)
@@ -205,8 +191,8 @@ export default function ObstructionMapView({ evaluations }: Props) {
     }, 50)
   }, [])
 
-  const handleLegendClick = useCallback((filter: StatusFilter) => {
-    setStatusFilter((prev) => (prev === filter ? 'all' : filter))
+  const handleLegendClick = useCallback((classValue: string) => {
+    setActiveClassFilter((prev) => (prev === classValue ? null : classValue))
   }, [])
 
   if (!mapboxReady) {
@@ -231,7 +217,7 @@ export default function ObstructionMapView({ evaluations }: Props) {
     )
   }
 
-  if (geoEvaluations.length === 0) {
+  if (geoWaivers.length === 0) {
     return (
       <div
         style={{
@@ -246,13 +232,17 @@ export default function ObstructionMapView({ evaluations }: Props) {
           No GPS Coordinates
         </div>
         <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', lineHeight: 1.5 }}>
-          None of the evaluations have GPS coordinates.
+          None of the filtered waivers have GPS coordinates.
           <br />
-          Pin a location when creating evaluations to see them on the map.
+          Pin a location when creating waivers to see them on the map.
         </div>
       </div>
     )
   }
+
+  // Build legend entries from the classification types actually present
+  const presentClasses = new Set(geoWaivers.map((w) => w.classification))
+  const legendItems = WAIVER_CLASSIFICATIONS.filter((c) => presentClasses.has(c.value))
 
   return (
     <div style={{ position: 'relative' }}>
@@ -260,14 +250,14 @@ export default function ObstructionMapView({ evaluations }: Props) {
         ref={mapContainer}
         style={{
           width: '100%',
-          height: expanded ? '70vh' : '380px',
+          height: expanded ? 'var(--map-height-expanded)' : 'var(--map-height)',
           borderRadius: 10,
           overflow: 'hidden',
           border: '1px solid var(--color-border-mid)',
           transition: 'height 0.3s ease',
         }}
       />
-      {/* Expand / Collapse */}
+      {/* Expand / Collapse toggle */}
       {mapLoaded && (
         <button
           onClick={handleToggleExpand}
@@ -291,8 +281,8 @@ export default function ObstructionMapView({ evaluations }: Props) {
           {expanded ? '\u2296 Collapse' : '\u2295 Expand'}
         </button>
       )}
-      {/* Legend — top-left, clickable status filter */}
-      {mapLoaded && (
+      {/* Legend — top-left, clickable classification filter */}
+      {mapLoaded && legendItems.length > 0 && (
         <div
           style={{
             position: 'absolute',
@@ -308,18 +298,15 @@ export default function ObstructionMapView({ evaluations }: Props) {
           }}
         >
           <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Filter by Status
+            Filter by Type
           </div>
-          {([
-            { key: 'violation' as StatusFilter, label: 'Violation', color: '#EF4444', icon: '\u26A0', count: violationCount },
-            { key: 'clear' as StatusFilter, label: 'Clear', color: '#22C55E', icon: '\u2713', count: clearCount },
-          ]).map((item) => {
-            const isActive = statusFilter === item.key
-            const isDimmed = statusFilter !== 'all' && !isActive
+          {legendItems.map((c) => {
+            const isActive = activeClassFilter === c.value
+            const isDimmed = activeClassFilter !== null && !isActive
             return (
               <div
-                key={item.key}
-                onClick={() => handleLegendClick(item.key)}
+                key={c.value}
+                onClick={() => handleLegendClick(c.value)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -327,38 +314,19 @@ export default function ObstructionMapView({ evaluations }: Props) {
                   padding: '2px 4px',
                   borderRadius: 4,
                   cursor: 'pointer',
-                  background: isActive ? `${item.color}18` : 'transparent',
+                  background: isActive ? 'rgba(245, 158, 11, 0.12)' : 'transparent',
                   opacity: isDimmed ? 0.4 : 1,
                   transition: 'all 0.15s ease',
                 }}
               >
-                <div
-                  style={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: '50%',
-                    background: item.color,
-                    border: '1.5px solid #fff',
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '8px',
-                    lineHeight: '1',
-                    color: '#fff',
-                  }}
-                >
-                  {item.icon}
-                </div>
-                <span style={{ fontSize: '10px', color: isActive ? item.color : '#CBD5E1', fontWeight: 600 }}>
-                  {item.label} ({item.count})
-                </span>
+                <span style={{ fontSize: '12px', flexShrink: 0, width: 16, textAlign: 'center' }}>{c.emoji}</span>
+                <span style={{ fontSize: '10px', color: isActive ? '#F59E0B' : '#CBD5E1', fontWeight: 600 }}>{c.label}</span>
               </div>
             )
           })}
-          {statusFilter !== 'all' && (
+          {activeClassFilter && (
             <div
-              onClick={() => setStatusFilter('all')}
+              onClick={() => setActiveClassFilter(null)}
               style={{
                 fontSize: '9px',
                 fontWeight: 700,
@@ -392,7 +360,7 @@ export default function ObstructionMapView({ evaluations }: Props) {
             fontWeight: 600,
           }}
         >
-          {visibleEvaluations.length}{statusFilter !== 'all' ? ` / ${geoEvaluations.length}` : ''} pinned
+          {visibleWaivers.length}{activeClassFilter ? ` / ${geoWaivers.length}` : ''} pinned
           {noGeoCount > 0 && (
             <span style={{ color: '#64748B' }}> &bull; {noGeoCount} no GPS</span>
           )}
@@ -401,24 +369,24 @@ export default function ObstructionMapView({ evaluations }: Props) {
 
       {/* Popup dark-theme CSS + hide Mapbox branding */}
       <style jsx global>{`
-        .obstruction-map-popup .mapboxgl-popup-content {
+        .waiver-map-popup .mapboxgl-popup-content {
           background: rgba(15, 23, 42, 0.95) !important;
           border: 1px solid rgba(148, 163, 184, 0.2) !important;
           border-radius: 8px !important;
           padding: 10px 12px !important;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
         }
-        .obstruction-map-popup .mapboxgl-popup-close-button {
+        .waiver-map-popup .mapboxgl-popup-close-button {
           color: #94A3B8 !important;
           font-size: 16px !important;
           right: 4px !important;
           top: 2px !important;
         }
-        .obstruction-map-popup .mapboxgl-popup-close-button:hover {
+        .waiver-map-popup .mapboxgl-popup-close-button:hover {
           color: #F1F5F9 !important;
           background: transparent !important;
         }
-        .obstruction-map-popup .mapboxgl-popup-tip {
+        .waiver-map-popup .mapboxgl-popup-tip {
           border-top-color: rgba(15, 23, 42, 0.95) !important;
         }
         .mapboxgl-ctrl-logo,
