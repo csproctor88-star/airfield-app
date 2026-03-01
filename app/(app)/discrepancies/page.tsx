@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import Link from 'next/link'
 import { DiscrepancyCard } from '@/components/discrepancies/discrepancy-card'
 import { fetchDiscrepancies, type DiscrepancyRow } from '@/lib/supabase/discrepancies'
@@ -9,6 +9,9 @@ import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import { fetchMapImageDataUrl } from '@/lib/utils'
+import { Map, List } from 'lucide-react'
+
+const DiscrepancyMapView = lazy(() => import('@/components/discrepancies/discrepancy-map-view'))
 
 const FILTERS = ['open', 'completed', 'cancelled', 'all'] as const
 const FILTER_LABELS: Record<string, string> = {
@@ -35,6 +38,7 @@ export default function DiscrepanciesPage() {
   const [discrepancies, setDiscrepancies] = useState<DiscrepancyRow[]>([])
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
 
   useEffect(() => {
     async function load() {
@@ -398,6 +402,40 @@ export default function DiscrepanciesPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
         <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Discrepancies</div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {/* List / Map toggle */}
+          <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+            <button
+              onClick={() => setViewMode('list')}
+              title="List view"
+              style={{
+                background: viewMode === 'list' ? 'rgba(34,211,238,0.15)' : 'transparent',
+                border: 'none',
+                borderRight: '1px solid var(--color-border)',
+                padding: '6px 10px',
+                color: viewMode === 'list' ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <List size={16} />
+            </button>
+            <button
+              onClick={() => setViewMode('map')}
+              title="Map view"
+              style={{
+                background: viewMode === 'map' ? 'rgba(34,211,238,0.15)' : 'transparent',
+                border: 'none',
+                padding: '6px 10px',
+                color: viewMode === 'map' ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <Map size={16} />
+            </button>
+          </div>
           <button
             onClick={handleExportExcel}
             style={{
@@ -554,6 +592,19 @@ export default function DiscrepanciesPage() {
         <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
           Loading...
         </div>
+      ) : viewMode === 'map' ? (
+        <Suspense
+          fallback={
+            <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
+              Loading map...
+            </div>
+          }
+        >
+          <DiscrepancyMapView
+            discrepancies={filtered as DiscrepancyRow[]}
+            daysOpenFn={daysOpen}
+          />
+        </Suspense>
       ) : usingDemo ? (
         <div className="card-list">
           {demoFiltered.map((d) => (
@@ -592,7 +643,7 @@ export default function DiscrepanciesPage() {
         </div>
       )}
 
-      {!loading && filtered.length === 0 && (
+      {!loading && viewMode === 'list' && filtered.length === 0 && (
         <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
           No discrepancies match this filter
         </div>
