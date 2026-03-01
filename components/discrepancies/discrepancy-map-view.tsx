@@ -81,7 +81,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-v9',
       center: [centerLng, centerLat],
-      zoom: 13,
+      zoom: 12,
       pitch: 0,
       bearing: 0,
       attributionControl: false,
@@ -188,7 +188,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
     } else if (visibleDiscrepancies.length === 1) {
       map.current.flyTo({
         center: [visibleDiscrepancies[0].longitude!, visibleDiscrepancies[0].latitude!],
-        zoom: 14,
+        zoom: 13,
         duration: 800,
       })
     }

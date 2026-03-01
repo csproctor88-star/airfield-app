@@ -52,7 +52,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-v9',
       center: [centerLng, centerLat],
-      zoom: 14,
+      zoom: 13,
       pitch: 0,
       bearing: 0,
     })
@@ -113,7 +113,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
   // Fly to point when GPS location is captured
   useEffect(() => {
     if (!map.current || !mapLoaded || !flyToPoint) return
-    map.current.flyTo({ center: [flyToPoint.lng, flyToPoint.lat], zoom: 16, duration: 1500 })
+    map.current.flyTo({ center: [flyToPoint.lng, flyToPoint.lat], zoom: 15, duration: 1500 })
   }, [flyToPoint, mapLoaded])
 
   if (!mapboxReady) {

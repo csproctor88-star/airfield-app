@@ -68,7 +68,7 @@ export default function WaiverMapView({ waivers }: Props) {
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-v9',
       center: [centerLng, centerLat],
-      zoom: 13,
+      zoom: 12,
       pitch: 0,
       bearing: 0,
       attributionControl: false,
@@ -177,7 +177,7 @@ export default function WaiverMapView({ waivers }: Props) {
     } else if (visibleWaivers.length === 1) {
       map.current.flyTo({
         center: [visibleWaivers[0].location_lng!, visibleWaivers[0].location_lat!],
-        zoom: 14,
+        zoom: 13,
         duration: 800,
       })
     }
