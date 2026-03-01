@@ -79,7 +79,7 @@ Key responsive features:
 Real-time operational hub. Live clock, Open-Meteo weather with conditions/wind/visibility, advisory system (INFO/CAUTION/WARNING), Active Runway toggle with Open/Suspended/Closed status (color-coded card, persisted to DB with audit log), Current Status panel (RSC, BWC, Last Check), side-by-side NAVAID status panels with G/Y/R toggles and notes, quick actions (Begin Inspection, Begin Check, New Discrepancy), user presence tracking (Online/Away/Inactive), installation switcher in header for multi-base users, and expandable activity feed with enriched action labels.
 
 ### Discrepancies (`/discrepancies`)
-Track and resolve airfield issues. 11 discrepancy types (FOD, pavement, lighting, markings, signage, drainage, vegetation, wildlife, equipment, security, other). Full lifecycle: Open → Submitted to AFM → Submitted to CES → Work Completed → Closed/Cancelled. Photo uploads, Mapbox location pinning, notes history with timestamps, work order tracking, linked NOTAMs.
+Track and resolve airfield issues. 11 discrepancy types (FOD, pavement, lighting, markings, signage, drainage, vegetation, wildlife, equipment, security, other). Full lifecycle: Open → Submitted to AFM → Submitted to CES → Work Completed → Closed/Cancelled. Photo uploads, Mapbox location pinning, notes history with timestamps, work order tracking, linked NOTAMs. **Map view** with severity-colored pins (Common Operating Picture), List/Map toggle, severity legend with counts, expand/collapse.
 
 ### Airfield Checks (`/checks`)
 7 check types in a single unified form:
@@ -115,6 +115,7 @@ UFC 3-260-01 Class B imaginary surface analysis with multi-runway support:
 - Geodesic calculations (Haversine, cross-track/along-track), Open-Elevation API for MSL heights
 - Multiple photos per evaluation, violation detection with UFC table references
 - Responsive map with expand/collapse toggle
+- **History map view** with List/Map toggle showing all evaluations on a satellite map
 
 ### Aircraft Database (`/aircraft`)
 1,000+ military and civilian aircraft reference entries. Search by name, type, manufacturer, or branch. Sort by weight, wingspan, or ACN values. Favorites system. ACN/PCN comparison panel for pavement loading analysis.
@@ -127,7 +128,7 @@ Comprehensive regulatory reference library with two tabs:
 **My Documents tab** — Upload personal PDFs, JPGs, and PNGs. Client-side text extraction for search. Per-document offline caching. Supabase Storage integration.
 
 ### Waivers (`/waivers`)
-Full airfield waiver lifecycle management modeled after AF Form 505 and the AFCEC Playbook Appendix B. Six classification types (permanent, temporary, construction, event, extension, amendment), seven status values with mandatory comment dialogs for status transitions. Waiver detail pages include criteria & standards references, coordination tracking by office, photo attachments with camera capture, and annual review history. Individual waiver PDF export with embedded photos. Excel export of the full waiver register with criteria and coordination sheets. Annual review mode (`/waivers/annual-review`) with year-by-year review forms, KPIs, and board presentation tracking.
+Full airfield waiver lifecycle management modeled after AF Form 505 and the AFCEC Playbook Appendix B. Six classification types (permanent, temporary, construction, event, extension, amendment), seven status values with mandatory comment dialogs for status transitions. Waiver detail pages include criteria & standards references, coordination tracking by office, photo attachments with camera capture, and annual review history. Individual waiver PDF export with embedded photos. Excel export of the full waiver register with criteria and coordination sheets. Annual review mode (`/waivers/annual-review`) with year-by-year review forms, KPIs, and board presentation tracking. **Map view** with emoji markers by classification type, clickable type filter legend, List/Map toggle. **Location picker** on create/edit forms for GPS pinning.
 
 ### NOTAMs (`/notams`)
 Live FAA NOTAM feed via `notams.aim.faa.gov` — no API key required. Auto-fetches NOTAMs for the current installation's ICAO code on page load. ICAO search input for querying any airport. Full NOTAM text displayed on each card in monospace. Feed status indicator, refresh button, loading/error states. Filter chips (All/FAA/LOCAL/Active/Expired). Falls back to demo data when Supabase is not configured. Draft creation for local NOTAMs.
@@ -192,8 +193,9 @@ airfield-app/
 ├── components/
 │   ├── admin/                            # User management components (9 files)
 │   ├── layout/                           # Header (with installation switcher + presence), sidebar, bottom-nav
-│   ├── discrepancies/                    # Cards, location map, modals
-│   ├── obstructions/                     # Airfield map with surface overlays
+│   ├── discrepancies/                    # Cards, location map, map view (COP), modals
+│   ├── obstructions/                     # Airfield map with surface overlays, map view
+│   ├── waivers/                          # Waiver map view, location picker
 │   ├── ui/                               # Badge, button, card, input, skeleton, photo-picker
 │   ├── RegulationPDFViewer.tsx          # In-app PDF viewer with zoom/touch
 │   ├── login-activity-dialog.tsx         # Login notification with activity table
