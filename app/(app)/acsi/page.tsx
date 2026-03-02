@@ -65,7 +65,7 @@ export default function AcsiListPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-text-1)', margin: 0 }}>
-            ACSI — Annual Compliance & Safety Inspection
+            Airfield Compliance and Safety Inspection
           </h1>
           <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', margin: '4px 0 0' }}>
             DAFMAN 13-204v2, Para 5.4.3

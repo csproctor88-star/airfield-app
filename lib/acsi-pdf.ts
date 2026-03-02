@@ -584,7 +584,7 @@ export async function generateAcsiPdf(
       doc.setFontSize(7)
       doc.setTextColor(150)
       doc.text('Signature / Date', margin, y + 13)
-      y += 16
+      y += 24
     }
   }
 

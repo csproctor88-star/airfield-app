@@ -461,7 +461,9 @@ html, body {
 }
 
 /* Content area — no constraint on mobile (parent is already 480px) */
-.app-content {}
+.app-content {
+  padding-bottom: 80px; /* Clear the fixed bottom nav on mobile */
+}
 
 /* Sidebar toggle in header — hidden on mobile, shown on tablet+ when sidebar collapsed */
 .sidebar-toggle {
@@ -564,10 +566,11 @@ html, body {
     min-width: 0;
   }
 
-  /* Constrain and center content */
+  /* Constrain and center content; remove mobile bottom-nav clearance */
   .app-content {
     max-width: 768px;
     margin: 0 auto;
+    padding-bottom: 0;
   }
 
   /* Hide mobile bottom nav */
