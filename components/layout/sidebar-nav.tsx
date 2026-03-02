@@ -133,16 +133,16 @@ export function SidebarNav() {
     <nav className={`sidebar-drawer${isOpen ? '' : ' sidebar-collapsed'}`}>
       {/* Header with tagline + collapse toggle */}
       <div style={{
-        padding: isOpen ? '20px 20px 16px' : '16px 0',
+        padding: isOpen ? '12px 20px 12px 16px' : '16px 0',
         borderBottom: '1px solid var(--color-border)',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: isOpen ? 'flex-start' : 'center',
         justifyContent: isOpen ? 'space-between' : 'center',
         gap: 8,
       }}>
         {isOpen && (
           <div style={{
-            fontSize: 'var(--fs-lg)',
+            fontSize: 'var(--fs-sm)',
             fontWeight: 300,
             fontStyle: 'italic',
             color: 'var(--color-text-2)',
