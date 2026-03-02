@@ -232,8 +232,21 @@ export default function AirfieldChecksPage() {
 
     setSaving(true)
 
+    // Auto-save any pending remark text
+    const allRemarks = [...remarks]
+    if (remarkText.trim()) {
+      allRemarks.unshift({
+        id: `local-${Date.now()}`,
+        comment: remarkText.trim(),
+        user_name: currentUser,
+        created_at: new Date().toISOString(),
+      })
+      setRemarkText('')
+      setRemarks(allRemarks)
+    }
+
     const data = buildCheckData()
-    const comments = remarks.map((r) => ({
+    const comments = allRemarks.map((r) => ({
       comment: r.comment,
       user_name: r.user_name,
       created_at: r.created_at,

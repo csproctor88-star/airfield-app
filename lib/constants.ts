@@ -496,3 +496,278 @@ export const RANK_OPTIONS = [
   { value: 'GS', label: 'GS - General Schedule' },
   { value: 'CTR', label: 'CTR - Contractor' },
 ] as const
+
+// ========================================================
+// === ACSI — Airfield Compliance and Safety Inspection ===
+// === DAFMAN 13-204v2, Para 5.4.3, Attachment 2        ===
+// ========================================================
+
+export interface AcsiChecklistItem {
+  id: string          // e.g. '1.1', '3.1.2'
+  question: string    // Full checklist question text
+  subsection?: string // Parent heading for sub-items (e.g. 'Runways')
+  /** If true, item has A/B/C sub-fields (Operable, Properly Sited, Clear of Vegetation) */
+  hasSubFields?: boolean
+  /** Non-answerable heading text shown before items (no Y/N/NA) */
+  isHeading?: boolean
+}
+
+export const ACSI_SUB_FIELD_LABELS = [
+  { key: 'a', label: '(A) Operable' },
+  { key: 'b', label: '(B) Properly Sited' },
+  { key: 'c', label: '(C) Clear of Vegetation/Obstructions' },
+] as const
+
+export interface AcsiChecklistSection {
+  id: string          // e.g. 'acsi-1'
+  number: number      // 1–10
+  title: string       // Section title
+  reference: string   // Regulatory reference
+  scope?: string      // Scope note
+  preamble?: string   // Section-level preamble text
+  items: AcsiChecklistItem[]
+}
+
+export const ACSI_CHECKLIST_SECTIONS: AcsiChecklistSection[] = [
+  // ── Section 1: Pavement Areas ──
+  {
+    id: 'acsi-1',
+    number: 1,
+    title: 'Pavement Areas',
+    reference: 'DAFMAN 13-204 V2, TSPWG M 3260-01.09-2, AFMAN 32-1041, UFC 3-260-01, UFC 3-260-03',
+    scope: 'Runways, Taxiways, Ramps, Aprons',
+    items: [
+      { id: '1.1', question: 'Are pavement areas free of depressions and drain sufficiently to prevent ponding that obscures markings, attracts wildlife, or otherwise impairs safe aircraft operations such as hydroplaning?' },
+      { id: '1.2', question: 'Are pavement areas free of excessive rubber deposits, loose aggregate, contaminants, or other foreign objects?' },
+      { id: '1.3', question: 'Are pavement areas free of scaling, spalling, cracks, and surface variations such as bumps and low spots that could cause damage to aircraft, cut tires or cause tail hook skip?' },
+      { id: '1.4', question: 'Are runway, taxiway, apron edges and pavement joints free of vegetation growth that impedes draining or causes premature pavement deterioration?' },
+      { id: '1.5', question: 'Are pavements free of holes that could impair directional control of aircraft or possibly damage a tire? Holes greater than 3" in diameter can damage small, high-pressure tires on trainer and fighter aircraft.' },
+      { id: '1.6', question: 'Are pavement lips no greater than necessary to allow water to drain off the pavement?' },
+      { id: '1.7', question: 'Are primary pavements structurally capable of supporting the mission? (Review latest HQ AFCEC Pavement Evaluation Report)' },
+      { id: '1.8', question: 'Is the HQ AFCEC airfield pavement evaluation report current? (Evaluation is ten years or less and reflects the latest repair/construction efforts.)' },
+      { id: '1.9', question: 'Are runway friction characteristics adequate? (See latest HQ AFCEC Friction Characteristics Report)' },
+      { id: '1.10', question: 'Is the HQ AFCEC airfield pavement condition index survey current? (Survey is five years or less.)' },
+      { id: '1.11', question: 'Is pavement Condition Index (PCI) greater than 70? Pavement must have a PCI equal to or greater than 70 to be rated adequate.' },
+    ],
+  },
+  // ── Section 2: Airfield Safety Clearances and Apron Areas ──
+  {
+    id: 'acsi-2',
+    number: 2,
+    title: 'Airfield Safety Clearances and Apron Areas',
+    reference: 'UFC 3-260-01, AFI 32-1015, AFH 32-7084',
+    items: [
+      { id: '2.1', question: 'Are the runway lateral clearance zones ground surfaces clear of fixed or mobile objects and graded to UFC 3-260-01, Table 3-2? Is there any erosion, unusual depressions or rutting caused by vehicles or animals?' },
+      { id: '2.2', question: 'Is the graded area of the clear zone cleared, grubbed of stumps and free of abrupt surface irregularities, ditches, and ponding areas?' },
+      { id: '2.3', question: 'Is the graded portion of the Clear Zone free of above ground structures, objects, or roadways with the exception to those items listed within UFC 3-260-01, Appendix B Section 13?' },
+      { id: '2.4', question: 'Are all penetrations to airfield imaginary surfaces documented? Check airfield obstruction maps for accuracy and currency.' },
+      { id: '2.5', question: 'Are all violations along the taxiways documented? (Required clearance from taxiway centerline to fixed or mobile obstacles: Class A: 150ft; Class B: 200ft)' },
+      { id: '2.6', question: 'Are all violations along the apron edges documented? (Required clearance from apron boundary marking to fixed or mobile obstacles based on most demanding aircraft.)' },
+      { id: '2.7', question: 'Are storm sewer system inlets and drainage channels free of debris? Note any standing water.' },
+      { id: '2.8', question: 'Are manhole, hand hole, drainage structures, inlet and sewer covers in place? Is the top surface of foundations, covers and frames at grade level (no more than 3 inches high)?' },
+    ],
+  },
+  // ── Section 3: Airfield Markings ──
+  {
+    id: 'acsi-3',
+    number: 3,
+    title: 'Airfield Markings',
+    reference: 'AFMAN 32-1040, UFC 3-260-04',
+    preamble: 'For each marking type: (1) Properly depicted and sited? (2) Free of peeled/blistered/chipped/faded paint? (3) Clearly visible day and night? (4) Free of excessive rubber deposits?',
+    items: [
+      // 3.1 Runways
+      { id: '3.1.1', question: 'Centerline', subsection: 'Runways' },
+      { id: '3.1.2', question: 'Threshold', subsection: 'Runways' },
+      { id: '3.1.3', question: 'Displaced Threshold', subsection: 'Runways' },
+      { id: '3.1.4', question: 'Designation', subsection: 'Runways' },
+      { id: '3.1.5', question: 'Side Stripes', subsection: 'Runways' },
+      { id: '3.1.6', question: 'Touchdown Zone', subsection: 'Runways' },
+      { id: '3.1.7', question: 'Fixed Distance (ICAO: Aiming Points)', subsection: 'Runways' },
+      { id: '3.1.8', question: 'Aircraft Arresting System Warning', subsection: 'Runways' },
+      { id: '3.1.9', question: 'Overruns', subsection: 'Runways' },
+      // 3.2 Taxiways
+      { id: '3.2.1', question: 'Centerline Stripe', subsection: 'Taxiways' },
+      { id: '3.2.2', question: 'Instrument Holding Positions', subsection: 'Taxiways' },
+      { id: '3.2.3', question: 'VFR Runway Holding Position', subsection: 'Taxiways' },
+      { id: '3.2.4', question: 'Side Stripes', subsection: 'Taxiways' },
+      { id: '3.2.5', question: 'Taxilane Edge Stripes', subsection: 'Taxiways' },
+      // 3.3–3.5
+      { id: '3.3', question: 'Apron markings' },
+      { id: '3.4', question: 'Helipads (Perimeter/Identification/Hospital)' },
+      { id: '3.5', question: 'Parking Ramps' },
+      // 3.6 Closed Pavements
+      { id: '3.6.1', question: 'Permanently Closed Runways/Taxiways', subsection: 'Closed Pavements' },
+      { id: '3.6.2', question: 'Temporarily Closed Runways/Taxiways', subsection: 'Closed Pavements' },
+      { id: '3.6.3', question: 'Aprons', subsection: 'Closed Pavements' },
+      // 3.7
+      { id: '3.7', question: 'Barricades' },
+      // 3.8 Shoulders
+      { id: '3.8.1', question: 'Runway shoulders (deceptive surface)', subsection: 'Shoulders' },
+      { id: '3.8.2', question: 'Taxiway shoulders (deceptive surface)', subsection: 'Shoulders' },
+      { id: '3.8.3', question: 'Apron shoulders (deceptive surface)', subsection: 'Shoulders' },
+      // 3.9–3.12
+      { id: '3.9', question: 'INS Checkpoints' },
+      { id: '3.10', question: 'Ground Receiver Checkpoints' },
+      { id: '3.11', question: 'Compass Calibration Pad' },
+      { id: '3.12.1', question: 'Landing Zone', subsection: 'Expedient Airfield Markings' },
+      { id: '3.12.2', question: 'Minimum Operating Strip (MOS)', subsection: 'Expedient Airfield Markings' },
+      { id: '3.12.3', question: 'Taxiway', subsection: 'Expedient Airfield Markings' },
+      // 3.13–3.14
+      { id: '3.13.1', question: 'Are vehicular access roads leading to runways marked with a white "stop" bar at the normal positions for VFR or instrument hold lines?', subsection: 'Airfield Vehicular Access Roads' },
+      { id: '3.14', question: 'Are non-standard/additional markings approved and do not interfere with required airfield markings?' },
+    ],
+  },
+  // ── Section 4: Airfield Signs ──
+  {
+    id: 'acsi-4',
+    number: 4,
+    title: 'Airfield Signs',
+    reference: 'UFC 3-535-01',
+    items: [
+      { id: '4.1', question: 'Are mandatory signs installed and properly sited in accordance with current criteria?' },
+      { id: '4.2', question: 'Are information signs properly sited in accordance with current criteria?' },
+      { id: '4.3', question: 'Do all signs have the correct legend and orientation? Color coding? Easy to read? Illuminated for night operations?' },
+      { id: '4.4', question: 'Are signs mounted on frangible couplings? Note any broken panels.' },
+      { id: '4.5', question: 'Are signs clear of vegetation growth or dirt that obscures a vehicle operator or pilot\'s view?' },
+      { id: '4.6', question: 'Are appropriate sign sizes installed to correlate with the Instrument Landing System?' },
+    ],
+  },
+  // ── Section 5: Airfield Lighting ──
+  {
+    id: 'acsi-5',
+    number: 5,
+    title: 'Airfield Lighting',
+    reference: 'UFC 3-535-01',
+    items: [
+      // 5.1 & 5.2 — answerable general items
+      { id: '5.1', question: 'All required lighting systems installed per UFC 3-535-01 Table 2-1A?' },
+      { id: '5.2', question: 'Elevated fixtures on frangible couplings, lens orientation within tolerances?' },
+      // 5.3 — sub-heading (not answerable), applies to all items below
+      { id: '5.3', question: '5.3: For each system below — (A) Operable, (B) Properly sited, (C) Clear of vegetation/obstructions', isHeading: true },
+      // 5.5 Approach Lighting Systems
+      { id: '5.5.1', question: 'ALSF-1', subsection: 'Approach Lighting Systems', hasSubFields: true },
+      { id: '5.5.2', question: 'ALSF-2', subsection: 'Approach Lighting Systems', hasSubFields: true },
+      { id: '5.5.3', question: 'Short Approach Lighting System (SALS)', subsection: 'Approach Lighting Systems', hasSubFields: true },
+      { id: '5.5.4', question: 'Simplified Short Approach Lighting System (SSALR)', subsection: 'Approach Lighting Systems', hasSubFields: true },
+      { id: '5.5.5', question: 'Medium Intensity Approach Lighting System (MALSR)', subsection: 'Approach Lighting Systems', hasSubFields: true },
+      { id: '5.5.6', question: 'Runway End Identifier Lights (REIL)', subsection: 'Approach Lighting Systems', hasSubFields: true },
+      { id: '5.5.7', question: 'Precision Approach Path Indicator (PAPI)', subsection: 'Approach Lighting Systems', hasSubFields: true },
+      // 5.6 Runway Lighting
+      { id: '5.6.1', question: 'High Intensity Runway Lights (HIRL)', subsection: 'Runway Lighting Systems', hasSubFields: true },
+      { id: '5.6.2', question: 'Medium Intensity Runway Lights (MIRL)', subsection: 'Runway Lighting Systems', hasSubFields: true },
+      { id: '5.6.3', question: 'Threshold Lights', subsection: 'Runway Lighting Systems', hasSubFields: true },
+      { id: '5.6.4', question: 'Lights with Displaced Threshold', subsection: 'Runway Lighting Systems', hasSubFields: true },
+      { id: '5.6.5', question: 'Runway End Lights', subsection: 'Runway Lighting Systems', hasSubFields: true },
+      { id: '5.6.6', question: 'Runway Centerline Lights', subsection: 'Runway Lighting Systems', hasSubFields: true },
+      { id: '5.6.7', question: 'Touchdown Zone Lights', subsection: 'Runway Lighting Systems', hasSubFields: true },
+      { id: '5.6.8', question: 'CAT II and CAT III Lighting Systems', subsection: 'Runway Lighting Systems', hasSubFields: true },
+      // 5.7 Taxiway Lighting
+      { id: '5.7.1', question: 'Edge Lights', subsection: 'Taxiway Lighting', hasSubFields: true },
+      { id: '5.7.2', question: 'Centerline Lights', subsection: 'Taxiway Lighting', hasSubFields: true },
+      { id: '5.7.3', question: 'Runway Exit Lights', subsection: 'Taxiway Lighting', hasSubFields: true },
+      { id: '5.7.4', question: 'Taxiway Hold Lights / Stop Bar', subsection: 'Taxiway Lighting', hasSubFields: true },
+      { id: '5.7.5', question: 'Hold Position Edge Lights (Runway Guard Lights)', subsection: 'Taxiway Lighting', hasSubFields: true },
+      { id: '5.7.6', question: 'End Lights', subsection: 'Taxiway Lighting', hasSubFields: true },
+      // 5.8–5.11
+      { id: '5.8', question: 'Obstruction Lights', hasSubFields: true },
+      { id: '5.9.1', question: 'Perimeter Lights', subsection: 'Helipad Lights', hasSubFields: true },
+      { id: '5.9.2', question: 'VFR Landing Direction Lights and Approach Lights', subsection: 'Helipad Lights', hasSubFields: true },
+      { id: '5.9.3', question: 'Floodlights', subsection: 'Helipad Lights', hasSubFields: true },
+      { id: '5.9.4', question: 'Approach Slope Indicator', subsection: 'Helipad Lights', hasSubFields: true },
+      { id: '5.9.5', question: 'Identification Beacon', subsection: 'Helipad Lights', hasSubFields: true },
+      { id: '5.9.6', question: 'Wind Direction Indicators', subsection: 'Helipad Lights', hasSubFields: true },
+      { id: '5.10.1', question: 'Heliport', subsection: 'Heliport Lights', hasSubFields: true },
+      { id: '5.10.2', question: 'Rotary Wing Landing Lanes', subsection: 'Heliport Lights', hasSubFields: true },
+      { id: '5.10.3', question: 'Refueling Area Lights', subsection: 'Heliport Lights', hasSubFields: true },
+      { id: '5.10.4', question: 'Hoverlane Lights', subsection: 'Heliport Lights', hasSubFields: true },
+      { id: '5.11.1', question: 'Airport Beacon', subsection: 'Miscellaneous Lighted Visual Aids', hasSubFields: true },
+      { id: '5.11.2', question: 'Runway/Taxiway Retro-Reflective Markers', subsection: 'Miscellaneous Lighted Visual Aids', hasSubFields: true },
+      { id: '5.11.3', question: 'Other Auxiliary Lights', subsection: 'Miscellaneous Lighted Visual Aids', hasSubFields: true },
+      { id: '5.11.4', question: 'Apron/Security', subsection: 'Miscellaneous Lighted Visual Aids', hasSubFields: true },
+    ],
+  },
+  // ── Section 6: Wind Cones ──
+  {
+    id: 'acsi-6',
+    number: 6,
+    title: 'Wind Cones',
+    reference: 'UFC 3-535-01',
+    items: [
+      { id: '6.1', question: 'Are wind cone fabrics in good condition? (Must not be badly worn, rotted, faded, or soiled.)' },
+      { id: '6.2', question: 'Does the wind cone assembly swing freely at 36 degrees?' },
+      { id: '6.3', question: 'Are wind cones illuminated? If so, are the lights operable?' },
+      { id: '6.4', question: 'Are the wind cones free of obscuring vegetation?' },
+      { id: '6.5', question: 'Are wind cones sited in accordance with UFC 3-535-01?' },
+    ],
+  },
+  // ── Section 7: Obstructions to Air Navigation ──
+  {
+    id: 'acsi-7',
+    number: 7,
+    title: 'Obstructions to Air Navigation',
+    reference: '14 CFR Part 77, UFC 3-260-01',
+    items: [
+      { id: '7.1', question: 'Are all obstructions identified and documented? (Contact Community Planner and TERPS for assistance.)' },
+      { id: '7.2', question: 'Are all obstructions allowed (permissible deviations) or waived? Are they properly marked and lighted?' },
+    ],
+  },
+  // ── Section 8: Arresting Systems ──
+  {
+    id: 'acsi-8',
+    number: 8,
+    title: 'Arresting Systems',
+    reference: 'AFMAN 32-1040, DAFMAN 32-1084, UFC 3-260-01, FC 3-260-18F',
+    items: [
+      { id: '8.1', question: 'Are unidirectional systems and nets located no closer than 35 feet from the threshold of the runway?' },
+      { id: '8.2', question: 'Are energy absorbers located below grade or at least 275 feet from the centerline of the runway pavement?' },
+      { id: '8.3', question: 'Are paved transitions and buried crushed stone ramps provided around the arresting system components? Is the area over the fairlead tube finished to a grade of 1V:30H or flatter?' },
+      { id: '8.4', question: 'Do the shelters used for above-grade systems comply with AFMAN 32-1040 and UFC 3-260-01, Appendix B Section 13?' },
+      { id: '8.5', question: 'Is the minimum effective pendant height greater than 1.5 inches? If 1.75 inches or less, has repair been initiated?' },
+      { id: '8.6', question: 'Do aircraft arresting systems meet location and siting requirements?' },
+      { id: '8.7', question: 'Do arresting system cables have proper tension, doughnut spacing, and tie-downs? Are there any broken tie-downs?' },
+      { id: '8.8', question: 'Is the pavement type the same in the critical area (center 75 feet of pavement within 200 feet on either side of the cable)?' },
+      { id: '8.9', question: 'Is the pavement within 200 feet either side of the cable free of excessive paint build up that could cause a tail hook skip?' },
+    ],
+  },
+  // ── Section 9: Other Hazards ──
+  {
+    id: 'acsi-9',
+    number: 9,
+    title: 'Other Hazards',
+    reference: 'DAFI 91-202, DAFI 901-212, DAFI 31-101',
+    items: [
+      { id: '9.1', question: 'Are all Bird/Wildlife hazards and habitat control identified and management control measures in place?' },
+      { id: '9.2', question: 'Is the airfield a controlled area (security, fencing, and barricades) to prevent unauthorized access?' },
+    ],
+  },
+  // ── Section 10: Local Information / Hazardous Conditions ──
+  {
+    id: 'acsi-10',
+    number: 10,
+    title: 'Local Information / Hazardous Conditions',
+    reference: 'Wing/Base Instructions',
+    items: [
+      { id: '10.1', question: '(Locally defined)' },
+      { id: '10.2', question: '(Locally defined)' },
+      { id: '10.3', question: '(Locally defined)' },
+    ],
+  },
+]
+
+export const ACSI_STATUS_CONFIG = {
+  draft:       { color: '#9CA3AF', bg: '#E5E7EB', label: 'Draft' },
+  in_progress: { color: '#3B82F6', bg: '#DBEAFE', label: 'In Progress' },
+  completed:   { color: '#10B981', bg: '#D1FAE5', label: 'Completed' },
+  staffed:     { color: '#8B5CF6', bg: '#EDE9FE', label: 'Staffed' },
+} as const
+
+export const ACSI_TEAM_ROLES = [
+  { value: 'afm', label: 'Airfield Manager', required: true },
+  { value: 'ce', label: 'CE Representative', required: true },
+  { value: 'safety', label: 'Safety', required: true },
+  { value: 'raws', label: 'RAWS', required: false },
+  { value: 'weather', label: 'Weather', required: false },
+  { value: 'sfs', label: 'SFS', required: false },
+  { value: 'terps', label: 'TERPS', required: false },
+  { value: 'other', label: 'Other', required: false },
+] as const

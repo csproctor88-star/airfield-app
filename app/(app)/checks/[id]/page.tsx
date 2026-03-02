@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { CHECK_TYPE_CONFIG } from '@/lib/constants'
 import { DEMO_CHECKS, DEMO_CHECK_COMMENTS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
-import { fetchCheck, fetchCheckComments, addCheckComment, fetchCheckPhotos, uploadCheckPhoto, deleteCheck, updateCheckNotes, type CheckRow, type CheckCommentRow, type CheckPhotoRow } from '@/lib/supabase/checks'
+import { fetchCheck, fetchCheckComments, addCheckComment, fetchCheckPhotos, uploadCheckPhoto, deleteCheck, type CheckRow, type CheckCommentRow, type CheckPhotoRow } from '@/lib/supabase/checks'
 import { PhotoViewerModal } from '@/components/discrepancies/modals'
 import { useInstallation } from '@/lib/installation-context'
 import { ActionButton } from '@/components/ui/button'
@@ -31,8 +31,6 @@ export default function CheckDetailPage() {
   const [currentUser, setCurrentUser] = useState('Inspector')
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
-  const [editingNotes, setEditingNotes] = useState(false)
-  const [notesText, setNotesText] = useState('')
   const { currentInstallation, userRole } = useInstallation()
   const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
 
@@ -422,71 +420,6 @@ export default function CheckDetailPage() {
         )}
       </div>
 
-      {/* Admin Notes */}
-      {isAdmin && (
-        <div className="card" style={{ marginBottom: 8 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              Notes
-            </div>
-            {!editingNotes && (
-              <button
-                onClick={() => { setNotesText((check.data?.notes as string) || ''); setEditingNotes(true) }}
-                style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-              >
-                Edit
-              </button>
-            )}
-          </div>
-          {editingNotes ? (
-            <div>
-              <textarea
-                className="input-dark"
-                rows={3}
-                style={{ resize: 'vertical', width: '100%', boxSizing: 'border-box', marginBottom: 8 }}
-                value={notesText}
-                onChange={(e) => setNotesText(e.target.value)}
-              />
-              <div style={{ display: 'flex', gap: 6 }}>
-                <ActionButton
-                  color="#10B981"
-                  onClick={async () => {
-                    if (usingDemo) {
-                      toast.success('Notes updated (demo mode)')
-                      setEditingNotes(false)
-                      return
-                    }
-                    setActionLoading(true)
-                    const { error } = await updateCheckNotes(check.id, notesText.trim() || null)
-                    if (error) {
-                      toast.error(error)
-                    } else {
-                      toast.success('Notes updated')
-                      const freshCheck = await fetchCheck(check.id)
-                      if (freshCheck) setLiveData(freshCheck)
-                    }
-                    setActionLoading(false)
-                    setEditingNotes(false)
-                  }}
-                  disabled={actionLoading}
-                >
-                  {actionLoading ? 'Saving...' : 'Save'}
-                </ActionButton>
-                <ActionButton color="#9CA3AF" onClick={() => setEditingNotes(false)}>
-                  Cancel
-                </ActionButton>
-              </div>
-            </div>
-          ) : (
-            (check.data?.notes as string) ? (
-              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{check.data.notes as string}</div>
-            ) : (
-              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>No notes.</div>
-            )
-          )}
-        </div>
-      )}
-
       {/* Pinned Location Map */}
       {staticMapUrl && (
         <div className="card" style={{ marginBottom: 8, padding: 0, overflow: 'hidden' }}>
@@ -619,12 +552,6 @@ export default function CheckDetailPage() {
       {/* Admin Actions */}
       {isAdmin && (
         <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12, marginTop: 8, display: 'flex', gap: 8 }}>
-          <ActionButton
-            color="#3B82F6"
-            onClick={() => { setNotesText((check.data?.notes as string) || ''); setEditingNotes(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
-          >
-            Edit Notes
-          </ActionButton>
           <ActionButton
             color="#EF4444"
             onClick={async () => {

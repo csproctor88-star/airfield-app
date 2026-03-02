@@ -149,6 +149,8 @@ export type Database = {
           check_id: string | null
           inspection_id: string | null
           inspection_item_id: string | null
+          acsi_inspection_id: string | null
+          acsi_item_id: string | null
           base_id: string | null
           storage_path: string
           thumbnail_path: string | null
@@ -551,3 +553,92 @@ export type WaiverReview = Database['public']['Tables']['waiver_reviews']['Row']
 export type WaiverCoordination = Database['public']['Tables']['waiver_coordination']['Row']
 export type Regulation = Database['public']['Tables']['regulations']['Row']
 export type UserRegulationPdf = Database['public']['Tables']['user_regulation_pdfs']['Row']
+
+// === ACSI (Airfield Compliance and Safety Inspection) Types ===
+
+export type AcsiStatus = 'draft' | 'in_progress' | 'completed' | 'staffed'
+
+export type AcsiItemResponse = 'pass' | 'fail' | 'na' | null
+
+export type AcsiDiscrepancyDetail = {
+  comment: string
+  work_order: string
+  project_number: string
+  estimated_cost: string
+  estimated_completion: string
+  photo_ids: string[]
+  areas: string[]
+  /** @deprecated Use `pins` instead */
+  latitude: number | null
+  /** @deprecated Use `pins` instead */
+  longitude: number | null
+  pins: { lat: number; lng: number }[]
+}
+
+export type AcsiItem = {
+  id: string
+  section_id: string
+  item_number: string
+  question: string
+  response: AcsiItemResponse
+  discrepancy: AcsiDiscrepancyDetail | null
+}
+
+export type AcsiTeamMember = {
+  id: string
+  role: string
+  name: string
+  rank: string
+  title: string
+}
+
+export type AcsiSignatureBlock = {
+  label: string
+  organization: string
+  name: string
+  rank: string
+  title: string
+}
+
+export type AcsiDraftData = {
+  responses: Record<string, AcsiItemResponse>
+  comments: Record<string, string>
+  discrepancies: Record<string, AcsiDiscrepancyDetail>
+  team: AcsiTeamMember[]
+  signatures: AcsiSignatureBlock[]
+  notes: string
+  collapsedSections: Record<string, boolean>
+  localItems: { id: string; question: string }[]
+}
+
+export type AcsiInspection = {
+  id: string
+  display_id: string
+  base_id: string | null
+  airfield_name: string
+  inspection_date: string
+  fiscal_year: number
+  status: AcsiStatus
+  items: AcsiItem[]
+  total_items: number
+  passed_count: number
+  failed_count: number
+  na_count: number
+  inspection_team: AcsiTeamMember[]
+  risk_cert_signatures: AcsiSignatureBlock[]
+  notes: string | null
+  inspector_id: string | null
+  inspector_name: string | null
+  draft_data: AcsiDraftData | null
+  completed_at: string | null
+  completed_by_name: string | null
+  completed_by_id: string | null
+  filed_at: string | null
+  filed_by_name: string | null
+  filed_by_id: string | null
+  saved_at: string | null
+  saved_by_name: string | null
+  saved_by_id: string | null
+  created_at: string
+  updated_at: string
+}
