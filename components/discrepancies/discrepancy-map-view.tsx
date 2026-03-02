@@ -118,27 +118,30 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
       const days = daysOpenFn(d.created_at)
       const photoUrl = photoMap?.[d.id]
 
+      // Use inner div for scale so we don't overwrite Mapbox's transform
       const el = document.createElement('div')
-      el.style.width = '30px'
-      el.style.height = '30px'
-      el.style.borderRadius = '50%'
-      el.style.border = '2px solid #FFFFFF'
-      el.style.background = 'rgba(15, 23, 42, 0.85)'
-      el.style.boxShadow = '0 0 8px rgba(0,0,0,0.5)'
       el.style.cursor = 'pointer'
-      el.style.transition = 'transform 0.15s ease'
-      el.style.display = 'flex'
-      el.style.alignItems = 'center'
-      el.style.justifyContent = 'center'
-      el.style.fontSize = '15px'
-      el.style.lineHeight = '1'
-      el.textContent = emoji
+      const inner = document.createElement('div')
+      inner.style.width = '30px'
+      inner.style.height = '30px'
+      inner.style.borderRadius = '50%'
+      inner.style.border = '2px solid #FFFFFF'
+      inner.style.background = 'rgba(15, 23, 42, 0.85)'
+      inner.style.boxShadow = '0 0 8px rgba(0,0,0,0.5)'
+      inner.style.transition = 'transform 0.15s ease'
+      inner.style.display = 'flex'
+      inner.style.alignItems = 'center'
+      inner.style.justifyContent = 'center'
+      inner.style.fontSize = '15px'
+      inner.style.lineHeight = '1'
+      inner.textContent = emoji
+      el.appendChild(inner)
 
       el.addEventListener('mouseenter', () => {
-        el.style.transform = 'scale(1.3)'
+        inner.style.transform = 'scale(1.3)'
       })
       el.addEventListener('mouseleave', () => {
-        el.style.transform = 'scale(1)'
+        inner.style.transform = 'scale(1)'
       })
 
       const photoHtml = photoUrl
