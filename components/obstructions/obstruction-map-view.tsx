@@ -168,7 +168,7 @@ export default function ObstructionMapView({ evaluations }: Props) {
       const popup = new mapboxgl.Popup({
         offset: 16,
         closeButton: true,
-        closeOnClick: true,
+        closeOnClick: false,
         maxWidth: '280px',
         className: 'obstruction-map-popup',
       }).setHTML(popupHtml)
@@ -260,7 +260,7 @@ export default function ObstructionMapView({ evaluations }: Props) {
         ref={mapContainer}
         style={{
           width: '100%',
-          height: expanded ? '70vh' : '380px',
+          height: expanded ? 'var(--map-height-expanded)' : 'var(--map-height)',
           borderRadius: 10,
           overflow: 'hidden',
           border: '1px solid var(--color-border-mid)',

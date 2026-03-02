@@ -165,7 +165,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
       const popup = new mapboxgl.Popup({
         offset: 18,
         closeButton: true,
-        closeOnClick: true,
+        closeOnClick: false,
         maxWidth: '360px',
         className: 'discrepancy-map-popup',
       }).setHTML(popupHtml)
