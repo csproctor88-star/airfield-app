@@ -10,8 +10,85 @@ All notable changes to Glidepath.
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
 - Sync & Data module (offline queue, export, import)
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate ~182 `as any` casts
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate ~197 `as any` casts
 - Convert PDFLibrary.jsx to TypeScript (.tsx)
+
+---
+
+## [2.11.0] — 2026-03-02
+
+### ACSI Module, All Inspections Hub & Check Form Improvements
+
+New Airfield Compliance and Safety Inspection (ACSI) module implementing the DAFMAN 13-204v2, Para 5.4.3 annual compliance inspection. Also adds a unified All Inspections navigation hub and several quality-of-life improvements to the check form and inspection workflow.
+
+#### ACSI Module (New — 14 files)
+
+Complete annual compliance inspection system with 10 sections and ~100 checklist items.
+
+- **Form page** (`/acsi/new`) — 10 collapsible sections, Y/N/N/A toggle per item, per-item discrepancy documentation for failures (comment, work order, project, estimated cost/completion), photo upload on failed items, inspection team editor (AFM/CE/Safety + additional members), risk management certification with 3 signature blocks, general notes
+- **Detail page** (`/acsi/[id]`) — Read-only view of completed/draft ACSI with color-coded response badges, discrepancy details inline, team/certification display, edit button for authorized roles
+- **List page** (`/acsi`) — KPI badges (Total/Completed/In Progress/Draft), status filter, search, card list with display ID and pass/fail/na counts
+- **PDF export** (`lib/acsi-pdf.ts`) — Full inspection report with section headers, parent/sub-field visual hierarchy using `didParseCell`/`didDrawCell` hooks, inline discrepancy photos and map thumbnails, team roster, risk certification
+- **Excel export** (`lib/acsi-excel.ts`) — Multi-sheet workbook: Cover, Checklist (with discrepancy details), Inspection Team, Risk Cert
+- **Draft persistence** (`lib/acsi-draft.ts`) — localStorage auto-save with 1-second debounce, DB auto-save on new inspection mount for immediate photo upload support, resume from draft on page load
+- **Sub-components** — `acsi-section.tsx` (collapsible with progress counter), `acsi-item.tsx` (toggle + discrepancy expansion), `acsi-discrepancy-panel.tsx` (fields + photo picker), `acsi-team-editor.tsx` (role-based team), `acsi-risk-cert.tsx` (3 signature blocks), `acsi-location-map.tsx` (Mapbox pin placement, square aspect ratio)
+- **Edit capability** — Authorized roles (Airfield Manager, Base Admin, System Admin) can edit any ACSI regardless of status
+- **Sidebar nav** — Added "ACSI" entry with ShieldCheck icon after "Daily Inspections"
+
+#### Database Migration
+- **`2026030200_create_acsi_inspections.sql`** — `acsi_inspections` table with JSONB items/team/signatures, fiscal year, status workflow, pass/fail/na counts. Added `acsi_inspection_id` + `acsi_item_id` FK columns to `photos` table. RLS policies using existing helper functions.
+
+#### All Inspections Hub
+- **New page** (`/inspections/all`) — Navigation hub accessible from More menu with styled cards for each inspection type (Daily Airfield, ACSI, Pre/Post Construction, Joint Monthly). Each card has a "Start" button linking to the form and a "History" button linking to the list view.
+- **More menu** — Added "All Inspections" as first item with link to `/inspections/all`
+
+#### Airfield Check Improvements
+- **Auto-save remark on complete** — When "Complete Check" is clicked, any pending remark text is automatically saved before finalizing
+- **Removed Notes section** from check detail page (`checks/[id]/page.tsx`) — Section was not populated from the check form and created confusion
+
+#### PDF Sub-Field Hierarchy
+- **Parent/sub-field visual hierarchy** in ACSI PDF — Parent items (e.g., "5.5.1 ALSF-1") render as bold header rows with light blue-gray background, sub-fields render deeply indented showing only "(A) Operable", "(B) Properly Sited", "(C) Clear of Vegetation" labels
+- Sub-field item numbers removed from # column per user preference
+- Section headers have increased breathing room, post-section gaps widened
+
+#### Spacing & Styling Polish
+- All ACSI sections spaced further apart (gap 10→16)
+- Inspection Team and Risk Cert sections have increased margins (20→28)
+- Item # column widened (minWidth 48→64), sub-field indentation increased (20→28)
+- Team editor and risk cert labels bolded (fontWeight 600→700)
+- Reviewer block spacing increased across team editor and risk cert
+
+#### Files Created (14)
+- `app/(app)/acsi/page.tsx` — ACSI list page
+- `app/(app)/acsi/new/page.tsx` — ACSI form page
+- `app/(app)/acsi/[id]/page.tsx` — ACSI detail page
+- `app/(app)/inspections/all/page.tsx` — All Inspections navigation hub
+- `components/acsi/acsi-section.tsx` — Collapsible section wrapper
+- `components/acsi/acsi-item.tsx` — Checklist item with Y/N/N/A toggle
+- `components/acsi/acsi-discrepancy-panel.tsx` — Failure documentation panel
+- `components/acsi/acsi-team-editor.tsx` — Inspection team editor
+- `components/acsi/acsi-risk-cert.tsx` — Risk management certification
+- `components/acsi/acsi-location-map.tsx` — Mapbox location pin map
+- `lib/acsi-pdf.ts` — PDF export with didParseCell/didDrawCell hooks
+- `lib/acsi-excel.ts` — Excel export (multi-sheet)
+- `lib/acsi-draft.ts` — Draft persistence (localStorage + DB)
+- `lib/supabase/acsi-inspections.ts` — CRUD module
+- `supabase/migrations/2026030200_create_acsi_inspections.sql` — Migration
+
+#### Files Modified (10)
+- `lib/supabase/types.ts` — AcsiItem, AcsiTeamMember, AcsiSignatureBlock, AcsiDraftData, AcsiStatus types
+- `lib/constants.ts` — ACSI_CHECKLIST_SECTIONS (10 sections, ~100 items), ACSI_STATUS_CONFIG, ACSI_TEAM_ROLES
+- `lib/demo-data.ts` — DEMO_ACSI_INSPECTIONS (2 samples)
+- `components/layout/sidebar-nav.tsx` — ACSI nav entry
+- `app/(app)/more/page.tsx` — All Inspections menu item
+- `app/(app)/checks/page.tsx` — Auto-save remark on complete
+- `app/(app)/checks/[id]/page.tsx` — Removed Notes section
+- `package.json` — Version bump to 2.11.0
+- `app/login/page.tsx` — Version string update
+- `app/(app)/settings/page.tsx` — Version string update
+
+#### Version Sync
+- Updated version to 2.11.0 in package.json, login/page.tsx, settings/page.tsx
 
 ---
 
@@ -108,25 +185,6 @@ Major enhancements to the activity log with manual entry support and full CRUD, 
 - `2026022801_activity_log_update_delete_policies.sql` — RLS policies for activity log edit/delete
 - `2026022802_user_delete_set_null.sql` — ON DELETE SET NULL for all profile FK columns
 
-#### Files Changed (25+)
-- `app/(app)/activity/page.tsx` — Manual entry, edit modal, columnar display, column filters
-- `app/(app)/page.tsx` — Dashboard formatAction, navaid styling, KPI badges
-- `app/(app)/layout.tsx` — Removed InfoBar
-- `app/login/page.tsx` — Remember me checkbox
-- `components/layout/header.tsx` — Installation switcher, presence tracking, styling
-- `components/login-activity-dialog.tsx` — Columnar table, proper labels, metadata
-- `components/admin/invite-user-modal.tsx` — Installation dropdown for all admins
-- `lib/supabase/activity.ts` — logManualEntry, updateActivityEntry, deleteActivityEntry
-- `app/api/admin/users/[id]/route.ts` — FK nullification before user deletion
-- `app/(app)/reports/aging/page.tsx` — KPI badges, clickable discrepancies
-- `app/(app)/reports/daily/page.tsx` — KPI badges
-- `app/(app)/reports/discrepancies/page.tsx` — KPI badges
-- `app/(app)/reports/trends/page.tsx` — KPI badges
-- Multiple other pages — responsive fixes, font adjustments
-
-#### Version Sync
-- Updated version to 2.9.0 in package.json, login/page.tsx, settings/page.tsx
-
 ---
 
 ## [2.8.0] — 2026-02-28
@@ -136,16 +194,11 @@ Major enhancements to the activity log with manual entry support and full CRUD, 
 Major responsive overhaul enabling full iPad and desktop usage. Previously locked to a 480px mobile layout, the app now adapts across three breakpoints (mobile, 768px tablet, 1024px desktop) while preserving the existing mobile experience.
 
 #### Shell Layout
-- **Permanent sidebar navigation** — 300px side panel on tablet+ with full descriptive labels (e.g., "Obstruction Evaluation Tool", "Airfield Discrepancies", "Reference Library"). Hidden on mobile where bottom nav remains.
-- **Sidebar nav reordered** — Dashboard, Activity Log, Daily Inspections, Airfield Checks, NOTAMs, Airfield Discrepancies, Obstruction Evaluation Tool, Reference Library, Aircraft Database, Airfield Waivers, Reports & Analytics, PDF Library, User Management, Settings
+- **Permanent sidebar navigation** — 300px side panel on tablet+ with full descriptive labels
 - **Sidebar header** — Replaced logo with stylized tagline "Guiding You to Mission Success"
 - **App shell flex layout** — `app-shell` becomes horizontal flex on tablet+ (sidebar + main content column)
 - **Bottom nav hidden** on tablet+ (sidebar replaces it)
 - **Content area max-width** — 768px tablet, 1000px desktop, 1200px large desktop
-
-#### InfoBar Component (New)
-- **Extracted from header** — Installation ID (left) + user status/name (right) now rendered as a separate `InfoBar` component between the header and page content
-- **Visible on all pages** — Appears above weather/advisory on dashboard and above content on all other pages
 
 #### Responsive CSS Utility Classes
 - `.page-container` — Responsive padding (16px → 24px → 32px 40px)
@@ -157,60 +210,14 @@ Major responsive overhaul enabling full iPad and desktop usage. Previously locke
 - `.photo-grid` — 64px → 80px → 96px thumbnails
 - `.detail-grid-2` — 2-col → 3-col → 4-col
 - `.checklist-grid` — 1-col → 2-col on tablet+
-- `.badge-grid` — Auto-fill responsive grid
-- `.spec-grid` — 2-col → 3-col → 4-col for aircraft specs
-- `.navaid-grid` — 2-col mobile, 3-col tablet+
 
 #### Font Size Scaling
-- Introduced 11 CSS custom properties (`--fs-2xs` through `--fs-5xl`) with responsive overrides at each breakpoint
-- Mechanically replaced 1,123 inline `fontSize: N` values across 58 files with `var(--fs-*)` references
-- Scale: `--fs-base` goes 12px → 13px → 14px; `--fs-5xl` goes 24px → 28px → 34px
-
-#### Element Scaling
-- `.card` — padding 14→18→22px, border-radius 10→12→14px
-- `.input-dark` — padding and font scaled per breakpoint
-- `.btn-primary` — padding and font scaled per breakpoint
-- `.action-button` — CSS class replaces inline styles, scales at breakpoints
-- `.badge-pill` — CSS class replaces inline styles, scales at breakpoints
-- `.section-label` — font 10→11→12px
-
-#### Header Scaling
-- CSS custom properties for header padding, logo height, icon size, row gap
-- Weather component scaling (padding, gap, emoji size)
-- Advisory component scaling (padding, dialog width/padding)
-
-#### Dashboard Specific
-- **RSC/BWC boxes** — centered with `flex: '0 1 200px'`
-- **NAVAID grid** — CSS grid: 2-col mobile, 3-col tablet+ via `.navaid-grid`
-- **Quick Actions** — `actions-row` class (stacks mobile, row tablet+) with `whiteSpace: 'nowrap'`
-- **Active RWY card** — responsive via CSS custom properties (`--rwy-card-padding`, `--rwy-btn-font`, etc.)
+- 11 CSS custom properties (`--fs-2xs` through `--fs-5xl`) with responsive overrides
+- 1,123 inline `fontSize` values replaced across 58 files
 
 #### Map Components
-- **Location map** (checks/inspections) — responsive height via `--map-height` CSS var (420px → 70vh → 80vh) with expand/collapse toggle button
-- **Obstruction map** — responsive height via `--obs-map-height` (600px → 80vh → 85vh) with expand/collapse toggle, replaces hardcoded 500px
-- **Expanded maps** — 90vh → 90-92vh → 93-95vh for near full-screen viewing
-- **Smooth transitions** — `height 0.3s ease` with Mapbox `resize()` call
-
-#### Per-Page Responsive Updates (23 pages)
-Applied `.page-container`, `.form-row`, `.card-list`, `.filter-bar`, `.photo-grid`, `.checklist-grid`, `.detail-grid-2`, `.badge-grid`, `.spec-grid` classes across all page components, replacing inline padding and grid styles.
-
-#### Code Cleanup
-- Removed debug `console.log` from user management page
-- Removed orphaned `useTheme` import from sidebar-nav after logo removal
-
-#### Files Changed
-- `app/globals.css` — ~150 lines of responsive CSS added
-- `app/(app)/layout.tsx` — Restructured for sidebar + InfoBar
-- `components/layout/header.tsx` — Simplified to logo-only
-- `components/layout/info-bar.tsx` — New component
-- `components/layout/sidebar-nav.tsx` — New permanent sidebar with reordered nav
-- `lib/sidebar-context.tsx` — New context provider
-- `components/ui/button.tsx` — ActionButton CSS class
-- `components/ui/badge.tsx` — Badge CSS class
-- `components/discrepancies/location-map.tsx` — Responsive height + expand toggle
-- `components/obstructions/airfield-map.tsx` — Responsive height + expand toggle
-- 58 files — font-size variable replacement
-- 23 page components — responsive class application
+- Responsive height via CSS vars with expand/collapse toggle
+- Smooth transitions with Mapbox `resize()` call
 
 ---
 
@@ -218,34 +225,20 @@ Applied `.page-container`, `.form-row`, `.card-list`, `.filter-bar`, `.photo-gri
 
 ### Bug Fixes, PWA Hardening & Code Quality
 
-This release fixes critical bugs in photo uploads/display, resolves Android PWA rendering issues, improves mobile UX for dropdowns, and cleans up the project for branching.
-
 #### Bug Fixes
-- **Discrepancy photos not displaying** — Three bugs fixed:
-  1. Photo URL construction was missing the `photos/` bucket name in the Supabase Storage public URL path (404 on every photo)
-  2. `base_id` was never passed during photo upload, causing RLS policy `user_has_base_access()` to reject NULL and return empty results
-  3. Added fallback in `uploadDiscrepancyPhoto()` that resolves `base_id` from the parent discrepancy when not explicitly provided
-- **Same URL bug fixed in Checks detail page** — `checks/[id]/page.tsx` had identical missing bucket name issue
-- **FOD Walk → FOD Check** — PDF export details section incorrectly said "FOD Walk completed" instead of "FOD Check completed"
+- **Discrepancy photos not displaying** — Fixed photo URL construction (missing bucket name), `base_id` passthrough, and fallback resolution
+- **Checks detail page** — Same URL bug fixed
+- **FOD Walk → FOD Check** — PDF export label corrected
 
 #### PWA / Android
-- **Android system navigation bar** — Investigated and resolved white bar at bottom of screen in installed PWA mode:
-  - Removed problematic `body { padding-bottom: env(safe-area-inset-bottom) }` that created a gap below the fixed nav
-  - Added `overscroll-behavior: none` on html/body to prevent white flash on overscroll
-  - Bottom nav now spans full viewport width (`left: 0; right: 0`) with inner content centered at 480px
-  - Added `::after` pseudo-element extending nav background 100px below viewport for gesture bar coverage
-  - Service worker config updated to use `NetworkFirst` for `manifest.json`
-- **Header border** — Removed header bottom border in dark mode for cleaner look
-- **Dark mode logo** — Enlarged from 52px to 64px height
-
-#### UI Improvements
-- **Installation dropdown in User Management** — Replaced native `<select>` (which takes over the full screen on Android) with a custom scrollable dropdown matching the Settings > Installation pattern
+- Android system navigation bar white gap resolved
+- Service worker config updated for manifest.json
+- Dark mode logo enlarged
 
 #### Project Cleanup
-- Sorted `next.config.js` runtime caching from most specific to least specific to prevent premature matches
-- Removed unused `@types/react-dom` (Next.js includes its own)
-- Added `eslint-config-next` to align with Next.js 14 + ESLint 9 flat config
-- Addressed 4 minor ESLint warnings (unused vars, missing deps)
+- Sorted runtime caching in `next.config.js`
+- Removed unused `@types/react-dom`
+- Added `eslint-config-next`
 
 ---
 
@@ -253,16 +246,7 @@ This release fixes critical bugs in photo uploads/display, resolves Android PWA 
 
 ### Waiver Module — Full Lifecycle Management
 
-Complete airfield waiver system modeled after AF Form 505 and the AFCEC Playbook Appendix B.
-
-#### Features
-- Six classification types: permanent, temporary, construction, event, extension, amendment
-- Seven status values with mandatory comment dialogs for status transitions
-- Waiver detail pages with criteria & standards, coordination tracking, photo attachments, annual reviews
-- Individual waiver PDF export with embedded photos and full metadata
-- Excel export of the full waiver register with criteria and coordination sheets
-- Annual review mode (`/waivers/annual-review`) with year-by-year forms, KPIs, and board tracking
-- Seeded with 17 real Selfridge ANGB (KMTC) historical waivers
+Complete airfield waiver system modeled after AF Form 505 and AFCEC Playbook Appendix B. Six classification types, seven status values with mandatory comment dialogs, detail pages with criteria/coordination/photos/annual reviews, PDF and Excel export, annual review mode. Seeded with 17 real Selfridge ANGB (KMTC) historical waivers.
 
 ---
 
@@ -270,14 +254,7 @@ Complete airfield waiver system modeled after AF Form 505 and the AFCEC Playbook
 
 ### User Management & Admin System
 
-#### Features
-- Admin-only module for managing users across installations
-- Three-tier role hierarchy: sys_admin > base_admin/AFM/NAMO > regular roles
-- User cards with rank, role badge, status badge, base assignment, last seen
-- User detail modal for editing profiles with field-level permission enforcement
-- Email-based user invitation with branded setup email
-- Password reset (admin-initiated and self-serve)
-- Account lifecycle: deactivate/reactivate, delete (sys_admin only)
+Admin-only module with three-tier role hierarchy, user cards with rank/role/status, detail modal, email invitation, password reset, account lifecycle management.
 
 ---
 
@@ -285,11 +262,7 @@ Complete airfield waiver system modeled after AF Form 505 and the AFCEC Playbook
 
 ### Aircraft Database & Reports
 
-#### Features
-- 1,000+ military and civilian aircraft reference entries
-- Search, sort, and favorites system
-- ACN/PCN comparison panel for pavement loading analysis
-- Four report types with PDF export (Daily Ops, Open Discrepancies, Trends, Aging)
+1,000+ military and civilian aircraft entries with search, sort, favorites, ACN/PCN comparison. Four report types with PDF export (Daily Ops, Open Discrepancies, Trends, Aging).
 
 ---
 
@@ -297,12 +270,7 @@ Complete airfield waiver system modeled after AF Form 505 and the AFCEC Playbook
 
 ### Obstruction Evaluations
 
-#### Features
-- UFC 3-260-01 Class B imaginary surface analysis
-- 10 surfaces with interactive Mapbox overlays and per-surface toggles
-- Multi-runway support with per-runway visibility filtering
-- Geodesic calculations (Haversine, cross-track/along-track distance)
-- Photo documentation per evaluation
+UFC 3-260-01 Class B imaginary surface analysis with multi-runway support, 10 surfaces, interactive Mapbox overlays, geodesic calculations, photo documentation.
 
 ---
 
@@ -310,13 +278,7 @@ Complete airfield waiver system modeled after AF Form 505 and the AFCEC Playbook
 
 ### NOTAMs & Regulations
 
-#### Features
-- Live FAA NOTAM feed via notams.aim.faa.gov (no API key required)
-- ICAO search, filter chips, local NOTAM drafting
-- Regulatory reference library with 70+ entries
-- In-app PDF viewer with pinch-to-zoom
-- Offline caching via IndexedDB with bulk download
-- My Documents tab for personal uploads
+Live FAA NOTAM feed, ICAO search, filter chips, local NOTAM drafting. Regulatory reference library with 70+ entries, in-app PDF viewer, offline caching, My Documents tab.
 
 ---
 
@@ -324,12 +286,7 @@ Complete airfield waiver system modeled after AF Form 505 and the AFCEC Playbook
 
 ### Inspections & Checks
 
-#### Features
-- Daily inspection forms (Airfield + Lighting) with configurable templates
-- 7 airfield check types in unified form
-- Photo capture, map location, issue-found gating
-- BWC integration, draft persistence
-- PDF export for completed checks and inspections
+Daily inspection forms with configurable templates. 7 airfield check types. Photo capture, map location, draft persistence, PDF export.
 
 ---
 
@@ -337,11 +294,4 @@ Complete airfield waiver system modeled after AF Form 505 and the AFCEC Playbook
 
 ### Foundation
 
-#### Features
-- Next.js App Router with Supabase backend
-- Multi-base architecture with per-installation data isolation
-- Dashboard with weather, runway status, advisory system
-- Discrepancy tracking with full lifecycle
-- Light/dark/auto theme system
-- PWA with offline IndexedDB caching
-- Demo mode (runs without Supabase)
+Next.js App Router with Supabase backend. Multi-base architecture, dashboard with weather/runway status/advisory, discrepancy tracking, light/dark/auto theme, PWA with offline caching, demo mode.

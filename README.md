@@ -1,8 +1,8 @@
 # Glidepath
 
-Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
+Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, ACSI (annual compliance), NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.10.0 | **Build:** Clean | **48 routes** | **129 source files** | **60 migrations**
+**Version:** 2.11.0 | **Build:** Clean | **50 routes** | **147 source files** | **57 migrations**
 
 ## Tech Stack
 
@@ -52,7 +52,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 Apply the schema and migrations to a Supabase project:
 
 1. Run `supabase/schema.sql` to create the base tables and sequences
-2. Apply the 60 migrations in order from `supabase/migrations/`
+2. Apply the 57 migrations in order from `supabase/migrations/`
 
 See [BASE-ONBOARDING.md](./BASE-ONBOARDING.md) for adding new installations.
 
@@ -91,7 +91,7 @@ Track and resolve airfield issues. 11 discrepancy types (FOD, pavement, lighting
 - **Heavy Aircraft** — aircraft type, parking, weight, taxi route
 - **BASH** — condition code, species, mitigation, habitat attractants
 
-Photo capture, map location, issue-found gating, follow-up remarks. Full history with type filtering and search.
+Photo capture, map location, issue-found gating, follow-up remarks with auto-save on completion. Full history with type filtering and search.
 
 ### Daily Inspections (`/inspections`)
 Combined Airfield Inspection Report with two halves:
@@ -99,6 +99,18 @@ Combined Airfield Inspection Report with two halves:
 - **Lighting** — configurable sections and checklist items (per-base templates)
 
 Three-state toggle (Pass/Fail/N/A), Mark All Pass per section, BWC integration (LOW/MOD/SEV/PROHIB), draft persistence to localStorage, two-step Complete/File workflow with per-user tracking, combined PDF export. Also supports standalone Construction Meeting and Joint Monthly inspection forms with personnel attendance tracking.
+
+### ACSI (`/acsi`)
+Airfield Compliance and Safety Inspection per DAFMAN 13-204v2, Para 5.4.3. Annual compliance inspection with 10 sections and ~100 checklist items.
+
+- **Form** (`/acsi/new`) — 10 collapsible sections (all collapsed by default), Y/N/N/A toggle per item, per-item discrepancy documentation for failures (comment, work order, project #, estimated cost, estimated completion date), photo/map upload on failed items, inspection team editor (AFM/CE/Safety required + additional members), risk management certification with 3 signature blocks (OG/CC, MSG/CC, WG/CC), general notes
+- **Detail** (`/acsi/[id]`) — Read-only view with color-coded response badges, inline discrepancy details + photos, team and certification display. Edit button for Airfield Manager/Base Admin/System Admin
+- **List** (`/acsi`) — KPI badges (Total/Completed/In Progress/Draft), status filter, search
+- **Exports** — PDF with parent/sub-field visual hierarchy and inline discrepancy photos; Excel with Cover, Checklist, Team, and Risk Cert sheets
+- **Draft persistence** — localStorage auto-save (1s debounce) + auto-save to DB on new inspection for immediate photo upload
+
+### All Inspections (`/inspections/all`)
+Navigation hub accessible from the More menu. Styled cards for each inspection type (Daily Airfield, ACSI, Pre/Post Construction, Joint Monthly) with "Start" and "History" action buttons.
 
 ### Reports (`/reports`)
 Four report types with PDF export:
@@ -158,7 +170,7 @@ Admin-only module for managing users across installations. System admins see all
 Full audit trail with date-range filtering (Today, 7 Days, 30 Days, Custom). Columnar table display (Time Z, User, Action, Details) grouped by date headers with per-column search filters. Manual text entry for events not captured by the system. Edit/delete entries via modal dialog with Zulu time editing. Clickable items link to source entity (discrepancy, check, inspection). Excel export with styled formatting.
 
 ### More Menu (`/more`)
-Module directory linking to all features. All modules visible as a flat list with role-gated visibility (admin-only modules hidden for non-admin users).
+Module directory linking to all features. All modules visible as a flat list with role-gated visibility (admin-only modules hidden for non-admin users). "All Inspections" hub at top for quick access to all inspection forms.
 
 ## Project Structure
 
@@ -175,9 +187,10 @@ airfield-app/
 │   └── (app)/                            # Authenticated app shell
 │       ├── layout.tsx                    # Header + sidebar + bottom nav
 │       ├── page.tsx                      # Dashboard
+│       ├── acsi/                         # ACSI annual compliance (list, form, detail)
 │       ├── checks/                       # Check form, history, detail
 │       ├── discrepancies/                # List, create, detail
-│       ├── inspections/                  # Workspace + history, detail
+│       ├── inspections/                  # Workspace + history, detail, all-inspections hub
 │       ├── notams/                       # List, create, detail
 │       ├── obstructions/                 # Evaluation, history, detail
 │       ├── regulations/page.tsx          # Reference library + My Documents
@@ -191,8 +204,9 @@ airfield-app/
 │       ├── sync/page.tsx                 # Data sync (coming soon)
 │       └── users/page.tsx                # User Management (admin)
 ├── components/
+│   ├── acsi/                              # ACSI form sub-components (6 files)
 │   ├── admin/                            # User management components (9 files)
-│   ├── layout/                           # Header (with installation switcher + presence), sidebar, bottom-nav
+│   ├── layout/                           # Header, sidebar, bottom-nav
 │   ├── discrepancies/                    # Cards, location map, map view (COP), modals
 │   ├── obstructions/                     # Airfield map with surface overlays, map view
 │   ├── waivers/                          # Waiver map view, location picker
@@ -201,29 +215,33 @@ airfield-app/
 │   ├── login-activity-dialog.tsx         # Login notification with activity table
 │   └── PDFLibrary.jsx                   # Admin PDF library component (needs TSX conversion)
 ├── lib/
-│   ├── constants.ts                      # Checklists, types, regulation categories
+│   ├── constants.ts                      # Checklists, types, regulation categories, ACSI template
 │   ├── aircraft-data.ts                 # 1,000+ aircraft reference entries
 │   ├── utils.ts                          # Helpers (formatters, config checks)
-│   ├── demo-data.ts                      # Offline mock data
+│   ├── demo-data.ts                      # Offline mock data (10 arrays)
 │   ├── weather.ts                        # Open-Meteo weather fetching
+│   ├── acsi-draft.ts                    # ACSI draft persistence (localStorage + DB)
+│   ├── acsi-pdf.ts                      # ACSI PDF export with didParseCell/didDrawCell hooks
+│   ├── acsi-excel.ts                    # ACSI Excel export (multi-sheet)
 │   ├── *-context.tsx                     # React context (installation, dashboard, theme, sidebar)
 │   ├── idb.ts                            # IndexedDB wrapper (6 stores)
 │   ├── calculations/                     # UFC 3-260-01 geometry + obstruction analysis
 │   ├── reports/                          # PDF export data + generators (4 types)
 │   ├── admin/                            # RBAC utilities + user management
-│   └── supabase/                         # Client, server, types, CRUD modules (15 files)
+│   └── supabase/                         # Client, server, types, CRUD modules (16 files)
 ├── supabase/
 │   ├── schema.sql                        # Full database schema
-│   ├── migrations/                       # 60 migration files
+│   ├── migrations/                       # 57 migration files
 │   └── functions/                        # Edge functions (PDF text extraction)
 ├── middleware.ts                          # Auth guard + demo mode bypass
 ├── public/                               # Static assets, PWA manifest, aircraft images
-└── docs/                                 # Integration guides, reference scripts
+├── scripts/                              # Utility scripts (PDF downloads, regulation verification)
+└── docs/                                 # Integration guides, reference docs, session handoffs
 ```
 
 ## Database
 
-**25+ tables** across the Supabase PostgreSQL database:
+**26+ tables** across the Supabase PostgreSQL database:
 
 | Table | Purpose |
 |-------|---------|
@@ -238,10 +256,11 @@ airfield-app/
 | `airfield_checks` | 7 check types with JSONB data |
 | `check_comments` | Remarks timeline for checks |
 | `inspections` | Daily inspections (Airfield + Lighting) |
+| `acsi_inspections` | Annual compliance inspections (DAFMAN 13-204v2) |
 | `inspection_template_sections` | Per-base inspection template sections |
 | `inspection_template_items` | Per-base inspection checklist items |
 | `notams` | FAA and LOCAL NOTAM tracking |
-| `photos` | Photos for discrepancies, checks, inspections, evaluations |
+| `photos` | Photos for discrepancies, checks, inspections, evaluations, ACSI |
 | `obstruction_evaluations` | UFC 3-260-01 surface analysis |
 | `airfield_status` | Persisted runway status, advisory, BWC, RSC |
 | `runway_status_log` | Audit trail for all runway status changes |
@@ -269,22 +288,27 @@ airfield-app/
 8. **Hybrid Offline** — IndexedDB caches PDF blobs, extracted text, and demo-mode airfield diagrams. PWA service worker caches app shell.
 9. **Admin-Gated CRUD** — Base configuration and reference management require `airfield_manager` or `sys_admin` role.
 10. **Three-Tier Admin Hierarchy** — `sys_admin` has full access; `base_admin`, `airfield_manager`, and `namo` have base-scoped admin capabilities; all other roles are standard users.
+11. **ACSI Separate Table** — Annual compliance inspections use a dedicated `acsi_inspections` table (not reusing `inspections`) due to unique fields: inspection team, risk management certification, per-item discrepancy details, fiscal year tracking.
 
 ## Known Tech Debt
 
 | Item | Priority | Notes |
 |------|----------|-------|
 | No test suite | High | No unit or integration tests |
-| ~182 `as any` casts | Medium | Regenerate Supabase types (`supabase gen types typescript`) to eliminate |
+| ~197 `as any` casts | Medium | Regenerate Supabase types (`supabase gen types typescript`) to eliminate |
 | Weather API stub | Medium | `/api/weather` returns placeholder; Open-Meteo used client-side |
 | `PDFLibrary.jsx` | Low | Only JSX file — convert to TypeScript (.tsx) |
-| 30 files > 500 lines | Low | Largest: `inspections/page.tsx` (1,929), `regulations/page.tsx` (1,638) |
+| 30+ files > 500 lines | Low | Largest: `inspections/page.tsx` (1,929), `regulations/page.tsx` (1,638) |
+| Duplicate aircraft JSON | Low | Root-level `commercial_aircraft.json`, `military_aircraft.json`, `image_manifest.json` duplicated in `public/` |
+| Duplicate aircraft images | Low | `public/aircraft_images/military/commercial/` duplicates `public/aircraft_images/commercial/` (~20 files) |
+| Stray screenshots | Low | 2 screenshot PNGs in aircraft image directories |
+| Untracked migration | Low | `supabase/migrations/2026022701_inspection_photos.sql` not in git |
 
 ## Current Status
 
-**Build**: TypeScript compiles clean (`tsc --noEmit` passes with zero errors)
+**Build**: TypeScript compiles clean (`npm run build` passes with zero errors)
 
-**Complete modules**: Dashboard (with installation switcher + presence tracking), Discrepancies, Airfield Checks, Daily Inspections, NOTAMs (live FAA feed), Obstruction Evaluations, References (with My Documents), Reports (4 types with KPI badges), Aircraft Database, Waivers (full lifecycle with annual review, PDF/Excel export), Settings (with Base Setup and Templates), User Management (with delete cascade), Activity Log (manual entries, edit/delete, columnar display), More hub
+**Complete modules**: Dashboard (with installation switcher + presence tracking), Discrepancies, Airfield Checks, Daily Inspections, ACSI (annual compliance with PDF/Excel export), NOTAMs (live FAA feed), Obstruction Evaluations, References (with My Documents), Reports (4 types with KPI badges), Aircraft Database, Waivers (full lifecycle with annual review, PDF/Excel export), Settings (with Base Setup and Templates), User Management (with delete cascade), Activity Log (manual entries, edit/delete, columnar display), All Inspections hub, More hub
 
 **Placeholder modules**: Sync & Data
 
@@ -299,3 +323,4 @@ See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 - `SCALING-ASSESSMENT.md` — Multi-base architecture assessment
 - `PROJECT_STATUS.md` — Architecture details and tech debt audit
 - `docs/INTEGRATION_GUIDE.md` — PDF text search integration architecture
+- `docs/Airfield_Inspection_Checklist_Template.md` — ACSI checklist reference (DAFMAN 13-204v2)
