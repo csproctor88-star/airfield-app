@@ -62,10 +62,10 @@ export default function AcsiListPage() {
   return (
     <div style={{ padding: '24px 28px', maxWidth: 1100, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-text-1)', margin: 0 }}>
-            ACSI — Annual Compliance & Safety Inspection
+            Airfield Compliance and Safety Inspection
           </h1>
           <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', margin: '4px 0 0' }}>
             DAFMAN 13-204v2, Para 5.4.3
@@ -131,7 +131,7 @@ export default function AcsiListPage() {
             minWidth: 200,
           }}
         />
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {FILTERS.map(f => (
             <button
               key={f}
@@ -190,7 +190,8 @@ export default function AcsiListPage() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 16,
+                  gap: 12,
+                  rowGap: 8,
                   padding: '14px 18px',
                   borderRadius: 8,
                   border: '1px solid var(--color-border)',
@@ -198,10 +199,11 @@ export default function AcsiListPage() {
                   textDecoration: 'none',
                   color: 'var(--color-text-1)',
                   transition: 'border-color 0.15s',
+                  flexWrap: 'wrap',
                 }}
               >
                 {/* Display ID + airfield */}
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ flex: 1, minWidth: 160 }}>
                   <div style={{ fontWeight: 600, fontSize: 'var(--fs-base)' }}>
                     {insp.display_id}
                   </div>
@@ -210,33 +212,36 @@ export default function AcsiListPage() {
                   </div>
                 </div>
 
-                {/* Date */}
-                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', whiteSpace: 'nowrap' }}>
-                  {insp.inspection_date}
-                </div>
+                {/* Secondary metadata — wraps to next line on narrow screens */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', flexShrink: 0 }}>
+                  {/* Date */}
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', whiteSpace: 'nowrap' }}>
+                    {insp.inspection_date}
+                  </div>
 
-                {/* Progress */}
-                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', whiteSpace: 'nowrap', minWidth: 50, textAlign: 'right' }}>
-                  {pct}%
-                </div>
+                  {/* Progress */}
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', whiteSpace: 'nowrap', minWidth: 40, textAlign: 'right' }}>
+                    {pct}%
+                  </div>
 
-                {/* Counts */}
-                <div style={{ display: 'flex', gap: 6, fontSize: 'var(--fs-xs)' }}>
-                  <span style={{ color: '#10B981', fontWeight: 600 }}>{insp.passed_count}P</span>
-                  <span style={{ color: '#EF4444', fontWeight: 600 }}>{insp.failed_count}F</span>
-                  <span style={{ color: '#6B7280', fontWeight: 600 }}>{insp.na_count}NA</span>
-                </div>
+                  {/* Counts */}
+                  <div style={{ display: 'flex', gap: 6, fontSize: 'var(--fs-xs)' }}>
+                    <span style={{ color: '#10B981', fontWeight: 600 }}>{insp.passed_count}P</span>
+                    <span style={{ color: '#EF4444', fontWeight: 600 }}>{insp.failed_count}F</span>
+                    <span style={{ color: '#6B7280', fontWeight: 600 }}>{insp.na_count}NA</span>
+                  </div>
 
-                {/* Status badge */}
-                <Badge
-                  label={statusCfg.label}
-                  color={statusCfg.color}
-                  bg={statusCfg.bg}
-                />
+                  {/* Status badge */}
+                  <Badge
+                    label={statusCfg.label}
+                    color={statusCfg.color}
+                    bg={statusCfg.bg}
+                  />
 
-                {/* Inspector */}
-                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', whiteSpace: 'nowrap', minWidth: 80 }}>
-                  {insp.inspector_name || '—'}
+                  {/* Inspector */}
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>
+                    {insp.inspector_name || '—'}
+                  </div>
                 </div>
               </Link>
             )

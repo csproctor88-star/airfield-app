@@ -549,8 +549,8 @@ export default function ActivityPage() {
             </div>
 
             {/* Date & Time */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-              <div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8, marginBottom: 12 }}>
+              <div style={{ minWidth: 0 }}>
                 <span className="section-label">Date (Z)</span>
                 <input
                   type="date"
@@ -560,7 +560,7 @@ export default function ActivityPage() {
                   style={{ width: '100%', boxSizing: 'border-box' }}
                 />
               </div>
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <span className="section-label">Time (Z)</span>
                 <input
                   type="text"
