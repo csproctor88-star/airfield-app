@@ -19,7 +19,6 @@ export default function AcsiLocationMap({ pins, onPinsChange }: Props) {
   const map = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
   const [mapLoaded, setMapLoaded] = useState(false)
-  const [expanded, setExpanded] = useState(false)
   const { runways } = useInstallation()
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
@@ -134,30 +133,14 @@ export default function AcsiLocationMap({ pins, onPinsChange }: Props) {
         <div
           ref={mapContainer}
           style={{
-            width: 105,
-            height: expanded ? 'var(--map-height)' : 105,
+            width: '100%',
+            aspectRatio: '3 / 4',
+            maxHeight: '70vh',
             borderRadius: 10,
             overflow: 'hidden',
             border: '1px solid var(--color-border)',
-            transition: 'height 0.3s ease',
           }}
         />
-        {mapLoaded && (
-          <button
-            onClick={() => {
-              setExpanded(prev => !prev)
-              setTimeout(() => { map.current?.resize() }, 50)
-            }}
-            style={{
-              position: 'absolute', top: 8, right: 48,
-              background: 'rgba(4, 7, 12, 0.88)', border: '1px solid rgba(148, 163, 184, 0.2)',
-              borderRadius: 6, padding: '4px 10px', fontSize: 'var(--fs-sm)',
-              color: '#94A3B8', fontWeight: 600, cursor: 'pointer',
-            }}
-          >
-            {expanded ? '- Collapse' : '+ Expand'}
-          </button>
-        )}
         {pins.length === 0 && mapLoaded && (
           <div style={{
             position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)',

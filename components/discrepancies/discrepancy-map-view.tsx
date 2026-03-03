@@ -43,7 +43,6 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
   const map = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
   const [mapLoaded, setMapLoaded] = useState(false)
-  const [expanded, setExpanded] = useState(false)
   const [activeTypeFilter, setActiveTypeFilter] = useState<string | null>(null)
   const { runways } = useInstallation()
 
@@ -198,13 +197,6 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapLoaded, discrepancies, photoMap, activeTypeFilter])
 
-  const handleToggleExpand = useCallback(() => {
-    setExpanded((prev) => !prev)
-    setTimeout(() => {
-      map.current?.resize()
-    }, 50)
-  }, [])
-
   const handleLegendClick = useCallback((typeValue: string) => {
     setActiveTypeFilter((prev) => (prev === typeValue ? null : typeValue))
   }, [])
@@ -266,39 +258,14 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
         ref={mapContainer}
         style={{
           width: '100%',
-          aspectRatio: expanded ? undefined : '3 / 4',
-          height: expanded ? 'var(--map-height-expanded)' : undefined,
-          maxHeight: expanded ? undefined : '70vh',
+          aspectRatio: '3 / 4',
+          maxHeight: '70vh',
           borderRadius: 10,
           overflow: 'hidden',
           border: '1px solid var(--color-border-mid)',
           transition: 'height 0.3s ease',
         }}
       />
-      {/* Expand / Collapse toggle */}
-      {mapLoaded && (
-        <button
-          onClick={handleToggleExpand}
-          style={{
-            position: 'absolute',
-            top: 8,
-            right: 48,
-            background: 'rgba(4, 7, 12, 0.88)',
-            border: '1px solid rgba(148, 163, 184, 0.2)',
-            borderRadius: 6,
-            padding: '4px 10px',
-            fontSize: 'var(--fs-sm)',
-            color: '#94A3B8',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-          }}
-        >
-          {expanded ? '\u2296 Collapse' : '\u2295 Expand'}
-        </button>
-      )}
       {/* Legend — top-left, clickable type filter */}
       {mapLoaded && legendItems.length > 0 && (
         <div
