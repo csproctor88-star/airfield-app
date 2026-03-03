@@ -462,7 +462,7 @@ export default function LoginPage() {
               <input
                 type="email"
                 className="input-dark"
-                placeholder="name@mail.mil"
+                placeholder="name@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
