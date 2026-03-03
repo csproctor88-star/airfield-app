@@ -578,7 +578,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
   }, [])
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <div
         ref={mapContainer}
         style={{
