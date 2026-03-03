@@ -49,9 +49,9 @@ async function fetchImageAsDataUrl(imageUrl: string): Promise<string | null> {
 }
 
 // Photo/map thumbnail constants
-const THUMB_W = 20
-const THUMB_H = 15
-const THUMB_GAP = 1.5
+const THUMB_W = 30
+const THUMB_H = 22.5
+const THUMB_GAP = 2
 const THUMB_PAD = 2
 
 /** Pre-fetched images for a single discrepancy */

@@ -134,8 +134,8 @@ export default function AcsiLocationMap({ pins, onPinsChange }: Props) {
           ref={mapContainer}
           style={{
             width: '100%',
-            aspectRatio: '3 / 4',
-            maxHeight: '70vh',
+            aspectRatio: '1 / 1',
+            maxHeight: '50vh',
             borderRadius: 10,
             overflow: 'hidden',
             border: '1px solid var(--color-border)',

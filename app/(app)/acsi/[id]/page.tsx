@@ -11,7 +11,7 @@ import { fetchAcsiInspection, deleteAcsiInspection } from '@/lib/supabase/acsi-i
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
 import type { AcsiInspection, AcsiStatus, AcsiItem } from '@/lib/supabase/types'
-import { ArrowLeft, ChevronDown, ChevronRight, Trash2, Edit, FileText, Table, Mail } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronRight, Trash2, Edit, FileText, Table } from 'lucide-react'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 
@@ -196,14 +196,15 @@ export default function AcsiDetailPage() {
                 onClick={handleEmailPdf}
                 disabled={exporting}
                 style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '8px 14px', borderRadius: 6, border: '1px solid var(--color-border)',
-                  background: 'transparent', color: 'var(--color-text-2)',
-                  fontSize: 'var(--fs-sm)', fontWeight: 500, cursor: 'pointer',
-                  opacity: exporting ? 0.5 : 1,
+                  padding: '12px 16px', borderRadius: 10, textAlign: 'center',
+                  background: '#A78BFA14', border: '1px solid #A78BFA33',
+                  color: '#A78BFA', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  fontFamily: 'inherit', cursor: exporting ? 'default' : 'pointer',
+                  opacity: exporting ? 0.7 : 1,
                 }}
+                title="Email PDF"
               >
-                <Mail size={14} /> Email PDF
+                ✉
               </button>
               <button
                 onClick={handleExportExcel}
