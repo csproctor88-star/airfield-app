@@ -417,11 +417,12 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
   // Footer
   addPageNumber()
 
-  // Save
+  // Return doc + filename (caller decides to save or email)
   const dateSuffix = opts.isRange
     ? `${opts.startDate}_to_${opts.endDate}`
     : opts.startDate
-  doc.save(`${opts.baseIcao ?? 'AIRFIELD'}_Daily_Ops_${dateSuffix}.pdf`)
+  const filename = `${opts.baseIcao ?? 'AIRFIELD'}_Daily_Ops_${dateSuffix}.pdf`
+  return { doc, filename }
 }
 
 // ── Photo rendering helper ──

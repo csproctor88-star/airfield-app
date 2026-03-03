@@ -154,5 +154,6 @@ export function generateDiscrepancyTrendsPdf(data: DiscrepancyTrendsData, opts: 
   addPageNumber()
 
   const dateStr = now.toISOString().split('T')[0]
-  doc.save(`${opts.baseIcao ?? 'AIRFIELD'}_Discrepancy_Trends_${dateStr}.pdf`)
+  const filename = `${opts.baseIcao ?? 'AIRFIELD'}_Discrepancy_Trends_${dateStr}.pdf`
+  return { doc, filename }
 }

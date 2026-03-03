@@ -13,6 +13,8 @@ import { PhotoViewerModal } from '@/components/discrepancies/modals'
 import { useInstallation } from '@/lib/installation-context'
 import { ActionButton } from '@/components/ui/button'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
+import { sendPdfViaEmail } from '@/lib/email-pdf'
+import EmailPdfModal from '@/components/ui/email-pdf-modal'
 
 export default function CheckDetailPage() {
   const params = useParams()
@@ -31,6 +33,10 @@ export default function CheckDetailPage() {
   const [currentUser, setCurrentUser] = useState('Inspector')
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
   const { currentInstallation, userRole } = useInstallation()
   const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
 
@@ -478,7 +484,6 @@ export default function CheckDetailPage() {
           onClick={async () => {
             setGeneratingPdf(true)
             try {
-              // Convert photos to data URLs for PDF embedding
               const photoDataUrls: string[] = []
               for (const p of allPhotos) {
                 if (p.url.startsWith('data:')) {
@@ -500,13 +505,14 @@ export default function CheckDetailPage() {
                 }
               }
               const { generateCheckPdf } = await import('@/lib/check-pdf')
-              await generateCheckPdf({
+              const { doc, filename } = await generateCheckPdf({
                 check,
                 comments: displayComments,
                 photoDataUrls,
                 baseName: currentInstallation?.name,
                 baseIcao: currentInstallation?.icao,
               })
+              doc.save(filename)
               toast.success('PDF generated')
             } catch (e) {
               console.error('PDF export failed:', e)
@@ -524,6 +530,59 @@ export default function CheckDetailPage() {
           }}
         >
           {generatingPdf ? 'Generating...' : 'Export PDF'}
+        </button>
+        <button
+          type="button"
+          onClick={async () => {
+            setGeneratingPdf(true)
+            try {
+              const photoDataUrls: string[] = []
+              for (const p of allPhotos) {
+                if (p.url.startsWith('data:')) {
+                  photoDataUrls.push(p.url)
+                } else {
+                  try {
+                    const resp = await fetch(p.url)
+                    if (resp.ok) {
+                      const blob = await resp.blob()
+                      const reader = new FileReader()
+                      const dataUrl = await new Promise<string>((resolve, reject) => {
+                        reader.onload = () => resolve(reader.result as string)
+                        reader.onerror = reject
+                        reader.readAsDataURL(blob)
+                      })
+                      photoDataUrls.push(dataUrl)
+                    }
+                  } catch { /* skip failed photos */ }
+                }
+              }
+              const { generateCheckPdf } = await import('@/lib/check-pdf')
+              const result = await generateCheckPdf({
+                check,
+                comments: displayComments,
+                photoDataUrls,
+                baseName: currentInstallation?.name,
+                baseIcao: currentInstallation?.icao,
+              })
+              setEmailPdfData(result)
+              setEmailModalOpen(true)
+            } catch (e) {
+              console.error('PDF generation failed:', e)
+              toast.error('Failed to generate PDF')
+            }
+            setGeneratingPdf(false)
+          }}
+          disabled={generatingPdf}
+          style={{
+            padding: '12px 16px', borderRadius: 10, textAlign: 'center',
+            background: '#A78BFA14', border: '1px solid #A78BFA33',
+            color: '#A78BFA', fontSize: 'var(--fs-md)', fontWeight: 700,
+            fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
+            opacity: generatingPdf ? 0.7 : 1,
+          }}
+          title="Email PDF"
+        >
+          ✉
         </button>
         <Link
           href="/checks"
@@ -582,6 +641,26 @@ export default function CheckDetailPage() {
       {viewerIndex !== null && allPhotos.length > 0 && (
         <PhotoViewerModal photos={allPhotos} initialIndex={viewerIndex} onClose={() => setViewerIndex(null)} />
       )}
+
+      <EmailPdfModal
+        open={emailModalOpen}
+        onClose={() => { setEmailModalOpen(false); setEmailPdfData(null) }}
+        onSend={async (email: string) => {
+          if (!emailPdfData) return
+          setSendingEmail(true)
+          const result = await sendPdfViaEmail(emailPdfData.doc, emailPdfData.filename, email, `Check Report: ${emailPdfData.filename.replace(/_/g, ' ').replace('.pdf', '')}`)
+          if (result.success) {
+            toast.success('Email sent successfully')
+            setEmailModalOpen(false)
+            setEmailPdfData(null)
+          } else {
+            toast.error(result.error || 'Failed to send email')
+          }
+          setSendingEmail(false)
+        }}
+        sending={sendingEmail}
+        filename={emailPdfData?.filename}
+      />
     </div>
   )
 }

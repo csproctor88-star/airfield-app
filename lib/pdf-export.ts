@@ -313,9 +313,9 @@ export async function generateInspectionPdf(inspection: InspectionData, baseInfo
     doc.text(pdfFooter(baseInfo), pageWidth - margin, footerY, { align: 'right' })
   }
 
-  // Download
+  // Return doc + filename (caller decides to save or email)
   const filename = `${inspection.display_id}_Inspection_Report.pdf`
-  doc.save(filename)
+  return { doc, filename }
 }
 
 /**
@@ -681,12 +681,12 @@ export async function generateCombinedInspectionPdf(inspections: InspectionData[
     doc.text(pdfFooter(baseInfo), pageWidth - margin, footerY, { align: 'right' })
   }
 
-  // Download
+  // Return doc + filename (caller decides to save or email)
   const dateForFilename = primary.completed_at
     ? new Date(primary.completed_at).toISOString().split('T')[0]
     : primary.inspection_date
   const filename = `Airfield_Inspection_Report_${dateForFilename}.pdf`
-  doc.save(filename)
+  return { doc, filename }
 }
 
 /**
@@ -838,8 +838,8 @@ export async function generateSpecialInspectionPdf(inspection: InspectionData, b
     doc.text(pdfFooter(baseInfo), pageWidth - margin, footerY, { align: 'right' })
   }
 
-  // Download
+  // Return doc + filename (caller decides to save or email)
   const typeSlug = isConstruction ? 'Construction_Meeting' : 'Joint_Monthly'
   const filename = `${inspection.display_id}_${typeSlug}_Report.pdf`
-  doc.save(filename)
+  return { doc, filename }
 }

@@ -21,6 +21,8 @@ import {
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
 import type { WaiverStatus, WaiverCoordinationOffice, WaiverCoordinationStatus, WaiverAttachmentType, WaiverReviewRecommendation } from '@/lib/supabase/types'
+import { sendPdfViaEmail } from '@/lib/email-pdf'
+import EmailPdfModal from '@/components/ui/email-pdf-modal'
 
 type ModalType = 'approve' | 'coordination' | 'review' | 'attachment' | 'status_change' | null
 
@@ -33,7 +35,7 @@ const STATUS_CHANGE_CONFIG: Record<string, { title: string; description: string;
 export default function WaiverDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { userRole } = useInstallation()
+  const { userRole, currentInstallation } = useInstallation()
   const [waiver, setWaiver] = useState<WaiverRow | null>(null)
   const [criteria, setCriteria] = useState<WaiverCriteriaRow[]>([])
   const [attachments, setAttachments] = useState<WaiverAttachmentRow[]>([])
@@ -422,6 +424,10 @@ export default function WaiverDetailPage() {
   }
 
   const [exporting, setExporting] = useState(false)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
 
   if (loading) {
     return (
@@ -438,49 +444,79 @@ export default function WaiverDetailPage() {
   const demoCoordination = usingDemo ? DEMO_WAIVER_COORDINATION.filter(c => c.waiver_id === params.id) : coordination
   const allAttachments = usingDemo ? [] : attachments
 
+  const prepareWaiverPdf = async () => {
+    const { generateWaiverPdf } = await import('@/lib/waiver-pdf')
+
+    const photos = allAttachments.filter(a => a.mime_type?.startsWith('image/'))
+    const photoDataUrls: { name: string; dataUrl: string }[] = []
+
+    for (const photo of photos) {
+      const url = attachmentUrls[photo.id]
+      if (url) {
+        try {
+          const response = await fetch(url)
+          const blob = await response.blob()
+          const dataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onloadend = () => resolve(reader.result as string)
+            reader.readAsDataURL(blob)
+          })
+          photoDataUrls.push({ name: photo.caption || photo.file_name, dataUrl })
+        } catch { /* skip */ }
+      }
+    }
+
+    return generateWaiverPdf({
+      waiver: w!,
+      criteria: demoCriteria,
+      reviews: demoReviews,
+      coordination: demoCoordination,
+      attachments: allAttachments,
+      photoDataUrls,
+      baseName: currentInstallation?.name || 'Selfridge ANGB',
+      baseIcao: currentInstallation?.icao || 'KMTC',
+    })
+  }
+
   const handleExportPdf = async () => {
     if (!w) return
     setExporting(true)
     try {
-      const { generateWaiverPdf } = await import('@/lib/waiver-pdf')
-
-      // Fetch photo data URLs for embedding
-      const photos = allAttachments.filter(a => a.mime_type?.startsWith('image/'))
-      const photoDataUrls: { name: string; dataUrl: string }[] = []
-
-      for (const photo of photos) {
-        const url = attachmentUrls[photo.id]
-        if (url) {
-          try {
-            const response = await fetch(url)
-            const blob = await response.blob()
-            const dataUrl = await new Promise<string>((resolve) => {
-              const reader = new FileReader()
-              reader.onloadend = () => resolve(reader.result as string)
-              reader.readAsDataURL(blob)
-            })
-            photoDataUrls.push({ name: photo.caption || photo.file_name, dataUrl })
-          } catch {
-            // Skip photos that fail to load
-          }
-        }
-      }
-
-      generateWaiverPdf({
-        waiver: w,
-        criteria: demoCriteria,
-        reviews: demoReviews,
-        coordination: demoCoordination,
-        attachments: allAttachments,
-        photoDataUrls,
-        baseName: 'Selfridge ANGB',
-        baseIcao: 'KMTC',
-      })
+      const { doc, filename } = await prepareWaiverPdf()
+      doc.save(filename)
     } catch (err) {
       console.error('PDF export failed:', err)
       toast.error('Failed to generate PDF')
     }
     setExporting(false)
+  }
+
+  const handleEmailPdf = async () => {
+    if (!w) return
+    setExporting(true)
+    try {
+      const result = await prepareWaiverPdf()
+      setEmailPdfData(result)
+      setEmailModalOpen(true)
+    } catch (err) {
+      console.error('PDF generation failed:', err)
+      toast.error('Failed to generate PDF')
+    }
+    setExporting(false)
+  }
+
+  const handleSendEmail = async (email: string) => {
+    if (!emailPdfData) return
+    setSendingEmail(true)
+    const result = await sendPdfViaEmail(emailPdfData.doc, emailPdfData.filename, email, `Waiver Report: ${emailPdfData.filename.replace(/_/g, ' ').replace('.pdf', '')}`)
+    if (result.success) {
+      toast.success('Email sent successfully')
+      setEmailModalOpen(false)
+      setEmailPdfData(null)
+    } else {
+      toast.error(result.error || 'Failed to send email')
+    }
+    setSendingEmail(false)
   }
 
   if (!w) {
@@ -546,6 +582,17 @@ export default function WaiverDetailPage() {
             }}
           >
             {exporting ? 'Exporting...' : 'Export PDF'}
+          </button>
+          <button
+            onClick={handleEmailPdf}
+            disabled={exporting}
+            style={{
+              background: '#A78BFA14', border: '1px solid #A78BFA33', borderRadius: 8, padding: '6px 12px',
+              color: '#A78BFA', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+              opacity: exporting ? 0.6 : 1,
+            }}
+          >
+            Email PDF
           </button>
           {(w.status === 'draft' || w.status === 'pending') && (
             <Link
@@ -1307,6 +1354,14 @@ export default function WaiverDetailPage() {
           </div>
         </div>
       )}
+
+      <EmailPdfModal
+        open={emailModalOpen}
+        onClose={() => { setEmailModalOpen(false); setEmailPdfData(null) }}
+        onSend={handleSendEmail}
+        sending={sendingEmail}
+        filename={emailPdfData?.filename}
+      />
     </div>
   )
 }

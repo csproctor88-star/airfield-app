@@ -212,5 +212,6 @@ export function generateAgingDiscrepanciesPdf(data: AgingDiscrepanciesData, opts
   addPageNumber()
 
   const dateStr = now.toISOString().split('T')[0]
-  doc.save(`${opts.baseIcao ?? 'AIRFIELD'}_Aging_Discrepancies_${dateStr}.pdf`)
+  const filename = `${opts.baseIcao ?? 'AIRFIELD'}_Aging_Discrepancies_${dateStr}.pdf`
+  return { doc, filename }
 }

@@ -13,6 +13,8 @@ import { useInstallation } from '@/lib/installation-context'
 import { ActionButton } from '@/components/ui/button'
 import type { PdfBaseInfo, PdfPhotoMap, PdfGeneralPhotos } from '@/lib/pdf-export'
 import { PhotoViewerModal } from '@/components/discrepancies/modals'
+import { sendPdfViaEmail } from '@/lib/email-pdf'
+import EmailPdfModal from '@/components/ui/email-pdf-modal'
 
 export default function InspectionDetailPage() {
   const params = useParams()
@@ -23,6 +25,10 @@ export default function InspectionDetailPage() {
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
   const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [editingNotes, setEditingNotes] = useState(false)
   const [notesText, setNotesText] = useState('')
@@ -190,8 +196,7 @@ export default function InspectionDetailPage() {
     ? '#A78BFA'
     : airfieldInsp && lightingInsp ? 'var(--color-cyan)' : airfieldInsp ? '#34D399' : '#FBBF24'
 
-  const handleExportPdf = async () => {
-    setGeneratingPdf(true)
+  const preparePdf = async () => {
     const bi: PdfBaseInfo | undefined = currentInstallation
       ? { name: currentInstallation.name, icao: currentInstallation.icao, unit: currentInstallation.unit ?? '' }
       : undefined
@@ -261,21 +266,53 @@ export default function InspectionDetailPage() {
       })),
     }))
 
+    if (isSpecialType) {
+      const { generateSpecialInspectionPdf } = await import('@/lib/pdf-export')
+      return await generateSpecialInspectionPdf(inspectionsWithLocations[0], bi, generalPhotoUrls.length > 0 ? generalPhotoUrls : undefined)
+    } else if (isDaily) {
+      const { generateCombinedInspectionPdf } = await import('@/lib/pdf-export')
+      return await generateCombinedInspectionPdf(inspectionsWithLocations, bi, Object.keys(photoMapForPdf).length > 0 ? photoMapForPdf : undefined)
+    } else {
+      const { generateInspectionPdf } = await import('@/lib/pdf-export')
+      return await generateInspectionPdf(inspectionsWithLocations[0], bi, Object.keys(photoMapForPdf).length > 0 ? photoMapForPdf : undefined)
+    }
+  }
+
+  const handleExportPdf = async () => {
+    setGeneratingPdf(true)
     try {
-      if (isSpecialType) {
-        const { generateSpecialInspectionPdf } = await import('@/lib/pdf-export')
-        await generateSpecialInspectionPdf(inspectionsWithLocations[0], bi, generalPhotoUrls.length > 0 ? generalPhotoUrls : undefined)
-      } else if (isDaily) {
-        const { generateCombinedInspectionPdf } = await import('@/lib/pdf-export')
-        await generateCombinedInspectionPdf(inspectionsWithLocations, bi, Object.keys(photoMapForPdf).length > 0 ? photoMapForPdf : undefined)
-      } else {
-        const { generateInspectionPdf } = await import('@/lib/pdf-export')
-        await generateInspectionPdf(inspectionsWithLocations[0], bi, Object.keys(photoMapForPdf).length > 0 ? photoMapForPdf : undefined)
-      }
+      const { doc, filename } = await preparePdf()
+      doc.save(filename)
     } catch (e) {
       console.error('PDF export failed:', e)
     }
     setGeneratingPdf(false)
+  }
+
+  const handleEmailPdf = async () => {
+    setGeneratingPdf(true)
+    try {
+      const result = await preparePdf()
+      setEmailPdfData(result)
+      setEmailModalOpen(true)
+    } catch (e) {
+      console.error('PDF generation failed:', e)
+    }
+    setGeneratingPdf(false)
+  }
+
+  const handleSendEmail = async (email: string) => {
+    if (!emailPdfData) return
+    setSendingEmail(true)
+    const result = await sendPdfViaEmail(emailPdfData.doc, emailPdfData.filename, email, `Inspection Report: ${emailPdfData.filename.replace(/_/g, ' ').replace('.pdf', '')}`)
+    if (result.success) {
+      toast.success('Email sent successfully')
+      setEmailModalOpen(false)
+      setEmailPdfData(null)
+    } else {
+      toast.error(result.error || 'Failed to send email')
+    }
+    setSendingEmail(false)
   }
 
   // Render item photos inline
@@ -914,6 +951,20 @@ export default function InspectionDetailPage() {
         >
           {generatingPdf ? 'Generating...' : 'Export PDF'}
         </button>
+        <button
+          onClick={handleEmailPdf}
+          disabled={generatingPdf}
+          style={{
+            padding: '12px 16px', borderRadius: 12, textAlign: 'center',
+            background: '#A78BFA14', border: '1px solid #A78BFA33',
+            color: '#A78BFA', fontSize: 'var(--fs-md)', fontWeight: 700,
+            fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
+            opacity: generatingPdf ? 0.7 : 1,
+          }}
+          title="Email PDF"
+        >
+          ✉
+        </button>
         <Link
           href="/inspections?view=history"
           style={{
@@ -970,6 +1021,14 @@ export default function InspectionDetailPage() {
           onClose={() => setViewerPhotos(null)}
         />
       )}
+
+      <EmailPdfModal
+        open={emailModalOpen}
+        onClose={() => { setEmailModalOpen(false); setEmailPdfData(null) }}
+        onSend={handleSendEmail}
+        sending={sendingEmail}
+        filename={emailPdfData?.filename}
+      />
     </div>
   )
 }

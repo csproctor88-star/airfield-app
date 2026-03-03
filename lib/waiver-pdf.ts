@@ -374,5 +374,6 @@ export function generateWaiverPdf(input: WaiverPdfInput) {
   addPageNumber()
 
   // Save
-  doc.save(`${w.waiver_number.replace(/[^a-zA-Z0-9-]/g, '_')}_Report.pdf`)
+  const filename = `${w.waiver_number.replace(/[^a-zA-Z0-9-]/g, '_')}_Report.pdf`
+  return { doc, filename }
 }

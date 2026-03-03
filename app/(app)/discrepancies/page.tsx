@@ -10,6 +10,9 @@ import { useInstallation } from '@/lib/installation-context'
 import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import { fetchMapImageDataUrl } from '@/lib/utils'
 import { Map, List } from 'lucide-react'
+import { sendPdfViaEmail } from '@/lib/email-pdf'
+import EmailPdfModal from '@/components/ui/email-pdf-modal'
+import { toast } from 'sonner'
 
 const DiscrepancyMapView = lazy(() => import('@/components/discrepancies/discrepancy-map-view'))
 
@@ -40,6 +43,10 @@ export default function DiscrepanciesPage() {
   const [usingDemo, setUsingDemo] = useState(false)
   const [viewMode, setViewMode] = useState<'list' | 'map'>('map')
   const [discrepancyPhotoMap, setDiscrepancyPhotoMap] = useState<Record<string, string>>({})
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -422,7 +429,35 @@ export default function DiscrepanciesPage() {
     }
 
     const dateStr = now.toISOString().split('T')[0]
-    doc.save(`Discrepancy_Report_${dateStr}.pdf`)
+    const filename = `Discrepancy_Report_${dateStr}.pdf`
+    return { doc, filename }
+  }
+
+  const handleDownloadPdf = async () => {
+    const result = await handleExportPdf()
+    if (result) result.doc.save(result.filename)
+  }
+
+  const handleEmailPdf = async () => {
+    const result = await handleExportPdf()
+    if (result) {
+      setEmailPdfData(result)
+      setEmailModalOpen(true)
+    }
+  }
+
+  const handleSendEmail = async (email: string) => {
+    if (!emailPdfData) return
+    setSendingEmail(true)
+    const result = await sendPdfViaEmail(emailPdfData.doc, emailPdfData.filename, email, `Discrepancy Report: ${emailPdfData.filename.replace(/_/g, ' ').replace('.pdf', '')}`)
+    if (result.success) {
+      toast.success('Email sent successfully')
+      setEmailModalOpen(false)
+      setEmailPdfData(null)
+    } else {
+      toast.error(result.error || 'Failed to send email')
+    }
+    setSendingEmail(false)
   }
 
   return (
@@ -447,7 +482,7 @@ export default function DiscrepanciesPage() {
             Excel
           </button>
           <button
-            onClick={handleExportPdf}
+            onClick={handleDownloadPdf}
             style={{
               background: 'rgba(168,85,247,0.12)',
               border: '1px solid rgba(168,85,247,0.3)',
@@ -461,6 +496,23 @@ export default function DiscrepanciesPage() {
             }}
           >
             PDF
+          </button>
+          <button
+            onClick={handleEmailPdf}
+            style={{
+              background: 'rgba(168,85,247,0.12)',
+              border: '1px solid rgba(168,85,247,0.3)',
+              borderRadius: 8,
+              padding: '7px 10px',
+              color: '#A855F7',
+              fontSize: 'var(--fs-base)',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+            title="Email PDF"
+          >
+            ✉
           </button>
           <Link
             href="/discrepancies/new"
@@ -687,6 +739,14 @@ export default function DiscrepanciesPage() {
           )}
         </>
       )}
+
+      <EmailPdfModal
+        open={emailModalOpen}
+        onClose={() => { setEmailModalOpen(false); setEmailPdfData(null) }}
+        onSend={handleSendEmail}
+        sending={sendingEmail}
+        filename={emailPdfData?.filename}
+      />
     </div>
   )
 }

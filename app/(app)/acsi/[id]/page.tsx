@@ -11,7 +11,9 @@ import { fetchAcsiInspection, deleteAcsiInspection } from '@/lib/supabase/acsi-i
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
 import type { AcsiInspection, AcsiStatus, AcsiItem } from '@/lib/supabase/types'
-import { ArrowLeft, ChevronDown, ChevronRight, Trash2, Edit, FileText, Table } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronRight, Trash2, Edit, FileText, Table, Mail } from 'lucide-react'
+import { sendPdfViaEmail } from '@/lib/email-pdf'
+import EmailPdfModal from '@/components/ui/email-pdf-modal'
 
 export default function AcsiDetailPage() {
   const params = useParams()
@@ -26,6 +28,10 @@ export default function AcsiDetailPage() {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
   const [actionLoading, setActionLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
 
   const loadData = useCallback(async () => {
     const supabase = createClient()
@@ -81,21 +87,48 @@ export default function AcsiDetailPage() {
     }
   }
 
+  const acsiPdfOpts = { baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao, baseId: installationId }
+
   const handleExportPdf = async () => {
     setExporting(true)
     try {
       const { generateAcsiPdf } = await import('@/lib/acsi-pdf')
-      await generateAcsiPdf(insp, {
-        baseName: currentInstallation?.name,
-        baseIcao: currentInstallation?.icao,
-        baseId: installationId,
-      })
+      const { doc, filename } = await generateAcsiPdf(insp, acsiPdfOpts)
+      doc.save(filename)
       toast.success('PDF exported')
     } catch (err) {
       toast.error('PDF export failed')
       console.error(err)
     }
     setExporting(false)
+  }
+
+  const handleEmailPdf = async () => {
+    setExporting(true)
+    try {
+      const { generateAcsiPdf } = await import('@/lib/acsi-pdf')
+      const result = await generateAcsiPdf(insp, acsiPdfOpts)
+      setEmailPdfData(result)
+      setEmailModalOpen(true)
+    } catch (err) {
+      toast.error('PDF generation failed')
+      console.error(err)
+    }
+    setExporting(false)
+  }
+
+  const handleSendEmail = async (email: string) => {
+    if (!emailPdfData) return
+    setSendingEmail(true)
+    const result = await sendPdfViaEmail(emailPdfData.doc, emailPdfData.filename, email, `ACSI Report: ${emailPdfData.filename.replace(/_/g, ' ').replace('.pdf', '')}`)
+    if (result.success) {
+      toast.success('Email sent successfully')
+      setEmailModalOpen(false)
+      setEmailPdfData(null)
+    } else {
+      toast.error(result.error || 'Failed to send email')
+    }
+    setSendingEmail(false)
   }
 
   const handleExportExcel = async () => {
@@ -158,6 +191,19 @@ export default function AcsiDetailPage() {
                 }}
               >
                 <FileText size={14} /> Export PDF
+              </button>
+              <button
+                onClick={handleEmailPdf}
+                disabled={exporting}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '8px 14px', borderRadius: 6, border: '1px solid var(--color-border)',
+                  background: 'transparent', color: 'var(--color-text-2)',
+                  fontSize: 'var(--fs-sm)', fontWeight: 500, cursor: 'pointer',
+                  opacity: exporting ? 0.5 : 1,
+                }}
+              >
+                <Mail size={14} /> Email PDF
               </button>
               <button
                 onClick={handleExportExcel}
@@ -393,6 +439,14 @@ export default function AcsiDetailPage() {
           </div>
         </div>
       )}
+
+      <EmailPdfModal
+        open={emailModalOpen}
+        onClose={() => { setEmailModalOpen(false); setEmailPdfData(null) }}
+        onSend={handleSendEmail}
+        sending={sendingEmail}
+        filename={emailPdfData?.filename}
+      />
     </div>
   )
 }

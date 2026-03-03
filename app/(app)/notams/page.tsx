@@ -5,6 +5,9 @@ import { Badge } from '@/components/ui/badge'
 import { DEMO_NOTAMS } from '@/lib/demo-data'
 import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
+import { sendPdfViaEmail } from '@/lib/email-pdf'
+import EmailPdfModal from '@/components/ui/email-pdf-modal'
+import { toast } from 'sonner'
 
 type FilterType = 'all' | 'faa' | 'local' | 'active' | 'expired'
 
@@ -92,6 +95,10 @@ export default function NotamsPage() {
   const [error, setError] = useState<string | null>(null)
   const [fetchedAt, setFetchedAt] = useState<string | null>(null)
   const initialFetchDone = useRef(false)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
 
   // Set default ICAO once installation loads
   useEffect(() => {
@@ -248,7 +255,35 @@ export default function NotamsPage() {
     }
 
     const dateStr = now.toISOString().split('T')[0]
-    doc.save(`NOTAM_Register_${dateStr}.pdf`)
+    const filename = `NOTAM_Register_${dateStr}.pdf`
+    return { doc, filename }
+  }
+
+  const handleDownloadPdf = async () => {
+    const result = await handleExportPdf()
+    if (result) result.doc.save(result.filename)
+  }
+
+  const handleEmailPdf = async () => {
+    const result = await handleExportPdf()
+    if (result) {
+      setEmailPdfData(result)
+      setEmailModalOpen(true)
+    }
+  }
+
+  const handleSendEmail = async (email: string) => {
+    if (!emailPdfData) return
+    setSendingEmail(true)
+    const result = await sendPdfViaEmail(emailPdfData.doc, emailPdfData.filename, email, `NOTAM Register: ${emailPdfData.filename.replace(/_/g, ' ').replace('.pdf', '')}`)
+    if (result.success) {
+      toast.success('Email sent successfully')
+      setEmailModalOpen(false)
+      setEmailPdfData(null)
+    } else {
+      toast.error(result.error || 'Failed to send email')
+    }
+    setSendingEmail(false)
   }
 
   return (
@@ -263,22 +298,41 @@ export default function NotamsPage() {
         }}
       >
         <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>NOTAMs</div>
-        <button
-          onClick={handleExportPdf}
-          style={{
-            background: 'rgba(168,85,247,0.12)',
-            border: '1px solid rgba(168,85,247,0.3)',
-            borderRadius: 8,
-            padding: '7px 14px',
-            color: '#A855F7',
-            fontSize: 'var(--fs-md)',
-            fontWeight: 700,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-          }}
-        >
-          Export PDF
-        </button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            onClick={handleDownloadPdf}
+            style={{
+              background: 'rgba(168,85,247,0.12)',
+              border: '1px solid rgba(168,85,247,0.3)',
+              borderRadius: 8,
+              padding: '7px 14px',
+              color: '#A855F7',
+              fontSize: 'var(--fs-md)',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            Export PDF
+          </button>
+          <button
+            onClick={handleEmailPdf}
+            style={{
+              background: 'rgba(168,85,247,0.12)',
+              border: '1px solid rgba(168,85,247,0.3)',
+              borderRadius: 8,
+              padding: '7px 10px',
+              color: '#A855F7',
+              fontSize: 'var(--fs-md)',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+            title="Email PDF"
+          >
+            ✉
+          </button>
+        </div>
       </div>
 
       {/* ICAO search bar */}
@@ -557,6 +611,14 @@ export default function NotamsPage() {
           )}
         </div>
       )}
+
+      <EmailPdfModal
+        open={emailModalOpen}
+        onClose={() => { setEmailModalOpen(false); setEmailPdfData(null) }}
+        onSend={handleSendEmail}
+        sending={sendingEmail}
+        filename={emailPdfData?.filename}
+      />
     </div>
   )
 }

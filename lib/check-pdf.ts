@@ -330,5 +330,6 @@ export async function generateCheckPdf(input: CheckPdfInput) {
     }
   }
 
-  doc.save(`${displayId}_Check_Report.pdf`)
+  const filename = `${displayId}_Check_Report.pdf`
+  return { doc, filename }
 }

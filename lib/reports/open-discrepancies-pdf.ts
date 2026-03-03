@@ -200,9 +200,10 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
   // Footer
   addPageNumber()
 
-  // Save
+  // Return doc + filename (caller decides to save or email)
   const dateStr = now.toISOString().split('T')[0]
-  doc.save(`${opts.baseIcao ?? 'AIRFIELD'}_Open_Discrepancies_${dateStr}.pdf`)
+  const filename = `${opts.baseIcao ?? 'AIRFIELD'}_Open_Discrepancies_${dateStr}.pdf`
+  return { doc, filename }
 }
 
 // ── Photo rendering helper ──
