@@ -87,10 +87,15 @@ export default function InspectionsPage() {
     window.scrollTo(0, 0)
   }, [])
 
-  // ── Sync showHistory from URL (handles client-side navigation) ──
+  // ── Sync URL params (handles client-side navigation) ──
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('view') === 'history') {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('view') === 'history') {
       setShowHistory(true)
+    }
+    const typeParam = params.get('type') as TabType | null
+    if (typeParam && ['airfield', 'lighting', 'construction_meeting', 'joint_monthly'].includes(typeParam)) {
+      setActiveTab(typeParam)
     }
   }, [])
 
