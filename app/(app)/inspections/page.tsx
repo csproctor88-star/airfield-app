@@ -9,7 +9,6 @@ import {
   AIRFIELD_INSPECTION_SECTIONS,
   LIGHTING_INSPECTION_SECTIONS,
   BWC_OPTIONS,
-  INSPECTION_PERSONNEL,
   type InspectionSection,
 } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
@@ -40,7 +39,7 @@ const InspectionLocationMap = dynamic(
 )
 
 type BwcValue = null | (typeof BWC_OPTIONS)[number]
-type TabType = 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
+type TabType = 'airfield' | 'lighting'
 
 export default function InspectionsPage() {
   const router = useRouter()
@@ -94,7 +93,7 @@ export default function InspectionsPage() {
       setShowHistory(true)
     }
     const typeParam = params.get('type') as TabType | null
-    if (typeParam && ['airfield', 'lighting', 'construction_meeting', 'joint_monthly'].includes(typeParam)) {
+    if (typeParam && ['airfield', 'lighting'].includes(typeParam)) {
       setActiveTab(typeParam)
     }
   }, [])
@@ -104,14 +103,11 @@ export default function InspectionsPage() {
   const [filing, setFiling] = useState(false)
   const [showLightingWarning, setShowLightingWarning] = useState(false)
 
-  // ── Photo state for fail items & special inspections ──
+  // ── Photo state for fail items ──
   const [itemPhotos, setItemPhotos] = useState<Record<string, { file: File; url: string; name: string }[]>>({})
-  const [specialPhotos, setSpecialPhotos] = useState<{ file: File; url: string; name: string }[]>([])
   const [activePhotoItemId, setActivePhotoItemId] = useState<string | null>(null)
   const itemFileRef = useRef<HTMLInputElement>(null)
   const itemCameraRef = useRef<HTMLInputElement>(null)
-  const specialFileRef = useRef<HTMLInputElement>(null)
-  const specialCameraRef = useRef<HTMLInputElement>(null)
 
   // ── GPS location state for fail items ──
   const [itemLocations, setItemLocations] = useState<Record<string, { lat: number; lon: number }>>({})
@@ -139,16 +135,6 @@ export default function InspectionsPage() {
         ...prev,
         [itemId]: [...(prev[itemId] || []), { file, url, name: file.name }],
       }))
-    })
-    e.target.value = ''
-  }
-
-  const handleSpecialPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files?.length) return
-    Array.from(files).forEach((file) => {
-      const url = URL.createObjectURL(file)
-      setSpecialPhotos((prev) => [...prev, { file, url, name: file.name }])
     })
     e.target.value = ''
   }
@@ -210,7 +196,7 @@ export default function InspectionsPage() {
     if (params.get('action') === 'begin') {
       autoBeginHandled.current = true
       const typeParam = params.get('type') as TabType | null
-      const tab: TabType = (typeParam && ['airfield', 'lighting', 'construction_meeting', 'joint_monthly'].includes(typeParam))
+      const tab: TabType = (typeParam && ['airfield', 'lighting'].includes(typeParam))
         ? typeParam : 'airfield'
       if (!draft) {
         const newDraft = createNewDraft()
@@ -330,41 +316,6 @@ export default function InspectionsPage() {
     updateHalf(activeTab, (h) => ({ ...h, notes: text }))
   }
 
-  // CM/JM tabs use specialComment and personnel directly
-  const isCmJmTab = activeTab === 'construction_meeting' || activeTab === 'joint_monthly'
-  const cmJmLabel = activeTab === 'construction_meeting'
-    ? 'Pre/Post Construction Inspection'
-    : activeTab === 'joint_monthly'
-    ? 'Joint Monthly Inspection'
-    : ''
-
-  const setSpecialComment = (text: string) => {
-    updateHalf(activeTab, (h) => ({ ...h, specialComment: text }))
-  }
-
-  const togglePersonnel = (person: string) => {
-    updateHalf(activeTab, (h) => {
-      const current = h.selectedPersonnel || []
-      const names = h.personnelNames || {}
-      const removing = current.includes(person)
-      const next = removing
-        ? current.filter((p) => p !== person)
-        : [...current, person]
-      // Clear the name when unchecking
-      const nextNames = removing
-        ? (({ [person]: _, ...rest }) => rest)(names)
-        : names
-      return { ...h, selectedPersonnel: next, personnelNames: nextNames }
-    })
-  }
-
-  const setPersonnelName = (person: string, name: string) => {
-    updateHalf(activeTab, (h) => ({
-      ...h,
-      personnelNames: { ...(h.personnelNames || {}), [person]: name },
-    }))
-  }
-
   const sectionDoneCount = (section: InspectionSection) =>
     currentHalf
       ? section.items.filter((item) => {
@@ -388,16 +339,10 @@ export default function InspectionsPage() {
     if (!draft || !currentHalf) return
     setSaving(true)
 
-    const isCmJm = activeTab === 'construction_meeting' || activeTab === 'joint_monthly'
-
     const secs = activeTab === 'airfield'
       ? (dbAirfieldSections ?? AIRFIELD_INSPECTION_SECTIONS).filter(s => !s.conditional)
-      : activeTab === 'lighting'
-      ? (dbLightingSections ?? LIGHTING_INSPECTION_SECTIONS)
-      : []
-    const { items, passed, failed, na, total } = isCmJm
-      ? { items: [], passed: 0, failed: 0, na: 0, total: 0 }
-      : halfDraftToItems(currentHalf, secs, itemLocations)
+      : (dbLightingSections ?? LIGHTING_INSPECTION_SECTIONS)
+    const { items, passed, failed, na, total } = halfDraftToItems(currentHalf, secs, itemLocations)
 
     const { data: saved, error } = await saveInspectionDraft({
       id: currentHalf.dbRowId,
@@ -408,11 +353,11 @@ export default function InspectionsPage() {
       passed_count: passed,
       failed_count: failed,
       na_count: na,
-      bwc_value: isCmJm ? null : currentHalf.bwcValue,
-      notes: isCmJm ? (currentHalf.specialComment || null) : (currentHalf.notes || null),
+      bwc_value: currentHalf.bwcValue,
+      notes: currentHalf.notes || null,
       daily_group_id: draft.id,
-      construction_meeting: activeTab === 'construction_meeting',
-      joint_monthly: activeTab === 'joint_monthly',
+      construction_meeting: false,
+      joint_monthly: false,
       base_id: installationId,
     })
 
@@ -427,7 +372,7 @@ export default function InspectionsPage() {
       updateHalf(activeTab, (h) => ({ ...h, dbRowId: saved.id }))
     }
 
-    const tabLabels: Record<TabType, string> = { airfield: 'Airfield', lighting: 'Lighting', construction_meeting: 'Construction Meeting', joint_monthly: 'Joint Monthly' }
+    const tabLabels: Record<TabType, string> = { airfield: 'Airfield', lighting: 'Lighting' }
     setSaving(false)
     toast.success(`${tabLabels[activeTab]} progress saved`)
     await loadHistory()
@@ -459,7 +404,7 @@ export default function InspectionsPage() {
 
     for (const member of members) {
       const tab = member.inspection_type as TabType
-      if (tab !== 'airfield' && tab !== 'lighting' && tab !== 'construction_meeting' && tab !== 'joint_monthly') continue
+      if (tab !== 'airfield' && tab !== 'lighting') continue
       if (member.draft_data) {
         // Restore saved draft data
         newDraft[tab] = { ...member.draft_data, dbRowId: member.id }
@@ -491,8 +436,6 @@ export default function InspectionsPage() {
     if (!draft || !half) return
     setSaving(true)
 
-    const isCmJm = targetTab === 'construction_meeting' || targetTab === 'joint_monthly'
-
     // Auto-fetch weather
     const weather = await fetchCurrentWeather(baseLat, baseLon)
 
@@ -514,12 +457,8 @@ export default function InspectionsPage() {
     // Also save to DB
     const secs = targetTab === 'airfield'
       ? (dbAirfieldSections ?? AIRFIELD_INSPECTION_SECTIONS).filter(s => !s.conditional)
-      : targetTab === 'lighting'
-      ? (dbLightingSections ?? LIGHTING_INSPECTION_SECTIONS)
-      : []
-    const { items, passed, failed, na, total } = isCmJm
-      ? { items: [], passed: 0, failed: 0, na: 0, total: 0 }
-      : halfDraftToItems(completedHalf, secs, itemLocations)
+      : (dbLightingSections ?? LIGHTING_INSPECTION_SECTIONS)
+    const { items, passed, failed, na, total } = halfDraftToItems(completedHalf, secs, itemLocations)
 
     const { data: saved } = await saveInspectionDraft({
       id: half.dbRowId,
@@ -530,11 +469,11 @@ export default function InspectionsPage() {
       passed_count: passed,
       failed_count: failed,
       na_count: na,
-      bwc_value: isCmJm ? null : completedHalf.bwcValue,
-      notes: isCmJm ? (completedHalf.specialComment || null) : (completedHalf.notes || null),
+      bwc_value: completedHalf.bwcValue,
+      notes: completedHalf.notes || null,
       daily_group_id: draft.id,
-      construction_meeting: targetTab === 'construction_meeting',
-      joint_monthly: targetTab === 'joint_monthly',
+      construction_meeting: false,
+      joint_monthly: false,
       base_id: installationId,
     })
 
@@ -547,7 +486,7 @@ export default function InspectionsPage() {
       logActivity('completed', 'inspection', saved.id, saved.display_id, { inspection_type: targetTab }, installationId)
     }
 
-    const tabLabels: Record<TabType, string> = { airfield: 'Airfield', lighting: 'Lighting', construction_meeting: 'Construction Meeting', joint_monthly: 'Joint Monthly' }
+    const tabLabels: Record<TabType, string> = { airfield: 'Airfield', lighting: 'Lighting' }
     setSaving(false)
     toast.success(`${tabLabels[targetTab]} inspection completed`, {
       description: weather
@@ -560,119 +499,6 @@ export default function InspectionsPage() {
     // Auto-switch to lighting tab after completing airfield (only if lighting not started)
     if (targetTab === 'airfield' && !draft.lighting.savedAt) {
       setActiveTab('lighting')
-    }
-  }
-
-  // ── Helper: file a single CM/JM half ──
-  const fileCmJmHalf = async (
-    half: InspectionHalfDraft,
-    type: 'construction_meeting' | 'joint_monthly',
-    filerName: string,
-    filerId: string | null,
-  ): Promise<{ id: string | null; error: string | null }> => {
-    const personnel = (half.selectedPersonnel || []).map((p) => {
-      const name = half.personnelNames?.[p]
-      return name ? `${p} — ${name}` : p
-    })
-    const payload = {
-      items: [],
-      total_items: 0,
-      passed_count: 0,
-      failed_count: 0,
-      na_count: 0,
-      bwc_value: null,
-      weather_conditions: half.weatherConditions,
-      temperature_f: half.temperatureF,
-      notes: half.specialComment || null,
-      inspector_name: half.inspectorName || 'Unknown',
-      completed_by_name: half.inspectorName || 'Unknown',
-      completed_by_id: half.inspectorId,
-      completed_at: half.savedAt || new Date().toISOString(),
-      filed_by_name: filerName,
-      filed_by_id: filerId,
-      personnel,
-      construction_meeting: type === 'construction_meeting',
-      joint_monthly: type === 'joint_monthly',
-      base_id: installationId,
-    }
-
-    if (half.dbRowId) {
-      const { data, error } = await fileInspection({ id: half.dbRowId, ...payload })
-      return { id: data?.id || null, error: error || null }
-    } else {
-      const { data, error } = await createInspection({ inspection_type: type, ...payload })
-      return { id: data?.id || null, error: error || null }
-    }
-  }
-
-  // ── File a standalone CM/JM inspection (one-step: complete + file + navigate) ──
-  const handleFileCmJm = async () => {
-    if (!draft || !currentHalf) return
-    const type = activeTab as 'construction_meeting' | 'joint_monthly'
-    setFiling(true)
-
-    // Auto-capture weather + inspector
-    const weather = await fetchCurrentWeather(baseLat, baseLon)
-    const inspector = await getInspectorName()
-    const fallbackName = usingDemo ? 'Demo Inspector' : null
-    const filer = inspector
-
-    const completedHalf: InspectionHalfDraft = {
-      ...currentHalf,
-      inspectorName: inspector.name || fallbackName,
-      inspectorId: inspector.id,
-      savedAt: new Date().toISOString(),
-      weatherConditions: weather?.conditions || currentHalf.weatherConditions || null,
-      temperatureF: weather?.temperature_f ?? currentHalf.temperatureF ?? null,
-    }
-
-    const { id, error } = await fileCmJmHalf(
-      completedHalf,
-      type,
-      filer.name || (usingDemo ? 'Demo Inspector' : 'Unknown'),
-      filer.id,
-    )
-
-    if (error) {
-      toast.error(`Failed to file: ${error}`)
-      setFiling(false)
-      return
-    }
-
-    // Upload photos
-    if (id && specialPhotos.length > 0) {
-      for (const photo of specialPhotos) {
-        await uploadInspectionPhoto(id, photo.file, null, null, null, installationId)
-      }
-    }
-
-    // Clean up
-    specialPhotos.forEach((p) => URL.revokeObjectURL(p.url))
-    setSpecialPhotos([])
-
-    // Reset the CM/JM half in the draft (don't clear the whole draft — airfield/lighting may be in progress)
-    updateHalf(type, () => ({
-      responses: {}, bwcValue: null, comments: {}, enabledConditionals: {},
-      notes: '', inspectorName: null, inspectorId: null, savedAt: null,
-      weatherConditions: null, temperatureF: null, specialComment: '',
-      selectedPersonnel: [], personnelNames: {}, dbRowId: null,
-    }))
-    saveDraftToStorage(draft, installationId)
-
-    if (id) {
-      logActivity('filed', 'inspection', id, undefined, { inspection_type: type }, installationId)
-    }
-
-    setFiling(false)
-    const label = type === 'construction_meeting' ? 'Pre/Post Construction' : 'Joint Monthly'
-    toast.success(`${label} inspection filed`)
-
-    if (id) {
-      router.push(`/inspections/${id}`)
-    } else {
-      // Fallback for demo mode
-      setActiveTab('airfield')
-      await loadHistory()
     }
   }
 
@@ -873,18 +699,9 @@ export default function InspectionsPage() {
         }
       }
 
-      // Upload photos for special inspections (no item ID)
-      if (filedId && specialPhotos.length > 0) {
-        for (const photo of specialPhotos) {
-          await uploadInspectionPhoto(filedId, photo.file, null, null, null, installationId)
-        }
-      }
-
       // Clean up object URLs
       Object.values(itemPhotos).flat().forEach((p) => URL.revokeObjectURL(p.url))
-      specialPhotos.forEach((p) => URL.revokeObjectURL(p.url))
       setItemPhotos({})
-      setSpecialPhotos([])
       setItemLocations({})
 
       clearDraft(installationId)
@@ -1080,8 +897,6 @@ export default function InspectionsPage() {
           {([
             { key: 'airfield' as TabType, topLine: 'Airfield', bottomLine: null, wide: true },
             { key: 'lighting' as TabType, topLine: 'Lighting', bottomLine: null, wide: true },
-            ...(activeTab === 'construction_meeting' ? [{ key: 'construction_meeting' as TabType, topLine: 'Pre/Post', bottomLine: 'Construction' as string | null, wide: false }] : []),
-            ...(activeTab === 'joint_monthly' ? [{ key: 'joint_monthly' as TabType, topLine: 'Joint Monthly', bottomLine: 'Inspection' as string | null, wide: false }] : []),
           ]).map(({ key: type, topLine, bottomLine, wide }) => {
             const active = activeTab === type
             const half = draft[type]
@@ -1128,9 +943,8 @@ export default function InspectionsPage() {
           })}
         </div>
 
-        {/* ── Status Bar (airfield/lighting only) ── */}
-        {!isCmJmTab && (
-          <div className="card" style={{ marginBottom: 12, padding: 10 }}>
+        {/* ── Status Bar ── */}
+        <div className="card" style={{ marginBottom: 12, padding: 10 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 'var(--fs-sm)' }}>
               <div>
                 <div style={{ color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 'var(--fs-2xs)', marginBottom: 2 }}>
@@ -1164,137 +978,9 @@ export default function InspectionsPage() {
               </div>
             </div>
           </div>
-        )}
 
-        {/* ══════════════════════════════════════════════════════ */}
-        {/* ══ CM/JM STANDALONE FORM                               */}
-        {/* ══════════════════════════════════════════════════════ */}
-        {isCmJmTab ? (
-          <>
-            {/* CM/JM header */}
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-accent)' }}>
-                {cmJmLabel}
-              </div>
-              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', marginTop: 2 }}>
-                Fill out and file — this is a standalone record separate from the daily inspection.
-              </div>
-            </div>
 
-            {/* ── Personnel Multi-Select ── */}
-            <div className="card" style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-                Personnel / Offices Present
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {INSPECTION_PERSONNEL.map((person) => {
-                  const selected = currentHalf?.selectedPersonnel?.includes(person)
-                  const repName = currentHalf?.personnelNames?.[person] || ''
-                  return (
-                    <div key={person}>
-                      <label
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 6,
-                          padding: '8px 12px', borderRadius: selected ? '8px 8px 0 0' : 8, cursor: 'pointer',
-                          border: `1px solid ${selected ? 'rgba(56,189,248,0.5)' : 'var(--color-text-4)'}`,
-                          borderBottom: selected ? 'none' : undefined,
-                          background: selected ? 'var(--color-border-mid)' : 'transparent',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={!!selected}
-                          onChange={() => togglePersonnel(person)}
-                          style={{ accentColor: 'var(--color-accent)', width: 14, height: 14 }}
-                        />
-                        <span style={{ fontSize: 'var(--fs-md)', color: selected ? 'var(--color-accent)' : 'var(--color-text-2)', fontWeight: selected ? 600 : 400 }}>
-                          {person}
-                        </span>
-                      </label>
-                      {selected && (
-                        <div style={{
-                          padding: '6px 12px 8px',
-                          borderRadius: '0 0 8px 8px',
-                          border: '1px solid rgba(56,189,248,0.5)',
-                          borderTop: 'none',
-                          background: 'rgba(56,189,248,0.05)',
-                        }}>
-                          <input
-                            type="text"
-                            className="input-dark"
-                            placeholder={`Representative name...`}
-                            value={repName}
-                            onChange={(e) => setPersonnelName(person, e.target.value)}
-                            style={{ fontSize: 'var(--fs-base)', padding: '6px 8px', width: '100%' }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* ── Comment Box ── */}
-            <div className="card" style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
-                Comments
-              </div>
-              <textarea
-                className="input-dark"
-                rows={6}
-                placeholder={`Enter ${cmJmLabel.toLowerCase()} comments...`}
-                value={currentHalf?.specialComment || ''}
-                onChange={(e) => setSpecialComment(e.target.value)}
-                style={{ resize: 'vertical', fontSize: 'var(--fs-md)' }}
-              />
-            </div>
-
-            {/* ── Photos for CM/JM Inspection ── */}
-            <div className="card" style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-                Photos / Attachments
-              </div>
-
-              {/* Thumbnails */}
-              {specialPhotos.length > 0 && (
-                <div className="photo-grid" style={{ marginBottom: 8 }}>
-                  {specialPhotos.map((photo, idx) => (
-                    <div key={idx} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border-mid)' }}>
-                      <img src={photo.url} alt={photo.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          URL.revokeObjectURL(photo.url)
-                          setSpecialPhotos((prev) => prev.filter((_, i) => i !== idx))
-                        }}
-                        style={{
-                          position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%',
-                          background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', cursor: 'pointer',
-                          fontSize: 'var(--fs-xs)', lineHeight: '18px', textAlign: 'center', padding: 0,
-                        }}
-                      >
-                        x
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Photo button */}
-              <PhotoPickerButton
-                onUpload={() => specialFileRef.current?.click()}
-                onCapture={() => specialCameraRef.current?.click()}
-              />
-            </div>
-          </>
-        ) : (
-          <>
-            {/* ══════════════════════════════════════════════ */}
-            {/* ══ NORMAL MODE: Standard checklist            */}
-            {/* ══════════════════════════════════════════════ */}
-
-            {/* ── Progress + Mark All Pass ── */}
+        {/* ── Progress + Mark All Pass ── */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <div>
                 <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700 }}>
@@ -1534,88 +1220,64 @@ export default function InspectionsPage() {
                 style={{ resize: 'vertical', fontSize: 'var(--fs-md)' }}
               />
             </div>
-          </>
-        )}
 
         {/* ── Smart Action Buttons ── */}
-        {isCmJmTab ? (
-          /* CM/JM: single "Complete & File" button — standalone, one-step */
-          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          {!currentHalf?.savedAt && (
+            progress >= 100 ? (
+              <button
+                onClick={() => handleComplete()}
+                disabled={saving}
+                style={{
+                  flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
+                  background: 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-cyan))',
+                  color: '#FFF', fontSize: 'var(--fs-xl)', fontWeight: 700,
+                  cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
+                  opacity: saving ? 0.7 : 1,
+                }}
+              >
+                {saving ? 'Completing...' : 'Complete'}
+              </button>
+            ) : (
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={{
+                  flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
+                  background: 'linear-gradient(135deg, #3B82F6, #6366F1)',
+                  color: '#FFF', fontSize: 'var(--fs-xl)', fontWeight: 700,
+                  cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
+                  opacity: saving ? 0.7 : 1,
+                }}
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            )
+          )}
+
+          {/* File button: appears once at least one standard tab is completed */}
+          {(draft.airfield.savedAt || draft.lighting.savedAt) && (
             <button
-              onClick={handleFileCmJm}
+              onClick={() => handleFile()}
               disabled={filing}
               style={{
-                flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
-                background: 'linear-gradient(135deg, #22C55E, #16A34A)',
-                color: '#FFF', fontSize: 'var(--fs-xl)', fontWeight: 700,
+                flex: 1, padding: '14px 0', borderRadius: 10,
+                border: '1px solid rgba(34,197,94,0.4)',
+                background: 'rgba(34,197,94,0.1)',
+                color: '#22C55E',
+                fontSize: 'var(--fs-xl)', fontWeight: 700,
                 cursor: filing ? 'default' : 'pointer', fontFamily: 'inherit',
                 opacity: filing ? 0.7 : 1,
               }}
             >
-              {filing ? 'Filing...' : 'Complete & File'}
+              {filing ? 'Filing...' : 'File'}
             </button>
-          </div>
-        ) : (
-          /* Airfield/Lighting: Save progress or Complete, then File */
-          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-            {!currentHalf?.savedAt && (
-              progress >= 100 ? (
-                <button
-                  onClick={() => handleComplete()}
-                  disabled={saving}
-                  style={{
-                    flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
-                    background: 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-cyan))',
-                    color: '#FFF', fontSize: 'var(--fs-xl)', fontWeight: 700,
-                    cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
-                    opacity: saving ? 0.7 : 1,
-                  }}
-                >
-                  {saving ? 'Completing...' : 'Complete'}
-                </button>
-              ) : (
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  style={{
-                    flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
-                    background: 'linear-gradient(135deg, #3B82F6, #6366F1)',
-                    color: '#FFF', fontSize: 'var(--fs-xl)', fontWeight: 700,
-                    cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
-                    opacity: saving ? 0.7 : 1,
-                  }}
-                >
-                  {saving ? 'Saving...' : 'Save'}
-                </button>
-              )
-            )}
-
-            {/* File button: appears once at least one standard tab is completed */}
-            {(draft.airfield.savedAt || draft.lighting.savedAt) && (
-              <button
-                onClick={() => handleFile()}
-                disabled={filing}
-                style={{
-                  flex: 1, padding: '14px 0', borderRadius: 10,
-                  border: '1px solid rgba(34,197,94,0.4)',
-                  background: 'rgba(34,197,94,0.1)',
-                  color: '#22C55E',
-                  fontSize: 'var(--fs-xl)', fontWeight: 700,
-                  cursor: filing ? 'default' : 'pointer', fontFamily: 'inherit',
-                  opacity: filing ? 0.7 : 1,
-                }}
-              >
-                {filing ? 'Filing...' : 'File'}
-              </button>
-            )}
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Hidden file inputs for photo capture */}
         <input ref={itemFileRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleItemPhoto} />
         <input ref={itemCameraRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleItemPhoto} />
-        <input ref={specialFileRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleSpecialPhoto} />
-        <input ref={specialCameraRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleSpecialPhoto} />
 
         {/* ── Lighting Incomplete Confirmation Dialog ── */}
         {showLightingWarning && (
