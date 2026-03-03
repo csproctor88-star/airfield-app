@@ -582,7 +582,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
       <div
         ref={mapContainer}
         style={{
-          width: '100%',
+          width: '60%',
           height: expanded ? 'var(--obs-map-height-expanded)' : 'var(--obs-map-height)',
           borderRadius: 10,
           overflow: 'hidden',
