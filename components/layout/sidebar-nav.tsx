@@ -15,7 +15,6 @@ import {
   MapPin,
   FileText,
   Shield,
-  ShieldCheck,
   BarChart3,
   Plane,
   BookOpen,
@@ -23,33 +22,33 @@ import {
   Settings,
   Users,
   Activity,
+  MoreHorizontal,
+  ChevronDown,
+  ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react'
 
-// All navigation items — organized by section
+// Main navigation items
 const mainItems = [
   { name: 'Dashboard', icon: Home, href: '/' },
   { name: 'Activity Log', icon: Activity, href: '/activity' },
-  { name: 'Daily Inspections', icon: ClipboardList, href: '/inspections' },
-  { name: 'ACSI', icon: ShieldCheck, href: '/acsi' },
   { name: 'Airfield Checks', icon: ClipboardCheck, href: '/checks' },
-  { name: 'NOTAMs', icon: FileText, href: '/notams' },
+  { name: 'All Inspections', icon: ClipboardList, href: '/inspections/all' },
   { name: 'Airfield Discrepancies', icon: AlertTriangle, href: '/discrepancies' },
   { name: 'Obstruction Evaluation Tool', icon: MapPin, href: '/obstructions' },
-  { name: 'Reference Library', icon: BookOpen, href: '/regulations' },
   { name: 'Aircraft Database', icon: Plane, href: '/aircraft' },
+  { name: 'Reference Library', icon: BookOpen, href: '/regulations' },
+  { name: 'NOTAMs', icon: FileText, href: '/notams' },
   { name: 'Airfield Waivers', icon: Shield, href: '/waivers' },
   { name: 'Reports & Analytics', icon: BarChart3, href: '/reports' },
 ]
 
-const adminItems = [
-  { name: 'PDF Library', icon: BookMarked, href: '/library' },
-  { name: 'User Management', icon: Users, href: '/users' },
-]
-
-const bottomItems = [
+// "More" dropdown items
+const moreItems = [
   { name: 'Settings', icon: Settings, href: '/settings' },
+  { name: 'PDF Library', icon: BookMarked, href: '/library', adminOnly: true },
+  { name: 'User Management', icon: Users, href: '/users', adminOnly: true },
 ]
 
 export function SidebarNav() {
@@ -57,6 +56,7 @@ export function SidebarNav() {
   const { isOpen, toggle } = useSidebar()
   const [canManageUsers, setCanManageUsers] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
 
   useEffect(() => {
     async function checkRole() {
@@ -90,12 +90,21 @@ export function SidebarNav() {
     checkRole()
   }, [])
 
+  // Auto-expand More if a child route is active
+  useEffect(() => {
+    const moreActive = moreItems.some(item => {
+      if (item.href === '/') return pathname === '/'
+      return pathname.startsWith(item.href)
+    })
+    if (moreActive) setMoreOpen(true)
+  }, [pathname])
+
   function isActive(href: string) {
     if (href === '/') return pathname === '/'
     return pathname.startsWith(href)
   }
 
-  function renderNavItem(item: { name: string; icon: typeof Home; href: string }) {
+  function renderNavItem(item: { name: string; icon: typeof Home; href: string }, indented?: boolean) {
     const Icon = item.icon
     const active = isActive(item.href)
 
@@ -109,27 +118,28 @@ export function SidebarNav() {
           alignItems: 'center',
           justifyContent: isOpen ? undefined : 'center',
           gap: isOpen ? 12 : 0,
-          padding: isOpen ? '10px 20px' : '10px 0',
+          padding: isOpen ? `10px 20px${indented ? ' 10px 34px' : ''}` : '10px 0',
           textDecoration: 'none',
           color: active ? 'var(--color-accent)' : 'var(--color-text-2)',
           background: active ? 'var(--color-accent-glow)' : 'transparent',
           borderRight: active ? '3px solid var(--color-accent)' : '3px solid transparent',
-          fontSize: 'var(--fs-lg)',
+          fontSize: indented && isOpen ? 'var(--fs-base)' : 'var(--fs-lg)',
           fontWeight: active ? 700 : 500,
           transition: 'background 0.15s, color 0.15s',
           overflow: 'hidden',
           whiteSpace: 'nowrap',
         }}
       >
-        <Icon size={18} style={{ flexShrink: 0 }} />
+        <Icon size={indented ? 16 : 18} style={{ flexShrink: 0 }} />
         {isOpen && <span>{item.name}</span>}
       </Link>
     )
   }
 
-  const separator = (key: string) => (
-    <div key={key} style={{ height: 1, background: 'var(--color-border)', margin: '8px 16px' }} />
-  )
+  const visibleMoreItems = moreItems.filter(item => {
+    if ('adminOnly' in item && item.adminOnly) return loaded && canManageUsers
+    return true
+  })
 
   return (
     <nav className={`sidebar-drawer${isOpen ? '' : ' sidebar-collapsed'}`}>
@@ -179,18 +189,44 @@ export function SidebarNav() {
 
       {/* Navigation items */}
       <div style={{ flex: 1, padding: '8px 0', overflowY: 'auto' }}>
-        {mainItems.map(renderNavItem)}
+        {mainItems.map(item => renderNavItem(item))}
 
-        {/* Admin section — role-gated */}
-        {loaded && canManageUsers && (
-          <>
-            {separator('admin-sep')}
-            {adminItems.map(renderNavItem)}
-          </>
-        )}
+        {/* More dropdown */}
+        <div style={{ height: 1, background: 'var(--color-border)', margin: '8px 16px' }} />
+        <button
+          onClick={() => setMoreOpen(prev => !prev)}
+          title={!isOpen ? 'More' : undefined}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: isOpen ? undefined : 'center',
+            gap: isOpen ? 12 : 0,
+            padding: isOpen ? '10px 20px' : '10px 0',
+            width: '100%',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'var(--color-text-2)',
+            fontSize: 'var(--fs-lg)',
+            fontWeight: 500,
+            textAlign: 'left',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <MoreHorizontal size={18} style={{ flexShrink: 0 }} />
+          {isOpen && (
+            <>
+              <span style={{ flex: 1 }}>More</span>
+              {moreOpen
+                ? <ChevronDown size={14} style={{ color: 'var(--color-text-3)' }} />
+                : <ChevronRight size={14} style={{ color: 'var(--color-text-3)' }} />
+              }
+            </>
+          )}
+        </button>
 
-        {separator('bottom-sep')}
-        {bottomItems.map(renderNavItem)}
+        {moreOpen && visibleMoreItems.map(item => renderNavItem(item, true))}
       </div>
     </nav>
   )

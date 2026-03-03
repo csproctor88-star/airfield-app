@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 
 const INSPECTION_TYPES = [
   {
-    label: 'Daily Airfield',
+    label: 'Daily Airfield Inspection',
     icon: '✈️',
     color: '#10B981',
     description: 'DAFI 13-213 daily airfield & lighting inspections',
@@ -14,7 +14,7 @@ const INSPECTION_TYPES = [
     historyHref: '/inspections',
   },
   {
-    label: 'ACSI',
+    label: 'Airfield Compliance and Safety Inspection',
     icon: '🛡️',
     color: '#8B5CF6',
     description: 'DAFMAN 13-204v2, Para 5.4.3 annual compliance inspection',
@@ -32,7 +32,7 @@ const INSPECTION_TYPES = [
     historyHref: '/inspections',
   },
   {
-    label: 'Joint Monthly',
+    label: 'Monthly Joint Inspection',
     icon: '🤝',
     color: '#3B82F6',
     description: 'Monthly joint airfield inspection with CE & Safety',

@@ -1064,13 +1064,11 @@ export default function InspectionsPage() {
           </div>
         </div>
 
-        {/* ── Tab Bar (4 tabs) ── */}
+        {/* ── Tab Bar (2 tabs) ── */}
         <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-text-4)', marginBottom: 12 }}>
           {([
             { key: 'airfield' as TabType, topLine: 'Airfield', bottomLine: null, wide: true },
             { key: 'lighting' as TabType, topLine: 'Lighting', bottomLine: null, wide: true },
-            { key: 'construction_meeting' as TabType, topLine: 'Pre/Post', bottomLine: 'Construction', wide: false },
-            { key: 'joint_monthly' as TabType, topLine: 'Joint Monthly', bottomLine: 'Inspection', wide: false },
           ]).map(({ key: type, topLine, bottomLine, wide }) => {
             const active = activeTab === type
             const half = draft[type]
