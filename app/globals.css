@@ -463,6 +463,8 @@ html, body {
 /* Content area — no constraint on mobile (parent is already 480px) */
 .app-content {
   padding-bottom: 80px; /* Clear the fixed bottom nav on mobile */
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
 }
 
 /* Sidebar toggle in header — hidden on mobile, shown on tablet+ when sidebar collapsed */
