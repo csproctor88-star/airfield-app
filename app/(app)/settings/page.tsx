@@ -24,7 +24,7 @@ export default function SettingsPage() {
   return (
     <div className="page-container">
       <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>Settings</div>
-      <CollapsibleSection label="PROFILE" icon={User} defaultOpen>
+      <CollapsibleSection label="PROFILE" icon={User}>
         <ProfileSectionContent />
       </CollapsibleSection>
       <CollapsibleSection label="INSTALLATION" icon={MapPin}>
@@ -184,12 +184,6 @@ function ProfileSectionContent() {
         <div>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 2 }}>NAME</div>
           <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>{displayName || 'Not set'}</div>
-        </div>
-
-        {/* Email */}
-        <div>
-          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 2 }}>EMAIL</div>
-          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)' }}>{profile.email}</div>
         </div>
 
         {/* Installation */}
