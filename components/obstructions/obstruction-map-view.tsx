@@ -62,7 +62,7 @@ export default function ObstructionMapView({ evaluations }: Props) {
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-v9',
       center: [centerLng, centerLat],
-      zoom: 12,
+      zoom: 13,
       pitch: 0,
       bearing: 0,
       attributionControl: false,
@@ -193,7 +193,7 @@ export default function ObstructionMapView({ evaluations }: Props) {
     } else if (visibleEvaluations.length === 1) {
       map.current.flyTo({
         center: [visibleEvaluations[0].longitude!, visibleEvaluations[0].latitude!],
-        zoom: 13,
+        zoom: 14,
         duration: 800,
       })
     }

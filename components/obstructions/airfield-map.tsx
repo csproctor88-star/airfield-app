@@ -316,7 +316,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-v9',
       center: defaultCenter,
-      zoom: 12,
+      zoom: 13,
       pitch: 0,
       bearing: 0,
     })

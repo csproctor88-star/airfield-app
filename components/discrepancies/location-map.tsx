@@ -52,7 +52,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-v9',
       center: [centerLng, centerLat],
-      zoom: 13,
+      zoom: 14,
       pitch: 0,
       bearing: 0,
     })

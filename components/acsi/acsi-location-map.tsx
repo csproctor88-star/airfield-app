@@ -55,7 +55,7 @@ export default function AcsiLocationMap({ pins, onPinsChange }: Props) {
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-v9',
       center: [centerLng, centerLat],
-      zoom: 13,
+      zoom: 14,
       pitch: 0,
       bearing: 0,
     })
@@ -134,8 +134,8 @@ export default function AcsiLocationMap({ pins, onPinsChange }: Props) {
         <div
           ref={mapContainer}
           style={{
-            width: 210,
-            height: expanded ? 'var(--map-height)' : 210,
+            width: 105,
+            height: expanded ? 'var(--map-height)' : 105,
             borderRadius: 10,
             overflow: 'hidden',
             border: '1px solid var(--color-border)',
