@@ -798,7 +798,7 @@ export default function HomePage() {
           <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>No activity recorded yet</div>
         </div>
       ) : (
-        <>
+        <div className="card" style={{ padding: '6px 14px' }}>
           {activity.slice(0, 5).map((a, i, arr) => {
             const actionColor: Record<string, string> = {
               created: 'var(--color-success)',
@@ -877,7 +877,7 @@ export default function HomePage() {
               </div>
             )
           })}
-        </>
+        </div>
       )}
     </div>
   )
