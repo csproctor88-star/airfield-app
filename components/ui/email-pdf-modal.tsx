@@ -90,9 +90,9 @@ export default function EmailPdfModal({ open, onClose, onSend, sending, filename
           onKeyDown={(e) => { if (e.key === 'Enter' && !sending) handleSend() }}
           style={{
             width: '100%', padding: '10px 12px', borderRadius: 8,
-            background: 'var(--color-bg-input, #0d0d1a)',
+            background: 'var(--color-bg-surface, #fff)',
             border: error ? '1px solid #ef4444' : '1px solid var(--color-border, #444)',
-            color: 'var(--color-text-1, #fff)', fontSize: 'var(--fs-md, 15px)',
+            color: 'var(--color-text-1, #000)', fontSize: 'var(--fs-md, 15px)',
             fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
           }}
         />
