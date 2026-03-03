@@ -6,6 +6,17 @@ import type { AcsiItem, AcsiItemResponse, AcsiDiscrepancyDetail, AcsiTeamMember,
 
 const DRAFT_KEY_PREFIX = 'acsi_inspection_draft'
 
+/** Normalize legacy single-discrepancy data to the new array format */
+export function normalizeAcsiDraftDiscrepancies(
+  raw: Record<string, AcsiDiscrepancyDetail | AcsiDiscrepancyDetail[]>,
+): Record<string, AcsiDiscrepancyDetail[]> {
+  const result: Record<string, AcsiDiscrepancyDetail[]> = {}
+  for (const [key, value] of Object.entries(raw)) {
+    result[key] = Array.isArray(value) ? value : [value]
+  }
+  return result
+}
+
 function getDraftKey(baseId?: string): string {
   return baseId ? `${DRAFT_KEY_PREFIX}_${baseId}` : DRAFT_KEY_PREFIX
 }
@@ -36,7 +47,11 @@ export function loadAcsiDraft(baseId?: string | null): AcsiDraftData | null {
   try {
     const raw = localStorage.getItem(getDraftKey(baseId ?? undefined))
     if (!raw) return null
-    return JSON.parse(raw) as AcsiDraftData
+    const parsed = JSON.parse(raw) as AcsiDraftData
+    if (parsed.discrepancies) {
+      parsed.discrepancies = normalizeAcsiDraftDiscrepancies(parsed.discrepancies)
+    }
+    return parsed
   } catch {
     return null
   }
@@ -83,26 +98,28 @@ export function acsiDraftToItems(
         for (const sf of ACSI_SUB_FIELD_LABELS) {
           const subId = `${item.id}.${sf.key}`
           const response: AcsiItemResponse = draft.responses[subId] ?? null
-          const discrepancy = response === 'fail' ? (draft.discrepancies[subId] || null) : null
+          const discArray = response === 'fail' ? (draft.discrepancies[subId] || []) : []
           items.push({
             id: subId,
             section_id: section.id,
             item_number: subId,
             question: `${item.question} — ${sf.label}`,
             response,
-            discrepancy: discrepancy ? buildDiscrepancy(discrepancy) : null,
+            discrepancy: discArray.length > 0 ? buildDiscrepancy(discArray[0]) : null,
+            discrepancies: discArray.map(d => buildDiscrepancy(d)),
           })
         }
       } else {
         const response: AcsiItemResponse = draft.responses[item.id] ?? null
-        const discrepancy = response === 'fail' ? (draft.discrepancies[item.id] || null) : null
+        const discArray = response === 'fail' ? (draft.discrepancies[item.id] || []) : []
         items.push({
           id: item.id,
           section_id: section.id,
           item_number: item.id,
           question: item.question,
           response,
-          discrepancy: discrepancy ? buildDiscrepancy(discrepancy) : null,
+          discrepancy: discArray.length > 0 ? buildDiscrepancy(discArray[0]) : null,
+          discrepancies: discArray.map(d => buildDiscrepancy(d)),
         })
       }
     }
@@ -111,14 +128,15 @@ export function acsiDraftToItems(
   // Add locally-defined items (Section 10 extras)
   for (const local of draft.localItems) {
     const response: AcsiItemResponse = draft.responses[local.id] ?? null
-    const discrepancy = response === 'fail' ? (draft.discrepancies[local.id] || null) : null
+    const discArray = response === 'fail' ? (draft.discrepancies[local.id] || []) : []
     items.push({
       id: local.id,
       section_id: 'acsi-10',
       item_number: local.id,
       question: local.question,
       response,
-      discrepancy: discrepancy ? buildDiscrepancy(discrepancy) : null,
+      discrepancy: discArray.length > 0 ? buildDiscrepancy(discArray[0]) : null,
+      discrepancies: discArray.map(d => buildDiscrepancy(d)),
     })
   }
 

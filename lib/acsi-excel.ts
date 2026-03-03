@@ -61,24 +61,46 @@ export async function generateAcsiExcel(inspection: AcsiInspection): Promise<voi
   for (const section of ACSI_CHECKLIST_SECTIONS) {
     const sectionItems = itemsBySection[section.id] || []
     for (const item of sectionItems) {
-      allRows.push({
-        section: `${section.number}. ${section.title}`,
-        item_number: item.item_number,
-        question: item.question,
-        response: responseLabel(item.response),
-        comment: item.discrepancy?.comment || '',
-        work_order: item.discrepancy?.work_order || '',
-        project_number: item.discrepancy?.project_number || '',
-        estimated_cost: item.discrepancy?.estimated_cost || '',
-        estimated_completion: item.discrepancy?.estimated_completion || '',
-        areas: item.discrepancy?.areas?.join(', ') || '',
-      })
+      const discs = item.discrepancies?.length ? item.discrepancies : item.discrepancy ? [item.discrepancy] : []
+      if (item.response === 'fail' && discs.length > 0) {
+        for (let di = 0; di < discs.length; di++) {
+          const disc = discs[di]
+          allRows.push({
+            section: `${section.number}. ${section.title}`,
+            item_number: item.item_number,
+            disc_number: discs.length > 1 ? `${di + 1}/${discs.length}` : '',
+            question: item.question,
+            response: 'N',
+            comment: disc.comment || '',
+            work_order: disc.work_order || '',
+            project_number: disc.project_number || '',
+            estimated_cost: disc.estimated_cost || '',
+            estimated_completion: disc.estimated_completion || '',
+            areas: disc.areas?.join(', ') || '',
+          })
+        }
+      } else {
+        allRows.push({
+          section: `${section.number}. ${section.title}`,
+          item_number: item.item_number,
+          disc_number: '',
+          question: item.question,
+          response: responseLabel(item.response),
+          comment: '',
+          work_order: '',
+          project_number: '',
+          estimated_cost: '',
+          estimated_completion: '',
+          areas: '',
+        })
+      }
     }
   }
 
   addStyledSheet(wb, 'Checklist Items', [
     { header: 'Section', key: 'section', width: 30 },
     { header: 'Item #', key: 'item_number', width: 10 },
+    { header: 'Disc #', key: 'disc_number', width: 8 },
     { header: 'Question', key: 'question', width: 50 },
     { header: 'Response', key: 'response', width: 10 },
     { header: 'Comment', key: 'comment', width: 35 },
@@ -95,6 +117,7 @@ export async function generateAcsiExcel(inspection: AcsiInspection): Promise<voi
     addStyledSheet(wb, 'Discrepancies', [
       { header: 'Section', key: 'section', width: 30 },
       { header: 'Item #', key: 'item_number', width: 10 },
+      { header: 'Disc #', key: 'disc_number', width: 8 },
       { header: 'Question', key: 'question', width: 50 },
       { header: 'Comment', key: 'comment', width: 40 },
       { header: 'Work Order', key: 'work_order', width: 18 },

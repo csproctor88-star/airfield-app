@@ -280,6 +280,7 @@ export async function uploadAcsiPhoto(
   file: File,
   itemId?: string | null,
   baseId?: string | null,
+  discrepancyIndex?: number,
 ): Promise<{ data: AcsiPhotoRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -329,7 +330,7 @@ export async function uploadAcsiPhoto(
 
   const photoRow: Record<string, unknown> = {
     acsi_inspection_id: inspectionId,
-    acsi_item_id: itemId || null,
+    acsi_item_id: itemId ? (discrepancyIndex != null ? `${itemId}:${discrepancyIndex}` : itemId) : null,
     storage_path: storageUrl,
     file_name: file.name,
     file_size: file.size,

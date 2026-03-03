@@ -21,9 +21,10 @@ import {
 } from '@/lib/acsi-draft'
 import { AcsiSection } from '@/components/acsi/acsi-section'
 import { AcsiItem } from '@/components/acsi/acsi-item'
-import { AcsiDiscrepancyPanel } from '@/components/acsi/acsi-discrepancy-panel'
+import { AcsiDiscrepancyPanelGroup } from '@/components/acsi/acsi-discrepancy-panel-group'
 import { AcsiTeamEditor } from '@/components/acsi/acsi-team-editor'
 import { AcsiRiskCert } from '@/components/acsi/acsi-risk-cert'
+import { normalizeAcsiDraftDiscrepancies } from '@/lib/acsi-draft'
 import type { AcsiItemResponse, AcsiDiscrepancyDetail, AcsiTeamMember, AcsiSignatureBlock, AcsiDraftData } from '@/lib/supabase/types'
 import { ArrowLeft, Plus, Save, CheckCircle } from 'lucide-react'
 
@@ -86,7 +87,11 @@ export default function AcsiFormPage() {
       if (resumeId) {
         const existing = await fetchAcsiInspection(resumeId)
         if (existing && existing.draft_data) {
-          setDraft(existing.draft_data)
+          const draftData = existing.draft_data
+          if (draftData.discrepancies) {
+            draftData.discrepancies = normalizeAcsiDraftDiscrepancies(draftData.discrepancies)
+          }
+          setDraft(draftData)
           setDbRowId(existing.id)
           setAirfieldName(existing.airfield_name)
           setInspectionDate(existing.inspection_date)
@@ -150,10 +155,10 @@ export default function AcsiFormPage() {
 
       // Auto-create discrepancy entry when fail
       let discrepancies = prev.discrepancies
-      if (value === 'fail' && !discrepancies[itemId]) {
+      if (value === 'fail' && (!discrepancies[itemId] || discrepancies[itemId].length === 0)) {
         discrepancies = {
           ...discrepancies,
-          [itemId]: { ...EMPTY_DISCREPANCY },
+          [itemId]: [{ ...EMPTY_DISCREPANCY }],
         }
       }
 
@@ -161,11 +166,34 @@ export default function AcsiFormPage() {
     })
   }, [updateDraft])
 
-  const handleDiscrepancyChange = useCallback((itemId: string, detail: AcsiDiscrepancyDetail) => {
-    updateDraft(prev => ({
-      ...prev,
-      discrepancies: { ...prev.discrepancies, [itemId]: detail },
-    }))
+  const handleDiscrepancyChange = useCallback((itemId: string, index: number, detail: AcsiDiscrepancyDetail) => {
+    updateDraft(prev => {
+      const current = [...(prev.discrepancies[itemId] || [])]
+      current[index] = detail
+      return { ...prev, discrepancies: { ...prev.discrepancies, [itemId]: current } }
+    })
+  }, [updateDraft])
+
+  const handleAddDiscrepancy = useCallback((itemId: string) => {
+    updateDraft(prev => {
+      const current = [...(prev.discrepancies[itemId] || [])]
+      current.push({ ...EMPTY_DISCREPANCY })
+      return { ...prev, discrepancies: { ...prev.discrepancies, [itemId]: current } }
+    })
+  }, [updateDraft])
+
+  const handleRemoveDiscrepancy = useCallback((itemId: string, index: number) => {
+    updateDraft(prev => {
+      const current = [...(prev.discrepancies[itemId] || [])]
+      // If removing index 0, migrate pins to the next discrepancy
+      if (index === 0 && current.length > 1) {
+        const pins = current[0].pins || []
+        current[1] = { ...current[1], pins }
+      }
+      current.splice(index, 1)
+      if (current.length === 0) current.push({ ...EMPTY_DISCREPANCY })
+      return { ...prev, discrepancies: { ...prev.discrepancies, [itemId]: current } }
+    })
   }, [updateDraft])
 
   const handleTeamChange = useCallback((team: AcsiTeamMember[]) => {
@@ -458,20 +486,24 @@ export default function AcsiFormPage() {
                     subFieldResponses={item.hasSubFields ? draft.responses : undefined}
                     renderSubFieldChildren={item.hasSubFields ? (subId: string) => (
                       draft.responses[subId] === 'fail' ? (
-                        <AcsiDiscrepancyPanel
+                        <AcsiDiscrepancyPanelGroup
                           itemId={subId}
-                          detail={draft.discrepancies[subId] || { ...EMPTY_DISCREPANCY }}
+                          discrepancies={draft.discrepancies[subId] || [{ ...EMPTY_DISCREPANCY }]}
                           onChange={handleDiscrepancyChange}
+                          onAdd={handleAddDiscrepancy}
+                          onRemove={handleRemoveDiscrepancy}
                           inspectionId={dbRowId}
                         />
                       ) : null
                     ) : undefined}
                   >
                     {draft.responses[item.id] === 'fail' && !item.hasSubFields && !item.isHeading && (
-                      <AcsiDiscrepancyPanel
+                      <AcsiDiscrepancyPanelGroup
                         itemId={item.id}
-                        detail={draft.discrepancies[item.id] || { ...EMPTY_DISCREPANCY }}
+                        discrepancies={draft.discrepancies[item.id] || [{ ...EMPTY_DISCREPANCY }]}
                         onChange={handleDiscrepancyChange}
+                        onAdd={handleAddDiscrepancy}
+                        onRemove={handleRemoveDiscrepancy}
                         inspectionId={dbRowId}
                       />
                     )}
@@ -527,10 +559,13 @@ export default function AcsiFormPage() {
                         </div>
                       </div>
                       {draft.responses[li.id] === 'fail' && (
-                        <AcsiDiscrepancyPanel
+                        <AcsiDiscrepancyPanelGroup
                           itemId={li.id}
-                          detail={draft.discrepancies[li.id] || { ...EMPTY_DISCREPANCY }}
+                          discrepancies={draft.discrepancies[li.id] || [{ ...EMPTY_DISCREPANCY }]}
                           onChange={handleDiscrepancyChange}
+                          onAdd={handleAddDiscrepancy}
+                          onRemove={handleRemoveDiscrepancy}
+                          inspectionId={dbRowId}
                         />
                       )}
                     </div>

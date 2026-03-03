@@ -1,24 +1,22 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
-import dynamic from 'next/dynamic'
+import { useState, useRef } from 'react'
 import { useInstallation } from '@/lib/installation-context'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
-import { uploadAcsiPhoto, fetchAcsiPhotos } from '@/lib/supabase/acsi-inspections'
+import { uploadAcsiPhoto } from '@/lib/supabase/acsi-inspections'
 import { toast } from 'sonner'
 import { X, Check } from 'lucide-react'
 import type { AcsiDiscrepancyDetail } from '@/lib/supabase/types'
 
-const AcsiLocationMap = dynamic(() => import('@/components/acsi/acsi-location-map'), { ssr: false })
-
 interface AcsiDiscrepancyPanelProps {
   itemId: string
   detail: AcsiDiscrepancyDetail
-  onChange: (itemId: string, detail: AcsiDiscrepancyDetail) => void
+  index: number
+  onChange: (itemId: string, index: number, detail: AcsiDiscrepancyDetail) => void
   inspectionId?: string | null
 }
 
-export function AcsiDiscrepancyPanel({ itemId, detail, onChange, inspectionId }: AcsiDiscrepancyPanelProps) {
+export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspectionId }: AcsiDiscrepancyPanelProps) {
   const { areas: installationAreas, installationId } = useInstallation()
   const [uploading, setUploading] = useState(false)
   const [photoUrls, setPhotoUrls] = useState<{ url: string; name: string }[]>([])
@@ -27,7 +25,7 @@ export function AcsiDiscrepancyPanel({ itemId, detail, onChange, inspectionId }:
   const cameraInputRef = useRef<HTMLInputElement>(null)
 
   const update = (field: keyof AcsiDiscrepancyDetail, value: unknown) => {
-    onChange(itemId, { ...detail, [field]: value })
+    onChange(itemId, index, { ...detail, [field]: value })
   }
 
   const toggleArea = (area: string) => {
@@ -37,10 +35,6 @@ export function AcsiDiscrepancyPanel({ itemId, detail, onChange, inspectionId }:
       : [...current, area]
     update('areas', next)
   }
-
-  const handlePinsChange = useCallback((newPins: { lat: number; lng: number }[]) => {
-    onChange(itemId, { ...detail, pins: newPins })
-  }, [itemId, detail, onChange])
 
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -56,7 +50,7 @@ export function AcsiDiscrepancyPanel({ itemId, detail, onChange, inspectionId }:
     const newPhotoIds = [...(detail.photo_ids || [])]
 
     for (const file of Array.from(files)) {
-      const { data, error } = await uploadAcsiPhoto(inspectionId, file, itemId, installationId)
+      const { data, error } = await uploadAcsiPhoto(inspectionId, file, itemId, installationId, index)
       if (!error && data) {
         uploaded++
         newPhotoIds.push(data.id)
@@ -97,22 +91,11 @@ export function AcsiDiscrepancyPanel({ itemId, detail, onChange, inspectionId }:
 
   return (
     <div style={{
-      margin: '4px 0 8px 54px',
       padding: '12px 14px',
       background: 'rgba(239, 68, 68, 0.04)',
       border: '1px solid rgba(239, 68, 68, 0.15)',
       borderRadius: 8,
     }}>
-      <div style={{
-        fontSize: 'var(--fs-xs)',
-        fontWeight: 700,
-        color: '#EF4444',
-        textTransform: 'uppercase',
-        letterSpacing: '0.05em',
-        marginBottom: 10,
-      }}>
-        Discrepancy Details (Per 5.4.3.4)
-      </div>
 
       {/* Comment */}
       <div style={{ marginBottom: 10 }}>
@@ -213,15 +196,6 @@ export function AcsiDiscrepancyPanel({ itemId, detail, onChange, inspectionId }:
           )}
         </div>
       )}
-
-      {/* Location Map — multiple pins */}
-      <div style={{ marginBottom: 10 }}>
-        <label style={labelStyle}>Location(s) — tap map to add pins</label>
-        <AcsiLocationMap
-          pins={detail.pins || []}
-          onPinsChange={handlePinsChange}
-        />
-      </div>
 
       {/* Photos */}
       <div>

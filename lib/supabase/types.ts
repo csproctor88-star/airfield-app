@@ -583,6 +583,7 @@ export type AcsiItem = {
   question: string
   response: AcsiItemResponse
   discrepancy: AcsiDiscrepancyDetail | null
+  discrepancies?: AcsiDiscrepancyDetail[]
 }
 
 export type AcsiTeamMember = {
@@ -604,7 +605,7 @@ export type AcsiSignatureBlock = {
 export type AcsiDraftData = {
   responses: Record<string, AcsiItemResponse>
   comments: Record<string, string>
-  discrepancies: Record<string, AcsiDiscrepancyDetail>
+  discrepancies: Record<string, AcsiDiscrepancyDetail[]>
   team: AcsiTeamMember[]
   signatures: AcsiSignatureBlock[]
   notes: string

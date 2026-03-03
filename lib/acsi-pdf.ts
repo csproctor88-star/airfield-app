@@ -284,44 +284,54 @@ export async function generateAcsiPdf(
     const discTextMap: Record<string, string[]> = {}
 
     for (const item of sectionItems) {
-      if (item.response !== 'fail' || !item.discrepancy) continue
-      const disc = item.discrepancy
+      if (item.response !== 'fail') continue
+      const discs = item.discrepancies?.length ? item.discrepancies : item.discrepancy ? [item.discrepancy] : []
+      if (discs.length === 0) continue
 
-      // Build text lines
-      const lines: string[] = []
-      if (disc.comment) lines.push(`Comment: ${disc.comment}`)
-      if (disc.work_order) lines.push(`WO: ${disc.work_order}`)
-      if (disc.project_number) lines.push(`Project: ${disc.project_number}`)
-      if (disc.estimated_cost) lines.push(`Cost: ${disc.estimated_cost}`)
-      if (disc.estimated_completion) lines.push(`ECD: ${disc.estimated_completion}`)
-      if (disc.areas && disc.areas.length > 0) lines.push(`Areas: ${disc.areas.join(', ')}`)
-      discTextMap[item.id] = lines
+      for (let di = 0; di < discs.length; di++) {
+        const disc = discs[di]
+        const detailKey = `${item.id}:${di}`
 
-      // Fetch photo data URLs
-      const itemPhotos = photosByItem[item.id] || []
-      const photoDataUrls: (string | null)[] = []
-      for (const p of itemPhotos) {
-        photoDataUrls.push(await fetchImageAsDataUrl(p.url))
+        // Build text lines
+        const lines: string[] = []
+        if (disc.comment) lines.push(`Comment: ${disc.comment}`)
+        if (disc.work_order) lines.push(`WO: ${disc.work_order}`)
+        if (disc.project_number) lines.push(`Project: ${disc.project_number}`)
+        if (disc.estimated_cost) lines.push(`Cost: ${disc.estimated_cost}`)
+        if (disc.estimated_completion) lines.push(`ECD: ${disc.estimated_completion}`)
+        if (disc.areas && disc.areas.length > 0) lines.push(`Areas: ${disc.areas.join(', ')}`)
+        discTextMap[detailKey] = lines
+
+        // Fetch photo data URLs — check both keyed and legacy format
+        const keyedPhotos = photosByItem[detailKey] || []
+        const legacyPhotos = di === 0 ? (photosByItem[item.id] || []) : []
+        const allPhotos = [...keyedPhotos, ...legacyPhotos]
+        const photoDataUrls: (string | null)[] = []
+        for (const p of allPhotos) {
+          photoDataUrls.push(await fetchImageAsDataUrl(p.url))
+        }
+
+        // Fetch map data URLs (only on first discrepancy — pins are shared)
+        const mapDataUrls: (string | null)[] = []
+        if (di === 0) {
+          const pins = disc.pins || []
+          if (pins.length === 0 && disc.latitude != null && disc.longitude != null) {
+            pins.push({ lat: disc.latitude, lng: disc.longitude })
+          }
+          for (const pin of pins) {
+            mapDataUrls.push(await fetchCleanMapDataUrl(pin.lat, pin.lng))
+          }
+        }
+
+        discImagesMap[detailKey] = { photos: photoDataUrls, maps: mapDataUrls }
       }
-
-      // Fetch map data URLs
-      const pins = disc.pins || []
-      if (pins.length === 0 && disc.latitude != null && disc.longitude != null) {
-        pins.push({ lat: disc.latitude, lng: disc.longitude })
-      }
-      const mapDataUrls: (string | null)[] = []
-      for (const pin of pins) {
-        mapDataUrls.push(await fetchCleanMapDataUrl(pin.lat, pin.lng))
-      }
-
-      discImagesMap[item.id] = { photos: photoDataUrls, maps: mapDataUrls }
     }
 
     // ── Build table rows: parent headers + sub-field items + detail rows ──
     type RowMeta =
       | { type: 'item'; item: AcsiItem; idx: number }
       | { type: 'parent'; parentNum: string; parentQuestion: string }
-      | { type: 'detail'; item: AcsiItem }
+      | { type: 'detail'; item: AcsiItem; discIndex: number; detailKey: string }
     const rowMeta: RowMeta[] = []
     const tableBody: string[][] = []
     let itemIdx = 0
@@ -350,10 +360,14 @@ export async function generateAcsiPdf(
       }
       rowMeta.push({ type: 'item', item, idx: itemIdx++ })
 
-      // Insert detail row after fail items (empty cells — rendered via didDrawCell)
-      if (item.response === 'fail' && item.discrepancy) {
-        tableBody.push(['', '', ''])
-        rowMeta.push({ type: 'detail', item })
+      // Insert detail rows after fail items (one per discrepancy)
+      if (item.response === 'fail') {
+        const discs = item.discrepancies?.length ? item.discrepancies : item.discrepancy ? [item.discrepancy] : []
+        for (let di = 0; di < discs.length; di++) {
+          const detailKey = `${item.id}:${di}`
+          tableBody.push(['', '', ''])
+          rowMeta.push({ type: 'detail', item, discIndex: di, detailKey })
+        }
       }
     }
 
@@ -424,28 +438,12 @@ export async function generateAcsiPdf(
           data.cell.styles.fontSize = 7
           data.cell.styles.textColor = [80, 80, 80]
 
-          if (data.column.index === 1) {
-            const images = discImagesMap[meta.item.id]
-            const textLines = discTextMap[meta.item.id] || []
-
-            // Wrap text to calculate line count
-            const wrapped = doc.splitTextToSize(textLines.join('\n'), colItem - 4)
-            const lineCount = Array.isArray(wrapped) ? wrapped.length : 1
-
-            if (images) {
-              const h = detailRowHeight(lineCount, images, colItem)
-              data.cell.styles.minCellHeight = h
-            }
-          }
-          // Apply same minCellHeight to all columns so row height is uniform
-          if (data.column.index !== 1) {
-            const images = discImagesMap[meta.item.id]
-            const textLines = discTextMap[meta.item.id] || []
-            const wrapped = doc.splitTextToSize(textLines.join('\n'), colItem - 4)
-            const lineCount = Array.isArray(wrapped) ? wrapped.length : 1
-            if (images) {
-              data.cell.styles.minCellHeight = detailRowHeight(lineCount, images, colItem)
-            }
+          const images = discImagesMap[meta.detailKey]
+          const textLines = discTextMap[meta.detailKey] || []
+          const wrapped = doc.splitTextToSize(textLines.join('\n'), colItem - 4)
+          const lineCount = Array.isArray(wrapped) ? wrapped.length : 1
+          if (images) {
+            data.cell.styles.minCellHeight = detailRowHeight(lineCount, images, colItem)
           }
         }
       },
@@ -457,17 +455,21 @@ export async function generateAcsiPdf(
         if (data.column.index !== 1) return
 
         // Draw discrepancy text and images in the detail row's Item column
-        const images = discImagesMap[meta.item.id]
-        const textLines = discTextMap[meta.item.id] || []
+        const images = discImagesMap[meta.detailKey]
+        const textLines = discTextMap[meta.detailKey] || []
         const cellX = data.cell.x
         const cellY = data.cell.y
         const cellW = data.cell.width
 
-        // Draw header
+        // Draw header — show number when multiple discrepancies
+        const discs = meta.item.discrepancies?.length ? meta.item.discrepancies : meta.item.discrepancy ? [meta.item.discrepancy] : []
+        const label = discs.length > 1
+          ? `DISCREPANCY ${meta.discIndex + 1} — ${meta.item.item_number}`
+          : `DISCREPANCY — ${meta.item.item_number}`
         doc.setFontSize(7)
         doc.setFont('helvetica', 'bold')
         doc.setTextColor(239, 68, 68)
-        doc.text(`DISCREPANCY — ${meta.item.item_number}`, cellX + 2, cellY + 4)
+        doc.text(label, cellX + 2, cellY + 4)
         doc.setFont('helvetica', 'normal')
         doc.setTextColor(80)
 

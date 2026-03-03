@@ -335,39 +335,50 @@ export default function AcsiDetailPage() {
                       </div>
 
                       {/* Discrepancy details for failed items */}
-                      {item.response === 'fail' && item.discrepancy && (
-                        <div style={{
-                          margin: '4px 0 8px 54px', padding: '8px 12px',
-                          background: 'rgba(239, 68, 68, 0.04)',
-                          border: '1px solid rgba(239, 68, 68, 0.15)', borderRadius: 6,
-                          fontSize: 'var(--fs-sm)',
-                        }}>
-                          {item.discrepancy.comment && <div style={{ marginBottom: 4 }}><strong>Comment:</strong> {item.discrepancy.comment}</div>}
-                          {item.discrepancy.work_order && <div><strong>WO#:</strong> {item.discrepancy.work_order}</div>}
-                          {item.discrepancy.project_number && <div><strong>Project#:</strong> {item.discrepancy.project_number}</div>}
-                          {item.discrepancy.estimated_cost && <div><strong>Est. Cost:</strong> {item.discrepancy.estimated_cost}</div>}
-                          {item.discrepancy.estimated_completion && <div><strong>ECD:</strong> {item.discrepancy.estimated_completion}</div>}
-                          {item.discrepancy.areas && item.discrepancy.areas.length > 0 && (
-                            <div><strong>Areas:</strong> {item.discrepancy.areas.join(', ')}</div>
-                          )}
-                          {/* Multi-pin locations */}
-                          {item.discrepancy.pins && item.discrepancy.pins.length > 0 ? (
-                            <div style={{ marginTop: 2 }}>
-                              <strong>Locations:</strong>{' '}
-                              {item.discrepancy.pins.map((p: { lat: number; lng: number }, pi: number) => (
-                                <span key={pi}>
-                                  {pi > 0 && ' | '}
-                                  {p.lat.toFixed(5)}, {p.lng.toFixed(5)}
-                                </span>
-                              ))}
-                            </div>
-                          ) : item.discrepancy.latitude != null && item.discrepancy.longitude != null ? (
-                            <div style={{ marginTop: 2 }}>
-                              <strong>Location:</strong> {item.discrepancy.latitude.toFixed(5)}, {item.discrepancy.longitude.toFixed(5)}
-                            </div>
-                          ) : null}
-                        </div>
-                      )}
+                      {item.response === 'fail' && (() => {
+                        const discs = item.discrepancies?.length
+                          ? item.discrepancies
+                          : item.discrepancy ? [item.discrepancy] : []
+                        if (discs.length === 0) return null
+                        return discs.map((disc, di) => (
+                          <div key={di} style={{
+                            margin: '4px 0 8px 54px', padding: '8px 12px',
+                            background: 'rgba(239, 68, 68, 0.04)',
+                            border: '1px solid rgba(239, 68, 68, 0.15)', borderRadius: 6,
+                            fontSize: 'var(--fs-sm)',
+                          }}>
+                            {discs.length > 1 && (
+                              <div style={{ fontWeight: 700, color: '#EF4444', fontSize: 'var(--fs-xs)', marginBottom: 4 }}>
+                                Discrepancy {di + 1} of {discs.length}
+                              </div>
+                            )}
+                            {disc.comment && <div style={{ marginBottom: 4 }}><strong>Comment:</strong> {disc.comment}</div>}
+                            {disc.work_order && <div><strong>WO#:</strong> {disc.work_order}</div>}
+                            {disc.project_number && <div><strong>Project#:</strong> {disc.project_number}</div>}
+                            {disc.estimated_cost && <div><strong>Est. Cost:</strong> {disc.estimated_cost}</div>}
+                            {disc.estimated_completion && <div><strong>ECD:</strong> {disc.estimated_completion}</div>}
+                            {disc.areas && disc.areas.length > 0 && (
+                              <div><strong>Areas:</strong> {disc.areas.join(', ')}</div>
+                            )}
+                            {/* Show pins on first discrepancy (shared) */}
+                            {di === 0 && disc.pins && disc.pins.length > 0 ? (
+                              <div style={{ marginTop: 2 }}>
+                                <strong>Locations:</strong>{' '}
+                                {disc.pins.map((p: { lat: number; lng: number }, pi: number) => (
+                                  <span key={pi}>
+                                    {pi > 0 && ' | '}
+                                    {p.lat.toFixed(5)}, {p.lng.toFixed(5)}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : di === 0 && disc.latitude != null && disc.longitude != null ? (
+                              <div style={{ marginTop: 2 }}>
+                                <strong>Location:</strong> {disc.latitude.toFixed(5)}, {disc.longitude.toFixed(5)}
+                              </div>
+                            ) : null}
+                          </div>
+                        ))
+                      })()}
                     </div>
                   ))}
                 </div>
