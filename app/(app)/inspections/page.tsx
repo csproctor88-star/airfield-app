@@ -207,15 +207,21 @@ export default function InspectionsPage() {
   useEffect(() => {
     if (!draftLoaded || autoBeginHandled.current) return
     const params = new URLSearchParams(window.location.search)
-    if (params.get('action') === 'begin' && !draft) {
+    if (params.get('action') === 'begin') {
       autoBeginHandled.current = true
-      const newDraft = createNewDraft()
-      setDraft(newDraft)
-      setActiveTab('airfield')
-      saveDraftToStorage(newDraft, installationId)
-      toast.success('New daily inspection started')
+      const typeParam = params.get('type') as TabType | null
+      const tab: TabType = (typeParam && ['airfield', 'lighting', 'construction_meeting', 'joint_monthly'].includes(typeParam))
+        ? typeParam : 'airfield'
+      if (!draft) {
+        const newDraft = createNewDraft()
+        setDraft(newDraft)
+        saveDraftToStorage(newDraft, installationId)
+        toast.success('New inspection started')
+      }
+      setActiveTab(tab)
+      window.scrollTo(0, 0)
     }
-  }, [draftLoaded, draft])
+  }, [draftLoaded, draft, installationId])
 
   // ── Load history ──
   const loadHistory = useCallback(async () => {
@@ -1069,11 +1075,13 @@ export default function InspectionsPage() {
           </div>
         </div>
 
-        {/* ── Tab Bar (2 tabs) ── */}
+        {/* ── Tab Bar ── */}
         <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-text-4)', marginBottom: 12 }}>
           {([
             { key: 'airfield' as TabType, topLine: 'Airfield', bottomLine: null, wide: true },
             { key: 'lighting' as TabType, topLine: 'Lighting', bottomLine: null, wide: true },
+            ...(activeTab === 'construction_meeting' ? [{ key: 'construction_meeting' as TabType, topLine: 'Pre/Post', bottomLine: 'Construction' as string | null, wide: false }] : []),
+            ...(activeTab === 'joint_monthly' ? [{ key: 'joint_monthly' as TabType, topLine: 'Joint Monthly', bottomLine: 'Inspection' as string | null, wide: false }] : []),
           ]).map(({ key: type, topLine, bottomLine, wide }) => {
             const active = activeTab === type
             const half = draft[type]
