@@ -5,13 +5,107 @@ All notable changes to Glidepath.
 ## [Unreleased]
 
 ### Planned
-- Server-side email delivery for inspection reports (branded sender address)
 - METAR weather API integration (aviationweather.gov)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
 - Sync & Data module (offline queue, export, import)
 - Regenerate Supabase types (`supabase gen types typescript`) to eliminate ~197 `as any` casts
 - Convert PDFLibrary.jsx to TypeScript (.tsx)
+- Remove dead API routes (`/api/airfield-status`, `/api/weather`) or wire them up
+- Remove unused component (`components/ui/airfield-diagram-viewer.tsx`)
+- Remove unused lib file (`lib/supabase/regulations.ts`)
+- Clean up duplicate aircraft images and stray files
+- Fix aircraft data import (root JSON stale vs `public/` copies)
+
+---
+
+## [2.12.0] — 2026-03-02
+
+### Send PDF via Email & Default Email Setting
+
+Server-side email delivery for all PDF exports using Resend, plus a user-configurable default email that pre-fills the send modal. Also includes map standardization, standalone inspection forms, and login UX improvements.
+
+#### Email PDF Feature (New — 3 files)
+
+Send any PDF report directly via email from within the app. Adds a mail button alongside the existing Export PDF button on all 10 PDF-capable pages.
+
+- **API route** (`app/api/send-pdf-email/route.ts`) — POST endpoint accepting base64-encoded PDF, recipient email, filename, and subject. Uses Resend SDK with branded sender (`Glidepath <info@glidepathops.com>`)
+- **Email utility** (`lib/email-pdf.ts`) — Client-side helper that converts jsPDF doc to base64 and POSTs to the API route
+- **Email modal** (`components/ui/email-pdf-modal.tsx`) — Dark-themed modal with email input, validation, Send/Cancel buttons, loading state
+
+#### PDF Generator Refactoring (8 files modified)
+
+All PDF generators refactored to return `{ doc, filename }` instead of calling `doc.save()`, enabling callers to choose between download and email:
+
+- `lib/pdf-export.ts` — `generateInspectionPdf`, `generateCombinedInspectionPdf`, `generateSpecialInspectionPdf`
+- `lib/check-pdf.ts` — `generateCheckPdf`
+- `lib/acsi-pdf.ts` — `generateAcsiPdf`
+- `lib/waiver-pdf.ts` — `generateWaiverPdf`
+- `lib/reports/daily-ops-pdf.ts` — `generateDailyOpsPdf`
+- `lib/reports/aging-discrepancies-pdf.ts` — `generateAgingDiscrepanciesPdf`
+- `lib/reports/discrepancy-trends-pdf.ts` — `generateDiscrepancyTrendsPdf`
+- `lib/reports/open-discrepancies-pdf.ts` — `generateOpenDiscrepanciesPdf`
+
+#### Default PDF Email Setting (New — 1 migration)
+
+- **Database migration** (`2026030201_default_pdf_email.sql`) — Adds `default_pdf_email` column to `profiles` table
+- **Installation context** — Exposes `defaultPdfEmail` and `updateDefaultPdfEmail()` via `useInstallation()` hook
+- **Settings page** — Editable "DEFAULT PDF EMAIL" field in Profile section with save button and helper text
+- **Email modal** — Accepts `defaultEmail` prop, pre-fills when modal opens (still editable per-send)
+- **All 10 pages** — Pass `defaultPdfEmail` to `<EmailPdfModal>` via `useInstallation()` destructuring
+
+Pages with email functionality:
+- `app/(app)/inspections/[id]/page.tsx`
+- `app/(app)/checks/[id]/page.tsx`
+- `app/(app)/acsi/[id]/page.tsx`
+- `app/(app)/waivers/[id]/page.tsx`
+- `app/(app)/reports/daily/page.tsx`
+- `app/(app)/reports/aging/page.tsx`
+- `app/(app)/reports/trends/page.tsx`
+- `app/(app)/reports/discrepancies/page.tsx`
+- `app/(app)/discrepancies/page.tsx`
+- `app/(app)/notams/page.tsx`
+
+#### Map Standardization
+
+- All Mapbox maps standardized to 3:4 portrait aspect ratio with 70vh max height
+- Removed expand/collapse buttons from all map components
+- Obstruction evaluation map centered and narrowed to 60% width
+- Increased default zoom levels across all map views
+
+#### Standalone Inspection Forms
+
+- **Pre/Post Construction** (`/inspections/construction/new`) — Standalone form with project details, contractor, location, and area-specific checklist
+- **Joint Monthly** (`/inspections/joint-monthly/new`) — Standalone form with multi-agency personnel attendance tracking
+- All Inspections hub start buttons wired to correct form routes
+
+#### Sidebar & Navigation
+
+- Reorganized sidebar nav ordering and updated inspection labels
+- Removed unused tab navigation patterns
+- Profile section in settings collapsed by default, email hidden from profile display
+
+#### Login UX
+
+- Updated email placeholder from `name@mail.mil` to `name@email.com`
+- Added note on create account screen: "Please use a personal email on a non-government network"
+
+#### Files Created (4)
+- `app/api/send-pdf-email/route.ts`
+- `lib/email-pdf.ts`
+- `components/ui/email-pdf-modal.tsx`
+- `supabase/migrations/2026030201_default_pdf_email.sql`
+
+#### Files Modified (22)
+- 8 PDF generators — return `{ doc, filename }` instead of `doc.save()`
+- 10 pages — email button, modal, default email prop
+- `lib/installation-context.tsx` — `defaultPdfEmail` state + `updateDefaultPdfEmail()`
+- `lib/supabase/types.ts` — `default_pdf_email` field on profiles
+- `app/(app)/settings/page.tsx` — Default email field in profile section
+- `app/login/page.tsx` — Placeholder and signup note
+
+#### Version Sync
+- Updated version to 2.12.0 in package.json, login/page.tsx, settings/page.tsx
 
 ---
 

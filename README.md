@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, ACSI (annual compliance), NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.11.0 | **Build:** Clean | **50 routes** | **147 source files** | **57 migrations**
+**Version:** 2.12.0 | **Build:** Clean | **54 routes** | **144 source files** | **58 migrations** | **~49,500 lines**
 
 ## Tech Stack
 
@@ -15,6 +15,7 @@ Mobile-first, responsive web application for managing airfield operations across
 | Maps | Mapbox GL JS | 3.18.1 |
 | PDF Viewing | react-pdf (PDF.js) | 10.3.0 |
 | PDF Export | jsPDF + jspdf-autotable | 4.1.0 |
+| Email Delivery | Resend | 6.9.3 |
 | Excel Export | SheetJS (xlsx) + ExcelJS | 0.18.5 / 4.4.0 |
 | Validation | Zod | 3.25.76 |
 | Offline Storage | IndexedDB (6 object stores) | — |
@@ -45,6 +46,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=[anon-key]
 SUPABASE_SERVICE_ROLE_KEY=[service-role-key]
 NEXT_PUBLIC_MAPBOX_TOKEN=[mapbox-token]
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+RESEND_API_KEY=[resend-api-key]
 ```
 
 ### Database Setup
@@ -52,9 +54,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 Apply the schema and migrations to a Supabase project:
 
 1. Run `supabase/schema.sql` to create the base tables and sequences
-2. Apply the 57 migrations in order from `supabase/migrations/`
+2. Apply the 58 migrations in order from `supabase/migrations/`
 
-See [BASE-ONBOARDING.md](./BASE-ONBOARDING.md) for adding new installations.
+See [docs/BASE-ONBOARDING.md](./docs/BASE-ONBOARDING.md) for adding new installations.
 
 ## Responsive Layout
 
@@ -113,7 +115,7 @@ Airfield Compliance and Safety Inspection per DAFMAN 13-204v2, Para 5.4.3. Annua
 Navigation hub accessible from the More menu. Styled cards for each inspection type (Daily Airfield, ACSI, Pre/Post Construction, Joint Monthly) with "Start" and "History" action buttons.
 
 ### Reports (`/reports`)
-Four report types with PDF export:
+Four report types with PDF export and email delivery:
 - **Daily Operations Summary** — all activity for a date/range (inspections, checks, status changes, discrepancies, obstructions)
 - **Open Discrepancies** — current snapshot with area and type breakdowns
 - **Discrepancy Trends** — opened vs. closed over 30d/90d/6m/1y with top areas/types
@@ -147,7 +149,7 @@ Live FAA NOTAM feed via `notams.aim.faa.gov` — no API key required. Auto-fetch
 
 ### Settings (`/settings`)
 Collapsible dropdown sections — Profile and About default open, all others collapsed.
-- **Profile** — read-only display of user info, rank, role, primary base
+- **Profile** — read-only display of user info, rank, role, primary base, configurable default PDF email
 - **Installation** — current base display; switching/adding restricted to sys_admin only
 - **Data & Storage** — view/clear cached data, estimated storage used
 - **Regulations Library** — download all PDFs for offline, manage cache
@@ -180,7 +182,7 @@ airfield-app/
 │   ├── layout.tsx                        # Root layout (metadata, PWA manifest, toasts)
 │   ├── globals.css                       # Responsive CSS: themes, utility classes, breakpoints
 │   ├── login/page.tsx                    # Auth page (email/password + demo bypass)
-│   ├── api/                              # Server-side API routes (7 endpoints)
+│   ├── api/                              # Server-side API routes (8 endpoints)
 │   ├── auth/confirm/route.ts            # OTP/PKCE token exchange for email links
 │   ├── reset-password/page.tsx          # Password reset form
 │   ├── setup-account/page.tsx           # Invited user account setup
@@ -210,7 +212,7 @@ airfield-app/
 │   ├── discrepancies/                    # Cards, location map, map view (COP), modals
 │   ├── obstructions/                     # Airfield map with surface overlays, map view
 │   ├── waivers/                          # Waiver map view, location picker
-│   ├── ui/                               # Badge, button, card, input, skeleton, photo-picker
+│   ├── ui/                               # Badge, button, email-pdf-modal, photo-picker
 │   ├── RegulationPDFViewer.tsx          # In-app PDF viewer with zoom/touch
 │   ├── login-activity-dialog.tsx         # Login notification with activity table
 │   └── PDFLibrary.jsx                   # Admin PDF library component (needs TSX conversion)
@@ -231,7 +233,7 @@ airfield-app/
 │   └── supabase/                         # Client, server, types, CRUD modules (16 files)
 ├── supabase/
 │   ├── schema.sql                        # Full database schema
-│   ├── migrations/                       # 57 migration files
+│   ├── migrations/                       # 58 migration files
 │   └── functions/                        # Edge functions (PDF text extraction)
 ├── middleware.ts                          # Auth guard + demo mode bypass
 ├── public/                               # Static assets, PWA manifest, aircraft images
@@ -245,7 +247,7 @@ airfield-app/
 
 | Table | Purpose |
 |-------|---------|
-| `profiles` | User accounts, roles, rank, shop, primary base, presence |
+| `profiles` | User accounts, roles, rank, shop, primary base, presence, default PDF email |
 | `bases` | Installation definitions (name, ICAO, location) |
 | `base_runways` | Runway geometry per base (ends, heading, class, dimensions) |
 | `base_navaids` | Navigation aids per base |
@@ -283,7 +285,7 @@ airfield-app/
 3. **Responsive Layout** — Three breakpoints (mobile/tablet/desktop) with permanent sidebar on wider screens. CSS custom properties drive font and element scaling. Mobile bottom nav preserved for phone usage.
 4. **Theme System** — Light/Dark/Auto modes via CSS custom properties. Auto follows `prefers-color-scheme`.
 5. **Configurable Templates** — Inspection checklists are stored in the database per base, not hardcoded. New bases clone from a default template.
-6. **Client-Side PDF** — jsPDF generates reports in the browser. Server-side email delivery planned for a future phase.
+6. **Client-Side PDF + Email** — jsPDF generates reports in the browser. PDFs can be downloaded directly or emailed via Resend API. Users can set a default email in Settings that pre-fills the send modal.
 7. **RLS Fully Enabled** — Role-based RLS policies on all tables via 3 helper functions (`user_has_base_access`, `user_can_write`, `user_is_admin`). Five-tier role hierarchy: sys_admin > base_admin/AFM/NAMO > amops > CES/safety/ATC > read_only. Storage bucket policies on `storage.objects`.
 8. **Hybrid Offline** — IndexedDB caches PDF blobs, extracted text, and demo-mode airfield diagrams. PWA service worker caches app shell.
 9. **Admin-Gated CRUD** — Base configuration and reference management require `airfield_manager` or `sys_admin` role.
@@ -296,31 +298,35 @@ airfield-app/
 |------|----------|-------|
 | No test suite | High | No unit or integration tests |
 | ~197 `as any` casts | Medium | Regenerate Supabase types (`supabase gen types typescript`) to eliminate |
-| Weather API stub | Medium | `/api/weather` returns placeholder; Open-Meteo used client-side |
+| Dead API routes | Medium | `/api/weather` (stub) and `/api/airfield-status` (no callers) — remove or wire up |
+| Unused files | Medium | `components/ui/airfield-diagram-viewer.tsx` (no importers), `lib/supabase/regulations.ts` (no importers) |
+| Stale aircraft JSON imports | Medium | `lib/aircraft-data.ts` imports root-level JSON (fewer entries) instead of `public/` copies |
 | `PDFLibrary.jsx` | Low | Only JSX file — convert to TypeScript (.tsx) |
-| 30+ files > 500 lines | Low | Largest: `inspections/page.tsx` (1,929), `regulations/page.tsx` (1,638) |
-| Duplicate aircraft JSON | Low | Root-level `commercial_aircraft.json`, `military_aircraft.json`, `image_manifest.json` duplicated in `public/` |
+| 36 files > 500 lines | Low | Largest: `regulations/page.tsx` (1,638), `inspections/page.tsx` (1,602) |
+| Duplicate aircraft JSON | Low | Root-level JSON duplicated in `public/` with diverged content |
 | Duplicate aircraft images | Low | `public/aircraft_images/military/commercial/` duplicates `public/aircraft_images/commercial/` (~20 files) |
-| Stray screenshots | Low | 2 screenshot PNGs in aircraft image directories |
+| Stray files | Low | 2 screenshot PNGs + 1 "Copy" JPG in aircraft image directories |
 | Untracked migration | Low | `supabase/migrations/2026022701_inspection_photos.sql` not in git |
+| Unreachable page | Low | `/sync` has no navigation links — stub page |
 
 ## Current Status
 
 **Build**: TypeScript compiles clean (`npm run build` passes with zero errors)
 
-**Complete modules**: Dashboard (with installation switcher + presence tracking), Discrepancies, Airfield Checks, Daily Inspections, ACSI (annual compliance with PDF/Excel export), NOTAMs (live FAA feed), Obstruction Evaluations, References (with My Documents), Reports (4 types with KPI badges), Aircraft Database, Waivers (full lifecycle with annual review, PDF/Excel export), Settings (with Base Setup and Templates), User Management (with delete cascade), Activity Log (manual entries, edit/delete, columnar display), All Inspections hub, More hub
+**Complete modules**: Dashboard (with installation switcher + presence tracking), Discrepancies, Airfield Checks, Daily Inspections, ACSI (annual compliance with PDF/Excel export), NOTAMs (live FAA feed), Obstruction Evaluations, References (with My Documents), Reports (4 types with KPI badges), Aircraft Database, Waivers (full lifecycle with annual review, PDF/Excel export), Settings (with Base Setup, Templates, and Default PDF Email), User Management (with delete cascade), Activity Log (manual entries, edit/delete, columnar display), All Inspections hub, Email PDF (all 10 export pages), More hub
 
 **Placeholder modules**: Sync & Data
 
-**API stubs**: Weather METAR (`/api/weather`)
+**Dead API routes**: `/api/weather` (stub), `/api/airfield-status` (no callers)
 
 See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 
 ## Reference Documents
 
-- `SRS.md` — Software Requirements Specification
-- `BASE-ONBOARDING.md` — Guide for adding new installations
-- `SCALING-ASSESSMENT.md` — Multi-base architecture assessment
-- `PROJECT_STATUS.md` — Architecture details and tech debt audit
-- `docs/INTEGRATION_GUIDE.md` — PDF text search integration architecture
-- `docs/Airfield_Inspection_Checklist_Template.md` — ACSI checklist reference (DAFMAN 13-204v2)
+- [`docs/Glidepath_SRS_v3.0.md`](./docs/Glidepath_SRS_v3.0.md) — Software Requirements Specification
+- [`docs/BASE-ONBOARDING.md`](./docs/BASE-ONBOARDING.md) — Guide for adding new installations
+- [`docs/GLIDEPATH_CAPABILITIES_BRIEF.md`](./docs/GLIDEPATH_CAPABILITIES_BRIEF.md) — Capabilities brief
+- [`docs/GLIDEPATH_BETA_TESTER_OVERVIEW.md`](./docs/GLIDEPATH_BETA_TESTER_OVERVIEW.md) — Beta tester overview
+- [`docs/Glidepath_AFWERX_Spark_Proposal.md`](./docs/Glidepath_AFWERX_Spark_Proposal.md) — AFWERX Spark proposal
+- [`docs/RLS_TEST_CHECKLIST.md`](./docs/RLS_TEST_CHECKLIST.md) — Row-Level Security test results
+- [`docs/Airfield_Inspection_Checklist_Template.md`](./docs/Airfield_Inspection_Checklist_Template.md) — ACSI checklist reference (DAFMAN 13-204v2)
