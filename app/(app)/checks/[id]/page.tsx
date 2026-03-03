@@ -37,7 +37,7 @@ export default function CheckDetailPage() {
   const [sendingEmail, setSendingEmail] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
-  const { currentInstallation, userRole } = useInstallation()
+  const { currentInstallation, userRole, defaultPdfEmail } = useInstallation()
   const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
 
   useEffect(() => {
@@ -660,6 +660,7 @@ export default function CheckDetailPage() {
         }}
         sending={sendingEmail}
         filename={emailPdfData?.filename}
+        defaultEmail={defaultPdfEmail}
       />
     </div>
   )

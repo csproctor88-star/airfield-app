@@ -13,7 +13,7 @@ import { toast } from 'sonner'
 
 export default function OpenDiscrepanciesPage() {
   const router = useRouter()
-  const { installationId, currentInstallation } = useInstallation()
+  const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
 
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<OpenDiscrepanciesData | null>(null)
@@ -204,6 +204,7 @@ export default function OpenDiscrepanciesPage() {
         onSend={handleSendEmail}
         sending={sendingEmail}
         filename={emailPdfData?.filename}
+        defaultEmail={defaultPdfEmail}
       />
     </div>
   )

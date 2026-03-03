@@ -33,7 +33,7 @@ const KPI_DEFS: { key: KpiKey; label: string; color: string; match: (cs: string)
 ]
 
 export default function DiscrepanciesPage() {
-  const { installationId, currentInstallation } = useInstallation()
+  const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
   const [filter, setFilter] = useState<string>('open')
   const [over30Only, setOver30Only] = useState(false)
   const [currentStatusFilter, setCurrentStatusFilter] = useState<KpiKey | null>(null)
@@ -746,6 +746,7 @@ export default function DiscrepanciesPage() {
         onSend={handleSendEmail}
         sending={sendingEmail}
         filename={emailPdfData?.filename}
+        defaultEmail={defaultPdfEmail}
       />
     </div>
   )

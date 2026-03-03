@@ -24,6 +24,10 @@ export interface InstallationContextValue {
   removeInstallation: (baseId: string) => Promise<boolean>
   /** Current user's role */
   userRole: UserRole | null
+  /** Default email for PDF sending */
+  defaultPdfEmail: string | null
+  /** Update default PDF email */
+  updateDefaultPdfEmail: (email: string | null) => Promise<void>
   /** Whether the context has finished initial loading */
   loaded: boolean
 }
@@ -38,6 +42,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
   const [areas, setAreas] = useState<string[]>([])
   const [ceShops, setCeShops] = useState<string[]>([])
   const [userRole, setUserRole] = useState<UserRole | null>(null)
+  const [defaultPdfEmail, setDefaultPdfEmail] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
 
   // Load a specific installation's configuration
@@ -108,6 +113,22 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const updateDefaultPdfEmail = useCallback(async (email: string | null) => {
+    setDefaultPdfEmail(email)
+    const supabase = createClient()
+    if (supabase) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          await supabase
+            .from('profiles')
+            .update({ default_pdf_email: email } as Record<string, unknown>)
+            .eq('id', user.id)
+        }
+      } catch { /* non-critical */ }
+    }
+  }, [])
+
   // Initial load
   useEffect(() => {
     async function init() {
@@ -120,10 +141,11 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
           if (user) {
             const { data: profile } = await supabase
               .from('profiles')
-              .select('role')
+              .select('role, default_pdf_email')
               .eq('id', user.id)
               .single()
             if (profile?.role) role = profile.role as UserRole
+            if (profile?.default_pdf_email) setDefaultPdfEmail(profile.default_pdf_email)
           }
         } catch {
           // No auth — keep null
@@ -162,7 +184,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
 
   return (
     <InstallationContext.Provider
-      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, switchInstallation, removeInstallation, userRole, loaded }}
+      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, switchInstallation, removeInstallation, userRole, defaultPdfEmail, updateDefaultPdfEmail, loaded }}
     >
       {children}
     </InstallationContext.Provider>

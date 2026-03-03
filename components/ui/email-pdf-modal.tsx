@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 interface EmailPdfModalProps {
   open: boolean
@@ -8,11 +8,22 @@ interface EmailPdfModalProps {
   onSend: (email: string) => Promise<void>
   sending: boolean
   filename?: string
+  defaultEmail?: string | null
 }
 
-export default function EmailPdfModal({ open, onClose, onSend, sending, filename }: EmailPdfModalProps) {
+export default function EmailPdfModal({ open, onClose, onSend, sending, filename, defaultEmail }: EmailPdfModalProps) {
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
+  const prevOpen = useRef(false)
+
+  // Pre-fill with default email when modal opens
+  useEffect(() => {
+    if (open && !prevOpen.current) {
+      setEmail(defaultEmail || '')
+      setError('')
+    }
+    prevOpen.current = open
+  }, [open, defaultEmail])
 
   if (!open) return null
 

@@ -35,7 +35,7 @@ const STATUS_CHANGE_CONFIG: Record<string, { title: string; description: string;
 export default function WaiverDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { userRole, currentInstallation } = useInstallation()
+  const { userRole, currentInstallation, defaultPdfEmail } = useInstallation()
   const [waiver, setWaiver] = useState<WaiverRow | null>(null)
   const [criteria, setCriteria] = useState<WaiverCriteriaRow[]>([])
   const [attachments, setAttachments] = useState<WaiverAttachmentRow[]>([])
@@ -1361,6 +1361,7 @@ export default function WaiverDetailPage() {
         onSend={handleSendEmail}
         sending={sendingEmail}
         filename={emailPdfData?.filename}
+        defaultEmail={defaultPdfEmail}
       />
     </div>
   )

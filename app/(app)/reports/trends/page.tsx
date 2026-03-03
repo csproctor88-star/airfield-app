@@ -23,7 +23,7 @@ const PERIODS: { value: TrendPeriod; label: string }[] = [
 
 export default function DiscrepancyTrendsPage() {
   const router = useRouter()
-  const { installationId, currentInstallation } = useInstallation()
+  const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
 
   const [period, setPeriod] = useState<TrendPeriod>('30d')
   const [viewState, setViewState] = useState<ViewState>('picker')
@@ -320,6 +320,7 @@ export default function DiscrepancyTrendsPage() {
         onSend={handleSendEmail}
         sending={sendingEmail}
         filename={emailPdfData?.filename}
+        defaultEmail={defaultPdfEmail}
       />
     </div>
   )

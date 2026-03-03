@@ -42,7 +42,7 @@ function formatDate(dateStr: string) {
 
 export default function DailyOpsPage() {
   const router = useRouter()
-  const { installationId, currentInstallation } = useInstallation()
+  const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
   const today = new Date().toISOString().split('T')[0]
 
   const [dateMode, setDateMode] = useState<DateMode>('single')
@@ -406,6 +406,7 @@ export default function DailyOpsPage() {
         onSend={handleSendEmail}
         sending={sendingEmail}
         filename={emailPdfData?.filename}
+        defaultEmail={defaultPdfEmail}
       />
     </div>
   )

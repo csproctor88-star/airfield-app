@@ -18,7 +18,7 @@ import EmailPdfModal from '@/components/ui/email-pdf-modal'
 export default function AcsiDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { userRole, currentInstallation, installationId } = useInstallation()
+  const { userRole, currentInstallation, installationId, defaultPdfEmail } = useInstallation()
   const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
   const canEdit = isAdmin || userRole === 'airfield_manager'
 
@@ -446,6 +446,7 @@ export default function AcsiDetailPage() {
         onSend={handleSendEmail}
         sending={sendingEmail}
         filename={emailPdfData?.filename}
+        defaultEmail={defaultPdfEmail}
       />
     </div>
   )

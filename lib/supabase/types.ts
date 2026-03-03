@@ -104,6 +104,7 @@ export type Database = {
           status: ProfileStatus
           last_seen_at: string | null
           primary_base_id: string | null
+          default_pdf_email: string | null
           created_at: string
           updated_at: string
         }

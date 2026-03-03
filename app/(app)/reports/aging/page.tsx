@@ -21,7 +21,7 @@ const SEVERITY_LABELS: Record<string, string> = {
 
 export default function AgingDiscrepanciesPage() {
   const router = useRouter()
-  const { installationId, currentInstallation } = useInstallation()
+  const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
 
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<AgingDiscrepanciesData | null>(null)
@@ -289,6 +289,7 @@ export default function AgingDiscrepanciesPage() {
         onSend={handleSendEmail}
         sending={sendingEmail}
         filename={emailPdfData?.filename}
+        defaultEmail={defaultPdfEmail}
       />
     </div>
   )

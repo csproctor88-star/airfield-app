@@ -117,7 +117,7 @@ function SectionHeader({ label, icon: Icon }: { label: string; icon: React.Compo
 // ═══════════════════════════════════════════════════════════════
 
 function ProfileSectionContent() {
-  const { currentInstallation } = useInstallation()
+  const { currentInstallation, defaultPdfEmail, updateDefaultPdfEmail } = useInstallation()
   const [profile, setProfile] = useState<{
     name: string
     rank: string | null
@@ -125,6 +125,12 @@ function ProfileSectionContent() {
     role: UserRole
     installationName: string | null
   } | null>(null)
+  const [pdfEmail, setPdfEmail] = useState(defaultPdfEmail || '')
+  const [savingEmail, setSavingEmail] = useState(false)
+
+  useEffect(() => {
+    setPdfEmail(defaultPdfEmail || '')
+  }, [defaultPdfEmail])
 
   useEffect(() => {
     async function load() {
@@ -169,6 +175,13 @@ function ProfileSectionContent() {
     load()
   }, [])
 
+  const handleSaveEmail = async () => {
+    setSavingEmail(true)
+    await updateDefaultPdfEmail(pdfEmail.trim() || null)
+    toast.success('Default email saved')
+    setSavingEmail(false)
+  }
+
   if (!profile) {
     return (
       <div className="card" style={{ padding: 16, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>Loading...</div>
@@ -177,6 +190,7 @@ function ProfileSectionContent() {
 
   const roleConfig = USER_ROLES[profile.role]
   const displayName = [profile.rank, profile.name].filter(Boolean).join(' ')
+  const emailChanged = (pdfEmail.trim() || '') !== (defaultPdfEmail || '')
 
   return (
     <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -208,6 +222,44 @@ function ProfileSectionContent() {
           }}>
             {roleConfig?.label || profile.role}
           </span>
+        </div>
+
+        {/* Default PDF Email */}
+        <div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>DEFAULT PDF EMAIL</div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <input
+              type="email"
+              value={pdfEmail}
+              onChange={(e) => setPdfEmail(e.target.value)}
+              placeholder="unit.orgbox@mail.mil"
+              style={{
+                flex: 1, padding: '8px 10px', borderRadius: 6,
+                background: 'var(--color-bg-input, #0d0d1a)',
+                border: '1px solid var(--color-border, #444)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
+                fontFamily: 'inherit', outline: 'none',
+              }}
+            />
+            {emailChanged && (
+              <button
+                onClick={handleSaveEmail}
+                disabled={savingEmail}
+                style={{
+                  padding: '8px 12px', borderRadius: 6,
+                  background: '#22C55E', border: 'none',
+                  color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                  cursor: savingEmail ? 'default' : 'pointer', fontFamily: 'inherit',
+                  opacity: savingEmail ? 0.7 : 1,
+                }}
+              >
+                {savingEmail ? '...' : 'Save'}
+              </button>
+            )}
+          </div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
+            Pre-fills the email field when using Email PDF
+          </div>
         </div>
       </div>
   )

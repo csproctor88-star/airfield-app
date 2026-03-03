@@ -19,7 +19,7 @@ import EmailPdfModal from '@/components/ui/email-pdf-modal'
 export default function InspectionDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { currentInstallation, userRole } = useInstallation()
+  const { currentInstallation, userRole, defaultPdfEmail } = useInstallation()
   const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
   const [inspections, setInspections] = useState<InspectionRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -1028,6 +1028,7 @@ export default function InspectionDetailPage() {
         onSend={handleSendEmail}
         sending={sendingEmail}
         filename={emailPdfData?.filename}
+        defaultEmail={defaultPdfEmail}
       />
     </div>
   )

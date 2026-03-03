@@ -82,7 +82,7 @@ function cardBorder(notamNumber: string, sourceFallback: string): string {
 }
 
 export default function NotamsPage() {
-  const { currentInstallation } = useInstallation()
+  const { currentInstallation, defaultPdfEmail } = useInstallation()
   const [filter, setFilter] = useState<FilterType>('all')
 
   const isDemoMode = !createClient()
@@ -618,6 +618,7 @@ export default function NotamsPage() {
         onSend={handleSendEmail}
         sending={sendingEmail}
         filename={emailPdfData?.filename}
+        defaultEmail={defaultPdfEmail}
       />
     </div>
   )
