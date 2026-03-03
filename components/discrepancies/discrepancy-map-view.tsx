@@ -81,7 +81,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-v9',
       center: [centerLng, centerLat],
-      zoom: 13,
+      zoom: 12,
       pitch: 0,
       bearing: 0,
       attributionControl: false,
@@ -187,7 +187,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
       visibleDiscrepancies.forEach((d) => {
         bounds.extend([d.longitude!, d.latitude!])
       })
-      map.current.fitBounds(bounds, { padding: 60, maxZoom: 15, duration: 800 })
+      map.current.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 800 })
     } else if (visibleDiscrepancies.length === 1) {
       map.current.flyTo({
         center: [visibleDiscrepancies[0].longitude!, visibleDiscrepancies[0].latitude!],
@@ -266,7 +266,9 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
         ref={mapContainer}
         style={{
           width: '100%',
-          height: expanded ? 'var(--map-height-expanded)' : 'var(--map-height)',
+          aspectRatio: expanded ? undefined : '3 / 4',
+          height: expanded ? 'var(--map-height-expanded)' : undefined,
+          maxHeight: expanded ? undefined : '70vh',
           borderRadius: 10,
           overflow: 'hidden',
           border: '1px solid var(--color-border-mid)',
