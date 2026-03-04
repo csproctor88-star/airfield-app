@@ -83,8 +83,8 @@ export function SimpleDiscrepancyPanel({
 
       {/* Map + side buttons layout */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        {/* Map */}
-        <div style={{ flex: '0 0 auto' }}>
+        {/* Map — takes ~60% */}
+        <div style={{ flex: '3 1 0', minWidth: 0 }}>
           <label style={labelStyle}>Pin Location on Map</label>
           <LocationMap
             onPointSelected={(lat, lng) => onPointSelected(index, lat, lng)}
@@ -94,8 +94,8 @@ export function SimpleDiscrepancyPanel({
           />
         </div>
 
-        {/* Side buttons */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0, flex: 1 }}>
+        {/* Side buttons — takes ~40% */}
+        <div style={{ flex: '2 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {/* GPS button */}
           <button
             type="button"
@@ -103,27 +103,27 @@ export function SimpleDiscrepancyPanel({
             disabled={gpsLoading}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              width: '100%', padding: '10px 10px', borderRadius: 8,
+              width: '100%', padding: 10, borderRadius: 8, minHeight: 44,
               border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
-              color: 'var(--color-accent)', fontSize: 'var(--fs-sm)', fontWeight: 600,
+              color: 'var(--color-accent)', fontSize: 'var(--fs-base)', fontWeight: 600,
               cursor: gpsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
               opacity: gpsLoading ? 0.6 : 1,
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3" />
               <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
             </svg>
             {gpsLoading ? 'Getting...' : 'Use My Location'}
           </button>
 
-          {/* Photo button */}
+          {/* Photo button — full variant to match GPS button */}
           <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
           <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
           <PhotoPickerButton
             onUpload={() => fileInputRef.current?.click()}
             onCapture={() => cameraInputRef.current?.click()}
-            variant="compact"
+            variant="full"
             label={localPhotos.length > 0 ? `Add Photo (${localPhotos.length})` : 'Add Photo'}
           />
 
@@ -134,7 +134,7 @@ export function SimpleDiscrepancyPanel({
                 <div
                   key={i}
                   style={{
-                    position: 'relative', width: 48, height: 48, borderRadius: 6,
+                    position: 'relative', width: 56, height: 56, borderRadius: 6,
                     overflow: 'hidden', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer',
                   }}
                   onClick={() => setViewerIndex(i)}
