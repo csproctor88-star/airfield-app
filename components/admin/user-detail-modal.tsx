@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, RotateCcw, UserX, UserCheck, Trash2, Send, ChevronDown } from 'lucide-react'
+import { X, RotateCcw, UserX, UserCheck, Trash2, Send, ChevronDown, Eye, EyeOff } from 'lucide-react'
 import { RANK_OPTIONS, USER_ROLES } from '@/lib/constants'
 import { RoleBadge } from './role-badge'
 import { UserStatusBadge } from './status-badge'
@@ -46,6 +46,7 @@ export function UserDetailModal({
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [showInstDropdown, setShowInstDropdown] = useState(false)
   const [instSearch, setInstSearch] = useState('')
+  const [showEmail, setShowEmail] = useState(false)
   const instDropdownRef = useRef<HTMLDivElement>(null)
 
   // Close installation dropdown on outside click
@@ -221,7 +222,7 @@ export function UserDetailModal({
             </div>
           </div>
 
-          {/* Email (read-only) */}
+          {/* Email (read-only, hidden by default) */}
           <div>
             <span className="section-label">Email</span>
             <div
@@ -232,9 +233,25 @@ export function UserDetailModal({
                 background: 'var(--color-bg-elevated)',
                 border: '1px solid var(--color-border)',
                 borderRadius: 8,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
               }}
             >
-              {user.email}
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {showEmail ? user.email : user.email.replace(/^(..)[^@]*/, '$1***')}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowEmail(!showEmail)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0 }}
+                title={showEmail ? 'Hide email' : 'Reveal email'}
+              >
+                {showEmail
+                  ? <EyeOff size={14} color="var(--color-text-3)" />
+                  : <Eye size={14} color="var(--color-text-3)" />}
+              </button>
             </div>
           </div>
 

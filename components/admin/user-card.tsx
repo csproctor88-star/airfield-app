@@ -58,11 +58,9 @@ export function UserCard({ user, showInstallation, onSelect }: UserCardProps) {
         <RoleBadge role={user.role} />
       </div>
 
-      {/* Row 2: Email + Status badge */}
+      {/* Row 2: Status badge */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
-          {user.email}
-        </div>
+        <div />
         <UserStatusBadge status={user.status || 'active'} />
       </div>
 

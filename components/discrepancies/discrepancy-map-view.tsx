@@ -223,29 +223,6 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
     )
   }
 
-  if (geoDiscrepancies.length === 0) {
-    return (
-      <div
-        style={{
-          background: 'var(--color-bg-surface)',
-          border: '1px solid var(--color-border-mid)',
-          borderRadius: 10,
-          padding: 24,
-          textAlign: 'center',
-        }}
-      >
-        <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 8 }}>
-          No GPS Coordinates
-        </div>
-        <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', lineHeight: 1.5 }}>
-          None of the filtered discrepancies have GPS coordinates.
-          <br />
-          Pin a location when creating discrepancies to see them on the map.
-        </div>
-      </div>
-    )
-  }
-
   // Build legend entries from the discrepancy types actually present in the data
   const presentTypes = new Set(
     geoDiscrepancies.flatMap((d) => getTypes(d.type)),
@@ -327,6 +304,32 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
               Show All
             </div>
           )}
+        </div>
+      )}
+      {/* Empty overlay — shown when no geo-coded discrepancies match */}
+      {mapLoaded && visibleDiscrepancies.length === 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: 10,
+            background: 'rgba(4, 7, 12, 0.75)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 5,
+            pointerEvents: 'none',
+          }}
+        >
+          <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 8 }}>
+            No GPS Coordinates
+          </div>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', lineHeight: 1.5, textAlign: 'center', maxWidth: 280 }}>
+            {geoDiscrepancies.length === 0
+              ? 'None of the filtered discrepancies have GPS coordinates attached.'
+              : 'No discrepancies match the selected type filter.'}
+          </div>
         </div>
       )}
       {/* Stats badge */}

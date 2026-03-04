@@ -696,10 +696,10 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 800, color: 'var(--color-accent)', marginBottom: 2 }}>
+                  <div style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-accent)', marginBottom: 2 }}>
                     {reg.reg_id}
                   </div>
-                  <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', lineHeight: 1.3 }}>
+                  <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', lineHeight: 1.3 }}>
                     {reg.title}
                   </div>
                 </div>
@@ -722,21 +722,21 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
               <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
                 {catConfig && (
                   <span style={{
-                    fontSize: 'var(--fs-2xs)', fontWeight: 700, color: catConfig.color,
+                    fontSize: 'var(--fs-xs)', fontWeight: 700, color: catConfig.color,
                     background: catConfig.color + '18', padding: '1px 6px', borderRadius: 3,
                   }}>
                     {catConfig.label}
                   </span>
                 )}
                 <span style={{
-                  fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-text-2)',
+                  fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-2)',
                   background: 'rgba(148,163,184,0.10)', padding: '1px 6px', borderRadius: 3,
                 }}>
                   {reg.pub_type}
                 </span>
                 {reg.publication_date && (
                   <span style={{
-                    fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-text-3)',
+                    fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)',
                     padding: '1px 4px',
                   }}>
                     {reg.publication_date}
