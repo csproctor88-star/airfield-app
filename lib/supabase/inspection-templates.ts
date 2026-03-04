@@ -34,8 +34,7 @@ export async function fetchInspectionTemplate(
   if (!supabase) return []
 
   // Find the template
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: tmpl, error: tmplErr } = await (supabase as any)
+  const { data: tmpl, error: tmplErr } = await supabase
     .from('base_inspection_templates')
     .select('id')
     .eq('base_id', baseId)
@@ -45,8 +44,7 @@ export async function fetchInspectionTemplate(
   if (tmplErr || !tmpl) return []
 
   // Fetch sections
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: sections, error: secErr } = await (supabase as any)
+  const { data: sections, error: secErr } = await supabase
     .from('base_inspection_sections')
     .select('*')
     .eq('template_id', tmpl.id)
@@ -55,9 +53,8 @@ export async function fetchInspectionTemplate(
   if (secErr || !sections) return []
 
   // Fetch all items for these sections
-  const sectionIds = sections.map((s: { id: string }) => s.id)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: items, error: itemErr } = await (supabase as any)
+  const sectionIds = (sections as { id: string }[]).map(s => s.id)
+  const { data: items, error: itemErr } = await supabase
     .from('base_inspection_items')
     .select('*')
     .in('section_id', sectionIds)
@@ -67,9 +64,9 @@ export async function fetchInspectionTemplate(
 
   // Group items by section
   const itemsBySection: Record<string, TemplateItem[]> = {}
-  for (const item of (items ?? [])) {
+  for (const item of ((items ?? []) as TemplateItem[])) {
     if (!itemsBySection[item.section_id]) itemsBySection[item.section_id] = []
-    itemsBySection[item.section_id].push(item as TemplateItem)
+    itemsBySection[item.section_id].push(item)
   }
 
   return sections.map((s: Record<string, unknown>) => ({
@@ -108,8 +105,7 @@ export async function createDefaultTemplate(
   // If no source specified, find any base that has this template type
   let resolvedSourceId = sourceBaseId
   if (!resolvedSourceId) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: existing } = await (supabase as any)
+      const { data: existing } = await supabase
       .from('base_inspection_templates')
       .select('base_id')
       .eq('template_type', templateType)
@@ -117,7 +113,7 @@ export async function createDefaultTemplate(
       .limit(1)
       .single()
     if (!existing) return false
-    resolvedSourceId = existing.base_id as string
+    resolvedSourceId = (existing as { base_id: string }).base_id
   }
 
   // Fetch source template
@@ -125,22 +121,21 @@ export async function createDefaultTemplate(
   if (sourceSections.length === 0) return false
 
   // Create new template
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: newTmpl, error: tmplErr } = await (supabase as any)
+  const { data: newTmpl, error: tmplErr } = await supabase
     .from('base_inspection_templates')
     .insert({ base_id: baseId, template_type: templateType })
     .select('id')
     .single()
 
   if (tmplErr || !newTmpl) return false
+  const tmplId = (newTmpl as { id: string }).id
 
   // Clone sections and items
   for (const section of sourceSections) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: newSec, error: secErr } = await (supabase as any)
+      const { data: newSec, error: secErr } = await supabase
       .from('base_inspection_sections')
       .insert({
-        template_id: newTmpl.id,
+        template_id: tmplId,
         section_id: section.section_id,
         title: section.title,
         guidance: section.guidance,
@@ -151,10 +146,11 @@ export async function createDefaultTemplate(
       .single()
 
     if (secErr || !newSec) continue
+    const secId = (newSec as { id: string }).id
 
     if (section.items.length > 0) {
       const itemInserts = section.items.map(i => ({
-        section_id: newSec.id,
+        section_id: secId,
         item_key: i.item_key,
         item_number: i.item_number,
         item_text: i.item_text,
@@ -162,8 +158,7 @@ export async function createDefaultTemplate(
         sort_order: i.sort_order,
       }))
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any).from('base_inspection_items').insert(itemInserts)
+          await supabase.from('base_inspection_items').insert(itemInserts)
     }
   }
 
@@ -179,8 +174,7 @@ export async function updateTemplateItem(
   const supabase = createClient()
   if (!supabase) return false
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('base_inspection_items')
     .update(updates)
     .eq('id', itemId)
@@ -197,8 +191,7 @@ export async function addTemplateItem(
   const supabase = createClient()
   if (!supabase) return null
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('base_inspection_items')
     .insert({ section_id: sectionId, ...item, item_type: item.item_type ?? 'pass_fail' })
     .select('*')
@@ -214,8 +207,7 @@ export async function deleteTemplateItem(itemId: string): Promise<boolean> {
   const supabase = createClient()
   if (!supabase) return false
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('base_inspection_items')
     .delete()
     .eq('id', itemId)
@@ -234,8 +226,7 @@ export async function addTemplateSection(
   if (!supabase) return null
 
   // Find template
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: tmpl } = await (supabase as any)
+  const { data: tmpl } = await supabase
     .from('base_inspection_templates')
     .select('id')
     .eq('base_id', baseId)
@@ -244,15 +235,14 @@ export async function addTemplateSection(
 
   if (!tmpl) return null
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('base_inspection_sections')
-    .insert({ template_id: tmpl.id, ...section })
+    .insert({ template_id: (tmpl as { id: string }).id, ...section } as any)
     .select('id')
     .single()
 
   if (error) return null
-  return data.id as string
+  return (data as { id: string }).id
 }
 
 // ── Delete a section (cascades items) ──
@@ -261,8 +251,7 @@ export async function deleteTemplateSection(sectionId: string): Promise<boolean>
   const supabase = createClient()
   if (!supabase) return false
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('base_inspection_sections')
     .delete()
     .eq('id', sectionId)
@@ -279,8 +268,7 @@ export async function updateTemplateSection(
   const supabase = createClient()
   if (!supabase) return false
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('base_inspection_sections')
     .update(updates)
     .eq('id', sectionId)
@@ -297,8 +285,7 @@ export async function reorderTemplateItems(
   if (!supabase) return false
 
   for (const item of items) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
+      const { error } = await supabase
       .from('base_inspection_items')
       .update({ sort_order: item.sort_order, item_number: item.item_number })
       .eq('id', item.id)
@@ -317,8 +304,7 @@ export async function reorderTemplateSections(
   if (!supabase) return false
 
   for (const section of sections) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
+      const { error } = await supabase
       .from('base_inspection_sections')
       .update({ sort_order: section.sort_order })
       .eq('id', section.id)

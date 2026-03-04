@@ -59,23 +59,51 @@ export default function LoginActivityDialog() {
 
   useEffect(() => {
     async function checkLoginActivity() {
-      let previousLoginAt: string | null = null
+      // Only run once per browser tab session
       try {
-        previousLoginAt = sessionStorage.getItem('glidepath_previous_login_at')
-        if (previousLoginAt) sessionStorage.removeItem('glidepath_previous_login_at')
+        if (sessionStorage.getItem('glidepath_activity_checked')) return
+        sessionStorage.setItem('glidepath_activity_checked', '1')
       } catch {
         return
       }
 
-      if (!previousLoginAt) return
-
       const supabase = createClient()
       if (!supabase) return
 
-      let query = (supabase as any)
+      // Determine "last seen" timestamp:
+      // 1) From login page (stored in sessionStorage during sign-in flow)
+      // 2) Fallback: read directly from the user's profile (covers session resume)
+      let lastSeenAt: string | null = null
+      try {
+        lastSeenAt = sessionStorage.getItem('glidepath_previous_login_at')
+        if (lastSeenAt) sessionStorage.removeItem('glidepath_previous_login_at')
+      } catch { /* noop */ }
+
+      if (!lastSeenAt) {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('last_seen_at')
+          .eq('id', user.id)
+          .single()
+        lastSeenAt = profile?.last_seen_at ?? null
+      }
+
+      if (!lastSeenAt) return
+
+      // Update last_seen_at now so the header heartbeat doesn't clobber
+      // the old value before we finish querying
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await supabase.from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', user.id)
+      }
+
+      // Query activity since last seen
+      let query = supabase
         .from('activity_log')
         .select('id, action, entity_type, entity_display_id, created_at, metadata, user_id, profiles:user_id(name, rank)')
-        .gt('created_at', previousLoginAt)
+        .gt('created_at', lastSeenAt)
         .order('created_at', { ascending: false })
         .limit(50)
 
@@ -87,10 +115,10 @@ export default function LoginActivityDialog() {
 
       if (error) {
         // Fallback without profile join
-        let fallbackQuery = (supabase as any)
+        let fallbackQuery = supabase
           .from('activity_log')
           .select('*')
-          .gt('created_at', previousLoginAt)
+          .gt('created_at', lastSeenAt)
           .order('created_at', { ascending: false })
           .limit(50)
         if (installationId) fallbackQuery = fallbackQuery.eq('base_id', installationId)

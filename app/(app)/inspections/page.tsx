@@ -28,7 +28,6 @@ import {
 } from '@/lib/inspection-draft'
 import { DEMO_INSPECTIONS } from '@/lib/demo-data'
 import { getAirfieldDiagram } from '@/lib/airfield-diagram'
-import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 import { uploadInspectionPhoto } from '@/lib/supabase/inspections'
 import type { InspectionItem, SimpleDiscrepancy } from '@/lib/supabase/types'
 import dynamic from 'next/dynamic'

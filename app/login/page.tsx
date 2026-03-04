@@ -219,11 +219,14 @@ export default function LoginPage() {
     setSuccess(null)
   }
 
-  // Role options from USER_ROLES
-  const roleOptions = Object.entries(USER_ROLES).map(([key, cfg]) => ({
-    value: key as UserRole,
-    label: cfg.label,
-  }))
+  // Role options from USER_ROLES — exclude admin roles from self-service signup
+  const SELF_SERVICE_EXCLUDED_ROLES: UserRole[] = ['sys_admin', 'base_admin']
+  const roleOptions = Object.entries(USER_ROLES)
+    .filter(([key]) => !SELF_SERVICE_EXCLUDED_ROLES.includes(key as UserRole))
+    .map(([key, cfg]) => ({
+      value: key as UserRole,
+      label: cfg.label,
+    }))
 
   return (
     <div

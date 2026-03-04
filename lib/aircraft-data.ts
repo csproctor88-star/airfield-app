@@ -2,9 +2,9 @@
 // Sources: USACE TSC 13-2 (Military) & TSC 13-3 (Commercial)
 
 import type { AircraftCharacteristics } from './aircraft_database_schema'
-import commercialRaw from '../commercial_aircraft.json'
-import militaryRaw from '../military_aircraft.json'
-import imageManifest from '../image_manifest.json'
+import commercialRaw from '../public/commercial_aircraft.json'
+import militaryRaw from '../public/military_aircraft.json'
+import imageManifest from '../public/image_manifest.json'
 
 // Resolve image URL from manifest by aircraft name
 const manifest = imageManifest as Record<string, { filename: string }>

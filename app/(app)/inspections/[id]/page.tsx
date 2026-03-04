@@ -45,8 +45,7 @@ export default function InspectionDetailPage() {
     if (photo.storage_path.startsWith('data:')) return photo.storage_path
     const supabase = createClient()
     if (!supabase) return photo.storage_path
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = (supabase as any).storage.from('photos').getPublicUrl(photo.storage_path)
+    const { data } = supabase.storage.from('photos').getPublicUrl(photo.storage_path)
     return data?.publicUrl || photo.storage_path
   }
 

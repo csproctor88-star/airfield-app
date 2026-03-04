@@ -80,7 +80,7 @@ export async function POST(request: Request) {
     }
 
     // Invite user via Supabase auth admin
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || request.headers.get('origin') || ''
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || ''
     const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
       email,
       {

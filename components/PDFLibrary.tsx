@@ -33,7 +33,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -48,8 +48,116 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const BUCKET_NAME = "regulation-pdfs";
 
+// ─── Types ───────────────────────────────────────────────────
+
+/** A file object as returned by Supabase Storage list */
+interface StorageFileObject {
+  name: string;
+  id: string;
+  metadata?: { size?: number; [key: string]: unknown };
+  created_at?: string;
+}
+
+/** A page of extracted text */
+interface ExtractedPage {
+  page: number;
+  text: string;
+}
+
+/** Cached text data stored in IndexedDB */
+interface CachedTextData {
+  pages: ExtractedPage[];
+  source: "client" | "server";
+  cachedAt: number;
+}
+
+/** A search result from cross-PDF search */
+interface GlobalSearchResult {
+  fileName: string;
+  page: number;
+  snippet: string;
+  rank?: number;
+}
+
+/** An in-document search match */
+interface DocMatch {
+  page: number;
+  position: number;
+  snippet: string;
+}
+
+/** Extraction progress state */
+interface ExtractProgress {
+  current: number;
+  total: number;
+  fileName: string;
+}
+
+/** Props for the LazyPage component */
+interface LazyPageProps {
+  pageNumber: number;
+  scale: number;
+  searchTerm: string;
+}
+
+type ViewMode = "native" | "react-pdf";
+
+/** Shape of a query filter in the manual Supabase REST client */
+interface QueryFilter {
+  col: string;
+  op: string;
+  val: string;
+}
+
+/** Internal query state for the manual Supabase REST client */
+interface QueryState {
+  table: string;
+  filters: QueryFilter[];
+  selects: string;
+  orderCol: string | null;
+  orderAsc: boolean;
+}
+
+/** Result shape for Supabase-style responses */
+interface SupabaseResult<T> {
+  data: T | null;
+  error: { message: string } | null;
+}
+
+/** Storage bucket methods */
+interface StorageBucket {
+  list(folder?: string, options?: { limit?: number; offset?: number }): Promise<SupabaseResult<StorageFileObject[]>>;
+  download(path: string): Promise<SupabaseResult<Blob>>;
+}
+
+/** Delete chain returned by .delete() */
+interface DeleteChain {
+  eq(col: string, val: string): DeleteChain;
+  then(resolve: (result: { error: { message: string } | null }) => void): Promise<void>;
+}
+
+/** Query chain returned by .from() */
+interface QueryChain {
+  select(cols?: string): QueryChain;
+  eq(col: string, val: string): QueryChain;
+  order(col: string, opts?: { ascending?: boolean }): QueryChain;
+  then(resolve: (result: SupabaseResult<unknown[]>) => void): Promise<void>;
+  upsert(rows: Record<string, unknown> | Record<string, unknown>[], opts?: { onConflict?: string }): Promise<SupabaseResult<null>>;
+  insert(rows: Record<string, unknown> | Record<string, unknown>[]): Promise<SupabaseResult<null>>;
+  delete(): DeleteChain;
+}
+
+/** Shape of the manual Supabase REST client */
+interface ManualSupabaseClient {
+  storage: {
+    from(bucket: string): StorageBucket;
+  };
+  from(table: string): QueryChain;
+  rpc(fnName: string, params?: Record<string, unknown>): Promise<SupabaseResult<unknown>>;
+}
+
 // ─── Platform detection ──────────────────────────────────────
-function getDefaultViewMode() {
+function getDefaultViewMode(): ViewMode {
   if (typeof navigator === "undefined") return "react-pdf";
   const ua = navigator.userAgent.toLowerCase();
   const isIOS = /ipad|iphone|ipod/.test(ua) ||
@@ -58,7 +166,7 @@ function getDefaultViewMode() {
   return (isIOS || isAndroid) ? "react-pdf" : "native";
 }
 
-function isMobileDevice() {
+function isMobileDevice(): boolean {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent.toLowerCase();
   return /ipad|iphone|ipod|android/.test(ua) ||
@@ -66,13 +174,13 @@ function isMobileDevice() {
 }
 
 // ─── Supabase Client ─────────────────────────────────────────
-function createSupabaseClient(url, key) {
-  const headers = { apikey: key, Authorization: `Bearer ${key}` };
+function createSupabaseClient(url: string | undefined, key: string | undefined): ManualSupabaseClient {
+  const headers: Record<string, string> = { apikey: key ?? "", Authorization: `Bearer ${key ?? ""}` };
   return {
     storage: {
-      from(bucket) {
+      from(bucket: string): StorageBucket {
         return {
-          async list(folder = "", options = {}) {
+          async list(folder: string = "", options: { limit?: number; offset?: number } = {}): Promise<SupabaseResult<StorageFileObject[]>> {
             const res = await fetch(`${url}/storage/v1/object/list/${bucket}`, {
               method: "POST",
               headers: { ...headers, "Content-Type": "application/json" },
@@ -86,7 +194,7 @@ function createSupabaseClient(url, key) {
             if (!res.ok) throw new Error(`List failed: ${res.statusText}`);
             return { data: await res.json(), error: null };
           },
-          async download(path) {
+          async download(path: string): Promise<SupabaseResult<Blob>> {
             const res = await fetch(
               `${url}/storage/v1/object/${bucket}/${encodeURIComponent(path)}`,
               { headers }
@@ -97,13 +205,13 @@ function createSupabaseClient(url, key) {
         };
       },
     },
-    from(table) {
-      let query = { table, filters: [], selects: "*", orderCol: null, orderAsc: true };
-      const chain = {
-        select(cols = "*") { query.selects = cols; return chain; },
-        eq(col, val) { query.filters.push({ col, op: "eq", val }); return chain; },
-        order(col, opts = {}) { query.orderCol = col; query.orderAsc = opts.ascending !== false; return chain; },
-        async then(resolve) {
+    from(table: string): QueryChain {
+      const query: QueryState = { table, filters: [], selects: "*", orderCol: null, orderAsc: true };
+      const chain: QueryChain = {
+        select(cols: string = "*") { query.selects = cols; return chain; },
+        eq(col: string, val: string) { query.filters.push({ col, op: "eq", val }); return chain; },
+        order(col: string, opts: { ascending?: boolean } = {}) { query.orderCol = col; query.orderAsc = opts.ascending !== false; return chain; },
+        async then(resolve: (result: SupabaseResult<unknown[]>) => void) {
           let url2 = `${url}/rest/v1/${query.table}?select=${encodeURIComponent(query.selects)}`;
           for (const f of query.filters) url2 += `&${f.col}=${f.op}.${encodeURIComponent(f.val)}`;
           if (query.orderCol) url2 += `&order=${query.orderCol}.${query.orderAsc ? "asc" : "desc"}`;
@@ -111,43 +219,43 @@ function createSupabaseClient(url, key) {
           if (!res.ok) return resolve({ data: null, error: { message: res.statusText } });
           return resolve({ data: await res.json(), error: null });
         },
-      };
-      // Upsert support
-chain.upsert = async (rows, opts = {}) => {
-  let endpoint = `${url}/rest/v1/${table}`;
-  if (opts.onConflict) endpoint += `?on_conflict=${opts.onConflict}`;
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { ...headers, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates" },
-    body: JSON.stringify(Array.isArray(rows) ? rows : [rows]),
-  });
-        if (!res.ok) return { data: null, error: { message: res.statusText } };
-        return { data: null, error: null };
-      };
-      chain.insert = async (rows) => {
-        const res = await fetch(`${url}/rest/v1/${table}`, {
-          method: "POST",
-          headers: { ...headers, "Content-Type": "application/json" },
-          body: JSON.stringify(Array.isArray(rows) ? rows : [rows]),
-        });
-        if (!res.ok) return { data: null, error: { message: res.statusText } };
-        return { data: null, error: null };
-      };
-      chain.delete = () => {
-        const delChain = {
-          eq(col, val) { query.filters.push({ col, op: "eq", val }); return delChain; },
-          async then(resolve) {
-            let url2 = `${url}/rest/v1/${query.table}?`;
-            url2 += query.filters.map(f => `${f.col}=${f.op}.${encodeURIComponent(f.val)}`).join("&");
-            const res = await fetch(url2, { method: "DELETE", headers });
-            return resolve({ error: res.ok ? null : { message: res.statusText } });
-          },
-        };
-        return delChain;
+        // Upsert support
+        upsert: async (rows: Record<string, unknown> | Record<string, unknown>[], opts: { onConflict?: string } = {}): Promise<SupabaseResult<null>> => {
+          let endpoint = `${url}/rest/v1/${table}`;
+          if (opts.onConflict) endpoint += `?on_conflict=${opts.onConflict}`;
+          const res = await fetch(endpoint, {
+            method: "POST",
+            headers: { ...headers, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates" },
+            body: JSON.stringify(Array.isArray(rows) ? rows : [rows]),
+          });
+          if (!res.ok) return { data: null, error: { message: res.statusText } };
+          return { data: null, error: null };
+        },
+        insert: async (rows: Record<string, unknown> | Record<string, unknown>[]): Promise<SupabaseResult<null>> => {
+          const res = await fetch(`${url}/rest/v1/${table}`, {
+            method: "POST",
+            headers: { ...headers, "Content-Type": "application/json" },
+            body: JSON.stringify(Array.isArray(rows) ? rows : [rows]),
+          });
+          if (!res.ok) return { data: null, error: { message: res.statusText } };
+          return { data: null, error: null };
+        },
+        delete(): DeleteChain {
+          const delChain: DeleteChain = {
+            eq(col: string, val: string) { query.filters.push({ col, op: "eq", val }); return delChain; },
+            async then(resolve: (result: { error: { message: string } | null }) => void) {
+              let url2 = `${url}/rest/v1/${query.table}?`;
+              url2 += query.filters.map((f: QueryFilter) => `${f.col}=${f.op}.${encodeURIComponent(f.val)}`).join("&");
+              const res = await fetch(url2, { method: "DELETE", headers });
+              return resolve({ error: res.ok ? null : { message: res.statusText } });
+            },
+          };
+          return delChain;
+        },
       };
       return chain;
     },
-    rpc: async (fnName, params = {}) => {
+    rpc: async (fnName: string, params: Record<string, unknown> = {}): Promise<SupabaseResult<unknown>> => {
       const res = await fetch(`${url}/rest/v1/rpc/${fnName}`, {
         method: "POST",
         headers: { ...headers, "Content-Type": "application/json" },
@@ -164,42 +272,42 @@ const supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 import { idbSet, idbGet, idbGetAllKeys, idbGetAll, idbDelete, STORE_BLOBS, STORE_META, STORE_TEXT, STORE_TEXT_META } from '@/lib/idb';
 
 // ─── Text extraction with PDF.js ─────────────────────────────
-async function extractTextFromBuffer(arrayBuffer) {
+async function extractTextFromBuffer(arrayBuffer: ArrayBuffer): Promise<ExtractedPage[]> {
   const loadingTask = pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) });
   const pdf = await loadingTask.promise;
-  const pages = [];
+  const pages: ExtractedPage[] = [];
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    const text = content.items.map((item) => item.str).join(" ");
+    const text = content.items.map((item) => ("str" in item ? item.str : "")).join(" ");
     pages.push({ page: i, text });
   }
   return pages;
 }
 
 // ─── Utilities ───────────────────────────────────────────────
-function formatBytes(bytes) {
+function formatBytes(bytes: number | undefined | null): string {
   if (!bytes) return "\u2014";
   if (bytes < 1024) return bytes + " B";
   if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
   return (bytes / 1048576).toFixed(1) + " MB";
 }
 
-function formatDate(iso) {
+function formatDate(iso: string | undefined | null): string {
   if (!iso) return "";
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function escapeHtml(str) {
+function escapeHtml(str: string): string {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function renderSnippet(snippet, term) {
+function renderSnippet(snippet: string, term: string): React.ReactNode {
   if (!term) return snippet;
-  const parts = [];
+  const parts: React.ReactNode[] = [];
   const lower = snippet.toLowerCase();
   const tLower = term.toLowerCase();
-  let idx = 0, pos;
+  let idx = 0, pos: number;
   while ((pos = lower.indexOf(tLower, idx)) !== -1) {
     if (pos > idx) parts.push(snippet.slice(idx, pos));
     parts.push(
@@ -214,10 +322,10 @@ function renderSnippet(snippet, term) {
 }
 
 // ─── LazyPage Component ──────────────────────────────────────
-function LazyPage({ pageNumber, scale, searchTerm }) {
-  const [isVisible, setIsVisible] = useState(false);
-  const [hasRendered, setHasRendered] = useState(false);
-  const ref = useRef(null);
+function LazyPage({ pageNumber, scale, searchTerm }: LazyPageProps) {
+  const [isVisible, setIsVisible] = useState<boolean>(false);
+  const [hasRendered, setHasRendered] = useState<boolean>(false);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -244,22 +352,24 @@ function LazyPage({ pageNumber, scale, searchTerm }) {
       const spans = layer.querySelectorAll("span");
       const term = searchTerm.toLowerCase();
       spans.forEach((span) => {
-        if (span.dataset.orig) { span.innerHTML = span.dataset.orig; delete span.dataset.orig; }
+        const el = span as HTMLSpanElement;
+        if (el.dataset.orig) { el.innerHTML = el.dataset.orig; delete el.dataset.orig; }
       });
       spans.forEach((span) => {
-        const text = span.textContent;
+        const el = span as HTMLSpanElement;
+        const text = el.textContent;
         if (!text) return;
         const lower = text.toLowerCase();
         if (!lower.includes(term)) return;
-        span.dataset.orig = span.innerHTML;
-        let result = "", i = 0, p;
+        el.dataset.orig = el.innerHTML;
+        let result = "", i = 0, p: number;
         while ((p = lower.indexOf(term, i)) !== -1) {
           result += escapeHtml(text.slice(i, p));
           result += '<mark style="background:rgba(250,204,21,0.5);color:inherit;border-radius:2px;padding:0 1px">' + escapeHtml(text.slice(p, p + term.length)) + "</mark>";
           i = p + term.length;
         }
         result += escapeHtml(text.slice(i));
-        span.innerHTML = result;
+        el.innerHTML = result;
       });
     }, 150);
   }, [searchTerm]);
@@ -305,53 +415,52 @@ function LazyPage({ pageNumber, scale, searchTerm }) {
 // ═════════════════════════════════════════════════════════════
 export default function PDFLibrary() {
   // File list
-  const [files, setFiles] = useState([]);
-  const [cachedKeys, setCachedKeys] = useState(new Set());
-  const [extractedKeys, setExtractedKeys] = useState(new Set());
-  const [loading, setLoading] = useState(true);
-  const [downloading, setDownloading] = useState(new Set());
-  const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
-  const [error, setError] = useState(null);
-  const [listSearch, setListSearch] = useState("");
+  const [files, setFiles] = useState<StorageFileObject[]>([]);
+  const [cachedKeys, setCachedKeys] = useState<Set<IDBValidKey>>(new Set());
+  const [extractedKeys, setExtractedKeys] = useState<Set<IDBValidKey>>(new Set());
+  const [loading, setLoading] = useState<boolean>(true);
+  const [downloading, setDownloading] = useState<Set<string>>(new Set());
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== "undefined" ? navigator.onLine : true);
+  const [error, setError] = useState<string | null>(null);
+  const [listSearch, setListSearch] = useState<string>("");
 
   // Extraction
-  const [extracting, setExtracting] = useState(false);
-  const [extractProgress, setExtractProgress] = useState({ current: 0, total: 0, fileName: "" });
+  const [extracting, setExtracting] = useState<boolean>(false);
+  const [extractProgress, setExtractProgress] = useState<ExtractProgress>({ current: 0, total: 0, fileName: "" });
 
   // Cross-PDF search
-  const [globalSearch, setGlobalSearch] = useState("");
-  const [globalResults, setGlobalResults] = useState([]);
-  const [globalSearching, setGlobalSearching] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState<string>("");
+  const [globalResults, setGlobalResults] = useState<GlobalSearchResult[]>([]);
+  const [globalSearching, setGlobalSearching] = useState<boolean>(false);
 
   // Viewer
-  const [viewingFile, setViewingFile] = useState(null);
-  const [masterBuffer, setMasterBuffer] = useState(null);
-  const [blobUrl, setBlobUrl] = useState(null);
-  const blobUrlRef = useRef(null);
-  const [numPages, setNumPages] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [scale, setScale] = useState(isMobileDevice() ? 0.8 : 1.2);
-  const [viewMode, setViewMode] = useState(getDefaultViewMode);
-  const [pdfLoading, setPdfLoading] = useState(false);
-  const [pdfError, setPdfError] = useState(null);
+  const [viewingFile, setViewingFile] = useState<string | null>(null);
+  const [masterBuffer, setMasterBuffer] = useState<ArrayBuffer | null>(null);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const blobUrlRef = useRef<string | null>(null);
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [scale, setScale] = useState<number>(isMobileDevice() ? 0.8 : 1.2);
+  const [viewMode, setViewMode] = useState<ViewMode>(getDefaultViewMode);
+  const [pdfLoading, setPdfLoading] = useState<boolean>(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   // In-document search
-  const [docSearchOpen, setDocSearchOpen] = useState(false);
-  const [docSearchTerm, setDocSearchTerm] = useState("");
-  const [docMatches, setDocMatches] = useState([]);
-  const [docMatchIdx, setDocMatchIdx] = useState(0);
-  const [docPageTexts, setDocPageTexts] = useState([]);
+  const [docSearchOpen, setDocSearchOpen] = useState<boolean>(false);
+  const [docSearchTerm, setDocSearchTerm] = useState<string>("");
+  const [docMatches, setDocMatches] = useState<DocMatch[]>([]);
+  const [docMatchIdx, setDocMatchIdx] = useState<number>(0);
+  const [docPageTexts, setDocPageTexts] = useState<ExtractedPage[]>([]);
 
-  const searchInputRef = useRef(null);
-  const viewerBodyRef = useRef(null);
-  const transformRef = useRef(null);
-  const [touchScale, setTouchScale] = useState(1);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const viewerBodyRef = useRef<HTMLDivElement>(null);
+  const transformRef = useRef<{ zoomIn: (step: number) => void; zoomOut: (step: number) => void; resetTransform: () => void } | null>(null);
+  const [touchScale, setTouchScale] = useState<number>(1);
 
   // ── Request persistent storage (prevent IndexedDB eviction) ──
   useEffect(() => {
     if (navigator.storage && navigator.storage.persist) {
-      navigator.storage.persist().then((granted) => {
-        console.log("Persistent storage:", granted ? "granted" : "denied");
+      navigator.storage.persist().then(() => {
       });
     }
   }, []);
@@ -380,17 +489,17 @@ export default function PDFLibrary() {
       if (navigator.onLine) {
         const { data, error: e } = await supabase.storage.from(BUCKET_NAME).list("", { limit: 500 });
         if (e) throw e;
-        const pdfs = (data || []).filter((f) => f.name && f.name.toLowerCase().endsWith(".pdf") && f.id);
+        const pdfs = ((data as StorageFileObject[]) || []).filter((f) => f.name && f.name.toLowerCase().endsWith(".pdf") && f.id);
         setFiles(pdfs);
         await idbSet(STORE_META, "file_list", JSON.stringify(pdfs));
       } else {
-        const cached = await idbGet(STORE_META, "file_list");
+        const cached = await idbGet<string>(STORE_META, "file_list");
         if (cached) setFiles(JSON.parse(cached));
-        else { const keys = await idbGetAllKeys(STORE_BLOBS); setFiles(keys.map((k) => ({ name: k, id: k, metadata: {} }))); }
+        else { const keys = await idbGetAllKeys(STORE_BLOBS); setFiles(keys.map((k) => ({ name: k as string, id: k as string, metadata: {} }))); }
       }
-    } catch (e) {
-      setError(e.message);
-      const cached = await idbGet(STORE_META, "file_list");
+    } catch (e: unknown) {
+      setError((e as Error).message);
+      const cached = await idbGet<string>(STORE_META, "file_list");
       if (cached) setFiles(JSON.parse(cached));
     } finally { setLoading(false); }
     await refreshCache();
@@ -406,7 +515,7 @@ export default function PDFLibrary() {
         const { data: serverFiles } = await supabase
           .from("pdf_extraction_status")
           .select("file_name,total_pages")
-          .eq("status", "complete");
+          .eq("status", "complete") as SupabaseResult<Array<{ file_name: string; total_pages: number }>>;
         if (!serverFiles) return;
 
         const localKeys = new Set(await idbGetAllKeys(STORE_TEXT));
@@ -416,9 +525,9 @@ export default function PDFLibrary() {
             .from("pdf_text_pages")
             .select("page_number,text_content")
             .eq("file_name", file.file_name)
-            .order("page_number", { ascending: true });
+            .order("page_number", { ascending: true }) as SupabaseResult<Array<{ page_number: number; text_content: string }>>;
           if (rows && rows.length > 0) {
-            const pages = rows.map((r) => ({ page: r.page_number, text: r.text_content }));
+            const pages: ExtractedPage[] = rows.map((r) => ({ page: r.page_number, text: r.text_content }));
             await idbSet(STORE_TEXT, file.file_name, { pages, source: "server", cachedAt: Date.now() });
           }
         }
@@ -428,15 +537,15 @@ export default function PDFLibrary() {
   }, [isOnline, refreshCache]);
 
   // ── Download & cache PDF blob ──
-  const downloadAndCache = useCallback(async (fileName) => {
-    setDownloading((p) => new Set([...p, fileName]));
+  const downloadAndCache = useCallback(async (fileName: string) => {
+    setDownloading((p) => { const s = new Set(p); s.add(fileName); return s; });
     try {
       const { data: blob, error: e } = await supabase.storage.from(BUCKET_NAME).download(fileName);
       if (e) throw e;
-      const arrayBuffer = await blob.arrayBuffer();
+      const arrayBuffer = await (blob as Blob).arrayBuffer();
       await idbSet(STORE_BLOBS, fileName, arrayBuffer);
       await refreshCache();
-    } catch (e) { setError("Download failed: " + e.message); }
+    } catch (e: unknown) { setError("Download failed: " + (e as Error).message); }
     finally { setDownloading((p) => { const n = new Set(p); n.delete(fileName); return n; }); }
   }, [refreshCache]);
 
@@ -463,11 +572,11 @@ export default function PDFLibrary() {
 
       try {
         // Get PDF data (from cache or download)
-        let arrayBuffer = await idbGet(STORE_BLOBS, fileName);
+        let arrayBuffer = await idbGet<ArrayBuffer>(STORE_BLOBS, fileName);
         if (!arrayBuffer && navigator.onLine) {
           const { data: blob, error: e } = await supabase.storage.from(BUCKET_NAME).download(fileName);
           if (e) throw e;
-          arrayBuffer = await blob.arrayBuffer();
+          arrayBuffer = await (blob as Blob).arrayBuffer();
           await idbSet(STORE_BLOBS, fileName, arrayBuffer);
         }
         if (!arrayBuffer) { console.warn("Skip (no data):", fileName); continue; }
@@ -527,7 +636,7 @@ export default function PDFLibrary() {
             max_results: 50,
           });
           if (!e && data) {
-            setGlobalResults(data.map((r) => ({
+            setGlobalResults((data as Array<{ file_name: string; page_number: number; headline?: string; rank: number }>).map((r) => ({
               fileName: r.file_name,
               page: r.page_number,
               snippet: r.headline?.replace(/<b>/g, "").replace(/<\/b>/g, "") || "",
@@ -544,10 +653,10 @@ export default function PDFLibrary() {
       finally { setGlobalSearching(false); }
 
       async function searchOffline() {
-        const allData = await idbGetAll(STORE_TEXT);
+        const allData = await idbGetAll<CachedTextData>(STORE_TEXT);
         const allKeys = await idbGetAllKeys(STORE_TEXT);
         const term = globalSearch.toLowerCase();
-        const results = [];
+        const results: GlobalSearchResult[] = [];
         for (let i = 0; i < allKeys.length && results.length < 50; i++) {
           const d = allData[i];
           if (!d || !d.pages) continue;
@@ -559,7 +668,7 @@ export default function PDFLibrary() {
             const s = Math.max(0, pos - 40);
             const e = Math.min(pg.text.length, pos + term.length + 40);
             results.push({
-              fileName: allKeys[i],
+              fileName: allKeys[i] as string,
               page: pg.page,
               snippet: (s > 0 ? "\u2026" : "") + pg.text.slice(s, e) + (e < pg.text.length ? "\u2026" : ""),
             });
@@ -575,20 +684,20 @@ export default function PDFLibrary() {
   // ═══════════════════════════════════════════════════════════
   // OPEN PDF VIEWER
   // ═══════════════════════════════════════════════════════════
-  const viewPdf = useCallback(async (fileName) => {
+  const viewPdf = useCallback(async (fileName: string) => {
     setPdfLoading(true); setPdfError(null); setMasterBuffer(null);
     setNumPages(null); setCurrentPage(1); setViewingFile(fileName);
     setDocSearchOpen(false); setDocSearchTerm(""); setDocMatches([]);
     setDocPageTexts([]); setDocMatchIdx(0);
 
     try {
-      let arrayBuffer = await idbGet(STORE_BLOBS, fileName);
-      if (arrayBuffer instanceof Blob) arrayBuffer = await arrayBuffer.arrayBuffer();
+      let arrayBuffer = await idbGet<ArrayBuffer>(STORE_BLOBS, fileName);
+      if (arrayBuffer instanceof Blob) arrayBuffer = await (arrayBuffer as unknown as Blob).arrayBuffer();
 
       if (!arrayBuffer && navigator.onLine) {
         const { data: blob, error: e } = await supabase.storage.from(BUCKET_NAME).download(fileName);
         if (e) throw e;
-        arrayBuffer = await blob.arrayBuffer();
+        arrayBuffer = await (blob as Blob).arrayBuffer();
         await idbSet(STORE_BLOBS, fileName, arrayBuffer);
         await refreshCache();
       }
@@ -608,11 +717,11 @@ export default function PDFLibrary() {
       }
 
       // Load pre-extracted text for in-doc search (from IndexedDB first)
-      const cachedText = await idbGet(STORE_TEXT, fileName);
+      const cachedText = await idbGet<CachedTextData>(STORE_TEXT, fileName);
       if (cachedText && cachedText.pages) {
         setDocPageTexts(cachedText.pages);
       }
-    } catch (e) { setPdfError("Failed: " + e.message); }
+    } catch (e: unknown) { setPdfError("Failed: " + (e as Error).message); }
     finally { setPdfLoading(false); }
   }, [refreshCache]);
 
@@ -642,7 +751,7 @@ export default function PDFLibrary() {
   }, [viewMode, masterBuffer]);
 
   // ── Remove from cache ──
-  const removeFromCache = useCallback(async (fileName) => {
+  const removeFromCache = useCallback(async (fileName: string) => {
     await idbDelete(STORE_BLOBS, fileName);
     await refreshCache();
   }, [refreshCache]);
@@ -653,8 +762,8 @@ export default function PDFLibrary() {
     return { data: masterBuffer.slice(0) };
   }, [masterBuffer]);
 
-  function onDocumentLoadSuccess({ numPages: n }) { setNumPages(n); }
-  function onDocumentLoadError(err) {
+  function onDocumentLoadSuccess({ numPages: n }: { numPages: number }) { setNumPages(n); }
+  function onDocumentLoadError(err: Error) {
     console.error("react-pdf:", err);
     setPdfError("Render failed: " + err.message);
   }
@@ -667,10 +776,10 @@ export default function PDFLibrary() {
       setDocMatches([]); setDocMatchIdx(0); return;
     }
     const term = docSearchTerm.toLowerCase();
-    const found = [];
+    const found: DocMatch[] = [];
     for (const pt of docPageTexts) {
       const text = pt.text.toLowerCase();
-      let startIdx = 0, pos;
+      let startIdx = 0, pos: number;
       while ((pos = text.indexOf(term, startIdx)) !== -1) {
         const s = Math.max(0, pos - 40);
         const e = Math.min(pt.text.length, pos + term.length + 40);
@@ -690,7 +799,7 @@ export default function PDFLibrary() {
     }
   }, [docSearchTerm, docPageTexts, viewMode]);
 
-  const goToDocMatch = useCallback((dir) => {
+  const goToDocMatch = useCallback((dir: "next" | "prev") => {
     if (docMatches.length === 0) return;
     const next = dir === "next"
       ? (docMatchIdx + 1) % docMatches.length
@@ -707,7 +816,7 @@ export default function PDFLibrary() {
   // ── Keyboard shortcuts ──
   useEffect(() => {
     if (!viewingFile) return;
-    const handler = (e) => {
+    const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "f") {
         e.preventDefault();
         setDocSearchOpen(true);
@@ -732,7 +841,7 @@ export default function PDFLibrary() {
   const filtered = files.filter((f) => f.name.toLowerCase().includes(listSearch.toLowerCase()));
   const cachedCount = files.filter((f) => cachedKeys.has(f.name)).length;
   const extractedCount = files.filter((f) => extractedKeys.has(f.name)).length;
-  const pagesWithMatches = useMemo(() => { const s = new Set(); docMatches.forEach((m) => s.add(m.page)); return s; }, [docMatches]);
+  const pagesWithMatches = useMemo(() => { const s = new Set<number>(); docMatches.forEach((m) => s.add(m.page)); return s; }, [docMatches]);
 
   // ─────────────────────────────────────────────────────────
   // RENDER
@@ -766,15 +875,15 @@ export default function PDFLibrary() {
             <div style={S.sWrap}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-3)" strokeWidth="2" style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
               <input type="text" placeholder="Search across all regulations..." value={globalSearch || listSearch}
-                onChange={(e) => {
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   const v = e.target.value;
                   setListSearch(v);
                   setGlobalSearch(extractedCount > 0 ? v : "");
                 }}
                 style={S.sInput} />
-              {globalSearching && <span style={Object.assign({}, S.miniSpin, { position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)" })} />}
+              {globalSearching && <span style={Object.assign({}, S.miniSpin, { position: "absolute" as const, right: 10, top: "50%", transform: "translateY(-50%)" })} />}
             </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
               <button onClick={fetchFileList} disabled={!isOnline || loading} style={Object.assign({}, S.btn, S.btnG, (!isOnline || loading) ? S.off : {})}>&#8635; Refresh</button>
               <button onClick={cacheAll} disabled={!isOnline || cachedCount === files.length} style={Object.assign({}, S.btn, S.btnA, (!isOnline || cachedCount === files.length) ? S.off : {})}>&darr; Cache All</button>
               <button onClick={extractAll} disabled={extracting || (!isOnline && extractedCount === files.length)}
@@ -877,7 +986,7 @@ export default function PDFLibrary() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-3)" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
                   <input ref={searchInputRef} type="text"
                     placeholder={docPageTexts.length === 0 ? "No text index \u2014 run Extract first" : "Search in document..."}
-                    value={docSearchTerm} onChange={(e) => setDocSearchTerm(e.target.value)}
+                    value={docSearchTerm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDocSearchTerm(e.target.value)}
                     disabled={docPageTexts.length === 0} style={S.sPanelIn} />
                   {docMatches.length > 0 && <span style={S.mc}>{docMatchIdx + 1} of {docMatches.length}</span>}
                   {docSearchTerm.length >= 2 && docMatches.length === 0 && docPageTexts.length > 0 && <span style={Object.assign({}, S.mc, { color: "#F87171" })}>No matches</span>}
@@ -917,7 +1026,7 @@ export default function PDFLibrary() {
 
               {!pdfLoading && !pdfError && viewMode === "react-pdf" && fileData && (
                 <TransformWrapper
-                  ref={transformRef}
+                  ref={transformRef as React.Ref<never>}
                   initialScale={1}
                   minScale={0.5}
                   maxScale={5}
@@ -927,7 +1036,7 @@ export default function PDFLibrary() {
                   doubleClick={{ mode: "zoomIn", step: 0.7 }}
                   pinch={{ step: 5 }}
                   panning={{ disabled: touchScale <= 1, velocityDisabled: true }}
-                  onTransformed={function(_, state) { setTouchScale(state.scale); }}
+                  onTransformed={function(_: unknown, state: { scale: number }) { setTouchScale(state.scale); }}
                 >
                   <TransformComponent
                     wrapperStyle={{ width: "100%", maxHeight: "100%", overflow: "visible" }}
@@ -949,7 +1058,7 @@ export default function PDFLibrary() {
         ) : loading ? (
           <div style={S.ctr}><span style={S.spin} /><span style={{ color: "var(--color-text-3)", marginLeft: 8 }}>Loading&hellip;</span></div>
         ) : filtered.length === 0 && !globalResults.length ? (
-          <div style={Object.assign({}, S.ctr, { flexDirection: "column", padding: 80 })}>
+          <div style={Object.assign({}, S.ctr, { flexDirection: "column" as const, padding: 80 })}>
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-4)" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
             <p style={{ color: "var(--color-text-2)", marginTop: 12, fontWeight: 600 }}>{listSearch ? "No matching files" : "No PDFs found"}</p>
           </div>
@@ -957,14 +1066,14 @@ export default function PDFLibrary() {
           // ═══════════════════ FILE LIST ═══════════════════
           !globalResults.length && (
             <div style={S.list}>
-              {filtered.map(function(file) {
-                var cached = cachedKeys.has(file.name);
-                var extracted = extractedKeys.has(file.name);
-                var isDl = downloading.has(file.name);
+              {filtered.map(function(file: StorageFileObject) {
+                const cached = cachedKeys.has(file.name);
+                const extracted = extractedKeys.has(file.name);
+                const isDl = downloading.has(file.name);
                 return (
                   <div key={file.name} style={S.row}
-                    onMouseEnter={function(e) { e.currentTarget.style.background = "var(--color-bg-elevated)"; e.currentTarget.style.borderColor = "var(--color-text-4)"; }}
-                    onMouseLeave={function(e) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "var(--color-bg-elevated)"; }}>
+                    onMouseEnter={function(e: React.MouseEvent<HTMLDivElement>) { e.currentTarget.style.background = "var(--color-bg-elevated)"; e.currentTarget.style.borderColor = "var(--color-text-4)"; }}
+                    onMouseLeave={function(e: React.MouseEvent<HTMLDivElement>) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "var(--color-bg-elevated)"; }}>
                     <button onClick={() => viewPdf(file.name)} disabled={!cached && !isOnline} style={S.fBtn}>
                       <div style={Object.assign({}, S.fIco, { borderColor: cached ? "rgba(52,211,153,0.25)" : "rgba(100,116,139,0.25)", color: cached ? "#34D399" : "var(--color-text-3)" })}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
@@ -972,7 +1081,7 @@ export default function PDFLibrary() {
                       <div style={S.fInf}>
                         <span style={S.fNm}>{file.name}</span>
                         <span style={S.fMt}>
-                          {formatBytes(file.metadata && file.metadata.size)}
+                          {formatBytes(file.metadata && file.metadata.size as number | undefined)}
                           {file.created_at ? " \u00B7 " + formatDate(file.created_at) : ""}
                           {cached ? " \u00B7 Cached" : ""}
                           {extracted ? " \u00B7 Indexed" : ""}
@@ -1003,7 +1112,7 @@ export default function PDFLibrary() {
 }
 
 // ─── Styles ──────────────────────────────────────────────────
-var S = {
+const S: Record<string, React.CSSProperties> = {
   root: { fontFamily: "'DM Sans', -apple-system, sans-serif", background: "var(--color-bg-surface-solid)", color: "var(--color-text-1)", minHeight: "100vh", display: "flex", flexDirection: "column" },
   header: { background: "linear-gradient(180deg, var(--color-bg-elevated) 0%, var(--color-bg-surface-solid) 100%)", borderBottom: "1px solid var(--color-bg-elevated)", padding: "18px 24px" },
   headerRow: { maxWidth: 960, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" },
@@ -1065,10 +1174,10 @@ var S = {
   mc: { fontSize: 'var(--fs-base)', color: "var(--color-text-2)", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" },
   nb: { width: 26, height: 26, borderRadius: 5, background: "rgba(241,245,249,0.05)", border: "1px solid var(--color-text-4)", color: "var(--color-text-2)", fontSize: 'var(--fs-md)', fontWeight: 600, fontFamily: "inherit", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
   mList: { maxHeight: 200, overflowY: "auto", borderTop: "1px solid var(--color-bg-elevated)" },
-  mItem: { display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 16px", background: "none", border: "none", borderBottom: "1px solid var(--color-bg-elevated)", color: "var(--color-text-1)", fontSize: 'var(--fs-base)', fontFamily: "inherit", cursor: "pointer", textAlign: "left", width: "100%", boxSizing: "border-box" },
+  mItem: { display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 16px", background: "none", border: "none", borderBottom: "1px solid var(--color-bg-elevated)", color: "var(--color-text-1)", fontSize: 'var(--fs-base)', fontFamily: "inherit", cursor: "pointer", textAlign: "left" as const, width: "100%", boxSizing: "border-box" as const },
   mItemA: { background: "var(--color-border)" },
   mBadge: { flexShrink: 0, fontSize: 'var(--fs-xs)', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: "var(--color-accent)", background: "var(--color-border-mid)", padding: "2px 6px", borderRadius: 4, marginTop: 1 },
-  mSnip: { fontSize: 'var(--fs-base)', lineHeight: 1.5, color: "var(--color-text-2)", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" },
+  mSnip: { fontSize: 'var(--fs-base)', lineHeight: 1.5, color: "var(--color-text-2)", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const },
 
   vBody: { flex: 1, overflow: "auto", display: "flex", flexDirection: "column", justifyContent: "flex-start", alignItems: "center", padding: 16, background: "var(--color-bg-surface-solid)", minHeight: 0 },
 
@@ -1081,9 +1190,9 @@ var S = {
 };
 
 if (typeof document !== "undefined") {
-  var id = "aoms-pdf-kf";
+  const id = "aoms-pdf-kf";
   if (!document.getElementById(id)) {
-    var s = document.createElement("style");
+    const s = document.createElement("style");
     s.id = id;
     s.textContent = "@keyframes spin { to { transform: rotate(360deg); } }";
     document.head.appendChild(s);

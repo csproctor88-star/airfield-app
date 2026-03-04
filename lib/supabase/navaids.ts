@@ -14,8 +14,7 @@ export async function fetchNavaidStatuses(baseId?: string | null): Promise<Navai
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
+  let query = supabase
     .from('navaid_statuses')
     .select('*')
     .order('navaid_name')

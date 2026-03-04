@@ -185,8 +185,7 @@ function RunwayTab({
       end2_elevation_msl: parseFloat(newRunway.end2_elevation_msl) || null,
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('base_runways')
       .insert(insert)
       .select('*')
@@ -196,7 +195,7 @@ function RunwayTab({
       toast.error(`Failed to add runway: ${error.message}`)
     } else {
       toast.success(`Runway ${newRunway.runway_id} added`)
-      setRunways(prev => [...prev, data])
+      setRunways(prev => [...prev, data as typeof prev[number]])
       setAdding(false)
       setNewRunway({ runway_id: '', length_ft: '', width_ft: '', surface: 'Asphalt', true_heading: '', runway_class: 'B', end1_designator: '', end1_latitude: '', end1_longitude: '', end1_elevation_msl: '', end2_designator: '', end2_latitude: '', end2_longitude: '', end2_elevation_msl: '' })
     }
@@ -208,8 +207,7 @@ function RunwayTab({
     const supabase = createClient()
     if (!supabase) return
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from('base_runways').delete().eq('id', rwy.id)
+    const { error } = await supabase.from('base_runways').delete().eq('id', rwy.id)
     if (error) {
       toast.error(`Failed to delete: ${error.message}`)
     } else {
@@ -465,8 +463,7 @@ function NavaidTab({ installationId }: { installationId: string | null }) {
     const maxSort = navaids.length
 
     // Add to base_navaids config table
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: navaidRow, error: navaidErr } = await (supabase as any)
+    const { data: navaidRow, error: navaidErr } = await supabase
       .from('base_navaids')
       .insert({ base_id: installationId, navaid_name: newItem.trim(), sort_order: maxSort })
       .select('*')
@@ -478,8 +475,7 @@ function NavaidTab({ installationId }: { installationId: string | null }) {
     }
 
     // Also create a navaid_statuses entry so it appears on the dashboard
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any)
+    await supabase
       .from('navaid_statuses')
       .insert({
         navaid_name: newItem.trim(),
@@ -490,7 +486,7 @@ function NavaidTab({ installationId }: { installationId: string | null }) {
       })
 
     toast.success(`Added "${newItem.trim()}"`)
-    setNavaids(prev => [...prev, navaidRow])
+    setNavaids(prev => [...prev, navaidRow as typeof prev[number]])
     setNewItem('')
     // Reload to get updated statuses
     await loadNavaids()
@@ -502,12 +498,10 @@ function NavaidTab({ installationId }: { installationId: string | null }) {
     if (!supabase) return
 
     // Delete from base_navaids
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('base_navaids').delete().eq('id', navaid.id)
+    await supabase.from('base_navaids').delete().eq('id', navaid.id)
 
     // Also delete from navaid_statuses
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any)
+    await supabase
       .from('navaid_statuses')
       .delete()
       .eq('base_id', installationId)
@@ -633,8 +627,7 @@ function SimpleListTab({
 
     const maxSort = list.length
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
-      .from(tableName)
+    const { error } = await (supabase.from as any)(tableName)
       .insert({ base_id: installationId, [fieldName]: newItem.trim(), sort_order: maxSort })
 
     if (error) {
@@ -652,8 +645,7 @@ function SimpleListTab({
     if (!supabase) return
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
-      .from(tableName)
+    const { error } = await (supabase.from as any)(tableName)
       .delete()
       .eq('base_id', installationId)
       .eq(fieldName, item)
@@ -734,8 +726,7 @@ function ShopsTab({ shops, installationId }: { shops: string[]; installationId: 
     const supabase = createClient()
     if (!supabase) return
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('bases')
       .update({ ce_shops: updatedList })
       .eq('id', installationId)
@@ -942,12 +933,10 @@ function DashboardPreview({
         fetchNavaidStatuses(installationId),
         fetchInstallationNavaids(installationId),
         supabase
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ? (supabase as any).from('base_areas').select('area_name').eq('base_id', installationId).order('sort_order')
+          ? supabase.from('base_areas').select('area_name').eq('base_id', installationId).order('sort_order')
           : Promise.resolve({ data: [] }),
         supabase
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ? (supabase as any).from('base_runways').select('id').eq('base_id', installationId)
+          ? supabase.from('base_runways').select('id').eq('base_id', installationId)
           : Promise.resolve({ data: [] }),
         fetchInspectionTemplate(installationId, 'airfield'),
         fetchInspectionTemplate(installationId, 'lighting'),

@@ -44,8 +44,7 @@ export async function fetchInspections(baseId?: string | null, status?: 'in_prog
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
+  let query = supabase
     .from('inspections')
     .select('*')
     .order('created_at', { ascending: false })
@@ -71,8 +70,7 @@ export async function fetchInspection(id: string): Promise<InspectionRow | null>
   const supabase = createClient()
   if (!supabase) return null
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('inspections')
     .select('*')
     .eq('id', id)
@@ -91,8 +89,7 @@ export async function fetchDailyGroup(groupId: string): Promise<InspectionRow[]>
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('inspections')
     .select('*')
     .eq('daily_group_id', groupId)
@@ -186,10 +183,9 @@ export async function createInspection(input: {
   if (inspector_id) row.inspector_id = inspector_id
   if (input.base_id) row.base_id = input.base_id
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('inspections')
-    .insert(row)
+    .insert(row as any)
     .select()
     .single()
 
@@ -231,8 +227,7 @@ export async function saveInspectionDraft(input: {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       userId = user.id
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: profile } = await (supabase as any)
+          const { data: profile } = await supabase
         .from('profiles')
         .select('name, rank')
         .eq('id', user.id)
@@ -254,11 +249,10 @@ export async function saveInspectionDraft(input: {
 
   if (input.id) {
     // Update existing row
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
       .from('inspections')
       .update({
-        draft_data: input.draft_data,
+        draft_data: input.draft_data as unknown as Record<string, unknown>,
         items: input.items,
         total_items: input.total_items,
         passed_count: input.passed_count,
@@ -323,10 +317,9 @@ export async function saveInspectionDraft(input: {
   if (userId) row.inspector_id = userId
   if (input.base_id) row.base_id = input.base_id
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('inspections')
-    .insert(row)
+    .insert(row as any)
     .select()
     .single()
 
@@ -371,8 +364,7 @@ export async function fileInspection(input: {
     ? Math.round(((input.passed_count + input.failed_count + input.na_count) / input.total_items) * 100)
     : 0
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('inspections')
     .update({
       status: 'completed',
@@ -424,8 +416,7 @@ export async function getInspectorName(): Promise<{ name: string | null; id: str
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { name: null, id: null }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: profile } = await (supabase as any)
+      const { data: profile } = await supabase
       .from('profiles')
       .select('name, rank')
       .eq('id', user.id)
@@ -478,8 +469,7 @@ export async function uploadInspectionPhoto(
   let storageUrl = storagePath
   let usedStorage = false
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: uploadError } = await (supabase as any).storage
+      const { error: uploadError } = await supabase.storage
       .from('photos')
       .upload(storagePath, file, { contentType: file.type || 'image/jpeg' })
     if (!uploadError) {
@@ -529,10 +519,9 @@ export async function uploadInspectionPhoto(
   if (longitude != null) photoRow.longitude = longitude
   if (discIndex != null) photoRow.issue_index = discIndex
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('photos')
-    .insert(photoRow)
+    .insert(photoRow as any)
     .select()
     .single()
 
@@ -548,8 +537,7 @@ export async function fetchInspectionPhotos(inspectionId: string): Promise<Inspe
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('photos')
     .select('*')
     .eq('inspection_id', inspectionId)
@@ -567,11 +555,9 @@ export async function deleteInspection(id: string): Promise<{ error: string | nu
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase as any).from('inspections').select('display_id, inspection_type, base_id').eq('id', id).single()
+  const { data: existing } = await supabase.from('inspections').select('display_id, inspection_type, base_id').eq('id', id).single()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('inspections')
     .delete()
     .eq('id', id)
@@ -590,11 +576,9 @@ export async function updateInspectionNotes(id: string, notes: string | null): P
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase as any).from('inspections').select('display_id, base_id').eq('id', id).single()
+  const { data: existing } = await supabase.from('inspections').select('display_id, base_id').eq('id', id).single()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('inspections')
     .update({ notes })
     .eq('id', id)

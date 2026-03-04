@@ -41,8 +41,7 @@ export async function fetchAirfieldStatus(baseId?: string | null): Promise<Airfi
   const supabase = createClient()
   if (!supabase) return null
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
+  let query = supabase
     .from('airfield_status')
     .select('*')
 
@@ -70,8 +69,7 @@ export async function updateAirfieldStatus(
   const { data: { user } } = await supabase.auth.getUser()
 
   // Get the current row ID scoped to base
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let existingQuery = (supabase as any)
+  let existingQuery = supabase
     .from('airfield_status')
     .select('id')
 
@@ -83,8 +81,7 @@ export async function updateAirfieldStatus(
 
   if (!existing) return false
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('airfield_status')
     .update({
       ...updates,
@@ -101,6 +98,40 @@ export async function updateAirfieldStatus(
   return true
 }
 
+/** Log a change to runway_status_log for the daily operations report */
+export async function logRunwayStatusChange(
+  params: {
+    oldRunwayStatus?: string | null
+    newRunwayStatus?: string | null
+    oldActiveRunway?: string | null
+    newActiveRunway?: string | null
+    oldAdvisoryType?: string | null
+    newAdvisoryType?: string | null
+    oldAdvisoryText?: string | null
+    newAdvisoryText?: string | null
+  },
+  baseId?: string | null
+): Promise<void> {
+  const supabase = createClient()
+  if (!supabase) return
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  await supabase.from('runway_status_log').insert({
+    base_id: baseId ?? null,
+    old_runway_status: params.oldRunwayStatus ?? null,
+    new_runway_status: params.newRunwayStatus ?? null,
+    old_active_runway: params.oldActiveRunway ?? null,
+    new_active_runway: params.newActiveRunway ?? null,
+    old_advisory_type: params.oldAdvisoryType ?? null,
+    new_advisory_type: params.newAdvisoryType ?? null,
+    old_advisory_text: params.oldAdvisoryText ?? null,
+    new_advisory_text: params.newAdvisoryText ?? null,
+    changed_by: user?.id ?? null,
+    reason: null,
+  } as any)
+}
+
 /** Fetch runway status changes within a date range */
 export async function fetchRunwayStatusLog(
   startUTC: string,
@@ -111,8 +142,7 @@ export async function fetchRunwayStatusLog(
   if (!supabase) return []
 
   // Try with profile join
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
+  let query = supabase
     .from('runway_status_log')
     .select('*, profiles:changed_by(name, rank)')
     .gte('created_at', startUTC)
@@ -134,8 +164,7 @@ export async function fetchRunwayStatusLog(
   }
 
   // Fallback without join
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let fallbackQuery = (supabase as any)
+  let fallbackQuery = supabase
     .from('runway_status_log')
     .select('*')
     .gte('created_at', startUTC)

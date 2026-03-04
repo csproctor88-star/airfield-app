@@ -44,8 +44,7 @@ export async function fetchInstallationRunways(installationId: string): Promise<
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('base_runways')
     .select('*')
     .eq('base_id', installationId)
@@ -64,8 +63,7 @@ export async function fetchInstallationNavaids(installationId: string): Promise<
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('base_navaids')
     .select('*')
     .eq('base_id', installationId)
@@ -84,8 +82,7 @@ export async function fetchInstallationAreas(installationId: string): Promise<In
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('base_areas')
     .select('*')
     .eq('base_id', installationId)
@@ -107,8 +104,7 @@ export async function fetchUserInstallations(): Promise<(Installation & { member
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('base_members')
     .select('role, bases(*)')
     .eq('user_id', user.id)
@@ -131,8 +127,7 @@ export async function fetchInstallationMembers(installationId: string): Promise<
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('base_members')
     .select('*, profiles:user_id(name, rank, email)')
     .eq('base_id', installationId)
@@ -159,8 +154,7 @@ export async function addInstallationMember(
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('base_members')
     .upsert({ base_id: installationId, user_id: userId, role }, { onConflict: 'base_id,user_id' })
 
@@ -213,8 +207,7 @@ export async function getUserPrimaryInstallationId(): Promise<string | null> {
     if (profile?.primary_base_id) return profile.primary_base_id as string
 
     // Fall back to first installation membership
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: membership } = await (supabase as any)
+      const { data: membership } = await supabase
       .from('base_members')
       .select('base_id')
       .eq('user_id', user.id)

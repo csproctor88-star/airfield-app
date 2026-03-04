@@ -74,10 +74,9 @@ export async function createCheck(input: {
   }
   if (input.base_id) row.base_id = input.base_id
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('airfield_checks')
-    .insert(row)
+    .insert(row as any)
     .select()
     .single()
 
@@ -99,10 +98,9 @@ export async function createCheck(input: {
       if (input.base_id) cr.base_id = input.base_id
       return cr
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: commentError } = await (supabase as any)
+      const { error: commentError } = await supabase
       .from('check_comments')
-      .insert(commentRows)
+      .insert(commentRows as any)
     if (commentError) {
       console.error('Failed to save comments:', commentError.message)
     }
@@ -117,8 +115,7 @@ export async function fetchChecks(baseId?: string | null): Promise<{ data: Check
   const supabase = createClient()
   if (!supabase) return { data: [], error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
+  let query = supabase
     .from('airfield_checks')
     .select('*')
     .eq('status', 'completed')
@@ -142,8 +139,7 @@ export async function fetchRecentChecks(baseId?: string | null, limit = 5): Prom
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
+  let query = supabase
     .from('airfield_checks')
     .select('*')
     .eq('status', 'completed')
@@ -166,8 +162,7 @@ export async function fetchCheck(id: string): Promise<CheckRow | null> {
   const supabase = createClient()
   if (!supabase) return null
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('airfield_checks')
     .select('*')
     .eq('id', id)
@@ -185,8 +180,7 @@ export async function fetchCheckComments(checkId: string): Promise<CheckCommentR
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('check_comments')
     .select('*')
     .eq('check_id', checkId)
@@ -212,10 +206,9 @@ export async function addCheckComment(
   const row: Record<string, unknown> = { check_id: checkId, comment, user_name: userName }
   if (baseId) row.base_id = baseId
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('check_comments')
-    .insert(row)
+    .insert(row as any)
     .select()
     .single()
 
@@ -231,15 +224,11 @@ export async function deleteCheck(id: string): Promise<{ error: string | null }>
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase as any).from('airfield_checks').select('display_id, check_type, base_id').eq('id', id).single()
+  const { data: existing } = await supabase.from('airfield_checks').select('display_id, check_type, base_id').eq('id', id).single()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).from('check_comments').delete().eq('check_id', id)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).from('photos').delete().eq('check_id', id)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).from('airfield_checks').delete().eq('id', id)
+  await supabase.from('check_comments').delete().eq('check_id', id)
+  await supabase.from('photos').delete().eq('check_id', id)
+  const { error } = await supabase.from('airfield_checks').delete().eq('id', id)
 
   if (error) {
     console.error('Delete check failed:', error.message)
@@ -255,13 +244,11 @@ export async function updateCheckNotes(id: string, notes: string | null): Promis
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase as any).from('airfield_checks').select('display_id, data, base_id').eq('id', id).single()
+  const { data: existing } = await supabase.from('airfield_checks').select('display_id, data, base_id').eq('id', id).single()
   const currentData = (existing?.data as Record<string, unknown>) || {}
   const updatedData = { ...currentData, notes }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('airfield_checks')
     .update({ data: updatedData })
     .eq('id', id)
@@ -291,8 +278,7 @@ export async function uploadCheckPhoto(
   let storageUrl = storagePath
   let usedStorage = false
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: uploadError } = await (supabase as any).storage
+      const { error: uploadError } = await supabase.storage
       .from('photos')
       .upload(storagePath, file, { contentType: file.type || 'image/jpeg' })
 
@@ -340,10 +326,9 @@ export async function uploadCheckPhoto(
   if (baseId) photoRow.base_id = baseId
   if (issueIndex != null) photoRow.issue_index = issueIndex
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('photos')
-    .insert(photoRow)
+    .insert(photoRow as any)
     .select()
     .single()
 
@@ -352,15 +337,13 @@ export async function uploadCheckPhoto(
     return { data: null, error: error.message }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: chk } = await (supabase as any)
+  const { data: chk } = await supabase
     .from('airfield_checks')
     .select('photo_count')
     .eq('id', checkId)
     .single()
   if (chk) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any)
+      await supabase
       .from('airfield_checks')
       .update({ photo_count: (chk.photo_count || 0) + 1 })
       .eq('id', checkId)
@@ -387,8 +370,7 @@ export async function saveCheckDraftToDb(input: {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       userId = user.id
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: profile } = await (supabase as any)
+          const { data: profile } = await supabase
         .from('profiles')
         .select('name, rank')
         .eq('id', user.id)
@@ -407,11 +389,10 @@ export async function saveCheckDraftToDb(input: {
 
   if (input.id) {
     // Update existing draft row
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
       .from('airfield_checks')
       .update({
-        draft_data: input.draft_data,
+        draft_data: input.draft_data as unknown as Record<string, unknown>,
         saved_by_name: savedByName,
         saved_by_id: userId || null,
         saved_at: now.toISOString(),
@@ -448,10 +429,9 @@ export async function saveCheckDraftToDb(input: {
   }
   if (input.base_id) row.base_id = input.base_id
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('airfield_checks')
-    .insert(row)
+    .insert(row as any)
     .select()
     .single()
 
@@ -470,8 +450,7 @@ export async function loadCheckDraftFromDb(baseId?: string | null): Promise<Chec
   const supabase = createClient()
   if (!supabase) return null
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
+  let query = supabase
     .from('airfield_checks')
     .select('*')
     .eq('status', 'draft')
@@ -480,7 +459,7 @@ export async function loadCheckDraftFromDb(baseId?: string | null): Promise<Chec
     .maybeSingle()
 
   if (baseId) {
-    query = (supabase as any)
+    query = supabase
       .from('airfield_checks')
       .select('*')
       .eq('status', 'draft')
@@ -503,8 +482,7 @@ export async function deleteCheckDraft(id: string): Promise<{ error: string | nu
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('airfield_checks')
     .delete()
     .eq('id', id)
@@ -522,8 +500,7 @@ export async function fetchCheckPhotos(checkId: string): Promise<CheckPhotoRow[]
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('photos')
     .select('*')
     .eq('check_id', checkId)

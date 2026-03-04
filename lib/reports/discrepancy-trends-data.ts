@@ -101,8 +101,7 @@ export async function fetchDiscrepancyTrendsData(period: TrendPeriod, baseId?: s
   const startISO = startDate.toISOString()
 
   // Fetch all discrepancies created in the period (opened)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let openedQuery = (supabase as any)
+  let openedQuery = supabase
     .from('discrepancies')
     .select('id, created_at, location_text, type')
     .gte('created_at', startISO)
@@ -113,8 +112,7 @@ export async function fetchDiscrepancyTrendsData(period: TrendPeriod, baseId?: s
   const { data: opened } = await openedQuery
 
   // Fetch all discrepancies closed/cancelled in the period
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let closedQuery = (supabase as any)
+  let closedQuery = supabase
     .from('discrepancies')
     .select('id, created_at, updated_at, status, resolution_date')
     .in('status', ['completed', 'cancelled'])

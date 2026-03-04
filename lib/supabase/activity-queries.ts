@@ -23,8 +23,7 @@ export async function fetchActivityLog(options: {
 
   const { baseId, startDate, endDate, limit = 200 } = options
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
+  let query = supabase
     .from('activity_log')
     .select('id, action, entity_type, entity_id, entity_display_id, metadata, created_at, user_id, profiles:user_id(name, rank)')
     .order('created_at', { ascending: false })
@@ -38,8 +37,7 @@ export async function fetchActivityLog(options: {
 
   if (error) {
     // Fallback without join
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let fallbackQuery = (supabase as any)
+      let fallbackQuery = supabase
       .from('activity_log')
       .select('*')
       .order('created_at', { ascending: false })
@@ -112,8 +110,7 @@ export async function fetchEntityDetails(entries: ActivityEntry[]): Promise<Map<
   // Discrepancies
   if (groups['discrepancy']?.length) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any)
+          const { data } = await supabase
         .from('discrepancies')
         .select('id, title, description, resolution_notes')
         .in('id', groups['discrepancy'])
@@ -128,8 +125,7 @@ export async function fetchEntityDetails(entries: ActivityEntry[]): Promise<Map<
   // Obstruction evaluations
   if (groups['obstruction_evaluation']?.length) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any)
+          const { data } = await supabase
         .from('obstruction_evaluations')
         .select('id, description, notes')
         .in('id', groups['obstruction_evaluation'])
@@ -144,8 +140,7 @@ export async function fetchEntityDetails(entries: ActivityEntry[]): Promise<Map<
   // Airfield checks + comments
   if (groups['check']?.length) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any)
+          const { data } = await supabase
         .from('airfield_checks')
         .select('id, check_type')
         .in('id', groups['check'])
@@ -155,8 +150,7 @@ export async function fetchEntityDetails(entries: ActivityEntry[]): Promise<Map<
         }
       }
       // Fetch comments separately
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: comments } = await (supabase as any)
+          const { data: comments } = await supabase
         .from('check_comments')
         .select('check_id, comment')
         .in('check_id', groups['check'])
@@ -181,8 +175,7 @@ export async function fetchEntityDetails(entries: ActivityEntry[]): Promise<Map<
   // Inspections
   if (groups['inspection']?.length) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any)
+          const { data } = await supabase
         .from('inspections')
         .select('id, notes, weather_conditions, inspection_type')
         .in('id', groups['inspection'])
@@ -201,8 +194,7 @@ export async function fetchEntityDetails(entries: ActivityEntry[]): Promise<Map<
   // Waivers
   if (groups['waiver']?.length) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any)
+          const { data } = await supabase
         .from('waivers')
         .select('id, waiver_number, description')
         .in('id', groups['waiver'])
@@ -217,8 +209,7 @@ export async function fetchEntityDetails(entries: ActivityEntry[]): Promise<Map<
   // Waiver reviews
   if (groups['waiver_review']?.length) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any)
+          const { data } = await supabase
         .from('waiver_reviews')
         .select('id, notes')
         .in('id', groups['waiver_review'])

@@ -33,8 +33,7 @@ export async function fetchDiscrepancies(baseId?: string | null): Promise<Discre
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
+  let query = supabase
     .from('discrepancies')
     .select('*')
     .order('created_at', { ascending: false })
@@ -118,10 +117,9 @@ export async function createDiscrepancy(input: {
   if (reported_by) row.reported_by = reported_by
   if (input.base_id) row.base_id = input.base_id
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('discrepancies')
-    .insert(row)
+    .insert(row as any)
     .select()
     .single()
 
@@ -154,10 +152,9 @@ export async function updateDiscrepancy(
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('discrepancies')
-    .update({ ...fields, updated_at: new Date().toISOString() })
+    .update({ ...fields, updated_at: new Date().toISOString() } as any)
     .eq('id', id)
     .select()
     .single()
@@ -191,10 +188,9 @@ export async function updateDiscrepancyStatus(
   if (extraFields?.resolution_notes) updateFields.resolution_notes = extraFields.resolution_notes
   if (newStatus === 'resolved') updateFields.resolution_date = new Date().toISOString()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data: rawData, error } = await supabase
     .from('discrepancies')
-    .update(updateFields)
+    .update(updateFields as any)
     .eq('id', id)
     .select()
     .single()
@@ -203,6 +199,8 @@ export async function updateDiscrepancyStatus(
     console.error('Failed to update status:', error.message)
     return { data: null, error: error.message }
   }
+
+  const statusUpdated = rawData as DiscrepancyRow
 
   // Insert audit trail for status change
   try {
@@ -215,9 +213,8 @@ export async function updateDiscrepancyStatus(
         notes: notes || null,
         updated_by: user.id,
       }
-      if (data?.base_id) auditRow.base_id = data.base_id
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: auditError } = await (supabase as any).from('status_updates').insert(auditRow)
+      if (statusUpdated?.base_id) auditRow.base_id = statusUpdated.base_id
+          const { error: auditError } = await supabase.from('status_updates').insert(auditRow as any)
       if (auditError) {
         console.error('Failed to save status update note:', auditError.message)
       }
@@ -225,8 +222,6 @@ export async function updateDiscrepancyStatus(
   } catch (e) {
     console.error('Audit trail insert failed:', e)
   }
-
-  const statusUpdated = data as DiscrepancyRow
   logActivity('status_updated', 'discrepancy', statusUpdated.id, statusUpdated.display_id, { old_status: oldStatus, new_status: newStatus }, statusUpdated.base_id)
 
   return { data: statusUpdated, error: null }
@@ -238,15 +233,11 @@ export async function deleteDiscrepancy(
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase as any).from('discrepancies').select('display_id, title, base_id').eq('id', id).single()
+  const { data: existing } = await supabase.from('discrepancies').select('display_id, title, base_id').eq('id', id).single()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).from('photos').delete().eq('discrepancy_id', id)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).from('status_updates').delete().eq('discrepancy_id', id)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).from('discrepancies').delete().eq('id', id)
+  await supabase.from('photos').delete().eq('discrepancy_id', id)
+  await supabase.from('status_updates').delete().eq('discrepancy_id', id)
+  const { error } = await supabase.from('discrepancies').delete().eq('id', id)
 
   if (error) {
     console.error('Delete discrepancy failed:', error.message)
@@ -284,8 +275,7 @@ export async function uploadDiscrepancyPhoto(
   let storageUrl = storagePath
   let usedStorage = false
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: uploadError } = await (supabase as any).storage
+      const { error: uploadError } = await supabase.storage
       .from('photos')
       .upload(storagePath, file, { contentType: file.type || 'image/jpeg' })
 
@@ -326,8 +316,7 @@ export async function uploadDiscrepancyPhoto(
   let resolvedBaseId = baseId
   if (!resolvedBaseId) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: disc } = await (supabase as any)
+          const { data: disc } = await supabase
         .from('discrepancies')
         .select('base_id')
         .eq('id', discrepancyId)
@@ -346,10 +335,9 @@ export async function uploadDiscrepancyPhoto(
   if (uploaded_by) photoRow.uploaded_by = uploaded_by
   if (resolvedBaseId) photoRow.base_id = resolvedBaseId
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('photos')
-    .insert(photoRow)
+    .insert(photoRow as any)
     .select()
     .single()
 
@@ -358,15 +346,13 @@ export async function uploadDiscrepancyPhoto(
     return { data: null, error: error.message }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: disc } = await (supabase as any)
+  const { data: disc } = await supabase
     .from('discrepancies')
     .select('photo_count')
     .eq('id', discrepancyId)
     .single()
   if (disc) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any)
+      await supabase
       .from('discrepancies')
       .update({ photo_count: (disc.photo_count || 0) + 1 })
       .eq('id', discrepancyId)
@@ -379,8 +365,7 @@ export async function fetchDiscrepancyPhotos(discrepancyId: string): Promise<Pho
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('photos')
     .select('*')
     .eq('discrepancy_id', discrepancyId)
@@ -410,8 +395,7 @@ export async function fetchStatusUpdates(discrepancyId: string): Promise<StatusU
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('status_updates')
     .select('*, profiles:updated_by(name, rank)')
     .eq('discrepancy_id', discrepancyId)
@@ -426,8 +410,7 @@ export async function fetchStatusUpdates(discrepancyId: string): Promise<StatusU
   }
 
   console.warn('Status updates profile join failed, falling back:', error?.message)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: fallbackData, error: fallbackError } = await (supabase as any)
+  const { data: fallbackData, error: fallbackError } = await supabase
     .from('status_updates')
     .select('*')
     .eq('discrepancy_id', discrepancyId)
@@ -461,10 +444,9 @@ export async function addStatusNote(discrepancyId: string, notes: string, baseId
     }
     if (baseId) row.base_id = baseId
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
+      const { error } = await supabase
       .from('status_updates')
-      .insert(row)
+      .insert(row as any)
 
     if (error) {
       console.error('Failed to add note:', error.message)
@@ -483,8 +465,7 @@ export async function fetchDiscrepancyKPIs(baseId?: string | null): Promise<{
   const supabase = createClient()
   if (!supabase) return { open: 0, critical: 0 }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
+  let query = supabase
     .from('discrepancies')
     .select('severity, status')
     .not('status', 'in', '("completed","cancelled")')

@@ -19,8 +19,7 @@ export async function fetchObstructionEvaluations(baseId?: string | null): Promi
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
+  let query = supabase
     .from('obstruction_evaluations')
     .select('*')
     .order('created_at', { ascending: false })
@@ -43,8 +42,7 @@ export async function fetchObstructionEvaluation(id: string): Promise<Obstructio
   const supabase = createClient()
   if (!supabase) return null
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('obstruction_evaluations')
     .select('*')
     .eq('id', id)
@@ -101,10 +99,9 @@ export async function createObstructionEvaluation(input: {
   if (evaluated_by) row.evaluated_by = evaluated_by
   if (base_id) row.base_id = base_id
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('obstruction_evaluations')
-    .insert(row)
+    .insert(row as any)
     .select()
     .single()
 
@@ -130,14 +127,12 @@ export async function uploadObstructionPhoto(
 
   let storageUrl: string | null = null
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: uploadError } = await (supabase as any).storage
+      const { error: uploadError } = await supabase.storage
       .from('photos')
       .upload(storagePath, file, { contentType: file.type || 'image/jpeg' })
 
     if (!uploadError) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: urlData } = (supabase as any).storage
+          const { data: urlData } = supabase.storage
         .from('photos')
         .getPublicUrl(storagePath)
       if (urlData?.publicUrl) {
@@ -197,8 +192,7 @@ export async function updateObstructionEvaluation(
     photo_storage_path: photo_storage_paths.length > 0 ? JSON.stringify(photo_storage_paths) : null,
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: updateData, error: updateError } = await (supabase as any)
+  const { data: updateData, error: updateError } = await supabase
     .from('obstruction_evaluations')
     .update(updatePayload)
     .eq('id', id)
@@ -225,11 +219,9 @@ export async function deleteObstructionEvaluation(
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase as any).from('obstruction_evaluations').select('display_id, base_id').eq('id', id).single()
+  const { data: existing } = await supabase.from('obstruction_evaluations').select('display_id, base_id').eq('id', id).single()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('obstruction_evaluations')
     .delete()
     .eq('id', id)
@@ -239,8 +231,7 @@ export async function deleteObstructionEvaluation(
     return { error: error.message }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: remaining } = await (supabase as any)
+  const { data: remaining } = await supabase
     .from('obstruction_evaluations')
     .select('id')
     .eq('id', id)

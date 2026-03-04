@@ -140,7 +140,7 @@ export type Database = {
           updated_at: string
         }
         Insert: Omit<Database['public']['Tables']['discrepancies']['Row'], 'id' | 'created_at' | 'updated_at' | 'photo_count'>
-        Update: Partial<Database['public']['Tables']['discrepancies']['Insert']>
+        Update: Partial<Omit<Database['public']['Tables']['discrepancies']['Row'], 'id' | 'created_at'>>
         Relationships: []
       }
       photos: {
@@ -162,6 +162,7 @@ export type Database = {
           longitude: number | null
           captured_at: string
           uploaded_by: string
+          issue_index: number | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['photos']['Row'], 'id' | 'created_at' | 'captured_at'>
@@ -196,11 +197,16 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           photo_count: number
+          status: string
+          draft_data: Record<string, unknown> | null
+          saved_by_name: string | null
+          saved_by_id: string | null
+          saved_at: string | null
           created_at: string
           updated_at: string
         }
         Insert: Omit<Database['public']['Tables']['airfield_checks']['Row'], 'id' | 'created_at' | 'updated_at' | 'photo_count'>
-        Update: Partial<Database['public']['Tables']['airfield_checks']['Insert']>
+        Update: Partial<Omit<Database['public']['Tables']['airfield_checks']['Row'], 'id' | 'created_at'>>
         Relationships: []
       }
       check_comments: {
@@ -246,6 +252,10 @@ export type Database = {
           filed_by_name: string | null
           filed_by_id: string | null
           filed_at: string | null
+          draft_data: Record<string, unknown> | null
+          saved_by_name: string | null
+          saved_by_id: string | null
+          saved_at: string | null
           created_at: string
           updated_at: string
         }
@@ -342,7 +352,7 @@ export type Database = {
           updated_at: string
         }
         Insert: Omit<Database['public']['Tables']['waivers']['Row'], 'id' | 'created_at' | 'updated_at' | 'photo_count' | 'attachment_count'>
-        Update: Partial<Database['public']['Tables']['waivers']['Insert']>
+        Update: Partial<Omit<Database['public']['Tables']['waivers']['Row'], 'id' | 'created_at'>>
         Relationships: []
       }
       waiver_criteria: {
@@ -479,6 +489,118 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['user_regulation_pdfs']['Insert']>
         Relationships: []
       }
+      acsi_inspections: {
+        Row: {
+          id: string
+          display_id: string
+          base_id: string | null
+          airfield_name: string
+          inspection_date: string
+          fiscal_year: number
+          status: AcsiStatus
+          items: AcsiItem[]
+          total_items: number
+          passed_count: number
+          failed_count: number
+          na_count: number
+          inspection_team: AcsiTeamMember[]
+          risk_cert_signatures: AcsiSignatureBlock[]
+          notes: string | null
+          inspector_id: string | null
+          inspector_name: string | null
+          draft_data: AcsiDraftData | null
+          completed_at: string | null
+          completed_by_name: string | null
+          completed_by_id: string | null
+          filed_at: string | null
+          filed_by_name: string | null
+          filed_by_id: string | null
+          saved_at: string | null
+          saved_by_name: string | null
+          saved_by_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['acsi_inspections']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['acsi_inspections']['Insert']>
+        Relationships: []
+      }
+      base_inspection_templates: {
+        Row: {
+          id: string
+          base_id: string
+          template_type: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['base_inspection_templates']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['base_inspection_templates']['Insert']>
+        Relationships: []
+      }
+      base_inspection_sections: {
+        Row: {
+          id: string
+          template_id: string
+          section_id: string
+          title: string
+          guidance: string | null
+          conditional: string | null
+          sort_order: number
+        }
+        Insert: Omit<Database['public']['Tables']['base_inspection_sections']['Row'], 'id'>
+        Update: Partial<Database['public']['Tables']['base_inspection_sections']['Insert']>
+        Relationships: []
+      }
+      base_inspection_items: {
+        Row: {
+          id: string
+          section_id: string
+          item_key: string
+          item_number: number
+          item_text: string
+          item_type: string
+          sort_order: number
+        }
+        Insert: Omit<Database['public']['Tables']['base_inspection_items']['Row'], 'id'>
+        Update: Partial<Database['public']['Tables']['base_inspection_items']['Insert']>
+        Relationships: []
+      }
+      airfield_status: {
+        Row: {
+          id: string
+          base_id: string | null
+          advisory_type: string | null
+          advisory_text: string | null
+          active_runway: string
+          runway_status: string
+          runway_statuses: Record<string, unknown>
+          updated_by: string | null
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['airfield_status']['Row'], 'id' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['airfield_status']['Insert']>
+        Relationships: []
+      }
+      runway_status_log: {
+        Row: {
+          id: string
+          base_id: string | null
+          old_runway_status: string | null
+          new_runway_status: string | null
+          old_active_runway: string | null
+          new_active_runway: string | null
+          old_advisory_type: string | null
+          new_advisory_type: string | null
+          old_advisory_text: string | null
+          new_advisory_text: string | null
+          changed_by: string | null
+          reason: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['runway_status_log']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['runway_status_log']['Insert']>
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
@@ -561,6 +683,11 @@ export type WaiverReview = Database['public']['Tables']['waiver_reviews']['Row']
 export type WaiverCoordination = Database['public']['Tables']['waiver_coordination']['Row']
 export type Regulation = Database['public']['Tables']['regulations']['Row']
 export type UserRegulationPdf = Database['public']['Tables']['user_regulation_pdfs']['Row']
+export type BaseInspectionTemplate = Database['public']['Tables']['base_inspection_templates']['Row']
+export type BaseInspectionSection = Database['public']['Tables']['base_inspection_sections']['Row']
+export type BaseInspectionItem = Database['public']['Tables']['base_inspection_items']['Row']
+export type AirfieldStatusRow = Database['public']['Tables']['airfield_status']['Row']
+export type RunwayStatusLog = Database['public']['Tables']['runway_status_log']['Row']
 
 // === ACSI (Airfield Compliance and Safety Inspection) Types ===
 

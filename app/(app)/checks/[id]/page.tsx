@@ -45,8 +45,7 @@ export default function CheckDetailPage() {
     if (!supabase) { setCurrentUser('Demo User'); return }
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: profile } = await (supabase as any).from('profiles').select('name, rank, first_name, last_name').eq('id', user.id).single()
+      const { data: profile } = await supabase.from('profiles').select('name, rank, first_name, last_name').eq('id', user.id).single()
       if (profile?.first_name && profile?.last_name) {
         const displayName = `${profile.first_name} ${profile.last_name}`
         setCurrentUser(profile.rank ? `${profile.rank} ${displayName}` : displayName)

@@ -66,8 +66,7 @@ export async function fetchAgingDiscrepanciesData(baseId?: string | null): Promi
   const now = new Date()
 
   // Fetch open discrepancies with profile join
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
+  let query = supabase
     .from('discrepancies')
     .select('*, profiles:reported_by(name, rank)')
     .eq('status', 'open')
@@ -103,8 +102,7 @@ export async function fetchAgingDiscrepanciesData(baseId?: string | null): Promi
     })
   } else {
     // Fallback without join
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let fbQuery = (supabase as any)
+    let fbQuery = supabase
       .from('discrepancies')
       .select('*')
       .eq('status', 'open')
@@ -140,8 +138,7 @@ export async function fetchAgingDiscrepanciesData(baseId?: string | null): Promi
   // Fetch latest status update per discrepancy
   const discIds = rows.map((d) => d.id)
   if (discIds.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: updates } = await (supabase as any)
+    const { data: updates } = await supabase
       .from('status_updates')
       .select('discrepancy_id, notes, created_at')
       .in('discrepancy_id', discIds)

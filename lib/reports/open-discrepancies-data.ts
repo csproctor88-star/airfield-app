@@ -94,8 +94,7 @@ export async function fetchOpenDiscrepanciesData(
   // Fetch open discrepancies with profile join
   let discrepancies: OpenDiscrepancy[] = []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
+  let query = supabase
     .from('discrepancies')
     .select('*, profiles:reported_by(name, rank)')
     .eq('status', 'open')
@@ -120,8 +119,7 @@ export async function fetchOpenDiscrepanciesData(
     }) as OpenDiscrepancy[]
   } else {
     // Fallback
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let fbQuery = (supabase as any)
+    let fbQuery = supabase
       .from('discrepancies')
       .select('*')
       .eq('status', 'open')
@@ -148,8 +146,7 @@ export async function fetchOpenDiscrepanciesData(
   // Fetch latest status update per discrepancy
   const discIds = discrepancies.map((d) => d.id)
   if (discIds.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: updates } = await (supabase as any)
+    const { data: updates } = await supabase
       .from('status_updates')
       .select('discrepancy_id, notes, created_at')
       .in('discrepancy_id', discIds)
@@ -175,8 +172,7 @@ export async function fetchOpenDiscrepanciesData(
   // Fetch notes history if requested
   let notesHistory: Record<string, StatusNote[]> = {}
   if (includeNotes && discIds.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: allNotes } = await (supabase as any)
+    const { data: allNotes } = await supabase
       .from('status_updates')
       .select('*, profiles:updated_by(name, rank)')
       .in('discrepancy_id', discIds)
@@ -206,8 +202,7 @@ export async function fetchOpenDiscrepanciesData(
   // Fetch photos for all discrepancies
   const photos: Record<string, PhotoForReport[]> = {}
   if (discIds.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: photoRows } = await (supabase as any)
+    const { data: photoRows } = await supabase
       .from('photos')
       .select('id, discrepancy_id, storage_path, file_name')
       .in('discrepancy_id', discIds)
@@ -222,8 +217,7 @@ export async function fetchOpenDiscrepanciesData(
           dataUrl = row.storage_path
         } else {
           try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { data: urlData } = (supabase as any).storage
+            const { data: urlData } = supabase.storage
               .from('photos')
               .getPublicUrl(row.storage_path)
             if (urlData?.publicUrl) {

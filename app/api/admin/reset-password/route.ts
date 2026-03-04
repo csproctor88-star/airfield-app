@@ -70,7 +70,7 @@ export async function POST(request: Request) {
 
     // Send password reset email
     const { error: resetError } = await admin.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || request.headers.get('origin') || ''}/auth/confirm?next=/reset-password`,
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || ''}/auth/confirm?next=/reset-password`,
     })
 
     if (resetError) {

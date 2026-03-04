@@ -24,8 +24,7 @@ export async function logActivity(
   }
   if (baseId) row.base_id = baseId
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).from('activity_log').insert(row)
+  await supabase.from('activity_log').insert(row as any)
 }
 
 export async function logManualEntry(text: string, baseId?: string | null): Promise<{ error: string | null }> {
@@ -45,8 +44,7 @@ export async function logManualEntry(text: string, baseId?: string | null): Prom
   }
   if (baseId) row.base_id = baseId
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).from('activity_log').insert(row)
+  const { error } = await supabase.from('activity_log').insert(row as any)
 
   if (error) {
     console.error('Manual activity entry failed:', error.message)
@@ -60,17 +58,15 @@ export async function updateActivityEntry(id: string, notes: string, createdAt?:
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase as any).from('activity_log').select('metadata').eq('id', id).single()
+  const { data: existing } = await supabase.from('activity_log').select('metadata').eq('id', id).single()
   const currentMeta = (existing?.metadata as Record<string, unknown>) || {}
 
   const updates: Record<string, unknown> = { metadata: { ...currentMeta, notes } }
   if (createdAt) updates.created_at = createdAt
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('activity_log')
-    .update(updates)
+    .update(updates as any)
     .eq('id', id)
     .select('id')
 
@@ -88,8 +84,7 @@ export async function deleteActivityEntry(id: string): Promise<{ error: string |
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('activity_log')
     .delete()
     .eq('id', id)

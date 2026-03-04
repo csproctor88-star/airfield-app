@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
 function getAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
@@ -10,9 +12,25 @@ function getAdmin() {
   })
 }
 
+async function requireAuth(): Promise<{ user: { id: string } } | NextResponse> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim().replace(/^["']|["']$/g, '')
+  if (!url || !key) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
+  const cookieStore = cookies()
+  const supabase = createServerClient(url, key, {
+    cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} },
+  })
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  return { user }
+}
+
 /** POST — find or create an installation by name, optionally add user as member */
 export async function POST(request: Request) {
   try {
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+
     const supabase = getAdmin()
     if (!supabase) {
       console.error('[installations] SUPABASE_SERVICE_ROLE_KEY or SUPABASE_URL not configured')
@@ -116,6 +134,9 @@ export async function POST(request: Request) {
 /** DELETE — remove a user's membership from an installation */
 export async function DELETE(request: Request) {
   try {
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+
     const supabase = getAdmin()
     if (!supabase) {
       return NextResponse.json(

@@ -5,7 +5,7 @@
 // Updated: AFH 32-7084 URL (DAFH), AFMAN 32-1084→DAFMAN 32-1084, DAFMAN 13-204 V3/V4 URLs
 //
 // Used as demo/seed data until Supabase is connected.
-// Each entry matches the RegulationRow type from lib/supabase/regulations.ts
+// Each entry matches the RegulationEntry type defined below
 
 export type RegulationEntry = {
   reg_id: string

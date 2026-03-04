@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
 function getAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
@@ -11,8 +13,24 @@ function getAdmin() {
   return createClient(url, key)
 }
 
+async function requireAuth(): Promise<{ user: { id: string } } | Response> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim().replace(/^["']|["']$/g, '')
+  if (!url || !key) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
+  const cookieStore = cookies()
+  const supabase = createServerClient(url, key, {
+    cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} },
+  })
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  return { user }
+}
+
 /** GET — return the single airfield_status row */
 export async function GET() {
+  const auth = await requireAuth()
+  if (auth instanceof NextResponse) return auth
+
   const supabase = getAdmin()
   if (!supabase) return NextResponse.json({ error: 'Server not configured — SUPABASE_SERVICE_ROLE_KEY missing' }, { status: 500 })
 
@@ -28,6 +46,9 @@ export async function GET() {
 
 /** PATCH — update airfield_status fields */
 export async function PATCH(request: Request) {
+  const auth = await requireAuth()
+  if (auth instanceof NextResponse) return auth
+
   const supabase = getAdmin()
   if (!supabase) return NextResponse.json({ error: 'Server not configured — SUPABASE_SERVICE_ROLE_KEY missing' }, { status: 500 })
 

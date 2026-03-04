@@ -11,6 +11,7 @@ import {
   saveAcsiDraft,
   fileAcsiInspection,
   fetchAcsiInspection,
+  loadAcsiDraftFromDb,
 } from '@/lib/supabase/acsi-inspections'
 import {
   createNewAcsiDraft,
@@ -80,10 +81,10 @@ export default function AcsiFormPage() {
     }
   }, [installationId])
 
-  // Load draft on mount
+  // Load draft on mount — two-phase: localStorage first (instant), then check DB for newer draft
   useEffect(() => {
     async function init() {
-      // Try resuming from DB
+      // Phase 0: If ?resume= param, fetch by ID from DB (direct link)
       if (resumeId) {
         const existing = await fetchAcsiInspection(resumeId)
         if (existing && existing.draft_data) {
@@ -102,13 +103,41 @@ export default function AcsiFormPage() {
         }
       }
 
-      // Try localStorage
-      const stored = loadAcsiDraft(installationId)
-      if (stored) {
-        setDraft(stored)
+      // Phase 1 (sync): Load from localStorage for instant render
+      const localDraft = loadAcsiDraft(installationId)
+      if (localDraft) {
+        setDraft(localDraft)
         setExpandedSections({})
-      } else {
-        // New inspection — create draft and auto-save to DB
+      }
+
+      // Phase 2 (async): Check DB for a newer draft
+      const dbDraft = await loadAcsiDraftFromDb(installationId)
+
+      if (dbDraft && dbDraft.draft_data) {
+        // Compare timestamps: DB draft saved_at vs localStorage (no timestamp in localStorage, so DB always wins if local doesn't exist)
+        const dbSavedAt = dbDraft.saved_at ? new Date(dbDraft.saved_at).getTime() : 0
+        // localStorage drafts don't have a saved_at — if localDraft exists but DB is newer, prefer DB
+        const shouldUseDb = !localDraft || dbSavedAt > 0
+
+        if (shouldUseDb) {
+          const draftData = dbDraft.draft_data
+          if (draftData.discrepancies) {
+            draftData.discrepancies = normalizeAcsiDraftDiscrepancies(draftData.discrepancies)
+          }
+          setDraft(draftData)
+          setDbRowId(dbDraft.id)
+          setAirfieldName(dbDraft.airfield_name)
+          setInspectionDate(dbDraft.inspection_date)
+          setFiscalYear(dbDraft.fiscal_year)
+          setExpandedSections({})
+          // Mirror to localStorage so future local loads are up-to-date
+          saveAcsiDraftToStorage(draftData, installationId)
+          if (localDraft) {
+            toast.success('Draft loaded from server')
+          }
+        }
+      } else if (!localDraft) {
+        // Nothing found anywhere — create new draft + auto-save to DB
         const newDraft = createNewAcsiDraft()
         setDraft(newDraft)
         const name = currentInstallation?.name || ''
@@ -292,8 +321,7 @@ export default function AcsiFormPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
           completedById = user.id
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { data: profile } = await (supabase as any)
+          const { data: profile } = await supabase
             .from('profiles')
             .select('name, rank')
             .eq('id', user.id)

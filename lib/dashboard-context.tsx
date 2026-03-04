@@ -1,7 +1,8 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
-import { fetchAirfieldStatus, updateAirfieldStatus, type RunwayStatuses } from '@/lib/supabase/airfield-status'
+import { fetchAirfieldStatus, updateAirfieldStatus, type AirfieldStatus, type RunwayStatuses } from '@/lib/supabase/airfield-status'
+import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 
 type Advisory = {
@@ -66,6 +67,35 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setLoaded(true)
     }
     load()
+  }, [installationId])
+
+  // Realtime: subscribe to airfield_status UPDATE events for this base
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase || !installationId) return
+
+    const channel = supabase
+      .channel(`airfield_status:${installationId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'airfield_status', filter: `base_id=eq.${installationId}` },
+        (payload) => {
+          const row = payload.new as AirfieldStatus
+          if (row.advisory_type && row.advisory_text) {
+            setAdvisoryLocal({ type: row.advisory_type, text: row.advisory_text })
+          } else {
+            setAdvisoryLocal(null)
+          }
+          setActiveRunwayLocal(row.active_runway)
+          setRunwayStatusLocal(row.runway_status)
+          if (row.runway_statuses && Object.keys(row.runway_statuses).length > 0) {
+            setRunwayStatusesLocal(row.runway_statuses)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
   }, [installationId])
 
   // Initialize runway_statuses entries for any runways not yet tracked

@@ -105,8 +105,7 @@ export async function fetchWaivers(baseId?: string | null): Promise<WaiverRow[]>
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
+  let query = supabase
     .from('waivers')
     .select('*')
     .order('created_at', { ascending: false })
@@ -226,10 +225,9 @@ export async function createWaiver(input: {
   if (created_by) row.created_by = created_by
   if (input.base_id) row.base_id = input.base_id
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('waivers')
-    .insert(row)
+    .insert(row as any)
     .select()
     .single()
 
@@ -259,8 +257,7 @@ export async function updateWaiver(
     // No authenticated user
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('waivers')
     .update({ ...fields, updated_at: new Date().toISOString(), ...(updated_by ? { updated_by } : {}) })
     .eq('id', id)
@@ -311,10 +308,9 @@ export async function updateWaiverStatus(
     // No authenticated user
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('waivers')
-    .update(updateFields)
+    .update(updateFields as any)
     .eq('id', id)
     .select()
     .single()
@@ -334,11 +330,9 @@ export async function deleteWaiver(id: string): Promise<{ error: string | null }
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase as any).from('waivers').select('waiver_number, base_id').eq('id', id).single()
+  const { data: existing } = await supabase.from('waivers').select('waiver_number, base_id').eq('id', id).single()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).from('waivers').delete().eq('id', id)
+  const { error } = await supabase.from('waivers').delete().eq('id', id)
 
   if (error) {
     console.error('Delete waiver failed:', error.message)
@@ -356,8 +350,7 @@ export async function fetchWaiverCriteria(waiverId: string): Promise<WaiverCrite
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('waiver_criteria')
     .select('*')
     .eq('waiver_id', waiverId)
@@ -379,8 +372,7 @@ export async function upsertWaiverCriteria(
   if (!supabase) return { error: 'Supabase not configured' }
 
   // Delete existing + re-insert (batch upsert)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).from('waiver_criteria').delete().eq('waiver_id', waiverId)
+  await supabase.from('waiver_criteria').delete().eq('waiver_id', waiverId)
 
   if (criteria.length === 0) return { error: null }
 
@@ -392,8 +384,7 @@ export async function upsertWaiverCriteria(
     sort_order: c.sort_order ?? i,
   }))
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).from('waiver_criteria').insert(rows)
+  const { error } = await supabase.from('waiver_criteria').insert(rows)
 
   if (error) {
     console.error('Failed to upsert waiver criteria:', error.message)
@@ -407,8 +398,7 @@ export async function fetchAllWaiverCriteria(baseId: string): Promise<WaiverCrit
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('waiver_criteria')
     .select('*, waivers!inner(base_id)')
     .eq('waivers.base_id', baseId)
@@ -426,8 +416,7 @@ export async function fetchAllWaiverReviews(baseId: string): Promise<WaiverRevie
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('waiver_reviews')
     .select('*, waivers!inner(base_id)')
     .eq('waivers.base_id', baseId)
@@ -447,8 +436,7 @@ export async function fetchWaiverAttachments(waiverId: string): Promise<WaiverAt
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('waiver_attachments')
     .select('*')
     .eq('waiver_id', waiverId)
@@ -504,10 +492,9 @@ export async function uploadWaiverAttachment(input: {
   }
   if (uploaded_by) row.uploaded_by = uploaded_by
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('waiver_attachments')
-    .insert(row)
+    .insert(row as any)
     .select()
     .single()
 
@@ -517,15 +504,13 @@ export async function uploadWaiverAttachment(input: {
   }
 
   // Update attachment_count
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: countData } = await (supabase as any)
+  const { data: countData } = await supabase
     .from('waiver_attachments')
     .select('id', { count: 'exact', head: true })
     .eq('waiver_id', input.waiver_id)
 
   if (countData !== null) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('waivers').update({ attachment_count: countData.length || 0 }).eq('id', input.waiver_id)
+      await supabase.from('waivers').update({ attachment_count: countData.length || 0 }).eq('id', input.waiver_id)
   }
 
   return { data: data as WaiverAttachmentRow, error: null }
@@ -536,15 +521,13 @@ export async function deleteWaiverAttachment(id: string, waiverId: string): Prom
   if (!supabase) return { error: 'Supabase not configured' }
 
   // Get file path for storage deletion
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase as any).from('waiver_attachments').select('file_path').eq('id', id).single()
+  const { data: existing } = await supabase.from('waiver_attachments').select('file_path').eq('id', id).single()
 
   if (existing?.file_path) {
     await supabase.storage.from('waiver-attachments').remove([existing.file_path])
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).from('waiver_attachments').delete().eq('id', id)
+  const { error } = await supabase.from('waiver_attachments').delete().eq('id', id)
 
   if (error) {
     console.error('Failed to delete waiver attachment:', error.message)
@@ -560,8 +543,7 @@ export async function fetchWaiverReviews(waiverId: string): Promise<WaiverReview
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('waiver_reviews')
     .select('*')
     .eq('waiver_id', waiverId)
@@ -579,8 +561,7 @@ export async function fetchReviewsByYear(baseId: string, year: number): Promise<
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('waiver_reviews')
     .select('*')
     .eq('review_year', year)
@@ -628,10 +609,9 @@ export async function createWaiverReview(input: {
   }
   if (reviewed_by) row.reviewed_by = reviewed_by
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('waiver_reviews')
-    .insert(row)
+    .insert(row as any)
     .select()
     .single()
 
@@ -642,9 +622,8 @@ export async function createWaiverReview(input: {
 
   // Update waiver's last_reviewed_date and next_review_due
   const nextReviewDue = `${input.review_year + 1}-02-01`
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).from('waivers').update({
-    last_reviewed_date: row.review_date,
+  await supabase.from('waivers').update({
+    last_reviewed_date: row.review_date as string | null,
     next_review_due: nextReviewDue,
     updated_at: new Date().toISOString(),
   }).eq('id', input.waiver_id)
@@ -661,8 +640,7 @@ export async function updateWaiverReview(
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('waiver_reviews')
     .update(fields)
     .eq('id', id)
@@ -684,8 +662,7 @@ export async function deleteWaiverReview(
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('waiver_reviews')
     .delete()
     .eq('id', id)
@@ -696,8 +673,7 @@ export async function deleteWaiverReview(
   }
 
   // Clear last_reviewed_date and next_review_due on the waiver
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any)
+  await supabase
     .from('waivers')
     .update({ last_reviewed_date: null, next_review_due: null })
     .eq('id', waiverId)
@@ -713,8 +689,7 @@ export async function fetchWaiverCoordination(waiverId: string): Promise<WaiverC
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('waiver_coordination')
     .select('*')
     .eq('waiver_id', waiverId)
@@ -743,8 +718,7 @@ export async function upsertWaiverCoordination(
   if (!supabase) return { error: 'Supabase not configured' }
 
   // Delete existing + re-insert
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).from('waiver_coordination').delete().eq('waiver_id', waiverId)
+  await supabase.from('waiver_coordination').delete().eq('waiver_id', waiverId)
 
   if (entries.length === 0) return { error: null }
 
@@ -758,8 +732,7 @@ export async function upsertWaiverCoordination(
     comments: e.comments || null,
   }))
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).from('waiver_coordination').insert(rows)
+  const { error } = await supabase.from('waiver_coordination').insert(rows)
 
   if (error) {
     console.error('Failed to upsert waiver coordination:', error.message)
@@ -776,8 +749,7 @@ export async function updateWaiverCoordination(
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('waiver_coordination')
     .update(fields)
     .eq('id', id)
@@ -794,8 +766,7 @@ export async function deleteWaiverCoordination(id: string): Promise<{ error: str
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('waiver_coordination')
     .delete()
     .eq('id', id)

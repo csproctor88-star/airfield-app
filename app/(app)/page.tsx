@@ -10,6 +10,7 @@ import { fetchInstallationNavaids } from '@/lib/supabase/installations'
 import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
 import { logActivity } from '@/lib/supabase/activity'
+import { logRunwayStatusChange } from '@/lib/supabase/airfield-status'
 import { fetchActivityLog } from '@/lib/supabase/activity-queries'
 import LoginActivityDialog from '@/components/login-activity-dialog'
 
@@ -186,112 +187,128 @@ export default function HomePage() {
   useEffect(() => { loadNavaids() }, [loadNavaids])
 
   // --- Load Current Status (BWC, Last Check, Inspection, RSC) ---
-  useEffect(() => {
-    async function loadCurrentStatus() {
-      const supabase = createClient()
-      if (!supabase) return
+  const loadCurrentStatus = useCallback(async () => {
+    const supabase = createClient()
+    if (!supabase) return
 
-      // Latest inspection with BWC
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let inspQuery = (supabase as any)
-        .from('inspections')
-        .select('bwc_value, completed_at')
-        .not('bwc_value', 'is', null)
-        .order('completed_at', { ascending: false })
-        .limit(1)
-      if (installationId) inspQuery = inspQuery.eq('base_id', installationId)
-      const { data: insp } = await inspQuery
+    // Latest inspection with BWC
+    let inspQuery = supabase
+      .from('inspections')
+      .select('bwc_value, completed_at')
+      .not('bwc_value', 'is', null)
+      .order('completed_at', { ascending: false })
+      .limit(1)
+    if (installationId) inspQuery = inspQuery.eq('base_id', installationId)
+    const { data: insp } = await inspQuery
 
-      // Latest BASH check (condition_code stored in data JSON)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let bashQuery = (supabase as any)
-        .from('airfield_checks')
-        .select('data, completed_at')
-        .eq('check_type', 'bash')
-        .order('completed_at', { ascending: false })
-        .limit(1)
-      if (installationId) bashQuery = bashQuery.eq('base_id', installationId)
-      const { data: bashCheck } = await bashQuery
+    // Latest BASH check (condition_code stored in data JSON)
+    let bashQuery = supabase
+      .from('airfield_checks')
+      .select('data, completed_at')
+      .eq('check_type', 'bash')
+      .order('completed_at', { ascending: false })
+      .limit(1)
+    if (installationId) bashQuery = bashQuery.eq('base_id', installationId)
+    const { data: bashCheck } = await bashQuery
 
-      // Latest completed inspection
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let latestInspQuery = (supabase as any)
-        .from('inspections')
-        .select('completed_at')
-        .eq('status', 'completed')
-        .order('completed_at', { ascending: false })
-        .limit(1)
-      if (installationId) latestInspQuery = latestInspQuery.eq('base_id', installationId)
-      const { data: latestInsp } = await latestInspQuery
+    // Latest completed inspection
+    let latestInspQuery = supabase
+      .from('inspections')
+      .select('completed_at')
+      .eq('status', 'completed')
+      .order('completed_at', { ascending: false })
+      .limit(1)
+    if (installationId) latestInspQuery = latestInspQuery.eq('base_id', installationId)
+    const { data: latestInsp } = await latestInspQuery
 
-      // Latest check of any type
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let lastCheckQuery = (supabase as any)
-        .from('airfield_checks')
-        .select('check_type, completed_at')
-        .order('completed_at', { ascending: false })
-        .limit(1)
-      if (installationId) lastCheckQuery = lastCheckQuery.eq('base_id', installationId)
-      const { data: lastCheck } = await lastCheckQuery
+    // Latest check of any type
+    let lastCheckQuery = supabase
+      .from('airfield_checks')
+      .select('check_type, completed_at')
+      .order('completed_at', { ascending: false })
+      .limit(1)
+    if (installationId) lastCheckQuery = lastCheckQuery.eq('base_id', installationId)
+    const { data: lastCheck } = await lastCheckQuery
 
-      // Latest RSC check
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let rscQuery = (supabase as any)
-        .from('airfield_checks')
-        .select('data, completed_at')
-        .eq('check_type', 'rsc')
-        .order('completed_at', { ascending: false })
-        .limit(1)
-      if (installationId) rscQuery = rscQuery.eq('base_id', installationId)
-      const { data: rscCheck } = await rscQuery
+    // Latest RSC check
+    let rscQuery = supabase
+      .from('airfield_checks')
+      .select('data, completed_at')
+      .eq('check_type', 'rsc')
+      .order('completed_at', { ascending: false })
+      .limit(1)
+    if (installationId) rscQuery = rscQuery.eq('base_id', installationId)
+    const { data: rscCheck } = await rscQuery
 
-      // Determine BWC: use whichever source (inspection or BASH check) is more recent
-      const inspBwc = insp?.[0]?.bwc_value || null
-      const inspBwcTime = insp?.[0]?.completed_at ? new Date(insp[0].completed_at).getTime() : 0
-      const bashData = bashCheck?.[0]?.data as Record<string, unknown> | undefined
-      const bashConditionRaw = (bashData?.condition_code as string) || null
-      const bashBwcTime = bashCheck?.[0]?.completed_at ? new Date(bashCheck[0].completed_at).getTime() : 0
-      // Normalize BASH condition codes (LOW/MODERATE/SEVERE) to BWC format (LOW/MOD/SEV)
-      const bashConditionMap: Record<string, string> = { LOW: 'LOW', MODERATE: 'MOD', SEVERE: 'SEV' }
-      const bashBwc = bashConditionRaw ? (bashConditionMap[bashConditionRaw] || bashConditionRaw) : null
+    // Determine BWC: use whichever source (inspection or BASH check) is more recent
+    const inspBwc = insp?.[0]?.bwc_value || null
+    const inspBwcTime = insp?.[0]?.completed_at ? new Date(insp[0].completed_at).getTime() : 0
+    const bashData = bashCheck?.[0]?.data as Record<string, unknown> | undefined
+    const bashConditionRaw = (bashData?.condition_code as string) || null
+    const bashBwcTime = bashCheck?.[0]?.completed_at ? new Date(bashCheck[0].completed_at).getTime() : 0
+    // Normalize BASH condition codes (LOW/MODERATE/SEVERE) to BWC format (LOW/MOD/SEV)
+    const bashConditionMap: Record<string, string> = { LOW: 'LOW', MODERATE: 'MOD', SEVERE: 'SEV' }
+    const bashBwc = bashConditionRaw ? (bashConditionMap[bashConditionRaw] || bashConditionRaw) : null
 
-      let bwc: string | null
-      let bwcTimeMs = 0
-      if (inspBwc && bashBwc) {
-        bwc = bashBwcTime > inspBwcTime ? bashBwc : inspBwc
-        bwcTimeMs = bashBwcTime > inspBwcTime ? bashBwcTime : inspBwcTime
-      } else {
-        bwc = inspBwc || bashBwc
-        bwcTimeMs = inspBwc ? inspBwcTime : bashBwcTime
-      }
-      const bwcTime = bwcTimeMs ? new Date(bwcTimeMs).toTimeString().slice(0, 5) : null
-
-      const checkType = lastCheck?.[0]?.check_type?.toUpperCase() || null
-      const checkTime = lastCheck?.[0]?.completed_at
-        ? new Date(lastCheck[0].completed_at).toTimeString().slice(0, 5)
-        : null
-      const inspTime = latestInsp?.[0]?.completed_at
-        ? new Date(latestInsp[0].completed_at).toTimeString().slice(0, 5)
-        : null
-      const rscData = rscCheck?.[0]?.data as Record<string, unknown> | undefined
-      const rscCondition = (rscData?.condition as string) || (rscData?.runway_condition as string) || null
-      const rscTime = rscCheck?.[0]?.completed_at
-        ? new Date(rscCheck[0].completed_at).toTimeString().slice(0, 5)
-        : null
-
-      setCurrentStatus((prev) => ({
-        ...prev,
-        bwc,
-        bwcTime,
-        lastCheckType: checkType,
-        lastCheckTime: checkTime,
-        inspectionCompletion: inspTime,
-        rscCondition,
-        rscTime,
-      }))
+    let bwc: string | null
+    let bwcTimeMs = 0
+    if (inspBwc && bashBwc) {
+      bwc = bashBwcTime > inspBwcTime ? bashBwc : inspBwc
+      bwcTimeMs = bashBwcTime > inspBwcTime ? bashBwcTime : inspBwcTime
+    } else {
+      bwc = inspBwc || bashBwc
+      bwcTimeMs = inspBwc ? inspBwcTime : bashBwcTime
     }
-    loadCurrentStatus()
+    const bwcTime = bwcTimeMs ? new Date(bwcTimeMs).toTimeString().slice(0, 5) : null
+
+    const checkType = lastCheck?.[0]?.check_type?.toUpperCase() || null
+    const checkTime = lastCheck?.[0]?.completed_at
+      ? new Date(lastCheck[0].completed_at).toTimeString().slice(0, 5)
+      : null
+    const inspTime = latestInsp?.[0]?.completed_at
+      ? new Date(latestInsp[0].completed_at).toTimeString().slice(0, 5)
+      : null
+    const rscData = rscCheck?.[0]?.data as Record<string, unknown> | undefined
+    const rscCondition = (rscData?.condition as string) || (rscData?.runway_condition as string) || null
+    const rscTime = rscCheck?.[0]?.completed_at
+      ? new Date(rscCheck[0].completed_at).toTimeString().slice(0, 5)
+      : null
+
+    setCurrentStatus((prev) => ({
+      ...prev,
+      bwc,
+      bwcTime,
+      lastCheckType: checkType,
+      lastCheckTime: checkTime,
+      inspectionCompletion: inspTime,
+      rscCondition,
+      rscTime,
+    }))
   }, [installationId])
+
+  useEffect(() => { loadCurrentStatus() }, [loadCurrentStatus])
+
+  // Realtime: subscribe to airfield_checks and inspections INSERT events
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase || !installationId) return
+
+    const channel = supabase
+      .channel(`dashboard_status:${installationId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'airfield_checks', filter: `base_id=eq.${installationId}` },
+        () => { loadCurrentStatus() }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'inspections', filter: `base_id=eq.${installationId}` },
+        () => { loadCurrentStatus() }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [installationId, loadCurrentStatus])
 
   // --- Load Activity Feed ---
   useEffect(() => {
@@ -465,6 +482,12 @@ export default function HomePage() {
               {advisory && (
                 <button
                   onClick={() => {
+                    logRunwayStatusChange({
+                      oldAdvisoryType: advisory?.type ?? null,
+                      oldAdvisoryText: advisory?.text ?? null,
+                      newAdvisoryType: null,
+                      newAdvisoryText: null,
+                    }, installationId)
                     setAdvisory(null)
                     setAdvisoryDraftText('')
                     setAdvisoryDialogOpen(false)
@@ -479,6 +502,12 @@ export default function HomePage() {
               <button
                 onClick={() => {
                   if (advisoryDraftText.trim()) {
+                    logRunwayStatusChange({
+                      oldAdvisoryType: advisory?.type ?? null,
+                      oldAdvisoryText: advisory?.text ?? null,
+                      newAdvisoryType: advisoryDraftType,
+                      newAdvisoryText: advisoryDraftText.trim(),
+                    }, installationId)
                     setAdvisory({ type: advisoryDraftType, text: advisoryDraftText.trim() })
                   }
                   setAdvisoryDialogOpen(false)
@@ -550,6 +579,7 @@ export default function HomePage() {
                       if (runways.length > 0) {
                         setRunwayActiveEnd(rwy.label, newEnd)
                         logActivity('updated', 'airfield_status', 'active_runway', `RWY ${newEnd}`, { runway: rwy.label, active_end: newEnd }, installationId)
+                        logRunwayStatusChange({ oldActiveRunway: rwy.active_end, newActiveRunway: newEnd }, installationId)
                       } else {
                         const designators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
                         if (designators.length === 0) return
@@ -557,6 +587,7 @@ export default function HomePage() {
                         const next = designators[(idx + 1) % designators.length]
                         setActiveRunway(next)
                         logActivity('updated', 'airfield_status', 'active_runway', `RWY ${next}`, { active_runway: next }, installationId)
+                        logRunwayStatusChange({ oldActiveRunway: activeRunway, newActiveRunway: next }, installationId)
                       }
                     }}
                     style={{
@@ -573,9 +604,11 @@ export default function HomePage() {
                       if (runways.length > 0) {
                         setRunwayStatusForRunway(rwy.label, val)
                         logActivity('status_updated', 'airfield_status', 'runway_status', `RWY ${rwy.active_end}`, { runway: rwy.label, status: val }, installationId)
+                        logRunwayStatusChange({ oldRunwayStatus: rwy.status, newRunwayStatus: val }, installationId)
                       } else {
                         setRunwayStatus(val)
                         logActivity('status_updated', 'airfield_status', 'runway_status', `RWY ${activeRunway}`, { status: val }, installationId)
+                        logRunwayStatusChange({ oldRunwayStatus: runwayStatus, newRunwayStatus: val }, installationId)
                       }
                     }}
                     style={{

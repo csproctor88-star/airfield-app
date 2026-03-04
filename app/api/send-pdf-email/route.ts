@@ -1,10 +1,31 @@
 import { NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 export async function POST(request: Request) {
   try {
+    // Authenticate caller via cookie
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim().replace(/^["']|["']$/g, '')
+    if (!url || !key) {
+      return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
+    }
+    const cookieStore = cookies()
+    const supabase = createServerClient(url, key, {
+      cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} },
+    })
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     if (!process.env.RESEND_API_KEY) {
       return NextResponse.json(
         { error: 'Server not configured — RESEND_API_KEY missing' },
@@ -32,11 +53,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
     }
 
+    const safeFilename = escapeHtml(filename)
     const { error } = await resend.emails.send({
       from: 'Glidepath <info@glidepathops.com>',
       to,
       subject,
-      html: `<p>Please find the attached PDF report: <strong>${filename}</strong></p><p style="color:#888;font-size:12px;">Sent from Glidepath Airfield Management</p>`,
+      html: `<p>Please find the attached PDF report: <strong>${safeFilename}</strong></p><p style="color:#888;font-size:12px;">Sent from Glidepath Airfield Management</p>`,
       attachments: [
         {
           filename,

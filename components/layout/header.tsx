@@ -40,20 +40,21 @@ export function Header() {
     && (userRole === 'airfield_manager' || userRole === 'sys_admin')
 
   useEffect(() => {
-    async function loadProfile() {
+    async function loadProfile(updatePresence: boolean) {
       const supabase = createClient()
       if (!supabase) return
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
-        // Update last_seen_at
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any).from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', user.id)
+        // Update last_seen_at (skipped on initial mount so the login
+        // activity dialog can read the previous value first)
+        if (updatePresence) {
+          await supabase.from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', user.id)
+        }
 
         // Fetch profile
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: profile } = await (supabase as any)
+        const { data: profile } = await supabase
           .from('profiles')
           .select('name, rank, last_seen_at')
           .eq('id', user.id)
@@ -66,9 +67,9 @@ export function Header() {
         }
       } catch { /* ignore */ }
     }
-    loadProfile()
+    loadProfile(false)
     // Update presence every 5 min
-    const interval = setInterval(loadProfile, 5 * 60 * 1000)
+    const interval = setInterval(() => loadProfile(true), 5 * 60 * 1000)
     return () => clearInterval(interval)
   }, [])
 

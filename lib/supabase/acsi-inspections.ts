@@ -6,8 +6,7 @@ export async function fetchAcsiInspections(baseId?: string | null): Promise<Acsi
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
+  let query = supabase
     .from('acsi_inspections')
     .select('*')
     .order('created_at', { ascending: false })
@@ -30,8 +29,7 @@ export async function fetchAcsiInspection(id: string): Promise<AcsiInspection | 
   const supabase = createClient()
   if (!supabase) return null
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('acsi_inspections')
     .select('*')
     .eq('id', id)
@@ -72,8 +70,7 @@ export async function saveAcsiDraft(input: {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       userId = user.id
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: profile } = await (supabase as any)
+          const { data: profile } = await supabase
         .from('profiles')
         .select('name, rank')
         .eq('id', user.id)
@@ -91,8 +88,7 @@ export async function saveAcsiDraft(input: {
   const now = new Date()
 
   if (input.id) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
       .from('acsi_inspections')
       .update({
         airfield_name: input.airfield_name,
@@ -153,10 +149,9 @@ export async function saveAcsiDraft(input: {
   if (userId) row.inspector_id = userId
   if (input.base_id) row.base_id = input.base_id
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('acsi_inspections')
-    .insert(row)
+    .insert(row as any)
     .select()
     .single()
 
@@ -194,8 +189,7 @@ export async function fileAcsiInspection(input: {
 
   const now = new Date()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('acsi_inspections')
     .update({
       status: 'completed',
@@ -236,19 +230,49 @@ export async function fileAcsiInspection(input: {
   return { data: filed, error: null }
 }
 
+/** Load the most recent ACSI draft from the database for cross-device resume. */
+export async function loadAcsiDraftFromDb(baseId?: string | null): Promise<AcsiInspection | null> {
+  const supabase = createClient()
+  if (!supabase) return null
+
+  let query = supabase
+    .from('acsi_inspections')
+    .select('*')
+    .eq('status', 'draft')
+    .order('saved_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (baseId) {
+    query = supabase
+      .from('acsi_inspections')
+      .select('*')
+      .eq('status', 'draft')
+      .eq('base_id', baseId)
+      .order('saved_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+  }
+
+  const { data, error } = await query
+  if (error) {
+    console.error('Failed to load ACSI draft:', error.message)
+    return null
+  }
+  return data as AcsiInspection | null
+}
+
 export async function deleteAcsiInspection(id: string): Promise<{ error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase as any)
+  const { data: existing } = await supabase
     .from('acsi_inspections')
     .select('display_id, base_id')
     .eq('id', id)
     .single()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('acsi_inspections')
     .delete()
     .eq('id', id)
@@ -291,8 +315,7 @@ export async function uploadAcsiPhoto(
   let storageUrl = storagePath
   let usedStorage = false
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: uploadError } = await (supabase as any).storage
+      const { error: uploadError } = await supabase.storage
       .from('photos')
       .upload(storagePath, file, { contentType: file.type || 'image/jpeg' })
     if (!uploadError) {
@@ -339,10 +362,9 @@ export async function uploadAcsiPhoto(
   if (uploaded_by) photoRow.uploaded_by = uploaded_by
   if (baseId) photoRow.base_id = baseId
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('photos')
-    .insert(photoRow)
+    .insert(photoRow as any)
     .select()
     .single()
 
@@ -358,8 +380,7 @@ export async function fetchAcsiPhotos(inspectionId: string): Promise<AcsiPhotoRo
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('photos')
     .select('*')
     .eq('acsi_inspection_id', inspectionId)

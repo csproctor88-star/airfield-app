@@ -71,8 +71,7 @@ export default function DiscrepanciesPage() {
         try {
           const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
           const ids = data.map(d => d.id)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { data: photoRows } = await (supabase as any)
+          const { data: photoRows } = await supabase
             .from('photos')
             .select('discrepancy_id, storage_path')
             .in('discrepancy_id', ids)
@@ -80,12 +79,14 @@ export default function DiscrepanciesPage() {
           if (photoRows && photoRows.length > 0) {
             const pMap: Record<string, string> = {}
             for (const row of photoRows) {
+              const dId = row.discrepancy_id
+              if (!dId) continue
               // Only keep the first photo per discrepancy
-              if (pMap[row.discrepancy_id]) continue
+              if (pMap[dId]) continue
               if (row.storage_path.startsWith('data:')) {
-                pMap[row.discrepancy_id] = row.storage_path
+                pMap[dId] = row.storage_path
               } else if (supabaseUrl) {
-                pMap[row.discrepancy_id] = `${supabaseUrl}/storage/v1/object/public/photos/${row.storage_path}`
+                pMap[dId] = `${supabaseUrl}/storage/v1/object/public/photos/${row.storage_path}`
               }
             }
             setDiscrepancyPhotoMap(pMap)
@@ -166,24 +167,24 @@ export default function DiscrepanciesPage() {
       const supabase = createClient()
       if (supabase) {
         const ids = filtered.map(d => d.id)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: photoRows } = await (supabase as any)
+        const { data: photoRows } = await supabase
           .from('photos')
           .select('discrepancy_id, file_name')
           .in('discrepancy_id', ids)
         if (photoRows) {
           for (const row of photoRows) {
-            if (!photoInfo[row.discrepancy_id]) photoInfo[row.discrepancy_id] = { count: 0, files: [] }
-            photoInfo[row.discrepancy_id].count++
-            if (row.file_name) photoInfo[row.discrepancy_id].files.push(row.file_name)
+            const dId = row.discrepancy_id
+            if (!dId) continue
+            if (!photoInfo[dId]) photoInfo[dId] = { count: 0, files: [] }
+            photoInfo[dId].count++
+            if (row.file_name) photoInfo[dId].files.push(row.file_name)
           }
         }
       }
     }
 
     const hasPhotos = Object.keys(photoInfo).length > 0
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hasCoords = filtered.some(d => (d as any).latitude != null && (d as any).longitude != null)
+    const hasCoords = filtered.some(d => 'latitude' in d && d.latitude != null && 'longitude' in d && d.longitude != null)
     const columns = [
       { header: 'Display ID', key: 'display_id', width: 16 },
       { header: 'Title', key: 'title', width: 36 },
@@ -214,9 +215,8 @@ export default function DiscrepanciesPage() {
         current_status: getCurrentStatusLabel(d.current_status),
         location: d.location_text,
         ...(hasCoords ? {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          coordinates: (d as any).latitude != null && (d as any).longitude != null
-            ? `${Number((d as any).latitude).toFixed(5)}, ${Number((d as any).longitude).toFixed(5)}`
+          coordinates: 'latitude' in d && d.latitude != null && 'longitude' in d && d.longitude != null
+            ? `${Number(d.latitude).toFixed(5)}, ${Number(d.longitude).toFixed(5)}`
             : '',
         } : {}),
         assigned_shop: d.assigned_shop || '',
@@ -258,8 +258,7 @@ export default function DiscrepanciesPage() {
       if (supabase) {
         const ids = filtered.map(d => d.id)
         // Fetch uploaded photos (keyed by discrepancy_id FK)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: photoRows } = await (supabase as any)
+        const { data: photoRows } = await supabase
           .from('photos')
           .select('discrepancy_id, storage_path')
           .in('discrepancy_id', ids)
@@ -284,7 +283,7 @@ export default function DiscrepanciesPage() {
                   }
                 }
               }
-              if (dataUrl) {
+              if (dataUrl && row.discrepancy_id) {
                 if (!photoMap[row.discrepancy_id]) photoMap[row.discrepancy_id] = []
                 photoMap[row.discrepancy_id].push(dataUrl)
               }
@@ -295,10 +294,8 @@ export default function DiscrepanciesPage() {
 
       // Fetch Mapbox satellite map images for discrepancies with coordinates
       for (const d of filtered) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const lat = (d as any).latitude != null ? Number((d as any).latitude) : null
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const lng = (d as any).longitude != null ? Number((d as any).longitude) : null
+        const lat = 'latitude' in d && d.latitude != null ? Number(d.latitude) : null
+        const lng = 'longitude' in d && d.longitude != null ? Number(d.longitude) : null
         if (lat != null && lng != null) {
           const mapDataUrl = await fetchMapImageDataUrl(lat, lng)
           if (mapDataUrl) {
