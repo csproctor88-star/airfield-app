@@ -522,8 +522,8 @@ export default function AirfieldChecksPage() {
         )}
       </div>
 
-      {/* Recent Checks — shown when no check type selected */}
-      {!checkType && recentChecks.length > 0 && (
+      {/* Recent Checks */}
+      {recentChecks.length > 0 && (
         <div style={{ marginBottom: 8 }}>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
             Recent Checks
