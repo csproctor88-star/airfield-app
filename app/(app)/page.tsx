@@ -488,6 +488,7 @@ export default function HomePage() {
                       newAdvisoryType: null,
                       newAdvisoryText: null,
                     }, installationId)
+                    if (installationId) logActivity('updated', 'airfield_status', installationId, 'Advisory Cleared', { old_advisory: advisory?.type ?? null }, installationId)
                     setAdvisory(null)
                     setAdvisoryDraftText('')
                     setAdvisoryDialogOpen(false)
@@ -508,6 +509,7 @@ export default function HomePage() {
                       newAdvisoryType: advisoryDraftType,
                       newAdvisoryText: advisoryDraftText.trim(),
                     }, installationId)
+                    if (installationId) logActivity('updated', 'airfield_status', installationId, `Advisory ${advisoryDraftType}`, { advisory_type: advisoryDraftType, advisory_text: advisoryDraftText.trim() }, installationId)
                     setAdvisory({ type: advisoryDraftType, text: advisoryDraftText.trim() })
                   }
                   setAdvisoryDialogOpen(false)
@@ -578,7 +580,7 @@ export default function HomePage() {
                       const newEnd = rwy.active_end === rwy.end1 ? rwy.end2 : rwy.end1
                       if (runways.length > 0) {
                         setRunwayActiveEnd(rwy.label, newEnd)
-                        logActivity('updated', 'airfield_status', 'active_runway', `RWY ${newEnd}`, { runway: rwy.label, active_end: newEnd }, installationId)
+                        if (installationId) logActivity('updated', 'airfield_status', installationId, `RWY ${newEnd}`, { runway: rwy.label, active_end: newEnd }, installationId)
                         logRunwayStatusChange({ oldActiveRunway: rwy.active_end, newActiveRunway: newEnd }, installationId)
                       } else {
                         const designators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
@@ -586,7 +588,7 @@ export default function HomePage() {
                         const idx = designators.indexOf(activeRunway)
                         const next = designators[(idx + 1) % designators.length]
                         setActiveRunway(next)
-                        logActivity('updated', 'airfield_status', 'active_runway', `RWY ${next}`, { active_runway: next }, installationId)
+                        if (installationId) logActivity('updated', 'airfield_status', installationId, `RWY ${next}`, { active_runway: next }, installationId)
                         logRunwayStatusChange({ oldActiveRunway: activeRunway, newActiveRunway: next }, installationId)
                       }
                     }}
@@ -603,11 +605,11 @@ export default function HomePage() {
                       const val = e.target.value as 'open' | 'suspended' | 'closed'
                       if (runways.length > 0) {
                         setRunwayStatusForRunway(rwy.label, val)
-                        logActivity('status_updated', 'airfield_status', 'runway_status', `RWY ${rwy.active_end}`, { runway: rwy.label, status: val }, installationId)
+                        if (installationId) logActivity('status_updated', 'airfield_status', installationId, `RWY ${rwy.active_end} ${val.toUpperCase()}`, { runway: rwy.label, status: val }, installationId)
                         logRunwayStatusChange({ oldRunwayStatus: rwy.status, newRunwayStatus: val }, installationId)
                       } else {
                         setRunwayStatus(val)
-                        logActivity('status_updated', 'airfield_status', 'runway_status', `RWY ${activeRunway}`, { status: val }, installationId)
+                        if (installationId) logActivity('status_updated', 'airfield_status', installationId, `RWY ${activeRunway} ${val.toUpperCase()}`, { status: val }, installationId)
                         logRunwayStatusChange({ oldRunwayStatus: runwayStatus, newRunwayStatus: val }, installationId)
                       }
                     }}
