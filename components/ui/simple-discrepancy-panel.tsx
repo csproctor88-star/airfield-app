@@ -70,7 +70,7 @@ export function SimpleDiscrepancyPanel({
       border: '1px solid rgba(239, 68, 68, 0.15)',
       borderRadius: 8,
     }}>
-      {/* Row 1: Map (left) | Comment (right) */}
+      {/* Map (left) | Comment + Buttons (right) */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         {/* Left column: Map — takes ~60% */}
         <div style={{ flex: '3 1 0', minWidth: 0 }}>
@@ -83,83 +83,80 @@ export function SimpleDiscrepancyPanel({
           />
         </div>
 
-        {/* Right column: Comment — takes ~40% */}
-        <div style={{ flex: '2 1 0', minWidth: 0 }}>
-          <label style={labelStyle}>Comment / Description</label>
-          <textarea
-            value={detail.comment}
-            onChange={(e) => onChange(index, { ...detail, comment: e.target.value })}
-            placeholder="Describe the discrepancy..."
-            rows={6}
+        {/* Right column: Comment + Buttons — takes ~40% */}
+        <div style={{ flex: '2 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div>
+            <label style={labelStyle}>Comment / Description</label>
+            <textarea
+              value={detail.comment}
+              onChange={(e) => onChange(index, { ...detail, comment: e.target.value })}
+              placeholder="Describe the discrepancy..."
+              rows={4}
+              style={{
+                width: '100%', padding: '10px 12px', borderRadius: 6,
+                border: '1px solid var(--color-border)', background: 'var(--color-bg-input)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
+                fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box',
+              }}
+            />
+          </div>
+
+          {/* Use My Location */}
+          <button
+            type="button"
+            onClick={() => onCaptureGps(index)}
+            disabled={gpsLoading}
             style={{
-              width: '100%', padding: '10px 12px', borderRadius: 6,
-              border: '1px solid var(--color-border)', background: 'var(--color-bg-input)',
-              color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
-              fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              width: '100%', padding: 10, borderRadius: 8, minHeight: 44,
+              border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
+              color: 'var(--color-accent)', fontSize: 'var(--fs-base)', fontWeight: 600,
+              cursor: gpsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
+              opacity: gpsLoading ? 0.6 : 1,
             }}
-          />
-        </div>
-      </div>
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+            </svg>
+            {gpsLoading ? 'Getting...' : 'Use My Location'}
+          </button>
 
-      {/* Row 2: Buttons — GPS, Photo, Save Discrepancy */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-        {/* GPS button */}
-        <button
-          type="button"
-          onClick={() => onCaptureGps(index)}
-          disabled={gpsLoading}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            flex: '1 1 0', minWidth: 120, padding: 10, borderRadius: 8, minHeight: 44,
-            border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
-            color: 'var(--color-accent)', fontSize: 'var(--fs-base)', fontWeight: 600,
-            cursor: gpsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
-            opacity: gpsLoading ? 0.6 : 1,
-          }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-          </svg>
-          {gpsLoading ? 'Getting...' : 'Use My Location'}
-        </button>
-
-        {/* Photo button */}
-        <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
-        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
-        <div style={{ flex: '1 1 0', minWidth: 120 }}>
+          {/* Upload Photos */}
+          <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
+          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
           <PhotoPickerButton
             onUpload={() => fileInputRef.current?.click()}
             onCapture={() => cameraInputRef.current?.click()}
             variant="full"
             label={localPhotos.length > 0 ? `Add Photo (${localPhotos.length})` : 'Add Photo'}
           />
-        </div>
 
-        {/* Save Discrepancy button */}
-        {onSaveDraft && (
-          <button
-            type="button"
-            onClick={onSaveDraft}
-            disabled={draftSaving}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              flex: '1 1 0', minWidth: 120, padding: 10, borderRadius: 8, minHeight: 44,
-              border: '1.5px solid rgba(59,130,246,0.5)',
-              background: 'rgba(59,130,246,0.08)',
-              color: 'var(--color-accent)', fontSize: 'var(--fs-base)', fontWeight: 600,
-              cursor: draftSaving ? 'default' : 'pointer', fontFamily: 'inherit',
-              opacity: draftSaving ? 0.7 : 1,
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-              <polyline points="17 21 17 13 7 13 7 21" />
-              <polyline points="7 3 7 8 15 8" />
-            </svg>
-            {draftSaving ? 'Saving...' : 'Save Draft'}
-          </button>
-        )}
+          {/* Save Draft */}
+          {onSaveDraft && (
+            <button
+              type="button"
+              onClick={onSaveDraft}
+              disabled={draftSaving}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                width: '100%', padding: 10, borderRadius: 8, minHeight: 44,
+                border: '1.5px solid rgba(59,130,246,0.5)',
+                background: 'rgba(59,130,246,0.08)',
+                color: 'var(--color-accent)', fontSize: 'var(--fs-base)', fontWeight: 600,
+                cursor: draftSaving ? 'default' : 'pointer', fontFamily: 'inherit',
+                opacity: draftSaving ? 0.7 : 1,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                <polyline points="17 21 17 13 7 13 7 21" />
+                <polyline points="7 3 7 8 15 8" />
+              </svg>
+              {draftSaving ? 'Saving...' : 'Save Draft'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Photo thumbnails */}
