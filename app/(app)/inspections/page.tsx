@@ -292,7 +292,7 @@ export default function InspectionsPage() {
   const answeredCount = currentHalf
     ? visibleItems.filter((item) => {
         if (item.type === 'bwc') return currentHalf.bwcValue !== null
-        return currentHalf.responses[item.id] != null
+        return true // all items default to pass
       }).length
     : 0
   const progress = totalItems > 0 ? Math.round((answeredCount / totalItems) * 100) : 0
@@ -300,7 +300,7 @@ export default function InspectionsPage() {
   const passedCount = currentHalf
     ? visibleItems.filter((item) => {
         if (item.type === 'bwc') return currentHalf.bwcValue !== null
-        return currentHalf.responses[item.id] === 'pass'
+        return (currentHalf.responses[item.id] ?? 'pass') === 'pass'
       }).length
     : 0
   const failedCount = currentHalf
@@ -323,11 +323,11 @@ export default function InspectionsPage() {
 
   const toggle = (id: string) => {
     updateHalf(activeTab, (h) => {
-      const current = h.responses[id]
-      let next: 'pass' | 'fail' | 'na' | null = null
-      if (current === null || current === undefined) next = 'pass'
-      else if (current === 'pass') next = 'fail'
+      const current = h.responses[id] ?? 'pass' // default = pass
+      let next: 'pass' | 'fail' | 'na' = 'pass'
+      if (current === 'pass') next = 'fail'
       else if (current === 'fail') next = 'na'
+      else if (current === 'na') next = 'pass'
 
       const newDiscs = { ...h.discrepancies }
       if (next === 'fail' && !newDiscs[id]) {
@@ -342,15 +342,6 @@ export default function InspectionsPage() {
     })
   }
 
-  const markAllPass = () => {
-    updateHalf(activeTab, (h) => {
-      const updated = { ...h.responses }
-      visibleItems.forEach((item) => {
-        if (item.type !== 'bwc') updated[item.id] = 'pass'
-      })
-      return { ...h, responses: updated }
-    })
-  }
 
   const setBwcValue = (val: BwcValue) => {
     updateHalf(activeTab, (h) => ({ ...h, bwcValue: h.bwcValue === val ? null : val }))
@@ -482,7 +473,7 @@ export default function InspectionsPage() {
     currentHalf
       ? section.items.filter((item) => {
           if (item.type === 'bwc') return currentHalf.bwcValue !== null
-          return currentHalf.responses[item.id] != null
+          return true // all items default to pass
         }).length
       : 0
 
@@ -1186,18 +1177,6 @@ export default function InspectionsPage() {
               </div>
             </div>
 
-            <button
-              onClick={markAllPass}
-              style={{
-                width: '100%', padding: '10px 0', borderRadius: 8,
-                border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)',
-                color: '#22C55E', fontSize: 'var(--fs-md)', fontWeight: 700,
-                cursor: 'pointer', fontFamily: 'inherit', marginBottom: 12,
-              }}
-            >
-              Mark All Items as Pass
-            </button>
-
             {/* ── Sections & Items ── */}
             {visibleSections.map((section) => {
               const done = sectionDoneCount(section)
@@ -1253,8 +1232,8 @@ export default function InspectionsPage() {
                       )
                     }
 
-                    // Standard pass/fail/na item
-                    const state = currentHalf?.responses[item.id] ?? null
+                    // Standard pass/fail/na item (default = pass)
+                    const state = currentHalf?.responses[item.id] ?? 'pass'
                     const borderColor = state === 'pass' ? '#22C55E' : state === 'fail' ? '#EF4444' : state === 'na' ? 'var(--color-text-3)' : 'var(--color-text-4)'
                     const bgColor = state === 'pass' ? 'rgba(34,197,94,0.1)' : state === 'fail' ? 'rgba(239,68,68,0.1)' : state === 'na' ? 'rgba(100,116,139,0.1)' : 'transparent'
 

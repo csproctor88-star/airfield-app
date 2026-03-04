@@ -120,7 +120,7 @@ export function halfDraftToItems(
     const section = visSecs.find((s) => s.items.some((i) => i.id === item.id))
     const response = item.type === 'bwc'
       ? (half.bwcValue ? 'pass' : null)
-      : (half.responses[item.id] ?? null)
+      : (half.responses[item.id] ?? 'pass')
     const discs = half.discrepancies?.[item.id]
     const firstDisc = discs?.[0]
     return {
@@ -140,7 +140,7 @@ export function halfDraftToItems(
 
   const passed = visItems.filter((i) => {
     if (i.type === 'bwc') return half.bwcValue !== null
-    return half.responses[i.id] === 'pass'
+    return (half.responses[i.id] ?? 'pass') === 'pass'
   }).length
   const failed = visItems.filter((i) => half.responses[i.id] === 'fail').length
   const na = visItems.filter((i) => {
