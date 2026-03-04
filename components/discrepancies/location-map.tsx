@@ -145,9 +145,9 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
         ref={mapContainer}
         style={{
           width: '100%',
-          maxWidth: '35vh',
+          maxWidth: '45vh',
           aspectRatio: '1 / 1',
-          maxHeight: '35vh',
+          maxHeight: '45vh',
           borderRadius: 10,
           overflow: 'hidden',
           border: '1px solid var(--color-border-mid)',
