@@ -450,6 +450,7 @@ export type InspectionPhotoRow = {
   id: string
   inspection_id: string | null
   inspection_item_id: string | null
+  issue_index: number | null
   storage_path: string
   file_name: string
   file_size: number | null
@@ -466,6 +467,7 @@ export async function uploadInspectionPhoto(
   latitude?: number | null,
   longitude?: number | null,
   baseId?: string | null,
+  discIndex?: number | null,
 ): Promise<{ data: InspectionPhotoRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -525,6 +527,7 @@ export async function uploadInspectionPhoto(
   if (baseId) photoRow.base_id = baseId
   if (latitude != null) photoRow.latitude = latitude
   if (longitude != null) photoRow.longitude = longitude
+  if (discIndex != null) photoRow.issue_index = discIndex
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)

@@ -11,7 +11,7 @@ import { fetchInspection, fetchDailyGroup, fetchInspectionPhotos, deleteInspecti
 import type { InspectionItem } from '@/lib/supabase/types'
 import { useInstallation } from '@/lib/installation-context'
 import { ActionButton } from '@/components/ui/button'
-import type { PdfBaseInfo, PdfPhotoMap, PdfGeneralPhotos } from '@/lib/pdf-export'
+import type { PdfBaseInfo, PdfPhotoMap, PdfGeneralPhotos, PdfDiscPhotoMap } from '@/lib/pdf-export'
 import { PhotoViewerModal } from '@/components/discrepancies/modals'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
@@ -201,28 +201,37 @@ export default function InspectionDetailPage() {
       ? { name: currentInstallation.name, icao: currentInstallation.icao, unit: currentInstallation.unit ?? '' }
       : undefined
 
-    // Prepare photo data for PDF embedding
+    // Prepare photo data for PDF embedding — grouped by discrepancy index
     const photoMapForPdf: PdfPhotoMap = {}
+    const discPhotoMapForPdf: PdfDiscPhotoMap = {}
     for (const [itemId, photos] of Object.entries(photosByItem)) {
       const dataUrls: string[] = []
       for (const photo of photos) {
         const url = resolvePhotoUrl(photo)
+        let dataUrl: string | null = null
         if (url.startsWith('data:')) {
-          dataUrls.push(url)
+          dataUrl = url
         } else {
           try {
             const resp = await fetch(url)
             if (resp.ok) {
               const blob = await resp.blob()
               const reader = new FileReader()
-              const dataUrl = await new Promise<string>((resolve, reject) => {
+              dataUrl = await new Promise<string>((resolve, reject) => {
                 reader.onload = () => resolve(reader.result as string)
                 reader.onerror = reject
                 reader.readAsDataURL(blob)
               })
-              dataUrls.push(dataUrl)
             }
           } catch { /* skip failed photos */ }
+        }
+        if (dataUrl) {
+          dataUrls.push(dataUrl)
+          if (photo.issue_index != null) {
+            if (!discPhotoMapForPdf[itemId]) discPhotoMapForPdf[itemId] = {}
+            if (!discPhotoMapForPdf[itemId][photo.issue_index]) discPhotoMapForPdf[itemId][photo.issue_index] = []
+            discPhotoMapForPdf[itemId][photo.issue_index].push(dataUrl)
+          }
         }
       }
       if (dataUrls.length > 0) photoMapForPdf[itemId] = dataUrls
@@ -266,15 +275,18 @@ export default function InspectionDetailPage() {
       })),
     }))
 
+    const hasPhotos = Object.keys(photoMapForPdf).length > 0
+    const hasDiscPhotos = Object.keys(discPhotoMapForPdf).length > 0
+
     if (isSpecialType) {
       const { generateSpecialInspectionPdf } = await import('@/lib/pdf-export')
       return await generateSpecialInspectionPdf(inspectionsWithLocations[0], bi, generalPhotoUrls.length > 0 ? generalPhotoUrls : undefined)
     } else if (isDaily) {
       const { generateCombinedInspectionPdf } = await import('@/lib/pdf-export')
-      return await generateCombinedInspectionPdf(inspectionsWithLocations, bi, Object.keys(photoMapForPdf).length > 0 ? photoMapForPdf : undefined)
+      return await generateCombinedInspectionPdf(inspectionsWithLocations, bi, hasPhotos ? photoMapForPdf : undefined, hasDiscPhotos ? discPhotoMapForPdf : undefined)
     } else {
       const { generateInspectionPdf } = await import('@/lib/pdf-export')
-      return await generateInspectionPdf(inspectionsWithLocations[0], bi, Object.keys(photoMapForPdf).length > 0 ? photoMapForPdf : undefined)
+      return await generateInspectionPdf(inspectionsWithLocations[0], bi, hasPhotos ? photoMapForPdf : undefined, hasDiscPhotos ? discPhotoMapForPdf : undefined)
     }
   }
 
@@ -315,10 +327,26 @@ export default function InspectionDetailPage() {
     setSendingEmail(false)
   }
 
-  // Render item photos inline
-  const renderItemPhotos = (itemId: string) => {
+  // Group item photos by discrepancy index
+  const getItemPhotosByDisc = (itemId: string) => {
     const photos = photosByItem[itemId]
-    if (!photos || photos.length === 0) return null
+    if (!photos || photos.length === 0) return { byDisc: {} as Record<number, InspectionPhotoRow[]>, unlinked: [] as InspectionPhotoRow[] }
+    const byDisc: Record<number, InspectionPhotoRow[]> = {}
+    const unlinked: InspectionPhotoRow[] = []
+    for (const p of photos) {
+      if (p.issue_index != null) {
+        if (!byDisc[p.issue_index]) byDisc[p.issue_index] = []
+        byDisc[p.issue_index].push(p)
+      } else {
+        unlinked.push(p)
+      }
+    }
+    return { byDisc, unlinked }
+  }
+
+  // Render photos for a specific discrepancy
+  const renderDiscPhotos = (photos: InspectionPhotoRow[]) => {
+    if (photos.length === 0) return null
     return (
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
         {photos.map((photo, idx) => (
@@ -339,6 +367,12 @@ export default function InspectionDetailPage() {
         ))}
       </div>
     )
+  }
+
+  // Render unlinked item photos (legacy, no discrepancy index)
+  const renderItemPhotos = (itemId: string) => {
+    const { unlinked } = getItemPhotosByDisc(itemId)
+    return renderDiscPhotos(unlinked)
   }
 
   // Render a single inspection's sections
@@ -441,13 +475,16 @@ export default function InspectionDetailPage() {
                     {item.item}
                   </div>
                   {/* Multi-discrepancy or legacy single-note */}
-                  {isFail && item.discrepancies && item.discrepancies.length > 0 ? (
+                  {isFail && item.discrepancies && item.discrepancies.length > 0 ? (() => {
+                    const { byDisc, unlinked } = getItemPhotosByDisc(item.id)
+                    return (
                     <div style={{ marginTop: 4 }}>
                       {item.discrepancies.map((disc, di) => {
                         const mapToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
                         const discMapUrl = disc.location && mapToken && mapToken !== 'your-mapbox-token-here'
                           ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${disc.location.lon},${disc.location.lat})/${disc.location.lon},${disc.location.lat},16,0/400x200@2x?access_token=${mapToken}`
                           : null
+                        const discPhotosForIdx = byDisc[di] || []
                         return (
                           <div key={di} style={{
                             padding: '6px 8px', marginBottom: 4,
@@ -473,12 +510,13 @@ export default function InspectionDetailPage() {
                                 Location: {disc.location.lat.toFixed(5)}, {disc.location.lon.toFixed(5)}
                               </div>
                             )}
+                            {renderDiscPhotos(discPhotosForIdx)}
                           </div>
                         )
                       })}
-                      {renderItemPhotos(item.id)}
-                    </div>
-                  ) : (
+                      {renderDiscPhotos(unlinked)}
+                    </div>)
+                  })() : (
                     <>
                       {item.notes && isFail && (
                         <div style={{

@@ -432,10 +432,8 @@ export default function InspectionsPage() {
   }
 
   const handleDiscPointSelected = (itemId: string, discIndex: number, lat: number, lng: number) => {
-    handleDiscChange(itemId, discIndex, {
-      ...(draft?.[activeTab]?.discrepancies[itemId]?.[discIndex] || { comment: '', location: null, photo_ids: [] }),
-      location: { lat, lon: lng },
-    })
+    // Only pass location — handleDiscChange merges with prev, preserving comment/photo_ids
+    handleDiscChange(itemId, discIndex, { location: { lat, lon: lng } } as SimpleDiscrepancy)
     toast.success(`Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
   }
 
@@ -450,10 +448,8 @@ export default function InspectionsPage() {
       (position) => {
         const lat = position.coords.latitude
         const lon = position.coords.longitude
-        handleDiscChange(itemId, discIndex, {
-          ...(draft?.[activeTab]?.discrepancies[itemId]?.[discIndex] || { comment: '', location: null, photo_ids: [] }),
-          location: { lat, lon },
-        })
+        // Only pass location — handleDiscChange merges with prev, preserving comment/photo_ids
+        handleDiscChange(itemId, discIndex, { location: { lat, lon } } as SimpleDiscrepancy)
         setDiscFlyTo((prev) => ({ ...prev, [key]: { lat, lng: lon } }))
         setDiscGpsLoading(null)
         toast.success('Location acquired')
@@ -856,13 +852,14 @@ export default function InspectionsPage() {
     }
 
     if (filed > 0 || usingDemo) {
-      // Upload photos for fail items (from discrepancy panels)
+      // Upload photos per-discrepancy with their discrepancy index
       if (filedId && Object.keys(discPhotos).length > 0) {
         for (const [itemId, photoArrays] of Object.entries(discPhotos)) {
-          for (const photos of photoArrays) {
-            const loc = draft?.[activeTab]?.discrepancies[itemId]?.[0]?.location || itemLocations[itemId] || null
+          for (let discIdx = 0; discIdx < photoArrays.length; discIdx++) {
+            const photos = photoArrays[discIdx] || []
+            const loc = draft?.[activeTab]?.discrepancies[itemId]?.[discIdx]?.location || itemLocations[itemId] || null
             for (const photo of photos) {
-              await uploadInspectionPhoto(filedId, photo.file, itemId, loc?.lat, loc?.lon, installationId)
+              await uploadInspectionPhoto(filedId, photo.file, itemId, loc?.lat, loc?.lon, installationId, discIdx)
             }
           }
         }

@@ -27,6 +27,8 @@ async function fetchPhotoAsDataUrl(url: string): Promise<string | null> {
 
 /** Photo data for PDF embedding, keyed by inspection item ID */
 export type PdfPhotoMap = Record<string, string[]>  // itemId -> dataUrl[]
+/** Photos grouped by discrepancy index within an item: itemId -> discIndex -> dataUrl[] */
+export type PdfDiscPhotoMap = Record<string, Record<number, string[]>>
 /** General photos (not tied to an item) */
 export type PdfGeneralPhotos = string[]  // dataUrl[]
 
@@ -69,7 +71,7 @@ interface InspectionData {
   filed_at?: string | null
 }
 
-export async function generateInspectionPdf(inspection: InspectionData, baseInfo?: PdfBaseInfo, photoMap?: PdfPhotoMap) {
+export async function generateInspectionPdf(inspection: InspectionData, baseInfo?: PdfBaseInfo, photoMap?: PdfPhotoMap, discPhotoMap?: PdfDiscPhotoMap) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 15
@@ -235,6 +237,9 @@ export async function generateInspectionPdf(inspection: InspectionData, baseInfo
 
       // Multi-discrepancy rendering for failed items
       if (item.response === 'fail' && item.discrepancies && item.discrepancies.length > 0) {
+        const itemDiscPhotos = discPhotoMap?.[item.id]
+        const hasDiscPhotos = itemDiscPhotos && Object.keys(itemDiscPhotos).length > 0
+
         for (let di = 0; di < item.discrepancies.length; di++) {
           const disc = item.discrepancies[di]
           checkPageBreak(16)
@@ -270,10 +275,28 @@ export async function generateInspectionPdf(inspection: InspectionData, baseInfo
               }
             }
           }
+
+          // Per-discrepancy photos
+          const discPhotos = itemDiscPhotos?.[di]
+          if (discPhotos && discPhotos.length > 0) {
+            for (const dataUrl of discPhotos) {
+              checkPageBreak(38)
+              try {
+                const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG'
+                doc.addImage(dataUrl, format, margin + 4, y, 40, 30)
+                y += 34
+              } catch {
+                doc.setFontSize(7)
+                doc.setTextColor(150)
+                doc.text('[Photo unavailable]', margin + 4, y)
+                y += 5
+              }
+            }
+          }
         }
 
-        // Photos (still flat per item — all tied to item_id)
-        if (photoMap && photoMap[item.id]?.length > 0) {
+        // Unlinked photos (legacy, no disc index)
+        if (!hasDiscPhotos && photoMap && photoMap[item.id]?.length > 0) {
           for (const dataUrl of photoMap[item.id]) {
             checkPageBreak(38)
             try {
@@ -384,6 +407,7 @@ async function renderInspectionSections(
   margin: number,
   contentWidth: number,
   photoMap?: PdfPhotoMap,
+  discPhotoMap?: PdfDiscPhotoMap,
 ): Promise<number> {
   let y = startY
 
@@ -443,46 +467,125 @@ async function renderInspectionSections(
 
       y += 4
 
-      if (item.notes && item.response === 'fail') {
-        doc.setFontSize(7)
-        doc.setTextColor(180, 100, 0)
-        const noteLines = doc.splitTextToSize(`Note: ${item.notes}`, contentWidth - 10)
-        doc.text(noteLines, margin + 4, y)
-        y += noteLines.length * 3.5
-      }
+      // Multi-discrepancy rendering for failed items
+      if (item.response === 'fail' && item.discrepancies && item.discrepancies.length > 0) {
+        const itemDiscPhotos = discPhotoMap?.[item.id]
+        const hasDiscPhotos = itemDiscPhotos && Object.keys(itemDiscPhotos).length > 0
 
-      // Location map for failed items
-      if (item.response === 'fail' && item.location) {
-        const loc = item.location as { lat: number; lon: number }
-        checkPageBreak(48)
-        doc.setFontSize(7)
-        doc.setTextColor(100)
-        doc.text(`Location: ${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`, margin + 4, y)
-        y += 3.5
-        const mapDataUrl = await fetchMapImageDataUrl(loc.lat, loc.lon)
-        if (mapDataUrl) {
-          try {
-            doc.addImage(mapDataUrl, 'PNG', margin + 4, y, 60, 30)
-            y += 34
-          } catch {
-            y += 2
+        for (let di = 0; di < item.discrepancies.length; di++) {
+          const disc = item.discrepancies[di]
+          checkPageBreak(16)
+
+          if (item.discrepancies.length > 1) {
+            doc.setFontSize(7)
+            doc.setTextColor(200, 0, 0)
+            doc.text(`Discrepancy ${di + 1} of ${item.discrepancies.length}:`, margin + 4, y)
+            y += 3.5
+          }
+
+          if (disc.comment) {
+            doc.setFontSize(7)
+            doc.setTextColor(180, 100, 0)
+            const noteLines = doc.splitTextToSize(`Note: ${disc.comment}`, contentWidth - 10)
+            doc.text(noteLines, margin + 4, y)
+            y += noteLines.length * 3.5
+          }
+
+          if (disc.location) {
+            checkPageBreak(48)
+            doc.setFontSize(7)
+            doc.setTextColor(100)
+            doc.text(`Location: ${disc.location.lat.toFixed(5)}, ${disc.location.lon.toFixed(5)}`, margin + 4, y)
+            y += 3.5
+            const mapDataUrl = await fetchMapImageDataUrl(disc.location.lat, disc.location.lon)
+            if (mapDataUrl) {
+              try {
+                doc.addImage(mapDataUrl, 'PNG', margin + 4, y, 60, 30)
+                y += 34
+              } catch {
+                y += 2
+              }
+            }
+          }
+
+          // Per-discrepancy photos
+          const discPhotos = itemDiscPhotos?.[di]
+          if (discPhotos && discPhotos.length > 0) {
+            for (const dataUrl of discPhotos) {
+              checkPageBreak(38)
+              try {
+                const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG'
+                doc.addImage(dataUrl, format, margin + 4, y, 40, 30)
+                y += 34
+              } catch {
+                doc.setFontSize(7)
+                doc.setTextColor(150)
+                doc.text('[Photo unavailable]', margin + 4, y)
+                y += 5
+              }
+            }
           }
         }
-      }
 
-      // Embedded photos for failed items
-      if (item.response === 'fail' && photoMap && photoMap[item.id]?.length > 0) {
-        for (const dataUrl of photoMap[item.id]) {
-          checkPageBreak(38)
-          try {
-            const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG'
-            doc.addImage(dataUrl, format, margin + 4, y, 40, 30)
-            y += 34
-          } catch {
-            doc.setFontSize(7)
-            doc.setTextColor(150)
-            doc.text('[Photo unavailable]', margin + 4, y)
-            y += 5
+        // Unlinked photos (legacy, no disc index) — only show when no per-disc grouping
+        if (!hasDiscPhotos && photoMap && photoMap[item.id]?.length > 0) {
+          for (const dataUrl of photoMap[item.id]) {
+            checkPageBreak(38)
+            try {
+              const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG'
+              doc.addImage(dataUrl, format, margin + 4, y, 40, 30)
+              y += 34
+            } catch {
+              doc.setFontSize(7)
+              doc.setTextColor(150)
+              doc.text('[Photo unavailable]', margin + 4, y)
+              y += 5
+            }
+          }
+        }
+      } else if (item.response === 'fail') {
+        // Legacy single-note rendering
+        if (item.notes) {
+          doc.setFontSize(7)
+          doc.setTextColor(180, 100, 0)
+          const noteLines = doc.splitTextToSize(`Note: ${item.notes}`, contentWidth - 10)
+          doc.text(noteLines, margin + 4, y)
+          y += noteLines.length * 3.5
+        }
+
+        // Location map for failed items
+        if (item.location) {
+          const loc = item.location as { lat: number; lon: number }
+          checkPageBreak(48)
+          doc.setFontSize(7)
+          doc.setTextColor(100)
+          doc.text(`Location: ${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`, margin + 4, y)
+          y += 3.5
+          const mapDataUrl = await fetchMapImageDataUrl(loc.lat, loc.lon)
+          if (mapDataUrl) {
+            try {
+              doc.addImage(mapDataUrl, 'PNG', margin + 4, y, 60, 30)
+              y += 34
+            } catch {
+              y += 2
+            }
+          }
+        }
+
+        // Embedded photos for failed items
+        if (photoMap && photoMap[item.id]?.length > 0) {
+          for (const dataUrl of photoMap[item.id]) {
+            checkPageBreak(38)
+            try {
+              const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG'
+              doc.addImage(dataUrl, format, margin + 4, y, 40, 30)
+              y += 34
+            } catch {
+              doc.setFontSize(7)
+              doc.setTextColor(150)
+              doc.text('[Photo unavailable]', margin + 4, y)
+              y += 5
+            }
           }
         }
       }
@@ -515,7 +618,7 @@ async function renderInspectionSections(
  * Generate a single combined PDF for a daily airfield inspection report
  * containing both airfield and lighting inspection halves.
  */
-export async function generateCombinedInspectionPdf(inspections: InspectionData[], baseInfo?: PdfBaseInfo, photoMap?: PdfPhotoMap) {
+export async function generateCombinedInspectionPdf(inspections: InspectionData[], baseInfo?: PdfBaseInfo, photoMap?: PdfPhotoMap, discPhotoMap?: PdfDiscPhotoMap) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 15
@@ -716,7 +819,7 @@ export async function generateCombinedInspectionPdf(inspections: InspectionData[
     doc.text(`Completed by: ${inspCompletedBy}${inspCompletedTime ? ` @ ${inspCompletedTime}` : ''}`, margin, y)
     y += 5
 
-    y = await renderInspectionSections(doc, insp, y, margin, contentWidth, photoMap)
+    y = await renderInspectionSections(doc, insp, y, margin, contentWidth, photoMap, discPhotoMap)
 
     y += 4
   }
