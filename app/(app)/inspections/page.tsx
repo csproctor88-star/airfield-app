@@ -639,9 +639,10 @@ export default function InspectionsPage() {
   const handleFile = async (skipLightingWarning = false) => {
     if (!draft) return
 
-    // Auto-complete the current tab if not already completed
+    // Auto-complete the current tab if not already completed AND has responses
     const currentDraftHalf = draft[activeTab]
-    if (!currentDraftHalf.savedAt) {
+    const hasResponses = Object.keys(currentDraftHalf.responses).length > 0 || currentDraftHalf.bwcValue !== null
+    if (!currentDraftHalf.savedAt && hasResponses) {
       // Auto-fetch weather + inspector for the current tab
       const weather = await fetchCurrentWeather(baseLat, baseLon)
       const inspector = await getInspectorName()
