@@ -150,7 +150,9 @@ export default function AirfieldChecksPage() {
   const handleIssueChange = useCallback((index: number, detail: SimpleDiscrepancy) => {
     setIssues((prev) => {
       const arr = [...prev]
-      arr[index] = detail
+      // Merge: only take comment from onChange, preserve location/photo_ids from state
+      // This prevents stale render props from overwriting locations set via onPointSelected
+      arr[index] = { ...arr[index], comment: detail.comment }
       return arr
     })
   }, [])

@@ -89,7 +89,11 @@ export function SimpleDiscrepancyPanel({
             <label style={labelStyle}>Comment / Description</label>
             <textarea
               value={detail.comment}
-              onChange={(e) => onChange(index, { ...detail, comment: e.target.value })}
+              onChange={(e) => {
+                // Only pass comment — location and photo_ids are managed by their own handlers
+                // This prevents stale render props from overwriting data
+                onChange(index, { comment: e.target.value } as SimpleDiscrepancy)
+              }}
               placeholder="Describe the discrepancy..."
               rows={4}
               style={{

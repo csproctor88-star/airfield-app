@@ -364,10 +364,13 @@ export default function InspectionsPage() {
   const handleDiscChange = (itemId: string, index: number, detail: SimpleDiscrepancy) => {
     updateHalf(activeTab, (h) => {
       const arr = [...(h.discrepancies[itemId] || [])]
-      arr[index] = detail
+      // Merge: preserve fields from state, overlay with passed detail
+      // This prevents stale render props from overwriting locations/photos
+      const prev = arr[index] || { comment: '', location: null, photo_ids: [] }
+      arr[index] = { ...prev, ...detail }
       // Also sync first discrepancy comment to legacy comments
       if (index === 0) {
-        return { ...h, discrepancies: { ...h.discrepancies, [itemId]: arr }, comments: { ...h.comments, [itemId]: detail.comment } }
+        return { ...h, discrepancies: { ...h.discrepancies, [itemId]: arr }, comments: { ...h.comments, [itemId]: arr[index].comment } }
       }
       return { ...h, discrepancies: { ...h.discrepancies, [itemId]: arr } }
     })
