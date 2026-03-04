@@ -233,47 +233,102 @@ export async function generateInspectionPdf(inspection: InspectionData, baseInfo
 
       y += 4
 
-      // Notes for failed items
-      if (item.notes && item.response === 'fail') {
-        doc.setFontSize(7)
-        doc.setTextColor(180, 100, 0)
-        const noteLines = doc.splitTextToSize(`Note: ${item.notes}`, contentWidth - 10)
-        doc.text(noteLines, margin + 4, y)
-        y += noteLines.length * 3.5
-      }
+      // Multi-discrepancy rendering for failed items
+      if (item.response === 'fail' && item.discrepancies && item.discrepancies.length > 0) {
+        for (let di = 0; di < item.discrepancies.length; di++) {
+          const disc = item.discrepancies[di]
+          checkPageBreak(16)
 
-      // Location map for failed items
-      if (item.response === 'fail' && item.location) {
-        const loc = item.location as { lat: number; lon: number }
-        checkPageBreak(48)
-        doc.setFontSize(7)
-        doc.setTextColor(100)
-        doc.text(`Location: ${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`, margin + 4, y)
-        y += 3.5
-        const mapDataUrl = await fetchMapImageDataUrl(loc.lat, loc.lon)
-        if (mapDataUrl) {
-          try {
-            doc.addImage(mapDataUrl, 'PNG', margin + 4, y, 60, 30)
-            y += 34
-          } catch {
-            y += 2
+          if (item.discrepancies.length > 1) {
+            doc.setFontSize(7)
+            doc.setTextColor(200, 0, 0)
+            doc.text(`Discrepancy ${di + 1} of ${item.discrepancies.length}:`, margin + 4, y)
+            y += 3.5
+          }
+
+          if (disc.comment) {
+            doc.setFontSize(7)
+            doc.setTextColor(180, 100, 0)
+            const noteLines = doc.splitTextToSize(`Note: ${disc.comment}`, contentWidth - 10)
+            doc.text(noteLines, margin + 4, y)
+            y += noteLines.length * 3.5
+          }
+
+          if (disc.location) {
+            checkPageBreak(48)
+            doc.setFontSize(7)
+            doc.setTextColor(100)
+            doc.text(`Location: ${disc.location.lat.toFixed(5)}, ${disc.location.lon.toFixed(5)}`, margin + 4, y)
+            y += 3.5
+            const mapDataUrl = await fetchMapImageDataUrl(disc.location.lat, disc.location.lon)
+            if (mapDataUrl) {
+              try {
+                doc.addImage(mapDataUrl, 'PNG', margin + 4, y, 60, 30)
+                y += 34
+              } catch {
+                y += 2
+              }
+            }
           }
         }
-      }
 
-      // Embedded photos for failed items
-      if (item.response === 'fail' && photoMap && photoMap[item.id]?.length > 0) {
-        for (const dataUrl of photoMap[item.id]) {
-          checkPageBreak(38)
-          try {
-            const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG'
-            doc.addImage(dataUrl, format, margin + 4, y, 40, 30)
-            y += 34
-          } catch {
-            doc.setFontSize(7)
-            doc.setTextColor(150)
-            doc.text('[Photo unavailable]', margin + 4, y)
-            y += 5
+        // Photos (still flat per item — all tied to item_id)
+        if (photoMap && photoMap[item.id]?.length > 0) {
+          for (const dataUrl of photoMap[item.id]) {
+            checkPageBreak(38)
+            try {
+              const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG'
+              doc.addImage(dataUrl, format, margin + 4, y, 40, 30)
+              y += 34
+            } catch {
+              doc.setFontSize(7)
+              doc.setTextColor(150)
+              doc.text('[Photo unavailable]', margin + 4, y)
+              y += 5
+            }
+          }
+        }
+      } else if (item.response === 'fail') {
+        // Legacy single-note rendering
+        if (item.notes) {
+          doc.setFontSize(7)
+          doc.setTextColor(180, 100, 0)
+          const noteLines = doc.splitTextToSize(`Note: ${item.notes}`, contentWidth - 10)
+          doc.text(noteLines, margin + 4, y)
+          y += noteLines.length * 3.5
+        }
+
+        if (item.location) {
+          const loc = item.location as { lat: number; lon: number }
+          checkPageBreak(48)
+          doc.setFontSize(7)
+          doc.setTextColor(100)
+          doc.text(`Location: ${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`, margin + 4, y)
+          y += 3.5
+          const mapDataUrl = await fetchMapImageDataUrl(loc.lat, loc.lon)
+          if (mapDataUrl) {
+            try {
+              doc.addImage(mapDataUrl, 'PNG', margin + 4, y, 60, 30)
+              y += 34
+            } catch {
+              y += 2
+            }
+          }
+        }
+
+        if (photoMap && photoMap[item.id]?.length > 0) {
+          for (const dataUrl of photoMap[item.id]) {
+            checkPageBreak(38)
+            try {
+              const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG'
+              doc.addImage(dataUrl, format, margin + 4, y, 40, 30)
+              y += 34
+            } catch {
+              doc.setFontSize(7)
+              doc.setTextColor(150)
+              doc.text('[Photo unavailable]', margin + 4, y)
+              y += 5
+            }
           }
         }
       }

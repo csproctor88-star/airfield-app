@@ -426,8 +426,46 @@ export default function CheckDetailPage() {
         )}
       </div>
 
-      {/* Pinned Location Map */}
-      {staticMapUrl && (
+      {/* Multi-issue display (new format) or legacy pinned location */}
+      {Array.isArray((data as Record<string, unknown>).issues) && ((data as Record<string, unknown>).issues as { comment: string; location: { lat: number; lon: number } | null }[]).length > 0 ? (
+        <div className="card" style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#EF4444', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            Issues Found ({((data as Record<string, unknown>).issues as { comment: string; location: { lat: number; lon: number } | null }[]).length})
+          </div>
+          {((data as Record<string, unknown>).issues as { comment: string; location: { lat: number; lon: number } | null }[]).map((issue, idx) => {
+            const issueMapUrl = issue.location && mapboxToken && mapboxToken !== 'your-mapbox-token-here'
+              ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${issue.location.lon},${issue.location.lat})/${issue.location.lon},${issue.location.lat},15,0/600x300@2x?access_token=${mapboxToken}`
+              : null
+            return (
+              <div key={idx} style={{
+                padding: '10px 12px', marginBottom: 8,
+                background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.12)',
+                borderRadius: 8,
+              }}>
+                {((data as Record<string, unknown>).issues as unknown[]).length > 1 && (
+                  <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EF4444', marginBottom: 4 }}>
+                    Issue {idx + 1} of {((data as Record<string, unknown>).issues as unknown[]).length}
+                  </div>
+                )}
+                {issue.comment && (
+                  <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.4, marginBottom: 4 }}>
+                    {issue.comment}
+                  </div>
+                )}
+                {issueMapUrl && (
+                  <img src={issueMapUrl} alt={`Issue ${idx + 1} location`}
+                    style={{ width: '100%', display: 'block', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginBottom: 4 }} />
+                )}
+                {issue.location && (
+                  <div style={{ fontSize: 'var(--fs-sm)', color: '#34D399', fontFamily: 'monospace', fontWeight: 600 }}>
+                    {issue.location.lat.toFixed(5)}, {issue.location.lon.toFixed(5)}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      ) : staticMapUrl && (
         <div className="card" style={{ marginBottom: 8, padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '8px 12px 4px', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             Pinned Location

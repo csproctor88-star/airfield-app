@@ -518,6 +518,12 @@ export type WaiverCoordinationOffice = 'civil_engineer' | 'airfield_manager' | '
 export type WaiverCoordinationStatus = 'pending' | 'concur' | 'non_concur'
 export type RegulationPubType = 'DAF' | 'FAA' | 'UFC' | 'DoD' | 'ICAO' | 'CFR'
 
+export type SimpleDiscrepancy = {
+  comment: string
+  location: { lat: number; lon: number } | null
+  photo_ids: string[]
+}
+
 export type InspectionItem = {
   id: string
   section: string
@@ -528,6 +534,7 @@ export type InspectionItem = {
   photo_urls?: string[]
   location?: { lat: number; lon: number } | null
   generated_discrepancy_id: string | null
+  discrepancies?: SimpleDiscrepancy[]
 }
 
 // Table row shorthand types

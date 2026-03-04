@@ -222,34 +222,85 @@ export async function generateCheckPdf(input: CheckPdfInput) {
       y += 6
   }
 
-  // ── Location ──
-  const lat = check.latitude != null ? Number(check.latitude) : null
-  const lng = check.longitude != null ? Number(check.longitude) : null
-  if (lat != null && lng != null) {
-    checkPageBreak(50)
+  // ── Issues / Location ──
+  const issuesArr = Array.isArray(data.issues) ? (data.issues as { comment: string; location: { lat: number; lon: number } | null }[]) : []
+  if (issuesArr.length > 0) {
+    checkPageBreak(16)
     y += 2
     doc.setFontSize(10)
     doc.setTextColor(0)
     doc.setFont('helvetica', 'bold')
-    doc.text('LOCATION', margin, y)
-    y += 5
+    doc.text(`ISSUES FOUND (${issuesArr.length})`, margin, y)
+    y += 6
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(9)
-    doc.setTextColor(40)
-    doc.text(`Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}`, margin, y)
-    y += 5
 
-    // Embed static satellite map image
-    const mapDataUrl = await fetchMapImageDataUrl(lat, lng)
-    if (mapDataUrl) {
-      try {
-        doc.addImage(mapDataUrl, 'PNG', margin, y, 80, 40)
-        y += 44
-      } catch {
+    for (let ii = 0; ii < issuesArr.length; ii++) {
+      const issue = issuesArr[ii]
+      checkPageBreak(16)
+
+      if (issuesArr.length > 1) {
+        doc.setFontSize(9)
+        doc.setTextColor(200, 0, 0)
+        doc.text(`Issue ${ii + 1} of ${issuesArr.length}:`, margin, y)
+        y += 5
+      }
+
+      if (issue.comment) {
+        doc.setFontSize(9)
+        doc.setTextColor(40)
+        const commentLines = doc.splitTextToSize(issue.comment, contentWidth)
+        doc.text(commentLines, margin, y)
+        y += commentLines.length * 4 + 2
+      }
+
+      if (issue.location) {
+        checkPageBreak(50)
+        doc.setFontSize(9)
+        doc.setTextColor(40)
+        doc.text(`Coordinates: ${issue.location.lat.toFixed(5)}, ${issue.location.lon.toFixed(5)}`, margin, y)
+        y += 5
+        const mapDataUrl = await fetchMapImageDataUrl(issue.location.lat, issue.location.lon)
+        if (mapDataUrl) {
+          try {
+            doc.addImage(mapDataUrl, 'PNG', margin, y, 80, 40)
+            y += 44
+          } catch {
+            y += 4
+          }
+        }
+      }
+
+      y += 2
+    }
+  } else {
+    // Legacy single location
+    const lat = check.latitude != null ? Number(check.latitude) : null
+    const lng = check.longitude != null ? Number(check.longitude) : null
+    if (lat != null && lng != null) {
+      checkPageBreak(50)
+      y += 2
+      doc.setFontSize(10)
+      doc.setTextColor(0)
+      doc.setFont('helvetica', 'bold')
+      doc.text('LOCATION', margin, y)
+      y += 5
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(40)
+      doc.text(`Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}`, margin, y)
+      y += 5
+
+      const mapDataUrl = await fetchMapImageDataUrl(lat, lng)
+      if (mapDataUrl) {
+        try {
+          doc.addImage(mapDataUrl, 'PNG', margin, y, 80, 40)
+          y += 44
+        } catch {
+          y += 4
+        }
+      } else {
         y += 4
       }
-    } else {
-      y += 4
     }
   }
 

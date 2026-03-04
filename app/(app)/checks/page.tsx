@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
 import {
   CHECK_TYPE_CONFIG,
@@ -18,12 +17,8 @@ import { DEMO_CHECKS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { getAirfieldDiagram } from '@/lib/airfield-diagram'
-import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
-
-const CheckLocationMap = dynamic(
-  () => import('@/components/discrepancies/location-map'),
-  { ssr: false },
-)
+import { SimpleDiscrepancyPanelGroup } from '@/components/ui/simple-discrepancy-panel-group'
+import type { SimpleDiscrepancy } from '@/lib/supabase/types'
 
 type LocalComment = {
   id: string
@@ -35,15 +30,11 @@ type LocalComment = {
 export default function AirfieldChecksPage() {
   const router = useRouter()
   const { installationId, areas: installationAreas } = useInstallation()
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const cameraInputRef = useRef<HTMLInputElement>(null)
   const [checkType, setCheckType] = useState<CheckType | ''>('')
   const [areas, setAreas] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [currentUser, setCurrentUser] = useState('Inspector')
   const [recentChecks, setRecentChecks] = useState<CheckRow[]>([])
-  const [gpsLoading, setGpsLoading] = useState(false)
-
   // ── Airfield diagram state ──
   const [diagramUrl, setDiagramUrl] = useState<string | null>(null)
   const [showDiagram, setShowDiagram] = useState(false)
@@ -81,35 +72,103 @@ export default function AirfieldChecksPage() {
   // Issue Found toggle
   const [issueFound, setIssueFound] = useState(false)
 
-  // Location
+  // ── Multi-issue state ──
+  const [issues, setIssues] = useState<SimpleDiscrepancy[]>([])
+  const [issuePhotos, setIssuePhotos] = useState<{ file: File; url: string; name: string }[][]>([])
+  const [issueGpsLoading, setIssueGpsLoading] = useState<number | null>(null)
+  const [issueFlyTo, setIssueFlyTo] = useState<({ lat: number; lng: number } | null)[]>([])
+
+  // Legacy location (kept for backward compat in handleComplete)
   const [selectedLat, setSelectedLat] = useState<number | null>(null)
   const [selectedLng, setSelectedLng] = useState<number | null>(null)
-  const [flyToPoint, setFlyToPoint] = useState<{ lat: number; lng: number } | null>(null)
 
-  const handlePointSelected = useCallback((lat: number, lng: number) => {
-    setSelectedLat(lat)
-    setSelectedLng(lng)
+  // ── Issue handlers ──
+  const handleIssueChange = useCallback((index: number, detail: SimpleDiscrepancy) => {
+    setIssues((prev) => {
+      const arr = [...prev]
+      arr[index] = detail
+      return arr
+    })
+  }, [])
+
+  const handleAddIssue = useCallback(() => {
+    setIssues((prev) => [...prev, { comment: '', location: null, photo_ids: [] }])
+    setIssuePhotos((prev) => [...prev, []])
+    setIssueFlyTo((prev) => [...prev, null])
+  }, [])
+
+  const handleRemoveIssue = useCallback((index: number) => {
+    setIssues((prev) => {
+      if (prev.length <= 1) return prev
+      return prev.filter((_, i) => i !== index)
+    })
+    setIssuePhotos((prev) => {
+      if (prev.length <= 1) return prev
+      return prev.filter((_, i) => i !== index)
+    })
+    setIssueFlyTo((prev) => prev.filter((_, i) => i !== index))
+  }, [])
+
+  const handleIssueAddPhotos = useCallback((index: number, files: FileList) => {
+    const newPhotos = Array.from(files).map((file) => ({
+      file,
+      url: URL.createObjectURL(file),
+      name: file.name,
+    }))
+    setIssuePhotos((prev) => {
+      const arr = [...prev]
+      while (arr.length <= index) arr.push([])
+      arr[index] = [...arr[index], ...newPhotos]
+      return arr
+    })
+    toast.success(`${files.length} photo(s) added`)
+  }, [])
+
+  const handleIssueRemovePhoto = useCallback((index: number, photoIdx: number) => {
+    setIssuePhotos((prev) => {
+      const arr = [...prev]
+      if (arr[index]) {
+        URL.revokeObjectURL(arr[index][photoIdx].url)
+        arr[index] = arr[index].filter((_, i) => i !== photoIdx)
+      }
+      return arr
+    })
+  }, [])
+
+  const handleIssuePointSelected = useCallback((index: number, lat: number, lng: number) => {
+    setIssues((prev) => {
+      const arr = [...prev]
+      arr[index] = { ...arr[index], location: { lat, lon: lng } }
+      return arr
+    })
     toast.success(`Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
   }, [])
 
-  const captureLocation = useCallback(() => {
+  const handleIssueCaptureGps = useCallback((index: number) => {
     if (!navigator.geolocation) {
       toast.error('Geolocation is not supported by your browser')
       return
     }
-    setGpsLoading(true)
+    setIssueGpsLoading(index)
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const lat = position.coords.latitude
-        const lng = position.coords.longitude
-        setSelectedLat(lat)
-        setSelectedLng(lng)
-        setFlyToPoint({ lat, lng })
-        setGpsLoading(false)
-        toast.success(`Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+        const lon = position.coords.longitude
+        setIssues((prev) => {
+          const arr = [...prev]
+          arr[index] = { ...arr[index], location: { lat, lon } }
+          return arr
+        })
+        setIssueFlyTo((prev) => {
+          const arr = [...prev]
+          arr[index] = { lat, lng: lon }
+          return arr
+        })
+        setIssueGpsLoading(null)
+        toast.success('Location acquired')
       },
       (error) => {
-        setGpsLoading(false)
+        setIssueGpsLoading(null)
         switch (error.code) {
           case error.PERMISSION_DENIED:
             toast.error('Location access denied. Enable in browser settings.')
@@ -127,20 +186,6 @@ export default function AirfieldChecksPage() {
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     )
   }, [])
-
-  // Photos
-  const [photos, setPhotos] = useState<{ file: File; url: string; name: string }[]>([])
-
-  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files?.length) return
-    Array.from(files).forEach((file) => {
-      const url = URL.createObjectURL(file)
-      setPhotos((prev) => [...prev, { file, url, name: file.name }])
-    })
-    toast.success(`${files.length} photo(s) added`)
-    e.target.value = ''
-  }
 
   // Remarks
   const [remarkText, setRemarkText] = useState('')
@@ -190,15 +235,24 @@ export default function AirfieldChecksPage() {
   }
 
   const buildCheckData = (): Record<string, unknown> => {
+    const base: Record<string, unknown> = {}
+    // Include issues array if issue found
+    if (issueFound && issues.length > 0) {
+      base.issues = issues.map((iss) => ({
+        comment: iss.comment,
+        location: iss.location,
+      }))
+    }
     switch (checkType) {
       case 'rsc':
-        return { condition: rscCondition }
+        return { ...base, condition: rscCondition }
       case 'rcr':
-        return { rcr_value: rcrValue, condition_type: rcrConditionType }
+        return { ...base, rcr_value: rcrValue, condition_type: rcrConditionType }
       case 'bash':
-        return { condition_code: bashCondition, species_observed: bashSpecies }
+        return { ...base, condition_code: bashCondition, species_observed: bashSpecies }
       case 'ife':
         return {
+          ...base,
           aircraft_type: aircraftType,
           callsign,
           nature: emergencyNature,
@@ -207,16 +261,17 @@ export default function AirfieldChecksPage() {
         }
       case 'ground_emergency':
         return {
+          ...base,
           aircraft_type: aircraftType,
           nature: emergencyNature,
           actions: checkedActions,
           agencies_notified: notifiedAgencies,
         }
       case 'heavy_aircraft':
-        return { aircraft_type: heavyAircraftType }
+        return { ...base, aircraft_type: heavyAircraftType }
       case 'fod':
       default:
-        return {}
+        return base
     }
   }
 
@@ -252,14 +307,19 @@ export default function AirfieldChecksPage() {
       created_at: r.created_at,
     }))
 
+    // Use first issue's location for backward compat
+    const firstIssueLoc = issues[0]?.location
+    const lat = firstIssueLoc?.lat ?? selectedLat
+    const lng = firstIssueLoc?.lon ?? selectedLng
+
     const { data: created, error } = await createCheck({
       check_type: checkType,
       areas,
       data,
       completed_by: currentUser,
       comments,
-      latitude: selectedLat,
-      longitude: selectedLng,
+      latitude: lat,
+      longitude: lng,
       base_id: installationId,
     })
 
@@ -269,15 +329,16 @@ export default function AirfieldChecksPage() {
       return
     }
 
-    // Upload photos
-    if (photos.length > 0) {
+    // Upload all issue photos
+    const allIssuePhotos = issuePhotos.flat()
+    if (allIssuePhotos.length > 0) {
       let uploaded = 0
-      for (const photo of photos) {
+      for (const photo of allIssuePhotos) {
         const { error: photoErr } = await uploadCheckPhoto(created.id, photo.file)
         if (!photoErr) uploaded++
       }
-      if (uploaded < photos.length) {
-        toast.error(`${photos.length - uploaded} photo(s) failed to upload`)
+      if (uploaded < allIssuePhotos.length) {
+        toast.error(`${allIssuePhotos.length - uploaded} photo(s) failed to upload`)
       }
     }
 
@@ -301,7 +362,10 @@ export default function AirfieldChecksPage() {
     setSelectedLat(null)
     setSelectedLng(null)
     setIssueFound(false)
-    setPhotos([])
+    issuePhotos.flat().forEach((p) => URL.revokeObjectURL(p.url))
+    setIssues([])
+    setIssuePhotos([])
+    setIssueFlyTo([])
   }
 
   const typeConfig = checkType ? CHECK_TYPE_CONFIG[checkType] : null
@@ -698,8 +762,16 @@ export default function AirfieldChecksPage() {
           onClick={() => {
             const next = !issueFound
             setIssueFound(next)
-            if (!next) {
-              setPhotos([])
+            if (next) {
+              setIssues([{ comment: '', location: null, photo_ids: [] }])
+              setIssuePhotos([[]])
+              setIssueFlyTo([null])
+            } else {
+              // Clean up
+              issuePhotos.flat().forEach((p) => URL.revokeObjectURL(p.url))
+              setIssues([])
+              setIssuePhotos([])
+              setIssueFlyTo([])
               setSelectedLat(null)
               setSelectedLng(null)
             }
@@ -726,42 +798,25 @@ export default function AirfieldChecksPage() {
         </button>
       )}
 
-      {/* Pin Location on Map — only when issue found */}
-      {checkType && issueFound && (
+      {/* Issue Details — multi-issue panels */}
+      {checkType && issueFound && issues.length > 0 && (
         <div className="card" style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-            Pin Location on Map
-          </div>
-          <CheckLocationMap
-            onPointSelected={handlePointSelected}
-            selectedLat={selectedLat}
-            selectedLng={selectedLng}
-            flyToPoint={flyToPoint}
+          <SimpleDiscrepancyPanelGroup
+            discrepancies={issues}
+            onChange={handleIssueChange}
+            onAdd={handleAddIssue}
+            onRemove={handleRemoveIssue}
+            localPhotos={issuePhotos}
+            onAddPhotos={handleIssueAddPhotos}
+            onRemovePhoto={handleIssueRemovePhoto}
+            onPointSelected={handleIssuePointSelected}
+            onCaptureGps={handleIssueCaptureGps}
+            gpsLoadingIndex={issueGpsLoading}
+            flyToPoints={issueFlyTo}
+            headerLabel="Issue Details"
+            addLabel="Add Issue"
           />
         </div>
-      )}
-
-      {/* GPS Use My Location — only when issue found */}
-      {checkType && issueFound && (
-        <button
-          type="button"
-          onClick={captureLocation}
-          disabled={gpsLoading}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            width: '100%', padding: '10px 16px', marginBottom: 8, borderRadius: 8,
-            border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
-            color: 'var(--color-accent)', fontSize: 'var(--fs-md)', fontWeight: 600,
-            cursor: gpsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
-            opacity: gpsLoading ? 0.6 : 1,
-          }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-          </svg>
-          {gpsLoading ? 'Getting Location...' : 'Use My Location'}
-        </button>
       )}
 
       {/* Remarks Section */}
@@ -821,42 +876,7 @@ export default function AirfieldChecksPage() {
         </div>
       )}
 
-      {/* Photos Section — only when issue found */}
-      {checkType && issueFound && (
-        <div className="card" style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-            Photos
-          </div>
-
-          {photos.length > 0 && (
-            <div className="photo-grid" style={{ marginBottom: 8 }}>
-              {photos.map((p, i) => (
-                <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border-active)' }}>
-                  <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <button
-                    type="button"
-                    onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))}
-                    style={{
-                      position: 'absolute', top: 2, right: 2, background: 'var(--color-overlay)', border: 'none',
-                      color: '#EF4444', fontSize: 'var(--fs-md)', width: 20, height: 20, borderRadius: '50%', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
-          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
-          <PhotoPickerButton
-            onUpload={() => fileInputRef.current?.click()}
-            onCapture={() => cameraInputRef.current?.click()}
-          />
-        </div>
-      )}
+      {/* Photos section removed — photos now inside issue panels */}
 
       {/* Complete Check Button */}
       {checkType && (

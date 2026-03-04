@@ -30,8 +30,9 @@ import { DEMO_INSPECTIONS } from '@/lib/demo-data'
 import { getAirfieldDiagram } from '@/lib/airfield-diagram'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 import { uploadInspectionPhoto } from '@/lib/supabase/inspections'
-import type { InspectionItem } from '@/lib/supabase/types'
+import type { InspectionItem, SimpleDiscrepancy } from '@/lib/supabase/types'
 import dynamic from 'next/dynamic'
+import { SimpleDiscrepancyPanelGroup } from '@/components/ui/simple-discrepancy-panel-group'
 
 const InspectionLocationMap = dynamic(
   () => import('@/components/discrepancies/location-map'),
@@ -103,16 +104,22 @@ export default function InspectionsPage() {
   const [filing, setFiling] = useState(false)
   const [showLightingWarning, setShowLightingWarning] = useState(false)
 
-  // ── Photo state for fail items ──
+  // ── Photo state for fail items (keyed by itemId → discrepancy index → photos) ──
   const [itemPhotos, setItemPhotos] = useState<Record<string, { file: File; url: string; name: string }[]>>({})
   const [activePhotoItemId, setActivePhotoItemId] = useState<string | null>(null)
   const itemFileRef = useRef<HTMLInputElement>(null)
   const itemCameraRef = useRef<HTMLInputElement>(null)
 
+  // ── Discrepancy photos: Record<itemId, photos[][]> — one array per discrepancy ──
+  const [discPhotos, setDiscPhotos] = useState<Record<string, { file: File; url: string; name: string }[][]>>({})
+
   // ── GPS location state for fail items ──
   const [itemLocations, setItemLocations] = useState<Record<string, { lat: number; lon: number }>>({})
   const [gpsLoading, setGpsLoading] = useState<string | null>(null)
   const [itemFlyTo, setItemFlyTo] = useState<Record<string, { lat: number; lng: number }>>({})
+  // ── GPS state for discrepancy panels: "itemId:discIndex" ──
+  const [discGpsLoading, setDiscGpsLoading] = useState<string | null>(null)
+  const [discFlyTo, setDiscFlyTo] = useState<Record<string, { lat: number; lng: number }>>({})
 
 
   // ── Airfield diagram state ──
@@ -290,7 +297,17 @@ export default function InspectionsPage() {
       if (current === null || current === undefined) next = 'pass'
       else if (current === 'pass') next = 'fail'
       else if (current === 'fail') next = 'na'
-      return { ...h, responses: { ...h.responses, [id]: next } }
+
+      const newDiscs = { ...h.discrepancies }
+      if (next === 'fail' && !newDiscs[id]) {
+        // Auto-create first discrepancy when toggled to fail
+        newDiscs[id] = [{ comment: '', location: null, photo_ids: [] }]
+      } else if (next !== 'fail') {
+        // Clean up discrepancies when toggled away from fail
+        delete newDiscs[id]
+      }
+
+      return { ...h, responses: { ...h.responses, [id]: next }, discrepancies: newDiscs }
     })
   }
 
@@ -310,6 +327,121 @@ export default function InspectionsPage() {
 
   const setComment = (itemId: string, text: string) => {
     updateHalf(activeTab, (h) => ({ ...h, comments: { ...h.comments, [itemId]: text } }))
+  }
+
+  // ── Discrepancy handlers ──
+  const handleDiscChange = (itemId: string, index: number, detail: SimpleDiscrepancy) => {
+    updateHalf(activeTab, (h) => {
+      const arr = [...(h.discrepancies[itemId] || [])]
+      arr[index] = detail
+      // Also sync first discrepancy comment to legacy comments
+      if (index === 0) {
+        return { ...h, discrepancies: { ...h.discrepancies, [itemId]: arr }, comments: { ...h.comments, [itemId]: detail.comment } }
+      }
+      return { ...h, discrepancies: { ...h.discrepancies, [itemId]: arr } }
+    })
+  }
+
+  const handleAddDisc = (itemId: string) => {
+    updateHalf(activeTab, (h) => {
+      const arr = [...(h.discrepancies[itemId] || [])]
+      arr.push({ comment: '', location: null, photo_ids: [] })
+      return { ...h, discrepancies: { ...h.discrepancies, [itemId]: arr } }
+    })
+    // Add empty photo array for new discrepancy
+    setDiscPhotos((prev) => {
+      const arr = [...(prev[itemId] || [])]
+      arr.push([])
+      return { ...prev, [itemId]: arr }
+    })
+  }
+
+  const handleRemoveDisc = (itemId: string, index: number) => {
+    updateHalf(activeTab, (h) => {
+      const arr = [...(h.discrepancies[itemId] || [])]
+      if (arr.length <= 1) return h // Keep at least one
+      arr.splice(index, 1)
+      return { ...h, discrepancies: { ...h.discrepancies, [itemId]: arr } }
+    })
+    // Remove corresponding photos
+    setDiscPhotos((prev) => {
+      const arr = [...(prev[itemId] || [])]
+      if (arr.length > 1) arr.splice(index, 1)
+      return { ...prev, [itemId]: arr }
+    })
+  }
+
+  const handleDiscAddPhotos = (itemId: string, discIndex: number, files: FileList) => {
+    const newPhotos = Array.from(files).map((file) => ({
+      file,
+      url: URL.createObjectURL(file),
+      name: file.name,
+    }))
+    setDiscPhotos((prev) => {
+      const arr = [...(prev[itemId] || [])]
+      while (arr.length <= discIndex) arr.push([])
+      arr[discIndex] = [...arr[discIndex], ...newPhotos]
+      return { ...prev, [itemId]: arr }
+    })
+    toast.success(`${files.length} photo(s) added`)
+  }
+
+  const handleDiscRemovePhoto = (itemId: string, discIndex: number, photoIdx: number) => {
+    setDiscPhotos((prev) => {
+      const arr = [...(prev[itemId] || [])]
+      if (arr[discIndex]) {
+        URL.revokeObjectURL(arr[discIndex][photoIdx].url)
+        arr[discIndex] = arr[discIndex].filter((_, i) => i !== photoIdx)
+      }
+      return { ...prev, [itemId]: arr }
+    })
+  }
+
+  const handleDiscPointSelected = (itemId: string, discIndex: number, lat: number, lng: number) => {
+    handleDiscChange(itemId, discIndex, {
+      ...(draft?.[activeTab]?.discrepancies[itemId]?.[discIndex] || { comment: '', location: null, photo_ids: [] }),
+      location: { lat, lon: lng },
+    })
+    toast.success(`Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+  }
+
+  const handleDiscCaptureGps = (itemId: string, discIndex: number) => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser')
+      return
+    }
+    const key = `${itemId}:${discIndex}`
+    setDiscGpsLoading(key)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude
+        const lon = position.coords.longitude
+        handleDiscChange(itemId, discIndex, {
+          ...(draft?.[activeTab]?.discrepancies[itemId]?.[discIndex] || { comment: '', location: null, photo_ids: [] }),
+          location: { lat, lon },
+        })
+        setDiscFlyTo((prev) => ({ ...prev, [key]: { lat, lng: lon } }))
+        setDiscGpsLoading(null)
+        toast.success('Location acquired')
+      },
+      (error) => {
+        setDiscGpsLoading(null)
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            toast.error('Location access denied. Enable in browser settings.')
+            break
+          case error.POSITION_UNAVAILABLE:
+            toast.error('Location information unavailable.')
+            break
+          case error.TIMEOUT:
+            toast.error('Location request timed out.')
+            break
+          default:
+            toast.error('Unable to get your location.')
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    )
   }
 
   const setNotes = (text: string) => {
@@ -689,7 +821,18 @@ export default function InspectionsPage() {
     }
 
     if (filed > 0 || usingDemo) {
-      // Upload photos for fail items (keyed by item ID)
+      // Upload photos for fail items (from discrepancy panels)
+      if (filedId && Object.keys(discPhotos).length > 0) {
+        for (const [itemId, photoArrays] of Object.entries(discPhotos)) {
+          for (const photos of photoArrays) {
+            const loc = draft?.[activeTab]?.discrepancies[itemId]?.[0]?.location || itemLocations[itemId] || null
+            for (const photo of photos) {
+              await uploadInspectionPhoto(filedId, photo.file, itemId, loc?.lat, loc?.lon, installationId)
+            }
+          }
+        }
+      }
+      // Also upload any legacy itemPhotos
       if (filedId && Object.keys(itemPhotos).length > 0) {
         for (const [itemId, photos] of Object.entries(itemPhotos)) {
           const loc = itemLocations[itemId] || null
@@ -701,7 +844,9 @@ export default function InspectionsPage() {
 
       // Clean up object URLs
       Object.values(itemPhotos).flat().forEach((p) => URL.revokeObjectURL(p.url))
+      Object.values(discPhotos).flat().flat().forEach((p) => URL.revokeObjectURL(p.url))
       setItemPhotos({})
+      setDiscPhotos({})
       setItemLocations({})
 
       clearDraft(installationId)
@@ -1112,91 +1257,21 @@ export default function InspectionsPage() {
                           </div>
                         </div>
 
-                        {state === 'fail' && (
+                        {state === 'fail' && currentHalf?.discrepancies[item.id] && (
                           <div style={{ paddingLeft: 58, paddingBottom: 10 }}>
-                            <textarea
-                              placeholder="Describe the discrepancy..."
-                              value={currentHalf?.comments[item.id] || ''}
-                              onChange={(e) => setComment(item.id, e.target.value)}
-                              rows={2}
-                              style={{
-                                width: '100%', background: '#fff',
-                                border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6,
-                                padding: '8px 10px', color: '#111', fontSize: 'var(--fs-base)',
-                                fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box',
-                              }}
+                            <SimpleDiscrepancyPanelGroup
+                              discrepancies={currentHalf.discrepancies[item.id]}
+                              onChange={(idx, detail) => handleDiscChange(item.id, idx, detail)}
+                              onAdd={() => handleAddDisc(item.id)}
+                              onRemove={(idx) => handleRemoveDisc(item.id, idx)}
+                              localPhotos={discPhotos[item.id] || []}
+                              onAddPhotos={(idx, files) => handleDiscAddPhotos(item.id, idx, files)}
+                              onRemovePhoto={(idx, pIdx) => handleDiscRemovePhoto(item.id, idx, pIdx)}
+                              onPointSelected={(idx, lat, lng) => handleDiscPointSelected(item.id, idx, lat, lng)}
+                              onCaptureGps={(idx) => handleDiscCaptureGps(item.id, idx)}
+                              gpsLoadingIndex={discGpsLoading?.startsWith(`${item.id}:`) ? parseInt(discGpsLoading.split(':')[1]) : null}
+                              flyToPoints={(currentHalf.discrepancies[item.id] || []).map((_, i) => discFlyTo[`${item.id}:${i}`] || null)}
                             />
-
-                            {/* Photo thumbnails for this item */}
-                            {itemPhotos[item.id] && itemPhotos[item.id].length > 0 && (
-                              <div className="photo-grid" style={{ marginTop: 6 }}>
-                                {itemPhotos[item.id].map((photo, pi) => (
-                                  <div key={pi} style={{ position: 'relative', width: 56, height: 56, borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(239,68,68,0.3)' }}>
-                                    <img src={photo.url} alt={photo.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        URL.revokeObjectURL(photo.url)
-                                        setItemPhotos((prev) => ({
-                                          ...prev,
-                                          [item.id]: prev[item.id].filter((_, i) => i !== pi),
-                                        }))
-                                      }}
-                                      style={{
-                                        position: 'absolute', top: 2, right: 2, width: 16, height: 16, borderRadius: '50%',
-                                        background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', cursor: 'pointer',
-                                        fontSize: 'var(--fs-xs)', lineHeight: '16px', textAlign: 'center', padding: 0,
-                                      }}
-                                    >
-                                      x
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* Photo button */}
-                            <div style={{ marginTop: 6 }}>
-                              <PhotoPickerButton
-                                variant="compact"
-                                onUpload={() => { setActivePhotoItemId(item.id); itemFileRef.current?.click() }}
-                                onCapture={() => { setActivePhotoItemId(item.id); itemCameraRef.current?.click() }}
-                              />
-                            </div>
-
-                            {/* Interactive map for location selection */}
-                            <div style={{ marginTop: 8 }}>
-                              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
-                                Pin Location on Map
-                              </div>
-                              <InspectionLocationMap
-                                onPointSelected={(lat, lng) => handleItemPointSelected(item.id, lat, lng)}
-                                selectedLat={itemLocations[item.id]?.lat ?? null}
-                                selectedLng={itemLocations[item.id]?.lon ?? null}
-                                flyToPoint={itemFlyTo[item.id] ?? null}
-                              />
-                            </div>
-
-                            {/* Use My Location GPS button */}
-                            <button
-                              type="button"
-                              onClick={() => captureLocation(item.id)}
-                              disabled={gpsLoading === item.id}
-                              style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                                width: '100%', padding: '10px 16px', marginTop: 6, borderRadius: 8,
-                                border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
-                                color: 'var(--color-accent)', fontSize: 'var(--fs-md)', fontWeight: 600,
-                                cursor: gpsLoading === item.id ? 'wait' : 'pointer', fontFamily: 'inherit',
-                                opacity: gpsLoading === item.id ? 0.6 : 1,
-                              }}
-                            >
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="12" cy="12" r="3" />
-                                <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-                              </svg>
-                              {gpsLoading === item.id ? 'Getting Location...' : 'Use My Location'}
-                            </button>
                           </div>
                         )}
                       </div>

@@ -2,7 +2,7 @@
 // Survives page refreshes and browser closes until explicitly filed or cleared
 
 import type { InspectionSection } from '@/lib/constants'
-import type { InspectionItem } from '@/lib/supabase/types'
+import type { InspectionItem, SimpleDiscrepancy } from '@/lib/supabase/types'
 
 const DRAFT_KEY_PREFIX = 'airfield_daily_inspection_draft'
 
@@ -25,6 +25,7 @@ export interface InspectionHalfDraft {
   selectedPersonnel: string[]
   personnelNames: Record<string, string>
   dbRowId: string | null
+  discrepancies: Record<string, SimpleDiscrepancy[]>
 }
 
 export interface DailyInspectionDraft {
@@ -52,6 +53,7 @@ function createEmptyHalf(): InspectionHalfDraft {
     selectedPersonnel: [],
     personnelNames: {},
     dbRowId: null,
+    discrepancies: {},
   }
 }
 
@@ -75,6 +77,19 @@ export function loadDraft(baseId?: string | null): DailyInspectionDraft | null {
     // Backward-compat: add CM/JM halves if missing from older drafts
     if (!parsed.construction_meeting) parsed.construction_meeting = createEmptyHalf()
     if (!parsed.joint_monthly) parsed.joint_monthly = createEmptyHalf()
+    // Backward-compat: add discrepancies field if missing from older drafts
+    for (const key of ['airfield', 'lighting', 'construction_meeting', 'joint_monthly'] as const) {
+      const half = parsed[key]
+      if (!half.discrepancies) {
+        half.discrepancies = {}
+        // Migrate existing comments into discrepancies
+        for (const [itemId, comment] of Object.entries(half.comments)) {
+          if (comment && half.responses[itemId] === 'fail') {
+            half.discrepancies[itemId] = [{ comment, location: null, photo_ids: [] }]
+          }
+        }
+      }
+    }
     return parsed
   } catch {
     return null
@@ -106,15 +121,20 @@ export function halfDraftToItems(
     const response = item.type === 'bwc'
       ? (half.bwcValue ? 'pass' : null)
       : (half.responses[item.id] ?? null)
+    const discs = half.discrepancies?.[item.id]
+    const firstDisc = discs?.[0]
     return {
       id: item.id,
       section: section?.title || '',
       item: item.item,
       response: response as 'pass' | 'fail' | 'na' | null,
-      notes: item.type === 'bwc' ? (half.bwcValue || '') : (half.comments[item.id] || ''),
+      // Backward compat: notes = first discrepancy comment or legacy comment
+      notes: item.type === 'bwc' ? (half.bwcValue || '') : (firstDisc?.comment || half.comments[item.id] || ''),
       photo_id: null,
       generated_discrepancy_id: null,
-      location: itemLocations?.[item.id] || null,
+      // Backward compat: location = first discrepancy location or legacy location
+      location: firstDisc?.location || itemLocations?.[item.id] || null,
+      discrepancies: discs && discs.length > 0 ? discs : undefined,
     }
   })
 

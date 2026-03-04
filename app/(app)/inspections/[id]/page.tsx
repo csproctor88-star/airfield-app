@@ -440,39 +440,75 @@ export default function InspectionDetailPage() {
                   }}>
                     {item.item}
                   </div>
-                  {item.notes && isFail && (
-                    <div style={{
-                      fontSize: 'var(--fs-sm)', color: '#FBBF24', marginTop: 4, fontStyle: 'italic',
-                      padding: '4px 8px', background: 'rgba(251,191,36,0.06)', borderRadius: 4,
-                    }}>
-                      {item.notes}
+                  {/* Multi-discrepancy or legacy single-note */}
+                  {isFail && item.discrepancies && item.discrepancies.length > 0 ? (
+                    <div style={{ marginTop: 4 }}>
+                      {item.discrepancies.map((disc, di) => {
+                        const mapToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+                        const discMapUrl = disc.location && mapToken && mapToken !== 'your-mapbox-token-here'
+                          ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${disc.location.lon},${disc.location.lat})/${disc.location.lon},${disc.location.lat},16,0/400x200@2x?access_token=${mapToken}`
+                          : null
+                        return (
+                          <div key={di} style={{
+                            padding: '6px 8px', marginBottom: 4,
+                            background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.12)',
+                            borderRadius: 6,
+                          }}>
+                            {item.discrepancies!.length > 1 && (
+                              <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EF4444', marginBottom: 3 }}>
+                                Discrepancy {di + 1} of {item.discrepancies!.length}
+                              </div>
+                            )}
+                            {disc.comment && (
+                              <div style={{ fontSize: 'var(--fs-sm)', color: '#FBBF24', fontStyle: 'italic', lineHeight: 1.4 }}>
+                                {disc.comment}
+                              </div>
+                            )}
+                            {discMapUrl && (
+                              <img src={discMapUrl} alt={`Discrepancy ${di + 1} location`}
+                                style={{ width: '100%', maxWidth: 400, height: 140, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginTop: 4 }} />
+                            )}
+                            {disc.location && (
+                              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+                                Location: {disc.location.lat.toFixed(5)}, {disc.location.lon.toFixed(5)}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                      {renderItemPhotos(item.id)}
                     </div>
-                  )}
-                  {isFail && item.location && (() => {
-                    const loc = item.location
-                    const mapToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-                    const mapUrl = mapToken && mapToken !== 'your-mapbox-token-here'
-                      ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${loc.lon},${loc.lat})/${loc.lon},${loc.lat},16,0/400x200@2x?access_token=${mapToken}`
-                      : null
-                    return (
-                      <div style={{ marginTop: 4 }}>
-                        {mapUrl && (
-                          <img
-                            src={mapUrl}
-                            alt="Fail item location"
-                            style={{
-                              width: '100%', maxWidth: 400, height: 140, objectFit: 'cover',
-                              borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginBottom: 3,
-                            }}
-                          />
-                        )}
-                        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-                          Location: {loc.lat.toFixed(5)}, {loc.lon.toFixed(5)}
+                  ) : (
+                    <>
+                      {item.notes && isFail && (
+                        <div style={{
+                          fontSize: 'var(--fs-sm)', color: '#FBBF24', marginTop: 4, fontStyle: 'italic',
+                          padding: '4px 8px', background: 'rgba(251,191,36,0.06)', borderRadius: 4,
+                        }}>
+                          {item.notes}
                         </div>
-                      </div>
-                    )
-                  })()}
-                  {isFail && renderItemPhotos(item.id)}
+                      )}
+                      {isFail && item.location && (() => {
+                        const loc = item.location
+                        const mapToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+                        const mapUrl = mapToken && mapToken !== 'your-mapbox-token-here'
+                          ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${loc.lon},${loc.lat})/${loc.lon},${loc.lat},16,0/400x200@2x?access_token=${mapToken}`
+                          : null
+                        return (
+                          <div style={{ marginTop: 4 }}>
+                            {mapUrl && (
+                              <img src={mapUrl} alt="Fail item location"
+                                style={{ width: '100%', maxWidth: 400, height: 140, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginBottom: 3 }} />
+                            )}
+                            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                              Location: {loc.lat.toFixed(5)}, {loc.lon.toFixed(5)}
+                            </div>
+                          </div>
+                        )
+                      })()}
+                      {isFail && renderItemPhotos(item.id)}
+                    </>
+                  )}
                 </div>
               </div>
             )
@@ -841,15 +877,50 @@ export default function InspectionDetailPage() {
                       </span>
                     )}
                   </div>
-                  {item.notes && (
-                    <div style={{
-                      fontSize: 'var(--fs-base)', color: '#FBBF24', marginTop: 4, fontStyle: 'italic',
-                      padding: '4px 8px', background: 'rgba(251,191,36,0.06)', borderRadius: 4,
-                    }}>
-                      {item.notes}
+                  {/* Multi-discrepancy display */}
+                  {item.discrepancies && item.discrepancies.length > 0 ? (
+                    <div style={{ marginTop: 6 }}>
+                      {item.discrepancies.map((disc, di) => (
+                        <div key={di} style={{
+                          padding: '8px 10px', marginBottom: 6,
+                          background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.12)',
+                          borderRadius: 6,
+                        }}>
+                          {item.discrepancies!.length > 1 && (
+                            <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EF4444', marginBottom: 4 }}>
+                              Discrepancy {di + 1} of {item.discrepancies!.length}
+                            </div>
+                          )}
+                          {disc.comment && (
+                            <div style={{
+                              fontSize: 'var(--fs-base)', color: '#FBBF24', fontStyle: 'italic',
+                              padding: '2px 0', lineHeight: 1.4,
+                            }}>
+                              {disc.comment}
+                            </div>
+                          )}
+                          {disc.location && (
+                            <div style={{ fontSize: 'var(--fs-sm)', color: '#34D399', fontFamily: 'monospace', marginTop: 4 }}>
+                              {disc.location.lat.toFixed(5)}, {disc.location.lon.toFixed(5)}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {renderItemPhotos(item.id)}
                     </div>
+                  ) : (
+                    <>
+                      {item.notes && (
+                        <div style={{
+                          fontSize: 'var(--fs-base)', color: '#FBBF24', marginTop: 4, fontStyle: 'italic',
+                          padding: '4px 8px', background: 'rgba(251,191,36,0.06)', borderRadius: 4,
+                        }}>
+                          {item.notes}
+                        </div>
+                      )}
+                      {renderItemPhotos(item.id)}
+                    </>
                   )}
-                  {renderItemPhotos(item.id)}
                 </div>
               ))}
             </div>
