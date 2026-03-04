@@ -9,13 +9,84 @@ All notable changes to Glidepath.
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
 - Sync & Data module (offline queue, export, import)
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate ~197 `as any` casts
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate ~202 `as any` casts
 - Convert PDFLibrary.jsx to TypeScript (.tsx)
 - Remove dead API routes (`/api/airfield-status`, `/api/weather`) or wire them up
-- Remove unused component (`components/ui/airfield-diagram-viewer.tsx`)
-- Remove unused lib file (`lib/supabase/regulations.ts`)
-- Clean up duplicate aircraft images and stray files
+- Remove unused files: `components/ui/airfield-diagram-viewer.tsx`, `lib/supabase/regulations.ts`, `lib/acsi-excel.ts` (unwired)
+- Clean up duplicate aircraft images and stray files in `public/aircraft_images/`
 - Fix aircraft data import (root JSON stale vs `public/` copies)
+- Remove dead import: `PhotoPickerButton` in `inspections/page.tsx`
+
+---
+
+## [2.13.0] — 2026-03-03
+
+### Multi-Discrepancy System, Per-Issue Photos & Draft Persistence
+
+Complete overhaul of how discrepancies, photos, and drafts are handled across checks and inspections. Each failed item can now have multiple discrepancies with individual comments, GPS pins, map thumbnails, and photos — all persisted to Supabase and rendered in detail views and PDF exports. Draft persistence moved from localStorage to Supabase for cross-device access.
+
+#### Multiple Discrepancies Per Item (Checks + Inspections)
+- **Checks**: Each issue in a check now supports multiple discrepancy entries with individual comments, GPS locations, and photos via `SimpleDiscrepancyPanelGroup`
+- **Inspections**: Failed inspection items support multiple discrepancies with per-discrepancy comments, location pins, and photos
+- **ACSI**: Multiple discrepancies per failed ACSI checklist item with work order, project, cost, and completion tracking
+- Toggle cycle on inspection checklist changed: items now default to Pass (Pass → Fail → N/A → Pass), removing the blank/unanswered state
+- Removed "Mark All Items as Pass" button (no longer needed since all items default to pass)
+
+#### Per-Issue Photo Linking
+- **Database migration** (`2026030301_add_photo_issue_index.sql`) — Adds `issue_index` column to `photos` table, linking each photo to a specific issue/discrepancy within a check or inspection
+- **Checks**: Photos uploaded within an issue panel are tagged with `issue_index`, displayed under each issue on the detail page, and embedded per-issue in PDF export
+- **Inspections**: Photos uploaded within a discrepancy are tagged with `issue_index` (discrepancy index), displayed per-discrepancy on the detail page, and embedded per-discrepancy in PDF export
+- **Backward compatible**: Legacy photos without `issue_index` fall back to flat per-item display
+
+#### Supabase Draft Persistence for Checks
+- **Database migration** (`2026030300_add_check_draft_data.sql`) — Adds `status`, `draft_data`, `saved_by_name`, `saved_by_id`, `saved_at` columns to `airfield_checks` table
+- **Manual "Save Draft" button** — saves check form state to Supabase (not auto-save), enabling cross-device access
+- **Two-phase load** — loads from localStorage instantly, then checks Supabase for a newer draft and hydrates if found
+- **Draft lifecycle** — Save Draft creates/updates a `status: 'draft'` row; Complete Check deletes the draft row and creates a `status: 'completed'` row
+- Draft rows filtered from check history (`fetchChecks()`, `fetchRecentChecks()` filter to `status: 'completed'`)
+
+#### Discrepancy Panel Layout Improvements
+- Restructured `SimpleDiscrepancyPanel` and `SimpleDiscrepancyPanelGroup` layout: description box and buttons moved to right column, photos shown as thumbnails under description
+- Map and action buttons scaled proportionally with consistent sizing
+- Inline Save Draft button added to discrepancy panel area
+
+#### Inspection Location Capture Fix
+- **Fixed stale closure** in `handleDiscPointSelected` and `handleDiscCaptureGps` — these were spreading the full discrepancy object from a stale `draft` closure, potentially overwriting current comment and photo data with old values. Now only passes `{ location }` and relies on the merge pattern in `handleDiscChange`
+- **Added multi-discrepancy support to `renderInspectionSections`** — the shared PDF helper (used by combined daily inspection PDFs) previously only handled legacy single-note/single-location rendering, silently dropping all discrepancy data from combined reports
+
+#### Fail KPI Badge Dropdown
+- Per-discrepancy photos and map thumbnails now display in the Fail KPI badge dropdown on the inspection detail page (was only showing unlinked legacy photos)
+
+#### Check Form UX
+- Recent checks and "View Check History" link hidden when a check type is selected (declutters the form during active entry)
+
+#### Inspection Filing Dialog
+- "File Without Lighting" button given more horizontal padding, reduced font size, and `whiteSpace: nowrap` to prevent text overflow
+
+#### Migrations Added (2)
+- `2026030300_add_check_draft_data.sql` — Draft columns on `airfield_checks`
+- `2026030301_add_photo_issue_index.sql` — `issue_index` column on `photos`
+
+#### Files Created (1)
+- `supabase/migrations/2026030300_add_check_draft_data.sql`
+- `supabase/migrations/2026030301_add_photo_issue_index.sql`
+
+#### Files Modified (12)
+- `lib/check-draft.ts` — Added `dbRowId` to `CheckDraft` interface
+- `lib/supabase/checks.ts` — Added `saveCheckDraftToDb()`, `loadCheckDraftFromDb()`, `deleteCheckDraft()`, draft status filtering
+- `lib/supabase/inspections.ts` — Added `issue_index` to `InspectionPhotoRow`, `discIndex` param to `uploadInspectionPhoto`
+- `lib/inspection-draft.ts` — Default unset responses to 'pass' in `halfDraftToItems()`
+- `lib/pdf-export.ts` — Added `PdfDiscPhotoMap` type, per-discrepancy photo rendering in all 3 inspection PDF generators
+- `lib/check-pdf.ts` — Per-issue photo embedding in check PDF export
+- `app/(app)/checks/page.tsx` — Save Draft button, two-phase load, hide recent checks during entry
+- `app/(app)/checks/[id]/page.tsx` — Per-issue photo grouping in detail view, `photoDataUrlsByIssue` for PDF
+- `app/(app)/inspections/page.tsx` — Stale closure fix, per-discrepancy photo upload, default-to-pass, remove Mark All Pass
+- `app/(app)/inspections/[id]/page.tsx` — Per-discrepancy photo grouping, Fail KPI photo display, `PdfDiscPhotoMap` for PDF
+- `components/ui/simple-discrepancy-panel.tsx` — Layout restructure (right column for description/buttons/photos)
+- `components/ui/simple-discrepancy-panel-group.tsx` — Updated group layout
+
+#### Version Sync
+- Updated version to 2.13.0 in package.json, login/page.tsx, settings/page.tsx
 
 ---
 

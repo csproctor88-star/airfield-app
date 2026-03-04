@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, ACSI (annual compliance), NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.12.0 | **Build:** Clean | **54 routes** | **144 source files** | **58 migrations** | **~49,500 lines**
+**Version:** 2.13.0 | **Build:** Clean | **53 routes** | **144 source files** | **60 migrations** | **~51,500 lines**
 
 ## Tech Stack
 
@@ -54,7 +54,7 @@ RESEND_API_KEY=[resend-api-key]
 Apply the schema and migrations to a Supabase project:
 
 1. Run `supabase/schema.sql` to create the base tables and sequences
-2. Apply the 58 migrations in order from `supabase/migrations/`
+2. Apply the 60 migrations in order from `supabase/migrations/`
 
 See [docs/BASE-ONBOARDING.md](./docs/BASE-ONBOARDING.md) for adding new installations.
 
@@ -72,8 +72,8 @@ Key responsive features:
 - **Permanent sidebar** on tablet/desktop with full descriptive nav labels
 - **Font scaling** via 11 CSS custom properties (`--fs-2xs` through `--fs-5xl`)
 - **Element scaling** for cards, inputs, buttons, badges at each breakpoint
-- **Map components** scale from 420px to 80vh with expand/collapse toggle
-- **Obstruction map** scales from 600px to 85vh with expand/collapse toggle
+- **Map components** standardized to 3:4 portrait aspect ratio with 70vh max
+- **Obstruction map** centered at 60% width with responsive scaling
 
 ## Modules
 
@@ -93,14 +93,14 @@ Track and resolve airfield issues. 11 discrepancy types (FOD, pavement, lighting
 - **Heavy Aircraft** — aircraft type, parking, weight, taxi route
 - **BASH** — condition code, species, mitigation, habitat attractants
 
-Photo capture, map location, issue-found gating, follow-up remarks with auto-save on completion. Full history with type filtering and search.
+Photo capture, map location, issue-found gating, multiple issues per check with per-issue photos and GPS pins, follow-up remarks with auto-save on completion. Supabase draft persistence with manual "Save Draft" button for cross-device access. Full history with type filtering and search.
 
 ### Daily Inspections (`/inspections`)
 Combined Airfield Inspection Report with two halves:
 - **Airfield** — configurable sections and checklist items (per-base templates)
 - **Lighting** — configurable sections and checklist items (per-base templates)
 
-Three-state toggle (Pass/Fail/N/A), Mark All Pass per section, BWC integration (LOW/MOD/SEV/PROHIB), draft persistence to localStorage, two-step Complete/File workflow with per-user tracking, combined PDF export. Also supports standalone Construction Meeting and Joint Monthly inspection forms with personnel attendance tracking.
+All items default to Pass — three-state toggle (Pass → Fail → N/A → Pass) for amending individual items. Multiple discrepancies per failed item with per-discrepancy comments, GPS pins, map thumbnails, and photos. BWC integration (LOW/MOD/SEV/PROHIB), draft persistence to localStorage and Supabase for cross-device access, two-step Complete/File workflow with per-user tracking, combined PDF export with per-discrepancy photo embedding. Also supports standalone Construction Meeting and Joint Monthly inspection forms with personnel attendance tracking.
 
 ### ACSI (`/acsi`)
 Airfield Compliance and Safety Inspection per DAFMAN 13-204v2, Para 5.4.3. Annual compliance inspection with 10 sections and ~100 checklist items.
@@ -182,7 +182,7 @@ airfield-app/
 │   ├── layout.tsx                        # Root layout (metadata, PWA manifest, toasts)
 │   ├── globals.css                       # Responsive CSS: themes, utility classes, breakpoints
 │   ├── login/page.tsx                    # Auth page (email/password + demo bypass)
-│   ├── api/                              # Server-side API routes (8 endpoints)
+│   ├── api/                              # Server-side API routes (7 endpoints)
 │   ├── auth/confirm/route.ts            # OTP/PKCE token exchange for email links
 │   ├── reset-password/page.tsx          # Password reset form
 │   ├── setup-account/page.tsx           # Invited user account setup
@@ -233,7 +233,7 @@ airfield-app/
 │   └── supabase/                         # Client, server, types, CRUD modules (16 files)
 ├── supabase/
 │   ├── schema.sql                        # Full database schema
-│   ├── migrations/                       # 58 migration files
+│   ├── migrations/                       # 60 migration files
 │   └── functions/                        # Edge functions (PDF text extraction)
 ├── middleware.ts                          # Auth guard + demo mode bypass
 ├── public/                               # Static assets, PWA manifest, aircraft images
@@ -262,7 +262,7 @@ airfield-app/
 | `inspection_template_sections` | Per-base inspection template sections |
 | `inspection_template_items` | Per-base inspection checklist items |
 | `notams` | FAA and LOCAL NOTAM tracking |
-| `photos` | Photos for discrepancies, checks, inspections, evaluations, ACSI |
+| `photos` | Photos for discrepancies, checks, inspections, evaluations, ACSI (with `issue_index` for per-issue linking) |
 | `obstruction_evaluations` | UFC 3-260-01 surface analysis |
 | `airfield_status` | Persisted runway status, advisory, BWC, RSC |
 | `runway_status_log` | Audit trail for all runway status changes |
@@ -297,17 +297,19 @@ airfield-app/
 | Item | Priority | Notes |
 |------|----------|-------|
 | No test suite | High | No unit or integration tests |
-| ~197 `as any` casts | Medium | Regenerate Supabase types (`supabase gen types typescript`) to eliminate |
+| ~202 `as any` casts | Medium | Regenerate Supabase types (`supabase gen types typescript`) to eliminate across 27 files |
 | Dead API routes | Medium | `/api/weather` (stub) and `/api/airfield-status` (no callers) — remove or wire up |
-| Unused files | Medium | `components/ui/airfield-diagram-viewer.tsx` (no importers), `lib/supabase/regulations.ts` (no importers) |
+| Unused files | Medium | `components/ui/airfield-diagram-viewer.tsx`, `lib/supabase/regulations.ts`, `lib/acsi-excel.ts` (all zero importers) |
+| Dead import | Medium | `PhotoPickerButton` imported but unused in `inspections/page.tsx` |
 | Stale aircraft JSON imports | Medium | `lib/aircraft-data.ts` imports root-level JSON (fewer entries) instead of `public/` copies |
-| `PDFLibrary.jsx` | Low | Only JSX file — convert to TypeScript (.tsx) |
-| 36 files > 500 lines | Low | Largest: `regulations/page.tsx` (1,638), `inspections/page.tsx` (1,602) |
+| `PDFLibrary.jsx` | Low | Only JSX file (1,091 lines) — convert to TypeScript (.tsx) |
+| 37 files > 500 lines | Low | Largest: `inspections/page.tsx` (1,691), `regulations/page.tsx` (1,638) |
 | Duplicate aircraft JSON | Low | Root-level JSON duplicated in `public/` with diverged content |
 | Duplicate aircraft images | Low | `public/aircraft_images/military/commercial/` duplicates `public/aircraft_images/commercial/` (~20 files) |
 | Stray files | Low | 2 screenshot PNGs + 1 "Copy" JPG in aircraft image directories |
 | Untracked migration | Low | `supabase/migrations/2026022701_inspection_photos.sql` not in git |
 | Unreachable page | Low | `/sync` has no navigation links — stub page |
+| 1 `console.log` | Low | Debug leftover in `components/PDFLibrary.jsx` line 354 |
 
 ## Current Status
 
