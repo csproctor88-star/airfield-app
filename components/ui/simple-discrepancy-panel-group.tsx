@@ -21,6 +21,10 @@ interface SimpleDiscrepancyPanelGroupProps {
   headerLabel?: string
   /** Button label for adding — defaults to "Add Discrepancy" */
   addLabel?: string
+  /** Optional callback to save the entire form as a draft */
+  onSaveDraft?: () => void
+  /** Whether a draft save is currently in progress */
+  draftSaving?: boolean
 }
 
 export function SimpleDiscrepancyPanelGroup({
@@ -37,6 +41,8 @@ export function SimpleDiscrepancyPanelGroup({
   flyToPoints,
   headerLabel = 'Discrepancy Details',
   addLabel = 'Add Discrepancy',
+  onSaveDraft,
+  draftSaving,
 }: SimpleDiscrepancyPanelGroupProps) {
   return (
     <div style={{ marginTop: 4 }}>
@@ -101,6 +107,8 @@ export function SimpleDiscrepancyPanelGroup({
             onCaptureGps={onCaptureGps}
             gpsLoading={gpsLoadingIndex === i}
             flyToPoint={flyToPoints[i] || null}
+            onSaveDraft={onSaveDraft}
+            draftSaving={draftSaving}
           />
         </div>
       ))}

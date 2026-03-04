@@ -1303,6 +1303,8 @@ export default function InspectionsPage() {
                               onCaptureGps={(idx) => handleDiscCaptureGps(item.id, idx)}
                               gpsLoadingIndex={discGpsLoading?.startsWith(`${item.id}:`) ? parseInt(discGpsLoading.split(':')[1]) : null}
                               flyToPoints={(currentHalf.discrepancies[item.id] || []).map((_, i) => discFlyTo[`${item.id}:${i}`] || null)}
+                              onSaveDraft={handleSave}
+                              draftSaving={saving}
                             />
                           </div>
                         )}

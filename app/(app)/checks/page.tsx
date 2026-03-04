@@ -923,6 +923,8 @@ export default function AirfieldChecksPage() {
             flyToPoints={issueFlyTo}
             headerLabel="Issue Details"
             addLabel="Add Issue"
+            onSaveDraft={handleSaveDraft}
+            draftSaving={draftSaving}
           />
         </div>
       )}
