@@ -101,6 +101,35 @@ export function SimpleDiscrepancyPanel({
             />
           </div>
 
+          {/* Photo thumbnails */}
+          {localPhotos.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {localPhotos.map((p, i) => (
+                <div
+                  key={i}
+                  style={{
+                    position: 'relative', width: 56, height: 56, borderRadius: 6,
+                    overflow: 'hidden', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer',
+                  }}
+                  onClick={() => setViewerIndex(i)}
+                >
+                  <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onRemovePhoto(index, i) }}
+                    style={{
+                      position: 'absolute', top: 1, right: 1, width: 14, height: 14, borderRadius: '50%',
+                      background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', cursor: 'pointer',
+                      fontSize: 10, lineHeight: '14px', textAlign: 'center', padding: 0,
+                    }}
+                  >
+                    x
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Use My Location */}
           <button
             type="button"
@@ -158,35 +187,6 @@ export function SimpleDiscrepancyPanel({
           )}
         </div>
       </div>
-
-      {/* Photo thumbnails */}
-      {localPhotos.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
-          {localPhotos.map((p, i) => (
-            <div
-              key={i}
-              style={{
-                position: 'relative', width: 56, height: 56, borderRadius: 6,
-                overflow: 'hidden', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer',
-              }}
-              onClick={() => setViewerIndex(i)}
-            >
-              <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onRemovePhoto(index, i) }}
-                style={{
-                  position: 'absolute', top: 1, right: 1, width: 14, height: 14, borderRadius: '50%',
-                  background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', cursor: 'pointer',
-                  fontSize: 10, lineHeight: '14px', textAlign: 'center', padding: 0,
-                }}
-              >
-                x
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Photo viewer modal */}
       {viewerIndex !== null && localPhotos.length > 0 && (
