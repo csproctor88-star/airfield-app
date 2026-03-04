@@ -916,9 +916,17 @@ export default function InspectionDetailPage() {
                     )}
                   </div>
                   {/* Multi-discrepancy display */}
-                  {item.discrepancies && item.discrepancies.length > 0 ? (
+                  {item.discrepancies && item.discrepancies.length > 0 ? (() => {
+                    const { byDisc, unlinked } = getItemPhotosByDisc(item.id)
+                    return (
                     <div style={{ marginTop: 6 }}>
-                      {item.discrepancies.map((disc, di) => (
+                      {item.discrepancies.map((disc, di) => {
+                        const mapToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+                        const discMapUrl = disc.location && mapToken && mapToken !== 'your-mapbox-token-here'
+                          ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${disc.location.lon},${disc.location.lat})/${disc.location.lon},${disc.location.lat},16,0/400x200@2x?access_token=${mapToken}`
+                          : null
+                        const discPhotosForIdx = byDisc[di] || []
+                        return (
                         <div key={di} style={{
                           padding: '8px 10px', marginBottom: 6,
                           background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.12)',
@@ -937,16 +945,22 @@ export default function InspectionDetailPage() {
                               {disc.comment}
                             </div>
                           )}
+                          {discMapUrl && (
+                            <img src={discMapUrl} alt={`Discrepancy ${di + 1} location`}
+                              style={{ width: '100%', maxWidth: 400, height: 140, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginTop: 4 }} />
+                          )}
                           {disc.location && (
                             <div style={{ fontSize: 'var(--fs-sm)', color: '#34D399', fontFamily: 'monospace', marginTop: 4 }}>
                               {disc.location.lat.toFixed(5)}, {disc.location.lon.toFixed(5)}
                             </div>
                           )}
+                          {renderDiscPhotos(discPhotosForIdx)}
                         </div>
-                      ))}
-                      {renderItemPhotos(item.id)}
-                    </div>
-                  ) : (
+                        )
+                      })}
+                      {renderDiscPhotos(unlinked)}
+                    </div>)
+                  })() : (
                     <>
                       {item.notes && (
                         <div style={{

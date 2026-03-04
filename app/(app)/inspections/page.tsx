@@ -1415,9 +1415,10 @@ export default function InspectionsPage() {
                     handleFile(true)
                   }}
                   style={{
-                    flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                    flex: 1, padding: '10px 12px', borderRadius: 8, fontSize: 'var(--fs-base)', fontWeight: 700,
                     cursor: 'pointer', border: '1px solid rgba(251,191,36,0.4)',
                     background: 'rgba(251,191,36,0.1)', color: '#FBBF24', fontFamily: 'inherit',
+                    whiteSpace: 'nowrap',
                   }}
                 >File Without Lighting</button>
                 <button
