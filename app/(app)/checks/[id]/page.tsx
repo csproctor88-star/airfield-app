@@ -178,14 +178,28 @@ export default function CheckDetailPage() {
 
   // Build photo gallery from DB-stored photos
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
-  const allPhotos: { url: string; name: string }[] = dbPhotos.map((p) => ({
-    url: p.storage_path.startsWith('data:')
+  const getPhotoUrl = (p: CheckPhotoRow) =>
+    p.storage_path.startsWith('data:')
       ? p.storage_path
       : supabaseUrl
         ? `${supabaseUrl}/storage/v1/object/public/photos/${p.storage_path}`
-        : p.storage_path,
+        : p.storage_path
+  const allPhotos: { url: string; name: string }[] = dbPhotos.map((p) => ({
+    url: getPhotoUrl(p),
     name: p.file_name,
   }))
+  // Group photos by issue index for per-issue display
+  const photosByIssue: Record<number, { url: string; name: string; globalIdx: number }[]> = {}
+  const unlinkedPhotos: { url: string; name: string; globalIdx: number }[] = []
+  dbPhotos.forEach((p, i) => {
+    const entry = { url: getPhotoUrl(p), name: p.file_name, globalIdx: i }
+    if (p.issue_index != null) {
+      if (!photosByIssue[p.issue_index]) photosByIssue[p.issue_index] = []
+      photosByIssue[p.issue_index].push(entry)
+    } else {
+      unlinkedPhotos.push(entry)
+    }
+  })
 
   // Generate static map image URL from stored coordinates
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
@@ -457,8 +471,21 @@ export default function CheckDetailPage() {
                     style={{ width: '100%', display: 'block', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginBottom: 4 }} />
                 )}
                 {issue.location && (
-                  <div style={{ fontSize: 'var(--fs-sm)', color: '#34D399', fontFamily: 'monospace', fontWeight: 600 }}>
+                  <div style={{ fontSize: 'var(--fs-sm)', color: '#34D399', fontFamily: 'monospace', fontWeight: 600, marginBottom: (photosByIssue[idx]?.length > 0) ? 8 : 0 }}>
                     {issue.location.lat.toFixed(5)}, {issue.location.lon.toFixed(5)}
+                  </div>
+                )}
+                {photosByIssue[idx]?.length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                    {photosByIssue[idx].map((p) => (
+                      <div
+                        key={p.globalIdx}
+                        style={{ position: 'relative', width: 100, height: 100, borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer' }}
+                        onClick={() => setViewerIndex(p.globalIdx)}
+                      >
+                        <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -481,18 +508,18 @@ export default function CheckDetailPage() {
         </div>
       )}
 
-      {/* Photo Thumbnails */}
-      {allPhotos.length > 0 && (
+      {/* Photo Thumbnails — only show photos not linked to a specific issue */}
+      {unlinkedPhotos.length > 0 && (
         <div className="card" style={{ marginBottom: 8 }}>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-            Photos ({allPhotos.length})
+            Photos ({unlinkedPhotos.length})
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {allPhotos.map((p, i) => (
+            {unlinkedPhotos.map((p) => (
               <div
-                key={i}
+                key={p.globalIdx}
                 style={{ position: 'relative', width: 140, height: 140, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border-active)', cursor: 'pointer' }}
-                onClick={() => setViewerIndex(i)}
+                onClick={() => setViewerIndex(p.globalIdx)}
               >
                 <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
@@ -523,23 +550,33 @@ export default function CheckDetailPage() {
             setGeneratingPdf(true)
             try {
               const photoDataUrls: string[] = []
-              for (const p of allPhotos) {
-                if (p.url.startsWith('data:')) {
-                  photoDataUrls.push(p.url)
+              const photoDataUrlsByIssue: Record<number, string[]> = {}
+              for (let i = 0; i < dbPhotos.length; i++) {
+                const p = dbPhotos[i]
+                const url = getPhotoUrl(p)
+                let dataUrl: string | null = null
+                if (url.startsWith('data:')) {
+                  dataUrl = url
                 } else {
                   try {
-                    const resp = await fetch(p.url)
+                    const resp = await fetch(url)
                     if (resp.ok) {
                       const blob = await resp.blob()
                       const reader = new FileReader()
-                      const dataUrl = await new Promise<string>((resolve, reject) => {
+                      dataUrl = await new Promise<string>((resolve, reject) => {
                         reader.onload = () => resolve(reader.result as string)
                         reader.onerror = reject
                         reader.readAsDataURL(blob)
                       })
-                      photoDataUrls.push(dataUrl)
                     }
                   } catch { /* skip failed photos */ }
+                }
+                if (dataUrl) {
+                  photoDataUrls.push(dataUrl)
+                  if (p.issue_index != null) {
+                    if (!photoDataUrlsByIssue[p.issue_index]) photoDataUrlsByIssue[p.issue_index] = []
+                    photoDataUrlsByIssue[p.issue_index].push(dataUrl)
+                  }
                 }
               }
               const { generateCheckPdf } = await import('@/lib/check-pdf')
@@ -547,6 +584,7 @@ export default function CheckDetailPage() {
                 check,
                 comments: displayComments,
                 photoDataUrls,
+                photoDataUrlsByIssue,
                 baseName: currentInstallation?.name,
                 baseIcao: currentInstallation?.icao,
               })
@@ -575,23 +613,33 @@ export default function CheckDetailPage() {
             setGeneratingPdf(true)
             try {
               const photoDataUrls: string[] = []
-              for (const p of allPhotos) {
-                if (p.url.startsWith('data:')) {
-                  photoDataUrls.push(p.url)
+              const photoDataUrlsByIssue: Record<number, string[]> = {}
+              for (let i = 0; i < dbPhotos.length; i++) {
+                const p = dbPhotos[i]
+                const url = getPhotoUrl(p)
+                let dataUrl: string | null = null
+                if (url.startsWith('data:')) {
+                  dataUrl = url
                 } else {
                   try {
-                    const resp = await fetch(p.url)
+                    const resp = await fetch(url)
                     if (resp.ok) {
                       const blob = await resp.blob()
                       const reader = new FileReader()
-                      const dataUrl = await new Promise<string>((resolve, reject) => {
+                      dataUrl = await new Promise<string>((resolve, reject) => {
                         reader.onload = () => resolve(reader.result as string)
                         reader.onerror = reject
                         reader.readAsDataURL(blob)
                       })
-                      photoDataUrls.push(dataUrl)
                     }
                   } catch { /* skip failed photos */ }
+                }
+                if (dataUrl) {
+                  photoDataUrls.push(dataUrl)
+                  if (p.issue_index != null) {
+                    if (!photoDataUrlsByIssue[p.issue_index]) photoDataUrlsByIssue[p.issue_index] = []
+                    photoDataUrlsByIssue[p.issue_index].push(dataUrl)
+                  }
                 }
               }
               const { generateCheckPdf } = await import('@/lib/check-pdf')
@@ -599,6 +647,7 @@ export default function CheckDetailPage() {
                 check,
                 comments: displayComments,
                 photoDataUrls,
+                photoDataUrlsByIssue,
                 baseName: currentInstallation?.name,
                 baseIcao: currentInstallation?.icao,
               })

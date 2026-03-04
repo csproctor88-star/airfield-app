@@ -432,17 +432,19 @@ export default function AirfieldChecksPage() {
       return
     }
 
-    // Upload all issue photos
-    const allIssuePhotos = issuePhotos.flat()
-    if (allIssuePhotos.length > 0) {
-      let uploaded = 0
-      for (const photo of allIssuePhotos) {
-        const { error: photoErr } = await uploadCheckPhoto(created.id, photo.file)
-        if (!photoErr) uploaded++
+    // Upload photos per-issue with their issue index
+    let totalPhotos = 0
+    let uploadedPhotos = 0
+    for (let issueIdx = 0; issueIdx < issuePhotos.length; issueIdx++) {
+      const photos = issuePhotos[issueIdx] || []
+      totalPhotos += photos.length
+      for (const photo of photos) {
+        const { error: photoErr } = await uploadCheckPhoto(created.id, photo.file, installationId, issueIdx)
+        if (!photoErr) uploadedPhotos++
       }
-      if (uploaded < allIssuePhotos.length) {
-        toast.error(`${allIssuePhotos.length - uploaded} photo(s) failed to upload`)
-      }
+    }
+    if (uploadedPhotos < totalPhotos) {
+      toast.error(`${totalPhotos - uploadedPhotos} photo(s) failed to upload`)
     }
 
     // Clean up draft (DB + localStorage)

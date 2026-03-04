@@ -8,12 +8,14 @@ interface CheckPdfInput {
   check: any
   comments: CheckCommentRow[]
   photoDataUrls: string[]
+  /** Photo data URLs grouped by issue index */
+  photoDataUrlsByIssue?: Record<number, string[]>
   baseName?: string
   baseIcao?: string
 }
 
 export async function generateCheckPdf(input: CheckPdfInput) {
-  const { check, comments, photoDataUrls, baseName, baseIcao } = input
+  const { check, comments, photoDataUrls, photoDataUrlsByIssue, baseName, baseIcao } = input
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -270,6 +272,29 @@ export async function generateCheckPdf(input: CheckPdfInput) {
         }
       }
 
+      // Per-issue photos
+      const issuePhotos = photoDataUrlsByIssue?.[ii]
+      if (issuePhotos && issuePhotos.length > 0) {
+        checkPageBreak(14)
+        doc.setFontSize(8)
+        doc.setTextColor(100)
+        doc.text(`Photos (${issuePhotos.length}):`, margin, y)
+        y += 5
+        for (const dataUrl of issuePhotos) {
+          checkPageBreak(45)
+          try {
+            const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG'
+            doc.addImage(dataUrl, format, margin, y, 50, 38)
+            y += 42
+          } catch {
+            doc.setFontSize(7)
+            doc.setTextColor(150)
+            doc.text('[Photo unavailable]', margin, y)
+            y += 5
+          }
+        }
+      }
+
       y += 2
     }
   } else {
@@ -333,18 +358,24 @@ export async function generateCheckPdf(input: CheckPdfInput) {
     }
   }
 
-  // ── Photos ──
-  if (photoDataUrls.length > 0) {
+  // ── Photos (unlinked / legacy only) ──
+  // Per-issue photos are rendered inline above; this section shows photos not tied to an issue
+  const linkedIndexes = new Set(Object.keys(photoDataUrlsByIssue || {}).map(Number))
+  // If we have per-issue grouping, only show truly unlinked photos here
+  // photoDataUrls is the flat list; we treat all as unlinked when no grouping exists
+  const hasGrouping = linkedIndexes.size > 0
+  const unlinkedPhotoUrls = hasGrouping ? [] as string[] : photoDataUrls
+  if (unlinkedPhotoUrls.length > 0) {
     checkPageBreak(14)
     y += 4
     doc.setFontSize(10)
     doc.setTextColor(0)
     doc.setFont('helvetica', 'bold')
-    doc.text(`PHOTOS (${photoDataUrls.length})`, margin, y)
+    doc.text(`PHOTOS (${unlinkedPhotoUrls.length})`, margin, y)
     y += 6
     doc.setFont('helvetica', 'normal')
 
-    for (const dataUrl of photoDataUrls) {
+    for (const dataUrl of unlinkedPhotoUrls) {
       checkPageBreak(45)
       try {
         const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG'

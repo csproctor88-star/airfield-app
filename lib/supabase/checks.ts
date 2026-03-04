@@ -11,6 +11,7 @@ export type CheckPhotoRow = {
   file_name: string
   file_size: number | null
   mime_type: string
+  issue_index: number | null
   captured_at: string
   created_at: string
 }
@@ -278,7 +279,8 @@ export async function updateCheckNotes(id: string, notes: string | null): Promis
 export async function uploadCheckPhoto(
   checkId: string,
   file: File,
-  baseId?: string | null
+  baseId?: string | null,
+  issueIndex?: number | null
 ): Promise<{ data: CheckPhotoRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -336,6 +338,7 @@ export async function uploadCheckPhoto(
   }
   if (uploaded_by) photoRow.uploaded_by = uploaded_by
   if (baseId) photoRow.base_id = baseId
+  if (issueIndex != null) photoRow.issue_index = issueIndex
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
