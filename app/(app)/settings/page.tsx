@@ -235,8 +235,8 @@ function ProfileSectionContent() {
               placeholder="unit.orgbox@mail.mil"
               style={{
                 flex: 1, padding: '8px 10px', borderRadius: 6,
-                background: 'var(--color-bg-input, #0d0d1a)',
-                border: '1px solid var(--color-border, #444)',
+                background: 'var(--color-bg-elevated)',
+                border: '1px solid var(--color-border)',
                 color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
                 fontFamily: 'inherit', outline: 'none',
               }}
@@ -1192,7 +1192,7 @@ function AboutSectionContent() {
       <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>Version</span>
-          <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', fontWeight: 600 }}>2.13.0</span>
+          <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', fontWeight: 600 }}>2.14.0</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>Environment</span>

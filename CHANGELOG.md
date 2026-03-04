@@ -9,13 +9,63 @@ All notable changes to Glidepath.
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
 - Sync & Data module (offline queue, export, import)
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate ~202 `as any` casts
-- Convert PDFLibrary.jsx to TypeScript (.tsx)
-- Remove dead API routes (`/api/airfield-status`, `/api/weather`) or wire them up
-- Remove unused files: `components/ui/airfield-diagram-viewer.tsx`, `lib/supabase/regulations.ts`, `lib/acsi-excel.ts` (unwired)
-- Clean up duplicate aircraft images and stray files in `public/aircraft_images/`
-- Fix aircraft data import (root JSON stale vs `public/` copies)
-- Remove dead import: `PhotoPickerButton` in `inspections/page.tsx`
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~35 `as any` casts
+
+---
+
+## [2.14.0] — 2026-03-04
+
+### Real-time Updates, Map Fixes & UI Polish
+
+Supabase Realtime subscriptions for live dashboard updates across users, activity logging fixes, map lifecycle fixes across all modules, and UI polish.
+
+#### Real-time Dashboard Updates (Supabase Realtime)
+- **Database migration** (`2026030401_enable_realtime.sql`) — Enables Supabase Realtime on `airfield_status`, `airfield_checks`, and `inspections` tables. Sets `REPLICA IDENTITY FULL` on `airfield_status` for complete UPDATE payloads
+- **DashboardProvider** (`lib/dashboard-context.tsx`) — Subscribes to `postgres_changes` UPDATE events on `airfield_status` filtered by `base_id`. Advisory, active runway, runway status, and per-runway statuses update live across all connected clients
+- **Dashboard page** (`app/(app)/page.tsx`) — Refactored `loadCurrentStatus` to `useCallback` for reuse. Subscribes to INSERT events on `airfield_checks` and `inspections` on a single channel. BWC, RSC, and Last Check re-derive on any new check/inspection
+- **Cleanup** — All channels removed on unmount or installationId change. Demo mode (no Supabase) gracefully skipped
+
+#### Activity Log & Runway Status Logging Fixes
+- **Runway status log** — Created `logRunwayStatusChange()` in `lib/supabase/airfield-status.ts`. Called from all 6 dashboard handlers (runway toggle ×2, status change ×2, advisory set, advisory clear). Populates `runway_status_log` table for daily operations report PDF
+- **Activity log UUID fix** — `activity_log.entity_id` is `UUID NOT NULL`; handlers were passing string literals (`'active_runway'`, `'runway_status'`) which silently failed on INSERT. Fixed to use `installationId` (valid UUID) as entity_id
+- **Advisory logging** — Added `logActivity()` calls for advisory set and clear (were completely missing)
+
+#### Login Activity Dialog Fix
+- **Session resume support** — Dialog now works on both explicit login and tab resume (session already authenticated). Falls back to reading `last_seen_at` from user profile when sessionStorage is empty
+- **Per-session flag** — `glidepath_activity_checked` prevents re-runs within the same tab session
+- **Race condition fix** — Header's `loadProfile()` accepts `updatePresence` param; initial mount skips `last_seen_at` update so the dialog can read the previous value first
+
+#### Map Lifecycle Fixes (3 components)
+- **Discrepancy map** (`discrepancy-map-view.tsx`) — Removed early return for zero GPS discrepancies that was destroying the map container DOM node, causing Mapbox to break on filter toggle. Replaced with overlay message. Added `installationId` dep for re-initialization on installation switch
+- **Obstruction evaluation map** (`airfield-map.tsx`) — Added `installationId` dependency to map init effect. Surfaces, runway labels, and center point now re-render when switching installations
+- **Obstruction history map** (`obstruction-map-view.tsx`) — Same installation-switch fix
+
+#### UI Polish
+- **Regulation cards** — Increased font sizes: reg ID (`fs-base` → `fs-md`), title (`fs-md` → `fs-lg`), badges (`fs-2xs` → `fs-xs`)
+- **User cards** — Email hidden from card list for privacy
+- **User detail modal** — Email masked by default (`jo***@email.com`) with eye icon toggle to reveal/hide. Added `Eye`/`EyeOff` icons from Lucide
+
+#### Migration Added (1)
+- `supabase/migrations/2026030401_enable_realtime.sql`
+
+#### Files Created (1)
+- `supabase/migrations/2026030401_enable_realtime.sql`
+
+#### Files Modified (10)
+- `lib/dashboard-context.tsx` — Realtime subscription for airfield_status
+- `lib/supabase/airfield-status.ts` — `logRunwayStatusChange()` function
+- `app/(app)/page.tsx` — `useCallback` refactor, realtime subscriptions, logRunwayStatusChange/logActivity calls
+- `components/discrepancies/discrepancy-map-view.tsx` — Remove early return, add overlay, installationId dep
+- `components/obstructions/airfield-map.tsx` — installationId dep for map re-init
+- `components/obstructions/obstruction-map-view.tsx` — installationId dep for map re-init
+- `components/login-activity-dialog.tsx` — Session resume support, per-session flag
+- `components/layout/header.tsx` — Delayed last_seen_at update
+- `components/admin/user-card.tsx` — Remove email display
+- `components/admin/user-detail-modal.tsx` — Masked email with eye toggle
+- `app/(app)/regulations/page.tsx` — Larger card text
+
+#### Version Sync
+- Updated version to 2.14.0 in package.json, login/page.tsx, settings/page.tsx
 
 ---
 

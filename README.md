@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, ACSI (annual compliance), NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.13.0 | **Build:** Clean | **53 routes** | **144 source files** | **60 migrations** | **~51,500 lines**
+**Version:** 2.14.0 | **Build:** Clean | **53 routes** | **157 source files** | **61 migrations** | **~51,700 lines**
 
 ## Tech Stack
 
@@ -54,7 +54,7 @@ RESEND_API_KEY=[resend-api-key]
 Apply the schema and migrations to a Supabase project:
 
 1. Run `supabase/schema.sql` to create the base tables and sequences
-2. Apply the 60 migrations in order from `supabase/migrations/`
+2. Apply the 61 migrations in order from `supabase/migrations/`
 
 See [docs/BASE-ONBOARDING.md](./docs/BASE-ONBOARDING.md) for adding new installations.
 
@@ -78,7 +78,7 @@ Key responsive features:
 ## Modules
 
 ### Dashboard (`/`)
-Real-time operational hub. Live clock, Open-Meteo weather with conditions/wind/visibility, advisory system (INFO/CAUTION/WARNING), Active Runway toggle with Open/Suspended/Closed status (color-coded card, persisted to DB with audit log), Current Status panel (RSC, BWC, Last Check), side-by-side NAVAID status panels with G/Y/R toggles and notes, quick actions (Begin Inspection, Begin Check, New Discrepancy), user presence tracking (Online/Away/Inactive), installation switcher in header for multi-base users, and expandable activity feed with enriched action labels.
+Real-time operational hub with **Supabase Realtime** push updates — advisory, runway status, BWC, RSC, and last check changes propagate to all connected users instantly. Live clock, Open-Meteo weather with conditions/wind/visibility, advisory system (INFO/CAUTION/WARNING), Active Runway toggle with Open/Suspended/Closed status (color-coded card, persisted to DB with audit log), Current Status panel (RSC, BWC, Last Check), side-by-side NAVAID status panels with G/Y/R toggles and notes, quick actions (Begin Inspection, Begin Check, New Discrepancy), user presence tracking (Online/Away/Inactive), installation switcher in header for multi-base users, and expandable activity feed with enriched action labels.
 
 ### Discrepancies (`/discrepancies`)
 Track and resolve airfield issues. 11 discrepancy types (FOD, pavement, lighting, markings, signage, drainage, vegetation, wildlife, equipment, security, other). Full lifecycle: Open → Submitted to AFM → Submitted to CES → Work Completed → Closed/Cancelled. Photo uploads, Mapbox location pinning, notes history with timestamps, work order tracking, linked NOTAMs. **Map view** with severity-colored pins (Common Operating Picture), List/Map toggle, severity legend with counts, expand/collapse.
@@ -215,7 +215,7 @@ airfield-app/
 │   ├── ui/                               # Badge, button, email-pdf-modal, photo-picker
 │   ├── RegulationPDFViewer.tsx          # In-app PDF viewer with zoom/touch
 │   ├── login-activity-dialog.tsx         # Login notification with activity table
-│   └── PDFLibrary.jsx                   # Admin PDF library component (needs TSX conversion)
+│   └── PDFLibrary.tsx                    # Admin PDF library component
 ├── lib/
 │   ├── constants.ts                      # Checklists, types, regulation categories, ACSI template
 │   ├── aircraft-data.ts                 # 1,000+ aircraft reference entries
@@ -233,7 +233,7 @@ airfield-app/
 │   └── supabase/                         # Client, server, types, CRUD modules (16 files)
 ├── supabase/
 │   ├── schema.sql                        # Full database schema
-│   ├── migrations/                       # 60 migration files
+│   ├── migrations/                       # 61 migration files
 │   └── functions/                        # Edge functions (PDF text extraction)
 ├── middleware.ts                          # Auth guard + demo mode bypass
 ├── public/                               # Static assets, PWA manifest, aircraft images
@@ -297,29 +297,17 @@ airfield-app/
 | Item | Priority | Notes |
 |------|----------|-------|
 | No test suite | High | No unit or integration tests |
-| ~202 `as any` casts | Medium | Regenerate Supabase types (`supabase gen types typescript`) to eliminate across 27 files |
-| Dead API routes | Medium | `/api/weather` (stub) and `/api/airfield-status` (no callers) — remove or wire up |
-| Unused files | Medium | `components/ui/airfield-diagram-viewer.tsx`, `lib/supabase/regulations.ts`, `lib/acsi-excel.ts` (all zero importers) |
-| Dead import | Medium | `PhotoPickerButton` imported but unused in `inspections/page.tsx` |
-| Stale aircraft JSON imports | Medium | `lib/aircraft-data.ts` imports root-level JSON (fewer entries) instead of `public/` copies |
-| `PDFLibrary.jsx` | Low | Only JSX file (1,091 lines) — convert to TypeScript (.tsx) |
-| 37 files > 500 lines | Low | Largest: `inspections/page.tsx` (1,691), `regulations/page.tsx` (1,638) |
-| Duplicate aircraft JSON | Low | Root-level JSON duplicated in `public/` with diverged content |
-| Duplicate aircraft images | Low | `public/aircraft_images/military/commercial/` duplicates `public/aircraft_images/commercial/` (~20 files) |
-| Stray files | Low | 2 screenshot PNGs + 1 "Copy" JPG in aircraft image directories |
-| Untracked migration | Low | `supabase/migrations/2026022701_inspection_photos.sql` not in git |
-| Unreachable page | Low | `/sync` has no navigation links — stub page |
-| 1 `console.log` | Low | Debug leftover in `components/PDFLibrary.jsx` line 354 |
+| 35 `as any` casts | Medium | Across 13 files — mostly `Record<string,unknown>` row inserts and jspdf-autotable hooks. Regenerate Supabase types to eliminate |
+| 35 files > 500 lines | Low | Largest: `inspections/page.tsx` (1,690), `regulations/page.tsx` (1,638) |
+| No `.env.example` | Low | Should create a template for onboarding |
 
 ## Current Status
 
 **Build**: TypeScript compiles clean (`npm run build` passes with zero errors)
 
-**Complete modules**: Dashboard (with installation switcher + presence tracking), Discrepancies, Airfield Checks, Daily Inspections, ACSI (annual compliance with PDF/Excel export), NOTAMs (live FAA feed), Obstruction Evaluations, References (with My Documents), Reports (4 types with KPI badges), Aircraft Database, Waivers (full lifecycle with annual review, PDF/Excel export), Settings (with Base Setup, Templates, and Default PDF Email), User Management (with delete cascade), Activity Log (manual entries, edit/delete, columnar display), All Inspections hub, Email PDF (all 10 export pages), More hub
+**Complete modules**: Dashboard (with Supabase Realtime push + installation switcher + presence tracking), Discrepancies, Airfield Checks, Daily Inspections, ACSI (annual compliance with PDF/Excel export), NOTAMs (live FAA feed), Obstruction Evaluations, References (with My Documents), Reports (4 types with KPI badges), Aircraft Database, Waivers (full lifecycle with annual review, PDF/Excel export), Settings (with Base Setup, Templates, and Default PDF Email), User Management (with delete cascade + email privacy), Activity Log (manual entries, edit/delete, columnar display), All Inspections hub, Email PDF (all 10 export pages), More hub
 
 **Placeholder modules**: Sync & Data
-
-**Dead API routes**: `/api/weather` (stub), `/api/airfield-status` (no callers)
 
 See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 

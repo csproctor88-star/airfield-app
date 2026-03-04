@@ -125,7 +125,7 @@ export async function generateAcsiPdf(
   }
 
   function checkPageBreak(needed: number) {
-    if (y + needed > pageHeight - 16) {
+    if (y + needed > pageHeight - 18) {
       addPageNumber()
       doc.addPage()
       pageNum++
@@ -375,7 +375,9 @@ export async function generateAcsiPdf(
       startY: y,
       head: [['#', 'Item', 'Response']],
       body: tableBody,
-      margin: { left: margin, right: margin },
+      margin: { left: margin, right: margin, bottom: 18 },
+      rowPageBreak: 'avoid',
+      showHead: 'everyPage',
       columnStyles: {
         0: { cellWidth: colNum, halign: 'center', fontStyle: 'bold' },
         1: { cellWidth: colItem },

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { USER_ROLES } from '@/lib/constants'
 import { useSidebar } from '@/lib/sidebar-context'
+import { useTheme } from '@/lib/theme-context'
 import type { UserRole } from '@/lib/supabase/types'
 import {
   Home,
@@ -54,6 +55,7 @@ const moreItems = [
 export function SidebarNav() {
   const pathname = usePathname()
   const { isOpen, toggle } = useSidebar()
+  const { resolvedTheme } = useTheme()
   const [canManageUsers, setCanManageUsers] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
@@ -142,48 +144,64 @@ export function SidebarNav() {
 
   return (
     <nav className={`sidebar-drawer${isOpen ? '' : ' sidebar-collapsed'}`}>
-      {/* Header with tagline + collapse toggle */}
+      {/* Header with logo + tagline + collapse toggle */}
       <div style={{
-        padding: isOpen ? '12px 20px 12px 16px' : '16px 0',
+        padding: isOpen ? '20px 16px 12px' : '20px 0 12px',
         borderBottom: '1px solid var(--color-border)',
         display: 'flex',
-        alignItems: isOpen ? 'flex-start' : 'center',
-        justifyContent: isOpen ? 'space-between' : 'center',
-        gap: 8,
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 6,
       }}>
         {isOpen && (
-          <div style={{
-            fontSize: 'var(--fs-sm)',
-            fontWeight: 300,
-            fontStyle: 'italic',
-            color: 'var(--color-text-2)',
-            letterSpacing: '0.04em',
-            lineHeight: 1.4,
-            flex: 1,
-            overflow: 'hidden',
-            whiteSpace: 'nowrap',
-          }}>
-            Guiding You to Mission Success
-          </div>
+          <img
+            src={resolvedTheme === 'dark' ? '/glidepathdarkmode3.png' : '/glidepath2.png'}
+            alt="Glidepath"
+            style={{ height: 28, objectFit: 'contain', marginBottom: 2 }}
+          />
         )}
-        <button
-          onClick={toggle}
-          title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: 'var(--color-text-3)',
-            padding: 6,
-            borderRadius: 6,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
-        >
-          {isOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
-        </button>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: isOpen ? 'space-between' : 'center',
+          width: '100%',
+          gap: 8,
+        }}>
+          {isOpen && (
+            <div style={{
+              fontSize: 'var(--fs-sm)',
+              fontWeight: 300,
+              fontStyle: 'italic',
+              color: 'var(--color-text-2)',
+              letterSpacing: '0.04em',
+              lineHeight: 1.4,
+              flex: 1,
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              paddingLeft: 4,
+            }}>
+              Guiding You to Mission Success
+            </div>
+          )}
+          <button
+            onClick={toggle}
+            title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--color-text-3)',
+              padding: 6,
+              borderRadius: 6,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            {isOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+          </button>
+        </div>
       </div>
 
       {/* Navigation items */}
