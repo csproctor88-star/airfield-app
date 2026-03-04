@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -12,13 +12,14 @@ import {
   EMERGENCY_ACTIONS,
 } from '@/lib/constants'
 import type { CheckType } from '@/lib/supabase/types'
-import { createCheck, uploadCheckPhoto, fetchRecentChecks, type CheckRow } from '@/lib/supabase/checks'
+import { createCheck, uploadCheckPhoto, fetchRecentChecks, saveCheckDraftToDb, loadCheckDraftFromDb, deleteCheckDraft, type CheckRow } from '@/lib/supabase/checks'
 import { DEMO_CHECKS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { getAirfieldDiagram } from '@/lib/airfield-diagram'
 import { SimpleDiscrepancyPanelGroup } from '@/components/ui/simple-discrepancy-panel-group'
 import type { SimpleDiscrepancy } from '@/lib/supabase/types'
+import { loadCheckDraft, saveCheckDraft, clearCheckDraft, type CheckDraft } from '@/lib/check-draft'
 
 type LocalComment = {
   id: string
@@ -35,6 +36,10 @@ export default function AirfieldChecksPage() {
   const [saving, setSaving] = useState(false)
   const [currentUser, setCurrentUser] = useState('Inspector')
   const [recentChecks, setRecentChecks] = useState<CheckRow[]>([])
+  // ── Draft persistence state ──
+  const [draftDbRowId, setDraftDbRowId] = useState<string | null>(null)
+  const [draftSaving, setDraftSaving] = useState(false)
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
   // ── Airfield diagram state ──
   const [diagramUrl, setDiagramUrl] = useState<string | null>(null)
   const [showDiagram, setShowDiagram] = useState(false)
@@ -67,6 +72,65 @@ export default function AirfieldChecksPage() {
       }
     })
     fetchRecentChecks(installationId, 5).then(setRecentChecks)
+  }, [installationId])
+
+  // ── Draft persistence ──
+  const draftLoaded = useRef(false)
+
+  // Hydrate form from a CheckDraft object
+  const hydrateFormFromDraft = useCallback((saved: CheckDraft) => {
+    setCheckType(saved.checkType)
+    setAreas(saved.areas)
+    setIssueFound(saved.issueFound)
+    setIssues(saved.issues)
+    setRemarks(saved.remarks)
+    setRemarkText(saved.remarkText)
+    setRscCondition(saved.rscCondition)
+    setRcrValue(saved.rcrValue)
+    setRcrConditionType(saved.rcrConditionType)
+    setBashCondition(saved.bashCondition)
+    setBashSpecies(saved.bashSpecies)
+    setAircraftType(saved.aircraftType)
+    setCallsign(saved.callsign)
+    setEmergencyNature(saved.emergencyNature)
+    setCheckedActions(saved.checkedActions)
+    setNotifiedAgencies(saved.notifiedAgencies)
+    setHeavyAircraftType(saved.heavyAircraftType)
+    if (saved.dbRowId) setDraftDbRowId(saved.dbRowId)
+    if (saved.savedAt) setDraftSavedAt(saved.savedAt)
+    if (saved.issueFound && saved.issues.length > 0) {
+      setIssuePhotos(saved.issues.map(() => []))
+      setIssueFlyTo(saved.issues.map(() => null))
+    }
+  }, [])
+
+  // Two-phase draft load: localStorage (instant) then Supabase (async, cross-device)
+  useEffect(() => {
+    // Phase 1: Sync — load from localStorage
+    const localDraft = loadCheckDraft(installationId)
+    if (localDraft) {
+      hydrateFormFromDraft(localDraft)
+    }
+    draftLoaded.current = true
+
+    // Phase 2: Async — check Supabase for a newer draft
+    loadCheckDraftFromDb(installationId).then((dbRow) => {
+      if (!dbRow?.draft_data) return
+      const localTime = localDraft?.savedAt ? new Date(localDraft.savedAt).getTime() : 0
+      const dbTime = dbRow.saved_at ? new Date(dbRow.saved_at).getTime() : 0
+      if (dbTime > localTime) {
+        const dbDraft: CheckDraft = { ...dbRow.draft_data, dbRowId: dbRow.id, savedAt: dbRow.saved_at || '' }
+        hydrateFormFromDraft(dbDraft)
+        // Mirror to localStorage
+        saveCheckDraft(dbDraft, installationId)
+        toast.info('Draft loaded from server')
+      } else if (dbRow.id && !localDraft?.dbRowId) {
+        // Local is newer but link the DB row ID
+        setDraftDbRowId(dbRow.id)
+        setDraftSavedAt(dbRow.saved_at || null)
+      }
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [installationId])
 
   // Issue Found toggle
@@ -203,6 +267,43 @@ export default function AirfieldChecksPage() {
   const [checkedActions, setCheckedActions] = useState<string[]>([])
   const [notifiedAgencies, setNotifiedAgencies] = useState<string[]>([])
   const [heavyAircraftType, setHeavyAircraftType] = useState('')
+
+  // ── Save Draft handler (manual, not auto-save) ──
+  const handleSaveDraft = async () => {
+    if (!checkType) {
+      toast.error('Select a check type first')
+      return
+    }
+    setDraftSaving(true)
+    const draft: CheckDraft = {
+      checkType, areas, issueFound, issues, remarks, remarkText,
+      rscCondition, rcrValue, rcrConditionType, bashCondition, bashSpecies,
+      aircraftType, callsign, emergencyNature, checkedActions, notifiedAgencies,
+      heavyAircraftType, savedAt: '', dbRowId: draftDbRowId,
+    }
+
+    const { data: saved, error } = await saveCheckDraftToDb({
+      id: draftDbRowId,
+      draft_data: draft,
+      base_id: installationId,
+    })
+
+    if (error || !saved) {
+      toast.error(`Failed to save draft: ${error}`)
+      setDraftSaving(false)
+      return
+    }
+
+    const now = saved.saved_at || new Date().toISOString()
+    setDraftDbRowId(saved.id)
+    setDraftSavedAt(now)
+    // Mirror to localStorage
+    draft.dbRowId = saved.id
+    draft.savedAt = now
+    saveCheckDraft(draft, installationId)
+    setDraftSaving(false)
+    toast.success('Draft saved')
+  }
 
   const toggleArea = (area: string) => {
     setAreas((prev) =>
@@ -342,6 +443,13 @@ export default function AirfieldChecksPage() {
       }
     }
 
+    // Clean up draft (DB + localStorage)
+    if (draftDbRowId) {
+      await deleteCheckDraft(draftDbRowId)
+      setDraftDbRowId(null)
+      setDraftSavedAt(null)
+    }
+    clearCheckDraft(installationId)
     setSaving(false)
     toast.success(`Check ${created.display_id} completed`)
     router.push(`/checks/${created.id}`)
@@ -877,6 +985,32 @@ export default function AirfieldChecksPage() {
       )}
 
       {/* Photos section removed — photos now inside issue panels */}
+
+      {/* Save Draft Button */}
+      {checkType && (
+        <div style={{ marginBottom: 8 }}>
+          <button
+            type="button"
+            onClick={handleSaveDraft}
+            disabled={draftSaving}
+            style={{
+              width: '100%', padding: '14px', borderRadius: 10,
+              border: '1.5px solid rgba(59,130,246,0.5)',
+              background: 'rgba(59,130,246,0.08)',
+              color: 'var(--color-accent)', fontSize: 'var(--fs-xl)', fontWeight: 700,
+              cursor: draftSaving ? 'default' : 'pointer', fontFamily: 'inherit',
+              opacity: draftSaving ? 0.7 : 1,
+            }}
+          >
+            {draftSaving ? 'Saving...' : draftDbRowId ? 'Update Draft' : 'Save Draft'}
+          </button>
+          {draftSavedAt && (
+            <div style={{ textAlign: 'center', marginTop: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+              Last saved {new Date(draftSavedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} on {new Date(draftSavedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Complete Check Button */}
       {checkType && (

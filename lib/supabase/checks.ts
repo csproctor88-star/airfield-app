@@ -1,6 +1,7 @@
 import { createClient } from './client'
 import { logActivity } from './activity'
 import type { CheckType } from './types'
+import type { CheckDraft } from '@/lib/check-draft'
 
 export type CheckPhotoRow = {
   id: string
@@ -26,6 +27,11 @@ export type CheckRow = {
   latitude: number | null
   longitude: number | null
   photo_count: number
+  status: 'draft' | 'completed'
+  draft_data: CheckDraft | null
+  saved_by_name: string | null
+  saved_by_id: string | null
+  saved_at: string | null
   created_at: string
   updated_at: string
 }
@@ -114,6 +120,7 @@ export async function fetchChecks(baseId?: string | null): Promise<{ data: Check
   let query = (supabase as any)
     .from('airfield_checks')
     .select('*')
+    .eq('status', 'completed')
     .order('created_at', { ascending: false })
 
   if (baseId) {
@@ -138,6 +145,7 @@ export async function fetchRecentChecks(baseId?: string | null, limit = 5): Prom
   let query = (supabase as any)
     .from('airfield_checks')
     .select('*')
+    .eq('status', 'completed')
     .order('created_at', { ascending: false })
     .limit(limit)
 
@@ -356,6 +364,155 @@ export async function uploadCheckPhoto(
   }
 
   return { data: data as CheckPhotoRow, error: null }
+}
+
+// ── Draft persistence ──
+
+/** Save (upsert) a check draft to the database.
+ *  If `id` is provided, updates the existing row; otherwise inserts a new row. */
+export async function saveCheckDraftToDb(input: {
+  id?: string | null
+  draft_data: CheckDraft
+  base_id?: string | null
+}): Promise<{ data: CheckRow | null; error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { data: null, error: 'Supabase not configured' }
+
+  let userId: string | undefined
+  let savedByName: string | null = null
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      userId = user.id
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: profile } = await (supabase as any)
+        .from('profiles')
+        .select('name, rank')
+        .eq('id', user.id)
+        .single()
+      if (profile) {
+        savedByName = profile.rank ? `${profile.rank} ${profile.name}` : profile.name
+      } else {
+        savedByName = user.email || null
+      }
+    }
+  } catch {
+    // No authenticated user
+  }
+
+  const now = new Date()
+
+  if (input.id) {
+    // Update existing draft row
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from('airfield_checks')
+      .update({
+        draft_data: input.draft_data,
+        saved_by_name: savedByName,
+        saved_by_id: userId || null,
+        saved_at: now.toISOString(),
+      })
+      .eq('id', input.id)
+      .eq('status', 'draft')
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Failed to update check draft:', error.message)
+      return { data: null, error: error.message }
+    }
+
+    const updated = data as CheckRow
+    logActivity('saved', 'check', updated.id, updated.display_id, { check_type: input.draft_data.checkType || 'draft' }, input.base_id)
+    return { data: updated, error: null }
+  }
+
+  // Insert new draft row
+  const ts = now.getTime().toString(36).slice(-4).toUpperCase()
+  const display_id = `DC-${ts}`
+
+  const row: Record<string, unknown> = {
+    display_id,
+    check_type: input.draft_data.checkType || 'fod',
+    areas: input.draft_data.areas || [],
+    data: {},
+    status: 'draft',
+    draft_data: input.draft_data,
+    saved_by_name: savedByName,
+    saved_by_id: userId || null,
+    saved_at: now.toISOString(),
+  }
+  if (input.base_id) row.base_id = input.base_id
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('airfield_checks')
+    .insert(row)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Failed to save check draft:', error.message)
+    return { data: null, error: error.message }
+  }
+
+  const created = data as CheckRow
+  logActivity('saved', 'check', created.id, created.display_id, { check_type: input.draft_data.checkType || 'draft' }, input.base_id)
+  return { data: created, error: null }
+}
+
+/** Load the most recent draft check for a base */
+export async function loadCheckDraftFromDb(baseId?: string | null): Promise<CheckRow | null> {
+  const supabase = createClient()
+  if (!supabase) return null
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query = (supabase as any)
+    .from('airfield_checks')
+    .select('*')
+    .eq('status', 'draft')
+    .order('saved_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (baseId) {
+    query = (supabase as any)
+      .from('airfield_checks')
+      .select('*')
+      .eq('status', 'draft')
+      .eq('base_id', baseId)
+      .order('saved_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+  }
+
+  const { data, error } = await query
+  if (error) {
+    console.error('Failed to load check draft:', error.message)
+    return null
+  }
+  return (data as CheckRow) || null
+}
+
+/** Delete a draft check row (safety: only deletes rows with status='draft') */
+export async function deleteCheckDraft(id: string): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from('airfield_checks')
+    .delete()
+    .eq('id', id)
+    .eq('status', 'draft')
+
+  if (error) {
+    console.error('Failed to delete check draft:', error.message)
+    return { error: error.message }
+  }
+
+  return { error: null }
 }
 
 export async function fetchCheckPhotos(checkId: string): Promise<CheckPhotoRow[]> {

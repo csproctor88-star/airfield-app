@@ -189,11 +189,42 @@ export default function InspectionsPage() {
     toast.success(`Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
   }, [])
 
-  // ── Load draft from localStorage on mount (scoped to current base) ──
+  // ── Load draft: localStorage (instant) then Supabase (async, cross-device) ──
   useEffect(() => {
+    // Phase 1: Sync — load from localStorage
     const stored = loadDraft(installationId)
     if (stored) setDraft(stored)
     setDraftLoaded(true)
+
+    // Phase 2: Async — check Supabase for newer in-progress drafts
+    fetchInspections(installationId, 'in_progress').then((dbDrafts) => {
+      if (!dbDrafts.length) return
+      let merged = false
+      const current = stored || createNewDraft()
+
+      for (const dbRow of dbDrafts) {
+        if (!dbRow.draft_data) continue
+        const tab = dbRow.inspection_type as 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
+        if (!current[tab]) continue
+
+        const localTime = current[tab].savedAt ? new Date(current[tab].savedAt!).getTime() : 0
+        const dbTime = dbRow.saved_at ? new Date(dbRow.saved_at).getTime() : 0
+        if (dbTime > localTime) {
+          current[tab] = { ...(dbRow.draft_data as unknown as InspectionHalfDraft), dbRowId: dbRow.id }
+          merged = true
+        } else if (!current[tab].dbRowId && dbRow.id) {
+          // Link the DB row ID even if local is newer
+          current[tab].dbRowId = dbRow.id
+        }
+      }
+
+      if (merged) {
+        setDraft({ ...current })
+        saveDraftToStorage(current, installationId)
+        toast.info('Draft loaded from server')
+      }
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [installationId])
 
   // ── Auto-begin: if ?action=begin and no draft, create one ──
@@ -1326,7 +1357,7 @@ export default function InspectionsPage() {
                   opacity: saving ? 0.7 : 1,
                 }}
               >
-                {saving ? 'Saving...' : 'Save'}
+                {saving ? 'Saving...' : 'Save Draft'}
               </button>
             )
           )}
