@@ -11,7 +11,7 @@ import { fetchAcsiInspection, deleteAcsiInspection } from '@/lib/supabase/acsi-i
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
 import type { AcsiInspection, AcsiStatus, AcsiItem } from '@/lib/supabase/types'
-import { ArrowLeft, ChevronDown, ChevronRight, Trash2, Edit, FileText, Table } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronRight, Trash2, Edit, FileText } from 'lucide-react'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 
@@ -131,19 +131,6 @@ export default function AcsiDetailPage() {
     setSendingEmail(false)
   }
 
-  const handleExportExcel = async () => {
-    setExporting(true)
-    try {
-      const { generateAcsiExcel } = await import('@/lib/acsi-excel')
-      await generateAcsiExcel(insp)
-      toast.success('Excel exported')
-    } catch (err) {
-      toast.error('Excel export failed')
-      console.error(err)
-    }
-    setExporting(false)
-  }
-
   const responseBadge = (response: string | null) => {
     if (response === 'pass') return <span style={{ color: '#10B981', fontWeight: 600 }}>Y</span>
     if (response === 'fail') return <span style={{ color: '#EF4444', fontWeight: 600 }}>N</span>
@@ -205,19 +192,6 @@ export default function AcsiDetailPage() {
                 title="Email PDF"
               >
                 ✉
-              </button>
-              <button
-                onClick={handleExportExcel}
-                disabled={exporting}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '8px 14px', borderRadius: 6, border: '1px solid var(--color-border)',
-                  background: 'transparent', color: 'var(--color-text-2)',
-                  fontSize: 'var(--fs-sm)', fontWeight: 500, cursor: 'pointer',
-                  opacity: exporting ? 0.5 : 1,
-                }}
-              >
-                <Table size={14} /> Export Excel
               </button>
             </>
           )}

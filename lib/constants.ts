@@ -746,11 +746,7 @@ export const ACSI_CHECKLIST_SECTIONS: AcsiChecklistSection[] = [
     number: 10,
     title: 'Local Information / Hazardous Conditions',
     reference: 'Wing/Base Instructions',
-    items: [
-      { id: '10.1', question: '(Locally defined)' },
-      { id: '10.2', question: '(Locally defined)' },
-      { id: '10.3', question: '(Locally defined)' },
-    ],
+    items: [],
   },
 ]
 

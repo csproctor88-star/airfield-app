@@ -5,6 +5,10 @@ import { useRouter, useParams } from 'next/navigation'
 import { useInstallation } from '@/lib/installation-context'
 import { fetchObstructionEvaluation, deleteObstructionEvaluation, parsePhotoPaths, type ObstructionRow } from '@/lib/supabase/obstructions'
 import { PhotoViewerModal } from '@/components/discrepancies/modals'
+import { generateObstructionPdf } from '@/lib/obstruction-pdf'
+import { sendPdfViaEmail } from '@/lib/email-pdf'
+import EmailPdfModal from '@/components/ui/email-pdf-modal'
+import { toast } from 'sonner'
 
 type SurfaceResult = {
   surfaceKey: string
@@ -38,7 +42,7 @@ const SURFACE_COLORS: Record<string, string> = {
 export default function ObstructionDetailPage() {
   const router = useRouter()
   const params = useParams()
-  const { currentInstallation } = useInstallation()
+  const { currentInstallation, defaultPdfEmail } = useInstallation()
   const id = params.id as string
   const [evaluation, setEvaluation] = useState<ObstructionRow | null>(null)
   const [loading, setLoading] = useState(true)
@@ -46,6 +50,11 @@ export default function ObstructionDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
   const [showVerify, setShowVerify] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -66,6 +75,71 @@ export default function ObstructionDetailPage() {
       return
     }
     router.push('/obstructions/history')
+  }
+
+  const preparePdf = async () => {
+    const eval_ = evaluation!
+    const urls = parsePhotoPaths(eval_.photo_storage_path)
+    const photoDataUrls: string[] = []
+    for (const url of urls) {
+      try {
+        const response = await fetch(url)
+        const blob = await response.blob()
+        const dataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(reader.result as string)
+          reader.readAsDataURL(blob)
+        })
+        photoDataUrls.push(dataUrl)
+      } catch { /* skip */ }
+    }
+    return generateObstructionPdf({
+      evaluation: eval_,
+      photoDataUrls,
+      baseName: currentInstallation?.name,
+      baseIcao: currentInstallation?.icao,
+    })
+  }
+
+  const handleExportPdf = async () => {
+    if (!evaluation) return
+    setExporting(true)
+    try {
+      const { doc, filename } = await preparePdf()
+      doc.save(filename)
+    } catch (err) {
+      console.error('PDF export failed:', err)
+      toast.error('Failed to generate PDF')
+    }
+    setExporting(false)
+  }
+
+  const handleEmailPdf = async () => {
+    if (!evaluation) return
+    setExporting(true)
+    try {
+      const result = await preparePdf()
+      setEmailPdfData(result)
+      setEmailModalOpen(true)
+    } catch (err) {
+      console.error('PDF generation failed:', err)
+      toast.error('Failed to generate PDF')
+    }
+    setExporting(false)
+  }
+
+  const handleSendEmail = async (email: string) => {
+    if (!emailPdfData) return
+    setSendingEmail(true)
+    const result = await sendPdfViaEmail(emailPdfData.doc, emailPdfData.filename, email, `Obstruction Evaluation: ${emailPdfData.filename.replace(/_/g, ' ').replace('.pdf', '')}`)
+    if (result.success) {
+      toast.success('Email sent successfully')
+      setEmailModalOpen(false)
+      setEmailPdfData(null)
+    } else {
+      toast.error(result.error || 'Failed to send email')
+    }
+    setSendingEmail(false)
   }
 
   if (loading) {
@@ -133,6 +207,34 @@ export default function ObstructionDetailPage() {
           {evaluation.has_violation ? 'VIOLATION' : 'CLEAR'}
         </span>
         <span style={{ flex: 1 }} />
+        <button
+          onClick={handleExportPdf}
+          disabled={exporting}
+          style={{
+            padding: '4px 12px', borderRadius: 6,
+            background: '#A78BFA14', border: '1px solid #A78BFA33',
+            color: '#A78BFA', fontSize: 'var(--fs-base)', fontWeight: 700,
+            cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
+            opacity: exporting ? 0.6 : 1,
+          }}
+          title="Export PDF"
+        >
+          📄
+        </button>
+        <button
+          onClick={handleEmailPdf}
+          disabled={exporting}
+          style={{
+            padding: '4px 12px', borderRadius: 6,
+            background: '#A78BFA14', border: '1px solid #A78BFA33',
+            color: '#A78BFA', fontSize: 'var(--fs-base)', fontWeight: 700,
+            cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
+            opacity: exporting ? 0.7 : 1,
+          }}
+          title="Email PDF"
+        >
+          ✉
+        </button>
         <button
           onClick={() => router.push(`/obstructions?edit=${evaluation.id}`)}
           style={{
@@ -475,6 +577,15 @@ export default function ObstructionDetailPage() {
           onClose={() => setViewerIndex(null)}
         />
       )}
+
+      <EmailPdfModal
+        open={emailModalOpen}
+        onClose={() => { setEmailModalOpen(false); setEmailPdfData(null) }}
+        onSend={handleSendEmail}
+        sending={sendingEmail}
+        filename={emailPdfData?.filename}
+        defaultEmail={defaultPdfEmail}
+      />
 
       {/* Delete confirmation dialog */}
       {showDeleteConfirm && (

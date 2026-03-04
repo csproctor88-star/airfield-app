@@ -505,38 +505,47 @@ export async function generateAcsiPdf(
   if (inspection.inspection_team && inspection.inspection_team.length > 0) {
     sectionHeader('INSPECTION TEAM')
 
-    const teamData = inspection.inspection_team.map(m => [
-      m.title || m.role || '',
-      m.rank || '',
-      m.name || '(not assigned)',
-    ])
-
-    autoTable(doc, {
-      startY: y,
-      head: [['Title / Role', 'Rank', 'Name']],
-      body: teamData,
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 8, cellPadding: 3 },
-      headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [245, 245, 245] },
-    })
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    y = (doc as any).lastAutoTable.finalY + 6
+    const boxH = 32
+    const sigLineW = 70
+    const dateLineW = 35
 
     for (const member of inspection.inspection_team) {
-      checkPageBreak(18)
-      doc.setFontSize(8)
-      doc.setTextColor(80)
-      doc.text(`${member.title || member.role}: ${member.rank || ''} ${member.name || ''}`, margin, y)
-      y += 3
+      checkPageBreak(boxH + 6)
+
+      // Box border
       doc.setDrawColor(180)
       doc.setLineWidth(0.3)
-      doc.line(margin, y + 10, margin + 80, y + 10)
-      doc.setFontSize(7)
-      doc.setTextColor(150)
-      doc.text('Signature / Date', margin, y + 13)
-      y += 18
+      doc.setFillColor(252, 252, 252)
+      doc.roundedRect(margin, y, contentWidth, boxH, 2, 2, 'FD')
+
+      // Role/title label
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(0)
+      doc.text(member.title || member.role || 'Team Member', margin + 5, y + 6)
+
+      // Name + rank
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(60)
+      const nameStr = [member.rank, member.name].filter(Boolean).join(' ') || '(not assigned)'
+      doc.text(nameStr, margin + 5, y + 11)
+
+      // Signature line
+      const sigY = y + boxH - 7
+      doc.setDrawColor(120)
+      doc.setLineWidth(0.4)
+      doc.line(margin + 5, sigY, margin + 5 + sigLineW, sigY)
+      doc.setFontSize(6.5)
+      doc.setTextColor(130)
+      doc.text('Signature', margin + 5, sigY + 3.5)
+
+      // Date line
+      const dateX = margin + contentWidth - dateLineW - 5
+      doc.line(dateX, sigY, dateX + dateLineW, sigY)
+      doc.text('Date', dateX, sigY + 3.5)
+
+      y += boxH + 4
     }
     y += 4
   }
@@ -554,39 +563,49 @@ export async function generateAcsiPdf(
     y += certLines.length * 3.5 + 6
     doc.setFont('helvetica', 'normal')
 
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(0)
-    doc.text('Reviewed By:', margin, y)
-    y += 6
-    doc.setFont('helvetica', 'normal')
+    const boxH = 36
+    const sigLineW = 70
+    const dateLineW = 35
 
     for (const sig of inspection.risk_cert_signatures) {
-      checkPageBreak(22)
-      doc.setFontSize(8)
-      doc.setTextColor(0)
-      doc.setFont('helvetica', 'bold')
-      doc.text(sig.label || 'Reviewer', margin, y)
-      doc.setFont('helvetica', 'normal')
-      y += 4
+      checkPageBreak(boxH + 6)
 
-      const sigInfo: string[] = []
-      if (sig.organization) sigInfo.push(`Org: ${sig.organization}`)
-      if (sig.rank) sigInfo.push(`Rank: ${sig.rank}`)
-      if (sig.name) sigInfo.push(`Name: ${sig.name}`)
-      if (sig.title) sigInfo.push(`Title: ${sig.title}`)
-      doc.setFontSize(8)
-      doc.setTextColor(60)
-      doc.text(sigInfo.join('    |    '), margin + 2, y)
-      y += 4
-
+      // Box border
       doc.setDrawColor(180)
       doc.setLineWidth(0.3)
-      doc.line(margin, y + 10, margin + 80, y + 10)
-      doc.setFontSize(7)
-      doc.setTextColor(150)
-      doc.text('Signature / Date', margin, y + 13)
-      y += 24
+      doc.setFillColor(252, 252, 252)
+      doc.roundedRect(margin, y, contentWidth, boxH, 2, 2, 'FD')
+
+      // Label (role)
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(0)
+      doc.text(sig.label || 'Reviewer', margin + 5, y + 6)
+
+      // Name, rank, org, title on second line
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(60)
+      const parts = [sig.rank, sig.name].filter(Boolean).join(' ')
+      const orgTitle = [sig.organization, sig.title].filter(Boolean).join(' — ')
+      const detail = [parts, orgTitle].filter(Boolean).join('  |  ')
+      doc.text(detail || '(not assigned)', margin + 5, y + 11)
+
+      // Signature line
+      const sigY = y + boxH - 7
+      doc.setDrawColor(120)
+      doc.setLineWidth(0.4)
+      doc.line(margin + 5, sigY, margin + 5 + sigLineW, sigY)
+      doc.setFontSize(6.5)
+      doc.setTextColor(130)
+      doc.text('Signature', margin + 5, sigY + 3.5)
+
+      // Date line
+      const dateX = margin + contentWidth - dateLineW - 5
+      doc.line(dateX, sigY, dateX + dateLineW, sigY)
+      doc.text('Date', dateX, sigY + 3.5)
+
+      y += boxH + 4
     }
   }
 
