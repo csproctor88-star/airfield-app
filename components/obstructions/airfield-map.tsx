@@ -255,7 +255,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
   const [visibility, setVisibility] = useState<Record<ToggleKey, boolean>>(getDefaultVisibility)
   const [runwayVisibility, setRunwayVisibility] = useState<Record<number, boolean>>({})
   const [legendOpen, setLegendOpen] = useState(false)
-  const { runways: installationRunways } = useInstallation()
+  const { runways: installationRunways, installationId } = useInstallation()
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const mapboxReady = isMapboxConfigured()
@@ -292,10 +292,16 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
     [onPointSelected],
   )
 
-  // Initialize map
+  // Initialize map — re-create when installation changes
   useEffect(() => {
     if (!mapContainer.current || !mapboxReady || !token) return
-    if (map.current) return
+
+    // Tear down previous instance if switching installations
+    if (map.current) {
+      map.current.remove()
+      map.current = null
+      setMapLoaded(false)
+    }
 
     mapboxgl.accessToken = token
 
@@ -430,7 +436,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
       map.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token])
+  }, [token, installationId])
 
   // Update click handler when callback changes
   useEffect(() => {

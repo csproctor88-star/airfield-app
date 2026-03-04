@@ -44,7 +44,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
   const markersRef = useRef<mapboxgl.Marker[]>([])
   const [mapLoaded, setMapLoaded] = useState(false)
   const [activeTypeFilter, setActiveTypeFilter] = useState<string | null>(null)
-  const { runways } = useInstallation()
+  const { runways, installationId } = useInstallation()
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const mapboxReady = isMapboxConfigured()
@@ -61,10 +61,15 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
 
   const noGeoCount = discrepancies.length - geoDiscrepancies.length
 
-  // Initialize map
+  // Initialize map — re-create when installation changes
   useEffect(() => {
     if (!mapContainer.current || !mapboxReady || !token) return
-    if (map.current) return
+
+    if (map.current) {
+      map.current.remove()
+      map.current = null
+      setMapLoaded(false)
+    }
 
     mapboxgl.accessToken = token
 
@@ -99,7 +104,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
       map.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token])
+  }, [token, installationId])
 
   // Add/update markers when discrepancies, type filter, or map changes
   useEffect(() => {
