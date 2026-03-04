@@ -132,7 +132,7 @@ UFC 3-260-01 Class B imaginary surface analysis with multi-runway support:
 - **History map view** with List/Map toggle showing all evaluations on a satellite map
 
 ### Aircraft Database (`/aircraft`)
-1,000+ military and civilian aircraft reference entries. Search by name, type, manufacturer, or branch. Sort by weight, wingspan, or ACN values. Favorites system. ACN/PCN comparison panel for pavement loading analysis.
+200+ military and civilian aircraft reference entries. Search by name, type, manufacturer, or branch. Sort by weight, wingspan, or ACN values. Favorites system. ACN/PCN comparison panel for pavement loading analysis.
 
 ### References (`/regulations`)
 Comprehensive regulatory reference library with two tabs:
@@ -142,7 +142,7 @@ Comprehensive regulatory reference library with two tabs:
 **My Documents tab** — Upload personal PDFs, JPGs, and PNGs. Client-side text extraction for search. Per-document offline caching. Supabase Storage integration.
 
 ### Waivers (`/waivers`)
-Full airfield waiver lifecycle management modeled after AF Form 505 and the AFCEC Playbook Appendix B. Six classification types (permanent, temporary, construction, event, extension, amendment), seven status values with mandatory comment dialogs for status transitions. Waiver detail pages include criteria & standards references, coordination tracking by office, photo attachments with camera capture, and annual review history. Individual waiver PDF export with embedded photos. Excel export of the full waiver register with criteria and coordination sheets. Annual review mode (`/waivers/annual-review`) with year-by-year review forms, KPIs, and board presentation tracking. **Map view** with emoji markers by classification type, clickable type filter legend, List/Map toggle. **Location picker** on create/edit forms for GPS pinning.
+Full airfield waiver lifecycle management modeled after AF Form 505 and the AFCEC Playbook Appendix B requirements. Six classification types (permanent, temporary, construction, event, extension, amendment), seven status values with mandatory comment dialogs for status transitions. Waiver detail pages include criteria & standards references, coordination tracking by office, photo attachments with camera capture, and annual review history. Individual waiver PDF export with embedded photos. Excel export of the full waiver register with criteria and coordination sheets. Annual review mode (`/waivers/annual-review`) with year-by-year review forms, KPIs, and board presentation tracking. **Map view** with emoji markers by classification type, clickable type filter legend, List/Map toggle. **Location picker** on create/edit forms for GPS pinning.
 
 ### NOTAMs (`/notams`)
 Live FAA NOTAM feed via `notams.aim.faa.gov` — no API key required. Auto-fetches NOTAMs for the current installation's ICAO code on page load. ICAO search input for querying any airport. Full NOTAM text displayed on each card in monospace. Feed status indicator, refresh button, loading/error states. Filter chips (All/FAA/LOCAL/Active/Expired). Falls back to demo data when Supabase is not configured. Draft creation for local NOTAMs.
