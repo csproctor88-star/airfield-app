@@ -38,12 +38,12 @@ function AcnPcnPanel({
     return (
       <div style={{ padding: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>ACN/PCN Comparison</div>
+          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>ACN/PCN Comparison</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
             <X size={16} color="var(--color-text-3)" />
           </button>
         </div>
-        <div style={{ fontSize: 'var(--fs-2xl)', color: 'var(--color-text-2)' }}>No ACN data available for this aircraft.</div>
+        <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)' }}>No ACN data available for this aircraft.</div>
       </div>
     )
   }
@@ -70,7 +70,7 @@ function AcnPcnPanel({
   return (
     <div style={{ padding: 16, background: 'var(--color-detail-box-bg)', borderRadius: 10, border: '1px solid var(--color-border-mid)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>ACN/PCN Comparison</div>
+        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>ACN/PCN Comparison</div>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
           <X size={16} color="var(--color-text-3)" />
         </button>
@@ -78,7 +78,7 @@ function AcnPcnPanel({
 
       {/* Weight Mode Toggle */}
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-detail-box-label)', marginBottom: 4, fontWeight: 700 }}>WEIGHT CONDITION</div>
+        <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-detail-box-label)', marginBottom: 4, fontWeight: 700 }}>WEIGHT CONDITION</div>
         <div style={{ display: 'flex', gap: 6 }}>
           {(['max', 'min'] as const).map(m => (
             <button
@@ -91,7 +91,7 @@ function AcnPcnPanel({
                 border: weightMode === m ? '1px solid rgba(56,189,248,0.4)' : '1px solid var(--color-border-mid)',
                 background: weightMode === m ? 'rgba(56,189,248,0.1)' : 'transparent',
                 color: weightMode === m ? 'var(--color-accent)' : 'var(--color-text-2)',
-                fontSize: 'var(--fs-xl)',
+                fontSize: 'var(--fs-md)',
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
@@ -105,7 +105,7 @@ function AcnPcnPanel({
 
       {/* Pavement Type */}
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-detail-box-label)', marginBottom: 4, fontWeight: 700 }}>PAVEMENT TYPE</div>
+        <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-detail-box-label)', marginBottom: 4, fontWeight: 700 }}>PAVEMENT TYPE</div>
         <div style={{ display: 'flex', gap: 6 }}>
           {(['rigid', 'flexible'] as const).map(t => (
             <button
@@ -118,7 +118,7 @@ function AcnPcnPanel({
                 border: pavementType === t ? '1px solid rgba(56,189,248,0.4)' : '1px solid var(--color-border-mid)',
                 background: pavementType === t ? 'rgba(56,189,248,0.1)' : 'transparent',
                 color: pavementType === t ? 'var(--color-accent)' : 'var(--color-text-2)',
-                fontSize: 'var(--fs-xl)',
+                fontSize: 'var(--fs-md)',
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
@@ -131,7 +131,7 @@ function AcnPcnPanel({
 
       {/* Subgrade */}
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-detail-box-label)', marginBottom: 4, fontWeight: 700 }}>
+        <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-detail-box-label)', marginBottom: 4, fontWeight: 700 }}>
           SUBGRADE STRENGTH
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
@@ -165,7 +165,7 @@ function AcnPcnPanel({
 
       {/* PCN Input */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-detail-box-label)', marginBottom: 4, fontWeight: 700 }}>YOUR AIRFIELD PCN</div>
+        <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-detail-box-label)', marginBottom: 4, fontWeight: 700 }}>YOUR AIRFIELD PCN</div>
         <input
           type="number"
           value={pcnValue}
@@ -178,7 +178,7 @@ function AcnPcnPanel({
             border: '1px solid var(--color-border-mid)',
             background: 'var(--color-bg-inset)',
             color: 'var(--color-text-1)',
-            fontSize: 'var(--fs-3xl)',
+            fontSize: 'var(--fs-2xl)',
             outline: 'none',
           }}
         />
@@ -193,19 +193,19 @@ function AcnPcnPanel({
           : 'rgba(148,163,184,0.05)',
         border: `1px solid ${hasComparison ? (acnValue <= pcn ? 'rgba(52,211,153,0.2)' : 'rgba(239,68,68,0.2)') : 'rgba(148,163,184,0.1)'}`,
       }}>
-        <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: resultColor, marginBottom: 2 }}>
+        <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: resultColor, marginBottom: 2 }}>
           {resultText}
         </div>
-        <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-detail-box-value)' }}>
+        <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-detail-box-value)' }}>
           ACN = {acnValue.toFixed(1)} ({weightMode} wt, {pavementType}, subgrade {subgrade})
         </div>
       </div>
 
       {/* Full ACN Table */}
       <div style={{ marginTop: 12 }}>
-        <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-detail-box-label)', marginBottom: 6, fontWeight: 700 }}>ALL ACN VALUES</div>
+        <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-detail-box-label)', marginBottom: 6, fontWeight: 700 }}>ALL ACN VALUES</div>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', fontSize: 'var(--fs-lg)', borderCollapse: 'collapse' }}>
+          <table style={{ width: '100%', fontSize: 'var(--fs-md)', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ color: 'var(--color-detail-box-label)' }}>
                 <th style={{ textAlign: 'left', padding: '3px 4px', fontWeight: 600 }}>Cond.</th>
@@ -313,7 +313,7 @@ function AircraftDetailCard({
         {/* Name */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
-            fontSize: 'var(--fs-3xl)',
+            fontSize: 'var(--fs-2xl)',
             fontWeight: 700,
             color: 'var(--color-text-1)',
             whiteSpace: 'nowrap',
@@ -339,7 +339,7 @@ function AircraftDetailCard({
         }}>
           {/* Manufacturer & Group */}
           {(ac.manufacturer || ac.group_index) && (
-            <div style={{ fontSize: 'var(--fs-xl)', color: 'var(--color-text-2)', marginBottom: 10 }}>
+            <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', marginBottom: 10 }}>
               {ac.manufacturer}{ac.manufacturer && ac.group_index ? ' · ' : ''}{ac.group_index ? `Group ${ac.group_index}` : ''}
             </div>
           )}
@@ -362,7 +362,7 @@ function AircraftDetailCard({
                 borderRadius: 5,
                 textAlign: 'center',
               }}>
-                <div style={{ fontSize: 'var(--fs-xl)', color: 'var(--color-detail-box-value)', fontWeight: 600 }}>{value}</div>
+                <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-detail-box-value)', fontWeight: 600 }}>{value}</div>
                 <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-detail-box-label)', fontWeight: 700 }}>{label}</div>
               </div>
             ))}
@@ -406,7 +406,7 @@ function AircraftDetailCard({
                 border: isFavorite ? '1px solid rgba(250,204,21,0.3)' : '1px solid var(--color-border-mid)',
                 background: isFavorite ? 'rgba(250,204,21,0.08)' : 'transparent',
                 color: isFavorite ? 'var(--color-warning)' : 'var(--color-text-2)',
-                fontSize: 'var(--fs-xl)',
+                fontSize: 'var(--fs-md)',
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
@@ -427,7 +427,7 @@ function AircraftDetailCard({
                 border: showAcn ? '1px solid rgba(34,211,153,0.3)' : '1px solid var(--color-border-mid)',
                 background: showAcn ? 'rgba(34,211,153,0.08)' : 'transparent',
                 color: showAcn ? 'var(--color-success)' : 'var(--color-text-2)',
-                fontSize: 'var(--fs-xl)',
+                fontSize: 'var(--fs-md)',
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
@@ -479,7 +479,7 @@ function AircraftDetailCard({
           <DetailSection title="Landing Gear">
             {ac.gear_config && (
               <div style={{
-                fontSize: 'var(--fs-lg)',
+                fontSize: 'var(--fs-md)',
                 color: 'var(--color-detail-box-value)',
                 marginBottom: 8,
                 padding: '6px 8px',
@@ -498,7 +498,7 @@ function AircraftDetailCard({
             {/* Main Gear Detail */}
             {ac.main_pct_gross_load && (
               <>
-                <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600, margin: '8px 0 4px', letterSpacing: '0.05em' }}>
+                <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)', fontWeight: 600, margin: '8px 0 4px', letterSpacing: '0.05em' }}>
                   MAIN GEAR
                 </div>
                 <DetailGrid items={[
@@ -515,7 +515,7 @@ function AircraftDetailCard({
             {/* Nose Gear Detail */}
             {ac.nose_pct_gross_load && (
               <>
-                <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600, margin: '8px 0 4px', letterSpacing: '0.05em' }}>
+                <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)', fontWeight: 600, margin: '8px 0 4px', letterSpacing: '0.05em' }}>
                   NOSE GEAR
                 </div>
                 <DetailGrid items={[
@@ -542,7 +542,7 @@ function DetailSection({ title, children }: { title: string; children: React.Rea
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{
-        fontSize: 'var(--fs-lg)',
+        fontSize: 'var(--fs-md)',
         color: 'var(--color-accent)',
         fontWeight: 700,
         letterSpacing: '0.08em',
@@ -644,8 +644,8 @@ export default function AircraftPage() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
         <div>
-          <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>Aircraft Database</div>
-          <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)' }}>
+          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>Aircraft Database</div>
+          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)' }}>
             {AIRCRAFT_COUNT.total} aircraft &bull; {AIRCRAFT_COUNT.military} military &bull; {AIRCRAFT_COUNT.commercial} commercial
           </div>
         </div>
@@ -665,7 +665,7 @@ export default function AircraftPage() {
               }}
             >
               <Star size={14} color={showFavoritesOnly ? 'var(--color-warning)' : 'var(--color-text-3)'} fill={showFavoritesOnly ? 'var(--color-warning)' : 'none'} />
-              <span style={{ fontSize: 'var(--fs-lg)', color: showFavoritesOnly ? 'var(--color-warning)' : 'var(--color-text-3)', fontWeight: 600 }}>
+              <span style={{ fontSize: 'var(--fs-md)', color: showFavoritesOnly ? 'var(--color-warning)' : 'var(--color-text-3)', fontWeight: 600 }}>
                 {favorites.size}
               </span>
             </button>
@@ -707,7 +707,7 @@ export default function AircraftPage() {
             background: 'transparent',
             border: 'none',
             color: 'var(--color-text-1)',
-            fontSize: 'var(--fs-3xl)',
+            fontSize: 'var(--fs-2xl)',
             outline: 'none',
           }}
         />
@@ -738,7 +738,7 @@ export default function AircraftPage() {
               border: category === key ? '1px solid rgba(56,189,248,0.3)' : '1px solid rgba(148,163,184,0.1)',
               background: category === key ? 'rgba(56,189,248,0.08)' : 'transparent',
               color: category === key ? 'var(--color-accent)' : 'var(--color-text-2)',
-              fontSize: 'var(--fs-xl)',
+              fontSize: 'var(--fs-md)',
               fontWeight: 600,
               cursor: 'pointer',
             }}
@@ -751,7 +751,7 @@ export default function AircraftPage() {
       {/* Sort & Filter Panel */}
       {showFilters && (
         <div className="card" style={{ padding: 12, marginBottom: 10 }}>
-          <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6, letterSpacing: '0.05em' }}>
+          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6, letterSpacing: '0.05em' }}>
             SORT BY
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
@@ -772,7 +772,7 @@ export default function AircraftPage() {
                   border: sortField === value ? '1px solid rgba(56,189,248,0.3)' : '1px solid rgba(148,163,184,0.1)',
                   background: sortField === value ? 'rgba(56,189,248,0.08)' : 'transparent',
                   color: sortField === value ? 'var(--color-accent)' : 'var(--color-text-2)',
-                  fontSize: 'var(--fs-lg)',
+                  fontSize: 'var(--fs-md)',
                   fontWeight: 600,
                   cursor: 'pointer',
                   display: 'flex',
@@ -787,14 +787,14 @@ export default function AircraftPage() {
               </button>
             ))}
           </div>
-          <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)' }}>
+          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)' }}>
             Tap active sort to reverse direction. Pinned aircraft always appear first.
           </div>
         </div>
       )}
 
       {/* Results Count */}
-      <div style={{ fontSize: 'var(--fs-xl)', color: 'var(--color-text-3)', marginBottom: 8 }}>
+      <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)', marginBottom: 8 }}>
         {showFavoritesOnly ? `${filtered.length} pinned aircraft` : `${filtered.length} aircraft`}
         {search && ` matching "${search}"`}
       </div>
@@ -804,8 +804,8 @@ export default function AircraftPage() {
         {filtered.length === 0 && (
           <div className="card" style={{ textAlign: 'center', padding: 32 }}>
             <Search size={24} color="var(--color-text-4)" style={{ margin: '0 auto 8px' }} />
-            <div style={{ fontSize: 'var(--fs-3xl)', color: 'var(--color-text-2)', fontWeight: 600 }}>No aircraft found</div>
-            <div style={{ fontSize: 'var(--fs-xl)', color: 'var(--color-text-3)', marginTop: 4 }}>
+            <div style={{ fontSize: 'var(--fs-2xl)', color: 'var(--color-text-2)', fontWeight: 600 }}>No aircraft found</div>
+            <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)', marginTop: 4 }}>
               {showFavoritesOnly
                 ? 'No pinned aircraft match your filters.'
                 : 'Try a different search term or category.'}
