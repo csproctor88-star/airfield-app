@@ -44,7 +44,7 @@ export default function AllInspectionsPage() {
       label: 'Daily Airfield Inspection',
       icon: '✈️',
       color: '#10B981',
-      description: 'DAFI 13-213 daily airfield & lighting inspections',
+      description: 'DAFMAN 13-204v2 daily airfield & lighting inspections',
       href: '/inspections?action=begin',
       actionLabel: 'Start Daily Inspection',
       historyHref: '/inspections?view=history',

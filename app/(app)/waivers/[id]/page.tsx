@@ -587,12 +587,15 @@ export default function WaiverDetailPage() {
             onClick={handleEmailPdf}
             disabled={exporting}
             style={{
-              background: '#A78BFA14', border: '1px solid #A78BFA33', borderRadius: 8, padding: '6px 12px',
-              color: '#A78BFA', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-              opacity: exporting ? 0.6 : 1,
+              padding: '12px 16px', borderRadius: 10, textAlign: 'center',
+              background: '#A78BFA14', border: '1px solid #A78BFA33',
+              color: '#A78BFA', fontSize: 'var(--fs-md)', fontWeight: 700,
+              fontFamily: 'inherit', cursor: exporting ? 'default' : 'pointer',
+              opacity: exporting ? 0.7 : 1,
             }}
+            title="Email PDF"
           >
-            Email PDF
+            ✉
           </button>
           {(w.status === 'draft' || w.status === 'pending') && (
             <Link
