@@ -149,7 +149,8 @@ export default function HomePage() {
     title: string
     message: string
     color: string
-    onConfirm: () => void
+    notes: string
+    onConfirm: (notes: string) => void
   } | null>(null)
 
   // NAVAID status dialog state
@@ -683,13 +684,25 @@ export default function HomePage() {
             <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 12 }}>
               {confirmDialog.title}
             </div>
-            <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-2)', marginBottom: 20, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-2)', marginBottom: 14, lineHeight: 1.5 }}>
               {confirmDialog.message}
             </div>
+            <textarea
+              placeholder="Notes (optional)..."
+              value={confirmDialog.notes}
+              onChange={(e) => setConfirmDialog({ ...confirmDialog, notes: e.target.value })}
+              rows={2}
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8,
+                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none', marginBottom: 14,
+                fontFamily: 'inherit', resize: 'vertical', minHeight: 44,
+              }}
+            />
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 onClick={() => {
-                  confirmDialog.onConfirm()
+                  confirmDialog.onConfirm(confirmDialog.notes.trim())
                   setConfirmDialog(null)
                 }}
                 style={{
@@ -759,10 +772,13 @@ export default function HomePage() {
                         title: 'Change Active Runway',
                         message: `Switch active runway from RWY ${rwy.active_end} to RWY ${newEnd}?`,
                         color: c.color,
-                        onConfirm: () => {
+                        notes: '',
+                        onConfirm: (remarks) => {
+                          const details: Record<string, unknown> = { runway: rwy.label, active_end: newEnd }
+                          if (remarks) details.notes = remarks
                           if (runways.length > 0) {
                             setRunwayActiveEnd(rwy.label, newEnd)
-                            if (installationId) logActivity('updated', 'airfield_status', installationId, `RWY ${newEnd}`, { runway: rwy.label, active_end: newEnd }, installationId)
+                            if (installationId) logActivity('updated', 'airfield_status', installationId, `RWY ${newEnd}`, details, installationId)
                             logRunwayStatusChange({ oldActiveRunway: rwy.active_end, newActiveRunway: newEnd }, installationId)
                           } else {
                             const designators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
@@ -770,7 +786,7 @@ export default function HomePage() {
                             const idx = designators.indexOf(activeRunway)
                             const next = designators[(idx + 1) % designators.length]
                             setActiveRunway(next)
-                            if (installationId) logActivity('updated', 'airfield_status', installationId, `RWY ${next}`, { active_runway: next }, installationId)
+                            if (installationId) logActivity('updated', 'airfield_status', installationId, `RWY ${next}`, { active_runway: next, ...(remarks ? { notes: remarks } : {}) }, installationId)
                             logRunwayStatusChange({ oldActiveRunway: activeRunway, newActiveRunway: next }, installationId)
                           }
                         },
@@ -794,14 +810,15 @@ export default function HomePage() {
                         title: 'Change Runway Status',
                         message: `Change RWY ${rwy.active_end} status from ${currentVal.toUpperCase()} to ${val.toUpperCase()}?`,
                         color: statusColor,
-                        onConfirm: () => {
+                        notes: '',
+                        onConfirm: (remarks) => {
                           if (runways.length > 0) {
                             setRunwayStatusForRunway(rwy.label, val)
-                            if (installationId) logActivity('status_updated', 'airfield_status', installationId, `RWY ${rwy.active_end} ${val.toUpperCase()}`, { runway: rwy.label, status: val }, installationId)
+                            if (installationId) logActivity('status_updated', 'airfield_status', installationId, `RWY ${rwy.active_end} ${val.toUpperCase()}`, { runway: rwy.label, status: val, ...(remarks ? { notes: remarks } : {}) }, installationId)
                             logRunwayStatusChange({ oldRunwayStatus: rwy.status, newRunwayStatus: val }, installationId)
                           } else {
                             setRunwayStatus(val)
-                            if (installationId) logActivity('status_updated', 'airfield_status', installationId, `RWY ${activeRunway} ${val.toUpperCase()}`, { status: val }, installationId)
+                            if (installationId) logActivity('status_updated', 'airfield_status', installationId, `RWY ${activeRunway} ${val.toUpperCase()}`, { status: val, ...(remarks ? { notes: remarks } : {}) }, installationId)
                             logRunwayStatusChange({ oldRunwayStatus: runwayStatus, newRunwayStatus: val }, installationId)
                           }
                         },
