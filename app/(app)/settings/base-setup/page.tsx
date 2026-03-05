@@ -16,7 +16,7 @@ export default function BaseSetupPage() {
   const [activeTab, setActiveTab] = useState<SetupTab>('runways')
   const [showPreview, setShowPreview] = useState(false)
 
-  const canEdit = userRole === 'airfield_manager' || userRole === 'sys_admin'
+  const canEdit = userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo'
 
   if (!canEdit) {
     return (

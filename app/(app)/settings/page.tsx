@@ -332,7 +332,7 @@ function InstallationSectionContent() {
   const [confirmRemove, setConfirmRemove] = useState<{ id: string; name: string } | null>(null)
   const [userId, setUserId] = useState<string | undefined>()
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const canManageInstallations = (userRole === 'sys_admin' || userRole === 'airfield_manager') && allInstallations.length > 1
+  const canManageInstallations = (userRole === 'sys_admin' || userRole === 'airfield_manager' || userRole === 'base_admin' || userRole === 'namo') && allInstallations.length > 1
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -639,7 +639,7 @@ function InstallationSectionContent() {
 
 function BaseConfigSectionContent() {
   const { userRole, installationId } = useInstallation()
-  const canManage = userRole === 'airfield_manager' || userRole === 'sys_admin'
+  const canManage = userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo'
   const [diagramUrl, setDiagramUrl] = useState<string | null>(null)
   const [diagramLoaded, setDiagramLoaded] = useState(false)
   const [uploading, setUploading] = useState(false)

@@ -37,7 +37,7 @@ export function Header() {
   const [showInstSwitcher, setShowInstSwitcher] = useState(false)
 
   const canSwitchInstallation = allInstallations.length > 1
-    && (userRole === 'airfield_manager' || userRole === 'sys_admin')
+    && (userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo')
 
   useEffect(() => {
     async function loadProfile(updatePresence: boolean) {

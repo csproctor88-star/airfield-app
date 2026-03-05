@@ -138,7 +138,7 @@ export default function WaiverDetailPage() {
     })
   }, [attachments])
 
-  const isManager = !userRole || userRole === 'airfield_manager' || userRole === 'sys_admin'
+  const isManager = !userRole || userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo'
   const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
 
   const toggleSection = (key: string) => {
