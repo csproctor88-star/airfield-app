@@ -156,6 +156,7 @@ export default function HomePage() {
   const [navaidDialog, setNavaidDialog] = useState<{
     navaid: NavaidStatus
     selectedStatus: 'green' | 'yellow' | 'red'
+    notes: string
   } | null>(null)
 
   // --- Load weather ---
@@ -325,17 +326,33 @@ export default function HomePage() {
   }, [installationId, loadCurrentStatus])
 
   // --- Load Activity Feed ---
-  useEffect(() => {
-    async function loadActivity() {
-      const { data } = await fetchActivityLog({ baseId: installationId, limit: 20 })
-      if (data.length > 0) setActivity(data as ActivityEntry[])
-    }
-    loadActivity()
+  const loadActivity = useCallback(async () => {
+    const { data } = await fetchActivityLog({ baseId: installationId, limit: 20 })
+    setActivity(data as ActivityEntry[])
   }, [installationId])
 
+  useEffect(() => { loadActivity() }, [loadActivity])
+
+  // Realtime: auto-refresh activity feed on new entries
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase || !installationId) return
+
+    const channel = supabase
+      .channel(`activity_feed:${installationId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'activity_log', filter: `base_id=eq.${installationId}` },
+        () => { loadActivity() }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [installationId, loadActivity])
+
   // --- NAVAID status toggle handler ---
-  async function handleNavaidToggle(navaid: NavaidStatus, newStatus: 'green' | 'yellow' | 'red') {
-    const notes = newStatus === 'green' ? null : (navaidNotes[navaid.id] || null)
+  async function handleNavaidToggle(navaid: NavaidStatus, newStatus: 'green' | 'yellow' | 'red', dialogNotes?: string) {
+    const notes = newStatus === 'green' ? null : (dialogNotes ?? (navaidNotes[navaid.id] || null))
     const ok = await updateNavaidStatus(navaid.id, newStatus, notes)
     if (ok) {
       loadNavaids()
@@ -343,8 +360,8 @@ export default function HomePage() {
     }
   }
 
-  async function handleNavaidNotesSave(navaid: NavaidStatus) {
-    const notes = navaidNotes[navaid.id] || null
+  async function handleNavaidNotesSave(navaid: NavaidStatus, overrideNotes?: string) {
+    const notes = overrideNotes ?? (navaidNotes[navaid.id] || null)
     await updateNavaidStatus(navaid.id, navaid.status, notes)
     loadNavaids()
     logActivity('updated', 'navaid_status', navaid.id, navaid.navaid_name, { notes }, installationId)
@@ -569,7 +586,7 @@ export default function HomePage() {
             <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', marginBottom: 16 }}>
               Select status
             </div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
               {(['green', 'yellow', 'red'] as const).map((s) => {
                 const selected = navaidDialog.selectedStatus === s
                 const color = s === 'red' ? 'var(--color-danger)' : s === 'yellow' ? 'var(--color-warning)' : 'var(--color-success)'
@@ -589,34 +606,60 @@ export default function HomePage() {
                 )
               })}
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => {
-                  const { navaid, selectedStatus } = navaidDialog
-                  if (selectedStatus !== navaid.status) {
-                    handleNavaidToggle(navaid, selectedStatus)
-                  }
-                  setNavaidDialog(null)
-                }}
-                disabled={navaidDialog.selectedStatus === navaidDialog.navaid.status}
+            {navaidDialog.selectedStatus !== 'green' && (
+              <textarea
+                placeholder="Notes (optional)..."
+                value={navaidDialog.notes}
+                onChange={(e) => setNavaidDialog({ ...navaidDialog, notes: e.target.value })}
+                rows={2}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
-                  cursor: navaidDialog.selectedStatus === navaidDialog.navaid.status ? 'not-allowed' : 'pointer',
-                  border: `1px solid ${navaidDialog.selectedStatus === navaidDialog.navaid.status ? 'var(--color-border-mid)' : (navaidDialog.selectedStatus === 'red' ? 'var(--color-danger)' : navaidDialog.selectedStatus === 'yellow' ? 'var(--color-warning)' : 'var(--color-success)')}`,
-                  background: 'var(--color-bg-inset)',
-                  color: navaidDialog.selectedStatus === navaidDialog.navaid.status ? 'var(--color-text-3)' : (navaidDialog.selectedStatus === 'red' ? 'var(--color-danger)' : navaidDialog.selectedStatus === 'yellow' ? 'var(--color-warning)' : 'var(--color-success)'),
-                  opacity: navaidDialog.selectedStatus === navaidDialog.navaid.status ? 0.5 : 1,
+                  width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8,
+                  background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                  color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none', marginBottom: 14,
+                  fontFamily: 'inherit', resize: 'vertical', minHeight: 44,
                 }}
-              >Save</button>
-              <button
-                onClick={() => setNavaidDialog(null)}
-                style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
-                  cursor: 'pointer', border: '1px solid var(--color-border-mid)',
-                  background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
-                }}
-              >Cancel</button>
-            </div>
+              />
+            )}
+            {(() => {
+              const statusChanged = navaidDialog.selectedStatus !== navaidDialog.navaid.status
+              const notesChanged = navaidDialog.notes !== (navaidDialog.navaid.notes || '')
+              const hasChanges = statusChanged || notesChanged
+              const selColor = navaidDialog.selectedStatus === 'red' ? 'var(--color-danger)' : navaidDialog.selectedStatus === 'yellow' ? 'var(--color-warning)' : 'var(--color-success)'
+              return (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => {
+                      const { navaid, selectedStatus, notes } = navaidDialog
+                      if (statusChanged) {
+                        handleNavaidToggle(navaid, selectedStatus, notes || undefined)
+                      } else if (notesChanged) {
+                        // Only notes changed — save notes for current status
+                        setNavaidNotes(prev => ({ ...prev, [navaid.id]: notes }))
+                        handleNavaidNotesSave(navaid, notes)
+                      }
+                      setNavaidDialog(null)
+                    }}
+                    disabled={!hasChanges}
+                    style={{
+                      flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                      cursor: hasChanges ? 'pointer' : 'not-allowed',
+                      border: `1px solid ${hasChanges ? selColor : 'var(--color-border-mid)'}`,
+                      background: 'var(--color-bg-inset)',
+                      color: hasChanges ? selColor : 'var(--color-text-3)',
+                      opacity: hasChanges ? 1 : 0.5,
+                    }}
+                  >Save</button>
+                  <button
+                    onClick={() => setNavaidDialog(null)}
+                    style={{
+                      flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                      cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                      background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
+                    }}
+                  >Cancel</button>
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}
@@ -848,7 +891,7 @@ export default function HomePage() {
               </span>
               <button
                 onClick={() => {
-                  setNavaidDialog({ navaid: n, selectedStatus: n.status as 'green' | 'yellow' | 'red' })
+                  setNavaidDialog({ navaid: n, selectedStatus: n.status as 'green' | 'yellow' | 'red', notes: navaidNotes[n.id] || '' })
                 }}
                 style={{
                   width: 36, height: 28, borderRadius: 6,
