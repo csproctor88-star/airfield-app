@@ -218,7 +218,7 @@ airfield-app/
 │   └── PDFLibrary.tsx                    # Admin PDF library component
 ├── lib/
 │   ├── constants.ts                      # Checklists, types, regulation categories, ACSI template
-│   ├── aircraft-data.ts                 # 1,000+ aircraft reference entries
+│   ├── aircraft-data.ts                 # 200+ aircraft reference entries
 │   ├── utils.ts                          # Helpers (formatters, config checks)
 │   ├── demo-data.ts                      # Offline mock data (10 arrays)
 │   ├── weather.ts                        # Open-Meteo weather fetching
@@ -313,10 +313,10 @@ See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 
 ## Reference Documents
 
-- [`docs/Glidepath_SRS_v3.0.md`](./docs/Glidepath_SRS_v3.0.md) — Software Requirements Specification
+- [`docs/Glidepath_SRS_v4.0.md`](./docs/Glidepath_SRS_v4.0.md) — Software Requirements Specification
 - [`docs/BASE-ONBOARDING.md`](./docs/BASE-ONBOARDING.md) — Guide for adding new installations
 - [`docs/GLIDEPATH_CAPABILITIES_BRIEF.md`](./docs/GLIDEPATH_CAPABILITIES_BRIEF.md) — Capabilities brief
 - [`docs/GLIDEPATH_BETA_TESTER_OVERVIEW.md`](./docs/GLIDEPATH_BETA_TESTER_OVERVIEW.md) — Beta tester overview
-- [`docs/Glidepath_AFWERX_Spark_Proposal.md`](./docs/Glidepath_AFWERX_Spark_Proposal.md) — AFWERX Spark proposal
+- [`docs/Glidepath_AFWERX_Proposal.md`](./docs/Glidepath_AFWERX_Proposal.md) — AFWERX innovation proposal
 - [`docs/RLS_TEST_CHECKLIST.md`](./docs/RLS_TEST_CHECKLIST.md) — Row-Level Security test results
 - [`docs/Airfield_Inspection_Checklist_Template.md`](./docs/Airfield_Inspection_Checklist_Template.md) — ACSI checklist reference (DAFMAN 13-204v2)

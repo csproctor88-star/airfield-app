@@ -477,7 +477,7 @@ Admin-only module with three-tier role hierarchy, user cards with rank/role/stat
 
 ### Aircraft Database & Reports
 
-1,000+ military and civilian aircraft entries with search, sort, favorites, ACN/PCN comparison. Four report types with PDF export (Daily Ops, Open Discrepancies, Trends, Aging).
+200+ military and civilian aircraft entries with search, sort, favorites, ACN/PCN comparison. Four report types with PDF export (Daily Ops, Open Discrepancies, Trends, Aging).
 
 ---
 

@@ -1,8 +1,8 @@
 # GLIDEPATH — Software Requirements Specification
-## Version 3.0 | March 2026
+## Version 4.0 | March 2026
 
 **Application:** Glidepath
-**Current Release:** v2.10.0
+**Current Release:** v2.14.0
 **Stack:** Next.js 14.2 (App Router) · TypeScript 5.9 · CSS Custom Properties + Tailwind · Supabase · Mapbox GL JS
 **Primary Regulation:** DAFMAN 13-204 (Volumes 1–3) — Airfield Management
 **Target Installation:** 127th Wing, Selfridge ANGB (KMTC), Michigan
@@ -46,37 +46,39 @@ The application covers the full spectrum of Airfield Management duties as define
 
 | Module | Description | Status |
 |--------|-------------|--------|
-| Dashboard | Real-time operational hub with weather, runway status, NAVAID status, advisories | ✅ Complete |
-| Discrepancy Tracking | Full lifecycle management of airfield deficiencies with photos and maps | ✅ Complete |
-| Airfield Checks | 7 check types (FOD, RSC, RCR, IFE, Ground Emergency, Heavy Aircraft, BASH) | ✅ Complete |
-| Daily Inspections | Combined Airfield + Lighting inspection with configurable per-base templates | ✅ Complete |
-| Reports & Analytics | 4 operational report types with PDF export | ✅ Complete |
-| Obstruction Evaluations | UFC 3-260-01 Class B imaginary surface analysis with interactive map | ✅ Complete |
-| Aircraft Database | 1,000+ aircraft reference with ACN/PCN pavement analysis | ✅ Complete |
+| Dashboard | Real-time operational hub with live push updates, weather, runway status, NAVAID status, advisories | ✅ Complete |
+| Discrepancy Tracking | Full lifecycle management of airfield deficiencies with photos, maps, and Common Operating Picture | ✅ Complete |
+| Airfield Checks | 7 check types (FOD, RSC, RCR, IFE, Ground Emergency, Heavy Aircraft, BASH) with cross-device drafts | ✅ Complete |
+| Daily Inspections | Combined Airfield + Lighting inspection with configurable per-base templates and multi-discrepancy support | ✅ Complete |
+| ACSI | Annual Airfield Compliance and Safety Inspection (10 sections, ~100 items) with PDF/Excel export | ✅ Complete |
+| Reports & Analytics | 4 operational report types with PDF export and email delivery | ✅ Complete |
+| Obstruction Evaluations | UFC 3-260-01 imaginary surface analysis with interactive map and multi-runway support | ✅ Complete |
+| Aircraft Database | 200+ aircraft reference with ACN/PCN pavement analysis | ✅ Complete |
 | Regulations Library | 70 references with in-app PDF viewer, offline caching, personal documents | ✅ Complete |
 | Waiver Management | Full AF Form 505 lifecycle with coordination, annual review, PDF/Excel export | ✅ Complete |
 | NOTAMs | Live FAA feed + local NOTAM drafting | ✅ Complete |
-| Activity Log | Comprehensive audit trail with date filtering and Excel export | ✅ Complete |
-| User Management | Admin invite, role assignment, password reset, account lifecycle | ✅ Complete |
+| Activity Log | Comprehensive audit trail with manual entries, edit/delete, and Excel export | ✅ Complete |
+| User Management | Admin invite, role assignment, password reset, account lifecycle, email privacy | ✅ Complete |
 | Settings & Config | Per-base runways, NAVAIDs, areas, CE shops, inspection templates, themes | ✅ Complete |
 
 ### By the Numbers
 
 | Metric | Value |
 |--------|-------|
-| Application Routes | 48 |
-| Source Files | 130+ |
-| Database Tables | 25+ |
-| Database Migrations | 60 |
-| Aircraft Records | 1,000+ |
+| Application Routes | 53 |
+| Source Files | 157 |
+| Database Tables | 28+ |
+| Database Migrations | 61 |
+| Aircraft Records | 200+ |
 | Regulatory References | 70 |
 | Military Installations | 155 |
 | Check Types | 7 |
-| Obstruction Surfaces | 10 |
-| Waiver Seed Records | 17 (real KMTC data) |
-| User Roles | 9 |
 | Report Types | 4 |
+| PDF Export Types | 8 |
+| Excel Export Types | 4 |
+| User Roles | 9 |
 | TypeScript Errors | 0 |
+| Lines of Code | ~51,700 |
 
 ---
 
@@ -127,7 +129,7 @@ This fragmentation creates delayed response times, lost institutional knowledge 
 
 ### 3.2 In Scope (Built)
 
-All 13 modules listed in the Executive Summary are implemented and functional as of v2.10.0.
+All 14 modules listed in the Executive Summary are implemented and functional as of v2.14.0.
 
 ### 3.3 Out of Scope (Future)
 
@@ -137,7 +139,6 @@ All 13 modules listed in the Executive Summary are implemented and functional as
 - Automated NOTAM filing to FAA
 - RT3 friction tester direct hardware integration
 - Native mobile app (React Native)
-- Real-time WebSocket multi-user collaboration
 - AI-assisted trend detection and predictive maintenance
 
 ---
@@ -163,11 +164,13 @@ All 13 modules listed in the Executive Summary are implemented and functional as
                     +-------------|---------------+
                     |     Supabase Backend        |
                     |  +---------------------+    |
-                    |  | PostgreSQL (25+ tbl) |    |
+                    |  | PostgreSQL (28+ tbl) |    |
                     |  +---------------------+    |
                     |  | Auth (email/password)|    |
                     |  +---------------------+    |
                     |  | Storage (photos/PDFs)|    |
+                    |  +---------------------+    |
+                    |  | Realtime (live push) |    |
                     |  +---------------------+    |
                     +-----------------------------+
                                   |
@@ -189,8 +192,10 @@ All 13 modules listed in the Executive Summary are implemented and functional as
 | Decision | Rationale |
 |----------|-----------|
 | Progressive Web App | Installable on any device without app store. Works offline. Auto-updates. |
-| Supabase (PostgreSQL) | Managed database with built-in auth, storage, and real-time capabilities. Free tier for development. |
+| Supabase (PostgreSQL) | Managed database with built-in auth, storage, real-time subscriptions. Free tier for development. |
+| Supabase Realtime | Live push updates across all connected clients — advisory, runway status, BWC, RSC changes propagate instantly. |
 | Client-side PDF/Excel | Reports generated in-browser — no server load, works offline, instant delivery. |
+| Server-side email delivery | Resend SDK sends branded PDF reports via email from within the app. |
 | Multi-base data isolation | Every table scoped by `base_id`. Data from one base never visible to another. |
 | Demo mode | App runs fully offline with mock data when Supabase credentials are missing. Zero setup for training and evaluation. |
 | Configurable templates | Inspection checklists stored in database per base, not hardcoded. New bases clone from defaults. |
@@ -205,11 +210,12 @@ All 13 modules listed in the Executive Summary are implemented and functional as
 | Framework | Next.js (App Router) | 14.2.35 |
 | Language | TypeScript (strict mode) | 5.9.3 |
 | Styling | CSS custom properties + Tailwind (light/dark/auto theme) | 3.4.19 |
-| Backend | Supabase (PostgreSQL, Auth, Storage) | SSR 0.8.0 |
+| Backend | Supabase (PostgreSQL, Auth, Storage, Realtime) | SSR 0.8.0 |
 | Maps | Mapbox GL JS | 3.18.1 |
 | PDF Viewing | react-pdf (PDF.js) | 10.3.0 |
 | PDF Export | jsPDF + jspdf-autotable | 4.1.0 |
-| Excel Export | SheetJS (xlsx) | 0.18.5 |
+| Email Delivery | Resend | 6.9.3 |
+| Excel Export | SheetJS (xlsx) + ExcelJS | 0.18.5 / 4.4.0 |
 | Validation | Zod | 3.25.76 |
 | Offline Storage | IndexedDB (6 object stores) | — |
 | Icons | Lucide React | 0.563.0 |
@@ -231,38 +237,40 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=[anon-key]
 SUPABASE_SERVICE_ROLE_KEY=[service-role-key]
 NEXT_PUBLIC_MAPBOX_TOKEN=[mapbox-token]
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+RESEND_API_KEY=[resend-api-key]
 ```
 
 ---
 
 ## 6. DATABASE SCHEMA
 
-### 6.1 Tables (25+)
+### 6.1 Tables (28+)
 
 **Core Configuration:**
 
 | Table | Purpose |
 |-------|---------|
-| `profiles` | User accounts, roles, rank, shop, primary base, presence tracking (`last_seen_at`) |
+| `profiles` | User accounts, roles, rank, shop, primary base, presence tracking, default PDF email |
 | `bases` | Installation definitions (name, ICAO, location, coordinates) |
 | `base_runways` | Runway geometry per base (ends, heading, class, dimensions, approach lighting, threshold elevations) |
 | `base_navaids` | Navigation aids per base with sort order |
 | `base_areas` | Airfield areas per base (used across checks, discrepancies, inspections) |
 | `base_ce_shops` | Civil Engineering shops per base for discrepancy assignment |
-| `base_members` | User ↔ base membership join table (supports multi-base users) |
+| `base_members` | User-base membership join table (supports multi-base users) |
 
 **Operational Data:**
 
 | Table | Purpose |
 |-------|---------|
 | `discrepancies` | Airfield issues with full lifecycle tracking (display_id `D-YYYY-NNNN`) |
-| `airfield_checks` | 7 check types with JSONB data column (display_id `CHK-YYYY-NNNN`) |
+| `airfield_checks` | 7 check types with JSONB data, draft persistence (`status`, `draft_data`) |
 | `check_comments` | Remarks timeline for checks (author, content, timestamp) |
 | `inspections` | Daily inspections with JSONB items array (display_id `AIR-YYYY-NNNN` / `LT-YYYY-NNNN`) |
+| `acsi_inspections` | Annual compliance inspections with JSONB items/team/signatures, fiscal year, per-item discrepancies |
 | `inspection_template_sections` | Per-base inspection template sections (customizable) |
 | `inspection_template_items` | Per-base inspection checklist items (customizable) |
 | `notams` | FAA and LOCAL NOTAM tracking (display_id `N-YYYY-NNNN`) |
-| `photos` | Photos for discrepancies, checks, inspections, evaluations (entity-specific FK columns: `discrepancy_id`, `check_id`, `inspection_id`, `evaluation_id`) |
+| `photos` | Photos for discrepancies, checks, inspections, evaluations, ACSI (entity-specific FK columns + `issue_index` for per-issue linking) |
 | `obstruction_evaluations` | UFC 3-260-01 surface analysis with JSONB results (display_id `OBS-YYYY-NNNN`) |
 
 **Waiver System (5 tables):**
@@ -279,8 +287,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 | Table | Purpose |
 |-------|---------|
-| `airfield_status` | Persisted runway status, active runway, advisory, BWC, RSC |
-| `runway_status_log` | Audit trail for all runway status changes (database trigger) |
+| `airfield_status` | Persisted runway status, active runway, advisory, BWC, RSC — Realtime-enabled for live push updates |
+| `runway_status_log` | Audit trail for all runway status changes |
 | `activity_log` | Audit trail for all mutations (user, action, entity_type, entity_id, details, timestamp) |
 | `navaid_statuses` | G/Y/R status per approach system with notes |
 
@@ -302,6 +310,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - `obstruction_seq` → `OBS-YYYY-NNNN`
 - `generate_display_id(prefix, seq_name)` — PostgreSQL function for atomic ID generation
 - `search_all_pdfs(query_text, limit)` — Full-text search RPC across `pdf_text_pages`
+- `update_airfield_status()` — RPC for atomic runway status updates with `p_base_id` parameter
 - Signup trigger — Auto-creates `base_members` row on user registration
 
 ### 6.3 Storage Buckets (Supabase Storage)
@@ -311,11 +320,18 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 | `regulation-pdfs` | Public read policy | Official regulation PDF files |
 | `photos` | RLS active (INSERT/SELECT/UPDATE/DELETE) | All entity photos, airfield diagrams |
 
-### 6.4 Schema Artifacts
+### 6.4 Realtime Configuration
+
+Three tables enabled for Supabase Realtime via `supabase_realtime` publication:
+- `airfield_status` — UPDATE events with `REPLICA IDENTITY FULL` for complete payloads
+- `airfield_checks` — INSERT events for BWC/RSC derivation
+- `inspections` — INSERT events for last-check derivation
+
+### 6.5 Schema Artifacts
 
 The complete database schema is maintained in the repository:
 - `supabase/schema.sql` — Base table definitions and sequences
-- `supabase/migrations/` — 60 migration files applied in order
+- `supabase/migrations/` — 61 migration files applied in order
 - `lib/supabase/types.ts` — Full TypeScript type definitions for all tables
 
 ---
@@ -337,6 +353,8 @@ The complete database schema is maintained in the repository:
 | FR-DASH-009 | Quick Actions: Begin Inspection, Begin Check, New Discrepancy (large touch targets) | ✅ |
 | FR-DASH-010 | User presence tracking with 5-minute heartbeat (Online/Away/Inactive) | ✅ |
 | FR-DASH-011 | Activity feed with color-coded action dots, clickable items linking to source entities | ✅ |
+| FR-DASH-012 | Supabase Realtime: advisory, runway status, and BWC/RSC changes push live to all connected clients | ✅ |
+| FR-DASH-013 | Runway status change logging to `runway_status_log` for daily operations report | ✅ |
 
 ### 7.2 Discrepancy Tracking (`/discrepancies`)
 
@@ -354,22 +372,24 @@ The complete database schema is maintained in the repository:
 | FR-DISC-010 | Days-open aging counter | ✅ |
 | FR-DISC-011 | Searchable, filterable list with clickable KPI counters | ✅ |
 | FR-DISC-012 | Auto-generated display ID: `D-YYYY-NNNN` | ✅ |
-| FR-DISC-013 | Common Operating Picture (COP) map view: Mapbox satellite map with severity-colored pins, hover popups, auto-fit bounds, list/map toggle | ✅ |
+| FR-DISC-013 | Common Operating Picture (COP) map view: Mapbox satellite map with type-emoji markers, hover popups with photos, clickable filter legend, list/map toggle | ✅ |
 
 ### 7.3 Airfield Checks (`/checks`)
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-CHK-001 | 7 check types in unified form system: FOD Walk, RSC, RCR, IFE, Ground Emergency, Heavy Aircraft, BASH | ✅ |
-| FR-CHK-002 | FOD Walk: route selection (multi-select areas), items found, clear/not-clear | ✅ |
+| FR-CHK-001 | 7 check types in unified form system: FOD, RSC, RCR, IFE, Ground Emergency, Heavy Aircraft, BASH | ✅ |
+| FR-CHK-002 | FOD: route selection (multi-select areas), items found, clear/not-clear | ✅ |
 | FR-CHK-003 | RSC: runway condition (wet/dry), observation notes | ✅ |
 | FR-CHK-004 | RCR: Mu readings at rollout/midpoint/departure, contaminant type/depth/coverage, braking action, equipment type, temperature | ✅ |
 | FR-CHK-005 | IFE: aircraft info (callsign, type, tail), classification, description, damage/injuries | ✅ |
 | FR-CHK-006 | Ground Emergency: 12-item AM action checklist, 9-agency notification tracker, incident narrative | ✅ |
 | FR-CHK-007 | Heavy Aircraft: aircraft type, parking location, weight, taxi route, pavement observations | ✅ |
 | FR-CHK-008 | BASH: condition code (None/Low/Moderate/High/Extreme), species, mitigation, habitat attractants | ✅ |
-| FR-CHK-009 | Photo capture with GPS, Mapbox location pinning, issue-found gating | ✅ |
+| FR-CHK-009 | Photo capture with GPS, Mapbox location pinning, multiple issues per check with per-issue photos | ✅ |
 | FR-CHK-010 | Check history with type filtering, search, and detail view with photo gallery and remarks | ✅ |
+| FR-CHK-011 | Supabase draft persistence with manual "Save Draft" for cross-device access | ✅ |
+| FR-CHK-012 | Follow-up remarks with auto-save on check completion | ✅ |
 
 ### 7.4 Daily Inspections (`/inspections`)
 
@@ -379,15 +399,30 @@ The complete database schema is maintained in the repository:
 | FR-INS-002 | Fully customizable per-base templates (sections and items via Settings) | ✅ |
 | FR-INS-003 | Default Airfield half: 9 sections, 42 items | ✅ |
 | FR-INS-004 | Default Lighting half: 5 sections, 32 items | ✅ |
-| FR-INS-005 | Three-state toggle: Pass (green) / Fail (red) / N/A (gray) | ✅ |
+| FR-INS-005 | Three-state toggle: Pass (green) / Fail (red) / N/A (gray) — items default to Pass | ✅ |
 | FR-INS-006 | BWC items use four-state toggle: LOW / MOD / SEV / PROHIB | ✅ |
-| FR-INS-007 | Mark All Pass per section for routine inspections | ✅ |
-| FR-INS-008 | Draft persistence to localStorage and database | ✅ |
+| FR-INS-007 | Multiple discrepancies per failed item with per-discrepancy comments, GPS pins, map thumbnails, and photos | ✅ |
+| FR-INS-008 | Draft persistence to localStorage and Supabase for cross-device access | ✅ |
 | FR-INS-009 | Two-step Complete/File workflow with per-user tracking | ✅ |
-| FR-INS-010 | Combined PDF export with pass/fail summaries, location maps, embedded photos | ✅ |
+| FR-INS-010 | Combined PDF export with pass/fail summaries, per-discrepancy photos and location maps | ✅ |
 | FR-INS-011 | Construction Meeting and Joint Monthly inspection forms with personnel attendance | ✅ |
 
-### 7.5 Reports & Analytics (`/reports`)
+### 7.5 ACSI — Annual Compliance Inspection (`/acsi`)
+
+| ID | Requirement | Status |
+|----|-------------|--------|
+| FR-ACSI-001 | 10 collapsible sections with ~100 checklist items per DAFMAN 13-204v2, Para 5.4.3 | ✅ |
+| FR-ACSI-002 | Y/N/N/A toggle per item with per-item discrepancy documentation for failures | ✅ |
+| FR-ACSI-003 | Discrepancy fields: comment, work order, project number, estimated cost, estimated completion date | ✅ |
+| FR-ACSI-004 | Photo and map uploads on failed items | ✅ |
+| FR-ACSI-005 | Inspection team editor (AFM/CE/Safety required + additional members) | ✅ |
+| FR-ACSI-006 | Risk management certification with 3 signature blocks (OG/CC, MSG/CC, WG/CC) | ✅ |
+| FR-ACSI-007 | PDF export with parent/sub-field visual hierarchy and inline discrepancy photos | ✅ |
+| FR-ACSI-008 | Excel export (multi-sheet: Cover, Checklist, Team, Risk Cert) | ✅ |
+| FR-ACSI-009 | Draft persistence via localStorage auto-save + DB auto-save for cross-device access | ✅ |
+| FR-ACSI-010 | Edit capability for authorized roles (AFM, Base Admin, System Admin) | ✅ |
+
+### 7.6 Reports & Analytics (`/reports`)
 
 | ID | Requirement | Status |
 |----|-------------|--------|
@@ -397,36 +432,41 @@ The complete database schema is maintained in the repository:
 | FR-RPT-004 | Aging Discrepancies: open items by age tier (0-7d, 8-14d, 15-30d, 31-60d, 61-90d, 90+) | ✅ |
 | FR-RPT-005 | All reports include branded headers, page numbers, generation timestamps, embedded imagery | ✅ |
 | FR-RPT-006 | PDF export for all report types | ✅ |
+| FR-RPT-007 | Email delivery for all PDF reports via Resend with branded sender | ✅ |
 
-### 7.6 Obstruction Evaluations (`/obstructions`)
+### 7.7 Obstruction Evaluations (`/obstructions`)
+
+The Obstruction Evaluation Tool automates UFC 3-260-01 imaginary surface analysis — a process that traditionally requires hours of hand calculations with printed manuals. Glidepath performs this analysis in seconds against all base runways simultaneously.
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-OBS-001 | 10 UFC 3-260-01 surfaces: Primary, Approach-Departure, Transitional, Inner Horizontal, Conical, Outer Horizontal, Clear Zone, Graded Area, APZ I, APZ II | ✅ |
+| FR-OBS-001 | Evaluates 10 UFC 3-260-01 imaginary surfaces per runway | ✅ |
 | FR-OBS-002 | Multi-runway simultaneous evaluation against ALL base runways | ✅ |
 | FR-OBS-003 | Geodesic calculations: Haversine distance, cross-track/along-track from centerline | ✅ |
-| FR-OBS-004 | Stadium-shaped boundary geometry for horizontal surfaces | ✅ |
-| FR-OBS-005 | Slope calculations: approach-departure (50:1), transitional (7:1), conical (20:1) | ✅ |
-| FR-OBS-006 | Open-Elevation API for ground MSL height lookup | ✅ |
-| FR-OBS-007 | Interactive Mapbox map with color-coded surface overlays and per-runway toggles | ✅ |
-| FR-OBS-008 | Click-to-place obstruction on map | ✅ |
-| FR-OBS-009 | Violation detection with penetration depth and exact UFC table references | ✅ |
-| FR-OBS-010 | Multiple photos per evaluation | ✅ |
-| FR-OBS-011 | Evaluation history with search and detail view | ✅ |
-| FR-OBS-012 | Obstruction history map view with list/map toggle | ✅ |
+| FR-OBS-004 | Automatic violation detection with penetration depth and UFC table references | ✅ |
+| FR-OBS-005 | Open-Elevation API for ground MSL height lookup | ✅ |
+| FR-OBS-006 | Interactive Mapbox map with color-coded surface overlays and per-runway toggles | ✅ |
+| FR-OBS-007 | Click-to-place obstruction on map or manual coordinate entry | ✅ |
+| FR-OBS-008 | Results table: all surfaces with bounds check, max allowable height, obstruction height, violation status, penetration depth | ✅ |
+| FR-OBS-009 | Multiple photos per evaluation | ✅ |
+| FR-OBS-010 | Evaluation history with search and detail view | ✅ |
+| FR-OBS-011 | History map view: satellite map with violation/clear markers, status filter legend, list/map toggle | ✅ |
+| FR-OBS-012 | Map auto-refreshes when switching between installations | ✅ |
 
-### 7.7 Aircraft Database (`/aircraft`)
+**Operational Impact:** Reduces obstruction evaluation time from 1–4 hours (manual) to under 30 seconds. Eliminates calculation errors. Provides instant violation detection with regulatory references, enabling Airfield Managers to identify and document potential hazards immediately.
+
+### 7.8 Aircraft Database (`/aircraft`)
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-ACF-001 | 1,000+ military and civilian aircraft reference entries | ✅ |
+| FR-ACF-001 | 200+ military and civilian aircraft reference entries | ✅ |
 | FR-ACF-002 | Per-aircraft data: name, designation, manufacturer, weights, dimensions, wheel geometry, ACN/PCN, FAA type code | ✅ |
 | FR-ACF-003 | Search by name, type, manufacturer, branch | ✅ |
 | FR-ACF-004 | Sort by weight, wingspan, ACN | ✅ |
 | FR-ACF-005 | Favorites system (persistent across sessions) | ✅ |
 | FR-ACF-006 | ACN/PCN Comparison Panel: compare aircraft pavement loading against runway PCN | ✅ |
 
-### 7.8 Regulations & Reference Library (`/regulations`)
+### 7.9 Regulations & Reference Library (`/regulations`)
 
 | ID | Requirement | Status |
 |----|-------------|--------|
@@ -439,7 +479,7 @@ The complete database schema is maintained in the repository:
 | FR-REG-007 | Admin CRUD: Add Reference (with PDF upload), Delete Reference (sys_admin) | ✅ |
 | FR-REG-008 | My Documents tab: upload personal PDFs/images (50MB max), text extraction, search | ✅ |
 
-### 7.9 Waiver Lifecycle Management (`/waivers`)
+### 7.10 Waiver Lifecycle Management (`/waivers`)
 
 | ID | Requirement | Status |
 |----|-------------|--------|
@@ -456,80 +496,65 @@ The complete database schema is maintained in the repository:
 | FR-WAV-011 | Waiver map view: Mapbox satellite map with emoji markers by classification, clickable type filter in legend, status badges in popups, list/map toggle | ✅ |
 | FR-WAV-012 | GPS location picker: click-to-place map for waiver create/edit forms with coordinate display | ✅ |
 
-### 7.10 NOTAMs (`/notams`)
+### 7.11 NOTAMs (`/notams`)
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-NOT-001 | Live FAA NOTAM feed via `notams.aim.faa.gov` — no API key required | ✅ |
-| FR-NOT-002 | Auto-fetch NOTAMs for current installation ICAO on page load | ✅ |
-| FR-NOT-003 | Manual ICAO search for querying any airport worldwide | ✅ |
-| FR-NOT-004 | Feed status indicator (green/red/gray) with last-fetched timestamp | ✅ |
-| FR-NOT-005 | Full NOTAM text on cards in monospace format | ✅ |
-| FR-NOT-006 | Filter chips: All / FAA / LOCAL / Active / Expired | ✅ |
-| FR-NOT-007 | Local NOTAM draft creation | ✅ |
-| FR-NOT-008 | Demo mode fallback with 5 sample NOTAMs | ✅ |
+| FR-NOTAM-001 | Live FAA NOTAM feed via `notams.aim.faa.gov` | ✅ |
+| FR-NOTAM-002 | ICAO search input for querying any airport | ✅ |
+| FR-NOTAM-003 | Filter chips: All / FAA / Local / Active / Expired | ✅ |
+| FR-NOTAM-004 | Full NOTAM text display in monospace | ✅ |
+| FR-NOTAM-005 | Draft creation for local NOTAMs | ✅ |
+| FR-NOTAM-006 | PDF export with email delivery | ✅ |
 
-### 7.11 Activity Log & Audit Trail (`/activity`)
+### 7.12 Activity Log & Audit Trail (`/activity`)
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-ACT-001 | Date-range filtering: Today, Last 7 Days, Last 30 Days, Custom Range | ✅ |
-| FR-ACT-002 | Entries grouped by date with color-coded action dots | ✅ |
-| FR-ACT-003 | Clickable items link to source entity (discrepancy, check, inspection, etc.) | ✅ |
-| FR-ACT-004 | Excel export with styled formatting | ✅ |
-| FR-ACT-005 | Tracks: entity creation, status changes, edits, deletions, login activity | ✅ |
+| FR-ACT-001 | Columnar table display: Time (Z), User, Action, Details grouped by date headers | ✅ |
+| FR-ACT-002 | Date-range filtering: Today, 7 Days, 30 Days, Custom | ✅ |
+| FR-ACT-003 | Per-column text search filters | ✅ |
+| FR-ACT-004 | Manual text entry for events not captured by the system | ✅ |
+| FR-ACT-005 | Edit/delete entries via modal dialog with Zulu time editing | ✅ |
+| FR-ACT-006 | Clickable items link to source entity | ✅ |
+| FR-ACT-007 | Excel export with styled formatting | ✅ |
 
-### 7.12 User Management (`/users`)
+### 7.13 User Management (`/users`)
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-USR-001 | Searchable user list with role and status filter dropdowns | ✅ |
+| FR-USR-001 | Searchable user list with role and status filters | ✅ |
 | FR-USR-002 | User cards with rank, role badge, status badge, base assignment, last seen | ✅ |
 | FR-USR-003 | User detail modal for editing profiles with field-level permission enforcement | ✅ |
-| FR-USR-004 | Invite user with branded setup email | ✅ |
-| FR-USR-005 | Admin-initiated and self-service password reset | ✅ |
-| FR-USR-006 | Account lifecycle: deactivate/reactivate, delete (sys_admin only, type-to-confirm) | ✅ |
-| FR-USR-007 | Three-tier role hierarchy with escalation prevention | ✅ |
-| FR-USR-008 | Installation selector: sys_admin sees all bases, base admins locked to own base | ✅ |
+| FR-USR-004 | Email privacy: masked by default with eye icon toggle to reveal | ✅ |
+| FR-USR-005 | Invite user with email, rank, names, role, installation — branded setup email | ✅ |
+| FR-USR-006 | Password reset (admin-initiated and self-service) | ✅ |
+| FR-USR-007 | Account lifecycle: deactivate, reactivate, delete (sys_admin only with type-to-confirm) | ✅ |
+| FR-USR-008 | User deletion cascade: nullifies 12 FK columns across 10 tables before deleting profile and auth | ✅ |
 
-### 7.13 Settings & Base Configuration (`/settings`)
+### 7.14 Settings & Base Configuration (`/settings`)
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-SET-001 | Profile: read-only display of user info, rank, role, primary base | ✅ |
-| FR-SET-002 | Installation: current base display, sys_admin switching/adding | ✅ |
-| FR-SET-003 | Base Configuration: runways, NAVAIDs, areas, CE shops, airfield diagram upload | ✅ |
-| FR-SET-004 | Inspection Templates: customize sections/items per base, toggle Pass/Fail vs BWC | ✅ |
-| FR-SET-005 | Appearance: Day / Night / Auto theme toggle | ✅ |
-| FR-SET-006 | Data & Storage: view/clear cached data, estimated storage | ✅ |
-| FR-SET-007 | Collapsible dropdown sections with sensible defaults | ✅ |
+| FR-SET-001 | Profile section: read-only user info with configurable default PDF email | ✅ |
+| FR-SET-002 | Installation display with switching (sys_admin can add new bases) | ✅ |
+| FR-SET-003 | Data & Storage: view/clear cached data, estimated storage used | ✅ |
+| FR-SET-004 | Regulations Library: bulk PDF download for offline access | ✅ |
+| FR-SET-005 | Base Configuration: runways, NAVAIDs, areas, CE shops, airfield diagram upload | ✅ |
+| FR-SET-006 | Inspection Templates: customize airfield/lighting checklist sections and items | ✅ |
+| FR-SET-007 | Appearance: Day/Night/Auto theme toggle | ✅ |
+| FR-SET-008 | About: version, environment, branding | ✅ |
 
 ---
 
 ## 8. FUNCTIONAL REQUIREMENTS — PLANNED ENHANCEMENTS
 
-### 8.1 Near-Term (Next Release Cycle)
-
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| FR-PLAN-001 | METAR weather integration from aviationweather.gov replacing Open-Meteo | High |
-| FR-PLAN-002 | Server-side email delivery for inspection reports (branded sender address) | Medium |
-| FR-PLAN-003 | Offline sync queue: store mutations while offline, auto-sync on reconnect | Medium |
-| FR-PLAN-004 | Unit and integration testing suite | Medium |
-| FR-PLAN-005 | NOTAM persistence (draft form save to DB) | Medium |
-| FR-PLAN-006 | Regenerate Supabase types to eliminate ~182 `as any` casts | Medium |
-
-### 8.2 Long-Term Vision
-
-| ID | Capability | Description |
-|----|-----------|-------------|
-| FR-FUTURE-001 | CAC/PKI Authentication | Smart card login for DoD network compliance |
-| FR-FUTURE-002 | IMDS/ACES Integration | Bi-directional sync with maintenance tracking |
-| FR-FUTURE-003 | RT3 Hardware Integration | Direct import from runway friction testers |
-| FR-FUTURE-004 | Native Mobile App | React Native wrapper for enhanced offline/camera |
-| FR-FUTURE-005 | Real-Time Collaboration | Live multi-user WebSocket updates |
-| FR-FUTURE-006 | AI-Assisted Analysis | Trend detection, predictive maintenance, anomaly alerting |
-| FR-FUTURE-007 | Platform One Deployment | Enterprise hosting via Party Bus (see Section 19) |
+| Enhancement | Description | Priority |
+|------------|-------------|----------|
+| METAR Weather Integration | Live aviation weather from aviationweather.gov replacing Open-Meteo | High |
+| Offline Sync Queue | Store mutations while offline; auto-sync when connectivity returns | Medium |
+| Unit & Integration Testing | Automated test suite for all modules | Medium |
+| Regenerate Supabase Types | Eliminate remaining ~35 `as any` casts | Low |
 
 ---
 
@@ -537,11 +562,11 @@ The complete database schema is maintained in the repository:
 
 ### 9.1 Discrepancy Types (11)
 
-| Type | Default Shop | Default Severity |
-|------|-------------|-----------------|
-| FOD Hazard | Airfield Management | Critical |
-| Pavement Deficiency | CE Pavements | High |
-| Lighting Outage | CE Electrical | High |
+| Type | Default Assignment | Default Severity |
+|------|-------------------|-----------------|
+| FOD | Airfield Management | High |
+| Pavement Deficiency | CE Pavements | Medium |
+| Lighting Deficiency | CE Electrical | High |
 | Marking Deficiency | CE Pavements | Medium |
 | Signage Deficiency | CE Electrical | Medium |
 | Drainage Issue | CE Structures | Medium |
@@ -559,20 +584,11 @@ Auto-generated waiver number format: `{type}-{ICAO}-{YY}-{##}` (e.g., `P-KMTC-26
 
 Status transitions with mandatory comments: Draft → Pending → Approved → Active → Expired / Closed / Cancelled. Reactivation paths: Closed → Active, Expired → Active.
 
-### 9.3 Obstruction Surface Criteria (Class B)
+### 9.3 Obstruction Evaluation Engine
 
-| Surface | UFC Reference | Key Criteria |
-|---------|--------------|-------------|
-| Primary | Table 3-7, Item 1 | 1,000 ft half-width, 200 ft extension, 0 ft max height |
-| Approach-Departure | Table 3-7, Item 2 | 50:1 slope, 25,000 ft length |
-| Transitional | Table 3-7, Item 3 | 7:1 slope to 150 ft AGL |
-| Inner Horizontal | Table 3-7, Item 4 | 150 ft AGL, 13,120 ft stadium radius |
-| Conical | Table 3-7, Item 5 | 20:1 slope, 7,000 ft horizontal |
-| Outer Horizontal | Table 3-7, Item 6 | 500 ft AGL, 42,250 ft stadium radius |
-| Clear Zone | Ch. 3 & App B §13 | 3,000 ft × 3,000 ft, 0 ft max height |
-| Graded Area | Ch. 3 & App B §13 | 1,000 ft × 3,000 ft, 0 ft max height |
-| APZ I | DoD Inst 4165.57 | 3,000–8,000 ft from threshold |
-| APZ II | DoD Inst 4165.57 | 8,000–15,000 ft from threshold |
+The obstruction evaluation module implements UFC 3-260-01 Class B imaginary surface analysis. The engine evaluates 10 distinct surfaces per runway using geodesic math (Haversine, cross-track, along-track distances), slope calculations, and elevation API lookups. It reports which surfaces are penetrated, the penetration depth, and the controlling surface for each runway.
+
+The 10 evaluated surfaces are: Primary, Approach-Departure, Transitional, Inner Horizontal, Conical, Outer Horizontal, Clear Zone, Graded Area, APZ I, and APZ II. All criteria reference UFC 3-260-01 Table 3-7 and related appendices.
 
 ### 9.4 Emergency Response AM Action Checklist (12 items)
 
@@ -592,6 +608,10 @@ Status transitions with mandatory comments: Draft → Pending → Approved → A
 ### 9.5 Emergency Agency Notification (9 agencies)
 
 SOF, Fire Chief / ARFF, Wing Safety, MOC, Command Post, ATC / Tower, CE, Security Forces, Medical
+
+### 9.6 ACSI Checklist (10 sections, ~100 items)
+
+Implements DAFMAN 13-204v2, Para 5.4.3 annual compliance inspection covering: Obstacle Clearance Criteria, Airfield Lighting, Airfield Pavement, Airfield Marking, Airfield Signage, NAVAIDs, BASH/Wildlife Management, Emergency Response, Airfield Management Administration, and Airfield Security.
 
 ---
 
@@ -624,18 +644,7 @@ SOF, Fire Chief / ARFF, Wing Safety, MOC, Command Post, ATC / Tower, CE, Securit
 
 - System font stack (`font-sans`)
 - Monospace for display IDs and NOTAM text (`font-mono`)
-
-### Role Badges
-
-- Red: `sys_admin`
-- Cyan: `base_admin`, `airfield_manager`, `namo`
-- Slate: all operational roles
-
-### Status Badges
-
-- Green: Active
-- Red: Deactivated
-- Amber: Pending
+- 11 CSS custom properties for responsive font scaling (`--fs-2xs` through `--fs-5xl`)
 
 ---
 
@@ -646,7 +655,7 @@ SOF, Fire Chief / ARFF, Wing Safety, MOC, Command Post, ATC / Tower, CE, Securit
 1. User visits app → middleware checks Supabase session
 2. No session → redirect to `/login`
 3. Login: email + password via `supabase.auth.signInWithPassword()`
-4. On login → check `profiles` table → update `last_seen_at`
+4. On login → check `profiles` table → update `last_seen_at` → show login activity dialog
 5. Deactivated users see "Account deactivated" message
 6. Session stored in HTTP-only cookie via `@supabase/ssr`
 7. Demo mode: bypass auth when Supabase credentials are missing
@@ -674,6 +683,7 @@ SOF, Fire Chief / ARFF, Wing Safety, MOC, Command Post, ATC / Tower, CE, Securit
 | Update Status | ✅ | ✅ | ✅ | Own shop | — | — | — |
 | Perform Checks | ✅ | ✅ | ✅ | — | — | — | — |
 | Perform Inspections | ✅ | ✅ | ✅ | — | — | — | — |
+| ACSI Inspections | ✅ | ✅ | — | — | — | — | — |
 | Manage Waivers | ✅ | ✅ | — | — | — | — | — |
 | Create NOTAMs | ✅ | ✅ | — | — | — | — | — |
 | Obstruction Eval | ✅ | ✅ | ✅ | — | ✅ | — | — |
@@ -688,7 +698,7 @@ SOF, Fire Chief / ARFF, Wing Safety, MOC, Command Post, ATC / Tower, CE, Securit
 ### Database-Level Isolation
 
 - Every operational table carries a `base_id` foreign key
-- All queries filtered to user's current installation at application layer
+- Row-Level Security policies enforce base isolation at the database level
 - Users can belong to multiple bases via `base_members` join table
 
 ### Base Directory
@@ -711,6 +721,7 @@ SOF, Fire Chief / ARFF, Wing Safety, MOC, Command Post, ATC / Tower, CE, Securit
 | Andersen AFB | PGUA | Dual-runway seed for multi-base proof |
 | Mountain Home AFB | KMUO | Additional seed data |
 | Bradley International (CT ANG) | KBDL | Additional seed data |
+| Beale AFB | KBAB | Additional seed data |
 
 ### Onboarding a New Base
 
@@ -745,10 +756,11 @@ SOF, Fire Chief / ARFF, Wing Safety, MOC, Command Post, ATC / Tower, CE, Securit
 ### Offline Capabilities
 
 - All 70 regulation PDFs downloadable for offline ("Cache All")
-- Inspection drafts auto-saved to localStorage
+- Inspection drafts auto-saved to localStorage and Supabase
+- Check drafts saved to Supabase for cross-device access
 - Airfield diagrams cached locally (IDB in demo, Supabase Storage online)
 - Aircraft database available offline (static data)
-- Demo mode with zero network calls (6 discrepancies, 5 NOTAMs, 17 waivers, 1000+ aircraft, 70 regulations)
+- Demo mode with zero network calls (6 discrepancies, 5 NOTAMs, 17 waivers, 200+ aircraft, 70 regulations)
 
 ### Planned: Offline Sync Queue
 
@@ -760,7 +772,7 @@ SOF, Fire Chief / ARFF, Wing Safety, MOC, Command Post, ATC / Tower, CE, Securit
 
 ## 14. EXPORT & REPORTING
 
-### PDF Reports (7 Types)
+### PDF Reports (8 Types)
 
 | Report | Content | Embedded Media |
 |--------|---------|----------------|
@@ -768,18 +780,20 @@ SOF, Fire Chief / ARFF, Wing Safety, MOC, Command Post, ATC / Tower, CE, Securit
 | Open Discrepancies | Current snapshot with breakdowns | Photos, satellite map thumbnails |
 | Discrepancy Trends | Historical opened vs. closed | Trend charts, area/type breakdowns |
 | Aging Discrepancies | Open items by age tier | Severity and shop breakdowns |
-| Individual Inspection | Section-by-section pass/fail | Location maps for failed items, photos |
+| Individual Inspection | Section-by-section pass/fail | Per-discrepancy location maps and photos |
 | Individual Waiver | Full AF-505 format | Criteria tables, coordination stamps, photos |
-| Individual Check | Check detail record | Location map, photos |
+| Individual Check | Check detail record | Location map, per-issue photos |
+| ACSI Inspection | Annual compliance report | Parent/sub-field hierarchy, inline discrepancy photos |
 
-All PDFs include branded headers with installation name/ICAO, page numbers, and generation timestamps.
+All PDFs include branded headers with installation name/ICAO, page numbers, and generation timestamps. Every PDF can be downloaded directly or emailed via Resend with a branded sender (`Glidepath <info@glidepathops.com>`).
 
-### Excel Exports (3 Types)
+### Excel Exports (4 Types)
 
 | Export | Sheets |
 |--------|--------|
 | Waiver Register | Waivers, Criteria & Standards, Coordination Status |
 | Annual Review | Year review data with recommendations and board status |
+| ACSI Inspection | Cover, Checklist (with discrepancy details), Inspection Team, Risk Cert |
 | Activity Log | Date, Time, User, Rank, Action, Entity, Details |
 
 ---
@@ -792,6 +806,7 @@ All PDFs include branded headers with installation name/ICAO, page numbers, and 
 | FAA NOTAM Search | ✅ Active | Live NOTAM feed by ICAO | No |
 | Open-Elevation | ✅ Active | Ground MSL height for obstructions | No |
 | Mapbox GL JS | ✅ Active | Interactive maps, satellite imagery, static thumbnails | Token (free tier) |
+| Resend | ✅ Active | Email delivery for PDF reports | API key |
 | aviationweather.gov METAR | ⏳ Planned | Aviation-specific weather data | No |
 
 ---
@@ -802,6 +817,7 @@ All PDFs include branded headers with installation name/ICAO, page numbers, and 
 |----------|-------------|--------|
 | Performance | Page load < 3 seconds on 4G | ✅ |
 | Performance | Obstruction calculation < 100ms | ✅ |
+| Performance | Realtime updates < 2 seconds propagation | ✅ |
 | Accessibility | WCAG 2.1 AA target, minimum 4.5:1 contrast | ✅ (partial) |
 | Responsiveness | Mobile-first (480px), tablet (768px), desktop (1024px) | ✅ |
 | Security | All data over HTTPS | ✅ |
@@ -823,7 +839,7 @@ All PDFs include branded headers with installation name/ICAO, page numbers, and 
 - Email/password authentication via Supabase Auth
 - Session management with HTTP-only cookies
 - Account deactivation blocks login immediately
-- Five-tier role hierarchy with escalation prevention (sys_admin → base_admin/airfield_manager/namo → amops → ces/safety/atc → read_only)
+- Five-tier role hierarchy with escalation prevention
 - Row-Level Security (RLS) enabled on all database tables with role-based policies
 - Three SECURITY DEFINER helper functions: `user_has_base_access()`, `user_can_write()`, `user_is_admin()`
 - Base-scoped data isolation — users can only access data from their assigned base
@@ -831,14 +847,15 @@ All PDFs include branded headers with installation name/ICAO, page numbers, and 
 - RLS policies active on `storage.objects` for photos bucket
 - Role-based write restrictions at both database (RLS) and application layer (API routes + UI guards)
 - Admin API routes use Supabase service role key with server-side permission checks
+- Email privacy: user emails masked by default in the UI with toggle reveal
 
 ### Production Hardening Path
 
 1. **CAC/PKI authentication** via DoD identity provider
-3. **GCC High migration** (Azure Government or AWS GovCloud)
-4. **Platform One deployment** via Party Bus (see Section 19)
-5. **STIG compliance** audit against DoD security baselines
-6. **cATO** through Platform One's Certificate to Field process
+2. **GCC High migration** (Azure Government or AWS GovCloud)
+3. **Platform One deployment** via Party Bus (see Section 19)
+4. **STIG compliance** audit against DoD security baselines
+5. **cATO** through Platform One's Certificate to Field process
 
 ### Data Classification
 
@@ -857,11 +874,13 @@ All PDFs include branded headers with installation name/ICAO, page numbers, and 
 - **Domain:** glidepathops.com
 - **CDN:** Vercel Edge Network (automatic)
 - **SSL:** Automatic via Vercel
+- **Email:** Resend (branded PDF delivery)
 
 ### Infrastructure Requirements
 
 - Supabase project (free tier for dev, Pro for production)
 - Mapbox account (free tier: 50,000 map loads/month)
+- Resend account for email PDF delivery
 - No other paid services — weather, NOTAMs, and elevation APIs are free
 
 ### Production Migration Path
@@ -881,7 +900,7 @@ Supabase (free)     → Supabase (Pro tier)  → DoD-managed PostgreSQL
 
 ### Overview
 
-Platform One (P1) is the DoD's enterprise DevSecOps platform. It provides secure Kubernetes hosting, pre-certified CI/CD pipelines, and a streamlined path to Authorization to Operate. For Glidepath, the target service is **Party Bus** — P1's Platform as a Service (PaaS) that delivers a fully managed environment with P1's ATO with Continuous Delivery capabilities.
+Platform One (P1) is the DoD's enterprise DevSecOps platform. It provides secure Kubernetes hosting, pre-certified CI/CD pipelines, and a streamlined path to Authorization to Operate. For Glidepath, the target service is **Party Bus** — P1's Platform as a Service (PaaS) that delivers a fully managed environment with continuous ATO capabilities.
 
 ### Why Platform One
 
@@ -920,7 +939,7 @@ Platform One (P1) is the DoD's enterprise DevSecOps platform. It provides secure
 1. Glidepath available to any USAF, ANG, or AFRC installation via P1
 2. New bases onboard through admin UI (no code deployment)
 3. Career field manager visibility across all installations
-4. Data isolation maintained per base via application-layer scoping
+4. Data isolation maintained per base via RLS and application-layer scoping
 
 ### Technical Considerations for P1 Migration
 
@@ -933,6 +952,7 @@ Platform One (P1) is the DoD's enterprise DevSecOps platform. It provides secure
 | Maps | Mapbox (commercial) | Evaluate DoD-approved mapping (NGA, GEOINT) |
 | Weather | Open-Meteo | aviationweather.gov METAR (DoD-internal) |
 | NOTAMs | FAA public endpoint | Same (FAA public, no change needed) |
+| Email | Resend | P1-approved email service |
 
 ### Glidepath Advantages for P1 Onboarding
 
@@ -971,11 +991,22 @@ Platform One (P1) is the DoD's enterprise DevSecOps platform. It provides secure
 | 2.7.0 | 2026-02-27 | Bug fixes, PWA hardening, code quality |
 | 2.8.0 | 2026-02-28 | Responsive layout overhaul (sidebar, breakpoints, font scaling) |
 | 2.9.0 | 2026-02-28 | Activity log overhaul, header consolidation, login UX, user delete cascade |
-| 2.10.0 | 2026-03-01 | Row-Level Security (RLS) on all tables, map views (discrepancy/waiver/obstruction), project cleanup |
+| 2.10.0 | 2026-03-01 | Row-Level Security (RLS) on all tables, map views, project cleanup |
+| 2.11.0 | 2026-03-02 | ACSI module (annual compliance), All Inspections hub |
+| 2.12.0 | 2026-03-02 | Email PDF delivery (Resend), default PDF email, map standardization |
+| 2.13.0 | 2026-03-03 | Multi-discrepancy per item, per-issue photos, Supabase draft persistence, default-to-pass |
+| 2.14.0 | 2026-03-04 | Supabase Realtime dashboard updates, map lifecycle fixes, UI polish |
 
 ### Development Approach
 
 Built iteratively using Claude Code (AI coding agent) with the developer (MSgt Chris Proctor, 127 WG/AM) providing domain expertise, requirements, and testing. Each version shipped functional features — no throwaway prototypes. Every module was built by someone who performs these duties daily and has 18+ years of Airfield Management experience.
+
+### Development Period
+
+- **Start:** February 8, 2026
+- **Current Release:** v2.14.0 (March 5, 2026)
+- **Duration:** 25 days
+- **Releases:** 25 version releases
 
 ---
 
@@ -984,9 +1015,9 @@ Built iteratively using Claude Code (AI coding agent) with the developer (MSgt C
 | Regulation | Title | How Glidepath Supports It |
 |-----------|-------|--------------------------|
 | DAFMAN 13-204 Vol 1 | Airfield Management: Planning and Operations | Reference library with indexed entries; inspection templates aligned to Vol 1 |
-| DAFMAN 13-204 Vol 2 | Airfield Management: Operations | Dashboard, checks, inspections, discrepancy tracking — all core AM duties digitized |
+| DAFMAN 13-204 Vol 2 | Airfield Management: Operations | Dashboard, checks, inspections, discrepancy tracking — all core AM duties digitized; ACSI annual compliance inspection |
 | DAFMAN 13-204 Vol 3 | Airfield Management: Special Operations | Reference library entries; extensible template system |
-| UFC 3-260-01 | Airfield and Heliport Planning and Design | 10-surface obstruction evaluation engine with geodesic math and UFC table references |
+| UFC 3-260-01 | Airfield and Heliport Planning and Design | Automated obstruction evaluation engine with geodesic math, multi-runway analysis, and UFC table references |
 | AF Form 505 | Airfield Waiver Template | Waiver module captures all AF-505 fields with lifecycle tracking and coordination |
 | AFCEC Playbook App B | Airfield Waiver Playbook | Waiver register format, classification types, Excel export aligned to Appendix B |
 | DoD Instruction 4165.57 | Air Installations Compatible Use Zones | APZ I and APZ II evaluation in obstruction module |
@@ -999,6 +1030,7 @@ Built iteratively using Claude Code (AI coding agent) with the developer (MSgt C
 | Term | Definition |
 |------|-----------|
 | ACN | Aircraft Classification Number — pavement stress rating per aircraft |
+| ACSI | Airfield Compliance and Safety Inspection — annual inspection per DAFMAN 13-204v2 |
 | AGL | Above Ground Level |
 | AM | Airfield Manager / Airfield Management |
 | APZ | Accident Potential Zone (I and II) |
@@ -1006,6 +1038,7 @@ Built iteratively using Claude Code (AI coding agent) with the developer (MSgt C
 | BWC | Bird Watch Condition (LOW/MOD/SEV/PROHIB) |
 | cATO | Continuous Authority to Operate |
 | CE | Civil Engineering |
+| COP | Common Operating Picture |
 | CtF | Certificate to Field (Platform One) |
 | CUI | Controlled Unclassified Information |
 | FOD | Foreign Object Debris/Damage |
@@ -1034,17 +1067,15 @@ Built iteratively using Claude Code (AI coding agent) with the developer (MSgt C
 | Artifact | Location | Description |
 |----------|----------|-------------|
 | Database Schema | `supabase/schema.sql` | Complete table definitions |
-| Migrations | `supabase/migrations/` | 60 migration files |
+| Migrations | `supabase/migrations/` | 61 migration files |
 | TypeScript Types | `lib/supabase/types.ts` | Full type definitions for all tables |
-| Capabilities Brief | `GLIDEPATH_CAPABILITIES_BRIEF.md` | Detailed module-by-module capabilities |
+| Capabilities Brief | `docs/GLIDEPATH_CAPABILITIES_BRIEF.md` | Detailed module-by-module capabilities |
+| AFWERX Proposal | `docs/Glidepath_AFWERX_Proposal.md` | Innovation proposal for enterprise deployment |
 | Changelog | `CHANGELOG.md` | Complete version history |
-| Base Onboarding | `BASE-ONBOARDING.md` | Guide for adding new installations |
-| Scaling Assessment | `SCALING-ASSESSMENT.md` | Multi-base architecture assessment |
-| Project Status | `PROJECT_STATUS.md` | Architecture details and tech debt audit |
-| Integration Guide | `docs/INTEGRATION_GUIDE.md` | PDF text search architecture |
+| README | `README.md` | Technical overview and project structure |
+| Base Onboarding | `docs/BASE-ONBOARDING.md` | Guide for adding new installations |
 
 ---
 
-*Glidepath SRS v3.0 — March 2026*
+*Glidepath SRS v4.0 — March 2026*
 *Built by MSgt Chris Proctor, 127th Wing Airfield Management, Selfridge ANGB (KMTC)*
-*"Guiding You to Mission Success"*

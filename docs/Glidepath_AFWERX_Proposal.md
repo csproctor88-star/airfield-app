@@ -1,10 +1,10 @@
-# GLIDEPATH — AFWERX Spark Cell Innovation Proposal
+# GLIDEPATH — AFWERX Innovation Proposal
 
 **Proposal Title:** Glidepath — Enterprise Airfield Operations Management Suite
 **Proposing Unit:** 127th Wing, Selfridge Air National Guard Base, MI (KMTC)
 **Proposer:** MSgt Chris Proctor, Airfield Manager (1C7X1), 127th Wing
-**Date:** February 2026
-**Application Version:** 2.9.0
+**Date:** March 2026
+**Application Version:** 2.14.0
 **Classification:** UNCLASSIFIED // CUI
 
 ---
@@ -19,13 +19,15 @@ This isn't a minor inconvenience. It creates delayed response times, lost instit
 
 ### The Solution
 
-**Glidepath** is a production-ready, mobile-first Progressive Web Application that consolidates every Airfield Management function defined in DAFMAN 13-204 (Volumes 1–3) into a single platform. It is not a concept, prototype, or PowerPoint. It is a working application with 13 modules, 48 routes, 130+ source files, 25+ database tables, and zero TypeScript compilation errors, built and tested by an active Airfield Manager with 18+ years of career field experience.
+**Glidepath** is a production-ready, mobile-first Progressive Web Application that consolidates every Airfield Management function defined in DAFMAN 13-204 (Volumes 1–3) into a single platform. It is not a concept, prototype, or PowerPoint. It is a working application with 14 modules, 53 routes, 157 source files, 28+ database tables, and zero TypeScript compilation errors, built and tested by an active Airfield Manager with 18+ years of career field experience.
+
+Glidepath features Supabase Realtime push updates — when someone changes the runway status, advisory, or completes a check, every connected user sees it instantly. No page refresh required. The entire team shares the same live operational picture.
 
 ### The Ask
 
-1. **AFWERX Spark endorsement** as a career-field innovation project
+1. **AFWERX endorsement** as a career-field innovation project
 2. **Introduction to Platform One** for enterprise deployment via Party Bus
-3. **Guidance on the path** from Spark Cell innovation to program-of-record consideration
+3. **Guidance on the pathway** from grassroots innovation to program-of-record consideration
 
 Glidepath does not need development funding — it is built. It needs the institutional pathway to get from "one base" to "every base."
 
@@ -41,9 +43,10 @@ Glidepath does not need development funding — it is built. It needs the instit
 | Discrepancy Tracking | Paper logs + emailed spreadsheets | ✅ Built |
 | Airfield Checks (7 types) | Clipboard forms (FOD, RSC, RCR, IFE, Ground Emergency, Heavy Aircraft, BASH) | ✅ Built |
 | Daily Inspections | Paper checklists printed and scanned | ✅ Built |
+| ACSI Annual Compliance | Printed checklist packets, manual reports | ✅ Built |
 | Reports & Analytics (4 types) | Manual report compilation in Word/Excel | ✅ Built |
 | Obstruction Evaluations | Hand calculations from printed UFC manuals | ✅ Built |
-| Aircraft Database (1,000+ aircraft) | Printed reference binders | ✅ Built |
+| Aircraft Database (200+ aircraft) | Printed reference binders | ✅ Built |
 | Regulations Library (70 refs) | Bookmarked PDFs on personal computers | ✅ Built |
 | Waiver Management (AF Form 505) | Filing cabinets + Excel registers | ✅ Built |
 | NOTAMs (Live FAA Feed) | Separate FAA website, manual lookup | ✅ Built |
@@ -55,7 +58,9 @@ Glidepath does not need development funding — it is built. It needs the instit
 
 **Built by the warfighter, for the warfighter.** Glidepath was not designed in a conference room by people who have never walked a flightline. Every screen, workflow, and data field was built by an active Airfield Manager who performs these duties on drill weekends and has done so for nearly two decades. The application reflects how the job actually works, not how someone thinks it should work.
 
-**155-base ready today.** The application's multi-base architecture scopes every data table by installation. A built-in directory of 155 U.S. military installations (AFBs, ANGBs, Joint Bases) lets any new base onboard through the admin UI without code changes. Four bases are already seeded with operational data.
+**Live, shared operational picture.** Supabase Realtime push updates mean every user sees the same airfield status simultaneously. Runway closures, advisory changes, and check completions propagate to all connected clients within seconds. No more calling the AM desk to ask "what's the status?"
+
+**155-base ready today.** The application's multi-base architecture scopes every data table by installation. A built-in directory of 155 U.S. military installations (AFBs, ANGBs, Joint Bases) lets any new base onboard through the admin UI without code changes. Five bases are already seeded with operational data.
 
 **Zero cost to evaluate.** Glidepath runs in demo mode with no server, no credentials, and no setup. Clone the repository, run `npm install && npm run dev`, and the full application loads with mock data. Every module is functional. No infrastructure, no accounts, no configuration required.
 
@@ -70,10 +75,10 @@ Glidepath does not need development funding — it is built. It needs the instit
 ### For the Airfield Manager (Installation Level)
 
 - **Single pane of glass** for all AM duties — no more switching between 6+ disconnected systems
-- **Instant operational picture** — open the app and see runway status, weather, advisories, NAVAID conditions, and recent activity from any device
-- **Audit-ready** — every action logged with user, timestamp, and entity reference; export any report as PDF on demand
+- **Instant, shared operational picture** — open the app and see runway status, weather, advisories, NAVAID conditions, and recent activity from any device, with live push updates across all users
+- **Audit-ready** — every action logged with user, timestamp, and entity reference; export any report as PDF or email it directly
 - **Waiver management** — replace filing cabinets with a searchable, tracked, exportable register with annual review workflow
-- **Obstruction analysis** — UFC 3-260-01 calculations that previously took hours done in seconds with geodesic precision
+- **Obstruction analysis** — UFC 3-260-01 calculations that previously took hours done in seconds with geodesic precision and instant violation detection
 
 ### For the Career Field Manager (Enterprise Level)
 
@@ -89,30 +94,31 @@ Glidepath does not need development funding — it is built. It needs the instit
 |--------|--------------|----------------|
 | Time to compile daily report | 30–60 minutes (manual) | < 5 minutes (auto-generated PDF) |
 | Discrepancy response tracking | Spreadsheet, days between updates | Real-time status with audit trail |
-| Obstruction evaluation | 1–4 hours (hand calculation) | < 30 seconds (10 surfaces simultaneously) |
+| Obstruction evaluation | 1–4 hours (hand calculation) | < 30 seconds (all surfaces, all runways simultaneously) |
 | Waiver register maintenance | Hours per month (Excel management) | Automatic with annual review workflow |
 | Knowledge transfer at PCS | Weeks of shadowing, still loses data | Full history preserved in database |
 | NOTAM awareness | Manual FAA website checks | Auto-fetched live feed on dashboard |
-| Leadership visibility | Call the AM desk and ask | Open the app from anywhere |
+| Leadership visibility | Call the AM desk and ask | Open the app from anywhere — live updates pushed to all users |
 
 ---
 
 ## 4. TECHNOLOGY MATURITY
 
-### Current State (v2.9.0 — February 2026)
+### Current State (v2.14.0 — March 2026)
 
 Glidepath is not a prototype. The following metrics demonstrate production-level maturity:
 
 | Metric | Value |
 |--------|-------|
-| Application Routes | 48 |
-| Source Files | 130+ |
-| Database Tables | 25+ |
-| Database Migrations | 56 |
-| Version Releases | 17 |
-| Development Period | Feb 8 – Feb 28, 2026 (21 days) |
+| Application Routes | 53 |
+| Source Files | 157 |
+| Database Tables | 28+ |
+| Database Migrations | 61 |
+| Lines of Code | ~51,700 |
+| Version Releases | 25 |
+| Development Period | Feb 8 – Mar 5, 2026 (25 days) |
 | TypeScript Compilation | 0 errors (strict mode) |
-| Modules Complete | 15 complete + 2 enhanced |
+| Modules Complete | 14 complete |
 | Multi-Base Support | 155 installations |
 | Demo Mode | Fully functional offline |
 
@@ -126,7 +132,8 @@ Glidepath is not a prototype. The following metrics demonstrate production-level
 | Styling | Tailwind CSS | Utility-first CSS with theme system |
 | Maps | Mapbox GL JS | Interactive maps and satellite imagery |
 | PDF Export | jsPDF | Browser-based report generation |
-| Excel Export | SheetJS | Browser-based spreadsheet generation |
+| Email | Resend | Server-side branded PDF email delivery |
+| Excel Export | SheetJS + ExcelJS | Browser-based spreadsheet generation with styling |
 | Offline | IndexedDB + PWA | Full offline reference access |
 | Validation | Zod | Schema validation for all forms |
 
@@ -145,18 +152,18 @@ Glidepath is architecturally ready for Platform One. The stack is open-source, c
 ### Proposed Integration Roadmap
 
 ```
-CURRENT STATE (Feb 2026)
+CURRENT STATE (Mar 2026)
 ├── Vercel hosting (commercial cloud)
 ├── Supabase database (commercial cloud)
 ├── Email/password authentication
-└── Single installation operational (KMTC)
+└── Five installations seeded with operational data
          │
          ▼
-PHASE 1: SPARK ENDORSEMENT (Months 1–3)
-├── AFWERX Spark Cell recognition
+PHASE 1: ENDORSEMENT & PILOT TESTING (Months 1–3)
+├── AFWERX recognition as career-field innovation project
 ├── Wing-level leadership briefing and endorsement
 ├── Career Field Manager (CFM) awareness brief
-├── Identify AFWERX POC for Platform One introduction
+├── Identify POC for Platform One introduction
 └── Begin pilot testing with 2–3 additional ANG installations
          │
          ▼
@@ -227,6 +234,7 @@ That said, the DevSecOps practices Kessel Run pioneered — agile delivery, cont
 |------|-------------|
 | Supabase Pro (if commercial cloud) | $25/month |
 | Vercel Pro (if commercial cloud) | $20/month |
+| Resend (email delivery) | $0 (free tier covers most bases) |
 | Mapbox (free tier covers most bases) | $0 |
 | **Total per base (commercial)** | **~$45/month** |
 
@@ -265,28 +273,28 @@ The Air Force currently has no enterprise digital solution for Airfield Manageme
 
 ---
 
-## 8. WHAT AFWERX SPARK PROVIDES
+## 8. WHAT AFWERX PROVIDES
 
-### What Glidepath Needs from Spark
+### What Glidepath Needs
 
-1. **Formal endorsement** as an AFWERX Spark Cell innovation project
+1. **Formal endorsement** as an AFWERX innovation project
 2. **Introduction to Platform One** customer success team for Party Bus onboarding guidance
-3. **Career Field Manager visibility** — Spark's network connects innovations to the right decision-makers
-4. **Refinery accelerator access** — tools and resources to push through the "frozen middle" between grassroots innovation and institutional adoption
-5. **Mentorship** on the transition from Spark project to potential program of record
+3. **Career Field Manager visibility** — AFWERX's network connects innovations to the right decision-makers
+4. **Accelerator access** — tools and resources to push through the "frozen middle" between grassroots innovation and institutional adoption
+5. **Mentorship** on the transition from innovation project to potential program of record
 
-### What Glidepath Does NOT Need from Spark
+### What Glidepath Does NOT Need
 
 - **Development funding** — the application is built
 - **Contractor support** — the codebase is maintainable by any web developer
 - **Feasibility study** — the application is in use
-- **Requirements definition** — the SRS is 1,300+ lines and covers every module
+- **Requirements definition** — the SRS is 1,000+ lines and covers every module
 
-### Spark Cell Alignment
+### Innovation Alignment
 
-Glidepath embodies the Spark Cell model: a grassroots innovation built by an active-duty operator who identified a problem, prototyped a solution, and iterated to production quality. The Spark mission — *Empowering innovators, Accelerating results* — is exactly what Glidepath needs to cross the gap from "one base innovation" to "enterprise capability."
+Glidepath embodies the AFWERX innovation model: a grassroots innovation built by an active-duty operator who identified a problem, prototyped a solution, and iterated to production quality. The AFWERX mission — connecting innovators with resources and decision-makers — is exactly what Glidepath needs to cross the gap from "one base innovation" to "enterprise capability."
 
-AFWERX Spark has delivered 250+ impactful projects to Wings and Squadrons. Glidepath is ready to be next — not as an idea that needs development, but as a finished product that needs a deployment pathway.
+AFWERX has a track record of delivering impactful projects to Wings and Squadrons. Glidepath is ready to be next — not as an idea that needs development, but as a finished product that needs a deployment pathway.
 
 ---
 
@@ -307,9 +315,9 @@ Open `http://localhost:3000` — full application runs in demo mode with mock da
 Visit `glidepathops.com` for the production deployment. Contact the developer for demo credentials.
 
 **Option 3: Documentation Review**
-- `SRS.md` — Software Requirements Specification (v3.0, 1,300+ lines)
-- `GLIDEPATH_CAPABILITIES_BRIEF.md` — Module-by-module capabilities (950 lines)
-- `CHANGELOG.md` — Complete version history (725 lines)
+- `Glidepath_SRS_v4.0.md` — Software Requirements Specification (1,000+ lines)
+- `GLIDEPATH_CAPABILITIES_BRIEF.md` — Module-by-module capabilities (1,000 lines)
+- `CHANGELOG.md` — Complete version history (25 releases)
 - `README.md` — Technical overview and project structure
 
 ### Recommended Evaluation Workflow
@@ -339,7 +347,7 @@ Visit `glidepathops.com` for the production deployment. Contact the developer fo
 
 ### Development Approach
 
-Glidepath was built iteratively over 21 days using Claude Code (AI-assisted development) with the developer providing domain expertise, regulatory knowledge, and real-world testing against actual Selfridge ANGB operations. Every module was built, tested, and validated by someone who performs these duties in uniform.
+Glidepath was built iteratively over 25 days using Claude Code (AI-assisted development) with the developer providing domain expertise, regulatory knowledge, and real-world testing against actual Selfridge ANGB operations. Every module was built, tested, and validated by someone who performs these duties in uniform.
 
 ---
 
@@ -354,5 +362,5 @@ The Air Force does not currently have an enterprise digital solution for Airfiel
 ---
 
 *Glidepath — "Guiding You to Mission Success"*
-*AFWERX Spark Cell Innovation Proposal — February 2026*
+*AFWERX Innovation Proposal — March 2026*
 *127th Wing, Selfridge Air National Guard Base, Michigan*
