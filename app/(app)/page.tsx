@@ -144,6 +144,14 @@ export default function HomePage() {
   const [advisoryDraftType, setAdvisoryDraftType] = useState<'INFO' | 'CAUTION' | 'WARNING'>('INFO')
   const [advisoryDraftText, setAdvisoryDraftText] = useState('')
 
+  // Confirmation dialog state for runway / NAVAID changes
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string
+    message: string
+    color: string
+    onConfirm: () => void
+  } | null>(null)
+
   // --- Load weather ---
   useEffect(() => {
     async function loadWeather() {
@@ -533,6 +541,53 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* Confirmation dialog for runway / NAVAID changes */}
+      {confirmDialog && (
+        <div
+          onClick={() => setConfirmDialog(null)}
+          style={{
+            position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 24, width: '100%', maxWidth: 380,
+              border: '1px solid var(--color-border-mid)',
+            }}
+          >
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 12 }}>
+              {confirmDialog.title}
+            </div>
+            <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-2)', marginBottom: 20, lineHeight: 1.5 }}>
+              {confirmDialog.message}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => {
+                  confirmDialog.onConfirm()
+                  setConfirmDialog(null)
+                }}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: `1px solid ${confirmDialog.color}`,
+                  background: 'var(--color-bg-inset)', color: confirmDialog.color,
+                }}
+              >Confirm</button>
+              <button
+                onClick={() => setConfirmDialog(null)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                  background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
+                }}
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ===== Current Status ===== */}
       <span className="section-label">Current Status</span>
       {/* Active RWY cards — one per runway, side-by-side for multi-runway bases */}
@@ -576,21 +631,27 @@ export default function HomePage() {
                   <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>Active RWY</div>
                   <button
                     onClick={() => {
-                      // Toggle between the two ends of this runway
                       const newEnd = rwy.active_end === rwy.end1 ? rwy.end2 : rwy.end1
-                      if (runways.length > 0) {
-                        setRunwayActiveEnd(rwy.label, newEnd)
-                        if (installationId) logActivity('updated', 'airfield_status', installationId, `RWY ${newEnd}`, { runway: rwy.label, active_end: newEnd }, installationId)
-                        logRunwayStatusChange({ oldActiveRunway: rwy.active_end, newActiveRunway: newEnd }, installationId)
-                      } else {
-                        const designators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
-                        if (designators.length === 0) return
-                        const idx = designators.indexOf(activeRunway)
-                        const next = designators[(idx + 1) % designators.length]
-                        setActiveRunway(next)
-                        if (installationId) logActivity('updated', 'airfield_status', installationId, `RWY ${next}`, { active_runway: next }, installationId)
-                        logRunwayStatusChange({ oldActiveRunway: activeRunway, newActiveRunway: next }, installationId)
-                      }
+                      setConfirmDialog({
+                        title: 'Change Active Runway',
+                        message: `Switch active runway from RWY ${rwy.active_end} to RWY ${newEnd}?`,
+                        color: c.color,
+                        onConfirm: () => {
+                          if (runways.length > 0) {
+                            setRunwayActiveEnd(rwy.label, newEnd)
+                            if (installationId) logActivity('updated', 'airfield_status', installationId, `RWY ${newEnd}`, { runway: rwy.label, active_end: newEnd }, installationId)
+                            logRunwayStatusChange({ oldActiveRunway: rwy.active_end, newActiveRunway: newEnd }, installationId)
+                          } else {
+                            const designators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
+                            if (designators.length === 0) return
+                            const idx = designators.indexOf(activeRunway)
+                            const next = designators[(idx + 1) % designators.length]
+                            setActiveRunway(next)
+                            if (installationId) logActivity('updated', 'airfield_status', installationId, `RWY ${next}`, { active_runway: next }, installationId)
+                            logRunwayStatusChange({ oldActiveRunway: activeRunway, newActiveRunway: next }, installationId)
+                          }
+                        },
+                      })
                     }}
                     style={{
                       padding: 'var(--rwy-btn-padding)', borderRadius: 8, fontSize: 'var(--rwy-btn-font)', fontWeight: 800,
@@ -603,15 +664,27 @@ export default function HomePage() {
                     value={runways.length > 0 ? rwy.status : runwayStatus}
                     onChange={(e) => {
                       const val = e.target.value as 'open' | 'suspended' | 'closed'
-                      if (runways.length > 0) {
-                        setRunwayStatusForRunway(rwy.label, val)
-                        if (installationId) logActivity('status_updated', 'airfield_status', installationId, `RWY ${rwy.active_end} ${val.toUpperCase()}`, { runway: rwy.label, status: val }, installationId)
-                        logRunwayStatusChange({ oldRunwayStatus: rwy.status, newRunwayStatus: val }, installationId)
-                      } else {
-                        setRunwayStatus(val)
-                        if (installationId) logActivity('status_updated', 'airfield_status', installationId, `RWY ${activeRunway} ${val.toUpperCase()}`, { status: val }, installationId)
-                        logRunwayStatusChange({ oldRunwayStatus: runwayStatus, newRunwayStatus: val }, installationId)
-                      }
+                      const currentVal = runways.length > 0 ? rwy.status : runwayStatus
+                      if (val === currentVal) return
+                      const statusColor = val === 'closed' ? 'var(--color-danger)' : val === 'suspended' ? 'var(--color-warning)' : 'var(--color-success)'
+                      setConfirmDialog({
+                        title: 'Change Runway Status',
+                        message: `Change RWY ${rwy.active_end} status from ${currentVal.toUpperCase()} to ${val.toUpperCase()}?`,
+                        color: statusColor,
+                        onConfirm: () => {
+                          if (runways.length > 0) {
+                            setRunwayStatusForRunway(rwy.label, val)
+                            if (installationId) logActivity('status_updated', 'airfield_status', installationId, `RWY ${rwy.active_end} ${val.toUpperCase()}`, { runway: rwy.label, status: val }, installationId)
+                            logRunwayStatusChange({ oldRunwayStatus: rwy.status, newRunwayStatus: val }, installationId)
+                          } else {
+                            setRunwayStatus(val)
+                            if (installationId) logActivity('status_updated', 'airfield_status', installationId, `RWY ${activeRunway} ${val.toUpperCase()}`, { status: val }, installationId)
+                            logRunwayStatusChange({ oldRunwayStatus: runwayStatus, newRunwayStatus: val }, installationId)
+                          }
+                        },
+                      })
+                      // Reset select to current value — it only changes after confirm
+                      e.target.value = currentVal
                     }}
                     style={{
                       padding: 'var(--rwy-select-padding)', borderRadius: 6, fontSize: 'var(--fs-md)', fontWeight: 700,
@@ -698,7 +771,13 @@ export default function HomePage() {
                 onClick={() => {
                   const idx = NAVAID_CYCLE.indexOf(n.status as 'green' | 'yellow' | 'red')
                   const next = NAVAID_CYCLE[(idx + 1) % NAVAID_CYCLE.length]
-                  handleNavaidToggle(n, next)
+                  const navaidColor = next === 'red' ? 'var(--color-danger)' : next === 'yellow' ? 'var(--color-warning)' : 'var(--color-success)'
+                  setConfirmDialog({
+                    title: 'Change NAVAID Status',
+                    message: `Change ${n.navaid_name} from ${(n.status as string).toUpperCase()} to ${next.toUpperCase()}?`,
+                    color: navaidColor,
+                    onConfirm: () => handleNavaidToggle(n, next),
+                  })
                 }}
                 style={{
                   width: 36, height: 28, borderRadius: 6,
