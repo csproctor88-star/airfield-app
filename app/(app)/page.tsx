@@ -144,12 +144,18 @@ export default function HomePage() {
   const [advisoryDraftType, setAdvisoryDraftType] = useState<'INFO' | 'CAUTION' | 'WARNING'>('INFO')
   const [advisoryDraftText, setAdvisoryDraftText] = useState('')
 
-  // Confirmation dialog state for runway / NAVAID changes
+  // Confirmation dialog state for runway changes
   const [confirmDialog, setConfirmDialog] = useState<{
     title: string
     message: string
     color: string
     onConfirm: () => void
+  } | null>(null)
+
+  // NAVAID status dialog state
+  const [navaidDialog, setNavaidDialog] = useState<{
+    navaid: NavaidStatus
+    selectedStatus: 'green' | 'yellow' | 'red'
   } | null>(null)
 
   // --- Load weather ---
@@ -541,7 +547,81 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Confirmation dialog for runway / NAVAID changes */}
+      {/* NAVAID status dialog */}
+      {navaidDialog && (
+        <div
+          onClick={() => setNavaidDialog(null)}
+          style={{
+            position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 24, width: '100%', maxWidth: 380,
+              border: '1px solid var(--color-border-mid)',
+            }}
+          >
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 6 }}>
+              {navaidDialog.navaid.navaid_name}
+            </div>
+            <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', marginBottom: 16 }}>
+              Select status
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              {(['green', 'yellow', 'red'] as const).map((s) => {
+                const selected = navaidDialog.selectedStatus === s
+                const color = s === 'red' ? 'var(--color-danger)' : s === 'yellow' ? 'var(--color-warning)' : 'var(--color-success)'
+                const label = s === 'red' ? 'RED' : s === 'yellow' ? 'YELLOW' : 'GREEN'
+                return (
+                  <button
+                    key={s}
+                    onClick={() => setNavaidDialog({ ...navaidDialog, selectedStatus: s })}
+                    style={{
+                      flex: 1, padding: '12px 4px', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                      cursor: 'pointer', textAlign: 'center',
+                      border: selected ? `2px solid ${color}` : '1px solid var(--color-border-mid)',
+                      background: selected ? `${STATUS_HEX[s]}20` : 'var(--color-bg-inset)',
+                      color: selected ? color : 'var(--color-text-3)',
+                    }}
+                  >{label}</button>
+                )
+              })}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => {
+                  const { navaid, selectedStatus } = navaidDialog
+                  if (selectedStatus !== navaid.status) {
+                    handleNavaidToggle(navaid, selectedStatus)
+                  }
+                  setNavaidDialog(null)
+                }}
+                disabled={navaidDialog.selectedStatus === navaidDialog.navaid.status}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: navaidDialog.selectedStatus === navaidDialog.navaid.status ? 'not-allowed' : 'pointer',
+                  border: `1px solid ${navaidDialog.selectedStatus === navaidDialog.navaid.status ? 'var(--color-border-mid)' : (navaidDialog.selectedStatus === 'red' ? 'var(--color-danger)' : navaidDialog.selectedStatus === 'yellow' ? 'var(--color-warning)' : 'var(--color-success)')}`,
+                  background: 'var(--color-bg-inset)',
+                  color: navaidDialog.selectedStatus === navaidDialog.navaid.status ? 'var(--color-text-3)' : (navaidDialog.selectedStatus === 'red' ? 'var(--color-danger)' : navaidDialog.selectedStatus === 'yellow' ? 'var(--color-warning)' : 'var(--color-success)'),
+                  opacity: navaidDialog.selectedStatus === navaidDialog.navaid.status ? 0.5 : 1,
+                }}
+              >Save</button>
+              <button
+                onClick={() => setNavaidDialog(null)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                  background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
+                }}
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation dialog for runway changes */}
       {confirmDialog && (
         <div
           onClick={() => setConfirmDialog(null)}
@@ -759,7 +839,6 @@ export default function HomePage() {
           }
           return name
         }
-        const NAVAID_CYCLE: ('green' | 'yellow' | 'red')[] = ['green', 'yellow', 'red']
         const NAVAID_LABELS: Record<string, string> = { green: 'G', yellow: 'Y', red: 'R' }
         const renderNavaidItem = (n: NavaidStatus) => (
           <div key={n.id} style={{ marginBottom: 10 }}>
@@ -769,15 +848,7 @@ export default function HomePage() {
               </span>
               <button
                 onClick={() => {
-                  const idx = NAVAID_CYCLE.indexOf(n.status as 'green' | 'yellow' | 'red')
-                  const next = NAVAID_CYCLE[(idx + 1) % NAVAID_CYCLE.length]
-                  const navaidColor = next === 'red' ? 'var(--color-danger)' : next === 'yellow' ? 'var(--color-warning)' : 'var(--color-success)'
-                  setConfirmDialog({
-                    title: 'Change NAVAID Status',
-                    message: `Change ${n.navaid_name} from ${(n.status as string).toUpperCase()} to ${next.toUpperCase()}?`,
-                    color: navaidColor,
-                    onConfirm: () => handleNavaidToggle(n, next),
-                  })
+                  setNavaidDialog({ navaid: n, selectedStatus: n.status as 'green' | 'yellow' | 'red' })
                 }}
                 style={{
                   width: 36, height: 28, borderRadius: 6,
