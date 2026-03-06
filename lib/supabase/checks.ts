@@ -1,5 +1,6 @@
 import { createClient } from './client'
 import { logActivity } from './activity'
+import { updateAirfieldStatus } from './airfield-status'
 import type { CheckType } from './types'
 import type { CheckDraft } from '@/lib/check-draft'
 
@@ -107,6 +108,22 @@ export async function createCheck(input: {
   }
 
   logActivity('completed', 'check', created.id, created.display_id, { check_type: input.check_type, areas: input.areas }, input.base_id)
+
+  // Auto-update airfield_status RSC/BWC from check data
+  const nowIso = now.toISOString()
+  if (input.check_type === 'rsc') {
+    const condition = (input.data.condition as string) || (input.data.runway_condition as string) || null
+    if (condition) {
+      await updateAirfieldStatus({ rsc_condition: condition, rsc_updated_at: nowIso }, input.base_id)
+    }
+  } else if (input.check_type === 'bash') {
+    const conditionRaw = (input.data.condition_code as string) || null
+    if (conditionRaw) {
+      const bwcMap: Record<string, string> = { LOW: 'LOW', MODERATE: 'MOD', SEVERE: 'SEV', PROHIBITED: 'PROHIB' }
+      const normalized = bwcMap[conditionRaw] || conditionRaw
+      await updateAirfieldStatus({ bwc_value: normalized, bwc_updated_at: nowIso }, input.base_id)
+    }
+  }
 
   return { data: created, error: null }
 }

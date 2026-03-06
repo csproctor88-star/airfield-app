@@ -10,6 +10,8 @@ type Advisory = {
   text: string
 }
 
+type ArffReadiness = 'inadequate' | 'critical' | 'reduced' | 'optimum'
+
 type DashboardState = {
   advisory: Advisory | null
   setAdvisory: (a: Advisory | null) => void
@@ -22,6 +24,19 @@ type DashboardState = {
   runwayStatuses: RunwayStatuses
   setRunwayActiveEnd: (runwayLabel: string, activeEnd: string) => void
   setRunwayStatusForRunway: (runwayLabel: string, status: 'open' | 'suspended' | 'closed') => void
+  // ARFF
+  arffCat: number | null
+  setArffCat: (cat: number | null) => Promise<void>
+  arffStatuses: Record<string, ArffReadiness>
+  setArffStatusForAircraft: (name: string, status: ArffReadiness) => Promise<void>
+  // RSC / BWC
+  rscCondition: string | null
+  rscUpdatedAt: string | null
+  setRscCondition: (val: string | null) => Promise<void>
+  bwcValue: string | null
+  bwcUpdatedAt: string | null
+  setBwcValue: (val: string | null) => Promise<void>
+  refreshStatus: () => Promise<void>
 }
 
 const DashboardContext = createContext<DashboardState | null>(null)
@@ -32,6 +47,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [activeRunway, setActiveRunwayLocal] = useState('01')
   const [runwayStatus, setRunwayStatusLocal] = useState<'open' | 'suspended' | 'closed'>('open')
   const [runwayStatuses, setRunwayStatusesLocal] = useState<RunwayStatuses>({})
+  const [arffCat, setArffCatLocal] = useState<number | null>(null)
+  const [arffStatuses, setArffStatusesLocal] = useState<Record<string, ArffReadiness>>({})
+  const [rscCondition, setRscConditionLocal] = useState<string | null>(null)
+  const [rscUpdatedAt, setRscUpdatedAtLocal] = useState<string | null>(null)
+  const [bwcValue, setBwcValueLocal] = useState<string | null>(null)
+  const [bwcUpdatedAt, setBwcUpdatedAtLocal] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
 
   // Build runway labels from installation runways (e.g., "06L/24R")
@@ -63,6 +84,18 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
             },
           })
         }
+
+        // ARFF state
+        setArffCatLocal(status.arff_cat ?? null)
+        if (status.arff_statuses && typeof status.arff_statuses === 'object') {
+          setArffStatusesLocal(status.arff_statuses as Record<string, ArffReadiness>)
+        }
+
+        // RSC / BWC state
+        setRscConditionLocal(status.rsc_condition ?? null)
+        setRscUpdatedAtLocal(status.rsc_updated_at ?? null)
+        setBwcValueLocal(status.bwc_value ?? null)
+        setBwcUpdatedAtLocal(status.bwc_updated_at ?? null)
       }
       setLoaded(true)
     }
@@ -91,6 +124,16 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
           if (row.runway_statuses && Object.keys(row.runway_statuses).length > 0) {
             setRunwayStatusesLocal(row.runway_statuses)
           }
+          // ARFF realtime
+          setArffCatLocal(row.arff_cat ?? null)
+          if (row.arff_statuses && typeof row.arff_statuses === 'object') {
+            setArffStatusesLocal(row.arff_statuses as Record<string, ArffReadiness>)
+          }
+          // RSC / BWC realtime
+          setRscConditionLocal(row.rsc_condition ?? null)
+          setRscUpdatedAtLocal(row.rsc_updated_at ?? null)
+          setBwcValueLocal(row.bwc_value ?? null)
+          setBwcUpdatedAtLocal(row.bwc_updated_at ?? null)
         }
       )
       .subscribe()
@@ -167,6 +210,67 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     await persistRunwayStatuses(updated)
   }, [runwayStatuses, runwayLabels, persistRunwayStatuses])
 
+  // ARFF: set ARFF CAT
+  const setArffCat = useCallback(async (cat: number | null) => {
+    setArffCatLocal(cat)
+    await updateAirfieldStatus({ arff_cat: cat }, installationId)
+  }, [installationId])
+
+  // ARFF: set readiness status for a specific aircraft
+  const setArffStatusForAircraft = useCallback(async (name: string, status: ArffReadiness) => {
+    const updated = { ...arffStatuses, [name]: status }
+    setArffStatusesLocal(updated)
+    await updateAirfieldStatus({ arff_statuses: updated }, installationId)
+  }, [arffStatuses, installationId])
+
+  // RSC: set runway surface condition
+  const setRscCondition = useCallback(async (val: string | null) => {
+    const now = new Date().toISOString()
+    setRscConditionLocal(val)
+    setRscUpdatedAtLocal(now)
+    await updateAirfieldStatus({ rsc_condition: val, rsc_updated_at: now }, installationId)
+  }, [installationId])
+
+  // BWC: set bird watch condition
+  const setBwcValue = useCallback(async (val: string | null) => {
+    const now = new Date().toISOString()
+    setBwcValueLocal(val)
+    setBwcUpdatedAtLocal(now)
+    await updateAirfieldStatus({ bwc_value: val, bwc_updated_at: now }, installationId)
+  }, [installationId])
+
+  // Re-fetch airfield_status (called on mount, by dashboard realtime, and by polling fallback)
+  const refreshStatus = useCallback(async () => {
+    const status = await fetchAirfieldStatus(installationId)
+    if (status) {
+      if (status.advisory_type && status.advisory_text) {
+        setAdvisoryLocal({ type: status.advisory_type, text: status.advisory_text })
+      } else {
+        setAdvisoryLocal(null)
+      }
+      setActiveRunwayLocal(status.active_runway)
+      setRunwayStatusLocal(status.runway_status)
+      if (status.runway_statuses && Object.keys(status.runway_statuses).length > 0) {
+        setRunwayStatusesLocal(status.runway_statuses)
+      }
+      setArffCatLocal(status.arff_cat ?? null)
+      if (status.arff_statuses && typeof status.arff_statuses === 'object') {
+        setArffStatusesLocal(status.arff_statuses as Record<string, ArffReadiness>)
+      }
+      setRscConditionLocal(status.rsc_condition ?? null)
+      setRscUpdatedAtLocal(status.rsc_updated_at ?? null)
+      setBwcValueLocal(status.bwc_value ?? null)
+      setBwcUpdatedAtLocal(status.bwc_updated_at ?? null)
+    }
+  }, [installationId])
+
+  // Polling fallback: re-fetch airfield_status every 10s in case realtime is unavailable
+  useEffect(() => {
+    if (!loaded) return
+    const interval = setInterval(refreshStatus, 10000)
+    return () => clearInterval(interval)
+  }, [loaded, refreshStatus])
+
   // Don't render children until initial load completes to avoid flash of defaults
   if (!loaded) return null
 
@@ -177,6 +281,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         activeRunway, setActiveRunway,
         runwayStatus, setRunwayStatus,
         runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway,
+        arffCat, setArffCat,
+        arffStatuses, setArffStatusForAircraft,
+        rscCondition, rscUpdatedAt, setRscCondition,
+        bwcValue, bwcUpdatedAt, setBwcValue,
+        refreshStatus,
       }}
     >
       {children}

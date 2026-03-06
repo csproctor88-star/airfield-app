@@ -1,5 +1,6 @@
 import { createClient } from './client'
 import { logActivity } from './activity'
+import { updateAirfieldStatus } from './airfield-status'
 import type { InspectionType, InspectionItem } from './types'
 import type { InspectionHalfDraft } from '@/lib/inspection-draft'
 
@@ -196,6 +197,11 @@ export async function createInspection(input: {
 
   const created = data as InspectionRow
   logActivity('completed', 'inspection', created.id, created.display_id, { inspection_type: input.inspection_type }, input.base_id)
+
+  // Auto-update airfield_status BWC from inspection
+  if (input.bwc_value) {
+    await updateAirfieldStatus({ bwc_value: input.bwc_value, bwc_updated_at: now.toISOString() }, input.base_id)
+  }
 
   return { data: created, error: null }
 }
@@ -404,6 +410,12 @@ export async function fileInspection(input: {
 
   const filed = data as InspectionRow
   logActivity('filed', 'inspection', filed.id, filed.display_id, { inspection_type: filed.inspection_type }, input.base_id)
+
+  // Auto-update airfield_status BWC from filed inspection
+  if (input.bwc_value) {
+    await updateAirfieldStatus({ bwc_value: input.bwc_value, bwc_updated_at: new Date().toISOString() }, input.base_id)
+  }
+
   return { data: filed, error: null }
 }
 

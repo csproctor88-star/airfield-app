@@ -11,6 +11,7 @@ import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
 import { logActivity } from '@/lib/supabase/activity'
 import { logRunwayStatusChange } from '@/lib/supabase/airfield-status'
+import { RSC_CONDITIONS, BWC_OPTIONS } from '@/lib/constants'
 import { fetchActivityLog } from '@/lib/supabase/activity-queries'
 import LoginActivityDialog from '@/components/login-activity-dialog'
 
@@ -61,6 +62,7 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     obstruction_evaluation: 'Obstruction Eval',
     navaid_status: 'NAVAID',
     airfield_status: 'Runway',
+    arff_status: 'ARFF',
     manual: 'Manual Entry',
   }
   const entity = typeLabel[entityType] || entityType
@@ -117,29 +119,33 @@ const ADVISORY_COLORS: Record<string, { bg: string; border: string; text: string
 }
 
 type CurrentStatusData = {
-  bwc: string | null
-  bwcTime: string | null
   lastCheckType: string | null
   lastCheckTime: string | null
   inspectionCompletion: string | null
-  rscCondition: string | null
-  rscTime: string | null
 }
 
 export default function HomePage() {
   const router = useRouter()
-  const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway } = useDashboard()
-  const { installationId, runways } = useInstallation()
+  const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, rscUpdatedAt, setRscCondition, bwcValue, bwcUpdatedAt, setBwcValue, refreshStatus } = useDashboard()
+  const { installationId, runways, arffAircraft } = useInstallation()
   const [weather, setWeather] = useState<WeatherResult | null>(null)
   const [weatherLoaded, setWeatherLoaded] = useState(false)
   const [navaids, setNavaids] = useState<NavaidStatus[]>([])
   const [navaidNotes, setNavaidNotes] = useState<Record<string, string>>({})
   const [activity, setActivity] = useState<ActivityEntry[]>([])
   const [currentStatus, setCurrentStatus] = useState<CurrentStatusData>({
-    bwc: null, bwcTime: null, lastCheckType: null, lastCheckTime: null, inspectionCompletion: null, rscCondition: null, rscTime: null,
+    lastCheckType: null, lastCheckTime: null, inspectionCompletion: null,
   })
   const [showRscTime, setShowRscTime] = useState(false)
   const [showBwcTime, setShowBwcTime] = useState(false)
+  // RSC dialog state
+  const [rscDialogOpen, setRscDialogOpen] = useState(false)
+  const [rscDraftValue, setRscDraftValue] = useState<string | null>(null)
+  const [rscDraftNotes, setRscDraftNotes] = useState('')
+  // BWC dialog state
+  const [bwcDialogOpen, setBwcDialogOpen] = useState(false)
+  const [bwcDraftValue, setBwcDraftValue] = useState<string | null>(null)
+  const [bwcDraftNotes, setBwcDraftNotes] = useState('')
   const [advisoryDialogOpen, setAdvisoryDialogOpen] = useState(false)
   const [advisoryDraftType, setAdvisoryDraftType] = useState<'INFO' | 'CAUTION' | 'WARNING'>('INFO')
   const [advisoryDraftText, setAdvisoryDraftText] = useState('')
@@ -157,6 +163,13 @@ export default function HomePage() {
   const [navaidDialog, setNavaidDialog] = useState<{
     navaid: NavaidStatus
     selectedStatus: 'green' | 'yellow' | 'red'
+    notes: string
+  } | null>(null)
+
+  // ARFF aircraft readiness dialog state
+  const [arffDialog, setArffDialog] = useState<{
+    aircraft: string
+    selectedStatus: 'inadequate' | 'critical' | 'reduced' | 'optimum'
     notes: string
   } | null>(null)
 
@@ -202,30 +215,10 @@ export default function HomePage() {
 
   useEffect(() => { loadNavaids() }, [loadNavaids])
 
-  // --- Load Current Status (BWC, Last Check, Inspection, RSC) ---
+  // --- Load Current Status (Last Check, Inspection) ---
   const loadCurrentStatus = useCallback(async () => {
     const supabase = createClient()
     if (!supabase) return
-
-    // Latest inspection with BWC
-    let inspQuery = supabase
-      .from('inspections')
-      .select('bwc_value, completed_at')
-      .not('bwc_value', 'is', null)
-      .order('completed_at', { ascending: false })
-      .limit(1)
-    if (installationId) inspQuery = inspQuery.eq('base_id', installationId)
-    const { data: insp } = await inspQuery
-
-    // Latest BASH check (condition_code stored in data JSON)
-    let bashQuery = supabase
-      .from('airfield_checks')
-      .select('data, completed_at')
-      .eq('check_type', 'bash')
-      .order('completed_at', { ascending: false })
-      .limit(1)
-    if (installationId) bashQuery = bashQuery.eq('base_id', installationId)
-    const { data: bashCheck } = await bashQuery
 
     // Latest completed inspection
     let latestInspQuery = supabase
@@ -246,37 +239,6 @@ export default function HomePage() {
     if (installationId) lastCheckQuery = lastCheckQuery.eq('base_id', installationId)
     const { data: lastCheck } = await lastCheckQuery
 
-    // Latest RSC check
-    let rscQuery = supabase
-      .from('airfield_checks')
-      .select('data, completed_at')
-      .eq('check_type', 'rsc')
-      .order('completed_at', { ascending: false })
-      .limit(1)
-    if (installationId) rscQuery = rscQuery.eq('base_id', installationId)
-    const { data: rscCheck } = await rscQuery
-
-    // Determine BWC: use whichever source (inspection or BASH check) is more recent
-    const inspBwc = insp?.[0]?.bwc_value || null
-    const inspBwcTime = insp?.[0]?.completed_at ? new Date(insp[0].completed_at).getTime() : 0
-    const bashData = bashCheck?.[0]?.data as Record<string, unknown> | undefined
-    const bashConditionRaw = (bashData?.condition_code as string) || null
-    const bashBwcTime = bashCheck?.[0]?.completed_at ? new Date(bashCheck[0].completed_at).getTime() : 0
-    // Normalize BASH condition codes (LOW/MODERATE/SEVERE) to BWC format (LOW/MOD/SEV)
-    const bashConditionMap: Record<string, string> = { LOW: 'LOW', MODERATE: 'MOD', SEVERE: 'SEV' }
-    const bashBwc = bashConditionRaw ? (bashConditionMap[bashConditionRaw] || bashConditionRaw) : null
-
-    let bwc: string | null
-    let bwcTimeMs = 0
-    if (inspBwc && bashBwc) {
-      bwc = bashBwcTime > inspBwcTime ? bashBwc : inspBwc
-      bwcTimeMs = bashBwcTime > inspBwcTime ? bashBwcTime : inspBwcTime
-    } else {
-      bwc = inspBwc || bashBwc
-      bwcTimeMs = inspBwc ? inspBwcTime : bashBwcTime
-    }
-    const bwcTime = bwcTimeMs ? new Date(bwcTimeMs).toTimeString().slice(0, 5) : null
-
     const checkType = lastCheck?.[0]?.check_type?.toUpperCase() || null
     const checkTime = lastCheck?.[0]?.completed_at
       ? new Date(lastCheck[0].completed_at).toTimeString().slice(0, 5)
@@ -284,25 +246,16 @@ export default function HomePage() {
     const inspTime = latestInsp?.[0]?.completed_at
       ? new Date(latestInsp[0].completed_at).toTimeString().slice(0, 5)
       : null
-    const rscData = rscCheck?.[0]?.data as Record<string, unknown> | undefined
-    const rscCondition = (rscData?.condition as string) || (rscData?.runway_condition as string) || null
-    const rscTime = rscCheck?.[0]?.completed_at
-      ? new Date(rscCheck[0].completed_at).toTimeString().slice(0, 5)
-      : null
 
     setCurrentStatus((prev) => ({
       ...prev,
-      bwc,
-      bwcTime,
       lastCheckType: checkType,
       lastCheckTime: checkTime,
       inspectionCompletion: inspTime,
-      rscCondition,
-      rscTime,
     }))
   }, [installationId])
 
-  useEffect(() => { loadCurrentStatus() }, [loadCurrentStatus])
+  useEffect(() => { loadCurrentStatus(); refreshStatus() }, [loadCurrentStatus, refreshStatus])
 
   // Realtime: subscribe to airfield_checks and inspections INSERT events
   useEffect(() => {
@@ -314,17 +267,17 @@ export default function HomePage() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'airfield_checks', filter: `base_id=eq.${installationId}` },
-        () => { loadCurrentStatus() }
+        () => { loadCurrentStatus(); refreshStatus() }
       )
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'inspections', filter: `base_id=eq.${installationId}` },
-        () => { loadCurrentStatus() }
+        () => { loadCurrentStatus(); refreshStatus() }
       )
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [installationId, loadCurrentStatus])
+  }, [installationId, loadCurrentStatus, refreshStatus])
 
   // --- Load Activity Feed ---
   const loadActivity = useCallback(async () => {
@@ -724,6 +677,168 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* RSC dialog */}
+      {rscDialogOpen && (
+        <div
+          onClick={() => setRscDialogOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 24, width: '100%', maxWidth: 380,
+              border: '1px solid var(--color-border-mid)',
+            }}
+          >
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>
+              Runway Surface Condition
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              {RSC_CONDITIONS.map(c => (
+                <button
+                  key={c}
+                  onClick={() => setRscDraftValue(c)}
+                  style={{
+                    flex: 1, padding: '12px 0', borderRadius: 8, fontSize: 'var(--fs-lg)', fontWeight: 700,
+                    cursor: 'pointer', border: rscDraftValue === c ? '2px solid var(--color-accent)' : '1px solid var(--color-border-mid)',
+                    background: rscDraftValue === c ? 'rgba(56,189,248,0.12)' : 'var(--color-bg-inset)',
+                    color: rscDraftValue === c ? 'var(--color-accent)' : 'var(--color-text-2)',
+                  }}
+                >{c}</button>
+              ))}
+            </div>
+            <textarea
+              placeholder="Notes (optional)..."
+              value={rscDraftNotes}
+              onChange={(e) => setRscDraftNotes(e.target.value)}
+              rows={2}
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8,
+                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none', marginBottom: 14,
+                fontFamily: 'inherit', resize: 'vertical', minHeight: 44,
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => {
+                  if (rscDraftValue) {
+                    setRscCondition(rscDraftValue)
+                    if (installationId) {
+                      const details: Record<string, unknown> = { old_value: rscCondition, new_value: rscDraftValue }
+                      if (rscDraftNotes.trim()) details.notes = rscDraftNotes.trim()
+                      logActivity('updated', 'airfield_status', installationId, `RSC ${rscDraftValue}`, details, installationId)
+                    }
+                  }
+                  setRscDialogOpen(false)
+                }}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid var(--color-accent)',
+                  background: 'var(--color-bg-inset)', color: 'var(--color-accent)',
+                  opacity: rscDraftValue ? 1 : 0.4,
+                }}
+                disabled={!rscDraftValue}
+              >Confirm</button>
+              <button
+                onClick={() => setRscDialogOpen(false)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                  background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
+                }}
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BWC dialog */}
+      {bwcDialogOpen && (
+        <div
+          onClick={() => setBwcDialogOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 24, width: '100%', maxWidth: 380,
+              border: '1px solid var(--color-border-mid)',
+            }}
+          >
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>
+              Bird Watch Condition
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
+              {BWC_OPTIONS.map(opt => {
+                const bwcColors: Record<string, string> = { LOW: 'var(--color-success)', MOD: 'var(--color-warning)', SEV: 'var(--color-danger)', PROHIB: 'var(--color-danger)' }
+                const c = bwcColors[opt] || 'var(--color-text-2)'
+                return (
+                  <button
+                    key={opt}
+                    onClick={() => setBwcDraftValue(opt)}
+                    style={{
+                      padding: '12px 0', borderRadius: 8, fontSize: 'var(--fs-lg)', fontWeight: 700,
+                      cursor: 'pointer', border: bwcDraftValue === opt ? `2px solid ${c}` : '1px solid var(--color-border-mid)',
+                      background: bwcDraftValue === opt ? `${c}15` : 'var(--color-bg-inset)',
+                      color: bwcDraftValue === opt ? c : 'var(--color-text-2)',
+                    }}
+                  >{opt}</button>
+                )
+              })}
+            </div>
+            <textarea
+              placeholder="Notes (optional)..."
+              value={bwcDraftNotes}
+              onChange={(e) => setBwcDraftNotes(e.target.value)}
+              rows={2}
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8,
+                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none', marginBottom: 14,
+                fontFamily: 'inherit', resize: 'vertical', minHeight: 44,
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => {
+                  if (bwcDraftValue) {
+                    setBwcValue(bwcDraftValue)
+                    if (installationId) {
+                      const details: Record<string, unknown> = { old_value: bwcValue, new_value: bwcDraftValue }
+                      if (bwcDraftNotes.trim()) details.notes = bwcDraftNotes.trim()
+                      logActivity('updated', 'airfield_status', installationId, `BWC ${bwcDraftValue}`, details, installationId)
+                    }
+                  }
+                  setBwcDialogOpen(false)
+                }}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid var(--color-accent)',
+                  background: 'var(--color-bg-inset)', color: 'var(--color-accent)',
+                  opacity: bwcDraftValue ? 1 : 0.4,
+                }}
+                disabled={!bwcDraftValue}
+              >Confirm</button>
+              <button
+                onClick={() => setBwcDialogOpen(false)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                  background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
+                }}
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ===== Current Status ===== */}
       <span className="section-label">Current Status</span>
       {/* Active RWY cards — one per runway, side-by-side for multi-runway bases */}
@@ -846,33 +961,221 @@ export default function HomePage() {
       <div className="card" style={{ marginBottom: 12, padding: '14px 12px' }}>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 12 }}>
           <div
-            title={currentStatus.rscTime ? `Last checked: ${currentStatus.rscTime}` : undefined}
-            onClick={() => setShowRscTime(p => !p)}
+            title={rscUpdatedAt ? `Updated: ${new Date(rscUpdatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : undefined}
+            onClick={() => { setRscDraftValue(rscCondition); setRscDraftNotes(''); setRscDialogOpen(true) }}
             style={{ flex: '0 1 200px', padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textAlign: 'center' }}
           >
             <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6 }}>RSC</div>
             <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: 'var(--color-accent)' }}>
-              {currentStatus.rscCondition || 'No Data'}
+              {rscCondition || 'No Data'}
             </div>
-            {showRscTime && currentStatus.rscTime && (
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>@ {currentStatus.rscTime}</div>
+            {rscUpdatedAt && (
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>@ {new Date(rscUpdatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
             )}
           </div>
           <div
-            title={currentStatus.bwcTime ? `Last checked: ${currentStatus.bwcTime}` : undefined}
-            onClick={() => setShowBwcTime(p => !p)}
+            title={bwcUpdatedAt ? `Updated: ${new Date(bwcUpdatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : undefined}
+            onClick={() => { setBwcDraftValue(bwcValue); setBwcDraftNotes(''); setBwcDialogOpen(true) }}
             style={{ flex: '0 1 200px', padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textAlign: 'center' }}
           >
             <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6 }}>BWC</div>
-            <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: currentStatus.bwc === 'SEV' || currentStatus.bwc === 'PROHIB' ? 'var(--color-danger)' : currentStatus.bwc === 'MOD' ? 'var(--color-warning)' : 'var(--color-success)' }}>
-              {currentStatus.bwc || 'No Data'}
+            <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: bwcValue === 'SEV' || bwcValue === 'PROHIB' ? 'var(--color-danger)' : bwcValue === 'MOD' ? 'var(--color-warning)' : 'var(--color-success)' }}>
+              {bwcValue || 'No Data'}
             </div>
-            {showBwcTime && currentStatus.bwcTime && (
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>@ {currentStatus.bwcTime}</div>
+            {bwcUpdatedAt && (
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>@ {new Date(bwcUpdatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
             )}
           </div>
         </div>
       </div>
+
+      {/* ===== ARFF Status ===== */}
+      <span className="section-label">ARFF Status</span>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: arffAircraft.length > 0
+          ? `repeat(${Math.min(arffAircraft.length + 1, 4)}, 1fr)`
+          : '1fr',
+        gap: 8,
+        marginBottom: 16,
+      }}>
+        {/* ARFF CAT card */}
+        <div className="card" style={{
+          padding: '14px 12px',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+        }}>
+          <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>ARFF CAT</div>
+          <select
+            value={arffCat ?? ''}
+            onChange={(e) => {
+              const val = e.target.value ? parseInt(e.target.value) : null
+              const current = arffCat
+              if (val === current) return
+              setConfirmDialog({
+                title: 'Change ARFF Category',
+                message: `Change ARFF Category from ${current ?? 'None'} to ${val ?? 'None'}?`,
+                color: 'var(--color-accent)',
+                notes: '',
+                onConfirm: (remarks) => {
+                  setArffCat(val)
+                  if (installationId) {
+                    const details: Record<string, unknown> = { old_cat: current, new_cat: val }
+                    if (remarks) details.notes = remarks
+                    logActivity('updated', 'arff_status', installationId, `ARFF CAT ${val ?? 'None'}`, details, installationId)
+                  }
+                },
+              })
+              // Reset select to current value — changes after confirm
+              e.target.value = String(current ?? '')
+            }}
+            style={{
+              padding: '8px 12px', borderRadius: 6, fontSize: 'var(--fs-2xl)', fontWeight: 800,
+              cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', outline: 'none',
+              color: 'var(--color-accent)', background: 'var(--color-bg-inset)',
+              border: '2px solid rgba(56,189,248,0.3)',
+              minWidth: 70,
+            }}
+          >
+            <option value="">—</option>
+            {[6, 7, 8, 9, 10].map(n => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Aircraft readiness cards */}
+        {arffAircraft.map(aircraft => {
+          const readiness = (arffStatuses[aircraft] ?? 'optimum') as 'inadequate' | 'critical' | 'reduced' | 'optimum'
+          const ARFF_COLORS: Record<string, { color: string; bg: string; border: string }> = {
+            optimum: { color: 'var(--color-success)', bg: 'rgba(52,211,153,0.08)', border: 'rgba(52,211,153,0.2)' },
+            reduced: { color: 'var(--color-warning)', bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.2)' },
+            critical: { color: '#f97316', bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.2)' },
+            inadequate: { color: 'var(--color-danger)', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.2)' },
+          }
+          const c = ARFF_COLORS[readiness]
+          return (
+            <div
+              key={aircraft}
+              className="card"
+              onClick={() => setArffDialog({ aircraft, selectedStatus: readiness, notes: '' })}
+              style={{
+                padding: '14px 12px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                cursor: 'pointer',
+                background: c.bg, border: `1px solid ${c.border}`,
+              }}
+            >
+              <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>{aircraft}</div>
+              <div style={{
+                fontSize: 'var(--fs-md)', fontWeight: 700, color: c.color,
+                textTransform: 'uppercase', letterSpacing: '0.04em',
+              }}>
+                {readiness}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* ARFF Aircraft Readiness Dialog */}
+      {arffDialog && (
+        <div
+          onClick={() => setArffDialog(null)}
+          style={{
+            position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 24, width: '100%', maxWidth: 380,
+              border: '1px solid var(--color-border-mid)',
+            }}
+          >
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>
+              {arffDialog.aircraft} Readiness
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
+              {([
+                { key: 'optimum', label: 'Optimum', color: 'var(--color-success)', hex: '#34D399' },
+                { key: 'reduced', label: 'Reduced', color: 'var(--color-warning)', hex: '#FBBF24' },
+                { key: 'critical', label: 'Critical', color: '#f97316', hex: '#f97316' },
+                { key: 'inadequate', label: 'Inadequate', color: 'var(--color-danger)', hex: '#EF4444' },
+              ] as const).map(({ key, label, color, hex }) => {
+                const selected = arffDialog.selectedStatus === key
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setArffDialog({ ...arffDialog, selectedStatus: key })}
+                    style={{
+                      padding: '12px 4px', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                      cursor: 'pointer', textAlign: 'center',
+                      border: selected ? `2px solid ${color}` : '1px solid var(--color-border-mid)',
+                      background: selected ? `${hex}20` : 'var(--color-bg-inset)',
+                      color: selected ? color : 'var(--color-text-3)',
+                    }}
+                  >{label}</button>
+                )
+              })}
+            </div>
+            <textarea
+              placeholder="Notes (optional)..."
+              value={arffDialog.notes}
+              onChange={(e) => setArffDialog({ ...arffDialog, notes: e.target.value })}
+              rows={2}
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8,
+                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none', marginBottom: 14,
+                fontFamily: 'inherit', resize: 'vertical', minHeight: 44,
+              }}
+            />
+            {(() => {
+              const currentReadiness = (arffStatuses[arffDialog.aircraft] ?? 'optimum') as string
+              const hasChanges = arffDialog.selectedStatus !== currentReadiness || arffDialog.notes.trim() !== ''
+              const ARFF_SEL_COLORS: Record<string, string> = {
+                optimum: 'var(--color-success)', reduced: 'var(--color-warning)',
+                critical: '#f97316', inadequate: 'var(--color-danger)',
+              }
+              const selColor = ARFF_SEL_COLORS[arffDialog.selectedStatus]
+              return (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => {
+                      const { aircraft, selectedStatus, notes } = arffDialog
+                      setArffStatusForAircraft(aircraft, selectedStatus)
+                      if (installationId) {
+                        const details: Record<string, unknown> = { aircraft, status: selectedStatus, old_status: currentReadiness }
+                        if (notes.trim()) details.notes = notes.trim()
+                        logActivity('updated', 'arff_status', installationId, `${aircraft} ${selectedStatus.toUpperCase()}`, details, installationId)
+                      }
+                      setArffDialog(null)
+                    }}
+                    disabled={!hasChanges}
+                    style={{
+                      flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                      cursor: hasChanges ? 'pointer' : 'not-allowed',
+                      border: `1px solid ${hasChanges ? selColor : 'var(--color-border-mid)'}`,
+                      background: 'var(--color-bg-inset)',
+                      color: hasChanges ? selColor : 'var(--color-text-3)',
+                      opacity: hasChanges ? 1 : 0.5,
+                    }}
+                  >Save</button>
+                  <button
+                    onClick={() => setArffDialog(null)}
+                    style={{
+                      flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                      cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                      background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
+                    }}
+                  >Cancel</button>
+                </div>
+              )
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* ===== NAVAID Status ===== */}
       <span className="section-label">NAVAID Status</span>

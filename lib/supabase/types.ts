@@ -574,11 +574,29 @@ export type Database = {
           active_runway: string
           runway_status: string
           runway_statuses: Record<string, unknown>
+          arff_cat: number | null
+          arff_statuses: Record<string, string>
+          rsc_condition: string | null
+          rsc_updated_at: string | null
+          bwc_value: string | null
+          bwc_updated_at: string | null
           updated_by: string | null
           updated_at: string
         }
         Insert: Omit<Database['public']['Tables']['airfield_status']['Row'], 'id' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['airfield_status']['Insert']>
+        Relationships: []
+      }
+      base_arff_aircraft: {
+        Row: {
+          id: string
+          base_id: string
+          aircraft_name: string
+          sort_order: number
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['base_arff_aircraft']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['base_arff_aircraft']['Insert']>
         Relationships: []
       }
       runway_status_log: {
@@ -687,6 +705,7 @@ export type BaseInspectionTemplate = Database['public']['Tables']['base_inspecti
 export type BaseInspectionSection = Database['public']['Tables']['base_inspection_sections']['Row']
 export type BaseInspectionItem = Database['public']['Tables']['base_inspection_items']['Row']
 export type AirfieldStatusRow = Database['public']['Tables']['airfield_status']['Row']
+export type InstallationArffAircraft = Database['public']['Tables']['base_arff_aircraft']['Row']
 export type RunwayStatusLog = Database['public']['Tables']['runway_status_log']['Row']
 
 // === ACSI (Airfield Compliance and Safety Inspection) Types ===
