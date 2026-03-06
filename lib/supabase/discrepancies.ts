@@ -129,7 +129,11 @@ export async function createDiscrepancy(input: {
   }
 
   const created = data as DiscrepancyRow
-  logActivity('created', 'discrepancy', created.id, created.display_id, { title: input.title, type: input.type }, input.base_id)
+  const createMeta: Record<string, unknown> = { title: input.title, type: input.type, location: input.location_text }
+  if (input.description) createMeta.description = input.description
+  if (input.severity && input.severity !== 'no') createMeta.severity = input.severity
+  if (input.notam_reference) createMeta.notam_reference = input.notam_reference
+  logActivity('created', 'discrepancy', created.id, created.display_id, createMeta, input.base_id)
 
   return { data: created, error: null }
 }
@@ -165,7 +169,15 @@ export async function updateDiscrepancy(
   }
 
   const updated = data as DiscrepancyRow
-  logActivity('updated', 'discrepancy', updated.id, updated.display_id, { fields: Object.keys(fields) }, updated.base_id)
+  const updateMeta: Record<string, unknown> = {}
+  if (fields.current_status) updateMeta.status = fields.current_status
+  if (fields.severity) updateMeta.severity = fields.severity
+  if (fields.resolution_notes) updateMeta.resolution_notes = fields.resolution_notes
+  if (fields.title) updateMeta.title = fields.title
+  if (fields.assigned_shop) updateMeta.assigned_shop = fields.assigned_shop
+  if (fields.work_order_number) updateMeta.work_order = fields.work_order_number
+  if (fields.description) updateMeta.description = fields.description
+  logActivity('updated', 'discrepancy', updated.id, updated.display_id, updateMeta, updated.base_id)
 
   return { data: updated, error: null }
 }
@@ -222,7 +234,14 @@ export async function updateDiscrepancyStatus(
   } catch (e) {
     console.error('Audit trail insert failed:', e)
   }
-  logActivity('status_updated', 'discrepancy', statusUpdated.id, statusUpdated.display_id, { old_status: oldStatus, new_status: newStatus }, statusUpdated.base_id)
+  const statusMeta: Record<string, unknown> = { new_status: newStatus }
+  if (notes) statusMeta.notes = notes
+  if (extraFields?.resolution_notes) statusMeta.resolution_notes = extraFields.resolution_notes
+  if (extraFields?.assigned_shop) statusMeta.assigned_shop = extraFields.assigned_shop
+  logActivity(
+    newStatus === 'cancelled' ? 'cancelled' : 'status_updated',
+    'discrepancy', statusUpdated.id, statusUpdated.display_id, statusMeta, statusUpdated.base_id
+  )
 
   return { data: statusUpdated, error: null }
 }

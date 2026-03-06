@@ -174,7 +174,28 @@ export async function updateContractor(
   }
 
   const updated = data as ContractorRow
-  logActivity('updated', 'contractor', updated.id, updated.company_name, { fields: Object.keys(fields) }, updated.base_id)
+
+  if (fields.status === 'completed') {
+    // Personnel marked off airfield
+    const details: Record<string, unknown> = {
+      company: updated.company_name,
+    }
+    if (updated.callsign) details.callsign = updated.callsign
+    if (updated.location) details.location = updated.location
+    logActivity('personnel_off_airfield', 'contractor', updated.id, undefined, details, updated.base_id)
+  } else {
+    // Regular edit
+    const details: Record<string, unknown> = {}
+    if (fields.company_name) details.company = fields.company_name
+    if (fields.location) details.location = fields.location
+    if (fields.callsign !== undefined) details.callsign = fields.callsign
+    if (fields.contact_name !== undefined) details.contact = fields.contact_name
+    if (fields.radio_number !== undefined) details.radio = fields.radio_number
+    if (fields.flag_number !== undefined) details.flag = fields.flag_number
+    if (fields.work_description) details.work = fields.work_description
+    if (fields.notes !== undefined) details.notes = fields.notes
+    logActivity('updated', 'contractor', updated.id, updated.company_name, details, updated.base_id)
+  }
 
   return { data: updated, error: null }
 }

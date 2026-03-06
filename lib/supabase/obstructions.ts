@@ -111,7 +111,11 @@ export async function createObstructionEvaluation(input: {
   }
 
   const created = data as ObstructionRow
-  logActivity('created', 'obstruction_evaluation', created.id, created.display_id ?? undefined, { has_violation: input.has_violation }, base_id)
+  const obsMeta: Record<string, unknown> = { has_violation: input.has_violation }
+  if (input.description) obsMeta.description = input.description
+  if (input.controlling_surface) obsMeta.controlling_surface = input.controlling_surface
+  if (input.violated_surfaces.length > 0) obsMeta.violated_surfaces = input.violated_surfaces.join(', ')
+  logActivity('created', 'obstruction_evaluation', created.id, created.display_id ?? undefined, obsMeta, base_id)
 
   return { data: created, error: null }
 }
@@ -208,7 +212,11 @@ export async function updateObstructionEvaluation(
   }
 
   const updated = updateData[0] as ObstructionRow
-  logActivity('updated', 'obstruction_evaluation', updated.id, updated.display_id ?? undefined, { has_violation: input.has_violation }, updated.base_id)
+  const updateObsMeta: Record<string, unknown> = { has_violation: input.has_violation }
+  if (input.description) updateObsMeta.description = input.description
+  if (input.controlling_surface) updateObsMeta.controlling_surface = input.controlling_surface
+  if (input.violated_surfaces.length > 0) updateObsMeta.violated_surfaces = input.violated_surfaces.join(', ')
+  logActivity('updated', 'obstruction_evaluation', updated.id, updated.display_id ?? undefined, updateObsMeta, updated.base_id)
 
   return { data: updated, error: null }
 }

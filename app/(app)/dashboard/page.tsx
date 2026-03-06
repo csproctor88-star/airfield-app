@@ -44,9 +44,12 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     reviewed: 'Reviewed',
     noted: 'Logged',
     logged_personnel: 'Logged',
+    personnel_off_airfield: 'Personnel Off Airfield',
+    cancelled: 'Cancelled',
     waiver_review_deleted: 'Deleted review for',
   }
   const label = actionLabel[action] || (action.charAt(0).toUpperCase() + action.slice(1).replace(/_/g, ' '))
+  if (action === 'personnel_off_airfield') return `${label}${id}`
   return `${label} ${entity}${id}`
 }
 

@@ -314,7 +314,7 @@ export async function updateCheckNotes(id: string, notes: string | null): Promis
     return { error: error.message }
   }
 
-  logActivity('updated', 'check', id, existing?.display_id, { field: 'notes' }, existing?.base_id)
+  logActivity('updated', 'check', id, existing?.display_id, { field: 'notes', notes: notes || 'cleared' }, existing?.base_id)
 
   return { error: null }
 }
