@@ -10,6 +10,7 @@ import { useTheme } from '@/lib/theme-context'
 import type { UserRole } from '@/lib/supabase/types'
 import {
   Home,
+  LayoutDashboard,
   AlertTriangle,
   ClipboardCheck,
   ClipboardList,
@@ -23,6 +24,8 @@ import {
   Settings,
   Users,
   Activity,
+  HardHat,
+  Wrench,
   MoreHorizontal,
   ChevronDown,
   ChevronRight,
@@ -32,15 +35,21 @@ import {
 
 // Main navigation items
 const mainItems = [
-  { name: 'Dashboard', icon: Home, href: '/' },
-  { name: 'Activity Log', icon: Activity, href: '/activity' },
-  { name: 'Airfield Checks', icon: ClipboardCheck, href: '/checks' },
-  { name: 'All Inspections', icon: ClipboardList, href: '/inspections/all' },
-  { name: 'Airfield Discrepancies', icon: AlertTriangle, href: '/discrepancies' },
+  { name: 'Airfield Status', icon: Home, href: '/' },
+  { name: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
   { name: 'Obstruction Evaluation Tool', icon: MapPin, href: '/obstructions' },
   { name: 'Aircraft Database', icon: Plane, href: '/aircraft' },
   { name: 'Reference Library', icon: BookOpen, href: '/regulations' },
   { name: 'NOTAMs', icon: FileText, href: '/notams' },
+]
+
+// "AM Tools" dropdown items
+const opsItems = [
+  { name: 'Activity Log', icon: Activity, href: '/activity' },
+  { name: 'Airfield Checks', icon: ClipboardCheck, href: '/checks' },
+  { name: 'All Inspections', icon: ClipboardList, href: '/inspections/all' },
+  { name: 'Personnel on Airfield', icon: HardHat, href: '/contractors' },
+  { name: 'Airfield Discrepancies', icon: AlertTriangle, href: '/discrepancies' },
   { name: 'Airfield Waivers', icon: Shield, href: '/waivers' },
   { name: 'Reports & Analytics', icon: BarChart3, href: '/reports' },
 ]
@@ -58,6 +67,7 @@ export function SidebarNav() {
   const { resolvedTheme } = useTheme()
   const [canManageUsers, setCanManageUsers] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const [opsOpen, setOpsOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
 
   useEffect(() => {
@@ -91,8 +101,11 @@ export function SidebarNav() {
     checkRole()
   }, [])
 
-  // Auto-expand More if a child route is active
+  // Auto-expand Operations/More if a child route is active
   useEffect(() => {
+    const opsActive = opsItems.some(item => pathname.startsWith(item.href))
+    if (opsActive) setOpsOpen(true)
+
     const moreActive = moreItems.some(item => {
       if (item.href === '/') return pathname === '/'
       return pathname.startsWith(item.href)
@@ -208,7 +221,43 @@ export function SidebarNav() {
       <div style={{ flex: 1, padding: '8px 0', overflowY: 'auto' }}>
         {mainItems.map(item => renderNavItem(item))}
 
-        {/* More dropdown */}
+        {/* AM Tools dropdown */}
+        <button
+          onClick={() => setOpsOpen(prev => !prev)}
+          title={!isOpen ? 'AM Tools' : undefined}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: isOpen ? undefined : 'center',
+            gap: isOpen ? 12 : 0,
+            padding: isOpen ? '10px 20px' : '10px 0',
+            width: '100%',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: opsItems.some(i => isActive(i.href)) ? 'var(--color-accent)' : 'var(--color-text-2)',
+            fontSize: 'var(--fs-lg)',
+            fontWeight: 500,
+            textAlign: 'left',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <Wrench size={18} style={{ flexShrink: 0 }} />
+          {isOpen && (
+            <>
+              <span style={{ flex: 1 }}>AM Tools</span>
+              {opsOpen
+                ? <ChevronDown size={14} style={{ color: 'var(--color-text-3)' }} />
+                : <ChevronRight size={14} style={{ color: 'var(--color-text-3)' }} />
+              }
+            </>
+          )}
+        </button>
+
+        {opsOpen && opsItems.map(item => renderNavItem(item, true))}
+
+        {/* Divider before More */}
         <div style={{ height: 1, background: 'var(--color-border)', margin: '8px 16px' }} />
         <button
           onClick={() => setMoreOpen(prev => !prev)}

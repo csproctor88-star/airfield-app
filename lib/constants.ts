@@ -33,6 +33,11 @@ export const STATUS_CONFIG = {
   cancelled: { color: '#9CA3AF', bg: '#E5E7EB', label: 'Cancelled' },
 } as const
 
+export const CONTRACTOR_STATUS_CONFIG = {
+  active:    { color: '#22C55E', bg: '#D1FAE5', label: 'Active' },
+  completed: { color: '#64748B', bg: '#E2E8F0', label: 'Completed' },
+} as const
+
 // === Current Status Options (workflow tracking field) ===
 
 export const CURRENT_STATUS_OPTIONS = [

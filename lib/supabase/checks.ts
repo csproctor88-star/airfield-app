@@ -107,7 +107,24 @@ export async function createCheck(input: {
     }
   }
 
-  logActivity('completed', 'check', created.id, created.display_id, { check_type: input.check_type, areas: input.areas }, input.base_id)
+  // Build rich metadata for activity log
+  const checkMeta: Record<string, unknown> = {
+    check_type: input.check_type,
+    areas: input.areas,
+  }
+  // Include all check-specific data fields
+  if (input.data) {
+    for (const [k, v] of Object.entries(input.data)) {
+      if (v != null && v !== '' && !(Array.isArray(v) && v.length === 0)) {
+        checkMeta[k] = v
+      }
+    }
+  }
+  // Include comments
+  if (input.comments.length > 0) {
+    checkMeta.comments = input.comments.map(c => c.comment).join('; ')
+  }
+  logActivity('completed', 'check', created.id, created.display_id, checkMeta, input.base_id)
 
   // Auto-update airfield_status RSC/BWC from check data
   const nowIso = now.toISOString()

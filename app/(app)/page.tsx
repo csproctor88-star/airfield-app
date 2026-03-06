@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { fetchCurrentWeather, type WeatherResult } from '@/lib/weather'
 import { fetchNavaidStatuses, updateNavaidStatus, type NavaidStatus } from '@/lib/supabase/navaids'
@@ -12,7 +11,8 @@ import { useInstallation } from '@/lib/installation-context'
 import { logActivity } from '@/lib/supabase/activity'
 import { logRunwayStatusChange } from '@/lib/supabase/airfield-status'
 import { RSC_CONDITIONS, BWC_OPTIONS, RCR_CONDITION_TYPES } from '@/lib/constants'
-import { fetchActivityLog } from '@/lib/supabase/activity-queries'
+import { fetchActiveContractors, type ContractorRow } from '@/lib/supabase/contractors'
+import { DEMO_CONTRACTORS } from '@/lib/demo-data'
 import LoginActivityDialog from '@/components/login-activity-dialog'
 
 // --- Weather emoji mapping ---
@@ -31,13 +31,6 @@ function weatherEmoji(conditions: string): string {
   return '☀️'
 }
 
-// --- Quick Actions (KPI badges) ---
-const QUICK_ACTIONS = [
-  { label: 'Airfield Inspections', icon: '📋', color: 'var(--color-success)', href: '/inspections?action=begin' },
-  { label: 'Airfield Checks', icon: '🛡️', color: 'var(--color-warning)', href: '/checks' },
-  { label: 'New Discrepancy', icon: '🚨', color: 'var(--color-danger)', href: '/discrepancies/new' },
-]
-
 // --- NAVAID color map (theme-aware for text, raw hex for alpha interpolation) ---
 const STATUS_COLORS: Record<string, string> = {
   green: 'var(--color-success)',
@@ -52,60 +45,6 @@ const STATUS_HEX: Record<string, string> = {
 
 // --- Empty NAVAID default (NAVAIDs are fetched per-base from DB) ---
 const DEFAULT_NAVAIDS: NavaidStatus[] = []
-
-// --- Activity action formatting ---
-function formatAction(action: string, entityType: string, displayId?: string): string {
-  const typeLabel: Record<string, string> = {
-    discrepancy: 'Discrepancy',
-    check: 'Check',
-    inspection: 'Inspection',
-    obstruction_evaluation: 'Obstruction Eval',
-    navaid_status: 'NAVAID',
-    airfield_status: 'Runway',
-    arff_status: 'ARFF',
-    manual: 'Manual Entry',
-  }
-  const entity = typeLabel[entityType] || entityType
-  const id = displayId ? ` ${displayId}` : ''
-  const actionLabel: Record<string, string> = {
-    created: 'Created',
-    updated: 'Updated',
-    deleted: 'Deleted',
-    completed: 'Completed',
-    status_updated: 'Status changed on',
-    saved: 'Saved',
-    filed: 'Filed',
-    resumed: 'Resumed',
-    reviewed: 'Reviewed',
-    noted: 'Logged',
-    waiver_review_deleted: 'Deleted review for',
-  }
-  const label = actionLabel[action] || (action.charAt(0).toUpperCase() + action.slice(1).replace(/_/g, ' '))
-  return `${label} ${entity}${id}`
-}
-
-type ActivityEntry = {
-  id: string
-  action: string
-  entity_type: string
-  entity_id: string | null
-  entity_display_id: string | null
-  metadata: Record<string, unknown> | null
-  created_at: string
-  user_name: string
-  user_rank: string | null
-}
-
-function getEntityLink(entityType: string, entityId: string | null): string | null {
-  if (!entityId) return null
-  switch (entityType) {
-    case 'discrepancy': return `/discrepancies/${entityId}`
-    case 'check': return `/checks/${entityId}`
-    case 'inspection': return `/inspections/${entityId}`
-    case 'obstruction_evaluation': return `/obstructions`
-    default: return null
-  }
-}
 
 type Advisory = {
   type: 'INFO' | 'CAUTION' | 'WARNING'
@@ -132,7 +71,7 @@ export default function HomePage() {
   const [weatherLoaded, setWeatherLoaded] = useState(false)
   const [navaids, setNavaids] = useState<NavaidStatus[]>([])
   const [navaidNotes, setNavaidNotes] = useState<Record<string, string>>({})
-  const [activity, setActivity] = useState<ActivityEntry[]>([])
+  const [activeContractors, setActiveContractors] = useState<ContractorRow[]>([])
   const [currentStatus, setCurrentStatus] = useState<CurrentStatusData>({
     lastCheckType: null, lastCheckTime: null, inspectionCompletion: null,
   })
@@ -277,30 +216,18 @@ export default function HomePage() {
     return () => { supabase.removeChannel(channel) }
   }, [installationId, loadCurrentStatus, refreshStatus])
 
-  // --- Load Activity Feed ---
-  const loadActivity = useCallback(async () => {
-    const { data } = await fetchActivityLog({ baseId: installationId, limit: 20 })
-    setActivity(data as ActivityEntry[])
+  // --- Load Active Contractors ---
+  const loadContractors = useCallback(async () => {
+    const supabase = createClient()
+    if (!supabase) {
+      setActiveContractors(DEMO_CONTRACTORS.filter(c => c.status === 'active') as ContractorRow[])
+      return
+    }
+    const data = await fetchActiveContractors(installationId)
+    setActiveContractors(data)
   }, [installationId])
 
-  useEffect(() => { loadActivity() }, [loadActivity])
-
-  // Realtime: auto-refresh activity feed on new entries
-  useEffect(() => {
-    const supabase = createClient()
-    if (!supabase || !installationId) return
-
-    const channel = supabase
-      .channel(`activity_feed:${installationId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'activity_log', filter: `base_id=eq.${installationId}` },
-        () => { loadActivity() }
-      )
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [installationId, loadActivity])
+  useEffect(() => { loadContractors() }, [loadContractors])
 
   // --- NAVAID status toggle handler ---
   async function handleNavaidToggle(navaid: NavaidStatus, newStatus: 'green' | 'yellow' | 'red', dialogNotes?: string) {
@@ -308,7 +235,7 @@ export default function HomePage() {
     const ok = await updateNavaidStatus(navaid.id, newStatus, notes)
     if (ok) {
       loadNavaids()
-      logActivity('updated', 'navaid_status', navaid.id, navaid.navaid_name, { status: newStatus, notes }, installationId)
+      logActivity('updated', 'navaid_status', navaid.id, navaid.navaid_name, { navaid: navaid.navaid_name, changed_to: newStatus, reason: notes || undefined }, installationId)
     }
   }
 
@@ -316,7 +243,7 @@ export default function HomePage() {
     const notes = overrideNotes ?? (navaidNotes[navaid.id] || null)
     await updateNavaidStatus(navaid.id, navaid.status, notes)
     loadNavaids()
-    logActivity('updated', 'navaid_status', navaid.id, navaid.navaid_name, { notes }, installationId)
+    logActivity('updated', 'navaid_status', navaid.id, navaid.navaid_name, { navaid: navaid.navaid_name, reason: notes || undefined }, installationId)
   }
 
   return (
@@ -1305,126 +1232,54 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ===== Quick Actions ===== */}
-      <span className="section-label">Quick Actions</span>
-      <div className="actions-row" style={{ marginBottom: 20 }}>
-        {QUICK_ACTIONS.map((q) => (
-          <Link
-            key={q.label}
-            href={q.href}
-            style={{
-              background: 'var(--color-bg-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 12,
-              padding: '14px 16px',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
-              flex: 1,
-              minWidth: 0,
-            }}
-          >
-            <span style={{ fontSize: 'var(--fs-5xl)' }}>{q.icon}</span>
-            <span style={{ fontSize: 'var(--fs-xl)', color: q.color, letterSpacing: '0.04em', fontWeight: 700 }}>
-              {q.label}
-            </span>
-          </Link>
-        ))}
-      </div>
-
-      {/* ===== Recent Activity ===== */}
+      {/* ===== Personnel on Airfield ===== */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span className="section-label" style={{ marginBottom: 0 }}>Recent Activity</span>
+        <span className="section-label" style={{ marginBottom: 0 }}>Personnel on Airfield</span>
         <button
-          onClick={() => router.push('/activity')}
+          onClick={() => router.push('/contractors')}
           style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
         >
           View All →
         </button>
       </div>
-      {activity.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: 16 }}>
-          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>No activity recorded yet</div>
+      {activeContractors.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: 16, marginBottom: 20 }}>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>No active contractors</div>
         </div>
       ) : (
-        <div className="card" style={{ padding: '6px 14px' }}>
-          {activity.slice(0, 5).map((a, i, arr) => {
-            const actionColor: Record<string, string> = {
-              created: 'var(--color-success)',
-              completed: 'var(--color-cyan)',
-              updated: 'var(--color-warning)',
-              status_updated: 'var(--color-purple)',
-              deleted: 'var(--color-danger)',
-            }
-            const actionDotBg: Record<string, string> = {
-              created: 'rgba(52,211,153,0.07)',
-              completed: 'rgba(34,211,238,0.07)',
-              updated: 'rgba(251,191,36,0.07)',
-              status_updated: 'rgba(167,139,250,0.07)',
-              deleted: 'rgba(239,68,68,0.07)',
-            }
-            const color = actionColor[a.action] || 'var(--color-text-3)'
-            const dotBg = actionDotBg[a.action] || 'rgba(100,116,139,0.07)'
-            const date = new Date(a.created_at)
-            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-            const timeStr = date.toTimeString().slice(0, 5)
-            const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
-            const navaidNoteText = a.entity_type === 'navaid_status' && a.metadata?.notes ? String(a.metadata.notes) : null
-            const navaidStatusVal = a.entity_type === 'navaid_status' && a.metadata?.status ? String(a.metadata.status) : null
-            const link = getEntityLink(a.entity_type, a.entity_id)
-
+        <div className="card" style={{ padding: '6px 14px', marginBottom: 20 }}>
+          {activeContractors.map((c, i, arr) => {
+            const startDate = new Date(c.start_date)
+            const dayNum = Math.max(1, Math.ceil((Date.now() - startDate.getTime()) / 86400000))
             return (
               <div
-                key={a.id}
-                onClick={link ? () => router.push(link) : undefined}
+                key={c.id}
                 style={{
                   display: 'flex',
-                  gap: 8,
-                  padding: '7px 0',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 0',
                   borderBottom: i < arr.length - 1 ? '1px solid var(--color-border)' : 'none',
-                  cursor: link ? 'pointer' : 'default',
                 }}
               >
-                <div
-                  style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: 6,
-                    background: dotBg,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 'var(--fs-sm)',
-                    flexShrink: 0,
-                    color,
-                  }}
-                >
-                  &bull;
+                <div>
+                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-cyan)' }}>
+                    {c.company_name}
+                  </div>
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
+                    {c.location}
+                  </div>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-cyan)' }}>
-                      {userName}
-                    </span>
-                    <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{dateStr} {timeStr}</span>
-                  </div>
-                  <div style={{ fontSize: 'var(--fs-sm)', color: link ? 'var(--color-cyan)' : 'var(--color-text-2)' }}>
-                    {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined)}
-                    {link && (
-                      <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>→</span>
-                    )}
-                    {navaidStatusVal && (
-                      <span style={{ marginLeft: 6, width: 8, height: 8, borderRadius: '50%', display: 'inline-block', background: STATUS_HEX[navaidStatusVal] || '#64748B' }} />
-                    )}
-                  </div>
-                  {navaidNoteText && (
-                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 2 }}>
-                      &ldquo;{navaidNoteText}&rdquo;
-                    </div>
-                  )}
+                <div style={{
+                  fontSize: 'var(--fs-xs)',
+                  color: 'var(--color-text-3)',
+                  background: 'var(--color-bg-surface)',
+                  padding: '2px 8px',
+                  borderRadius: 8,
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                }}>
+                  Day {dayNum}
                 </div>
               </div>
             )

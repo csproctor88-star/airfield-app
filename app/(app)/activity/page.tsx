@@ -7,6 +7,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { fetchActivityLog, fetchEntityDetails, type ActivityEntry, type EntityDetails } from '@/lib/supabase/activity-queries'
 import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/supabase/activity'
 import { createClient } from '@/lib/supabase/client'
+import { TemplatePicker } from '@/components/ui/template-picker'
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'custom'
 
@@ -18,6 +19,7 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     obstruction_evaluation: 'Obstruction Eval',
     navaid_status: 'NAVAID',
     airfield_status: 'Runway',
+    contractor: 'Personnel on Airfield',
     manual: 'Manual Entry',
   }
   const entity = typeLabel[entityType] || entityType
@@ -34,6 +36,7 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     reviewed: 'Reviewed',
     waiver_review_deleted: 'Deleted review for',
     noted: 'Logged',
+    logged_personnel: 'Logged',
   }
   const label = actionLabel[action] || (action.charAt(0).toUpperCase() + action.slice(1).replace(/_/g, ' '))
   return `${label} ${entity}${id}`
@@ -50,26 +53,75 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
   }
 }
 
-function buildDetailsString(a: ActivityEntry, detailsMap: Map<string, EntityDetails>): string {
-  if (a.entity_type === 'navaid_status' || a.entity_type === 'airfield_status') {
-    const parts: string[] = []
-    if (a.metadata?.status) parts.push(`Status: ${String(a.metadata.status)}`)
-    if (a.metadata?.active_runway) parts.push(`Active RWY: ${String(a.metadata.active_runway)}`)
-    if (a.metadata?.active_end) parts.push(`Active End: ${String(a.metadata.active_end)}`)
-    if (a.metadata?.notes) parts.push(String(a.metadata.notes))
-    return parts.join(' | ')
+// Known acronyms/abbreviations that should be uppercase
+const ACRONYMS = new Set([
+  'fod', 'ife', 'rsc', 'rcr', 'bwc', 'bash', 'qrc', 'notam', 'notams',
+  'arff', 'pcas', 'scn', 'lmr', 'tacan', 'vor', 'ils', 'dme', 'ndb',
+  'papi', 'vasi', 'malsr', 'gps', 'rnav', 'rwy', 'twy', 'amops',
+  'na', 'id',
+])
+
+function capitalizeValue(str: string): string {
+  if (!str) return str
+  // If it looks like an all-caps abbreviation already, keep it
+  if (str === str.toUpperCase() && str.length <= 6) return str
+  // Check if the whole string is a known acronym
+  if (ACRONYMS.has(str.toLowerCase())) return str.toUpperCase()
+  // Title case each word, respecting known acronyms
+  return str
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map(w => ACRONYMS.has(w.toLowerCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+}
+
+function formatMetadataValue(val: unknown): string {
+  if (typeof val === 'boolean') return val ? 'Yes' : 'No'
+  if (Array.isArray(val)) return val.map(v => typeof v === 'string' ? capitalizeValue(v) : String(v)).join(', ')
+  const str = String(val)
+  return capitalizeValue(str)
+}
+
+function snakeToLabel(key: string): string {
+  return key
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map(w => ACRONYMS.has(w.toLowerCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+}
+
+// Keys to skip in generic metadata formatting (internal/redundant)
+const SKIP_META_KEYS = new Set(['fields', 'field'])
+
+function formatMetadata(metadata: Record<string, unknown> | null): string {
+  if (!metadata) return ''
+  const parts: string[] = []
+  for (const [key, val] of Object.entries(metadata)) {
+    if (val == null || val === '' || SKIP_META_KEYS.has(key)) continue
+    parts.push(`${snakeToLabel(key)}: ${formatMetadataValue(val)}`)
   }
+  return parts.join(' | ')
+}
+
+function buildDetailsString(a: ActivityEntry, detailsMap: Map<string, EntityDetails>): string {
+  const parts: string[] = []
+
+  // Add metadata-derived details
+  const metaStr = formatMetadata(a.metadata)
+  if (metaStr) parts.push(metaStr)
+
+  // Add DB-fetched entity details (if available and not already covered by metadata)
   if (a.entity_id && detailsMap.has(a.entity_id)) {
     const ed = detailsMap.get(a.entity_id)!
-    const parts: string[] = []
-    if (ed.title) parts.push(ed.title)
-    if (ed.description) parts.push(ed.description)
-    if (ed.notes) parts.push(ed.notes)
-    if (ed.extra) parts.push(ed.extra)
-    return parts.join(' | ')
+    const dbParts: string[] = []
+    if (ed.title) dbParts.push(ed.title)
+    if (ed.description) dbParts.push(ed.description)
+    if (ed.notes) dbParts.push(ed.notes)
+    if (ed.extra) dbParts.push(ed.extra)
+    if (dbParts.length) parts.push(dbParts.join(' | '))
   }
-  if (a.metadata?.notes) return String(a.metadata.notes)
-  return ''
+
+  return parts.join(' | ')
 }
 
 export default function ActivityPage() {
@@ -86,6 +138,7 @@ export default function ActivityPage() {
   const [exporting, setExporting] = useState(false)
   const [manualText, setManualText] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
   const [editDate, setEditDate] = useState('')
@@ -324,8 +377,20 @@ export default function ActivityPage() {
         <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-cyan)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 8 }}>
           New Log Entry
         </div>
-        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 10, lineHeight: 1.4 }}>
-          Record notes, observations, or events not captured automatically by the system.
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', lineHeight: 1.4 }}>
+            Record notes, observations, or events not captured automatically by the system.
+          </div>
+          <button
+            onClick={() => setShowTemplatePicker(true)}
+            style={{
+              background: 'none', border: '1px solid var(--color-cyan)', borderRadius: 8,
+              padding: '4px 12px', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)',
+              fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0,
+            }}
+          >
+            Use Template
+          </button>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <textarea
@@ -357,6 +422,28 @@ export default function ActivityPage() {
           </button>
         </div>
       </div>
+
+      {showTemplatePicker && (
+        <TemplatePicker
+          onSubmit={async (text) => {
+            const supabase = createClient()
+            if (!supabase) {
+              toast.success('Entry logged (demo mode)')
+              setShowTemplatePicker(false)
+              return
+            }
+            const { error } = await logManualEntry(text, installationId)
+            if (error) {
+              toast.error(error)
+            } else {
+              toast.success('Entry logged')
+              setShowTemplatePicker(false)
+              await loadEntries()
+            }
+          }}
+          onClose={() => setShowTemplatePicker(false)}
+        />
+      )}
 
       {/* Period Presets */}
       <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-text-4)', marginBottom: 12 }}>

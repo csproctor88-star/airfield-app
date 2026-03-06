@@ -526,3 +526,48 @@ export const DEMO_CHECK_COMMENTS = [
     user_name: 'MSgt Proctor', created_at: '2026-02-04T15:04:00Z',
   },
 ]
+
+export const DEMO_CONTRACTORS = [
+  {
+    id: 'demo-contr-1', base_id: 'demo-base',
+    company_name: 'Kiewit Infrastructure', contact_name: 'Mike Daniels',
+    location: 'TWY A/B Intersection', work_description: 'Joint sealing and pavement repair — Phase 2',
+    status: 'active' as const, start_date: new Date(Date.now() - 5 * 86400000).toISOString().split('T')[0],
+    end_date: null, notes: 'Crew of 6, daily 0700-1600. Equipment staged on south apron.',
+    radio_number: 'R-14', flag_number: 'F-3', callsign: 'KIEWIT 1',
+    created_by: null, created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 5 * 86400000).toISOString(),
+  },
+  {
+    id: 'demo-contr-2', base_id: 'demo-base',
+    company_name: 'Musco Lighting LLC', contact_name: 'Sarah Chen',
+    location: 'RWY 01/19 Approach', work_description: 'MALSR station 7-8 replacement and re-alignment',
+    status: 'active' as const, start_date: new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0],
+    end_date: null, notes: 'FAA coordination required. Night work only 2200-0500.',
+    radio_number: 'R-15', flag_number: null, callsign: 'MUSCO',
+    created_by: null, created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+  },
+  {
+    id: 'demo-contr-3', base_id: 'demo-base',
+    company_name: 'AECOM', contact_name: 'John Reeves',
+    location: 'West Ramp', work_description: 'Apron drainage assessment and core sampling',
+    status: 'completed' as const, start_date: new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0],
+    end_date: new Date(Date.now() - 10 * 86400000).toISOString().split('T')[0],
+    notes: 'Final report delivered to CE.',
+    radio_number: 'R-12', flag_number: 'F-1', callsign: 'AECOM SURVEY',
+    created_by: null, created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 10 * 86400000).toISOString(),
+  },
+  {
+    id: 'demo-contr-4', base_id: 'demo-base',
+    company_name: 'Striping Solutions Inc', contact_name: null,
+    location: 'RWY 01/19 TDZ', work_description: 'Touchdown zone and centerline marking repaint',
+    status: 'completed' as const, start_date: new Date(Date.now() - 45 * 86400000).toISOString().split('T')[0],
+    end_date: new Date(Date.now() - 40 * 86400000).toISOString().split('T')[0],
+    notes: null,
+    radio_number: null, flag_number: null, callsign: null,
+    created_by: null, created_at: new Date(Date.now() - 45 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 40 * 86400000).toISOString(),
+  },
+]

@@ -205,7 +205,25 @@ export async function createInspection(input: {
   }
 
   const created = data as InspectionRow
-  logActivity('completed', 'inspection', created.id, created.display_id, { inspection_type: input.inspection_type }, input.base_id)
+
+  // Build rich metadata for activity log
+  const activityMeta: Record<string, unknown> = { inspection_type: input.inspection_type }
+  const failedItems = (input.items || []).filter(i => i.response === 'fail')
+  if (failedItems.length > 0) {
+    activityMeta.failed_items = failedItems.map(i => i.item).join(', ')
+    const discNotes = failedItems.flatMap(i => {
+      const notes: string[] = []
+      if (i.notes) notes.push(i.notes)
+      if (i.discrepancies) {
+        for (const d of i.discrepancies) {
+          if (d.comment) notes.push(d.comment)
+        }
+      }
+      return notes
+    }).filter(Boolean)
+    if (discNotes.length > 0) activityMeta.discrepancy_notes = discNotes.join('; ')
+  }
+  logActivity('completed', 'inspection', created.id, created.display_id, activityMeta, input.base_id)
 
   // Auto-update airfield_status BWC from inspection
   if (input.bwc_value) {

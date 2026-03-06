@@ -607,6 +607,29 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['base_arff_aircraft']['Insert']>
         Relationships: []
       }
+      airfield_contractors: {
+        Row: {
+          id: string
+          base_id: string | null
+          company_name: string
+          contact_name: string | null
+          location: string
+          work_description: string
+          status: 'active' | 'completed'
+          start_date: string
+          end_date: string | null
+          notes: string | null
+          radio_number: string | null
+          flag_number: string | null
+          callsign: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['airfield_contractors']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<Database['public']['Tables']['airfield_contractors']['Row'], 'id' | 'created_at'>>
+        Relationships: []
+      }
       runway_status_log: {
         Row: {
           id: string
@@ -715,6 +738,7 @@ export type BaseInspectionItem = Database['public']['Tables']['base_inspection_i
 export type AirfieldStatusRow = Database['public']['Tables']['airfield_status']['Row']
 export type InstallationArffAircraft = Database['public']['Tables']['base_arff_aircraft']['Row']
 export type RunwayStatusLog = Database['public']['Tables']['runway_status_log']['Row']
+export type AirfieldContractor = Database['public']['Tables']['airfield_contractors']['Row']
 
 // === ACSI (Airfield Compliance and Safety Inspection) Types ===
 

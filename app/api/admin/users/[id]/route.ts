@@ -190,6 +190,7 @@ export async function DELETE(
       nullify('status_updates', 'updated_by'),
       nullify('waiver_reviews', 'reviewed_by'),
       nullify('runway_status_log', 'changed_by'),
+      nullify('airfield_contractors', 'created_by'),
     ]).catch((err) => {
       console.warn('[admin/users/DELETE] Some FK nullify failed (run migration 2026022802):', err)
     })
