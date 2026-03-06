@@ -139,10 +139,33 @@ export default function AMDashboardPage() {
 
   // --- Edit / Delete handlers ---
   const handleEdit = (a: ActivityEntry) => {
-    const editVal = a.metadata?.edit ? String(a.metadata.edit) : (a.metadata?.notes ? String(a.metadata.notes) : '')
+    // Build the current details text to pre-populate
+    let currentDetails = ''
+    if (a.metadata) {
+      if (typeof a.metadata.details === 'string') {
+        currentDetails = a.metadata.details
+      } else {
+        const acronyms = new Set(['fod','ife','rsc','rcr','bwc','bash','qrc','notam','notams','arff','pcas','scn','lmr','tacan','vor','ils','dme','ndb','papi','vasi','malsr','gps','rnav','rwy','twy','amops','na','id'])
+        const capWord = (w: string) => acronyms.has(w.toLowerCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)
+        const capVal = (s: string) => {
+          if (!s) return s
+          if (s === s.toUpperCase() && s.length <= 6) return s
+          if (acronyms.has(s.toLowerCase())) return s.toUpperCase()
+          return s.replace(/_/g, ' ').split(' ').map(capWord).join(' ')
+        }
+        const parts: string[] = []
+        for (const [k, v] of Object.entries(a.metadata)) {
+          if (v == null || v === '' || k === 'fields' || k === 'field') continue
+          const label = k.replace(/_/g, ' ').split(' ').map(capWord).join(' ')
+          const val = typeof v === 'boolean' ? (v ? 'Yes' : 'No') : Array.isArray(v) ? v.map(i => typeof i === 'string' ? capVal(i) : String(i)).join(', ') : capVal(String(v))
+          parts.push(`${label}: ${val}`)
+        }
+        currentDetails = parts.join(' | ')
+      }
+    }
     const d = new Date(a.created_at)
     setEditingId(a.id)
-    setEditText(editVal)
+    setEditText(currentDetails)
     setEditDate(d.toISOString().slice(0, 10))
     setEditTime(d.toISOString().slice(11, 16))
   }
@@ -356,28 +379,30 @@ export default function AMDashboardPage() {
                 const timeStr = d.toISOString().slice(11, 16)
                 const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
                 const link = getEntityLink(a.entity_type, a.entity_id)
-                const detailParts: string[] = []
+                let detailsText = ''
                 if (a.metadata) {
-                  const acronyms = new Set(['fod','ife','rsc','rcr','bwc','bash','qrc','notam','notams','arff','pcas','scn','lmr','tacan','vor','ils','dme','ndb','papi','vasi','malsr','gps','rnav','rwy','twy','amops','na','id'])
-                  const capWord = (w: string) => acronyms.has(w.toLowerCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)
-                  const capVal = (s: string) => {
-                    if (!s) return s
-                    if (s === s.toUpperCase() && s.length <= 6) return s
-                    if (acronyms.has(s.toLowerCase())) return s.toUpperCase()
-                    return s.replace(/_/g, ' ').split(' ').map(capWord).join(' ')
-                  }
-                  for (const [k, v] of Object.entries(a.metadata)) {
-                    if (v == null || v === '' || k === 'fields' || k === 'field' || k === 'edit') continue
-                    const label = k.replace(/_/g, ' ').split(' ').map(capWord).join(' ')
-                    const val = typeof v === 'boolean' ? (v ? 'Yes' : 'No') : Array.isArray(v) ? v.map(i => typeof i === 'string' ? capVal(i) : String(i)).join(', ') : capVal(String(v))
-                    detailParts.push(`${label}: ${val}`)
-                  }
-                  // Append user edit note at the end
-                  if (a.metadata.edit) {
-                    detailParts.push(`Edit: ${capVal(String(a.metadata.edit))}`)
+                  // If metadata was replaced by a user edit, show the flat string
+                  if (typeof a.metadata.details === 'string') {
+                    detailsText = a.metadata.details
+                  } else {
+                    const acronyms = new Set(['fod','ife','rsc','rcr','bwc','bash','qrc','notam','notams','arff','pcas','scn','lmr','tacan','vor','ils','dme','ndb','papi','vasi','malsr','gps','rnav','rwy','twy','amops','na','id'])
+                    const capWord = (w: string) => acronyms.has(w.toLowerCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)
+                    const capVal = (s: string) => {
+                      if (!s) return s
+                      if (s === s.toUpperCase() && s.length <= 6) return s
+                      if (acronyms.has(s.toLowerCase())) return s.toUpperCase()
+                      return s.replace(/_/g, ' ').split(' ').map(capWord).join(' ')
+                    }
+                    const detailParts: string[] = []
+                    for (const [k, v] of Object.entries(a.metadata)) {
+                      if (v == null || v === '' || k === 'fields' || k === 'field') continue
+                      const label = k.replace(/_/g, ' ').split(' ').map(capWord).join(' ')
+                      const val = typeof v === 'boolean' ? (v ? 'Yes' : 'No') : Array.isArray(v) ? v.map(i => typeof i === 'string' ? capVal(i) : String(i)).join(', ') : capVal(String(v))
+                      detailParts.push(`${label}: ${val}`)
+                    }
+                    detailsText = detailParts.join(' | ')
                   }
                 }
-                const detailsText = detailParts.join(' | ')
 
                 return (
                   <tr key={a.id}>
@@ -479,9 +504,9 @@ export default function AMDashboardPage() {
               </div>
             </div>
 
-            {/* Edit note */}
+            {/* Details */}
             <div style={{ marginBottom: 16 }}>
-              <span className="section-label">Edit</span>
+              <span className="section-label">Details</span>
               <textarea
                 className="input-dark"
                 rows={4}
