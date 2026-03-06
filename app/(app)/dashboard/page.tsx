@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { fetchActivityLog } from '@/lib/supabase/activity-queries'
-import { logManualEntry } from '@/lib/supabase/activity'
+import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/supabase/activity'
 import { toast } from 'sonner'
 import { TemplatePicker } from '@/components/ui/template-picker'
 
@@ -84,6 +84,11 @@ export default function AMDashboardPage() {
   const [submitting, setSubmitting] = useState(false)
   const [showContractorForm, setShowContractorForm] = useState(false)
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editText, setEditText] = useState('')
+  const [editDate, setEditDate] = useState('')
+  const [editTime, setEditTime] = useState('')
+  const [saving, setSaving] = useState(false)
 
   // --- Load Activity Feed ---
   const loadActivity = useCallback(async () => {
@@ -130,6 +135,54 @@ export default function AMDashboardPage() {
       await loadActivity()
     }
     setSubmitting(false)
+  }
+
+  // --- Edit / Delete handlers ---
+  const handleEdit = (a: ActivityEntry) => {
+    const notes = a.metadata?.notes ? String(a.metadata.notes) : ''
+    const d = new Date(a.created_at)
+    setEditingId(a.id)
+    setEditText(notes)
+    setEditDate(d.toISOString().slice(0, 10))
+    setEditTime(d.toISOString().slice(11, 16))
+  }
+
+  const handleEditSave = async () => {
+    if (!editingId) return
+    setSaving(true)
+    const supabase = createClient()
+    if (!supabase) {
+      toast.success('Entry updated (demo mode)')
+      setEditingId(null)
+      setSaving(false)
+      return
+    }
+    const newTimestamp = editDate && editTime ? `${editDate}T${editTime}:00.000Z` : undefined
+    const { error } = await updateActivityEntry(editingId, editText.trim(), newTimestamp)
+    if (error) {
+      toast.error(error)
+    } else {
+      toast.success('Entry updated')
+      setEditingId(null)
+      await loadActivity()
+    }
+    setSaving(false)
+  }
+
+  const handleDelete = async (a: ActivityEntry) => {
+    const supabase = createClient()
+    if (!supabase) {
+      toast.success('Entry deleted (demo mode)')
+      return
+    }
+    if (!confirm('Delete this activity log entry? This cannot be undone.')) return
+    const { error } = await deleteActivityEntry(a.id)
+    if (error) {
+      toast.error(error)
+    } else {
+      toast.success('Entry deleted')
+      await loadActivity()
+    }
   }
 
   return (
@@ -294,6 +347,7 @@ export default function AMDashboardPage() {
                 <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '2px solid var(--color-border)', width: 140 }}>User</th>
                 <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '2px solid var(--color-border)', width: 140 }}>Action</th>
                 <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}>Details</th>
+                <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'right', borderBottom: '2px solid var(--color-border)', width: 60 }}></th>
               </tr>
             </thead>
             <tbody>
@@ -341,11 +395,143 @@ export default function AMDashboardPage() {
                         {detailsText || '\u2014'}
                       </span>
                     </td>
+                    <td style={{ padding: '6px 8px', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleEdit(a) }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: '#3B82F6' }}
+                        title="Edit entry"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDelete(a) }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: '#EF4444', marginLeft: 2 }}
+                        title="Delete entry"
+                      >
+                        Del
+                      </button>
+                    </td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ===== Edit Entry Modal ===== */}
+      {editingId && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 16, background: 'rgba(0,0,0,0.6)',
+          }}
+          onClick={() => setEditingId(null)}
+        >
+          <div
+            className="card"
+            style={{ width: '100%', maxWidth: 420, padding: 20 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 16 }}>
+              Edit Entry
+            </div>
+
+            {/* Date & Time */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8, marginBottom: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <span className="section-label">Date (Z)</span>
+                <input
+                  type="date"
+                  className="input-dark"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  style={{ width: '100%', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <span className="section-label">Time (Z)</span>
+                <input
+                  type="text"
+                  className="input-dark"
+                  value={editTime}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/[^0-9:]/g, '')
+                    if (v.length <= 5) setEditTime(v)
+                  }}
+                  onBlur={() => {
+                    let v = editTime.replace(/[^0-9]/g, '')
+                    if (v.length <= 2) v = v.padStart(2, '0') + '00'
+                    else if (v.length === 3) v = '0' + v
+                    const hh = Math.min(23, parseInt(v.slice(0, 2))).toString().padStart(2, '0')
+                    const mm = Math.min(59, parseInt(v.slice(2, 4))).toString().padStart(2, '0')
+                    setEditTime(`${hh}:${mm}`)
+                  }}
+                  placeholder="HH:MM"
+                  maxLength={5}
+                  style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'monospace' }}
+                />
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div style={{ marginBottom: 16 }}>
+              <span className="section-label">Notes</span>
+              <textarea
+                className="input-dark"
+                rows={4}
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditSave() }
+                }}
+                style={{ width: '100%', boxSizing: 'border-box', fontSize: 'var(--fs-base)', resize: 'vertical' }}
+                autoFocus
+              />
+            </div>
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+              <button
+                onClick={handleEditSave}
+                disabled={saving}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
+                  background: saving ? 'rgba(6,182,212,0.5)' : '#06B6D4',
+                  color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+              <button
+                onClick={() => setEditingId(null)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8,
+                  border: '1px solid var(--color-border)', background: 'transparent',
+                  color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+            <button
+              onClick={() => {
+                const entry = activity.find((e) => e.id === editingId)
+                if (entry) { setEditingId(null); handleDelete(entry) }
+              }}
+              style={{
+                width: '100%', padding: '8px 0', borderRadius: 8,
+                border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)',
+                color: '#EF4444', fontSize: 'var(--fs-sm)', fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Delete Entry
+            </button>
+          </div>
         </div>
       )}
     </div>
