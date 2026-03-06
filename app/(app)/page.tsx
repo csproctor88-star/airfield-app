@@ -11,7 +11,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { logActivity } from '@/lib/supabase/activity'
 import { logRunwayStatusChange } from '@/lib/supabase/airfield-status'
 import { RSC_CONDITIONS, BWC_OPTIONS, RCR_CONDITION_TYPES } from '@/lib/constants'
-import { fetchActiveContractors, type ContractorRow } from '@/lib/supabase/contractors'
+import { fetchActiveContractors, updateContractor, type ContractorRow } from '@/lib/supabase/contractors'
 import { DEMO_CONTRACTORS } from '@/lib/demo-data'
 import LoginActivityDialog from '@/components/login-activity-dialog'
 
@@ -1262,24 +1262,54 @@ export default function HomePage() {
                   borderBottom: i < arr.length - 1 ? '1px solid var(--color-border)' : 'none',
                 }}
               >
-                <div>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-cyan)' }}>
                     {c.company_name}
                   </div>
                   <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
                     {c.location}
+                    {c.callsign ? ` · ${c.callsign}` : ''}
                   </div>
                 </div>
-                <div style={{
-                  fontSize: 'var(--fs-xs)',
-                  color: 'var(--color-text-3)',
-                  background: 'var(--color-bg-surface)',
-                  padding: '2px 8px',
-                  borderRadius: 8,
-                  fontWeight: 600,
-                  whiteSpace: 'nowrap',
-                }}>
-                  Day {dayNum}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  <div style={{
+                    fontSize: 'var(--fs-xs)',
+                    color: 'var(--color-text-3)',
+                    background: 'var(--color-bg-surface)',
+                    padding: '2px 8px',
+                    borderRadius: 8,
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                  }}>
+                    Day {dayNum}
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!confirm(`Mark ${c.company_name} as completed / off airfield?`)) return
+                      const { error } = await updateContractor(c.id, { status: 'completed' })
+                      if (error) {
+                        const { toast } = await import('sonner')
+                        toast.error(error)
+                      } else {
+                        await loadContractors()
+                      }
+                    }}
+                    style={{
+                      background: 'none',
+                      border: '1px solid rgba(34,197,94,0.4)',
+                      borderRadius: 6,
+                      padding: '3px 8px',
+                      fontSize: 'var(--fs-xs)',
+                      fontWeight: 600,
+                      color: '#22C55E',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      whiteSpace: 'nowrap',
+                    }}
+                    title="Mark completed / off airfield"
+                  >
+                    ✓ Complete
+                  </button>
                 </div>
               </div>
             )
