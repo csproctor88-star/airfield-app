@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import type { Installation, InstallationRunway, UserRole } from '@/lib/supabase/types'
-import { fetchInstallation, fetchInstallationRunways, fetchInstallationAreas, getUserPrimaryInstallationId, fetchInstallations, fetchUserInstallations } from '@/lib/supabase/installations'
+import { fetchInstallation, fetchInstallationRunways, fetchInstallationAreas, fetchInstallationArffAircraft, getUserPrimaryInstallationId, fetchInstallations, fetchUserInstallations } from '@/lib/supabase/installations'
 import { createClient } from '@/lib/supabase/client'
 
 export interface InstallationContextValue {
@@ -18,6 +18,8 @@ export interface InstallationContextValue {
   areas: string[]
   /** CE shops for the current installation */
   ceShops: string[]
+  /** ARFF aircraft configured for the current installation */
+  arffAircraft: string[]
   /** Switch to a different installation */
   switchInstallation: (installationId: string) => Promise<void>
   /** Remove an installation from the user's list */
@@ -41,16 +43,18 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
   const [runways, setRunways] = useState<InstallationRunway[]>([])
   const [areas, setAreas] = useState<string[]>([])
   const [ceShops, setCeShops] = useState<string[]>([])
+  const [arffAircraft, setArffAircraft] = useState<string[]>([])
   const [userRole, setUserRole] = useState<UserRole | null>(null)
   const [defaultPdfEmail, setDefaultPdfEmail] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
 
   // Load a specific installation's configuration
   const loadInstallationConfig = useCallback(async (id: string) => {
-    const [installation, installationRunways, installationAreas] = await Promise.all([
+    const [installation, installationRunways, installationAreas, installationArffAircraft] = await Promise.all([
       fetchInstallation(id),
       fetchInstallationRunways(id),
       fetchInstallationAreas(id),
+      fetchInstallationArffAircraft(id),
     ])
 
     if (installation) {
@@ -61,6 +65,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
     setRunways(installationRunways)
     const areaNames = installationAreas.map(a => a.area_name)
     setAreas(areaNames)
+    setArffAircraft(installationArffAircraft.map(a => a.aircraft_name))
   }, [])
 
   // Switch to a different installation and persist the choice
@@ -184,7 +189,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
 
   return (
     <InstallationContext.Provider
-      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, switchInstallation, removeInstallation, userRole, defaultPdfEmail, updateDefaultPdfEmail, loaded }}
+      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, arffAircraft, switchInstallation, removeInstallation, userRole, defaultPdfEmail, updateDefaultPdfEmail, loaded }}
     >
       {children}
     </InstallationContext.Provider>

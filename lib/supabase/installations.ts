@@ -1,5 +1,5 @@
 import { createClient } from './client'
-import type { Installation, InstallationRunway, InstallationNavaid, InstallationArea, InstallationMember } from './types'
+import type { Installation, InstallationRunway, InstallationNavaid, InstallationArea, InstallationMember, InstallationArffAircraft } from './types'
 
 // ── Fetch all active installations ──
 export async function fetchInstallations(): Promise<Installation[]> {
@@ -94,6 +94,25 @@ export async function fetchInstallationAreas(installationId: string): Promise<In
   }
 
   return data as InstallationArea[]
+}
+
+// ── Fetch ARFF aircraft for an installation ──
+export async function fetchInstallationArffAircraft(installationId: string): Promise<InstallationArffAircraft[]> {
+  const supabase = createClient()
+  if (!supabase) return []
+
+  const { data, error } = await supabase
+    .from('base_arff_aircraft')
+    .select('*')
+    .eq('base_id', installationId)
+    .order('sort_order')
+
+  if (error) {
+    console.error('Failed to fetch installation ARFF aircraft:', error.message)
+    return []
+  }
+
+  return data as InstallationArffAircraft[]
 }
 
 // ── Fetch installations the current user belongs to ──

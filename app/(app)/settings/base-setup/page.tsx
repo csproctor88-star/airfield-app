@@ -9,10 +9,10 @@ import { createDefaultTemplate, fetchInspectionTemplate } from '@/lib/supabase/i
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
 import { fetchNavaidStatuses, type NavaidStatus } from '@/lib/supabase/navaids'
 
-type SetupTab = 'runways' | 'navaids' | 'areas' | 'shops' | 'templates'
+type SetupTab = 'runways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'templates'
 
 export default function BaseSetupPage() {
-  const { installationId, currentInstallation, runways, areas, ceShops, userRole } = useInstallation()
+  const { installationId, currentInstallation, runways, areas, ceShops, arffAircraft, userRole } = useInstallation()
   const [activeTab, setActiveTab] = useState<SetupTab>('runways')
   const [showPreview, setShowPreview] = useState(false)
 
@@ -36,6 +36,7 @@ export default function BaseSetupPage() {
     { key: 'runways', label: 'Runways' },
     { key: 'navaids', label: 'NAVAIDs' },
     { key: 'areas', label: 'Areas' },
+    { key: 'arff', label: 'ARFF Aircraft' },
     { key: 'shops', label: 'CE Shops' },
     { key: 'templates', label: 'Templates' },
   ]
@@ -90,6 +91,7 @@ export default function BaseSetupPage() {
         {activeTab === 'runways' && <RunwayTab runways={runways} installationId={installationId} />}
         {activeTab === 'navaids' && <NavaidTab installationId={installationId} />}
         {activeTab === 'areas' && <SimpleListTab title="Airfield Areas" items={areas} tableName="base_areas" fieldName="area_name" installationId={installationId} />}
+        {activeTab === 'arff' && <SimpleListTab title="ARFF Aircraft" items={arffAircraft} tableName="base_arff_aircraft" fieldName="aircraft_name" installationId={installationId} />}
         {activeTab === 'shops' && <ShopsTab shops={ceShops} installationId={installationId} />}
         {activeTab === 'templates' && <TemplatesTab installationId={installationId} />}
       </div>
