@@ -1220,22 +1220,10 @@ export default function HomePage() {
         )
       })()}
 
-      {/* ===== Last Check + Personnel on Airfield (side by side) ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16, alignItems: 'start' }}>
-        {/* Last Check Completed */}
-        <div>
-          <span className="section-label">Last Check Completed</span>
-          <div className="card" style={{ padding: 12, textAlign: 'center' }}>
-            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-cyan)' }}>
-              {currentStatus.lastCheckType && currentStatus.lastCheckTime
-                ? `${currentStatus.lastCheckType} @ ${currentStatus.lastCheckTime}`
-                : 'No Data'}
-            </div>
-          </div>
-        </div>
-
+      {/* ===== Personnel on Airfield + Last Check (side by side) ===== */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16, alignItems: 'stretch' }}>
         {/* Personnel on Airfield */}
-        <div>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <span className="section-label" style={{ marginBottom: 0 }}>Personnel on Airfield</span>
             <button
@@ -1246,11 +1234,11 @@ export default function HomePage() {
             </button>
           </div>
           {activeContractors.length === 0 ? (
-            <div className="card" style={{ textAlign: 'center', padding: 16 }}>
+            <div className="card" style={{ textAlign: 'center', padding: 16, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>No active contractors</div>
             </div>
           ) : (
-            <div className="card" style={{ padding: '6px 14px' }}>
+            <div className="card" style={{ padding: '6px 14px', flex: 1 }}>
               {activeContractors.map((c, i, arr) => {
                 const startDate = new Date(c.start_date)
                 const dayNum = Math.max(1, Math.ceil((Date.now() - startDate.getTime()) / 86400000))
@@ -1319,6 +1307,18 @@ export default function HomePage() {
               })}
             </div>
           )}
+        </div>
+
+        {/* Last Check Completed */}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span className="section-label">Last Check Completed</span>
+          <div className="card" style={{ padding: 12, textAlign: 'center', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-cyan)' }}>
+              {currentStatus.lastCheckType && currentStatus.lastCheckTime
+                ? `${currentStatus.lastCheckType} @ ${currentStatus.lastCheckTime}`
+                : 'No Data'}
+            </div>
+          </div>
         </div>
       </div>
     </div>
