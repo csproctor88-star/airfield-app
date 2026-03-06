@@ -61,7 +61,7 @@ export async function updateActivityEntry(id: string, notes: string, createdAt?:
   const { data: existing } = await supabase.from('activity_log').select('metadata').eq('id', id).single()
   const currentMeta = (existing?.metadata as Record<string, unknown>) || {}
 
-  const updates: Record<string, unknown> = { metadata: { ...currentMeta, notes } }
+  const updates: Record<string, unknown> = { metadata: { ...currentMeta, edit: notes } }
   if (createdAt) updates.created_at = createdAt
 
   const { data, error } = await supabase

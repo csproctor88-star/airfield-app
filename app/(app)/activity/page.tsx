@@ -95,7 +95,7 @@ function snakeToLabel(key: string): string {
 }
 
 // Keys to skip in generic metadata formatting (internal/redundant)
-const SKIP_META_KEYS = new Set(['fields', 'field'])
+const SKIP_META_KEYS = new Set(['fields', 'field', 'edit'])
 
 function formatMetadata(metadata: Record<string, unknown> | null): string {
   if (!metadata) return ''
@@ -123,6 +123,11 @@ function buildDetailsString(a: ActivityEntry, detailsMap: Map<string, EntityDeta
     if (ed.notes) dbParts.push(ed.notes)
     if (ed.extra) dbParts.push(ed.extra)
     if (dbParts.length) parts.push(dbParts.join(' | '))
+  }
+
+  // Append user edit note at the end
+  if (a.metadata?.edit) {
+    parts.push(`Edit: ${String(a.metadata.edit)}`)
   }
 
   return parts.join(' | ')
@@ -245,10 +250,10 @@ export default function ActivityPage() {
   }
 
   const handleEdit = (a: ActivityEntry) => {
-    const notes = a.metadata?.notes ? String(a.metadata.notes) : ''
+    const editVal = a.metadata?.edit ? String(a.metadata.edit) : (a.metadata?.notes ? String(a.metadata.notes) : '')
     const d = new Date(a.created_at)
     setEditingId(a.id)
-    setEditText(notes)
+    setEditText(editVal)
     setEditDate(d.toISOString().slice(0, 10))
     setEditTime(d.toISOString().slice(11, 16))
   }
@@ -676,9 +681,9 @@ export default function ActivityPage() {
               </div>
             </div>
 
-            {/* Notes */}
+            {/* Edit note */}
             <div style={{ marginBottom: 16 }}>
-              <span className="section-label">Notes</span>
+              <span className="section-label">Edit</span>
               <textarea
                 className="input-dark"
                 rows={4}

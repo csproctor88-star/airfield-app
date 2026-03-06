@@ -139,10 +139,10 @@ export default function AMDashboardPage() {
 
   // --- Edit / Delete handlers ---
   const handleEdit = (a: ActivityEntry) => {
-    const notes = a.metadata?.notes ? String(a.metadata.notes) : ''
+    const editVal = a.metadata?.edit ? String(a.metadata.edit) : (a.metadata?.notes ? String(a.metadata.notes) : '')
     const d = new Date(a.created_at)
     setEditingId(a.id)
-    setEditText(notes)
+    setEditText(editVal)
     setEditDate(d.toISOString().slice(0, 10))
     setEditTime(d.toISOString().slice(11, 16))
   }
@@ -367,10 +367,14 @@ export default function AMDashboardPage() {
                     return s.replace(/_/g, ' ').split(' ').map(capWord).join(' ')
                   }
                   for (const [k, v] of Object.entries(a.metadata)) {
-                    if (v == null || v === '' || k === 'fields' || k === 'field') continue
+                    if (v == null || v === '' || k === 'fields' || k === 'field' || k === 'edit') continue
                     const label = k.replace(/_/g, ' ').split(' ').map(capWord).join(' ')
                     const val = typeof v === 'boolean' ? (v ? 'Yes' : 'No') : Array.isArray(v) ? v.map(i => typeof i === 'string' ? capVal(i) : String(i)).join(', ') : capVal(String(v))
                     detailParts.push(`${label}: ${val}`)
+                  }
+                  // Append user edit note at the end
+                  if (a.metadata.edit) {
+                    detailParts.push(`Edit: ${capVal(String(a.metadata.edit))}`)
                   }
                 }
                 const detailsText = detailParts.join(' | ')
@@ -475,9 +479,9 @@ export default function AMDashboardPage() {
               </div>
             </div>
 
-            {/* Notes */}
+            {/* Edit note */}
             <div style={{ marginBottom: 16 }}>
-              <span className="section-label">Notes</span>
+              <span className="section-label">Edit</span>
               <textarea
                 className="input-dark"
                 rows={4}
