@@ -106,6 +106,8 @@ export default function AMDashboardPage() {
   const [saving, setSaving] = useState(false)
   const [showEditTemplatePicker, setShowEditTemplatePicker] = useState(false)
   const [userPopover, setUserPopover] = useState<{ id: string; x: number; y: number; name: string; role: string | null; edipi: string | null } | null>(null)
+  const [lastCheckType, setLastCheckType] = useState<string | null>(null)
+  const [lastCheckTime, setLastCheckTime] = useState<string | null>(null)
 
   // --- Load Activity Feed ---
   const loadActivity = useCallback(async () => {
@@ -114,6 +116,25 @@ export default function AMDashboardPage() {
   }, [installationId])
 
   useEffect(() => { loadActivity() }, [loadActivity])
+
+  // --- Load Last Check Completed ---
+  const loadLastCheck = useCallback(async () => {
+    const supabase = createClient()
+    if (!supabase) return
+    let query = supabase
+      .from('airfield_checks')
+      .select('check_type, completed_at')
+      .order('completed_at', { ascending: false })
+      .limit(1)
+    if (installationId) query = query.eq('base_id', installationId)
+    const { data } = await query
+    setLastCheckType(data?.[0]?.check_type?.toUpperCase() || null)
+    setLastCheckTime(data?.[0]?.completed_at
+      ? new Date(data[0].completed_at).toTimeString().slice(0, 5)
+      : null)
+  }, [installationId])
+
+  useEffect(() => { loadLastCheck() }, [loadLastCheck])
 
   // Realtime: auto-refresh activity feed on new entries
   useEffect(() => {
@@ -125,12 +146,12 @@ export default function AMDashboardPage() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'activity_log', filter: `base_id=eq.${installationId}` },
-        () => { loadActivity() }
+        () => { loadActivity(); loadLastCheck() }
       )
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [installationId, loadActivity])
+  }, [installationId, loadActivity, loadLastCheck])
 
   // --- Manual Entry ---
   const handleManualSubmit = async () => {
@@ -228,6 +249,18 @@ export default function AMDashboardPage() {
   return (
     <div className="page-container">
       <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 16 }}>Dashboard</div>
+
+      {/* ===== Last Check Completed ===== */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ padding: 12, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', textAlign: 'center' }}>
+          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4 }}>Last Check Completed</div>
+          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-cyan)' }}>
+            {lastCheckType && lastCheckTime
+              ? `${lastCheckType} @ ${lastCheckTime}`
+              : 'No Data'}
+          </div>
+        </div>
+      </div>
 
       {/* ===== Quick Actions ===== */}
       <span className="section-label">Quick Actions</span>

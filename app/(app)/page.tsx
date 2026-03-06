@@ -57,12 +57,6 @@ const ADVISORY_COLORS: Record<string, { bg: string; border: string; text: string
   WARNING: { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)', text: 'var(--color-danger)' },
 }
 
-type CurrentStatusData = {
-  lastCheckType: string | null
-  lastCheckTime: string | null
-  inspectionCompletion: string | null
-}
-
 export default function HomePage() {
   const router = useRouter()
   const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, setRscCondition, rcrValue, rcrCondition, bwcValue, setBwcValue, refreshStatus } = useDashboard()
@@ -72,9 +66,6 @@ export default function HomePage() {
   const [navaids, setNavaids] = useState<NavaidStatus[]>([])
   const [navaidNotes, setNavaidNotes] = useState<Record<string, string>>({})
   const [activeContractors, setActiveContractors] = useState<ContractorRow[]>([])
-  const [currentStatus, setCurrentStatus] = useState<CurrentStatusData>({
-    lastCheckType: null, lastCheckTime: null, inspectionCompletion: null,
-  })
   // RSC dialog state
   const [rscDialogOpen, setRscDialogOpen] = useState(false)
   const [rscDraftValue, setRscDraftValue] = useState<string | null>(null)
@@ -152,47 +143,7 @@ export default function HomePage() {
 
   useEffect(() => { loadNavaids() }, [loadNavaids])
 
-  // --- Load Current Status (Last Check, Inspection) ---
-  const loadCurrentStatus = useCallback(async () => {
-    const supabase = createClient()
-    if (!supabase) return
-
-    // Latest completed inspection
-    let latestInspQuery = supabase
-      .from('inspections')
-      .select('completed_at')
-      .eq('status', 'completed')
-      .order('completed_at', { ascending: false })
-      .limit(1)
-    if (installationId) latestInspQuery = latestInspQuery.eq('base_id', installationId)
-    const { data: latestInsp } = await latestInspQuery
-
-    // Latest check of any type
-    let lastCheckQuery = supabase
-      .from('airfield_checks')
-      .select('check_type, completed_at')
-      .order('completed_at', { ascending: false })
-      .limit(1)
-    if (installationId) lastCheckQuery = lastCheckQuery.eq('base_id', installationId)
-    const { data: lastCheck } = await lastCheckQuery
-
-    const checkType = lastCheck?.[0]?.check_type?.toUpperCase() || null
-    const checkTime = lastCheck?.[0]?.completed_at
-      ? new Date(lastCheck[0].completed_at).toTimeString().slice(0, 5)
-      : null
-    const inspTime = latestInsp?.[0]?.completed_at
-      ? new Date(latestInsp[0].completed_at).toTimeString().slice(0, 5)
-      : null
-
-    setCurrentStatus((prev) => ({
-      ...prev,
-      lastCheckType: checkType,
-      lastCheckTime: checkTime,
-      inspectionCompletion: inspTime,
-    }))
-  }, [installationId])
-
-  useEffect(() => { loadCurrentStatus(); refreshStatus() }, [loadCurrentStatus, refreshStatus])
+  useEffect(() => { refreshStatus() }, [refreshStatus])
 
   // Realtime: subscribe to airfield_checks and inspections INSERT events
   useEffect(() => {
@@ -204,17 +155,17 @@ export default function HomePage() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'airfield_checks', filter: `base_id=eq.${installationId}` },
-        () => { loadCurrentStatus(); refreshStatus() }
+        () => { refreshStatus() }
       )
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'inspections', filter: `base_id=eq.${installationId}` },
-        () => { loadCurrentStatus(); refreshStatus() }
+        () => { refreshStatus() }
       )
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [installationId, loadCurrentStatus, refreshStatus])
+  }, [installationId, refreshStatus])
 
   // --- Load Active Contractors ---
   const loadContractors = useCallback(async () => {
@@ -1220,25 +1171,22 @@ export default function HomePage() {
         )
       })()}
 
-      {/* ===== Personnel on Airfield + Last Check (side by side) ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16, alignItems: 'stretch' }}>
-        {/* Personnel on Airfield */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span className="section-label" style={{ marginBottom: 0 }}>Personnel on Airfield</span>
-            <button
-              onClick={() => router.push('/contractors')}
-              style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-            >
-              View All →
-            </button>
-          </div>
-          {activeContractors.length === 0 ? (
-            <div className="card" style={{ textAlign: 'center', padding: 16, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>No active contractors</div>
-            </div>
-          ) : (
-            <div className="card" style={{ padding: '6px 14px', flex: 1 }}>
+      {/* ===== Personnel on Airfield ===== */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <span className="section-label" style={{ marginBottom: 0 }}>Personnel on Airfield</span>
+        <button
+          onClick={() => router.push('/contractors')}
+          style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+        >
+          View All →
+        </button>
+      </div>
+      {activeContractors.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: 16, marginBottom: 16 }}>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>No active contractors</div>
+        </div>
+      ) : (
+        <div className="card" style={{ padding: '6px 14px', marginBottom: 16 }}>
               {activeContractors.map((c, i, arr) => {
                 const startDate = new Date(c.start_date)
                 const dayNum = Math.max(1, Math.ceil((Date.now() - startDate.getTime()) / 86400000))
@@ -1306,21 +1254,7 @@ export default function HomePage() {
                 )
               })}
             </div>
-          )}
-        </div>
-
-        {/* Last Check Completed */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span className="section-label">Last Check Completed</span>
-          <div className="card" style={{ padding: 12, textAlign: 'center', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-cyan)' }}>
-              {currentStatus.lastCheckType && currentStatus.lastCheckTime
-                ? `${currentStatus.lastCheckType} @ ${currentStatus.lastCheckTime}`
-                : 'No Data'}
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   )
 }
