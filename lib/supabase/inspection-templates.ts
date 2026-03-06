@@ -20,7 +20,7 @@ export interface TemplateItem {
   item_key: string
   item_number: number
   item_text: string
-  item_type: 'pass_fail' | 'bwc'
+  item_type: 'pass_fail' | 'bwc' | 'rsc' | 'rcr'
   sort_order: number
 }
 
@@ -87,7 +87,7 @@ export function toInspectionSections(templateSections: TemplateSection[]): Inspe
       id: i.item_key,
       itemNumber: i.item_number,
       item: i.item_text,
-      type: i.item_type === 'bwc' ? 'bwc' as const : undefined,
+      type: (i.item_type === 'bwc' || i.item_type === 'rsc' || i.item_type === 'rcr') ? i.item_type : undefined,
     })),
   }))
 }
@@ -169,7 +169,7 @@ export async function createDefaultTemplate(
 
 export async function updateTemplateItem(
   itemId: string,
-  updates: { item_text?: string; item_type?: 'pass_fail' | 'bwc'; item_number?: number }
+  updates: { item_text?: string; item_type?: 'pass_fail' | 'bwc' | 'rsc' | 'rcr'; item_number?: number }
 ): Promise<boolean> {
   const supabase = createClient()
   if (!supabase) return false
@@ -186,7 +186,7 @@ export async function updateTemplateItem(
 
 export async function addTemplateItem(
   sectionId: string,
-  item: { item_key: string; item_number: number; item_text: string; item_type?: 'pass_fail' | 'bwc'; sort_order: number }
+  item: { item_key: string; item_number: number; item_text: string; item_type?: 'pass_fail' | 'bwc' | 'rsc' | 'rcr'; sort_order: number }
 ): Promise<TemplateItem | null> {
   const supabase = createClient()
   if (!supabase) return null

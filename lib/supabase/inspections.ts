@@ -23,6 +23,9 @@ export type InspectionRow = {
   joint_monthly: boolean
   personnel: string[]
   bwc_value: string | null
+  rsc_condition: string | null
+  rcr_value: string | null
+  rcr_condition: string | null
   weather_conditions: string | null
   temperature_f: number | null
   notes: string | null
@@ -116,6 +119,9 @@ export async function createInspection(input: {
   joint_monthly: boolean
   personnel?: string[]
   bwc_value: string | null
+  rsc_condition?: string | null
+  rcr_value?: string | null
+  rcr_condition?: string | null
   weather_conditions: string | null
   temperature_f: number | null
   notes: string | null
@@ -170,6 +176,9 @@ export async function createInspection(input: {
     joint_monthly: input.joint_monthly,
     personnel: input.personnel || [],
     bwc_value: input.bwc_value,
+    rsc_condition: input.rsc_condition || null,
+    rcr_value: input.rcr_value || null,
+    rcr_condition: input.rcr_condition || null,
     weather_conditions: input.weather_conditions,
     temperature_f: input.temperature_f,
     notes: input.notes,
@@ -203,6 +212,26 @@ export async function createInspection(input: {
     await updateAirfieldStatus({ bwc_value: input.bwc_value, bwc_updated_at: now.toISOString() }, input.base_id)
   }
 
+  // Auto-update airfield_status RSC from inspection
+  if (input.rsc_condition) {
+    await updateAirfieldStatus({ rsc_condition: input.rsc_condition, rsc_updated_at: now.toISOString() }, input.base_id)
+  }
+
+  // Auto-update airfield_status RCR from inspection
+  if (input.rcr_value) {
+    await updateAirfieldStatus({
+      rcr_touchdown: input.rcr_value,
+      rcr_condition: input.rcr_condition || null,
+      rcr_updated_at: now.toISOString(),
+    }, input.base_id)
+  } else if (input.rsc_condition && !input.rcr_value) {
+    // RSC only — clear existing RCR so dashboard shows RSC
+    await updateAirfieldStatus({
+      rcr_touchdown: null, rcr_midpoint: null, rcr_rollout: null,
+      rcr_condition: null, rcr_updated_at: null,
+    }, input.base_id)
+  }
+
   return { data: created, error: null }
 }
 
@@ -218,6 +247,9 @@ export async function saveInspectionDraft(input: {
   failed_count: number
   na_count: number
   bwc_value: string | null
+  rsc_condition?: string | null
+  rcr_value?: string | null
+  rcr_condition?: string | null
   notes: string | null
   daily_group_id: string
   construction_meeting: boolean
@@ -266,6 +298,9 @@ export async function saveInspectionDraft(input: {
         na_count: input.na_count,
         completion_percent,
         bwc_value: input.bwc_value,
+        rsc_condition: input.rsc_condition || null,
+        rcr_value: input.rcr_value || null,
+        rcr_condition: input.rcr_condition || null,
         notes: input.notes,
         saved_by_name: savedByName,
         saved_by_id: userId || null,
@@ -313,6 +348,9 @@ export async function saveInspectionDraft(input: {
     joint_monthly: input.joint_monthly,
     personnel: [],
     bwc_value: input.bwc_value,
+    rsc_condition: input.rsc_condition || null,
+    rcr_value: input.rcr_value || null,
+    rcr_condition: input.rcr_condition || null,
     notes: input.notes,
     daily_group_id: input.daily_group_id,
     draft_data: input.draft_data,
@@ -348,6 +386,9 @@ export async function fileInspection(input: {
   failed_count: number
   na_count: number
   bwc_value: string | null
+  rsc_condition?: string | null
+  rcr_value?: string | null
+  rcr_condition?: string | null
   weather_conditions: string | null
   temperature_f: number | null
   notes: string | null
@@ -381,6 +422,9 @@ export async function fileInspection(input: {
       na_count: input.na_count,
       completion_percent,
       bwc_value: input.bwc_value,
+      rsc_condition: input.rsc_condition || null,
+      rcr_value: input.rcr_value || null,
+      rcr_condition: input.rcr_condition || null,
       weather_conditions: input.weather_conditions,
       temperature_f: input.temperature_f,
       notes: input.notes,
@@ -414,6 +458,26 @@ export async function fileInspection(input: {
   // Auto-update airfield_status BWC from filed inspection
   if (input.bwc_value) {
     await updateAirfieldStatus({ bwc_value: input.bwc_value, bwc_updated_at: new Date().toISOString() }, input.base_id)
+  }
+
+  // Auto-update airfield_status RSC from filed inspection
+  if (input.rsc_condition) {
+    await updateAirfieldStatus({ rsc_condition: input.rsc_condition, rsc_updated_at: new Date().toISOString() }, input.base_id)
+  }
+
+  // Auto-update airfield_status RCR from filed inspection
+  if (input.rcr_value) {
+    await updateAirfieldStatus({
+      rcr_touchdown: input.rcr_value,
+      rcr_condition: input.rcr_condition || null,
+      rcr_updated_at: new Date().toISOString(),
+    }, input.base_id)
+  } else if (input.rsc_condition && !input.rcr_value) {
+    // RSC only — clear existing RCR so dashboard shows RSC
+    await updateAirfieldStatus({
+      rcr_touchdown: null, rcr_midpoint: null, rcr_rollout: null,
+      rcr_condition: null, rcr_updated_at: null,
+    }, input.base_id)
   }
 
   return { data: filed, error: null }

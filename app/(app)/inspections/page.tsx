@@ -9,11 +9,14 @@ import {
   AIRFIELD_INSPECTION_SECTIONS,
   LIGHTING_INSPECTION_SECTIONS,
   BWC_OPTIONS,
+  RSC_CONDITIONS,
+  RCR_CONDITION_TYPES,
   type InspectionSection,
 } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { fetchInspections, createInspection, saveInspectionDraft, fileInspection, fetchDailyGroup, getInspectorName, type InspectionRow } from '@/lib/supabase/inspections'
 import { logActivity } from '@/lib/supabase/activity'
+import { updateAirfieldStatus } from '@/lib/supabase/airfield-status'
 import { useInstallation } from '@/lib/installation-context'
 import { fetchCurrentWeather } from '@/lib/weather'
 import { fetchInspectionTemplate, toInspectionSections } from '@/lib/supabase/inspection-templates'
@@ -291,6 +294,8 @@ export default function InspectionsPage() {
   const answeredCount = currentHalf
     ? visibleItems.filter((item) => {
         if (item.type === 'bwc') return currentHalf.bwcValue !== null
+        if (item.type === 'rsc') return true // RSC is optional, doesn't block completion
+        if (item.type === 'rcr') return true // RCR is optional, doesn't block completion
         return true // all items default to pass
       }).length
     : 0
@@ -344,6 +349,27 @@ export default function InspectionsPage() {
 
   const setBwcValue = (val: BwcValue) => {
     updateHalf(activeTab, (h) => ({ ...h, bwcValue: h.bwcValue === val ? null : val }))
+  }
+
+  const setRscCondition = (val: string) => {
+    updateHalf(activeTab, (h) => ({ ...h, rscCondition: h.rscCondition === val ? null : val }))
+  }
+
+  const setRcrValue = (val: string) => {
+    updateHalf(activeTab, (h) => ({ ...h, rcrValue: val || null }))
+  }
+
+  const setRcrConditionType = (val: string) => {
+    updateHalf(activeTab, (h) => ({ ...h, rcrConditionType: val || null }))
+  }
+
+  const toggleRcrReported = () => {
+    updateHalf(activeTab, (h) => ({
+      ...h,
+      rcrReported: !h.rcrReported,
+      // Clear RCR values when toggling off
+      ...(!h.rcrReported ? {} : { rcrValue: null, rcrConditionType: null }),
+    }))
   }
 
   const setComment = (itemId: string, text: string) => {
@@ -472,6 +498,8 @@ export default function InspectionsPage() {
     currentHalf
       ? section.items.filter((item) => {
           if (item.type === 'bwc') return currentHalf.bwcValue !== null
+          if (item.type === 'rsc') return currentHalf.rscCondition !== null
+          if (item.type === 'rcr') return currentHalf.rcrReported ? currentHalf.rcrValue !== null : currentHalf.rscCondition !== null
           return true // all items default to pass
         }).length
       : 0
@@ -506,6 +534,9 @@ export default function InspectionsPage() {
       failed_count: failed,
       na_count: na,
       bwc_value: currentHalf.bwcValue,
+      rsc_condition: currentHalf.rscCondition,
+      rcr_value: currentHalf.rcrReported ? currentHalf.rcrValue : null,
+      rcr_condition: currentHalf.rcrReported ? currentHalf.rcrConditionType : null,
       notes: currentHalf.notes || null,
       daily_group_id: draft.id,
       construction_meeting: false,
@@ -622,6 +653,9 @@ export default function InspectionsPage() {
       failed_count: failed,
       na_count: na,
       bwc_value: completedHalf.bwcValue,
+      rsc_condition: completedHalf.rscCondition,
+      rcr_value: completedHalf.rcrReported ? completedHalf.rcrValue : null,
+      rcr_condition: completedHalf.rcrReported ? completedHalf.rcrConditionType : null,
       notes: completedHalf.notes || null,
       daily_group_id: draft.id,
       construction_meeting: false,
@@ -636,6 +670,32 @@ export default function InspectionsPage() {
 
     if (saved) {
       logActivity('completed', 'inspection', saved.id, saved.display_id, { inspection_type: targetTab }, installationId)
+    }
+
+    // Push BWC/RSC/RCR to dashboard on complete (always, even if draft save had issues)
+    const nowIso = new Date().toISOString()
+    if (completedHalf.bwcValue) {
+      await updateAirfieldStatus({ bwc_value: completedHalf.bwcValue, bwc_updated_at: nowIso }, installationId)
+    }
+    if (completedHalf.rscCondition) {
+      await updateAirfieldStatus({ rsc_condition: completedHalf.rscCondition, rsc_updated_at: nowIso }, installationId)
+    }
+    if (completedHalf.rcrReported && completedHalf.rcrValue) {
+      // RCR reported — update dashboard with RCR (replaces RSC display)
+      await updateAirfieldStatus({
+        rcr_touchdown: completedHalf.rcrValue,
+        rcr_condition: completedHalf.rcrConditionType || null,
+        rcr_updated_at: nowIso,
+      }, installationId)
+    } else if (completedHalf.rscCondition && !completedHalf.rcrReported) {
+      // RSC only — clear any existing RCR so dashboard shows RSC
+      await updateAirfieldStatus({
+        rcr_touchdown: null,
+        rcr_midpoint: null,
+        rcr_rollout: null,
+        rcr_condition: null,
+        rcr_updated_at: null,
+      }, installationId)
     }
 
     const tabLabels: Record<TabType, string> = { airfield: 'Airfield', lighting: 'Lighting' }
@@ -661,7 +721,7 @@ export default function InspectionsPage() {
 
     // Auto-complete the current tab if not already completed AND has responses
     const currentDraftHalf = draft[activeTab]
-    const hasResponses = Object.keys(currentDraftHalf.responses).length > 0 || currentDraftHalf.bwcValue !== null
+    const hasResponses = Object.keys(currentDraftHalf.responses).length > 0 || currentDraftHalf.bwcValue !== null || currentDraftHalf.rscCondition !== null || currentDraftHalf.rcrValue !== null
     if (!currentDraftHalf.savedAt && hasResponses) {
       // Auto-fetch weather + inspector for the current tab
       const weather = await fetchCurrentWeather(baseLat, baseLon)
@@ -729,6 +789,9 @@ export default function InspectionsPage() {
           failed_count: failed,
           na_count: na,
           bwc_value: airfieldHalf.bwcValue,
+          rsc_condition: airfieldHalf.rscCondition,
+          rcr_value: airfieldHalf.rcrReported ? airfieldHalf.rcrValue : null,
+          rcr_condition: airfieldHalf.rcrReported ? airfieldHalf.rcrConditionType : null,
           weather_conditions: airfieldHalf.weatherConditions,
           temperature_f: airfieldHalf.temperatureF,
           notes: airfieldHalf.notes || null,
@@ -758,6 +821,9 @@ export default function InspectionsPage() {
           construction_meeting: false,
           joint_monthly: false,
           bwc_value: airfieldHalf.bwcValue,
+          rsc_condition: airfieldHalf.rscCondition,
+          rcr_value: airfieldHalf.rcrReported ? airfieldHalf.rcrValue : null,
+          rcr_condition: airfieldHalf.rcrReported ? airfieldHalf.rcrConditionType : null,
           weather_conditions: airfieldHalf.weatherConditions,
           temperature_f: airfieldHalf.temperatureF,
           notes: airfieldHalf.notes || null,
@@ -792,6 +858,9 @@ export default function InspectionsPage() {
           failed_count: failed,
           na_count: na,
           bwc_value: lightingHalf.bwcValue,
+          rsc_condition: lightingHalf.rscCondition,
+          rcr_value: lightingHalf.rcrReported ? lightingHalf.rcrValue : null,
+          rcr_condition: lightingHalf.rcrReported ? lightingHalf.rcrConditionType : null,
           weather_conditions: lightingHalf.weatherConditions,
           temperature_f: lightingHalf.temperatureF,
           notes: lightingHalf.notes || null,
@@ -821,6 +890,9 @@ export default function InspectionsPage() {
           construction_meeting: false,
           joint_monthly: false,
           bwc_value: lightingHalf.bwcValue,
+          rsc_condition: lightingHalf.rscCondition,
+          rcr_value: lightingHalf.rcrReported ? lightingHalf.rcrValue : null,
+          rcr_condition: lightingHalf.rcrReported ? lightingHalf.rcrConditionType : null,
           weather_conditions: lightingHalf.weatherConditions,
           temperature_f: lightingHalf.temperatureF,
           notes: lightingHalf.notes || null,
@@ -842,6 +914,28 @@ export default function InspectionsPage() {
     }
 
     if (filed > 0 || usingDemo) {
+      // Push RSC/RCR/BWC to dashboard directly (belt-and-suspenders with create/fileInspection)
+      const filedHalf = airfieldSaved ? airfieldHalf : lightingHalf
+      const fileNow = new Date().toISOString()
+      if (filedHalf.bwcValue) {
+        await updateAirfieldStatus({ bwc_value: filedHalf.bwcValue, bwc_updated_at: fileNow }, installationId)
+      }
+      if (filedHalf.rscCondition) {
+        await updateAirfieldStatus({ rsc_condition: filedHalf.rscCondition, rsc_updated_at: fileNow }, installationId)
+      }
+      if (filedHalf.rcrReported && filedHalf.rcrValue) {
+        await updateAirfieldStatus({
+          rcr_touchdown: filedHalf.rcrValue,
+          rcr_condition: filedHalf.rcrConditionType || null,
+          rcr_updated_at: fileNow,
+        }, installationId)
+      } else if (filedHalf.rscCondition && !filedHalf.rcrReported) {
+        await updateAirfieldStatus({
+          rcr_touchdown: null, rcr_midpoint: null, rcr_rollout: null,
+          rcr_condition: null, rcr_updated_at: null,
+        }, installationId)
+      }
+
       // Upload photos per-discrepancy with their discrepancy index
       if (filedId && Object.keys(discPhotos).length > 0) {
         for (const [itemId, photoArrays] of Object.entries(discPhotos)) {
@@ -903,6 +997,9 @@ export default function InspectionsPage() {
     totalNa: number
     totalItems: number
     bwcValue: string | null
+    rscCondition: string | null
+    rcrValue: string | null
+    rcrCondition: string | null
     weatherConditions: string | null
     temperatureF: number | null
     completedAt: string | null
@@ -944,6 +1041,9 @@ export default function InspectionsPage() {
         totalNa: (af?.na_count || 0) + (lt?.na_count || 0),
         totalItems: (af?.total_items || 0) + (lt?.total_items || 0),
         bwcValue: af?.bwc_value || lt?.bwc_value || null,
+        rscCondition: af?.rsc_condition || lt?.rsc_condition || null,
+        rcrValue: af?.rcr_value || lt?.rcr_value || null,
+        rcrCondition: af?.rcr_condition || lt?.rcr_condition || null,
         weatherConditions: primary.weather_conditions,
         temperatureF: primary.temperature_f,
         completedAt: primary.completed_at,
@@ -967,6 +1067,9 @@ export default function InspectionsPage() {
         totalNa: isSpecialType ? 0 : insp.na_count,
         totalItems: isSpecialType ? 0 : insp.total_items,
         bwcValue: insp.bwc_value,
+        rscCondition: insp.rsc_condition || null,
+        rcrValue: insp.rcr_value || null,
+        rcrCondition: insp.rcr_condition || null,
         weatherConditions: insp.weather_conditions,
         temperatureF: insp.temperature_f,
         completedAt: insp.completed_at,
@@ -1227,6 +1330,105 @@ export default function InspectionsPage() {
                               )
                             })}
                           </div>
+                        </div>
+                      )
+                    }
+
+                    // RSC item — shows Dry/Wet buttons + Report RCR toggle
+                    if (item.type === 'rsc') {
+                      return (
+                        <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--color-bg-elevated)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                            <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', fontWeight: 600, minWidth: 22 }}>{item.itemNumber}.</span>
+                            <span style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: '18px' }}>{item.item}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: 6, paddingLeft: 30 }}>
+                            {RSC_CONDITIONS.map((opt) => {
+                              const selected = currentHalf?.rscCondition === opt
+                              const color = opt === 'Dry' ? '#22C55E' : '#3B82F6'
+                              return (
+                                <button
+                                  key={opt}
+                                  onClick={() => setRscCondition(opt)}
+                                  style={{
+                                    padding: '6px 12px', borderRadius: 6,
+                                    border: `2px solid ${selected ? color : 'var(--color-text-4)'}`,
+                                    background: selected ? `${color}20` : 'transparent',
+                                    color: selected ? color : 'var(--color-text-2)',
+                                    fontSize: 'var(--fs-base)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                                  }}
+                                >
+                                  {opt === 'Dry' ? '☀️' : '💧'} {opt}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                    }
+
+                    // RCR item — toggle to report, with value + condition inputs
+                    if (item.type === 'rcr') {
+                      const rcrOn = currentHalf?.rcrReported ?? false
+                      return (
+                        <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--color-bg-elevated)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                            <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', fontWeight: 600, minWidth: 22 }}>{item.itemNumber}.</span>
+                            <span style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: '18px' }}>{item.item}</span>
+                          </div>
+                          {/* Report RCR toggle */}
+                          <div
+                            onClick={toggleRcrReported}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', marginLeft: 30,
+                              borderRadius: 8, cursor: 'pointer',
+                              background: rcrOn ? 'rgba(34,211,238,0.08)' : 'var(--color-bg-elevated)',
+                              border: rcrOn ? '1.5px solid var(--color-cyan, #22D3EE)' : '1.5px solid var(--color-text-4)',
+                            }}
+                          >
+                            <div style={{
+                              width: 20, height: 20, borderRadius: 4,
+                              border: rcrOn ? '2px solid var(--color-cyan, #22D3EE)' : '2px solid var(--color-text-4)',
+                              background: rcrOn ? 'var(--color-cyan, #22D3EE)' : 'transparent',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: 14, color: 'var(--color-bg-surface-solid, #0F172A)', fontWeight: 700,
+                            }}>
+                              {rcrOn && '✓'}
+                            </div>
+                            <span style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: rcrOn ? 'var(--color-cyan, #22D3EE)' : 'var(--color-text-2)' }}>
+                              Report RCR
+                            </span>
+                          </div>
+                          {/* RCR inputs (shown when toggle is on) */}
+                          {rcrOn && (
+                            <div style={{ display: 'flex', gap: 8, paddingLeft: 30, flexWrap: 'wrap', marginTop: 8 }}>
+                              <input
+                                type="number"
+                                placeholder="RCR value"
+                                value={currentHalf?.rcrValue || ''}
+                                onChange={(e) => setRcrValue(e.target.value)}
+                                style={{
+                                  width: 100, padding: '6px 10px', borderRadius: 6,
+                                  border: '2px solid var(--color-text-4)', background: 'var(--color-bg-surface)',
+                                  color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit',
+                                }}
+                              />
+                              <select
+                                value={currentHalf?.rcrConditionType || ''}
+                                onChange={(e) => setRcrConditionType(e.target.value)}
+                                style={{
+                                  padding: '6px 10px', borderRadius: 6,
+                                  border: '2px solid var(--color-text-4)', background: 'var(--color-bg-surface)',
+                                  color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit',
+                                }}
+                              >
+                                <option value="">Condition type...</option>
+                                {RCR_CONDITION_TYPES.map((ct) => (
+                                  <option key={ct.value} value={ct.value}>{ct.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
                         </div>
                       )
                     }
@@ -1619,15 +1821,35 @@ export default function InspectionsPage() {
                   <span style={{ color: 'var(--color-text-3)' }}>/ {report.totalItems} items</span>
                 </div>
 
-                {report.bwcValue && (
-                  <div style={{ marginBottom: 6 }}>
-                    <span style={{
-                      fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-                      color: report.bwcValue === 'LOW' ? '#22C55E' : report.bwcValue === 'MOD' ? '#EAB308' : report.bwcValue === 'SEV' ? '#F97316' : '#EF4444',
-                      background: report.bwcValue === 'LOW' ? 'rgba(34,197,94,0.1)' : report.bwcValue === 'MOD' ? 'rgba(234,179,8,0.1)' : report.bwcValue === 'SEV' ? 'rgba(249,115,22,0.1)' : 'rgba(239,68,68,0.1)',
-                    }}>
-                      BWC: {report.bwcValue}
-                    </span>
+                {(report.bwcValue || report.rscCondition || report.rcrValue) && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+                    {report.bwcValue && (
+                      <span style={{
+                        fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                        color: report.bwcValue === 'LOW' ? '#22C55E' : report.bwcValue === 'MOD' ? '#EAB308' : report.bwcValue === 'SEV' ? '#F97316' : '#EF4444',
+                        background: report.bwcValue === 'LOW' ? 'rgba(34,197,94,0.1)' : report.bwcValue === 'MOD' ? 'rgba(234,179,8,0.1)' : report.bwcValue === 'SEV' ? 'rgba(249,115,22,0.1)' : 'rgba(239,68,68,0.1)',
+                      }}>
+                        BWC: {report.bwcValue}
+                      </span>
+                    )}
+                    {report.rscCondition && (
+                      <span style={{
+                        fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                        color: report.rscCondition === 'Dry' ? '#22C55E' : '#3B82F6',
+                        background: report.rscCondition === 'Dry' ? 'rgba(34,197,94,0.1)' : 'rgba(59,130,246,0.1)',
+                      }}>
+                        RSC: {report.rscCondition}
+                      </span>
+                    )}
+                    {report.rcrValue && (
+                      <span style={{
+                        fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                        color: '#8B5CF6',
+                        background: 'rgba(139,92,246,0.1)',
+                      }}>
+                        RCR: {report.rcrValue}{report.rcrCondition ? ` (${report.rcrCondition})` : ''}
+                      </span>
+                    )}
                   </div>
                 )}
               </>

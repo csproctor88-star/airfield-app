@@ -242,6 +242,9 @@ export type Database = {
           joint_monthly: boolean
           personnel: string[]
           bwc_value: string | null
+          rsc_condition: string | null
+          rcr_value: string | null
+          rcr_condition: string | null
           weather_conditions: string | null
           temperature_f: number | null
           notes: string | null

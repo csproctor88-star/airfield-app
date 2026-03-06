@@ -92,7 +92,7 @@ export interface InspectionItem {
   id: string
   itemNumber: number
   item: string
-  type?: 'pass_fail' | 'bwc'  // default is pass_fail
+  type?: 'pass_fail' | 'bwc' | 'rsc' | 'rcr'  // default is pass_fail
 }
 
 export interface InspectionSection {
@@ -205,6 +205,14 @@ export const AIRFIELD_INSPECTION_SECTIONS: InspectionSection[] = [
       { id: 'af-42', itemNumber: 42, item: 'TERPS, Flight & Ground Safety, SOF, CE, SFS' },
     ],
   },
+  {
+    id: 'af-sec-rwy',
+    title: 'Runway Conditions',
+    items: [
+      { id: 'af-rsc', itemNumber: 43, item: 'Runway Surface Condition (RSC)', type: 'rsc' },
+      { id: 'af-rcr', itemNumber: 44, item: 'Runway Condition Reading (RCR)', type: 'rcr' },
+    ],
+  },
 ]
 
 // === BWC Value Options ===
@@ -274,6 +282,14 @@ export const LIGHTING_INSPECTION_SECTIONS: InspectionSection[] = [
       { id: 'lt-30', itemNumber: 30, item: 'Rotating Beacon' },
       { id: 'lt-31', itemNumber: 31, item: 'Wind Cones' },
       { id: 'lt-32', itemNumber: 32, item: 'Construction Barriers' },
+    ],
+  },
+  {
+    id: 'lt-sec-rwy',
+    title: 'Runway Conditions',
+    items: [
+      { id: 'lt-rsc', itemNumber: 33, item: 'Runway Surface Condition (RSC)', type: 'rsc' },
+      { id: 'lt-rcr', itemNumber: 34, item: 'Runway Condition Reading (RCR)', type: 'rcr' },
     ],
   },
 ]

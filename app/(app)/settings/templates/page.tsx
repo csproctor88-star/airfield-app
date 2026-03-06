@@ -82,10 +82,13 @@ export default function TemplateManagementPage() {
   }
 
   const handleToggleType = async (item: TemplateItem) => {
-    const newType = item.item_type === 'bwc' ? 'pass_fail' : 'bwc'
+    const cycle: Array<'pass_fail' | 'bwc' | 'rsc' | 'rcr'> = ['pass_fail', 'bwc', 'rsc', 'rcr']
+    const idx = cycle.indexOf(item.item_type)
+    const newType = cycle[(idx + 1) % cycle.length]
+    const labelMap: Record<string, string> = { pass_fail: 'Pass/Fail', bwc: 'BWC', rsc: 'RSC', rcr: 'RCR' }
     const ok = await updateTemplateItem(item.id, { item_type: newType })
     if (ok) {
-      toast.success(`Changed to ${newType === 'bwc' ? 'BWC' : 'Pass/Fail'}`)
+      toast.success(`Changed to ${labelMap[newType]}`)
       await loadTemplate()
     }
   }
@@ -463,14 +466,14 @@ export default function TemplateManagementPage() {
                           padding: '2px 6px',
                           borderRadius: 4,
                           border: '1px solid var(--color-border)',
-                          background: item.item_type === 'bwc' ? 'var(--color-warning)' : 'var(--color-surface-2)',
-                          color: item.item_type === 'bwc' ? '#000' : 'var(--color-text-2)',
+                          background: item.item_type === 'bwc' ? 'var(--color-warning)' : item.item_type === 'rsc' ? '#3B82F620' : item.item_type === 'rcr' ? '#8B5CF620' : 'var(--color-surface-2)',
+                          color: item.item_type === 'bwc' ? '#000' : item.item_type === 'rsc' ? '#3B82F6' : item.item_type === 'rcr' ? '#8B5CF6' : 'var(--color-text-2)',
                           cursor: 'pointer',
                           flexShrink: 0,
                         }}
-                        title={item.item_type === 'bwc' ? 'BWC type — click to change to Pass/Fail' : 'Pass/Fail — click to change to BWC'}
+                        title={`${({ pass_fail: 'Pass/Fail', bwc: 'BWC', rsc: 'RSC', rcr: 'RCR' } as Record<string, string>)[item.item_type] || 'Pass/Fail'} — click to cycle type`}
                       >
-                        {item.item_type === 'bwc' ? 'BWC' : 'P/F'}
+                        {({ pass_fail: 'P/F', bwc: 'BWC', rsc: 'RSC', rcr: 'RCR' } as Record<string, string>)[item.item_type] || 'P/F'}
                       </button>
 
                       <button

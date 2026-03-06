@@ -13,6 +13,10 @@ function getDraftKey(baseId?: string): string {
 export interface InspectionHalfDraft {
   responses: Record<string, 'pass' | 'fail' | 'na' | null>
   bwcValue: string | null
+  rscCondition: string | null
+  rcrReported: boolean
+  rcrValue: string | null
+  rcrConditionType: string | null
   comments: Record<string, string>
   enabledConditionals: Record<string, boolean>
   notes: string
@@ -41,6 +45,10 @@ function createEmptyHalf(): InspectionHalfDraft {
   return {
     responses: {},
     bwcValue: null,
+    rscCondition: null,
+    rcrReported: false,
+    rcrValue: null,
+    rcrConditionType: null,
     comments: {},
     enabledConditionals: {},
     notes: '',
@@ -77,6 +85,14 @@ export function loadDraft(baseId?: string | null): DailyInspectionDraft | null {
     // Backward-compat: add CM/JM halves if missing from older drafts
     if (!parsed.construction_meeting) parsed.construction_meeting = createEmptyHalf()
     if (!parsed.joint_monthly) parsed.joint_monthly = createEmptyHalf()
+    // Backward-compat: add RSC/RCR fields if missing from older drafts
+    for (const key of ['airfield', 'lighting', 'construction_meeting', 'joint_monthly'] as const) {
+      const half = parsed[key]
+      if (half.rscCondition === undefined) half.rscCondition = null
+      if (half.rcrReported === undefined) half.rcrReported = false
+      if (half.rcrValue === undefined) half.rcrValue = null
+      if (half.rcrConditionType === undefined) half.rcrConditionType = null
+    }
     // Backward-compat: add discrepancies field if missing from older drafts
     for (const key of ['airfield', 'lighting', 'construction_meeting', 'joint_monthly'] as const) {
       const half = parsed[key]
@@ -118,21 +134,33 @@ export function halfDraftToItems(
 
   const items: InspectionItem[] = visItems.map((item) => {
     const section = visSecs.find((s) => s.items.some((i) => i.id === item.id))
-    const response = item.type === 'bwc'
-      ? (half.bwcValue ? 'pass' : null)
-      : (half.responses[item.id] ?? 'pass')
+    let response: 'pass' | 'fail' | 'na' | null
+    let notes: string
+    if (item.type === 'bwc') {
+      response = half.bwcValue ? 'pass' : null
+      notes = half.bwcValue || ''
+    } else if (item.type === 'rsc') {
+      response = half.rscCondition ? 'pass' : null
+      notes = half.rscCondition || ''
+    } else if (item.type === 'rcr') {
+      response = half.rcrReported && half.rcrValue ? 'pass' : (half.rscCondition ? 'pass' : null)
+      notes = half.rcrReported && half.rcrValue ? `${half.rcrValue}${half.rcrConditionType ? ` (${half.rcrConditionType})` : ''}` : (half.rcrReported ? '' : 'N/A — RSC only')
+    } else {
+      response = half.responses[item.id] ?? 'pass'
+      const discs = half.discrepancies?.[item.id]
+      const firstDisc = discs?.[0]
+      notes = firstDisc?.comment || half.comments[item.id] || ''
+    }
     const discs = half.discrepancies?.[item.id]
     const firstDisc = discs?.[0]
     return {
       id: item.id,
       section: section?.title || '',
       item: item.item,
-      response: response as 'pass' | 'fail' | 'na' | null,
-      // Backward compat: notes = first discrepancy comment or legacy comment
-      notes: item.type === 'bwc' ? (half.bwcValue || '') : (firstDisc?.comment || half.comments[item.id] || ''),
+      response,
+      notes,
       photo_id: null,
       generated_discrepancy_id: null,
-      // Backward compat: location = first discrepancy location or legacy location
       location: firstDisc?.location || itemLocations?.[item.id] || null,
       discrepancies: discs && discs.length > 0 ? discs : undefined,
     }
@@ -140,11 +168,13 @@ export function halfDraftToItems(
 
   const passed = visItems.filter((i) => {
     if (i.type === 'bwc') return half.bwcValue !== null
+    if (i.type === 'rsc') return half.rscCondition !== null
+    if (i.type === 'rcr') return half.rcrReported ? half.rcrValue !== null : half.rscCondition !== null
     return (half.responses[i.id] ?? 'pass') === 'pass'
   }).length
   const failed = visItems.filter((i) => half.responses[i.id] === 'fail').length
   const na = visItems.filter((i) => {
-    if (i.type === 'bwc') return false
+    if (i.type === 'bwc' || i.type === 'rsc' || i.type === 'rcr') return false
     return half.responses[i.id] === 'na'
   }).length
 
