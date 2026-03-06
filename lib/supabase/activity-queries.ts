@@ -10,6 +10,8 @@ export type ActivityEntry = {
   created_at: string
   user_name: string
   user_rank: string | null
+  user_role: string | null
+  user_edipi: string | null
 }
 
 export async function fetchActivityLog(options: {
@@ -25,7 +27,7 @@ export async function fetchActivityLog(options: {
 
   let query = supabase
     .from('activity_log')
-    .select('id, action, entity_type, entity_id, entity_display_id, metadata, created_at, user_id, profiles:user_id(name, rank)')
+    .select('id, action, entity_type, entity_id, entity_display_id, metadata, created_at, user_id, profiles:user_id(name, rank, role, edipi)')
     .order('created_at', { ascending: false })
     .limit(limit)
 
@@ -55,6 +57,8 @@ export async function fetchActivityLog(options: {
           ...r,
           user_name: 'Unknown',
           user_rank: null,
+          user_role: null,
+          user_edipi: null,
           metadata: (r.metadata as Record<string, unknown>) || null,
         })) as ActivityEntry[],
         error: null,
@@ -70,6 +74,8 @@ export async function fetchActivityLog(options: {
         ...r,
         user_name: (r.profiles as { name?: string } | null)?.name || 'Unknown',
         user_rank: (r.profiles as { rank?: string } | null)?.rank || null,
+        user_role: (r.profiles as { role?: string } | null)?.role || null,
+        user_edipi: (r.profiles as { edipi?: string } | null)?.edipi || null,
         metadata: (r.metadata as Record<string, unknown>) || null,
       })) as ActivityEntry[],
       error: null,

@@ -14,6 +14,7 @@ export interface UserCardData {
   status: string
   last_seen_at: string | null
   primary_base_id: string | null
+  edipi: string | null
   created_at: string
   bases?: { name: string; icao: string } | null
 }

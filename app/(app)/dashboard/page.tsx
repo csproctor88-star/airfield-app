@@ -17,6 +17,19 @@ const QUICK_ACTIONS = [
   { label: 'New Discrepancy', icon: '🚨', color: 'var(--color-danger)', href: '/discrepancies/new' },
 ]
 
+function maskEdipi(edipi: string): string {
+  if (edipi.length <= 4) return '*'.repeat(edipi.length)
+  return '*'.repeat(edipi.length - 4) + edipi.slice(-4)
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Administrator',
+  airfield_manager: 'Airfield Manager',
+  inspector: 'Inspector',
+  viewer: 'Viewer',
+  operator: 'Operator',
+}
+
 // --- Activity action formatting ---
 function formatAction(action: string, entityType: string, displayId?: string): string {
   const typeLabel: Record<string, string> = {
@@ -63,6 +76,8 @@ type ActivityEntry = {
   created_at: string
   user_name: string
   user_rank: string | null
+  user_role: string | null
+  user_edipi: string | null
 }
 
 function getEntityLink(entityType: string, entityId: string | null): string | null {
@@ -90,6 +105,7 @@ export default function AMDashboardPage() {
   const [editTime, setEditTime] = useState('')
   const [saving, setSaving] = useState(false)
   const [showEditTemplatePicker, setShowEditTemplatePicker] = useState(false)
+  const [userPopover, setUserPopover] = useState<{ id: string; x: number; y: number; name: string; role: string | null; edipi: string | null } | null>(null)
 
   // --- Load Activity Feed ---
   const loadActivity = useCallback(async () => {
@@ -410,7 +426,13 @@ export default function AMDashboardPage() {
                     <td style={{ padding: '6px 8px', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                       {timeStr}
                     </td>
-                    <td style={{ padding: '6px 8px', fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    <td
+                      onClick={(e) => {
+                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                        setUserPopover({ id: a.id, x: rect.left, y: rect.bottom + 4, name: userName, role: a.user_role, edipi: a.user_edipi })
+                      }}
+                      style={{ padding: '6px 8px', fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }}
+                    >
                       {userName}
                     </td>
                     <td
@@ -446,6 +468,44 @@ export default function AMDashboardPage() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* User Info Popover */}
+      {userPopover && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 150 }}
+          onClick={() => setUserPopover(null)}
+        >
+          <div
+            style={{
+              position: 'fixed',
+              left: Math.min(userPopover.x, typeof window !== 'undefined' ? window.innerWidth - 240 : 400),
+              top: userPopover.y,
+              background: 'var(--color-bg-elevated)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 10,
+              padding: '12px 16px',
+              minWidth: 200,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+              zIndex: 151,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
+              {userPopover.name}
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 4 }}>
+              <span style={{ fontWeight: 600, color: 'var(--color-text-2)' }}>Role:</span>{' '}
+              {ROLE_LABELS[userPopover.role || ''] || userPopover.role || 'N/A'}
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
+              <span style={{ fontWeight: 600, color: 'var(--color-text-2)' }}>EDIPI:</span>{' '}
+              <span style={{ fontFamily: 'monospace', letterSpacing: '0.05em' }}>
+                {userPopover.edipi ? maskEdipi(userPopover.edipi) : 'Not on file'}
+              </span>
+            </div>
+          </div>
         </div>
       )}
 

@@ -57,6 +57,19 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
   }
 }
 
+function maskEdipi(edipi: string): string {
+  if (edipi.length <= 4) return '*'.repeat(edipi.length)
+  return '*'.repeat(edipi.length - 4) + edipi.slice(-4)
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Administrator',
+  airfield_manager: 'Airfield Manager',
+  inspector: 'Inspector',
+  viewer: 'Viewer',
+  operator: 'Operator',
+}
+
 // Known acronyms/abbreviations that should be uppercase
 const ACRONYMS = new Set([
   'fod', 'ife', 'rsc', 'rcr', 'bwc', 'bash', 'qrc', 'notam', 'notams',
@@ -151,6 +164,7 @@ export default function ActivityPage() {
   const [editTime, setEditTime] = useState('')
   const [saving, setSaving] = useState(false)
   const [showEditTemplatePicker, setShowEditTemplatePicker] = useState(false)
+  const [userPopover, setUserPopover] = useState<{ id: string; x: number; y: number; name: string; role: string | null; edipi: string | null } | null>(null)
   const [filterUser, setFilterUser] = useState('')
   const [filterAction, setFilterAction] = useState('')
   const [filterDetails, setFilterDetails] = useState('')
@@ -581,7 +595,13 @@ export default function ActivityPage() {
                           <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>
                             {timeStr}
                           </td>
-                          <td style={{ ...tdStyle, fontWeight: 600, color: 'var(--color-cyan)', whiteSpace: 'nowrap' }}>
+                          <td
+                            onClick={(e) => {
+                              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                              setUserPopover({ id: a.id, x: rect.left, y: rect.bottom + 4, name: userName, role: a.user_role, edipi: a.user_edipi })
+                            }}
+                            style={{ ...tdStyle, fontWeight: 600, color: 'var(--color-cyan)', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                          >
                             {userName}
                           </td>
                           <td
@@ -621,6 +641,44 @@ export default function ActivityPage() {
             </table>
           </div>
         </>
+      )}
+
+      {/* User Info Popover */}
+      {userPopover && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 150 }}
+          onClick={() => setUserPopover(null)}
+        >
+          <div
+            style={{
+              position: 'fixed',
+              left: Math.min(userPopover.x, window.innerWidth - 240),
+              top: userPopover.y,
+              background: 'var(--color-bg-elevated)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 10,
+              padding: '12px 16px',
+              minWidth: 200,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+              zIndex: 151,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
+              {userPopover.name}
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 4 }}>
+              <span style={{ fontWeight: 600, color: 'var(--color-text-2)' }}>Role:</span>{' '}
+              {ROLE_LABELS[userPopover.role || ''] || userPopover.role || 'N/A'}
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
+              <span style={{ fontWeight: 600, color: 'var(--color-text-2)' }}>EDIPI:</span>{' '}
+              <span style={{ fontFamily: 'monospace', letterSpacing: '0.05em' }}>
+                {userPopover.edipi ? maskEdipi(userPopover.edipi) : 'Not on file'}
+              </span>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Edit Entry Modal */}

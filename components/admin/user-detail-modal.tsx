@@ -37,6 +37,7 @@ export function UserDetailModal({
   const [rank, setRank] = useState(user.rank || '')
   const [firstName, setFirstName] = useState(user.first_name || '')
   const [lastName, setLastName] = useState(user.last_name || '')
+  const [edipi, setEdipi] = useState(user.edipi || '')
   const [role, setRole] = useState(user.role)
   const [baseId, setBaseId] = useState(user.primary_base_id || '')
   const [saving, setSaving] = useState(false)
@@ -86,6 +87,7 @@ export function UserDetailModal({
         rank,
         first_name: firstName,
         last_name: lastName,
+        edipi: edipi.trim() || null,
       }
       if (isSysAdmin) {
         updates.role = role
@@ -253,6 +255,21 @@ export function UserDetailModal({
                   : <Eye size={14} color="var(--color-text-3)" />}
               </button>
             </div>
+          </div>
+
+          {/* EDIPI */}
+          <div>
+            <span className="section-label">EDIPI</span>
+            <input
+              type="text"
+              className="input-dark"
+              value={edipi}
+              onChange={(e) => setEdipi(e.target.value.replace(/\D/g, '').slice(0, 10))}
+              placeholder="10-digit DoD ID number"
+              disabled={anyLoading}
+              maxLength={10}
+              style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'monospace' }}
+            />
           </div>
 
           {/* Role (sys admin only) */}
