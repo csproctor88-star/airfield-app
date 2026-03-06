@@ -11,7 +11,7 @@ import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
 import { logActivity } from '@/lib/supabase/activity'
 import { logRunwayStatusChange } from '@/lib/supabase/airfield-status'
-import { RSC_CONDITIONS, BWC_OPTIONS } from '@/lib/constants'
+import { RSC_CONDITIONS, BWC_OPTIONS, RCR_CONDITION_TYPES } from '@/lib/constants'
 import { fetchActivityLog } from '@/lib/supabase/activity-queries'
 import LoginActivityDialog from '@/components/login-activity-dialog'
 
@@ -126,7 +126,7 @@ type CurrentStatusData = {
 
 export default function HomePage() {
   const router = useRouter()
-  const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, setRscCondition, rcrTouchdown, rcrMidpoint, rcrRollout, rcrCondition, bwcValue, setBwcValue, refreshStatus } = useDashboard()
+  const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, setRscCondition, rcrValue, rcrCondition, bwcValue, setBwcValue, refreshStatus } = useDashboard()
   const { installationId, runways, arffAircraft } = useInstallation()
   const [weather, setWeather] = useState<WeatherResult | null>(null)
   const [weatherLoaded, setWeatherLoaded] = useState(false)
@@ -958,28 +958,15 @@ export default function HomePage() {
       })()}
       <div className="card" style={{ marginBottom: 12, padding: '14px 12px' }}>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 12 }}>
-          {rcrTouchdown ? (
-            /* RCR card — display-only, set from checks */
+          {rcrValue ? (
+            /* RWY RCR card — display-only, set from checks */
             <div
               style={{ flex: '0 1 200px', padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid rgba(34,211,238,0.25)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}
             >
-              <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-cyan)', fontWeight: 600, marginBottom: 6 }}>RCR</div>
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 4 }}>
-                <div>
-                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', fontWeight: 600 }}>TD</div>
-                  <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-accent)' }}>{rcrTouchdown}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', fontWeight: 600 }}>MID</div>
-                  <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-accent)' }}>{rcrMidpoint}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', fontWeight: 600 }}>RO</div>
-                  <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-accent)' }}>{rcrRollout}</div>
-                </div>
-              </div>
+              <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-cyan)', fontWeight: 600, marginBottom: 6 }}>RWY RCR</div>
+              <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-accent)' }}>{rcrValue}</div>
               {rcrCondition && (
-                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', fontWeight: 600 }}>{rcrCondition}</div>
+                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', fontWeight: 600, marginTop: 4 }}>{RCR_CONDITION_TYPES.find(c => c.value === rcrCondition)?.label || rcrCondition}</div>
               )}
             </div>
           ) : (

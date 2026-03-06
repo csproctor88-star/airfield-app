@@ -301,7 +301,7 @@ export const RCR_CONDITION_TYPES = [
   { value: 'IR', label: 'IR - Ice' },
   { value: 'SOR', label: 'Slush on Runway' },
   { value: 'DRY', label: 'Dry' },
-  { value: 'LOW', label: 'Low' },
+  { value: 'WET', label: 'Wet' },
 ] as const
 
 // === BASH Condition Codes ===

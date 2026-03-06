@@ -33,9 +33,7 @@ type DashboardState = {
   rscCondition: string | null
   rscUpdatedAt: string | null
   setRscCondition: (val: string | null) => Promise<void>
-  rcrTouchdown: string | null
-  rcrMidpoint: string | null
-  rcrRollout: string | null
+  rcrValue: string | null
   rcrCondition: string | null
   bwcValue: string | null
   bwcUpdatedAt: string | null
@@ -55,9 +53,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [arffStatuses, setArffStatusesLocal] = useState<Record<string, ArffReadiness>>({})
   const [rscCondition, setRscConditionLocal] = useState<string | null>(null)
   const [rscUpdatedAt, setRscUpdatedAtLocal] = useState<string | null>(null)
-  const [rcrTouchdown, setRcrTouchdownLocal] = useState<string | null>(null)
-  const [rcrMidpoint, setRcrMidpointLocal] = useState<string | null>(null)
-  const [rcrRollout, setRcrRolloutLocal] = useState<string | null>(null)
+  const [rcrValue, setRcrValueLocal] = useState<string | null>(null)
   const [rcrCondition, setRcrConditionLocal] = useState<string | null>(null)
   const [bwcValue, setBwcValueLocal] = useState<string | null>(null)
   const [bwcUpdatedAt, setBwcUpdatedAtLocal] = useState<string | null>(null)
@@ -102,9 +98,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         // RSC / RCR / BWC state
         setRscConditionLocal(status.rsc_condition ?? null)
         setRscUpdatedAtLocal(status.rsc_updated_at ?? null)
-        setRcrTouchdownLocal(status.rcr_touchdown ?? null)
-        setRcrMidpointLocal(status.rcr_midpoint ?? null)
-        setRcrRolloutLocal(status.rcr_rollout ?? null)
+        setRcrValueLocal(status.rcr_touchdown ?? null)
         setRcrConditionLocal(status.rcr_condition ?? null)
         setBwcValueLocal(status.bwc_value ?? null)
         setBwcUpdatedAtLocal(status.bwc_updated_at ?? null)
@@ -144,9 +138,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
           // RSC / RCR / BWC realtime
           setRscConditionLocal(row.rsc_condition ?? null)
           setRscUpdatedAtLocal(row.rsc_updated_at ?? null)
-          setRcrTouchdownLocal(row.rcr_touchdown ?? null)
-          setRcrMidpointLocal(row.rcr_midpoint ?? null)
-          setRcrRolloutLocal(row.rcr_rollout ?? null)
+          setRcrValueLocal(row.rcr_touchdown ?? null)
           setRcrConditionLocal(row.rcr_condition ?? null)
           setBwcValueLocal(row.bwc_value ?? null)
           setBwcUpdatedAtLocal(row.bwc_updated_at ?? null)
@@ -275,9 +267,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       }
       setRscConditionLocal(status.rsc_condition ?? null)
       setRscUpdatedAtLocal(status.rsc_updated_at ?? null)
-      setRcrTouchdownLocal(status.rcr_touchdown ?? null)
-      setRcrMidpointLocal(status.rcr_midpoint ?? null)
-      setRcrRolloutLocal(status.rcr_rollout ?? null)
+      setRcrValueLocal(status.rcr_touchdown ?? null)
       setRcrConditionLocal(status.rcr_condition ?? null)
       setBwcValueLocal(status.bwc_value ?? null)
       setBwcUpdatedAtLocal(status.bwc_updated_at ?? null)
@@ -304,7 +294,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         arffCat, setArffCat,
         arffStatuses, setArffStatusForAircraft,
         rscCondition, rscUpdatedAt, setRscCondition,
-        rcrTouchdown, rcrMidpoint, rcrRollout, rcrCondition,
+        rcrValue, rcrCondition,
         bwcValue, bwcUpdatedAt, setBwcValue,
         refreshStatus,
       }}

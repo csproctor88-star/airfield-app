@@ -86,9 +86,7 @@ export default function AirfieldChecksPage() {
     setRemarkText(saved.remarkText)
     setRscCondition(saved.rscCondition)
     setReportRcr(saved.reportRcr ?? false)
-    setRcrTouchdown(saved.rcrTouchdown ?? '')
-    setRcrMidpoint(saved.rcrMidpoint ?? '')
-    setRcrRollout(saved.rcrRollout ?? '')
+    setRcrValue((saved as any).rcrValue ?? (saved as any).rcrTouchdown ?? '')
     setRcrConditionType(saved.rcrConditionType)
     setBashCondition(saved.bashCondition)
     setBashSpecies(saved.bashSpecies)
@@ -262,9 +260,7 @@ export default function AirfieldChecksPage() {
   // Type-specific fields
   const [rscCondition, setRscCondition] = useState('')
   const [reportRcr, setReportRcr] = useState(false)
-  const [rcrTouchdown, setRcrTouchdown] = useState('')
-  const [rcrMidpoint, setRcrMidpoint] = useState('')
-  const [rcrRollout, setRcrRollout] = useState('')
+  const [rcrValue, setRcrValue] = useState('')
   const [rcrConditionType, setRcrConditionType] = useState('')
   const [bashCondition, setBashCondition] = useState('')
   const [bashSpecies, setBashSpecies] = useState('')
@@ -284,7 +280,7 @@ export default function AirfieldChecksPage() {
     setDraftSaving(true)
     const draft: CheckDraft = {
       checkType, areas, issueFound, issues, remarks, remarkText,
-      rscCondition, reportRcr, rcrTouchdown, rcrMidpoint, rcrRollout, rcrConditionType, bashCondition, bashSpecies,
+      rscCondition, reportRcr, rcrValue, rcrConditionType, bashCondition, bashSpecies,
       aircraftType, callsign, emergencyNature, checkedActions, notifiedAgencies,
       heavyAircraftType, savedAt: '', dbRowId: draftDbRowId,
     }
@@ -356,9 +352,7 @@ export default function AirfieldChecksPage() {
         const rscData: Record<string, unknown> = { ...base, condition: rscCondition }
         if (reportRcr) {
           rscData.rcr_reported = true
-          rscData.rcr_touchdown = rcrTouchdown
-          rscData.rcr_midpoint = rcrMidpoint
-          rscData.rcr_rollout = rcrRollout
+          rscData.rcr_value = rcrValue
           rscData.rcr_condition = rcrConditionType
         }
         return rscData
@@ -474,9 +468,7 @@ export default function AirfieldChecksPage() {
   const resetTypeFields = () => {
     setRscCondition('')
     setReportRcr(false)
-    setRcrTouchdown('')
-    setRcrMidpoint('')
-    setRcrRollout('')
+    setRcrValue('')
     setRcrConditionType('')
     setBashCondition('')
     setBashSpecies('')
@@ -649,40 +641,16 @@ export default function AirfieldChecksPage() {
               {/* RCR inputs (shown when toggle is on) */}
               {reportRcr && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '10px 12px', borderRadius: 8, background: 'rgba(34,211,238,0.04)', border: '1px solid rgba(34,211,238,0.12)' }}>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Touchdown</div>
-                      <input
-                        className="input-dark"
-                        type="number"
-                        placeholder="TD"
-                        value={rcrTouchdown}
-                        onChange={(e) => setRcrTouchdown(e.target.value)}
-                        style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, fontFamily: 'monospace', textAlign: 'center' }}
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Mid Point</div>
-                      <input
-                        className="input-dark"
-                        type="number"
-                        placeholder="MID"
-                        value={rcrMidpoint}
-                        onChange={(e) => setRcrMidpoint(e.target.value)}
-                        style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, fontFamily: 'monospace', textAlign: 'center' }}
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Rollout</div>
-                      <input
-                        className="input-dark"
-                        type="number"
-                        placeholder="RO"
-                        value={rcrRollout}
-                        onChange={(e) => setRcrRollout(e.target.value)}
-                        style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, fontFamily: 'monospace', textAlign: 'center' }}
-                      />
-                    </div>
+                  <div>
+                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>RWY RCR</div>
+                    <input
+                      className="input-dark"
+                      type="number"
+                      placeholder="RCR value"
+                      value={rcrValue}
+                      onChange={(e) => setRcrValue(e.target.value)}
+                      style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, fontFamily: 'monospace', textAlign: 'center' }}
+                    />
                   </div>
                   <div>
                     <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Condition</div>

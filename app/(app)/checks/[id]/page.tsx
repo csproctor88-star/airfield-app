@@ -284,21 +284,8 @@ export default function CheckDetailPage() {
             />
             {!!data.rcr_reported && (
               <div style={{ marginTop: 10 }}>
-                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Runway Condition Reading (RCR)</div>
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', fontWeight: 600 }}>TD</div>
-                    <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 800, fontFamily: 'monospace', color: 'var(--color-cyan)' }}>{(data.rcr_touchdown as string) || '—'}</div>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', fontWeight: 600 }}>MID</div>
-                    <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 800, fontFamily: 'monospace', color: 'var(--color-cyan)' }}>{(data.rcr_midpoint as string) || '—'}</div>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', fontWeight: 600 }}>RO</div>
-                    <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 800, fontFamily: 'monospace', color: 'var(--color-cyan)' }}>{(data.rcr_rollout as string) || '—'}</div>
-                  </div>
-                </div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>RWY RCR</div>
+                <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 800, fontFamily: 'monospace', color: 'var(--color-cyan)' }}>{(data.rcr_value as string) || '—'}</div>
                 {!!data.rcr_condition && (
                   <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', fontWeight: 600, marginTop: 4 }}>{data.rcr_condition as string}</div>
                 )}

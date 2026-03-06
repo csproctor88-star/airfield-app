@@ -19,9 +19,7 @@ export interface CheckDraft {
   // Type-specific fields
   rscCondition: string
   reportRcr: boolean
-  rcrTouchdown: string
-  rcrMidpoint: string
-  rcrRollout: string
+  rcrValue: string
   rcrConditionType: string
   bashCondition: string
   bashSpecies: string
@@ -45,9 +43,7 @@ export function createEmptyCheckDraft(): CheckDraft {
     remarkText: '',
     rscCondition: '',
     reportRcr: false,
-    rcrTouchdown: '',
-    rcrMidpoint: '',
-    rcrRollout: '',
+    rcrValue: '',
     rcrConditionType: '',
     bashCondition: '',
     bashSpecies: '',
