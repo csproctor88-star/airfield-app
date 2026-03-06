@@ -126,7 +126,7 @@ type CurrentStatusData = {
 
 export default function HomePage() {
   const router = useRouter()
-  const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, rscUpdatedAt, setRscCondition, bwcValue, bwcUpdatedAt, setBwcValue, refreshStatus } = useDashboard()
+  const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, setRscCondition, rcrTouchdown, rcrMidpoint, rcrRollout, rcrCondition, bwcValue, setBwcValue, refreshStatus } = useDashboard()
   const { installationId, runways, arffAircraft } = useInstallation()
   const [weather, setWeather] = useState<WeatherResult | null>(null)
   const [weatherLoaded, setWeatherLoaded] = useState(false)
@@ -136,8 +136,6 @@ export default function HomePage() {
   const [currentStatus, setCurrentStatus] = useState<CurrentStatusData>({
     lastCheckType: null, lastCheckTime: null, inspectionCompletion: null,
   })
-  const [showRscTime, setShowRscTime] = useState(false)
-  const [showBwcTime, setShowBwcTime] = useState(false)
   // RSC dialog state
   const [rscDialogOpen, setRscDialogOpen] = useState(false)
   const [rscDraftValue, setRscDraftValue] = useState<string | null>(null)
@@ -960,21 +958,43 @@ export default function HomePage() {
       })()}
       <div className="card" style={{ marginBottom: 12, padding: '14px 12px' }}>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 12 }}>
-          <div
-            title={rscUpdatedAt ? `Updated: ${new Date(rscUpdatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : undefined}
-            onClick={() => { setRscDraftValue(rscCondition); setRscDraftNotes(''); setRscDialogOpen(true) }}
-            style={{ flex: '0 1 200px', padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textAlign: 'center' }}
-          >
-            <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6 }}>RSC</div>
-            <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: 'var(--color-accent)' }}>
-              {rscCondition || 'No Data'}
+          {rcrTouchdown ? (
+            /* RCR card — display-only, set from checks */
+            <div
+              style={{ flex: '0 1 200px', padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid rgba(34,211,238,0.25)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}
+            >
+              <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-cyan)', fontWeight: 600, marginBottom: 6 }}>RCR</div>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 4 }}>
+                <div>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', fontWeight: 600 }}>TD</div>
+                  <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-accent)' }}>{rcrTouchdown}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', fontWeight: 600 }}>MID</div>
+                  <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-accent)' }}>{rcrMidpoint}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', fontWeight: 600 }}>RO</div>
+                  <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-accent)' }}>{rcrRollout}</div>
+                </div>
+              </div>
+              {rcrCondition && (
+                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', fontWeight: 600 }}>{rcrCondition}</div>
+              )}
             </div>
-            {rscUpdatedAt && (
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>@ {new Date(rscUpdatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-            )}
-          </div>
+          ) : (
+            /* Standard RSC card — clickable */
+            <div
+              onClick={() => { setRscDraftValue(rscCondition); setRscDraftNotes(''); setRscDialogOpen(true) }}
+              style={{ flex: '0 1 200px', padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textAlign: 'center' }}
+            >
+              <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6 }}>RSC</div>
+              <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: 'var(--color-accent)' }}>
+                {rscCondition || 'No Data'}
+              </div>
+            </div>
+          )}
           <div
-            title={bwcUpdatedAt ? `Updated: ${new Date(bwcUpdatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : undefined}
             onClick={() => { setBwcDraftValue(bwcValue); setBwcDraftNotes(''); setBwcDialogOpen(true) }}
             style={{ flex: '0 1 200px', padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textAlign: 'center' }}
           >
@@ -982,9 +1002,6 @@ export default function HomePage() {
             <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: bwcValue === 'SEV' || bwcValue === 'PROHIB' ? 'var(--color-danger)' : bwcValue === 'MOD' ? 'var(--color-warning)' : 'var(--color-success)' }}>
               {bwcValue || 'No Data'}
             </div>
-            {bwcUpdatedAt && (
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>@ {new Date(bwcUpdatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-            )}
           </div>
         </div>
       </div>

@@ -144,7 +144,7 @@ export default function CheckHistoryPage() {
         // Build a summary line based on check type
         let summary = ''
         if (check.check_type === 'rcr' && data.rcr_value) summary = `RCR: ${data.rcr_value} — ${data.condition_type || 'N/A'}`
-        else if (check.check_type === 'rsc' && data.condition) summary = `Condition: ${data.condition}`
+        else if (check.check_type === 'rsc' && data.condition) summary = data.rcr_reported ? `${data.condition} | RCR: TD ${data.rcr_touchdown} / MID ${data.rcr_midpoint} / RO ${data.rcr_rollout}` : `Condition: ${data.condition}`
         else if (check.check_type === 'bash' && data.condition_code) summary = `${data.condition_code}${data.species_observed ? ` — ${(data.species_observed as string).slice(0, 50)}` : ''}`
         else if ((check.check_type === 'ife' || check.check_type === 'ground_emergency') && data.nature) summary = `${data.aircraft_type || ''} ${data.callsign || ''} — ${data.nature}`.trim()
         else if (check.check_type === 'heavy_aircraft' && data.aircraft_type) summary = data.aircraft_type as string

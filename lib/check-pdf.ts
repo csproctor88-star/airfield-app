@@ -120,7 +120,12 @@ export async function generateCheckPdf(input: CheckPdfInput) {
 
     case 'rsc':
       doc.text(`Runway Surface Condition: ${(data.condition as string) || 'N/A'}`, margin, y)
-      y += 6
+      y += 5
+      if (data.rcr_reported) {
+        doc.text(`RCR: TD ${data.rcr_touchdown || '—'} / MID ${data.rcr_midpoint || '—'} / RO ${data.rcr_rollout || '—'}${data.rcr_condition ? ` — ${data.rcr_condition}` : ''}`, margin, y)
+        y += 5
+      }
+      y += 1
       break
 
     case 'rcr':

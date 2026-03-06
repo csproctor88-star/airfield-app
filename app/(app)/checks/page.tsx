@@ -85,7 +85,10 @@ export default function AirfieldChecksPage() {
     setRemarks(saved.remarks)
     setRemarkText(saved.remarkText)
     setRscCondition(saved.rscCondition)
-    setRcrValue(saved.rcrValue)
+    setReportRcr(saved.reportRcr ?? false)
+    setRcrTouchdown(saved.rcrTouchdown ?? '')
+    setRcrMidpoint(saved.rcrMidpoint ?? '')
+    setRcrRollout(saved.rcrRollout ?? '')
     setRcrConditionType(saved.rcrConditionType)
     setBashCondition(saved.bashCondition)
     setBashSpecies(saved.bashSpecies)
@@ -258,7 +261,10 @@ export default function AirfieldChecksPage() {
 
   // Type-specific fields
   const [rscCondition, setRscCondition] = useState('')
-  const [rcrValue, setRcrValue] = useState('')
+  const [reportRcr, setReportRcr] = useState(false)
+  const [rcrTouchdown, setRcrTouchdown] = useState('')
+  const [rcrMidpoint, setRcrMidpoint] = useState('')
+  const [rcrRollout, setRcrRollout] = useState('')
   const [rcrConditionType, setRcrConditionType] = useState('')
   const [bashCondition, setBashCondition] = useState('')
   const [bashSpecies, setBashSpecies] = useState('')
@@ -278,7 +284,7 @@ export default function AirfieldChecksPage() {
     setDraftSaving(true)
     const draft: CheckDraft = {
       checkType, areas, issueFound, issues, remarks, remarkText,
-      rscCondition, rcrValue, rcrConditionType, bashCondition, bashSpecies,
+      rscCondition, reportRcr, rcrTouchdown, rcrMidpoint, rcrRollout, rcrConditionType, bashCondition, bashSpecies,
       aircraftType, callsign, emergencyNature, checkedActions, notifiedAgencies,
       heavyAircraftType, savedAt: '', dbRowId: draftDbRowId,
     }
@@ -346,10 +352,17 @@ export default function AirfieldChecksPage() {
       }))
     }
     switch (checkType) {
-      case 'rsc':
-        return { ...base, condition: rscCondition }
-      case 'rcr':
-        return { ...base, rcr_value: rcrValue, condition_type: rcrConditionType }
+      case 'rsc': {
+        const rscData: Record<string, unknown> = { ...base, condition: rscCondition }
+        if (reportRcr) {
+          rscData.rcr_reported = true
+          rscData.rcr_touchdown = rcrTouchdown
+          rscData.rcr_midpoint = rcrMidpoint
+          rscData.rcr_rollout = rcrRollout
+          rscData.rcr_condition = rcrConditionType
+        }
+        return rscData
+      }
       case 'bash':
         return { ...base, condition_code: bashCondition, species_observed: bashSpecies }
       case 'ife':
@@ -460,7 +473,10 @@ export default function AirfieldChecksPage() {
 
   const resetTypeFields = () => {
     setRscCondition('')
-    setRcrValue('')
+    setReportRcr(false)
+    setRcrTouchdown('')
+    setRcrMidpoint('')
+    setRcrRollout('')
     setRcrConditionType('')
     setBashCondition('')
     setBashSpecies('')
@@ -479,7 +495,7 @@ export default function AirfieldChecksPage() {
     setIssueFlyTo([])
   }
 
-  const typeConfig = checkType ? CHECK_TYPE_CONFIG[checkType] : null
+  const typeConfig = checkType ? CHECK_TYPE_CONFIG[checkType as keyof typeof CHECK_TYPE_CONFIG] ?? null : null
 
   return (
     <div className="page-container">
@@ -575,64 +591,114 @@ export default function AirfieldChecksPage() {
             {typeConfig?.label} Details
           </div>
 
-          {/* RSC */}
+          {/* RSC / RCR */}
           {checkType === 'rsc' && (
-            <div>
-              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 4 }}>Runway Surface Condition</div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {RSC_CONDITIONS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setRscCondition(c)}
-                    style={{
-                      flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-lg)', fontWeight: 700,
-                      cursor: 'pointer', fontFamily: 'inherit',
-                      border: rscCondition === c
-                        ? `1.5px solid ${c === 'Dry' ? 'var(--color-success)' : 'var(--color-accent)'}`
-                        : '1.5px solid var(--color-border-mid)',
-                      background: rscCondition === c
-                        ? c === 'Dry' ? 'rgba(34,197,94,0.13)' : 'rgba(59,130,246,0.13)'
-                        : 'var(--color-bg-elevated)',
-                      color: rscCondition === c
-                        ? c === 'Dry' ? 'var(--color-success)' : 'var(--color-accent)'
-                        : 'var(--color-text-3)',
-                    }}
-                  >
-                    {c === 'Dry' ? '☀️' : '💧'} {c}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* RCR */}
-          {checkType === 'rcr' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 4 }}>RCR Value</div>
-                <input
-                  className="input-dark"
-                  type="number"
-                  placeholder="e.g., 23"
-                  value={rcrValue}
-                  onChange={(e) => setRcrValue(e.target.value)}
-                  style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, fontFamily: 'monospace', textAlign: 'center' }}
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 4 }}>Condition Type</div>
-                <select
-                  className="input-dark"
-                  value={rcrConditionType}
-                  onChange={(e) => setRcrConditionType(e.target.value)}
-                >
-                  <option value="">Select condition...</option>
-                  {RCR_CONDITION_TYPES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 4 }}>Runway Surface Condition</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {RSC_CONDITIONS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setRscCondition(c)}
+                      style={{
+                        flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-lg)', fontWeight: 700,
+                        cursor: 'pointer', fontFamily: 'inherit',
+                        border: rscCondition === c
+                          ? `1.5px solid ${c === 'Dry' ? 'var(--color-success)' : 'var(--color-accent)'}`
+                          : '1.5px solid var(--color-border-mid)',
+                        background: rscCondition === c
+                          ? c === 'Dry' ? 'rgba(34,197,94,0.13)' : 'rgba(59,130,246,0.13)'
+                          : 'var(--color-bg-elevated)',
+                        color: rscCondition === c
+                          ? c === 'Dry' ? 'var(--color-success)' : 'var(--color-accent)'
+                          : 'var(--color-text-3)',
+                      }}
+                    >
+                      {c === 'Dry' ? '☀️' : '💧'} {c}
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
+
+              {/* Report RCR toggle */}
+              <div
+                onClick={() => setReportRcr(!reportRcr)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                  borderRadius: 8, cursor: 'pointer',
+                  background: reportRcr ? 'rgba(34,211,238,0.08)' : 'var(--color-bg-elevated)',
+                  border: reportRcr ? '1.5px solid var(--color-cyan)' : '1.5px solid var(--color-border-mid)',
+                }}
+              >
+                <div style={{
+                  width: 20, height: 20, borderRadius: 4,
+                  border: reportRcr ? '2px solid var(--color-cyan)' : '2px solid var(--color-text-4)',
+                  background: reportRcr ? 'var(--color-cyan)' : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 14, color: 'var(--color-bg-surface-solid)', fontWeight: 700,
+                }}>
+                  {reportRcr && '✓'}
+                </div>
+                <span style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: reportRcr ? 'var(--color-cyan)' : 'var(--color-text-2)' }}>
+                  Report RCR
+                </span>
+              </div>
+
+              {/* RCR inputs (shown when toggle is on) */}
+              {reportRcr && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '10px 12px', borderRadius: 8, background: 'rgba(34,211,238,0.04)', border: '1px solid rgba(34,211,238,0.12)' }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Touchdown</div>
+                      <input
+                        className="input-dark"
+                        type="number"
+                        placeholder="TD"
+                        value={rcrTouchdown}
+                        onChange={(e) => setRcrTouchdown(e.target.value)}
+                        style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, fontFamily: 'monospace', textAlign: 'center' }}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Mid Point</div>
+                      <input
+                        className="input-dark"
+                        type="number"
+                        placeholder="MID"
+                        value={rcrMidpoint}
+                        onChange={(e) => setRcrMidpoint(e.target.value)}
+                        style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, fontFamily: 'monospace', textAlign: 'center' }}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Rollout</div>
+                      <input
+                        className="input-dark"
+                        type="number"
+                        placeholder="RO"
+                        value={rcrRollout}
+                        onChange={(e) => setRcrRollout(e.target.value)}
+                        style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, fontFamily: 'monospace', textAlign: 'center' }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Condition</div>
+                    <select
+                      className="input-dark"
+                      value={rcrConditionType}
+                      onChange={(e) => setRcrConditionType(e.target.value)}
+                    >
+                      <option value="">Select condition...</option>
+                      {RCR_CONDITION_TYPES.map((c) => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

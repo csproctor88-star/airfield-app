@@ -282,8 +282,7 @@ export const LIGHTING_INSPECTION_SECTIONS: InspectionSection[] = [
 
 export const CHECK_TYPE_CONFIG = {
   fod:              { label: 'FOD Check', color: '#EAB308', icon: '🔍' },
-  rsc:              { label: 'RSC Check', color: '#3B82F6', icon: '🌧️' },
-  rcr:              { label: 'RCR Check', color: '#22D3EE', icon: '📊' },
+  rsc:              { label: 'RSC/RCR Check', color: '#3B82F6', icon: '🌧️' },
   ife:              { label: 'In-Flight Emergency', color: '#EF4444', icon: '🚨' },
   ground_emergency: { label: 'Ground Emergency', color: '#F97316', icon: '🚒' },
   heavy_aircraft:   { label: 'Heavy Aircraft Check', color: '#8B5CF6', icon: '✈️' },
@@ -297,8 +296,12 @@ export const RSC_CONDITIONS = ['Dry', 'Wet'] as const
 // === RCR Condition Types ===
 
 export const RCR_CONDITION_TYPES = [
-  'Dry', 'Wet', 'Slush', 'Ice', 'Patchy Ice', 'Snow',
-  'Patchy Snow', 'Frost', 'Standing Water', 'Flooded',
+  { value: 'PSR', label: 'PSR - Packed Snow' },
+  { value: 'LSR', label: 'LSR - Loose Snow' },
+  { value: 'IR', label: 'IR - Ice' },
+  { value: 'SOR', label: 'Slush on Runway' },
+  { value: 'DRY', label: 'Dry' },
+  { value: 'LOW', label: 'Low' },
 ] as const
 
 // === BASH Condition Codes ===

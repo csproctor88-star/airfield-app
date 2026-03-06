@@ -19,6 +19,11 @@ export interface AirfieldStatus {
   arff_statuses: Record<string, string>
   rsc_condition: string | null
   rsc_updated_at: string | null
+  rcr_touchdown: string | null
+  rcr_midpoint: string | null
+  rcr_rollout: string | null
+  rcr_condition: string | null
+  rcr_updated_at: string | null
   bwc_value: string | null
   bwc_updated_at: string | null
   updated_by: string | null
@@ -66,7 +71,7 @@ export async function fetchAirfieldStatus(baseId?: string | null): Promise<Airfi
 }
 
 export async function updateAirfieldStatus(
-  updates: Partial<Pick<AirfieldStatus, 'advisory_type' | 'advisory_text' | 'active_runway' | 'runway_status' | 'runway_statuses' | 'arff_cat' | 'arff_statuses' | 'rsc_condition' | 'rsc_updated_at' | 'bwc_value' | 'bwc_updated_at'>>,
+  updates: Partial<Pick<AirfieldStatus, 'advisory_type' | 'advisory_text' | 'active_runway' | 'runway_status' | 'runway_statuses' | 'arff_cat' | 'arff_statuses' | 'rsc_condition' | 'rsc_updated_at' | 'rcr_touchdown' | 'rcr_midpoint' | 'rcr_rollout' | 'rcr_condition' | 'rcr_updated_at' | 'bwc_value' | 'bwc_updated_at'>>,
   baseId?: string | null,
 ): Promise<boolean> {
   const supabase = createClient()

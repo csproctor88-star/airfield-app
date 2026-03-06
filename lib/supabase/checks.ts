@@ -114,7 +114,29 @@ export async function createCheck(input: {
   if (input.check_type === 'rsc') {
     const condition = (input.data.condition as string) || (input.data.runway_condition as string) || null
     if (condition) {
-      await updateAirfieldStatus({ rsc_condition: condition, rsc_updated_at: nowIso }, input.base_id)
+      if (input.data.rcr_reported) {
+        // RSC + RCR: write both RSC condition and RCR values
+        await updateAirfieldStatus({
+          rsc_condition: condition,
+          rsc_updated_at: nowIso,
+          rcr_touchdown: (input.data.rcr_touchdown as string) || null,
+          rcr_midpoint: (input.data.rcr_midpoint as string) || null,
+          rcr_rollout: (input.data.rcr_rollout as string) || null,
+          rcr_condition: (input.data.rcr_condition as string) || null,
+          rcr_updated_at: nowIso,
+        }, input.base_id)
+      } else {
+        // RSC only: clear RCR columns so dashboard reverts to RSC display
+        await updateAirfieldStatus({
+          rsc_condition: condition,
+          rsc_updated_at: nowIso,
+          rcr_touchdown: null,
+          rcr_midpoint: null,
+          rcr_rollout: null,
+          rcr_condition: null,
+          rcr_updated_at: null,
+        }, input.base_id)
+      }
     }
   } else if (input.check_type === 'bash') {
     const conditionRaw = (input.data.condition_code as string) || null

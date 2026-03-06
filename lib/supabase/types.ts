@@ -578,6 +578,11 @@ export type Database = {
           arff_statuses: Record<string, string>
           rsc_condition: string | null
           rsc_updated_at: string | null
+          rcr_touchdown: string | null
+          rcr_midpoint: string | null
+          rcr_rollout: string | null
+          rcr_condition: string | null
+          rcr_updated_at: string | null
           bwc_value: string | null
           bwc_updated_at: string | null
           updated_by: string | null
