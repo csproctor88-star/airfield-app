@@ -40,7 +40,7 @@ export async function logManualEntry(text: string, baseId?: string | null): Prom
     entity_type: 'manual',
     entity_id: crypto.randomUUID(),
     entity_display_id: null,
-    metadata: { notes: text },
+    metadata: { details: text },
   }
   if (baseId) row.base_id = baseId
 
