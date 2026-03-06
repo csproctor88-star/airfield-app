@@ -45,7 +45,7 @@ const mainItems = [
 
 // "AM Tools" dropdown items
 const opsItems = [
-  { name: 'Activity Log', icon: Activity, href: '/activity' },
+  { name: 'Events Log', icon: Activity, href: '/activity' },
   { name: 'Airfield Checks', icon: ClipboardCheck, href: '/checks' },
   { name: 'All Inspections', icon: ClipboardList, href: '/inspections/all' },
   { name: 'Personnel on Airfield', icon: HardHat, href: '/contractors' },

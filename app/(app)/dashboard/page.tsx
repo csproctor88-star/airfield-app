@@ -199,7 +199,7 @@ export default function AMDashboardPage() {
       toast.success('Entry deleted (demo mode)')
       return
     }
-    if (!confirm('Delete this activity log entry? This cannot be undone.')) return
+    if (!confirm('Delete this events log entry? This cannot be undone.')) return
     const { error } = await deleteActivityEntry(a.id)
     if (error) {
       toast.error(error)
@@ -355,7 +355,7 @@ export default function AMDashboardPage() {
           onClick={() => router.push('/activity')}
           style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
         >
-          View All History →
+          View Entire Events Log →
         </button>
       </div>
       {activity.length === 0 ? (

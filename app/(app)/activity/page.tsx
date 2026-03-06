@@ -284,7 +284,7 @@ export default function ActivityPage() {
       toast.success('Entry deleted (demo mode)')
       return
     }
-    if (!confirm('Delete this activity log entry? This cannot be undone.')) return
+    if (!confirm('Delete this events log entry? This cannot be undone.')) return
     const { error } = await deleteActivityEntry(a.id)
     if (error) {
       toast.error(error)
@@ -319,11 +319,11 @@ export default function ActivityPage() {
         }
       })
       const wb = await createStyledWorkbook()
-      addStyledSheet(wb, 'Activity Log', columns, rows)
+      addStyledSheet(wb, 'Events Log', columns, rows)
       const { start, end } = getDateRange()
       const startLabel = start.split('T')[0]
       const endLabel = end.split('T')[0]
-      await saveWorkbook(wb, `Activity_Log_${startLabel}_to_${endLabel}.xlsx`)
+      await saveWorkbook(wb, `Events_Log_${startLabel}_to_${endLabel}.xlsx`)
     } catch (e) {
       console.error('Export failed:', e)
     }
@@ -377,7 +377,7 @@ export default function ActivityPage() {
         </button>
       </div>
 
-      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 12 }}>Activity Log</div>
+      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 12 }}>Events Log</div>
 
       {/* Manual Entry Section */}
       <div className="card" style={{ marginBottom: 16, padding: '14px', border: '1px solid rgba(34,211,238,0.2)', background: 'rgba(34,211,238,0.04)' }}>
