@@ -2,6 +2,7 @@ import { Header } from '@/components/layout/header'
 
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { SidebarNav } from '@/components/layout/sidebar-nav'
+import { ScrollToTop } from '@/components/scroll-to-top'
 import { DashboardProvider } from '@/lib/dashboard-context'
 import { InstallationProvider } from '@/lib/installation-context'
 import { SidebarProvider } from '@/lib/sidebar-context'
@@ -26,6 +27,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="app-main">
             <Header />
 
+            <ScrollToTop />
             <DashboardProvider>
               <main className="app-content">
                 {children}

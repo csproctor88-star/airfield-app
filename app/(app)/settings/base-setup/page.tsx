@@ -60,7 +60,7 @@ export default function BaseSetupPage() {
           return (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => { setActiveTab(tab.key); window.scrollTo(0, 0) }}
               style={{
                 padding: '8px 16px',
                 borderRadius: 8,
@@ -447,12 +447,14 @@ function NavaidTab({ installationId }: { installationId: string | null }) {
 
   const loadNavaids = useCallback(async () => {
     if (!installationId) return
+    const scrollY = window.scrollY
     setLoading(true)
     const navaidData = await fetchInstallationNavaids(installationId)
     setNavaids(navaidData)
     const statusData = await fetchNavaidStatuses(installationId)
     setStatuses(statusData)
     setLoading(false)
+    requestAnimationFrame(() => window.scrollTo(0, scrollY))
   }, [installationId])
 
   useEffect(() => { loadNavaids() }, [loadNavaids])

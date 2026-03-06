@@ -1174,7 +1174,7 @@ export default function InspectionsPage() {
             return (
               <button
                 key={type}
-                onClick={() => setActiveTab(type)}
+                onClick={() => { setActiveTab(type); window.scrollTo(0, 0) }}
                 style={{
                   flex: wide ? '1.3 0 0%' : '1 0 0%',
                   minWidth: 0,

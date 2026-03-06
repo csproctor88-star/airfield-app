@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
@@ -38,17 +38,26 @@ export default function TemplateManagementPage() {
 
   const canEdit = userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo'
 
+  const isInitialLoad = useRef(true)
+
   const loadTemplate = useCallback(async () => {
     if (!installationId) return
+    const scrollY = window.scrollY
     setLoading(true)
     const data = await fetchInspectionTemplate(installationId, activeType)
     setSections(data)
-    // Auto-expand all sections on load
-    setExpandedSections(new Set(data.map(s => s.id)))
+    // Auto-expand all sections only on initial load
+    if (isInitialLoad.current) {
+      setExpandedSections(new Set(data.map(s => s.id)))
+      isInitialLoad.current = false
+    }
     setLoading(false)
+    // Restore scroll position after re-render (prevents jump to top on edits)
+    requestAnimationFrame(() => window.scrollTo(0, scrollY))
   }, [installationId, activeType])
 
   useEffect(() => {
+    isInitialLoad.current = true
     loadTemplate()
   }, [loadTemplate])
 
