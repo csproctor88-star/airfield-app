@@ -89,6 +89,7 @@ export default function AMDashboardPage() {
   const [editDate, setEditDate] = useState('')
   const [editTime, setEditTime] = useState('')
   const [saving, setSaving] = useState(false)
+  const [showEditTemplatePicker, setShowEditTemplatePicker] = useState(false)
 
   // --- Load Activity Feed ---
   const loadActivity = useCallback(async () => {
@@ -506,7 +507,15 @@ export default function AMDashboardPage() {
 
             {/* Details */}
             <div style={{ marginBottom: 16 }}>
-              <span className="section-label">Details</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span className="section-label" style={{ marginBottom: 0 }}>Details</span>
+                <button
+                  onClick={() => setShowEditTemplatePicker(true)}
+                  style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+                >
+                  Use Template
+                </button>
+              </div>
               <textarea
                 className="input-dark"
                 rows={4}
@@ -562,6 +571,17 @@ export default function AMDashboardPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Edit Template Picker — populates editText instead of submitting */}
+      {showEditTemplatePicker && (
+        <TemplatePicker
+          onSubmit={async (text) => {
+            setEditText(text)
+            setShowEditTemplatePicker(false)
+          }}
+          onClose={() => setShowEditTemplatePicker(false)}
+        />
       )}
     </div>
   )
