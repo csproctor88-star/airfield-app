@@ -711,6 +711,7 @@ export default function InspectionsPage() {
     // Auto-switch to lighting tab after completing airfield (only if lighting not started)
     if (targetTab === 'airfield' && !draft.lighting.savedAt) {
       setActiveTab('lighting')
+      window.scrollTo(0, 0)
     }
   }
 
