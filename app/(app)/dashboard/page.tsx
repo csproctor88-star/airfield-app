@@ -1145,13 +1145,21 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
 // ===== QRC Dialog =====
 
 function QrcDialog({ installationId, onClose, onActivity }: { installationId: string | null; onClose: () => void; onActivity: () => Promise<void> }) {
-  const [templates, setTemplates] = useState<import('@/lib/supabase/types').QrcTemplate[]>([])
-  const [openExecs, setOpenExecs] = useState<import('@/lib/supabase/types').QrcExecution[]>([])
+  type QrcStep = import('@/lib/supabase/types').QrcStep
+  type QrcStepResponse = import('@/lib/supabase/types').QrcStepResponse
+  type QrcTemplate = import('@/lib/supabase/types').QrcTemplate
+  type QrcExecution = import('@/lib/supabase/types').QrcExecution
+
+  const [templates, setTemplates] = useState<QrcTemplate[]>([])
+  const [openExecs, setOpenExecs] = useState<QrcExecution[]>([])
   const [loaded, setLoaded] = useState(false)
   const [starting, setStarting] = useState<string | null>(null)
   const [activeExecId, setActiveExecId] = useState<string | null>(null)
-  const [responses, setResponses] = useState<Record<string, import('@/lib/supabase/types').QrcStepResponse>>({})
+  const [responses, setResponses] = useState<Record<string, QrcStepResponse>>({})
+  const [scnData, setScnDataLocal] = useState<Record<string, unknown>>({})
   const [closing, setClosing] = useState(false)
+  const [closeInitials, setCloseInitials] = useState('')
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
 
   const load = useCallback(async () => {
     const { fetchQrcTemplates, fetchOpenExecutions } = await import('@/lib/supabase/qrc')
@@ -1161,28 +1169,28 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
     ])
     setTemplates(t)
     setOpenExecs(o)
-    // Auto-select first open execution
     if (o.length > 0 && !activeExecId) setActiveExecId(o[0].id)
     setLoaded(true)
   }, [installationId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load() }, [load])
 
-  // Sync responses when execution changes
+  // Sync responses/scn when execution changes
   useEffect(() => {
     const exec = openExecs.find(e => e.id === activeExecId)
-    if (exec) setResponses((exec.step_responses || {}) as Record<string, import('@/lib/supabase/types').QrcStepResponse>)
+    if (exec) {
+      setResponses((exec.step_responses || {}) as Record<string, QrcStepResponse>)
+      setScnDataLocal((exec.scn_data || {}) as Record<string, unknown>)
+    }
   }, [activeExecId, openExecs])
 
-  async function handleStart(tmpl: import('@/lib/supabase/types').QrcTemplate) {
+  async function handleStart(tmpl: QrcTemplate) {
     if (!installationId) return
     setStarting(tmpl.id)
     const { startQrcExecution } = await import('@/lib/supabase/qrc')
     const { data, error } = await startQrcExecution({
-      base_id: installationId,
-      template_id: tmpl.id,
-      qrc_number: tmpl.qrc_number,
-      title: tmpl.title,
+      base_id: installationId, template_id: tmpl.id,
+      qrc_number: tmpl.qrc_number, title: tmpl.title,
     })
     if (error) { toast.error(error); setStarting(null); return }
     if (data) {
@@ -1198,14 +1206,49 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
     if (!activeExecId) return
     const { updateStepResponse } = await import('@/lib/supabase/qrc')
     const current = responses[stepId] || {}
-    const newResp: import('@/lib/supabase/types').QrcStepResponse = {
-      ...current,
-      completed: !current.completed,
+    const newResp: QrcStepResponse = {
+      ...current, completed: !current.completed,
       completed_at: !current.completed ? new Date().toISOString() : undefined,
     }
-    const updated = { ...responses, [stepId]: newResp }
-    setResponses(updated)
+    setResponses(prev => ({ ...prev, [stepId]: newResp }))
     await updateStepResponse(activeExecId, stepId, newResp)
+  }
+
+  async function handleFieldChange(stepId: string, value: string) {
+    if (!activeExecId) return
+    const { updateStepResponse } = await import('@/lib/supabase/qrc')
+    const current = responses[stepId] || {}
+    const newResp: QrcStepResponse = { ...current, value, completed: !!value }
+    setResponses(prev => ({ ...prev, [stepId]: newResp }))
+    await updateStepResponse(activeExecId, stepId, newResp)
+  }
+
+  async function handleAgencyToggle(stepId: string, agency: string) {
+    if (!activeExecId) return
+    const { updateStepResponse } = await import('@/lib/supabase/qrc')
+    const current = responses[stepId] || {}
+    const checked = current.agencies_checked || []
+    const next = checked.includes(agency) ? checked.filter((a: string) => a !== agency) : [...checked, agency]
+    const newResp: QrcStepResponse = { ...current, agencies_checked: next, completed: next.length > 0 }
+    setResponses(prev => ({ ...prev, [stepId]: newResp }))
+    await updateStepResponse(activeExecId, stepId, newResp)
+  }
+
+  async function handleNotes(stepId: string, notes: string) {
+    if (!activeExecId) return
+    const { updateStepResponse } = await import('@/lib/supabase/qrc')
+    const current = responses[stepId] || {}
+    const newResp: QrcStepResponse = { ...current, notes }
+    setResponses(prev => ({ ...prev, [stepId]: newResp }))
+    await updateStepResponse(activeExecId, stepId, newResp)
+  }
+
+  async function handleScnField(key: string, value: string) {
+    if (!activeExecId) return
+    const { updateScnData } = await import('@/lib/supabase/qrc')
+    const updated = { ...scnData, [key]: value }
+    setScnDataLocal(updated)
+    await updateScnData(activeExecId, updated)
   }
 
   async function handleClose() {
@@ -1213,20 +1256,142 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
     setClosing(true)
     const { closeQrcExecution } = await import('@/lib/supabase/qrc')
     const exec = openExecs.find(e => e.id === activeExecId)
-    const { error } = await closeQrcExecution(activeExecId, undefined, installationId)
+    const { error } = await closeQrcExecution(activeExecId, closeInitials, installationId)
     if (error) toast.error(error)
     else {
       toast.success(`QRC-${exec?.qrc_number} closed`)
       setActiveExecId(null)
+      setShowCloseConfirm(false)
+      setCloseInitials('')
       await load()
       await onActivity()
     }
     setClosing(false)
   }
 
+  function zuluNow(): string {
+    return new Date().toISOString().slice(11, 16).replace(':', '')
+  }
+
   const activeExec = openExecs.find(e => e.id === activeExecId)
   const activeTemplate = activeExec ? templates.find(t => t.id === activeExec.template_id) : null
   const steps = activeTemplate?.steps || []
+
+  function renderStep(step: QrcStep) {
+    const resp = responses[step.id] || {}
+    const checked = resp.completed ?? false
+
+    if (step.type === 'conditional') {
+      return (
+        <div key={step.id} style={{
+          padding: '6px 10px', marginBottom: 4, fontSize: 'var(--fs-sm)',
+          fontWeight: 600, color: 'var(--color-warning)', fontStyle: 'italic',
+        }}>{step.id}. {step.label}</div>
+      )
+    }
+
+    return (
+      <div key={step.id} style={{
+        padding: '8px 10px', marginBottom: 6, borderRadius: 8,
+        border: '1px solid var(--color-border)',
+        background: checked ? 'rgba(34,197,94,0.04)' : 'transparent',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: 'var(--color-text-3)', minWidth: 24, paddingTop: 2 }}>{step.id}.</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {/* Checkbox / checkbox_with_note */}
+            {(step.type === 'checkbox' || step.type === 'checkbox_with_note') && (
+              <div>
+                <button onClick={() => handleStepToggle(step.id)} style={{
+                  display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none',
+                  cursor: 'pointer', padding: 0, fontFamily: 'inherit', textAlign: 'left', width: '100%',
+                }}>
+                  <span style={{
+                    width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                    border: checked ? 'none' : '2px solid var(--color-border-mid)',
+                    background: checked ? '#22C55E' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>{checked && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>&#10003;</span>}</span>
+                  <span style={{
+                    fontSize: 'var(--fs-sm)', fontWeight: 600,
+                    color: checked ? 'var(--color-text-3)' : 'var(--color-text-1)',
+                    textDecoration: checked ? 'line-through' : 'none',
+                  }}>{step.label}</span>
+                </button>
+                {step.note && (
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 3, marginLeft: 26, fontStyle: 'italic' }}>
+                    {step.note}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Notify agencies */}
+            {step.type === 'notify_agencies' && (
+              <div>
+                <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>{step.label}</div>
+                {(step.agencies || []).map(agency => {
+                  const agencyChecked = (resp.agencies_checked || []).includes(agency)
+                  return (
+                    <button key={agency} onClick={() => handleAgencyToggle(step.id, agency)} style={{
+                      display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none',
+                      cursor: 'pointer', padding: '2px 0', fontFamily: 'inherit', textAlign: 'left', width: '100%',
+                    }}>
+                      <span style={{
+                        width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                        border: agencyChecked ? 'none' : '2px solid var(--color-border-mid)',
+                        background: agencyChecked ? '#22C55E' : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>{agencyChecked && <span style={{ color: '#fff', fontSize: 8, fontWeight: 800 }}>&#10003;</span>}</span>
+                      <span style={{ fontSize: 'var(--fs-xs)', color: agencyChecked ? 'var(--color-text-3)' : 'var(--color-text-1)', textDecoration: agencyChecked ? 'line-through' : 'none' }}>{agency}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Fill field */}
+            {step.type === 'fill_field' && (
+              <div>
+                <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 3 }}>{step.label}</div>
+                <input className="input-dark" placeholder={step.field_label || 'Enter value'}
+                  value={resp.value || ''} onChange={e => handleFieldChange(step.id, e.target.value)}
+                  style={{ width: '100%', fontSize: 'var(--fs-xs)' }} />
+              </div>
+            )}
+
+            {/* Time field */}
+            {step.type === 'time_field' && (
+              <div>
+                <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 3 }}>{step.label}</div>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input className="input-dark" placeholder={step.field_label || 'HHmm'}
+                    value={resp.value || ''} onChange={e => handleFieldChange(step.id, e.target.value)}
+                    style={{ width: 90, fontSize: 'var(--fs-xs)', textAlign: 'center' }} />
+                  <button onClick={() => handleFieldChange(step.id, zuluNow())} style={{
+                    background: 'rgba(34,211,238,0.1)', border: '1px solid var(--color-cyan)',
+                    borderRadius: 6, padding: '3px 8px', color: 'var(--color-cyan)',
+                    fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                  }}>Now (Z)</button>
+                </div>
+              </div>
+            )}
+
+            {/* Notes input */}
+            <input className="input-dark" placeholder="Notes..."
+              value={resp.notes || ''} onChange={e => handleNotes(step.id, e.target.value)}
+              style={{ width: '100%', fontSize: 'var(--fs-xs)', padding: '2px 6px', opacity: 0.7, marginTop: 4 }} />
+          </div>
+          {/* Timestamp */}
+          {checked && resp.completed_at && (
+            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              {new Date(resp.completed_at).toISOString().slice(11, 16)}Z
+            </span>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -1239,7 +1404,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
     >
       <div
         className="card"
-        style={{ width: '100%', maxWidth: 560, maxHeight: '85vh', display: 'flex', flexDirection: 'column', padding: 0 }}
+        style={{ width: '100%', maxWidth: 600, maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: 0 }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -1247,22 +1412,31 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {activeExecId && (
-                <button onClick={() => setActiveExecId(null)} style={{
+                <button onClick={() => { setActiveExecId(null); setShowCloseConfirm(false) }} style={{
                   background: 'none', border: 'none', color: 'var(--color-cyan)', cursor: 'pointer',
                   fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600, padding: 0,
                 }}>&larr;</button>
               )}
-              <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
-                {activeExec ? `QRC-${activeExec.qrc_number}` : 'Quick Reaction Checklists'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {activeExec && (
+                  <span style={{
+                    fontSize: 'var(--fs-sm)', fontWeight: 800, color: '#000',
+                    background: '#EAB308', padding: '2px 8px', borderRadius: 6,
+                  }}>QRC-{activeExec.qrc_number}</span>
+                )}
+                <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                  {activeExec ? activeExec.title : 'Quick Reaction Checklists'}
+                </span>
               </div>
             </div>
-            <Link href="/qrc" onClick={onClose} style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontWeight: 600, textDecoration: 'none' }}>
+            <Link href={activeExec ? `/qrc?exec=${activeExec.id}` : '/qrc'} onClick={onClose} style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap', marginLeft: 8 }}>
               Full Page &rarr;
             </Link>
           </div>
           {activeExec && (
-            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
-              {activeExec.title}
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
+              Opened {new Date(activeExec.opened_at).toISOString().slice(11, 16)}Z
+              {activeExec.open_initials && ` by ${activeExec.open_initials}`}
             </div>
           )}
         </div>
@@ -1272,82 +1446,54 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
           {!loaded ? (
             <div style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>Loading...</div>
           ) : activeExec && activeTemplate ? (
-            /* Execution view */
             <div>
+              {/* Warning note */}
               {activeTemplate.notes && (
                 <div style={{
                   padding: '6px 10px', borderRadius: 6, marginBottom: 10,
                   background: 'rgba(239,68,68,0.08)', fontSize: 'var(--fs-xs)', fontWeight: 600, color: '#EF4444',
                 }}>{activeTemplate.notes}</div>
               )}
-              {steps.map(step => {
-                const resp = responses[step.id] || {}
-                const checked = resp.completed ?? false
-                if (step.type === 'conditional') {
-                  return (
-                    <div key={step.id} style={{
-                      padding: '6px 10px', marginBottom: 4, fontSize: 'var(--fs-sm)',
-                      fontWeight: 600, color: 'var(--color-warning)', fontStyle: 'italic',
-                    }}>{step.id}. {step.label}</div>
-                  )
-                }
-                if (step.type === 'notify_agencies') {
-                  return (
-                    <div key={step.id} style={{ marginBottom: 6, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--color-border)' }}>
-                      <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>
-                        {step.id}. {step.label}
+
+              {/* References */}
+              {activeTemplate.references && (
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', marginBottom: 10 }}>
+                  Ref: {activeTemplate.references}
+                </div>
+              )}
+
+              {/* Steps */}
+              {steps.map(step => renderStep(step))}
+
+              {/* SCN Form */}
+              {activeTemplate.has_scn_form && activeTemplate.scn_fields && (
+                <div style={{
+                  padding: 14, borderRadius: 10, marginTop: 12,
+                  background: 'var(--color-bg-surface)', border: '1px solid rgba(34,211,238,0.2)',
+                }}>
+                  <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-cyan)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Secondary Crash Net (SCN) Form
+                  </div>
+                  {((activeTemplate.scn_fields as { fields?: { key: string; label: string; type: string }[] }).fields || []).map(
+                    (field: { key: string; label: string; type: string }) => (
+                      <div key={field.key} style={{ marginBottom: 6 }}>
+                        <label style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', display: 'block', marginBottom: 1 }}>
+                          {field.label}
+                        </label>
+                        {field.type === 'textarea' ? (
+                          <textarea className="input-dark" value={(scnData[field.key] as string) || ''}
+                            onChange={e => handleScnField(field.key, e.target.value)} rows={2}
+                            style={{ width: '100%', fontSize: 'var(--fs-xs)', resize: 'vertical' }} />
+                        ) : (
+                          <input className="input-dark" value={(scnData[field.key] as string) || ''}
+                            onChange={e => handleScnField(field.key, e.target.value)}
+                            style={{ width: '100%', fontSize: 'var(--fs-xs)' }} />
+                        )}
                       </div>
-                      {(step.agencies || []).map(agency => {
-                        const agencyChecked = (resp.agencies_checked || []).includes(agency)
-                        return (
-                          <button key={agency} onClick={() => {
-                            const checked2 = resp.agencies_checked || []
-                            const next = checked2.includes(agency) ? checked2.filter((a: string) => a !== agency) : [...checked2, agency]
-                            const updated = { ...responses, [step.id]: { ...resp, agencies_checked: next, completed: next.length > 0 } }
-                            setResponses(updated)
-                            import('@/lib/supabase/qrc').then(m => m.updateStepResponse(activeExecId!, step.id, updated[step.id]))
-                          }} style={{
-                            display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none',
-                            cursor: 'pointer', padding: '1px 0', fontFamily: 'inherit', textAlign: 'left', width: '100%',
-                          }}>
-                            <span style={{
-                              width: 14, height: 14, borderRadius: 3, flexShrink: 0,
-                              border: agencyChecked ? 'none' : '2px solid var(--color-border-mid)',
-                              background: agencyChecked ? '#22C55E' : 'transparent',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>{agencyChecked && <span style={{ color: '#fff', fontSize: 8, fontWeight: 800 }}>&#10003;</span>}</span>
-                            <span style={{ fontSize: 'var(--fs-xs)', color: agencyChecked ? 'var(--color-text-3)' : 'var(--color-text-1)', textDecoration: agencyChecked ? 'line-through' : 'none' }}>{agency}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )
-                }
-                return (
-                  <button key={step.id} onClick={() => handleStepToggle(step.id)} style={{
-                    display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-                    background: 'none', border: 'none', cursor: 'pointer', padding: '5px 0',
-                    fontFamily: 'inherit', textAlign: 'left', borderBottom: '1px solid var(--color-border)',
-                  }}>
-                    <span style={{
-                      width: 18, height: 18, borderRadius: 4, flexShrink: 0,
-                      border: checked ? 'none' : '2px solid var(--color-border-mid)',
-                      background: checked ? '#22C55E' : 'transparent',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>{checked && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>&#10003;</span>}</span>
-                    <span style={{
-                      fontSize: 'var(--fs-sm)', fontWeight: 600,
-                      color: checked ? 'var(--color-text-3)' : 'var(--color-text-1)',
-                      textDecoration: checked ? 'line-through' : 'none', flex: 1,
-                    }}>{step.id}. {step.label}</span>
-                    {checked && resp.completed_at && (
-                      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)' }}>
-                        {new Date(resp.completed_at).toISOString().slice(11, 16)}Z
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
+                    )
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             /* Template picker grid */
@@ -1371,16 +1517,12 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
               <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Start New</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                 {templates.filter(t => t.is_active).map(tmpl => (
-                  <button
-                    key={tmpl.id}
-                    onClick={() => handleStart(tmpl)}
-                    disabled={starting === tmpl.id}
+                  <button key={tmpl.id} onClick={() => handleStart(tmpl)} disabled={starting === tmpl.id}
                     style={{
                       background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
                       borderRadius: 8, padding: '8px 10px', cursor: 'pointer',
                       fontFamily: 'inherit', textAlign: 'left',
-                    }}
-                  >
+                    }}>
                     <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#000', background: 'var(--color-warning)', padding: '1px 5px', borderRadius: 4 }}>
                       {tmpl.qrc_number}
                     </span>
@@ -1402,11 +1544,31 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
         {/* Footer */}
         {activeExec && (
           <div style={{ padding: '12px 20px', borderTop: '1px solid var(--color-border)', flexShrink: 0 }}>
-            <button onClick={handleClose} disabled={closing} style={{
-              width: '100%', padding: '10px 0', borderRadius: 8, border: 'none',
-              background: '#22C55E', color: '#fff', fontWeight: 700,
-              fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
-            }}>{closing ? 'Closing...' : 'Close QRC'}</button>
+            {showCloseConfirm ? (
+              <div>
+                <input className="input-dark" placeholder="Closing initials (optional)"
+                  value={closeInitials} onChange={e => setCloseInitials(e.target.value)}
+                  style={{ width: '100%', marginBottom: 8, fontSize: 'var(--fs-sm)' }} />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={handleClose} disabled={closing} style={{
+                    flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
+                    background: '#22C55E', color: '#fff', fontWeight: 700,
+                    fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
+                  }}>{closing ? 'Closing...' : 'Confirm Close'}</button>
+                  <button onClick={() => setShowCloseConfirm(false)} style={{
+                    padding: '10px 14px', borderRadius: 8, border: '1px solid var(--color-border)',
+                    background: 'transparent', color: 'var(--color-text-2)', fontWeight: 700,
+                    fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
+                  }}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => setShowCloseConfirm(true)} style={{
+                width: '100%', padding: '10px 0', borderRadius: 8, border: 'none',
+                background: '#22C55E', color: '#fff', fontWeight: 700,
+                fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
+              }}>Close QRC</button>
+            )}
           </div>
         )}
       </div>
