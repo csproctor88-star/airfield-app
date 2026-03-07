@@ -1415,29 +1415,57 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
 // QRC Templates Tab
 // ═══════════════════════════════════════════════════════════════
 
+type QrcTemplateRow = { id: string; qrc_number: number; title: string; notes: string | null; is_active: boolean; steps: unknown[]; references: string | null; has_scn_form: boolean }
+
 function QrcTemplatesTab({ installationId }: { installationId: string | null }) {
-  const [templates, setTemplates] = useState<{ id: string; qrc_number: number; title: string; is_active: boolean; steps: unknown[] }[]>([])
+  const [templates, setTemplates] = useState<QrcTemplateRow[]>([])
   const [loaded, setLoaded] = useState(false)
+  const [showSeedPicker, setShowSeedPicker] = useState(false)
+  const [seedSelected, setSeedSelected] = useState<Set<number>>(new Set())
   const [seeding, setSeeding] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState<QrcTemplateRow | null>(null)
+  const [menuOpen, setMenuOpen] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!installationId) return
     const { fetchQrcTemplates } = await import('@/lib/supabase/qrc')
     const data = await fetchQrcTemplates(installationId)
-    setTemplates(data)
+    setTemplates(data as QrcTemplateRow[])
     setLoaded(true)
   }, [installationId])
 
   useEffect(() => { load() }, [load])
 
-  async function handleSeed() {
-    if (!installationId) return
+  // Close menus on outside click
+  useEffect(() => {
+    if (!menuOpen) return
+    const handler = () => setMenuOpen(null)
+    document.addEventListener('click', handler)
+    return () => document.removeEventListener('click', handler)
+  }, [menuOpen])
+
+  // Seed picker helpers
+  async function openSeedPicker() {
+    const { QRC_SEED_DATA } = await import('@/lib/qrc-seed-data')
+    const existingNumbers = new Set(templates.map(t => t.qrc_number))
+    const available = QRC_SEED_DATA.filter(q => !existingNumbers.has(q.qrc_number))
+    if (available.length === 0) {
+      toast.info('All 25 default QRCs are already added')
+      return
+    }
+    setSeedSelected(new Set(available.map(q => q.qrc_number)))
+    setShowSeedPicker(true)
+  }
+
+  async function handleSeedSelected() {
+    if (!installationId || seedSelected.size === 0) return
     setSeeding(true)
     const { seedQrcTemplates } = await import('@/lib/supabase/qrc')
-    const { count, error } = await seedQrcTemplates(installationId)
+    const { count, error } = await seedQrcTemplates(installationId, Array.from(seedSelected))
     if (error) toast.error(error)
     else {
-      toast.success(`Seeded ${count} QRC templates`)
+      toast.success(`Added ${count} QRC template${count !== 1 ? 's' : ''}`)
+      setShowSeedPicker(false)
       await load()
     }
     setSeeding(false)
@@ -1451,11 +1479,17 @@ function QrcTemplatesTab({ installationId }: { installationId: string | null }) 
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Delete this QRC template? This cannot be undone.')) return
+    if (!confirm('Permanently delete this QRC template and all its execution history? This cannot be undone.\n\nTo keep the template but hide it, use "Disable" instead.')) return
     const { deleteQrcTemplate } = await import('@/lib/supabase/qrc')
     const { error } = await deleteQrcTemplate(id)
     if (error) toast.error(error)
     else { toast.success('Template deleted'); await load() }
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '8px 10px', borderRadius: 6,
+    border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+    color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
   }
 
   return (
@@ -1465,17 +1499,39 @@ function QrcTemplatesTab({ installationId }: { installationId: string | null }) 
           <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>QRC Templates</div>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Configure Quick Reaction Checklists for this base.</div>
         </div>
-        <button onClick={handleSeed} disabled={seeding} style={{
+        <button onClick={openSeedPicker} style={{
           background: 'var(--color-cyan)', color: '#000', border: 'none', borderRadius: 8,
           padding: '8px 16px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
-        }}>{seeding ? 'Seeding...' : 'Seed 25 Defaults'}</button>
+        }}>+ Add from Defaults</button>
       </div>
+
+      {/* Seed Picker Dialog */}
+      {showSeedPicker && (
+        <SeedPickerDialog
+          seedSelected={seedSelected}
+          setSeedSelected={setSeedSelected}
+          existingNumbers={new Set(templates.map(t => t.qrc_number))}
+          seeding={seeding}
+          onSeed={handleSeedSelected}
+          onClose={() => setShowSeedPicker(false)}
+        />
+      )}
+
+      {/* Edit Template Dialog */}
+      {editingTemplate && (
+        <EditQrcDialog
+          template={editingTemplate}
+          inputStyle={inputStyle}
+          onClose={() => setEditingTemplate(null)}
+          onSaved={async () => { setEditingTemplate(null); await load() }}
+        />
+      )}
 
       {!loaded ? (
         <div style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)' }}>Loading...</div>
       ) : templates.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>
-          No QRC templates. Click &quot;Seed 25 Defaults&quot; to load the standard set.
+          No QRC templates. Click &quot;+ Add from Defaults&quot; to select which QRCs to add.
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -1495,20 +1551,306 @@ function QrcTemplatesTab({ installationId }: { installationId: string | null }) 
                 <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)' }}>{t.title}</div>
                 <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{(t.steps as unknown[]).length} steps</div>
               </div>
-              <button onClick={() => handleToggle(t.id, t.is_active)} style={{
-                background: 'none', border: '1px solid var(--color-border)', borderRadius: 6,
-                padding: '3px 10px', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer',
-                color: t.is_active ? 'var(--color-danger)' : 'var(--color-success)', fontFamily: 'inherit',
-              }}>{t.is_active ? 'Disable' : 'Enable'}</button>
-              <button onClick={() => handleDelete(t.id)} style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--color-text-4)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
-                padding: '2px 6px',
-              }}>&#x2715;</button>
+              {/* Action menu */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === t.id ? null : t.id) }}
+                  style={{
+                    background: 'none', border: '1px solid var(--color-border)', borderRadius: 6,
+                    padding: '3px 10px', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer',
+                    color: 'var(--color-text-2)', fontFamily: 'inherit',
+                  }}
+                >&#x22EE;</button>
+                {menuOpen === t.id && (
+                  <div style={{
+                    position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 20,
+                    background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+                    borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.3)', minWidth: 140,
+                    overflow: 'hidden',
+                  }}>
+                    <button onClick={() => { setMenuOpen(null); setEditingTemplate(t) }} style={{
+                      display: 'block', width: '100%', padding: '8px 14px', background: 'none', border: 'none',
+                      textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)',
+                      fontWeight: 600, color: 'var(--color-text-1)',
+                    }}>Edit</button>
+                    <button onClick={() => { setMenuOpen(null); handleToggle(t.id, t.is_active) }} style={{
+                      display: 'block', width: '100%', padding: '8px 14px', background: 'none', border: 'none',
+                      textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)',
+                      fontWeight: 600, color: t.is_active ? '#EAB308' : 'var(--color-success)',
+                    }}>{t.is_active ? 'Disable' : 'Enable'}</button>
+                    <div style={{ height: 1, background: 'var(--color-border)' }} />
+                    <button onClick={() => { setMenuOpen(null); handleDelete(t.id) }} style={{
+                      display: 'block', width: '100%', padding: '8px 14px', background: 'none', border: 'none',
+                      textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)',
+                      fontWeight: 600, color: 'var(--color-danger)',
+                    }}>Delete</button>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+// --- Seed Picker Dialog ---
+
+function SeedPickerDialog({
+  seedSelected, setSeedSelected, existingNumbers, seeding, onSeed, onClose,
+}: {
+  seedSelected: Set<number>
+  setSeedSelected: (s: Set<number>) => void
+  existingNumbers: Set<number>
+  seeding: boolean
+  onSeed: () => void
+  onClose: () => void
+}) {
+  const [allQrcs, setAllQrcs] = useState<{ qrc_number: number; title: string }[]>([])
+
+  useEffect(() => {
+    import('@/lib/qrc-seed-data').then(({ QRC_SEED_DATA }) => {
+      setAllQrcs(QRC_SEED_DATA.filter(q => !existingNumbers.has(q.qrc_number)))
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function toggleAll() {
+    if (seedSelected.size === allQrcs.length) setSeedSelected(new Set())
+    else setSeedSelected(new Set(allQrcs.map(q => q.qrc_number)))
+  }
+
+  function toggle(n: number) {
+    const next = new Set(seedSelected)
+    if (next.has(n)) next.delete(n)
+    else next.add(n)
+    setSeedSelected(next)
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 200,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 16, background: 'rgba(0,0,0,0.6)',
+    }} onClick={onClose}>
+      <div className="card" style={{ width: '100%', maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column', padding: 0 }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
+          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>Add QRC Templates</div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Select which QRCs to add to this base.</div>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 20px' }}>
+          {allQrcs.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>
+              All default QRCs are already added.
+            </div>
+          ) : (
+            <>
+              <button onClick={toggleAll} style={{
+                background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-cyan)', padding: '4px 0', marginBottom: 4,
+              }}>{seedSelected.size === allQrcs.length ? 'Deselect All' : 'Select All'}</button>
+              {allQrcs.map(q => (
+                <button key={q.qrc_number} onClick={() => toggle(q.qrc_number)} style={{
+                  display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 0',
+                  background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  textAlign: 'left', borderBottom: '1px solid var(--color-border)',
+                }}>
+                  <span style={{
+                    width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                    border: seedSelected.has(q.qrc_number) ? 'none' : '2px solid var(--color-border-mid)',
+                    background: seedSelected.has(q.qrc_number) ? 'var(--color-cyan)' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>{seedSelected.has(q.qrc_number) && <span style={{ color: '#000', fontSize: 10, fontWeight: 800 }}>&#10003;</span>}</span>
+                  <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#000', background: 'var(--color-warning)', padding: '1px 5px', borderRadius: 4 }}>{q.qrc_number}</span>
+                  <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', flex: 1 }}>{q.title}</span>
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+        <div style={{ padding: '12px 20px', borderTop: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', gap: 8 }}>
+          <button onClick={onSeed} disabled={seeding || seedSelected.size === 0} style={{
+            flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
+            background: seedSelected.size > 0 ? 'var(--color-cyan)' : 'var(--color-border)',
+            color: seedSelected.size > 0 ? '#000' : 'var(--color-text-3)',
+            fontWeight: 700, fontSize: 'var(--fs-base)', cursor: seedSelected.size > 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
+          }}>{seeding ? 'Adding...' : `Add ${seedSelected.size} QRC${seedSelected.size !== 1 ? 's' : ''}`}</button>
+          <button onClick={onClose} style={{
+            padding: '10px 16px', borderRadius: 8, border: '1px solid var(--color-border)',
+            background: 'transparent', color: 'var(--color-text-2)', fontWeight: 700,
+            fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
+          }}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// --- Edit QRC Template Dialog ---
+
+function EditQrcDialog({
+  template, inputStyle, onClose, onSaved,
+}: {
+  template: QrcTemplateRow
+  inputStyle: React.CSSProperties
+  onClose: () => void
+  onSaved: () => Promise<void>
+}) {
+  const [title, setTitle] = useState(template.title)
+  const [notes, setNotes] = useState(template.notes || '')
+  const [refs, setRefs] = useState(template.references || '')
+  const [steps, setSteps] = useState<{ id: string; label: string; type: string }[]>(
+    (template.steps as { id: string; label: string; type: string }[]).map(s => ({ id: s.id, label: s.label, type: s.type }))
+  )
+  const [saving, setSaving] = useState(false)
+  const [addingStep, setAddingStep] = useState(false)
+  const [newStepLabel, setNewStepLabel] = useState('')
+
+  async function handleSave() {
+    if (!title.trim()) { toast.error('Title is required'); return }
+    setSaving(true)
+    const { updateQrcTemplate } = await import('@/lib/supabase/qrc')
+
+    // Rebuild full steps — preserve original step data, update labels, add new steps
+    const origSteps = template.steps as Record<string, unknown>[]
+    const origMap = new Map(origSteps.map(s => [(s as { id: string }).id, s]))
+    const fullSteps = steps.map(s => {
+      const orig = origMap.get(s.id)
+      if (orig) return { ...orig, label: s.label }
+      return { id: s.id, type: s.type, label: s.label }
+    })
+
+    const { error } = await updateQrcTemplate(template.id, {
+      title: title.trim(),
+      notes: notes.trim() || null,
+      references: refs.trim() || null,
+      steps: fullSteps as any,
+    })
+    if (error) toast.error(error)
+    else { toast.success('Template updated'); await onSaved() }
+    setSaving(false)
+  }
+
+  function handleAddStep() {
+    if (!newStepLabel.trim()) return
+    const nextNum = steps.length + 1
+    setSteps([...steps, { id: String(nextNum), label: newStepLabel.trim(), type: 'checkbox' }])
+    setNewStepLabel('')
+    setAddingStep(false)
+  }
+
+  function handleRemoveStep(idx: number) {
+    setSteps(steps.filter((_, i) => i !== idx))
+  }
+
+  function handleMoveStep(idx: number, dir: -1 | 1) {
+    const arr = [...steps]
+    const target = idx + dir
+    if (target < 0 || target >= arr.length) return
+    ;[arr[idx], arr[target]] = [arr[target], arr[idx]]
+    setSteps(arr)
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 200,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 16, background: 'rgba(0,0,0,0.6)',
+    }} onClick={onClose}>
+      <div className="card" style={{ width: '100%', maxWidth: 560, maxHeight: '85vh', display: 'flex', flexDirection: 'column', padding: 0 }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
+          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+            Edit QRC-{template.qrc_number}
+          </div>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }}>
+          {/* Title */}
+          <div style={{ marginBottom: 10 }}>
+            <label style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>Title</label>
+            <input value={title} onChange={e => setTitle(e.target.value)} style={inputStyle} />
+          </div>
+          {/* Notes / Warning */}
+          <div style={{ marginBottom: 10 }}>
+            <label style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>Warning / Notes</label>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
+          </div>
+          {/* References */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>References</label>
+            <input value={refs} onChange={e => setRefs(e.target.value)} placeholder="e.g. AFI 13-204V3" style={inputStyle} />
+          </div>
+          {/* Steps */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <label style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>Steps ({steps.length})</label>
+            <button onClick={() => setAddingStep(true)} style={{
+              background: 'none', border: '1px solid var(--color-cyan)', borderRadius: 6,
+              padding: '2px 10px', color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)',
+              fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+            }}>+ Add Step</button>
+          </div>
+          {steps.map((s, i) => (
+            <div key={`${s.id}-${i}`} style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0',
+              borderBottom: '1px solid var(--color-border)',
+            }}>
+              <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', minWidth: 20 }}>{i + 1}.</span>
+              <input
+                value={s.label}
+                onChange={e => { const arr = [...steps]; arr[i] = { ...arr[i], label: e.target.value }; setSteps(arr) }}
+                style={{ ...inputStyle, padding: '4px 8px', flex: 1 }}
+              />
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', whiteSpace: 'nowrap' }}>{s.type}</span>
+              <button onClick={() => handleMoveStep(i, -1)} disabled={i === 0} style={{
+                background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer',
+                color: i === 0 ? 'var(--color-text-4)' : 'var(--color-text-2)', fontSize: 12, padding: '0 2px', fontFamily: 'inherit',
+              }}>&uarr;</button>
+              <button onClick={() => handleMoveStep(i, 1)} disabled={i === steps.length - 1} style={{
+                background: 'none', border: 'none', cursor: i === steps.length - 1 ? 'default' : 'pointer',
+                color: i === steps.length - 1 ? 'var(--color-text-4)' : 'var(--color-text-2)', fontSize: 12, padding: '0 2px', fontFamily: 'inherit',
+              }}>&darr;</button>
+              <button onClick={() => handleRemoveStep(i)} style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', padding: '0 2px', fontFamily: 'inherit',
+              }}>&times;</button>
+            </div>
+          ))}
+          {addingStep && (
+            <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+              <input
+                value={newStepLabel}
+                onChange={e => setNewStepLabel(e.target.value)}
+                placeholder="New step text"
+                onKeyDown={e => { if (e.key === 'Enter') handleAddStep() }}
+                style={{ ...inputStyle, flex: 1, padding: '4px 8px' }}
+                autoFocus
+              />
+              <button onClick={handleAddStep} disabled={!newStepLabel.trim()} style={{
+                background: newStepLabel.trim() ? 'var(--color-cyan)' : 'var(--color-border)',
+                color: newStepLabel.trim() ? '#000' : 'var(--color-text-3)',
+                border: 'none', borderRadius: 6, padding: '4px 12px',
+                fontWeight: 700, fontSize: 'var(--fs-xs)', cursor: newStepLabel.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
+              }}>Add</button>
+              <button onClick={() => { setAddingStep(false); setNewStepLabel('') }} style={{
+                background: 'none', border: '1px solid var(--color-border)', borderRadius: 6,
+                padding: '4px 10px', color: 'var(--color-text-2)', fontSize: 'var(--fs-xs)',
+                fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+              }}>Cancel</button>
+            </div>
+          )}
+        </div>
+        <div style={{ padding: '12px 20px', borderTop: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', gap: 8 }}>
+          <button onClick={handleSave} disabled={saving} style={{
+            flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
+            background: 'var(--color-cyan)', color: '#000', fontWeight: 700,
+            fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
+          }}>{saving ? 'Saving...' : 'Save Changes'}</button>
+          <button onClick={onClose} style={{
+            padding: '10px 16px', borderRadius: 8, border: '1px solid var(--color-border)',
+            background: 'transparent', color: 'var(--color-text-2)', fontWeight: 700,
+            fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
+          }}>Cancel</button>
+        </div>
+      </div>
     </div>
   )
 }

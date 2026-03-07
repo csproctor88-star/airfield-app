@@ -68,7 +68,7 @@ export async function deleteQrcTemplate(id: string): Promise<{ error: string | n
   return { error: error?.message || null }
 }
 
-export async function seedQrcTemplates(baseId: string): Promise<{ count: number; error: string | null }> {
+export async function seedQrcTemplates(baseId: string, selectedNumbers?: number[]): Promise<{ count: number; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { count: 0, error: 'Supabase not configured' }
 
@@ -81,7 +81,10 @@ export async function seedQrcTemplates(baseId: string): Promise<{ count: number;
     .eq('base_id', baseId)
   const existingNumbers = new Set((existing || []).map((t: { qrc_number: number }) => t.qrc_number))
 
-  const toInsert = QRC_SEED_DATA.filter(q => !existingNumbers.has(q.qrc_number)).map(q => ({
+  const toInsert = QRC_SEED_DATA
+    .filter(q => !existingNumbers.has(q.qrc_number))
+    .filter(q => !selectedNumbers || selectedNumbers.includes(q.qrc_number))
+    .map(q => ({
     base_id: baseId,
     qrc_number: q.qrc_number,
     title: q.title,

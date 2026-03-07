@@ -20,6 +20,7 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     navaid_status: 'NAVAID',
     airfield_status: 'Runway',
     contractor: 'Personnel on Airfield',
+    qrc: 'QRC',
     manual: 'Manual Entry',
   }
   const entity = typeLabel[entityType] || entityType
@@ -29,6 +30,8 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     updated: 'Updated',
     deleted: 'Deleted',
     completed: 'Completed',
+    opened: 'Opened',
+    closed: 'Closed',
     status_updated: 'Status changed on',
     saved: 'Saved',
     filed: 'Filed',
@@ -53,6 +56,7 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
     case 'check': return `/checks/${entityId}`
     case 'inspection': return `/inspections/${entityId}`
     case 'obstruction_evaluation': return `/obstructions`
+    case 'qrc': return `/qrc?exec=${entityId}`
     default: return null
   }
 }

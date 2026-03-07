@@ -90,6 +90,7 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
     case 'check': return `/checks/${entityId}`
     case 'inspection': return `/inspections/${entityId}`
     case 'obstruction_evaluation': return `/obstructions`
+    case 'qrc': return `/qrc?exec=${entityId}`
     default: return null
   }
 }

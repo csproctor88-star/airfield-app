@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
@@ -24,12 +25,14 @@ function zuluNow(): string {
 
 export default function QrcPage() {
   const { installationId } = useInstallation()
+  const searchParams = useSearchParams()
+  const execParam = searchParams.get('exec')
   const [tab, setTab] = useState<Tab>('available')
   const [templates, setTemplates] = useState<QrcTemplate[]>([])
   const [openExecs, setOpenExecs] = useState<QrcExecution[]>([])
   const [history, setHistory] = useState<QrcExecution[]>([])
   const [loaded, setLoaded] = useState(false)
-  const [activeExecId, setActiveExecId] = useState<string | null>(null)
+  const [activeExecId, setActiveExecId] = useState<string | null>(execParam)
   const [startingId, setStartingId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -46,9 +49,20 @@ export default function QrcPage() {
 
   useEffect(() => { load() }, [load])
 
-  // Auto-switch to active tab if there are open executions
+  // Auto-switch to active tab when loaded
   useEffect(() => {
-    if (loaded && openExecs.length > 0 && tab === 'available') {
+    if (!loaded) return
+    // If we have a deep-link exec param, switch to active tab
+    if (activeExecId) {
+      const inOpen = openExecs.some(e => e.id === activeExecId)
+      const inHistory = history.some(e => e.id === activeExecId)
+      if (inOpen || inHistory) {
+        setTab('active')
+        return
+      }
+    }
+    // Otherwise auto-switch if there are open executions
+    if (openExecs.length > 0 && tab === 'available') {
       setTab('active')
       setActiveExecId(openExecs[0].id)
     }
