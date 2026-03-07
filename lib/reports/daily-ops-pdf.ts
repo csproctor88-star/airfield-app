@@ -556,7 +556,7 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
       styles: { fontSize: 7, cellPadding: 1.5, textColor: [0, 0, 0] },
       headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
       alternateRowStyles: { fillColor: [245, 245, 245] },
-      columnStyles: { 0: { cellWidth: 18 }, 1: { cellWidth: 40 }, 3: { cellWidth: 30 } },
+      columnStyles: { 0: { cellWidth: 18 }, 1: { cellWidth: 50 }, 2: { cellWidth: 'auto' }, 3: { cellWidth: 38 } },
     })
     y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4
   }
