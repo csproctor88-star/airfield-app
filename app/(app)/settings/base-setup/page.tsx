@@ -1138,8 +1138,8 @@ function DashboardPreview({
 
 const SHIFT_OPTIONS: { value: ShiftType; label: string }[] = [
   { value: 'day', label: 'Day Shift' },
-  { value: 'mid', label: 'Mid Shift' },
   { value: 'swing', label: 'Swing Shift' },
+  { value: 'mid', label: 'Mid Shift' },
 ]
 
 const FREQ_OPTIONS: { value: FrequencyType; label: string }[] = [
@@ -1345,8 +1345,8 @@ function ShiftChecklistTab({ installationId }: { installationId: string | null }
       ) : (
         <>
           {renderItemList('Day Shift', dayItems)}
-          {midItems.length > 0 && renderItemList('Mid Shift', midItems)}
           {renderItemList('Swing Shift', swingItems)}
+          {midItems.length > 0 && renderItemList('Mid Shift', midItems)}
         </>
       )}
     </div>

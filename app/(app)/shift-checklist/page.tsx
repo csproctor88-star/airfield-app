@@ -349,8 +349,8 @@ export default function ShiftChecklistPage() {
           ) : (
             <>
               {renderShiftSection('Day Shift', dayItems)}
-              {midItems.length > 0 && renderShiftSection('Mid Shift', midItems)}
               {renderShiftSection('Swing Shift', swingItems)}
+              {midItems.length > 0 && renderShiftSection('Mid Shift', midItems)}
 
               {/* Complete / Reopen button */}
               <div style={{ marginTop: 8 }}>
@@ -561,8 +561,8 @@ export default function ShiftChecklistPage() {
             ) : (
               <>
                 {renderHistorySection('Day Shift', hDayItems)}
-                {hMidItems.length > 0 && renderHistorySection('Mid Shift', hMidItems)}
                 {renderHistorySection('Swing Shift', hSwingItems)}
+                {hMidItems.length > 0 && renderHistorySection('Mid Shift', hMidItems)}
               </>
             )}
           </>

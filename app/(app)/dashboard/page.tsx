@@ -1072,8 +1072,8 @@ function ShiftChecklistDialog({ installationId, onClose }: { installationId: str
           ) : (
             <>
               {renderSection('Day Shift', dayItems)}
-              {midItems.length > 0 && renderSection('Mid Shift', midItems)}
               {renderSection('Swing Shift', swingItems)}
+              {midItems.length > 0 && renderSection('Mid Shift', midItems)}
             </>
           )}
         </div>
