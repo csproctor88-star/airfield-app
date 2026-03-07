@@ -104,7 +104,7 @@ export default function BaseSetupPage() {
         {activeTab === 'arff' && <SimpleListTab title="ARFF Aircraft" items={arffAircraft} tableName="base_arff_aircraft" fieldName="aircraft_name" installationId={installationId} />}
         {activeTab === 'shops' && <ShopsTab shops={ceShops} installationId={installationId} />}
         {activeTab === 'templates' && <TemplatesTab installationId={installationId} />}
-        {activeTab === 'shiftchecklist' && <ShiftChecklistTab installationId={installationId} />}
+        {activeTab === 'shiftchecklist' && <ShiftChecklistTab installationId={installationId} currentInstallation={currentInstallation} />}
       </div>
 
       {/* Preview Dashboard Button */}
@@ -1150,12 +1150,14 @@ const FREQ_OPTIONS: { value: FrequencyType; label: string }[] = [
 
 const FREQ_TAG_COLORS: Record<string, string> = { daily: '#22D3EE', weekly: '#A78BFA', monthly: '#F59E0B' }
 
-function ShiftChecklistTab({ installationId }: { installationId: string | null }) {
+function ShiftChecklistTab({ installationId, currentInstallation }: { installationId: string | null; currentInstallation: any }) {
   const [items, setItems] = useState<ShiftChecklistItem[]>([])
   const [loaded, setLoaded] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [resetTime, setResetTime] = useState('06:00')
+  const [savingReset, setSavingReset] = useState(false)
 
   const [formLabel, setFormLabel] = useState('')
   const [formShift, setFormShift] = useState<ShiftType>('day')
@@ -1165,6 +1167,12 @@ function ShiftChecklistTab({ installationId }: { installationId: string | null }
   const [editShift, setEditShift] = useState<ShiftType>('day')
   const [editFreq, setEditFreq] = useState<FrequencyType>('daily')
 
+  useEffect(() => {
+    if (currentInstallation?.checklist_reset_time) {
+      setResetTime(currentInstallation.checklist_reset_time)
+    }
+  }, [currentInstallation])
+
   const load = useCallback(async () => {
     const data = await fetchChecklistItems(installationId)
     setItems(data)
@@ -1172,6 +1180,21 @@ function ShiftChecklistTab({ installationId }: { installationId: string | null }
   }, [installationId])
 
   useEffect(() => { load() }, [load])
+
+  async function handleSaveResetTime(newTime: string) {
+    if (!installationId) return
+    setSavingReset(true)
+    const supabase = createClient()
+    if (supabase) {
+      const { error } = await supabase
+        .from('bases')
+        .update({ checklist_reset_time: newTime, updated_at: new Date().toISOString() } as any)
+        .eq('id', installationId)
+      if (error) toast.error(error.message)
+      else toast.success('Reset time updated')
+    }
+    setSavingReset(false)
+  }
 
   async function handleCreate() {
     if (!formLabel.trim() || !installationId) return
@@ -1305,8 +1328,41 @@ function ShiftChecklistTab({ installationId }: { installationId: string | null }
     )
   }
 
+  const RESET_TIME_OPTIONS = [
+    '04:00', '05:00', '06:00', '07:00', '08:00', '09:00', '10:00',
+  ]
+
   return (
     <div>
+      {/* Reset Time Configuration */}
+      <div style={{
+        background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)',
+        borderRadius: 8, padding: 14, marginBottom: 16,
+        display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+      }}>
+        <div style={{ flex: 1, minWidth: 180 }}>
+          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>Daily Reset Time</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+            New checklists start at this time each day ({currentInstallation?.timezone || 'local time'}).
+          </div>
+        </div>
+        <select
+          value={resetTime}
+          onChange={e => {
+            setResetTime(e.target.value)
+            handleSaveResetTime(e.target.value)
+          }}
+          disabled={savingReset}
+          style={{ ...selectStyle, minWidth: 100 }}
+        >
+          {RESET_TIME_OPTIONS.map(t => {
+            const hr = parseInt(t)
+            const label = hr < 12 ? `${hr}:00 AM` : hr === 12 ? '12:00 PM' : `${hr - 12}:00 PM`
+            return <option key={t} value={t}>{label}</option>
+          })}
+        </select>
+      </div>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div>
           <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>Shift Checklist Items</div>

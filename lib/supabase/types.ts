@@ -16,11 +16,12 @@ export type Database = {
           timezone: string
           installation_code: string | null
           ce_shops: string[]
+          checklist_reset_time: string
           is_active: boolean
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['bases']['Row'], 'id' | 'created_at' | 'updated_at' | 'is_active'>
+        Insert: Omit<Database['public']['Tables']['bases']['Row'], 'id' | 'created_at' | 'updated_at' | 'is_active' | 'checklist_reset_time'>
         Update: Partial<Database['public']['Tables']['bases']['Insert']>
         Relationships: []
       }

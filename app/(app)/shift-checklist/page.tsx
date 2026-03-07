@@ -25,7 +25,9 @@ const FREQ_LABELS: Record<string, string> = { daily: 'Daily', weekly: 'Weekly', 
 const FREQ_COLORS: Record<string, string> = { daily: '#22D3EE', weekly: '#A78BFA', monthly: '#F59E0B' }
 
 export default function ShiftChecklistPage() {
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
+  const timezone = currentInstallation?.timezone || 'America/New_York'
+  const resetTime = (currentInstallation as Record<string, any>)?.checklist_reset_time || '06:00'
   const [tab, setTab] = useState<ViewTab>('today')
   const [items, setItems] = useState<ShiftChecklistItem[]>([])
   const [checklist, setChecklist] = useState<ShiftChecklist | null>(null)
@@ -45,10 +47,10 @@ export default function ShiftChecklistPage() {
 
     const [allItems, { checklist: cl }] = await Promise.all([
       fetchChecklistItems(installationId),
-      fetchOrCreateTodayChecklist(installationId),
+      fetchOrCreateTodayChecklist(installationId, timezone, resetTime),
     ])
 
-    const todayItems = allItems.filter(i => itemAppliesToday(i))
+    const todayItems = allItems.filter(i => itemAppliesToday(i, timezone, resetTime))
     setItems(todayItems)
     setChecklist(cl)
 
@@ -64,7 +66,7 @@ export default function ShiftChecklistPage() {
     }
 
     setLoaded(true)
-  }, [installationId])
+  }, [installationId, timezone, resetTime])
 
   const loadHistory = useCallback(async () => {
     if (!installationId) return

@@ -93,7 +93,9 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
 
 export default function AMDashboardPage() {
   const router = useRouter()
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
+  const baseTimezone = currentInstallation?.timezone || 'America/New_York'
+  const baseResetTime = (currentInstallation as Record<string, any>)?.checklist_reset_time || '06:00'
   const [activity, setActivity] = useState<ActivityEntry[]>([])
   const [manualText, setManualText] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -345,6 +347,8 @@ export default function AMDashboardPage() {
       {showShiftChecklist && (
         <ShiftChecklistDialog
           installationId={installationId}
+          timezone={baseTimezone}
+          resetTime={baseResetTime}
           onClose={() => setShowShiftChecklist(false)}
         />
       )}
@@ -863,7 +867,7 @@ function PersonnelFormDialog({ installationId, onClose, onSaved }: { installatio
 
 // ===== Shift Checklist Dialog =====
 
-function ShiftChecklistDialog({ installationId, onClose }: { installationId: string | null; onClose: () => void }) {
+function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: { installationId: string | null; timezone: string; resetTime: string; onClose: () => void }) {
   const [items, setItems] = useState<import('@/lib/supabase/shift-checklist').ShiftChecklistItem[]>([])
   const [checklist, setChecklist] = useState<import('@/lib/supabase/shift-checklist').ShiftChecklist | null>(null)
   const [responses, setResponses] = useState<import('@/lib/supabase/shift-checklist').ShiftChecklistResponse[]>([])
@@ -883,9 +887,9 @@ function ShiftChecklistDialog({ installationId, onClose }: { installationId: str
     if (!installationId) return
     const [allItems, { checklist: cl }] = await Promise.all([
       fetchChecklistItems(installationId),
-      fetchOrCreateTodayChecklist(installationId),
+      fetchOrCreateTodayChecklist(installationId, timezone, resetTime),
     ])
-    const todayItems = allItems.filter(i => itemAppliesToday(i))
+    const todayItems = allItems.filter(i => itemAppliesToday(i, timezone, resetTime))
     setItems(todayItems)
     setChecklist(cl)
 
@@ -910,7 +914,7 @@ function ShiftChecklistDialog({ installationId, onClose }: { installationId: str
       }
     }
     setLoaded(true)
-  }, [installationId])
+  }, [installationId, timezone, resetTime])
 
   useEffect(() => { load() }, [load])
 

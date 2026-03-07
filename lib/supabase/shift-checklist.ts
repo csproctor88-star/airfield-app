@@ -94,13 +94,53 @@ export async function deleteChecklistItem(id: string): Promise<{ error: string |
   return { error: error?.message || null }
 }
 
+// --- Timezone Helpers ---
+
+/**
+ * Get the effective checklist date based on a base's timezone and reset time.
+ * If the current local time is before the reset hour, the checklist belongs
+ * to the previous calendar day (the shift that started yesterday).
+ */
+export function getEffectiveChecklistDate(timezone: string, resetTime: string): string {
+  const now = new Date()
+  // Get current date/time in the base's timezone
+  const localStr = now.toLocaleString('en-US', { timeZone: timezone })
+  const local = new Date(localStr)
+
+  const [resetHour, resetMin] = resetTime.split(':').map(Number)
+  const currentMinutes = local.getHours() * 60 + local.getMinutes()
+  const resetMinutes = (resetHour || 6) * 60 + (resetMin || 0)
+
+  // If before reset time, this is still yesterday's checklist
+  if (currentMinutes < resetMinutes) {
+    local.setDate(local.getDate() - 1)
+  }
+
+  const y = local.getFullYear()
+  const m = String(local.getMonth() + 1).padStart(2, '0')
+  const d = String(local.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+/** Get current local date in a timezone (ignoring reset time) */
+export function getLocalDate(timezone: string): Date {
+  const localStr = new Date().toLocaleString('en-US', { timeZone: timezone })
+  return new Date(localStr)
+}
+
 // --- Daily Checklists ---
 
-export async function fetchOrCreateTodayChecklist(baseId: string): Promise<{ checklist: ShiftChecklist | null; error: string | null }> {
+export async function fetchOrCreateTodayChecklist(
+  baseId: string,
+  timezone?: string,
+  resetTime?: string,
+): Promise<{ checklist: ShiftChecklist | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { checklist: null, error: 'Supabase not configured' }
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = timezone
+    ? getEffectiveChecklistDate(timezone, resetTime || '06:00')
+    : new Date().toISOString().split('T')[0]
 
   // Try to fetch existing
   const { data: existing } = await supabase
@@ -231,11 +271,16 @@ export async function upsertResponse(input: {
 // --- Helpers ---
 
 /** Determine which items should appear today based on frequency */
-export function itemAppliesToday(item: ShiftChecklistItem, date?: Date): boolean {
+export function itemAppliesToday(item: ShiftChecklistItem, timezone?: string, resetTime?: string): boolean {
   if (!item.is_active) return false
   if (item.frequency === 'daily') return true
 
-  const d = date || new Date()
+  // Use the effective date in the base's timezone
+  const dateStr = timezone
+    ? getEffectiveChecklistDate(timezone, resetTime || '06:00')
+    : new Date().toISOString().split('T')[0]
+  const d = new Date(dateStr + 'T12:00:00') // noon to avoid DST edge cases
+
   if (item.frequency === 'weekly') {
     // Show weekly items on Mondays (day 1)
     return d.getDay() === 1
