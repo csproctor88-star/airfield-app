@@ -265,7 +265,7 @@ export default function AMDashboardPage() {
 
       {/* ===== Quick Actions ===== */}
       <span className="section-label">Quick Actions</span>
-      <div className="actions-row" style={{ marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
         {QUICK_ACTIONS.map((q) => (
           <Link
             key={q.label}
@@ -281,8 +281,6 @@ export default function AMDashboardPage() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: 10,
-              flex: 1,
-              minWidth: 0,
             }}
           >
             <span style={{ fontSize: 'var(--fs-5xl)' }}>{q.icon}</span>
@@ -304,8 +302,6 @@ export default function AMDashboardPage() {
             alignItems: 'center',
             justifyContent: 'center',
             gap: 10,
-            flex: 1,
-            minWidth: 0,
             fontFamily: 'inherit',
           }}
         >
@@ -326,8 +322,6 @@ export default function AMDashboardPage() {
             alignItems: 'center',
             justifyContent: 'center',
             gap: 10,
-            flex: 1,
-            minWidth: 0,
             fontFamily: 'inherit',
           }}
         >
