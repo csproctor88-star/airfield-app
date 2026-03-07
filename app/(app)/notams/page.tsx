@@ -65,20 +65,20 @@ function formatTime(iso: string) {
   })
 }
 
-/** Card background tint based on NOTAM number prefix */
-function cardBackground(notamNumber: string): string {
-  const prefix = notamNumber.charAt(0).toUpperCase()
-  if (prefix === 'M') return 'rgba(239,68,68,0.08)'   // safety — light red
-  if (prefix === 'L') return 'rgba(234,179,8,0.08)'    // local — light yellow
-  return 'var(--color-bg-surface-solid)'
+/** Check if a NOTAM is expiring within 24 hours */
+function isExpiringSoon(effectiveEnd: string): boolean {
+  if (!effectiveEnd || effectiveEnd.toUpperCase() === 'PERM') return false
+  const parsed = parseFaaDate(effectiveEnd) || new Date(effectiveEnd)
+  if (isNaN(parsed.getTime())) return false
+  const diff = parsed.getTime() - Date.now()
+  return diff > 0 && diff <= 24 * 60 * 60 * 1000
 }
 
-/** Card border tint for left accent */
-function cardBorder(notamNumber: string, sourceFallback: string): string {
-  const prefix = notamNumber.charAt(0).toUpperCase()
-  if (prefix === 'M') return '#EF4444'
-  if (prefix === 'L') return '#EAB308'
-  return SOURCE_COLORS[sourceFallback] || 'var(--color-text-4)'
+function parseFaaDate(str: string): Date | null {
+  const match = str.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2})(\d{2})$/)
+  if (!match) return null
+  const [, month, day, year, hour, minute] = match
+  return new Date(Date.UTC(+year, +month - 1, +day, +hour, +minute))
 }
 
 export default function NotamsPage() {
@@ -524,19 +524,19 @@ export default function NotamsPage() {
         <div className="card-list">
           {filtered.map((notam) => {
             const isExpired = notam.status === 'expired'
-            const bg = cardBackground(notam.notam_number)
-            const borderLeft = cardBorder(notam.notam_number, notam.source)
+            const expiringSoon = !isExpired && isExpiringSoon(notam.effective_end)
 
             return (
               <div
                 key={notam.id}
                 style={{
-                  background: bg,
-                  border: '1px solid var(--color-bg-elevated)',
-                  borderLeft: `3px solid ${borderLeft}`,
+                  background: expiringSoon ? 'rgba(239,68,68,0.10)' : 'var(--color-bg-surface-solid)',
+                  border: expiringSoon ? '1px solid rgba(239,68,68,0.4)' : '1px solid var(--color-bg-elevated)',
+                  borderLeft: expiringSoon ? '3px solid #EF4444' : '3px solid var(--color-text-4)',
                   borderRadius: 10,
                   padding: '12px 14px',
                   opacity: isExpired ? 0.5 : 1,
+                  boxShadow: expiringSoon ? '0 0 12px rgba(239,68,68,0.15)' : 'none',
                 }}
               >
                 {/* Top row: source + type badges, status badge */}
@@ -548,7 +548,7 @@ export default function NotamsPage() {
                     marginBottom: 6,
                   }}
                 >
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                     <Badge
                       label={notam.source.toUpperCase()}
                       color={SOURCE_COLORS[notam.source] || '#94A3B8'}
@@ -556,6 +556,9 @@ export default function NotamsPage() {
                     <Badge label={notam.notam_type} color="#94A3B8" />
                     {notam.notam_number.charAt(0).toUpperCase() === 'M' && (
                       <Badge label="SAFETY" color="#EF4444" />
+                    )}
+                    {expiringSoon && (
+                      <Badge label="EXPIRING SOON" color="#EF4444" />
                     )}
                   </div>
                   <Badge

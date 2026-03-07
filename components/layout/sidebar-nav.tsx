@@ -8,6 +8,7 @@ import { USER_ROLES } from '@/lib/constants'
 import { useSidebar } from '@/lib/sidebar-context'
 import { useTheme } from '@/lib/theme-context'
 import type { UserRole } from '@/lib/supabase/types'
+import { useExpiringNotamCount } from '@/lib/use-expiring-notams'
 import {
   Home,
   LayoutDashboard,
@@ -65,6 +66,7 @@ export function SidebarNav() {
   const pathname = usePathname()
   const { isOpen, toggle } = useSidebar()
   const { resolvedTheme } = useTheme()
+  const expiringNotamCount = useExpiringNotamCount()
   const [canManageUsers, setCanManageUsers] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [opsOpen, setOpsOpen] = useState(false)
@@ -144,8 +146,41 @@ export function SidebarNav() {
           whiteSpace: 'nowrap',
         }}
       >
-        <Icon size={indented ? 16 : 18} style={{ flexShrink: 0 }} />
-        {isOpen && <span>{item.name}</span>}
+        <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+          <Icon size={indented ? 16 : 18} />
+          {item.href === '/notams' && expiringNotamCount > 0 && (
+            <span style={{
+              position: 'absolute',
+              top: -4,
+              right: -6,
+              width: isOpen ? 16 : 14,
+              height: isOpen ? 16 : 14,
+              borderRadius: '50%',
+              background: '#EF4444',
+              color: '#fff',
+              fontSize: 9,
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              lineHeight: 1,
+              boxShadow: '0 0 6px rgba(239,68,68,0.5)',
+            }}>
+              {expiringNotamCount > 9 ? '9+' : expiringNotamCount}
+            </span>
+          )}
+        </span>
+        {isOpen && <span style={{ flex: 1 }}>{item.name}</span>}
+        {isOpen && item.href === '/notams' && expiringNotamCount > 0 && (
+          <span style={{
+            fontSize: 'var(--fs-xs)',
+            fontWeight: 700,
+            color: '#EF4444',
+            marginLeft: 'auto',
+          }}>
+            {expiringNotamCount} expiring
+          </span>
+        )}
       </Link>
     )
   }
