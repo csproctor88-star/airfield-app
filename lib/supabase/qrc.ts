@@ -295,3 +295,31 @@ export async function reopenQrcExecution(executionId: string): Promise<{ error: 
     .eq('id', executionId)
   return { error: error?.message || null }
 }
+
+export async function cancelQrcExecution(
+  executionId: string,
+  baseId?: string | null
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+
+  // Get QRC info before deleting for activity log
+  const { data } = await supabase
+    .from('qrc_executions')
+    .select('qrc_number, title')
+    .eq('id', executionId)
+    .single()
+
+  const { error } = await supabase
+    .from('qrc_executions')
+    .delete()
+    .eq('id', executionId)
+
+  if (error) return { error: error.message }
+
+  if (data) {
+    await logActivity('cancelled', 'qrc', executionId, `QRC-${data.qrc_number}`, { title: data.title }, baseId)
+  }
+
+  return { error: null }
+}

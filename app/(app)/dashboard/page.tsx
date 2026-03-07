@@ -1269,6 +1269,21 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
     setClosing(false)
   }
 
+  async function handleCancel() {
+    if (!activeExecId) return
+    if (!confirm('Cancel this QRC? This will permanently remove all data for this execution.')) return
+    const { cancelQrcExecution } = await import('@/lib/supabase/qrc')
+    const exec = openExecs.find(e => e.id === activeExecId)
+    const { error } = await cancelQrcExecution(activeExecId, installationId)
+    if (error) toast.error(error)
+    else {
+      toast.success(`QRC-${exec?.qrc_number} cancelled`)
+      setActiveExecId(null)
+      await load()
+      await onActivity()
+    }
+  }
+
   function zuluNow(): string {
     return new Date().toISOString().slice(11, 16).replace(':', '')
   }
@@ -1559,11 +1574,19 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                 </div>
               </div>
             ) : (
-              <button onClick={() => setShowCloseConfirm(true)} style={{
-                width: '100%', padding: '10px 0', borderRadius: 8, border: 'none',
-                background: '#22C55E', color: '#fff', fontWeight: 700,
-                fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
-              }}>Close QRC</button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setShowCloseConfirm(true)} style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
+                  background: '#22C55E', color: '#fff', fontWeight: 700,
+                  fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
+                }}>Close QRC</button>
+                <button onClick={handleCancel} style={{
+                  padding: '10px 14px', borderRadius: 8,
+                  border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.06)',
+                  color: '#EF4444', fontWeight: 700, fontSize: 'var(--fs-base)',
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}>Cancel</button>
+              </div>
             )}
           </div>
         )}

@@ -14,6 +14,7 @@ import {
   updateScnData,
   closeQrcExecution,
   reopenQrcExecution,
+  cancelQrcExecution,
   reviewQrcTemplate,
 } from '@/lib/supabase/qrc'
 import type { QrcTemplate, QrcExecution, QrcStep, QrcStepResponse } from '@/lib/supabase/types'
@@ -424,6 +425,17 @@ function QrcExecutionView({
     }
   }
 
+  async function handleCancel() {
+    if (!confirm('Cancel this QRC? This will permanently remove all data for this execution.')) return
+    const { error } = await cancelQrcExecution(execution.id, installationId)
+    if (error) toast.error(error)
+    else {
+      toast.success(`QRC-${execution.qrc_number} cancelled`)
+      onBack()
+      await onUpdate()
+    }
+  }
+
   async function handleReview() {
     if (!template) return
     setReviewing(true)
@@ -830,18 +842,29 @@ function QrcExecutionView({
                   color: 'var(--color-text-2)', fontWeight: 700, fontSize: 'var(--fs-base)',
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}
-              >Cancel</button>
+              >Back</button>
             </div>
           </div>
         ) : (
-          <button
-            onClick={() => setShowCloseConfirm(true)}
-            style={{
-              width: '100%', padding: '12px 0', borderRadius: 8, border: 'none',
-              background: '#22C55E', color: '#fff', fontWeight: 700,
-              fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >Close QRC</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => setShowCloseConfirm(true)}
+              style={{
+                flex: 1, padding: '12px 0', borderRadius: 8, border: 'none',
+                background: '#22C55E', color: '#fff', fontWeight: 700,
+                fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >Close QRC</button>
+            <button
+              onClick={handleCancel}
+              style={{
+                padding: '12px 16px', borderRadius: 8,
+                border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.06)',
+                color: '#EF4444', fontWeight: 700, fontSize: 'var(--fs-base)',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >Cancel QRC</button>
+          </div>
         )
       ) : (
         <button
