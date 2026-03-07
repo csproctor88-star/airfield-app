@@ -1377,10 +1377,6 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
               </div>
             )}
 
-            {/* Notes input */}
-            <input className="input-dark" placeholder="Notes..."
-              value={resp.notes || ''} onChange={e => handleNotes(step.id, e.target.value)}
-              style={{ width: '100%', fontSize: 'var(--fs-xs)', padding: '2px 6px', opacity: 0.7, marginTop: 4 }} />
           </div>
           {/* Timestamp */}
           {checked && resp.completed_at && (
@@ -1462,13 +1458,10 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                 </div>
               )}
 
-              {/* Steps */}
-              {steps.map(step => renderStep(step))}
-
-              {/* SCN Form */}
+              {/* SCN Form — data entry at top for quick capture */}
               {activeTemplate.has_scn_form && activeTemplate.scn_fields && (
                 <div style={{
-                  padding: 14, borderRadius: 10, marginTop: 12,
+                  padding: 14, borderRadius: 10, marginBottom: 12,
                   background: 'var(--color-bg-surface)', border: '1px solid rgba(34,211,238,0.2)',
                 }}>
                   <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-cyan)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -1494,6 +1487,9 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                   )}
                 </div>
               )}
+
+              {/* Steps */}
+              {steps.map(step => renderStep(step))}
             </div>
           ) : (
             /* Template picker grid */

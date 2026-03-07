@@ -585,23 +585,6 @@ function QrcExecutionView({
               </div>
             )}
 
-            {/* Notes field for any step */}
-            {step.type !== 'conditional' && !isClosed && (
-              <div style={{ marginTop: 4 }}>
-                <input
-                  className="input-dark"
-                  placeholder="Notes..."
-                  value={resp.notes || ''}
-                  onChange={e => handleNotes(step.id, e.target.value)}
-                  style={{ width: '100%', fontSize: 'var(--fs-xs)', padding: '3px 8px', opacity: 0.7 }}
-                />
-              </div>
-            )}
-            {resp.notes && isClosed && (
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4, fontStyle: 'italic' }}>
-                Note: {resp.notes}
-              </div>
-            )}
           </div>
 
           {/* Timestamp */}
@@ -688,12 +671,7 @@ function QrcExecutionView({
         </div>
       )}
 
-      {/* Steps */}
-      <div style={{ marginBottom: 16 }}>
-        {steps.map(step => renderStep(step))}
-      </div>
-
-      {/* SCN Form */}
+      {/* SCN Form — data entry at top for quick capture */}
       {template?.has_scn_form && template.scn_fields && (
         <div style={{
           padding: 16, borderRadius: 10, marginBottom: 16,
@@ -731,6 +709,11 @@ function QrcExecutionView({
           )}
         </div>
       )}
+
+      {/* Steps */}
+      <div style={{ marginBottom: 16 }}>
+        {steps.map(step => renderStep(step))}
+      </div>
 
       {/* Annual Review Section */}
       {template && (
