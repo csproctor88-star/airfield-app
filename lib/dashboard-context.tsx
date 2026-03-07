@@ -38,6 +38,10 @@ type DashboardState = {
   bwcValue: string | null
   bwcUpdatedAt: string | null
   setBwcValue: (val: string | null) => Promise<void>
+  constructionRemarks: string | null
+  setConstructionRemarks: (val: string | null) => Promise<void>
+  miscRemarks: string | null
+  setMiscRemarks: (val: string | null) => Promise<void>
   refreshStatus: () => Promise<void>
 }
 
@@ -57,6 +61,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [rcrCondition, setRcrConditionLocal] = useState<string | null>(null)
   const [bwcValue, setBwcValueLocal] = useState<string | null>(null)
   const [bwcUpdatedAt, setBwcUpdatedAtLocal] = useState<string | null>(null)
+  const [constructionRemarks, setConstructionRemarksLocal] = useState<string | null>(null)
+  const [miscRemarks, setMiscRemarksLocal] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
 
   // Build runway labels from installation runways (e.g., "06L/24R")
@@ -102,6 +108,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         setRcrConditionLocal(status.rcr_condition ?? null)
         setBwcValueLocal(status.bwc_value ?? null)
         setBwcUpdatedAtLocal(status.bwc_updated_at ?? null)
+        setConstructionRemarksLocal(status.construction_remarks ?? null)
+        setMiscRemarksLocal(status.misc_remarks ?? null)
       }
       setLoaded(true)
     }
@@ -135,6 +143,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
           if (row.arff_statuses && typeof row.arff_statuses === 'object') {
             setArffStatusesLocal(row.arff_statuses as Record<string, ArffReadiness>)
           }
+          // Construction / Misc remarks realtime
+          setConstructionRemarksLocal(row.construction_remarks ?? null)
+          setMiscRemarksLocal(row.misc_remarks ?? null)
           // RSC / RCR / BWC realtime
           setRscConditionLocal(row.rsc_condition ?? null)
           setRscUpdatedAtLocal(row.rsc_updated_at ?? null)
@@ -248,6 +259,18 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     await updateAirfieldStatus({ bwc_value: val, bwc_updated_at: now }, installationId)
   }, [installationId])
 
+  // Construction remarks
+  const setConstructionRemarks = useCallback(async (val: string | null) => {
+    setConstructionRemarksLocal(val)
+    await updateAirfieldStatus({ construction_remarks: val }, installationId)
+  }, [installationId])
+
+  // Misc remarks
+  const setMiscRemarks = useCallback(async (val: string | null) => {
+    setMiscRemarksLocal(val)
+    await updateAirfieldStatus({ misc_remarks: val }, installationId)
+  }, [installationId])
+
   // Re-fetch airfield_status (called on mount, by dashboard realtime, and by polling fallback)
   const refreshStatus = useCallback(async () => {
     const status = await fetchAirfieldStatus(installationId)
@@ -272,6 +295,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setRcrConditionLocal(status.rcr_condition ?? null)
       setBwcValueLocal(status.bwc_value ?? null)
       setBwcUpdatedAtLocal(status.bwc_updated_at ?? null)
+      setConstructionRemarksLocal(status.construction_remarks ?? null)
+      setMiscRemarksLocal(status.misc_remarks ?? null)
     }
   }, [installationId])
 
@@ -297,6 +322,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         rscCondition, rscUpdatedAt, setRscCondition,
         rcrValue, rcrCondition,
         bwcValue, bwcUpdatedAt, setBwcValue,
+        constructionRemarks, setConstructionRemarks,
+        miscRemarks, setMiscRemarks,
         refreshStatus,
       }}
     >

@@ -59,13 +59,17 @@ const ADVISORY_COLORS: Record<string, { bg: string; border: string; text: string
 
 export default function HomePage() {
   const router = useRouter()
-  const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, setRscCondition, rcrValue, rcrCondition, bwcValue, setBwcValue, refreshStatus } = useDashboard()
+  const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, setRscCondition, rcrValue, rcrCondition, bwcValue, setBwcValue, constructionRemarks, setConstructionRemarks, miscRemarks, setMiscRemarks, refreshStatus } = useDashboard()
   const { installationId, runways, arffAircraft } = useInstallation()
   const [weather, setWeather] = useState<WeatherResult | null>(null)
   const [weatherLoaded, setWeatherLoaded] = useState(false)
   const [navaids, setNavaids] = useState<NavaidStatus[]>([])
   const [navaidNotes, setNavaidNotes] = useState<Record<string, string>>({})
   const [activeContractors, setActiveContractors] = useState<ContractorRow[]>([])
+  const [editingConstruction, setEditingConstruction] = useState(false)
+  const [constructionDraft, setConstructionDraft] = useState('')
+  const [editingMisc, setEditingMisc] = useState(false)
+  const [miscDraft, setMiscDraft] = useState('')
   // RSC dialog state
   const [rscDialogOpen, setRscDialogOpen] = useState(false)
   const [rscDraftValue, setRscDraftValue] = useState<string | null>(null)
@@ -1187,22 +1191,25 @@ export default function HomePage() {
         )
       })()}
 
-      {/* ===== Personnel on Airfield ===== */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span className="section-label" style={{ marginBottom: 0 }}>Personnel on Airfield</span>
-        <button
-          onClick={() => router.push('/contractors')}
-          style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-        >
-          View All →
-        </button>
-      </div>
-      {activeContractors.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: 16, marginBottom: 16 }}>
-          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>No active contractors</div>
-        </div>
-      ) : (
-        <div className="card" style={{ padding: '6px 14px', marginBottom: 16 }}>
+      {/* ===== Personnel / Construction / Misc — 3-column grid ===== */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16, alignItems: 'start' }}>
+        {/* Personnel on Airfield */}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span className="section-label" style={{ marginBottom: 0 }}>Personnel on Airfield</span>
+            <button
+              onClick={() => router.push('/contractors')}
+              style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+            >
+              View All →
+            </button>
+          </div>
+          {activeContractors.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: 16 }}>
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>No active contractors</div>
+            </div>
+          ) : (
+            <div className="card" style={{ padding: '6px 14px' }}>
               {activeContractors.map((c, i, arr) => {
                 const startDate = new Date(c.start_date)
                 const dayNum = Math.max(1, Math.ceil((Date.now() - startDate.getTime()) / 86400000))
@@ -1270,6 +1277,118 @@ export default function HomePage() {
                 )
               })}
             </div>
+          )}
+        </div>
+
+        {/* Airfield Construction/Closures */}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span className="section-label" style={{ marginBottom: 0 }}>Construction / Closures</span>
+            <button
+              onClick={() => { setConstructionDraft(constructionRemarks || ''); setEditingConstruction(true) }}
+              style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+            >
+              {constructionRemarks ? 'Edit' : 'Add'}
+            </button>
+          </div>
+          <div className="card" style={{ padding: constructionRemarks ? '10px 14px' : 16, textAlign: constructionRemarks ? 'left' : 'center' }}>
+            {constructionRemarks ? (
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{constructionRemarks}</div>
+            ) : (
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>None</div>
+            )}
+          </div>
+        </div>
+
+        {/* Miscellaneous Info */}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span className="section-label" style={{ marginBottom: 0 }}>Miscellaneous Info</span>
+            <button
+              onClick={() => { setMiscDraft(miscRemarks || ''); setEditingMisc(true) }}
+              style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+            >
+              {miscRemarks ? 'Edit' : 'Add'}
+            </button>
+          </div>
+          <div className="card" style={{ padding: miscRemarks ? '10px 14px' : 16, textAlign: miscRemarks ? 'left' : 'center' }}>
+            {miscRemarks ? (
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{miscRemarks}</div>
+            ) : (
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>None</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Construction/Closures edit dialog */}
+      {editingConstruction && (
+        <div
+          onClick={() => setEditingConstruction(false)}
+          style={{ position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 24, width: '100%', maxWidth: 440, border: '1px solid var(--color-border-mid)' }}>
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>Construction / Closures</div>
+            <textarea
+              value={constructionDraft}
+              onChange={(e) => setConstructionDraft(e.target.value)}
+              placeholder="Enter construction activity, closures, or restrictions..."
+              rows={5}
+              style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8, background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)', color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', outline: 'none', marginBottom: 14, fontFamily: 'inherit', resize: 'vertical' }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              {constructionRemarks && (
+                <button
+                  onClick={() => { setConstructionRemarks(null); setEditingConstruction(false) }}
+                  style={{ flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: 'var(--color-danger)' }}
+                >Clear</button>
+              )}
+              <button
+                onClick={() => { setConstructionRemarks(constructionDraft.trim() || null); setEditingConstruction(false) }}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', border: '1px solid rgba(52,211,153,0.3)', background: 'rgba(52,211,153,0.15)', color: 'var(--color-success)' }}
+              >Save</button>
+              <button
+                onClick={() => setEditingConstruction(false)}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', border: '1px solid var(--color-border-mid)', background: 'var(--color-bg-inset)', color: 'var(--color-text-3)' }}
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Miscellaneous Info edit dialog */}
+      {editingMisc && (
+        <div
+          onClick={() => setEditingMisc(false)}
+          style={{ position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 24, width: '100%', maxWidth: 440, border: '1px solid var(--color-border-mid)' }}>
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>Miscellaneous Info</div>
+            <textarea
+              value={miscDraft}
+              onChange={(e) => setMiscDraft(e.target.value)}
+              placeholder="Enter miscellaneous information or notes..."
+              rows={5}
+              style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8, background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)', color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', outline: 'none', marginBottom: 14, fontFamily: 'inherit', resize: 'vertical' }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              {miscRemarks && (
+                <button
+                  onClick={() => { setMiscRemarks(null); setEditingMisc(false) }}
+                  style={{ flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: 'var(--color-danger)' }}
+                >Clear</button>
+              )}
+              <button
+                onClick={() => { setMiscRemarks(miscDraft.trim() || null); setEditingMisc(false) }}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', border: '1px solid rgba(52,211,153,0.3)', background: 'rgba(52,211,153,0.15)', color: 'var(--color-success)' }}
+              >Save</button>
+              <button
+                onClick={() => setEditingMisc(false)}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', border: '1px solid var(--color-border-mid)', background: 'var(--color-bg-inset)', color: 'var(--color-text-3)' }}
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
