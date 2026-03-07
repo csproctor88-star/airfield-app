@@ -651,6 +651,54 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['runway_status_log']['Insert']>
         Relationships: []
       }
+      shift_checklist_items: {
+        Row: {
+          id: string
+          base_id: string
+          label: string
+          shift: string
+          frequency: string
+          sort_order: number
+          is_active: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['shift_checklist_items']['Row'], 'id' | 'created_at' | 'updated_at' | 'is_active' | 'sort_order'>
+        Update: Partial<Database['public']['Tables']['shift_checklist_items']['Insert']>
+        Relationships: []
+      }
+      shift_checklists: {
+        Row: {
+          id: string
+          base_id: string
+          checklist_date: string
+          status: string
+          completed_by: string | null
+          completed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['shift_checklists']['Row'], 'id' | 'created_at' | 'updated_at' | 'status'>
+        Update: Partial<Database['public']['Tables']['shift_checklists']['Insert']>
+        Relationships: []
+      }
+      shift_checklist_responses: {
+        Row: {
+          id: string
+          checklist_id: string
+          item_id: string
+          completed: boolean
+          completed_by: string | null
+          completed_at: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['shift_checklist_responses']['Row'], 'id' | 'created_at' | 'updated_at' | 'completed'>
+        Update: Partial<Database['public']['Tables']['shift_checklist_responses']['Insert']>
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>

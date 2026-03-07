@@ -7,9 +7,18 @@ import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
 import { createDefaultTemplate, fetchInspectionTemplate } from '@/lib/supabase/inspection-templates'
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
+import {
+  fetchChecklistItems,
+  createChecklistItem,
+  updateChecklistItem,
+  deleteChecklistItem,
+  type ShiftChecklistItem,
+  type ShiftType,
+  type FrequencyType,
+} from '@/lib/supabase/shift-checklist'
 import { fetchNavaidStatuses, type NavaidStatus } from '@/lib/supabase/navaids'
 
-type SetupTab = 'runways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'templates'
+type SetupTab = 'runways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'templates' | 'shiftchecklist'
 
 export default function BaseSetupPage() {
   const { installationId, currentInstallation, runways, areas, ceShops, arffAircraft, userRole } = useInstallation()
@@ -39,6 +48,7 @@ export default function BaseSetupPage() {
     { key: 'arff', label: 'ARFF Aircraft' },
     { key: 'shops', label: 'CE Shops' },
     { key: 'templates', label: 'Templates' },
+    { key: 'shiftchecklist', label: 'Shift Checklist' },
   ]
 
   return (
@@ -94,6 +104,7 @@ export default function BaseSetupPage() {
         {activeTab === 'arff' && <SimpleListTab title="ARFF Aircraft" items={arffAircraft} tableName="base_arff_aircraft" fieldName="aircraft_name" installationId={installationId} />}
         {activeTab === 'shops' && <ShopsTab shops={ceShops} installationId={installationId} />}
         {activeTab === 'templates' && <TemplatesTab installationId={installationId} />}
+        {activeTab === 'shiftchecklist' && <ShiftChecklistTab installationId={installationId} />}
       </div>
 
       {/* Preview Dashboard Button */}
@@ -1119,6 +1130,222 @@ function DashboardPreview({
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ===== Shift Checklist Configuration Tab =====
+
+const SHIFT_OPTIONS: { value: ShiftType; label: string }[] = [
+  { value: 'day', label: 'Day Shift' },
+  { value: 'swing', label: 'Swing Shift' },
+]
+
+const FREQ_OPTIONS: { value: FrequencyType; label: string }[] = [
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+]
+
+const FREQ_TAG_COLORS: Record<string, string> = { daily: '#22D3EE', weekly: '#A78BFA', monthly: '#F59E0B' }
+
+function ShiftChecklistTab({ installationId }: { installationId: string | null }) {
+  const [items, setItems] = useState<ShiftChecklistItem[]>([])
+  const [loaded, setLoaded] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  const [formLabel, setFormLabel] = useState('')
+  const [formShift, setFormShift] = useState<ShiftType>('day')
+  const [formFreq, setFormFreq] = useState<FrequencyType>('daily')
+
+  const [editLabel, setEditLabel] = useState('')
+  const [editShift, setEditShift] = useState<ShiftType>('day')
+  const [editFreq, setEditFreq] = useState<FrequencyType>('daily')
+
+  const load = useCallback(async () => {
+    const data = await fetchChecklistItems(installationId)
+    setItems(data)
+    setLoaded(true)
+  }, [installationId])
+
+  useEffect(() => { load() }, [load])
+
+  async function handleCreate() {
+    if (!formLabel.trim() || !installationId) return
+    setSaving(true)
+    const { error } = await createChecklistItem({
+      base_id: installationId,
+      label: formLabel.trim(),
+      shift: formShift,
+      frequency: formFreq,
+      sort_order: items.length,
+    })
+    setSaving(false)
+    if (error) {
+      toast.error(error)
+    } else {
+      setFormLabel('')
+      setFormShift('day')
+      setFormFreq('daily')
+      setShowForm(false)
+      await load()
+      toast.success('Item added')
+    }
+  }
+
+  async function handleUpdate() {
+    if (!editingId || !editLabel.trim()) return
+    setSaving(true)
+    const { error } = await updateChecklistItem(editingId, {
+      label: editLabel.trim(),
+      shift: editShift,
+      frequency: editFreq,
+    })
+    setSaving(false)
+    if (error) {
+      toast.error(error)
+    } else {
+      setEditingId(null)
+      await load()
+      toast.success('Item updated')
+    }
+  }
+
+  async function handleDelete(id: string, label: string) {
+    if (!confirm(`Delete "${label}"? This cannot be undone.`)) return
+    const { error } = await deleteChecklistItem(id)
+    if (error) toast.error(error)
+    else { await load(); toast.success('Item deleted') }
+  }
+
+  async function handleToggleActive(item: ShiftChecklistItem) {
+    const { error } = await updateChecklistItem(item.id, { is_active: !item.is_active })
+    if (error) toast.error(error)
+    else await load()
+  }
+
+  function startEdit(item: ShiftChecklistItem) {
+    setEditingId(item.id)
+    setEditLabel(item.label)
+    setEditShift(item.shift)
+    setEditFreq(item.frequency)
+  }
+
+  const dayItems = items.filter(i => i.shift === 'day')
+  const swingItems = items.filter(i => i.shift === 'swing')
+
+  const inputStyle: React.CSSProperties = {
+    padding: '8px 10px',
+    borderRadius: 6,
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-bg-surface)',
+    color: 'var(--color-text-1)',
+    fontSize: 'var(--fs-sm)',
+    fontFamily: 'inherit',
+  }
+
+  const selectStyle: React.CSSProperties = { ...inputStyle, cursor: 'pointer' }
+
+  function renderItemList(label: string, list: ShiftChecklistItem[]) {
+    return (
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 6 }}>
+          {label} ({list.length})
+        </div>
+        {list.length === 0 ? (
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', padding: '8px 0' }}>No items configured.</div>
+        ) : (
+          <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, overflow: 'hidden' }}>
+            {list.map((item, i) => (
+              <div key={item.id}>
+                {editingId === item.id ? (
+                  <div style={{ padding: '10px 12px', background: 'var(--color-bg-elevated)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 8, marginBottom: 8 }}>
+                      <input value={editLabel} onChange={e => setEditLabel(e.target.value)} style={inputStyle} placeholder="Item label" />
+                      <select value={editShift} onChange={e => setEditShift(e.target.value as ShiftType)} style={selectStyle}>
+                        {SHIFT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                      <select value={editFreq} onChange={e => setEditFreq(e.target.value as FrequencyType)} style={selectStyle}>
+                        {FREQ_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button onClick={() => setEditingId(null)} style={{ background: 'none', border: 'none', color: 'var(--color-text-3)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)' }}>Cancel</button>
+                      <button onClick={handleUpdate} disabled={saving || !editLabel.trim()} style={{ background: 'var(--color-cyan)', color: '#000', border: 'none', borderRadius: 6, padding: '6px 14px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit' }}>Save</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                    borderBottom: i < list.length - 1 ? '1px solid var(--color-border)' : 'none',
+                    opacity: item.is_active ? 1 : 0.5,
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0, fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)' }}>{item.label}</div>
+                    <span style={{
+                      fontSize: 'var(--fs-xs)', fontWeight: 700, color: FREQ_TAG_COLORS[item.frequency],
+                      background: `${FREQ_TAG_COLORS[item.frequency]}15`, padding: '2px 8px', borderRadius: 10, flexShrink: 0,
+                    }}>{item.frequency.charAt(0).toUpperCase() + item.frequency.slice(1)}</span>
+                    <button onClick={() => handleToggleActive(item)} title={item.is_active ? 'Disable' : 'Enable'} style={{
+                      background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                      fontSize: 'var(--fs-xs)', fontWeight: 600, color: item.is_active ? '#22C55E' : 'var(--color-text-4)',
+                    }}>{item.is_active ? 'Active' : 'Inactive'}</button>
+                    <button onClick={() => startEdit(item)} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600 }}>Edit</button>
+                    <button onClick={() => handleDelete(item.id, item.label)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600 }}>Delete</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>Shift Checklist Items</div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Configure items for day and swing shift checklists.</div>
+        </div>
+        <button onClick={() => setShowForm(!showForm)} style={{
+          background: 'var(--color-cyan)', color: '#000', border: 'none', borderRadius: 8,
+          padding: '8px 16px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
+        }}>{showForm ? 'Cancel' : '+ Add Item'}</button>
+      </div>
+
+      {showForm && (
+        <div style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)', borderRadius: 8, padding: 14, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8, marginBottom: 8 }}>
+            <input value={formLabel} onChange={e => setFormLabel(e.target.value)} placeholder="Checklist item label" style={inputStyle} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <select value={formShift} onChange={e => setFormShift(e.target.value as ShiftType)} style={selectStyle}>
+                {SHIFT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <select value={formFreq} onChange={e => setFormFreq(e.target.value as FrequencyType)} style={selectStyle}>
+                {FREQ_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <button onClick={handleCreate} disabled={saving || !formLabel.trim()} style={{
+            width: '100%', padding: '8px 0', borderRadius: 6, border: 'none',
+            background: formLabel.trim() ? 'var(--color-cyan)' : 'var(--color-border)',
+            color: formLabel.trim() ? '#000' : 'var(--color-text-3)',
+            fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: formLabel.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
+          }}>{saving ? 'Adding...' : 'Add Item'}</button>
+        </div>
+      )}
+
+      {!loaded ? (
+        <div style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)' }}>Loading...</div>
+      ) : (
+        <>
+          {renderItemList('Day Shift', dayItems)}
+          {renderItemList('Swing Shift', swingItems)}
+        </>
+      )}
     </div>
   )
 }
