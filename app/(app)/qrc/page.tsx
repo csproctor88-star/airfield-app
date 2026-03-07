@@ -431,8 +431,8 @@ function QrcExecutionView({
     if (error) toast.error(error)
     else {
       toast.success(`QRC-${execution.qrc_number} cancelled`)
-      onBack()
       await onUpdate()
+      onBack()
     }
   }
 

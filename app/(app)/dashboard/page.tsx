@@ -1169,7 +1169,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
     ])
     setTemplates(t)
     setOpenExecs(o)
-    if (o.length > 0 && !activeExecId) setActiveExecId(o[0].id)
+    // Don't auto-select — let user pick from the list
     setLoaded(true)
   }, [installationId]) // eslint-disable-line react-hooks/exhaustive-deps
 
