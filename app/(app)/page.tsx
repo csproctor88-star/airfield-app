@@ -11,7 +11,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { logActivity } from '@/lib/supabase/activity'
 import { logRunwayStatusChange } from '@/lib/supabase/airfield-status'
 import { RSC_CONDITIONS, BWC_OPTIONS, RCR_CONDITION_TYPES } from '@/lib/constants'
-import { fetchActiveContractors, updateContractor, type ContractorRow } from '@/lib/supabase/contractors'
+import { fetchActiveContractors, updateContractor, createContractor, type ContractorRow } from '@/lib/supabase/contractors'
 import { DEMO_CONTRACTORS } from '@/lib/demo-data'
 import LoginActivityDialog from '@/components/login-activity-dialog'
 
@@ -66,6 +66,12 @@ export default function HomePage() {
   const [navaids, setNavaids] = useState<NavaidStatus[]>([])
   const [navaidNotes, setNavaidNotes] = useState<Record<string, string>>({})
   const [activeContractors, setActiveContractors] = useState<ContractorRow[]>([])
+  const [showAddPersonnel, setShowAddPersonnel] = useState(false)
+  const [addingPersonnel, setAddingPersonnel] = useState(false)
+  const [pCompany, setPCompany] = useState('')
+  const [pLocation, setPLocation] = useState('')
+  const [pDescription, setPDescription] = useState('')
+  const [pCallsign, setPCallsign] = useState('')
   const [editingConstruction, setEditingConstruction] = useState(false)
   const [constructionDraft, setConstructionDraft] = useState('')
   const [editingMisc, setEditingMisc] = useState(false)
@@ -1194,13 +1200,87 @@ export default function HomePage() {
       {/* ===== Personnel on Airfield ===== */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <span className="section-label" style={{ marginBottom: 0 }}>Personnel on Airfield</span>
-        <button
-          onClick={() => router.push('/contractors')}
-          style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-        >
-          View All →
-        </button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button
+            onClick={() => setShowAddPersonnel(prev => !prev)}
+            style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+          >
+            {showAddPersonnel ? 'Cancel' : '+ Add'}
+          </button>
+          <button
+            onClick={() => router.push('/contractors')}
+            style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+          >
+            View All →
+          </button>
+        </div>
       </div>
+      {showAddPersonnel && (
+        <div className="card" style={{ padding: '12px 14px', marginBottom: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+            <input
+              placeholder="Company / Name *"
+              value={pCompany}
+              onChange={e => setPCompany(e.target.value)}
+              style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }}
+            />
+            <input
+              placeholder="Location *"
+              value={pLocation}
+              onChange={e => setPLocation(e.target.value)}
+              style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }}
+            />
+            <input
+              placeholder="Work Description *"
+              value={pDescription}
+              onChange={e => setPDescription(e.target.value)}
+              style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }}
+            />
+            <input
+              placeholder="Callsign (optional)"
+              value={pCallsign}
+              onChange={e => setPCallsign(e.target.value)}
+              style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }}
+            />
+          </div>
+          <button
+            disabled={addingPersonnel || !pCompany.trim() || !pLocation.trim() || !pDescription.trim()}
+            onClick={async () => {
+              setAddingPersonnel(true)
+              const { error } = await createContractor({
+                company_name: pCompany.trim(),
+                location: pLocation.trim(),
+                work_description: pDescription.trim(),
+                callsign: pCallsign.trim() || undefined,
+                base_id: installationId,
+              })
+              setAddingPersonnel(false)
+              if (error) {
+                const { toast } = await import('sonner')
+                toast.error(error)
+              } else {
+                setPCompany(''); setPLocation(''); setPDescription(''); setPCallsign('')
+                setShowAddPersonnel(false)
+                await loadContractors()
+              }
+            }}
+            style={{
+              width: '100%',
+              padding: '8px 0',
+              borderRadius: 6,
+              border: 'none',
+              background: (!pCompany.trim() || !pLocation.trim() || !pDescription.trim()) ? 'var(--color-border)' : 'var(--color-cyan)',
+              color: (!pCompany.trim() || !pLocation.trim() || !pDescription.trim()) ? 'var(--color-text-3)' : '#000',
+              fontWeight: 700,
+              fontSize: 'var(--fs-sm)',
+              cursor: (!pCompany.trim() || !pLocation.trim() || !pDescription.trim()) ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            {addingPersonnel ? 'Adding…' : 'Add Personnel'}
+          </button>
+        </div>
+      )}
       {activeContractors.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: 16, marginBottom: 12 }}>
           <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>No active contractors</div>
