@@ -1,41 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { usePathname } from 'next/navigation'
 import { useTheme } from '@/lib/theme-context'
 import { useSidebar } from '@/lib/sidebar-context'
 import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
 import { PanelLeftOpen, ChevronDown } from 'lucide-react'
-
-const PAGE_LABELS: Record<string, string> = {
-  '/': 'Airfield Status',
-  '/dashboard': 'Dashboard',
-  '/obstructions': 'Obstruction Evaluation Tool',
-  '/aircraft': 'Aircraft Database',
-  '/regulations': 'Reference Library',
-  '/notams': 'NOTAMs',
-  '/activity': 'Events Log',
-  '/checks': 'Airfield Checks',
-  '/inspections': 'All Inspections',
-  '/contractors': 'Personnel on Airfield',
-  '/discrepancies': 'Airfield Discrepancies',
-  '/waivers': 'Airfield Waivers',
-  '/reports': 'Reports & Analytics',
-  '/settings': 'Settings',
-  '/library': 'PDF Library',
-  '/users': 'User Management',
-  '/acsi': 'ACSI Inspections',
-}
-
-function getPageLabel(pathname: string): string {
-  if (PAGE_LABELS[pathname]) return PAGE_LABELS[pathname]
-  // Fallback: match by prefix for nested routes like /discrepancies/123
-  for (const [route, label] of Object.entries(PAGE_LABELS)) {
-    if (route !== '/' && pathname.startsWith(route)) return label
-  }
-  return 'Glidepath'
-}
 
 const ROLE_LABELS: Record<string, string> = {
   airfield_manager: 'AFM',
@@ -58,7 +28,6 @@ function presenceLabel(lastSeen: string | null): { label: string; color: string 
 }
 
 export function Header() {
-  const pathname = usePathname()
   const { resolvedTheme } = useTheme()
   const { isOpen, toggle } = useSidebar()
   const { currentInstallation, allInstallations, switchInstallation, userRole } = useInstallation()
@@ -107,7 +76,6 @@ export function Header() {
   const baseIcao = currentInstallation?.icao || null
   const roleLabel = userRole ? (ROLE_LABELS[userRole] || userRole) : null
   const presence = presenceLabel(lastSeen)
-  const currentPageLabel = getPageLabel(pathname)
 
   return (
     <div
@@ -122,53 +90,39 @@ export function Header() {
         zIndex: 50,
       }}
     >
-      {/* Top row: sidebar toggle + logo + spacer */}
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
-        <button
-          onClick={toggle}
-          className={`sidebar-toggle${!isOpen ? ' sidebar-toggle-visible' : ''}`}
-          title="Expand sidebar"
-          style={{
-            position: 'absolute',
-            left: 0,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: 'var(--color-text-3)',
-            padding: 6,
-            borderRadius: 6,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <PanelLeftOpen size={20} />
-        </button>
-
-        <div style={{
-          fontSize: 'var(--header-title-size)',
-          fontWeight: 800,
-          color: 'var(--color-header-title)',
-          letterSpacing: '0.02em',
-        }}>
-          {currentPageLabel}
-        </div>
-      </div>
-
-      {/* Info row: installation left, status+user+role right */}
+      {/* Info row: sidebar toggle + installation left, status+user right */}
       {(baseName || userName) && (
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginTop: 4,
             fontSize: 'var(--fs-xs)',
             color: 'var(--color-text-3)',
             fontWeight: 600,
             letterSpacing: '0.03em',
           }}
         >
-          {/* Left: installation name + ICAO (switcher if multi-base) */}
+          {/* Left: sidebar toggle + installation name */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
+            <button
+              onClick={toggle}
+              className={`sidebar-toggle${!isOpen ? ' sidebar-toggle-visible' : ''}`}
+              title="Expand sidebar"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--color-text-3)',
+                padding: 4,
+                borderRadius: 6,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <PanelLeftOpen size={18} />
+            </button>
           <div style={{ position: 'relative' }}>
             <div
               style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: canSwitchInstallation ? 'pointer' : 'default' }}
@@ -210,6 +164,7 @@ export function Header() {
                 ))}
               </div>
             )}
+          </div>
           </div>
 
           {/* Right: status + user */}
