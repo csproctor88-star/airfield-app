@@ -9,7 +9,64 @@ All notable changes to Glidepath.
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
 - Sync & Data module (offline queue, export, import)
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~45 `as any` casts
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~57 `as any` casts
+
+---
+
+## [2.16.0] — 2026-03-07
+
+### QRC (Quick Reaction Checklist) Module
+
+Full digitization of 25 Quick Reaction Checklists used during airfield emergencies and operational events. Interactive execution with live step tracking, SCN form data capture, cancel/close lifecycle, dashboard quick-launch, and daily ops report integration.
+
+#### QRC Module (New)
+- **QRC Page** (`/qrc`) — Three tabs: Available (template grid), Active (open executions), History (closed/all)
+- **Interactive execution** — Per-step checkboxes, agency notification tracking, fill-in fields, time fields with "Now (Z)" auto-fill, conditional cross-references to other QRCs
+- **6 step types** — `checkbox`, `checkbox_with_note`, `notify_agencies`, `fill_field`, `time_field`, `conditional`
+- **SCN (Secondary Crash Net) form** — Data entry fields (aircraft type, callsign, tail number, etc.) displayed above checklist steps for applicable QRCs
+- **Cancel QRC** — Permanently deletes accidental executions with confirmation dialog and activity logging
+- **Close QRC** — Marks execution as closed with initials and timestamp, logs to Events Log
+- **Reopen QRC** — Reopen closed executions for amendment
+- **Template management** — Admin-only CRUD in Settings > Base Configuration > QRC Templates tab
+- **Seed data** — 25 pre-built QRC templates with full step structures transcribed from PDFs, selective seeding
+- **Annual review tracking** — Last reviewed date, reviewer, and review notes per template
+
+#### Dashboard QRC Integration
+- **QRC KPI badge** — Shows count of active QRC executions on dashboard
+- **QRC Dialog** — Two-mode dialog: Picker (grid of all templates) and Execution (interactive step form)
+- **Quick-launch** — Start new QRC or resume active execution directly from dashboard
+- **Cancel from dialog** — Cancel closes the dialog entirely (no return to picker)
+
+#### Daily Operations Report Integration
+- **QRC Executions section** — Table of all QRCs opened or closed during the report period, with step completion counts and SCN data sub-tables (teal header)
+- **Events Log section** — Chronological table of all activity log entries (Time, Action, Details, User)
+- **Per-day grouping** — Multi-day date ranges render each day separately with date headers and all 8 report sections per day
+
+#### Database
+- **2 new tables** — `qrc_templates` (admin-configured definitions per base) and `qrc_executions` (one row per QRC run with JSONB step responses and SCN data)
+- **3 migrations** — `2026030700` (tables + RLS), `2026030701` (review fields), `2026030702` (DELETE policy)
+- **RLS policies** — All base users can SELECT/INSERT/UPDATE executions (emergency access); only admins can manage templates; DELETE policy for cancel functionality
+
+#### Bug Fixes
+- **Commercial aircraft images restored** — 86 images accidentally deleted in a previous cleanup commit, recovered from git history
+- **Events Log column widths** — Adjusted in daily ops PDF for better readability (Action column wider, Details auto-width)
+- **DELETE RLS policy** — Cancel QRC was silently failing due to missing DELETE policy on `qrc_executions`
+
+#### Files Created (4)
+- `app/(app)/qrc/page.tsx` — QRC page (882 lines)
+- `lib/supabase/qrc.ts` — QRC CRUD module (326 lines)
+- `lib/qrc-seed-data.ts` — 25 QRC templates with full step structures (467 lines)
+- `supabase/migrations/2026030700_create_qrc_module.sql`, `2026030701_qrc_review_fields.sql`, `2026030702_qrc_exec_delete_policy.sql`
+
+#### Files Modified (7)
+- `app/(app)/dashboard/page.tsx` — QRC KPI badge + QrcDialog with picker/execution modes
+- `app/(app)/settings/base-setup/page.tsx` — QRC Templates tab with seed/edit/toggle
+- `app/(app)/reports/daily/page.tsx` — QRC and Events Log preview cards
+- `lib/reports/daily-ops-data.ts` — `fetchActivityForDate()`, `fetchQrcExecutionsForDate()` with two-query approach
+- `lib/reports/daily-ops-pdf.ts` — QRC Executions section, Events Log section, per-day grouping for multi-day ranges
+- `lib/supabase/types.ts` — QrcTemplate, QrcExecution, QrcStepResponse types + 2 table definitions
+- `components/layout/sidebar-nav.tsx` — QRC nav entry under AM Tools
+- `app/(app)/more/page.tsx` — QRC entry in mobile menu
 
 ---
 

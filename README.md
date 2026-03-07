@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, ACSI (annual compliance), NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.15.0 | **Build:** Clean | **57 routes** | **157 source files** | **76 migrations** | **~57,300 lines**
+**Version:** 2.16.0 | **Build:** Clean | **58 routes** | **160 source files** | **79 migrations** | **~60,400 lines**
 
 ## Tech Stack
 
@@ -54,7 +54,7 @@ RESEND_API_KEY=[resend-api-key]
 Apply the schema and migrations to a Supabase project:
 
 1. Run `supabase/schema.sql` to create the base tables and sequences
-2. Apply the 76 migrations in order from `supabase/migrations/`
+2. Apply the 79 migrations in order from `supabase/migrations/`
 
 See [docs/BASE-ONBOARDING.md](./docs/BASE-ONBOARDING.md) for adding new installations.
 
@@ -155,6 +155,17 @@ Per-shift task tracking with configurable items per base. Three shifts: Day, Swi
 - **Dashboard KPI badge** — Quick access dialog for marking items complete without leaving the dashboard
 - **Base Configuration** — Add/edit/delete/toggle items per shift, configurable daily reset time per base (`Settings > Base Configuration > Shift Checklist`)
 
+### QRC — Quick Reaction Checklists (`/qrc`)
+Interactive execution of 25 digitized Quick Reaction Checklists for airfield emergencies and operational events (IFE, aircraft mishap, bird strike, tornado warning, etc.).
+
+- **Three tabs** — Available (template grid for launching new QRCs), Active (open executions in progress), History (closed/all executions)
+- **6 step types** — Checkbox, checkbox with note, agency notification tracking, fill-in fields, time fields with "Now (Z)" auto-fill, conditional cross-references
+- **SCN (Secondary Crash Net) form** — Data entry fields displayed above steps for applicable QRCs
+- **Lifecycle** — Open (start execution) → Close (with initials/timestamp) or Cancel (permanently delete accidental openings)
+- **Dashboard integration** — KPI badge with active count, quick-launch dialog for starting/resuming QRCs without leaving the dashboard
+- **Template management** — Admin-only CRUD in Base Configuration with seed data for 25 standard QRCs, selective seeding, annual review tracking
+- **Daily ops report** — QRC executions and Events Log entries included in PDF export with per-day grouping for multi-day ranges
+
 ### Settings (`/settings`)
 Collapsible dropdown sections — Profile and About default open, all others collapsed.
 - **Profile** — read-only display of user info, rank, role, primary base, configurable default PDF email
@@ -216,6 +227,7 @@ airfield-app/
 │       ├── settings/                     # Hub + base-setup + templates
 │       ├── waivers/                      # List, create, detail, edit, annual review
 │       ├── activity/page.tsx             # Audit trail with date filtering
+│       ├── qrc/page.tsx                   # QRC execution (available + active + history)
 │       ├── shift-checklist/page.tsx       # Shift checklist (today + history)
 │       ├── contractors/page.tsx          # Personnel on Airfield
 │       ├── more/page.tsx                 # Module directory
@@ -241,16 +253,17 @@ airfield-app/
 │   ├── acsi-draft.ts                    # ACSI draft persistence (localStorage + DB)
 │   ├── acsi-pdf.ts                      # ACSI PDF export with didParseCell/didDrawCell hooks
 │   ├── acsi-excel.ts                    # ACSI Excel export (multi-sheet)
+│   ├── qrc-seed-data.ts                 # 25 QRC templates with full step structures
 │   ├── *-context.tsx                     # React context (installation, dashboard, theme, sidebar)
 │   ├── idb.ts                            # IndexedDB wrapper (6 stores)
 │   ├── calculations/                     # UFC 3-260-01 geometry + obstruction analysis
 │   ├── reports/                          # PDF export data + generators (4 types)
 │   ├── admin/                            # RBAC utilities + user management
 │   ├── use-expiring-notams.ts            # Hook for NOTAM expiry alerts (5-min poll)
-│   └── supabase/                         # Client, server, types, CRUD modules (17 files)
+│   └── supabase/                         # Client, server, types, CRUD modules (18 files)
 ├── supabase/
 │   ├── schema.sql                        # Full database schema
-│   ├── migrations/                       # 76 migration files
+│   ├── migrations/                       # 79 migration files
 │   └── functions/                        # Edge functions (PDF text extraction)
 ├── middleware.ts                          # Auth guard + demo mode bypass
 ├── public/                               # Static assets, PWA manifest, aircraft images
@@ -260,7 +273,7 @@ airfield-app/
 
 ## Database
 
-**31 tables** across the Supabase PostgreSQL database:
+**36 tables** across the Supabase PostgreSQL database:
 
 | Table | Purpose |
 |-------|---------|
@@ -299,6 +312,8 @@ airfield-app/
 | `shift_checklist_responses` | Per-item responses with completion tracking |
 | `airfield_contractors` | Personnel on airfield tracking |
 | `base_arff_aircraft` | ARFF aircraft per base |
+| `qrc_templates` | Admin-configured QRC definitions per base (steps, SCN fields, review tracking) |
+| `qrc_executions` | QRC execution instances with JSONB step responses and SCN data |
 
 ## Key Design Decisions
 
@@ -319,15 +334,15 @@ airfield-app/
 | Item | Priority | Notes |
 |------|----------|-------|
 | No test suite | High | No unit or integration tests |
-| 45 `as any` casts | Medium | Across 15 files — mostly `Record<string,unknown>` row inserts and jspdf-autotable hooks. Regenerate Supabase types to eliminate |
-| 35 files > 500 lines | Low | Largest: `inspections/page.tsx` (1,913), `regulations/page.tsx` (1,638) |
+| 57 `as any` casts | Medium | Across ~18 files — mostly `Record<string,unknown>` row inserts and jspdf-autotable hooks. Regenerate Supabase types to eliminate |
+| 41 files > 500 lines | Low | Largest: `inspections/page.tsx` (1,913), `base-setup/page.tsx` (1,856), `regulations/page.tsx` (1,638) |
 | No `.env.example` | Low | Should create a template for onboarding |
 
 ## Current Status
 
 **Build**: TypeScript compiles clean (`npm run build` passes with zero errors)
 
-**Complete modules**: Dashboard (with Supabase Realtime push + installation switcher + presence tracking + KPI badges), Airfield Status (with inline personnel + construction/misc), Discrepancies, Airfield Checks, Daily Inspections, ACSI (annual compliance with PDF/Excel export), NOTAMs (live FAA feed + expiry alerts), Obstruction Evaluations, References (with My Documents), Reports (4 types with KPI badges), Aircraft Database, Waivers (full lifecycle with annual review, PDF/Excel export), Shift Checklist (per-shift tasks + history + dashboard dialog), Settings (with Base Setup, Templates, Shift Checklist config, and Default PDF Email), User Management (with delete cascade + email privacy), Events Log (manual entries, edit/delete, templates, columnar display), All Inspections hub, Email PDF (all 10 export pages), More hub, Personnel on Airfield
+**Complete modules**: Dashboard (with Supabase Realtime push + installation switcher + presence tracking + KPI badges), Airfield Status (with inline personnel + construction/misc), Discrepancies, Airfield Checks, Daily Inspections, ACSI (annual compliance with PDF/Excel export), NOTAMs (live FAA feed + expiry alerts), Obstruction Evaluations, References (with My Documents), Reports (4 types with KPI badges + Events Log + QRC details), Aircraft Database, Waivers (full lifecycle with annual review, PDF/Excel export), QRC (25 Quick Reaction Checklists with interactive execution + dashboard dialog), Shift Checklist (per-shift tasks + history + dashboard dialog), Settings (with Base Setup, Templates, Shift Checklist config, QRC Templates, and Default PDF Email), User Management (with delete cascade + email privacy), Events Log (manual entries, edit/delete, templates, columnar display), All Inspections hub, Email PDF (all 10 export pages), More hub, Personnel on Airfield
 
 **Placeholder modules**: Sync & Data
 
