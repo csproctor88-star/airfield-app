@@ -10,11 +10,15 @@ import type { UserRole } from '@/lib/supabase/types'
 // "More" menu — full module list with role-gated entries
 
 const modules = [
+  { name: 'Dashboard', icon: '📊', color: '#38BDF8', badge: null, href: '/dashboard', adminOnly: false, sysAdminOnly: false },
+  { name: 'Events Log', icon: '📝', color: '#34D399', badge: null, href: '/activity', adminOnly: false, sysAdminOnly: false },
+  { name: 'Airfield Checks', icon: '✅', color: '#22D3EE', badge: null, href: '/checks', adminOnly: false, sysAdminOnly: false },
   { name: 'All Inspections', icon: '📋', color: '#22D3EE', badge: null, href: '/inspections/all', adminOnly: false, sysAdminOnly: false },
+  { name: 'Personnel on Airfield', icon: '🚧', color: '#F59E0B', badge: null, href: '/contractors', adminOnly: false, sysAdminOnly: false },
   { name: 'Airfield Discrepancies', icon: '⚠️', color: '#FBBF24', badge: null, href: '/discrepancies', adminOnly: false, sysAdminOnly: false },
   { name: 'Obstruction Database', icon: '🗺️', color: '#F97316', badge: null, href: '/obstructions/history', adminOnly: false, sysAdminOnly: false },
-  { name: 'Waivers', icon: '📄', color: '#A78BFA', badge: null, href: '/waivers', adminOnly: false, sysAdminOnly: false },
-  { name: 'Reports', icon: '📊', color: '#22D3EE', badge: null, href: '/reports', adminOnly: false, sysAdminOnly: false },
+  { name: 'Airfield Waivers', icon: '📄', color: '#A78BFA', badge: null, href: '/waivers', adminOnly: false, sysAdminOnly: false },
+  { name: 'Reports & Analytics', icon: '📈', color: '#22D3EE', badge: null, href: '/reports', adminOnly: false, sysAdminOnly: false },
   { name: 'NOTAMs', icon: '📡', color: '#22D3EE', badge: null, href: '/notams', adminOnly: false, sysAdminOnly: false },
   { name: 'PDF Library', icon: '📖', color: '#A855F7', badge: null, href: '/library', adminOnly: true, sysAdminOnly: false },
   { name: 'User Management', icon: '👥', color: '#64748B', badge: null, href: '/users', adminOnly: true, sysAdminOnly: false },
