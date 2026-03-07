@@ -9,7 +9,87 @@ All notable changes to Glidepath.
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
 - Sync & Data module (offline queue, export, import)
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~35 `as any` casts
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~45 `as any` casts
+
+---
+
+## [2.15.0] — 2026-03-06
+
+### Feature Requests Batch 1 + Shift Checklist Module
+
+Two development branches merged: `feature-req1` (UI/UX improvements, RSC/RCR enhancements, personnel tracking, events log overhaul) and `shiftchecklist` (full shift checklist module with timezone-aware dates).
+
+#### RSC/RCR Enhancements
+- **Combined RSC/RCR Check** — Single "RSC/RCR Check" type with RCR value (Mu reading), condition type, and equipment fields
+- **Dashboard conditional card** — RCR replaces RSC display when reported; falls back to RSC otherwise
+- **RSC/RCR on inspections** — Added RSC condition and RCR value fields to airfield/lighting inspection checklists
+- **Migrations** (`2026030505`, `2026030601`) — `rcr_value`, `rcr_equipment`, `rcr_temperature` on `airfield_status`; RSC/RCR fields on `inspections`
+
+#### Airfield Status Enhancements
+- **Construction/Closures & Miscellaneous Info** — New sections on Airfield Status page with rich text remarks
+- **Weather Info rename** — Advisory section renamed to "Weather Info (Watch/Warning/Advisory)" with runway-specific remarks
+- **Inline personnel creation** — "+ Add" form directly on Airfield Status page via `createContractor`
+- **Personnel completion** — Mark personnel completed directly from the status board
+- **Confirmation dialogs** — Runway and NAVAID status changes require confirmation with optional notes
+- **NAVAID status picker** — Replaced cycling toggle with a proper status picker dialog (G/Y/R)
+- **ARFF aircraft** — Added ARFF aircraft support to installation context and base setup
+
+#### Events Log Overhaul (renamed from Activity Log)
+- **Renamed** — "Activity Log" → "Events Log" throughout the app
+- **Enriched details** — All CRUD modules now write detailed action descriptions
+- **Activity templates** — "Use Template" button in the manual entry dialog
+- **Edit entries** — Edit activity entries by modifying original details directly (stored as 'Edit:' suffix)
+- **Clickable user IDs** — Show role and masked EDIPI in the Events Log
+
+#### Dashboard Improvements
+- **KPI badge grid** — 3-column on desktop, 2-column on mobile (`.kpi-grid` CSS class)
+- **Shift Checklist KPI badge** — Opens dialog for inline checklist completion without leaving dashboard
+- **Last Check moved** — Relocated from Airfield Status to Dashboard
+- **Side-by-side layout** — Last Check Completed and Personnel on Airfield cards
+
+#### Shift Checklist Module (New)
+- **Full CRUD module** (`app/(app)/shift-checklist/page.tsx`) — Today's checklist with progress bar per shift (Day/Swing/Mid), check-off items with notes, file/reopen workflow
+- **History tab** — Clickable historical checklists with read-only detail view
+- **Dashboard dialog** — Complete checklist items directly from the KPI badge dialog
+- **Base Configuration** — Add/edit/delete/toggle items per shift, daily/weekly/monthly frequency, configurable daily reset time per base
+- **Timezone-aware dates** — Uses base's configured timezone and reset time (default 06:00) to determine the current checklist date. Before the reset hour, items belong to the previous day
+- **Database** — 3 new tables (`shift_checklist_items`, `shift_checklists`, `shift_checklist_responses`) with full RLS policies
+- **Migrations** (`2026030607`, `2026030608`, `2026030609`) — Tables, mid-shift constraint, configurable reset time on `bases`
+
+#### NOTAM Expiry Alerts
+- **Sidebar badge** — Count of NOTAMs expiring within 24 hours (checked every 5 minutes)
+- **Card highlight** — Red border and "EXPIRING SOON" badge on expiring NOTAMs
+- **Hook** (`lib/use-expiring-notams.ts`) — Polls FAA NOTAM API, parses both FAA date format and ISO dates
+
+#### UI/UX Improvements
+- **Browser spellcheck** — Enabled globally via `spellCheck` attribute on root `<html>` element
+- **Mobile More page** — Collapsible dropdown groups (AM Tools, More) matching sidebar structure
+- **Scroll-to-top** — Auto-scroll on navigation and tab switches; preserved on template edits
+- **Header simplification** — Removed logo/title, kept only installation switcher and user/status
+
+#### Migrations Added (15)
+- `2026030500` through `2026030609` — Beale AFB seed, config RLS fix, realtime activity, ARFF status, RSC/BWC/RCR on airfield_status, RSC/RCR on inspections, expanded item types, contractors table, contractor fields, EDIPI, construction/misc remarks, shift checklist (3 migrations)
+
+#### Files Created (4)
+- `app/(app)/shift-checklist/page.tsx` — Shift checklist page
+- `lib/supabase/shift-checklist.ts` — Shift checklist CRUD + timezone helpers
+- `lib/use-expiring-notams.ts` — NOTAM expiry hook
+- 15 migration files in `supabase/migrations/`
+
+#### Files Modified (20+)
+- `app/(app)/dashboard/page.tsx` — KPI grid, shift checklist dialog, RSC/RCR conditional display
+- `app/(app)/page.tsx` — Airfield Status: construction/misc, inline personnel, weather info rename
+- `app/(app)/settings/base-setup/page.tsx` — Shift checklist tab with reset time config
+- `app/(app)/activity/page.tsx` — Renamed to Events Log, enriched details, templates
+- `app/(app)/notams/page.tsx` — Expiring NOTAM highlight
+- `app/(app)/more/page.tsx` — Collapsible dropdown groups
+- `components/layout/sidebar-nav.tsx` — Shift checklist nav item, NOTAM expiry badge
+- `app/layout.tsx` — Spellcheck attribute
+- `app/globals.css` — KPI grid responsive class
+- `lib/supabase/types.ts` — 3 new table types, checklist_reset_time on bases
+
+#### Version Sync
+- Updated version to 2.15.0 in package.json, login/page.tsx, settings/page.tsx
 
 ---
 

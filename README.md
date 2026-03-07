@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, ACSI (annual compliance), NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.14.0 | **Build:** Clean | **53 routes** | **157 source files** | **61 migrations** | **~51,700 lines**
+**Version:** 2.15.0 | **Build:** Clean | **57 routes** | **157 source files** | **76 migrations** | **~57,300 lines**
 
 ## Tech Stack
 
@@ -54,7 +54,7 @@ RESEND_API_KEY=[resend-api-key]
 Apply the schema and migrations to a Supabase project:
 
 1. Run `supabase/schema.sql` to create the base tables and sequences
-2. Apply the 61 migrations in order from `supabase/migrations/`
+2. Apply the 76 migrations in order from `supabase/migrations/`
 
 See [docs/BASE-ONBOARDING.md](./docs/BASE-ONBOARDING.md) for adding new installations.
 
@@ -78,7 +78,7 @@ Key responsive features:
 ## Modules
 
 ### Dashboard (`/`)
-Real-time operational hub with **Supabase Realtime** push updates — advisory, runway status, BWC, RSC, and last check changes propagate to all connected users instantly. Live clock, Open-Meteo weather with conditions/wind/visibility, advisory system (INFO/CAUTION/WARNING), Active Runway toggle with Open/Suspended/Closed status (color-coded card, persisted to DB with audit log), Current Status panel (RSC, BWC, Last Check), side-by-side NAVAID status panels with G/Y/R toggles and notes, quick actions (Begin Inspection, Begin Check, New Discrepancy), user presence tracking (Online/Away/Inactive), installation switcher in header for multi-base users, and expandable activity feed with enriched action labels.
+Real-time operational hub with **Supabase Realtime** push updates — advisory, runway status, BWC, RSC, and last check changes propagate to all connected users instantly. Live clock, Open-Meteo weather with conditions/wind/visibility, advisory system (INFO/CAUTION/WARNING), Active Runway toggle with Open/Suspended/Closed status (color-coded card, persisted to DB with audit log), Current Status panel (RSC/RCR, BWC, Last Check), side-by-side NAVAID status panels with G/Y/R toggles and notes, KPI badge grid (3-col desktop, 2-col mobile) with Shift Checklist dialog for inline completion, quick actions (Begin Inspection, Begin Check, New Discrepancy), user presence tracking (Online/Away/Inactive), installation switcher in header for multi-base users, and expandable activity feed with enriched action labels.
 
 ### Discrepancies (`/discrepancies`)
 Track and resolve airfield issues. 11 discrepancy types (FOD, pavement, lighting, markings, signage, drainage, vegetation, wildlife, equipment, security, other). Full lifecycle: Open → Submitted to AFM → Submitted to CES → Work Completed → Closed/Cancelled. Photo uploads, Mapbox location pinning, notes history with timestamps, work order tracking, linked NOTAMs. **Map view** with severity-colored pins (Common Operating Picture), List/Map toggle, severity legend with counts, expand/collapse.
@@ -145,7 +145,15 @@ Comprehensive regulatory reference library with two tabs:
 Full airfield waiver lifecycle management modeled after AF Form 505 and the AFCEC Playbook Appendix B requirements. Six classification types (permanent, temporary, construction, event, extension, amendment), seven status values with mandatory comment dialogs for status transitions. Waiver detail pages include criteria & standards references, coordination tracking by office, photo attachments with camera capture, and annual review history. Individual waiver PDF export with embedded photos. Excel export of the full waiver register with criteria and coordination sheets. Annual review mode (`/waivers/annual-review`) with year-by-year review forms, KPIs, and board presentation tracking. **Map view** with emoji markers by classification type, clickable type filter legend, List/Map toggle. **Location picker** on create/edit forms for GPS pinning.
 
 ### NOTAMs (`/notams`)
-Live FAA NOTAM feed via `notams.aim.faa.gov` — no API key required. Auto-fetches NOTAMs for the current installation's ICAO code on page load. ICAO search input for querying any airport. Full NOTAM text displayed on each card in monospace. Feed status indicator, refresh button, loading/error states. Filter chips (All/FAA/LOCAL/Active/Expired). Falls back to demo data when Supabase is not configured. Draft creation for local NOTAMs.
+Live FAA NOTAM feed via `notams.aim.faa.gov` — no API key required. Auto-fetches NOTAMs for the current installation's ICAO code on page load. ICAO search input for querying any airport. Full NOTAM text displayed on each card in monospace. Feed status indicator, refresh button, loading/error states. Filter chips (All/FAA/LOCAL/Active/Expired). **Expiring NOTAM alerts** — sidebar badge count and red card highlight for NOTAMs within 24 hours of expiration (checked every 5 minutes). Falls back to demo data when Supabase is not configured. Draft creation for local NOTAMs.
+
+### Shift Checklist (`/shift-checklist`)
+Per-shift task tracking with configurable items per base. Three shifts: Day, Swing, Mid. Items assigned to shifts with daily/weekly/monthly frequency. **Timezone-aware date calculation** — uses the base's configured timezone and reset time (default 06:00) to determine the current checklist date. Before the reset time, items belong to the previous day's checklist.
+
+- **Today tab** — Progress bar per shift, check-off items with notes, file/reopen workflow with per-user tracking
+- **History tab** — Clickable historical checklists with read-only detail view
+- **Dashboard KPI badge** — Quick access dialog for marking items complete without leaving the dashboard
+- **Base Configuration** — Add/edit/delete/toggle items per shift, configurable daily reset time per base (`Settings > Base Configuration > Shift Checklist`)
 
 ### Settings (`/settings`)
 Collapsible dropdown sections — Profile and About default open, all others collapsed.
@@ -153,7 +161,7 @@ Collapsible dropdown sections — Profile and About default open, all others col
 - **Installation** — current base display; switching/adding restricted to sys_admin only
 - **Data & Storage** — view/clear cached data, estimated storage used
 - **Regulations Library** — download all PDFs for offline, manage cache
-- **Base Configuration** (`/settings/base-setup`) — runways, NAVAIDs, areas, CE shops, templates, airfield diagram upload
+- **Base Configuration** (`/settings/base-setup`) — runways, NAVAIDs, areas, CE shops, templates, shift checklist items, checklist reset time, airfield diagram upload
 - **Appearance** — Day/Night/Auto theme toggle
 - **About** — version, environment, branding
 - **Inspection Templates** (`/settings/templates`) — customize airfield/lighting checklist sections and items
@@ -171,8 +179,14 @@ Admin-only module for managing users across installations. System admins see all
 ### Activity Log (`/activity`)
 Full audit trail with date-range filtering (Today, 7 Days, 30 Days, Custom). Columnar table display (Time Z, User, Action, Details) grouped by date headers with per-column search filters. Manual text entry for events not captured by the system. Edit/delete entries via modal dialog with Zulu time editing. Clickable items link to source entity (discrepancy, check, inspection). Excel export with styled formatting.
 
+### Airfield Status (`/`)
+Inline personnel creation with "+ Add" form directly on the Airfield Status page. Construction/Closures and Miscellaneous Info sections with rich text remarks. Weather Info (Watch/Warning/Advisory) with runway-specific remarks.
+
+### Events Log (`/activity`)
+Full audit trail with date-range filtering (Today, 7 Days, 30 Days, Custom). Columnar table display (Time Z, User, Action, Details) grouped by date headers with per-column search filters. Manual text entry with activity templates. Edit/delete entries via modal dialog with Zulu time editing. Clickable user IDs showing role and masked EDIPI. Clickable items link to source entity. Excel export with styled formatting.
+
 ### More Menu (`/more`)
-Module directory linking to all features. All modules visible as a flat list with role-gated visibility (admin-only modules hidden for non-admin users). "All Inspections" hub at top for quick access to all inspection forms.
+Module directory with collapsible dropdown groups (AM Tools, More) matching the sidebar structure. Role-gated visibility (admin-only modules hidden for non-admin users). "All Inspections" hub at top for quick access to all inspection forms.
 
 ## Project Structure
 
@@ -202,6 +216,8 @@ airfield-app/
 │       ├── settings/                     # Hub + base-setup + templates
 │       ├── waivers/                      # List, create, detail, edit, annual review
 │       ├── activity/page.tsx             # Audit trail with date filtering
+│       ├── shift-checklist/page.tsx       # Shift checklist (today + history)
+│       ├── contractors/page.tsx          # Personnel on Airfield
 │       ├── more/page.tsx                 # Module directory
 │       ├── sync/page.tsx                 # Data sync (coming soon)
 │       └── users/page.tsx                # User Management (admin)
@@ -230,10 +246,11 @@ airfield-app/
 │   ├── calculations/                     # UFC 3-260-01 geometry + obstruction analysis
 │   ├── reports/                          # PDF export data + generators (4 types)
 │   ├── admin/                            # RBAC utilities + user management
-│   └── supabase/                         # Client, server, types, CRUD modules (16 files)
+│   ├── use-expiring-notams.ts            # Hook for NOTAM expiry alerts (5-min poll)
+│   └── supabase/                         # Client, server, types, CRUD modules (17 files)
 ├── supabase/
 │   ├── schema.sql                        # Full database schema
-│   ├── migrations/                       # 61 migration files
+│   ├── migrations/                       # 76 migration files
 │   └── functions/                        # Edge functions (PDF text extraction)
 ├── middleware.ts                          # Auth guard + demo mode bypass
 ├── public/                               # Static assets, PWA manifest, aircraft images
@@ -243,12 +260,12 @@ airfield-app/
 
 ## Database
 
-**26+ tables** across the Supabase PostgreSQL database:
+**31 tables** across the Supabase PostgreSQL database:
 
 | Table | Purpose |
 |-------|---------|
 | `profiles` | User accounts, roles, rank, shop, primary base, presence, default PDF email |
-| `bases` | Installation definitions (name, ICAO, location) |
+| `bases` | Installation definitions (name, ICAO, location, timezone, checklist reset time) |
 | `base_runways` | Runway geometry per base (ends, heading, class, dimensions) |
 | `base_navaids` | Navigation aids per base |
 | `base_areas` | Airfield areas per base |
@@ -277,6 +294,11 @@ airfield-app/
 | `waiver_attachments` | Photos and documents per waiver |
 | `waiver_reviews` | Annual review records with recommendations |
 | `waiver_coordination` | Office-by-office coordination tracking |
+| `shift_checklist_items` | Configurable per-base shift checklist items (day/swing/mid) |
+| `shift_checklists` | Daily checklist instances per base (date, status, completion) |
+| `shift_checklist_responses` | Per-item responses with completion tracking |
+| `airfield_contractors` | Personnel on airfield tracking |
+| `base_arff_aircraft` | ARFF aircraft per base |
 
 ## Key Design Decisions
 
@@ -297,15 +319,15 @@ airfield-app/
 | Item | Priority | Notes |
 |------|----------|-------|
 | No test suite | High | No unit or integration tests |
-| 35 `as any` casts | Medium | Across 13 files — mostly `Record<string,unknown>` row inserts and jspdf-autotable hooks. Regenerate Supabase types to eliminate |
-| 35 files > 500 lines | Low | Largest: `inspections/page.tsx` (1,690), `regulations/page.tsx` (1,638) |
+| 45 `as any` casts | Medium | Across 15 files — mostly `Record<string,unknown>` row inserts and jspdf-autotable hooks. Regenerate Supabase types to eliminate |
+| 35 files > 500 lines | Low | Largest: `inspections/page.tsx` (1,913), `regulations/page.tsx` (1,638) |
 | No `.env.example` | Low | Should create a template for onboarding |
 
 ## Current Status
 
 **Build**: TypeScript compiles clean (`npm run build` passes with zero errors)
 
-**Complete modules**: Dashboard (with Supabase Realtime push + installation switcher + presence tracking), Discrepancies, Airfield Checks, Daily Inspections, ACSI (annual compliance with PDF/Excel export), NOTAMs (live FAA feed), Obstruction Evaluations, References (with My Documents), Reports (4 types with KPI badges), Aircraft Database, Waivers (full lifecycle with annual review, PDF/Excel export), Settings (with Base Setup, Templates, and Default PDF Email), User Management (with delete cascade + email privacy), Activity Log (manual entries, edit/delete, columnar display), All Inspections hub, Email PDF (all 10 export pages), More hub
+**Complete modules**: Dashboard (with Supabase Realtime push + installation switcher + presence tracking + KPI badges), Airfield Status (with inline personnel + construction/misc), Discrepancies, Airfield Checks, Daily Inspections, ACSI (annual compliance with PDF/Excel export), NOTAMs (live FAA feed + expiry alerts), Obstruction Evaluations, References (with My Documents), Reports (4 types with KPI badges), Aircraft Database, Waivers (full lifecycle with annual review, PDF/Excel export), Shift Checklist (per-shift tasks + history + dashboard dialog), Settings (with Base Setup, Templates, Shift Checklist config, and Default PDF Email), User Management (with delete cascade + email privacy), Events Log (manual entries, edit/delete, templates, columnar display), All Inspections hub, Email PDF (all 10 export pages), More hub, Personnel on Airfield
 
 **Placeholder modules**: Sync & Data
 
