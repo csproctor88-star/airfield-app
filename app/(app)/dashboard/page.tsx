@@ -265,7 +265,7 @@ export default function AMDashboardPage() {
 
       {/* ===== Quick Actions ===== */}
       <span className="section-label">Quick Actions</span>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
+      <div className="kpi-grid" style={{ marginBottom: 20 }}>
         {QUICK_ACTIONS.map((q) => (
           <Link
             key={q.label}
@@ -984,12 +984,12 @@ function ShiftChecklistDialog({ installationId, onClose }: { installationId: str
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
-            fontSize: 'var(--fs-sm)', fontWeight: 600,
+            fontSize: 'var(--fs-base)', fontWeight: 600,
             color: checked ? 'var(--color-text-3)' : 'var(--color-text-1)',
             textDecoration: checked ? 'line-through' : 'none',
           }}>{item.label}</div>
           {checked && resp?.completed_by && (
-            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-4)', marginTop: 1 }}>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', marginTop: 1 }}>
               {profiles[resp.completed_by] || 'Unknown'}
               {resp.completed_at && ` \u00b7 ${new Date(resp.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`}
             </div>
@@ -997,8 +997,8 @@ function ShiftChecklistDialog({ installationId, onClose }: { installationId: str
         </div>
         {item.frequency !== 'daily' && (
           <span style={{
-            fontSize: 9, fontWeight: 700, color: FREQ_COLORS[item.frequency],
-            background: `${FREQ_COLORS[item.frequency]}15`, padding: '1px 6px', borderRadius: 8,
+            fontSize: 'var(--fs-xs)', fontWeight: 700, color: FREQ_COLORS[item.frequency],
+            background: `${FREQ_COLORS[item.frequency]}15`, padding: '2px 8px', borderRadius: 8,
           }}>{item.frequency.charAt(0).toUpperCase() + item.frequency.slice(1)}</span>
         )}
       </div>
@@ -1011,8 +1011,8 @@ function ShiftChecklistDialog({ installationId, onClose }: { installationId: str
     return (
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
-          <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: done === sectionItems.length ? '#22C55E' : 'var(--color-text-3)' }}>{done}/{sectionItems.length}</div>
+          <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: done === sectionItems.length ? '#22C55E' : 'var(--color-text-3)' }}>{done}/{sectionItems.length}</div>
         </div>
         {sectionItems.map(renderItem)}
       </div>
@@ -1039,16 +1039,16 @@ function ShiftChecklistDialog({ installationId, onClose }: { installationId: str
         <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>Shift Checklist</div>
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>{today} &middot; {completedCount}/{totalCount} complete</div>
+              <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>Shift Checklist</div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>{today} &middot; {completedCount}/{totalCount} complete</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{
-                fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '3px 8px', borderRadius: 8,
+                fontSize: 'var(--fs-sm)', fontWeight: 700, padding: '3px 10px', borderRadius: 8,
                 background: isCompleted ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
                 color: isCompleted ? '#22C55E' : '#EAB308',
               }}>{isCompleted ? 'FILED' : 'IN PROGRESS'}</span>
-              <Link href="/shift-checklist" onClick={onClose} style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-cyan)', fontWeight: 600, textDecoration: 'none' }}>
+              <Link href="/shift-checklist" onClick={onClose} style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontWeight: 600, textDecoration: 'none' }}>
                 Full Page →
               </Link>
             </div>
@@ -1085,7 +1085,7 @@ function ShiftChecklistDialog({ installationId, onClose }: { installationId: str
               <button onClick={handleReopen} style={{
                 width: '100%', padding: '10px 0', borderRadius: 8,
                 border: '1px solid var(--color-border-mid)', background: 'transparent',
-                color: 'var(--color-text-2)', fontWeight: 700, fontSize: 'var(--fs-sm)',
+                color: 'var(--color-text-2)', fontWeight: 700, fontSize: 'var(--fs-base)',
                 cursor: 'pointer', fontFamily: 'inherit',
               }}>Reopen Checklist</button>
             ) : (
@@ -1093,7 +1093,7 @@ function ShiftChecklistDialog({ installationId, onClose }: { installationId: str
                 width: '100%', padding: '10px 0', borderRadius: 8, border: 'none',
                 background: allComplete ? '#22C55E' : 'var(--color-border)',
                 color: allComplete ? '#fff' : 'var(--color-text-3)',
-                fontWeight: 700, fontSize: 'var(--fs-sm)',
+                fontWeight: 700, fontSize: 'var(--fs-base)',
                 cursor: allComplete ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
               }}>{completing ? 'Filing...' : allComplete ? 'File Checklist' : `${totalCount - completedCount} items remaining`}</button>
             )}

@@ -393,6 +393,13 @@ html, body {
   gap: 8px;
 }
 
+/* KPI badge grid — 2 columns on mobile, 3 on tablet+ */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
 /* Form row — stacked on mobile, side-by-side on tablet+ */
 .form-row {
   display: flex;
@@ -636,6 +643,11 @@ html, body {
 
   .actions-row > * {
     min-width: 0;
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
   }
 
   .form-row {
