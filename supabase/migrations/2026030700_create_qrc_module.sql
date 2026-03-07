@@ -9,7 +9,7 @@ CREATE TABLE qrc_templates (
   title TEXT NOT NULL,
   notes TEXT,
   steps JSONB NOT NULL DEFAULT '[]'::jsonb,
-  references TEXT,
+  "references" TEXT,
   has_scn_form BOOLEAN NOT NULL DEFAULT false,
   scn_fields JSONB,
   is_active BOOLEAN NOT NULL DEFAULT true,
