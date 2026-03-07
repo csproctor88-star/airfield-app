@@ -49,7 +49,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning style={{ background: '#0B1120' }}>
+    <html lang="en" spellCheck suppressHydrationWarning style={{ background: '#0B1120' }}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
