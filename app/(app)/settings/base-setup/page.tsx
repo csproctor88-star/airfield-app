@@ -1138,6 +1138,7 @@ function DashboardPreview({
 
 const SHIFT_OPTIONS: { value: ShiftType; label: string }[] = [
   { value: 'day', label: 'Day Shift' },
+  { value: 'mid', label: 'Mid Shift' },
   { value: 'swing', label: 'Swing Shift' },
 ]
 
@@ -1234,6 +1235,7 @@ function ShiftChecklistTab({ installationId }: { installationId: string | null }
   }
 
   const dayItems = items.filter(i => i.shift === 'day')
+  const midItems = items.filter(i => i.shift === 'mid')
   const swingItems = items.filter(i => i.shift === 'swing')
 
   const inputStyle: React.CSSProperties = {
@@ -1343,6 +1345,7 @@ function ShiftChecklistTab({ installationId }: { installationId: string | null }
       ) : (
         <>
           {renderItemList('Day Shift', dayItems)}
+          {midItems.length > 0 && renderItemList('Mid Shift', midItems)}
           {renderItemList('Swing Shift', swingItems)}
         </>
       )}

@@ -2,7 +2,7 @@ import { createClient } from './client'
 
 // --- Types ---
 
-export type ShiftType = 'day' | 'swing'
+export type ShiftType = 'day' | 'mid' | 'swing'
 export type FrequencyType = 'daily' | 'weekly' | 'monthly'
 
 export interface ShiftChecklistItem {

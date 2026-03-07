@@ -20,7 +20,7 @@ import {
 
 type ViewTab = 'today' | 'history'
 
-const SHIFT_LABELS: Record<string, string> = { day: 'Day Shift', swing: 'Swing Shift' }
+const SHIFT_LABELS: Record<string, string> = { day: 'Day Shift', mid: 'Mid Shift', swing: 'Swing Shift' }
 const FREQ_LABELS: Record<string, string> = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' }
 const FREQ_COLORS: Record<string, string> = { daily: '#22D3EE', weekly: '#A78BFA', monthly: '#F59E0B' }
 
@@ -94,6 +94,7 @@ export default function ShiftChecklistPage() {
   const responseMap = new Map(responses.map(r => [r.item_id, r]))
 
   const dayItems = items.filter(i => i.shift === 'day')
+  const midItems = items.filter(i => i.shift === 'mid')
   const swingItems = items.filter(i => i.shift === 'swing')
 
   const allItemIds = items.map(i => i.id)
@@ -327,6 +328,7 @@ export default function ShiftChecklistPage() {
           ) : (
             <>
               {renderShiftSection('Day Shift', dayItems)}
+              {midItems.length > 0 && renderShiftSection('Mid Shift', midItems)}
               {renderShiftSection('Swing Shift', swingItems)}
 
               {/* Complete / Reopen button */}
