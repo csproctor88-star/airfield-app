@@ -1191,25 +1191,22 @@ export default function HomePage() {
         )
       })()}
 
-      {/* ===== Personnel / Construction / Misc — 3-column grid ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16, alignItems: 'start' }}>
-        {/* Personnel on Airfield */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span className="section-label" style={{ marginBottom: 0 }}>Personnel on Airfield</span>
-            <button
-              onClick={() => router.push('/contractors')}
-              style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-            >
-              View All →
-            </button>
-          </div>
-          {activeContractors.length === 0 ? (
-            <div className="card" style={{ textAlign: 'center', padding: 16 }}>
-              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>No active contractors</div>
-            </div>
-          ) : (
-            <div className="card" style={{ padding: '6px 14px' }}>
+      {/* ===== Personnel on Airfield ===== */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <span className="section-label" style={{ marginBottom: 0 }}>Personnel on Airfield</span>
+        <button
+          onClick={() => router.push('/contractors')}
+          style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+        >
+          View All →
+        </button>
+      </div>
+      {activeContractors.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>No active contractors</div>
+        </div>
+      ) : (
+        <div className="card" style={{ padding: '6px 14px', marginBottom: 12 }}>
               {activeContractors.map((c, i, arr) => {
                 const startDate = new Date(c.start_date)
                 const dayNum = Math.max(1, Math.ceil((Date.now() - startDate.getTime()) / 86400000))
@@ -1277,48 +1274,42 @@ export default function HomePage() {
                 )
               })}
             </div>
-          )}
-        </div>
+      )}
 
-        {/* Airfield Construction/Closures */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span className="section-label" style={{ marginBottom: 0 }}>Construction / Closures</span>
-            <button
-              onClick={() => { setConstructionDraft(constructionRemarks || ''); setEditingConstruction(true) }}
-              style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-            >
-              {constructionRemarks ? 'Edit' : 'Add'}
-            </button>
-          </div>
-          <div className="card" style={{ padding: constructionRemarks ? '10px 14px' : 16, textAlign: constructionRemarks ? 'left' : 'center' }}>
-            {constructionRemarks ? (
-              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{constructionRemarks}</div>
-            ) : (
-              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>None</div>
-            )}
-          </div>
-        </div>
+      {/* ===== Construction / Closures ===== */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <span className="section-label" style={{ marginBottom: 0 }}>Construction / Closures</span>
+        <button
+          onClick={() => { setConstructionDraft(constructionRemarks || ''); setEditingConstruction(true) }}
+          style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+        >
+          {constructionRemarks ? 'Edit' : 'Add'}
+        </button>
+      </div>
+      <div className="card" style={{ padding: constructionRemarks ? '10px 14px' : 16, textAlign: constructionRemarks ? 'left' : 'center', marginBottom: 12 }}>
+        {constructionRemarks ? (
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{constructionRemarks}</div>
+        ) : (
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>None</div>
+        )}
+      </div>
 
-        {/* Miscellaneous Info */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span className="section-label" style={{ marginBottom: 0 }}>Miscellaneous Info</span>
-            <button
-              onClick={() => { setMiscDraft(miscRemarks || ''); setEditingMisc(true) }}
-              style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-            >
-              {miscRemarks ? 'Edit' : 'Add'}
-            </button>
-          </div>
-          <div className="card" style={{ padding: miscRemarks ? '10px 14px' : 16, textAlign: miscRemarks ? 'left' : 'center' }}>
-            {miscRemarks ? (
-              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{miscRemarks}</div>
-            ) : (
-              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>None</div>
-            )}
-          </div>
-        </div>
+      {/* ===== Miscellaneous Info ===== */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <span className="section-label" style={{ marginBottom: 0 }}>Miscellaneous Info</span>
+        <button
+          onClick={() => { setMiscDraft(miscRemarks || ''); setEditingMisc(true) }}
+          style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+        >
+          {miscRemarks ? 'Edit' : 'Add'}
+        </button>
+      </div>
+      <div className="card" style={{ padding: miscRemarks ? '10px 14px' : 16, textAlign: miscRemarks ? 'left' : 'center', marginBottom: 12 }}>
+        {miscRemarks ? (
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{miscRemarks}</div>
+        ) : (
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>None</div>
+        )}
       </div>
 
       {/* Construction/Closures edit dialog */}

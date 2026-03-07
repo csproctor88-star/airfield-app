@@ -117,7 +117,7 @@ function formatMetadata(metadata: Record<string, unknown> | null): string {
   const parts: string[] = []
   for (const [key, val] of Object.entries(metadata)) {
     if (val == null || val === '' || SKIP_META_KEYS.has(key)) continue
-    parts.push(`${snakeToLabel(key)}: ${formatMetadataValue(val)}`)
+    parts.push(formatMetadataValue(val))
   }
   return parts.join(' | ')
 }

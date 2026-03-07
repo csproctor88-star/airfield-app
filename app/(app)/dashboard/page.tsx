@@ -196,7 +196,7 @@ export default function AMDashboardPage() {
           if (v == null || v === '' || k === 'fields' || k === 'field') continue
           const label = k.replace(/_/g, ' ').split(' ').map(capWord).join(' ')
           const val = typeof v === 'boolean' ? (v ? 'Yes' : 'No') : Array.isArray(v) ? v.map(i => typeof i === 'string' ? capVal(i) : String(i)).join(', ') : capVal(String(v))
-          parts.push(`${label}: ${val}`)
+          parts.push(val)
         }
         currentDetails = parts.join(' | ')
       }
@@ -448,7 +448,7 @@ export default function AMDashboardPage() {
                       if (v == null || v === '' || k === 'fields' || k === 'field') continue
                       const label = k.replace(/_/g, ' ').split(' ').map(capWord).join(' ')
                       const val = typeof v === 'boolean' ? (v ? 'Yes' : 'No') : Array.isArray(v) ? v.map(i => typeof i === 'string' ? capVal(i) : String(i)).join(', ') : capVal(String(v))
-                      detailParts.push(`${label}: ${val}`)
+                      detailParts.push(val)
                     }
                     detailsText = detailParts.join(' | ')
                   }
