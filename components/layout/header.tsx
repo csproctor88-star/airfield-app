@@ -1,12 +1,41 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useTheme } from '@/lib/theme-context'
 import { useSidebar } from '@/lib/sidebar-context'
 import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
 import { PanelLeftOpen, ChevronDown } from 'lucide-react'
+
+const PAGE_LABELS: Record<string, string> = {
+  '/': 'Airfield Status',
+  '/dashboard': 'Dashboard',
+  '/obstructions': 'Obstruction Evaluation Tool',
+  '/aircraft': 'Aircraft Database',
+  '/regulations': 'Reference Library',
+  '/notams': 'NOTAMs',
+  '/activity': 'Events Log',
+  '/checks': 'Airfield Checks',
+  '/inspections': 'All Inspections',
+  '/contractors': 'Personnel on Airfield',
+  '/discrepancies': 'Airfield Discrepancies',
+  '/waivers': 'Airfield Waivers',
+  '/reports': 'Reports & Analytics',
+  '/settings': 'Settings',
+  '/library': 'PDF Library',
+  '/users': 'User Management',
+  '/acsi': 'ACSI Inspections',
+}
+
+function getPageLabel(pathname: string): string {
+  if (PAGE_LABELS[pathname]) return PAGE_LABELS[pathname]
+  // Fallback: match by prefix for nested routes like /discrepancies/123
+  for (const [route, label] of Object.entries(PAGE_LABELS)) {
+    if (route !== '/' && pathname.startsWith(route)) return label
+  }
+  return 'Glidepath'
+}
 
 const ROLE_LABELS: Record<string, string> = {
   airfield_manager: 'AFM',
@@ -29,6 +58,7 @@ function presenceLabel(lastSeen: string | null): { label: string; color: string 
 }
 
 export function Header() {
+  const pathname = usePathname()
   const { resolvedTheme } = useTheme()
   const { isOpen, toggle } = useSidebar()
   const { currentInstallation, allInstallations, switchInstallation, userRole } = useInstallation()
@@ -77,6 +107,7 @@ export function Header() {
   const baseIcao = currentInstallation?.icao || null
   const roleLabel = userRole ? (ROLE_LABELS[userRole] || userRole) : null
   const presence = presenceLabel(lastSeen)
+  const currentPageLabel = getPageLabel(pathname)
 
   return (
     <div
@@ -113,17 +144,14 @@ export function Header() {
           <PanelLeftOpen size={20} />
         </button>
 
-        <Link href="/" style={{ textDecoration: 'none' }}>
-          <img
-            src={resolvedTheme === 'dark' ? '/glidepathdarkmode3.png' : '/glidepath2.png'}
-            alt="Glidepath"
-            style={{
-              display: 'block',
-              height: resolvedTheme === 'dark' ? 'var(--header-logo-height-dark)' : 'var(--header-logo-height)',
-              objectFit: 'contain',
-            }}
-          />
-        </Link>
+        <div style={{
+          fontSize: 'var(--fs-lg)',
+          fontWeight: 700,
+          color: 'var(--color-text-1)',
+          letterSpacing: '0.02em',
+        }}>
+          {currentPageLabel}
+        </div>
       </div>
 
       {/* Info row: installation left, status+user+role right */}
@@ -133,7 +161,7 @@ export function Header() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginTop: 6,
+            marginTop: 4,
             fontSize: 'var(--fs-xs)',
             color: 'var(--color-text-3)',
             fontWeight: 600,
