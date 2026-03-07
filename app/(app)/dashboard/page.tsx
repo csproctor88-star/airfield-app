@@ -98,6 +98,7 @@ export default function AMDashboardPage() {
   const [manualText, setManualText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [showContractorForm, setShowContractorForm] = useState(false)
+  const [showShiftChecklist, setShowShiftChecklist] = useState(false)
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
@@ -313,6 +314,28 @@ export default function AMDashboardPage() {
             Personnel on Airfield
           </span>
         </button>
+        <button
+          onClick={() => setShowShiftChecklist(true)}
+          style={{
+            background: 'var(--color-bg-surface)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 12,
+            padding: '14px 16px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+            flex: 1,
+            minWidth: 0,
+            fontFamily: 'inherit',
+          }}
+        >
+          <span style={{ fontSize: 'var(--fs-5xl)' }}>☑️</span>
+          <span style={{ fontSize: 'var(--fs-xl)', color: 'var(--color-cyan)', letterSpacing: '0.04em', fontWeight: 700 }}>
+            Shift Checklist
+          </span>
+        </button>
       </div>
 
       {/* ===== Contractor Form Dialog ===== */}
@@ -321,6 +344,14 @@ export default function AMDashboardPage() {
           installationId={installationId}
           onClose={() => setShowContractorForm(false)}
           onSaved={loadActivity}
+        />
+      )}
+
+      {/* ===== Shift Checklist Dialog ===== */}
+      {showShiftChecklist && (
+        <ShiftChecklistDialog
+          installationId={installationId}
+          onClose={() => setShowShiftChecklist(false)}
         />
       )}
 
@@ -831,6 +862,249 @@ function PersonnelFormDialog({ installationId, onClose, onSaved }: { installatio
             Cancel
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ===== Shift Checklist Dialog =====
+
+function ShiftChecklistDialog({ installationId, onClose }: { installationId: string | null; onClose: () => void }) {
+  const [items, setItems] = useState<import('@/lib/supabase/shift-checklist').ShiftChecklistItem[]>([])
+  const [checklist, setChecklist] = useState<import('@/lib/supabase/shift-checklist').ShiftChecklist | null>(null)
+  const [responses, setResponses] = useState<import('@/lib/supabase/shift-checklist').ShiftChecklistResponse[]>([])
+  const [profiles, setProfiles] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState<string | null>(null)
+  const [completing, setCompleting] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+
+  const load = useCallback(async () => {
+    const {
+      fetchChecklistItems,
+      fetchOrCreateTodayChecklist,
+      fetchResponses,
+      itemAppliesToday,
+    } = await import('@/lib/supabase/shift-checklist')
+
+    if (!installationId) return
+    const [allItems, { checklist: cl }] = await Promise.all([
+      fetchChecklistItems(installationId),
+      fetchOrCreateTodayChecklist(installationId),
+    ])
+    const todayItems = allItems.filter(i => itemAppliesToday(i))
+    setItems(todayItems)
+    setChecklist(cl)
+
+    if (cl) {
+      const resp = await fetchResponses(cl.id)
+      setResponses(resp)
+      const userIds = new Set<string>()
+      resp.forEach(r => { if (r.completed_by) userIds.add(r.completed_by) })
+      if (cl.completed_by) userIds.add(cl.completed_by)
+      if (userIds.size > 0) {
+        const supabase = createClient()
+        if (supabase) {
+          const { data } = await supabase.from('profiles').select('id, name, rank').in('id', Array.from(userIds))
+          if (data) {
+            const map: Record<string, string> = {}
+            data.forEach((p: { id: string; name: string; rank: string | null }) => {
+              map[p.id] = p.rank ? `${p.rank} ${p.name}` : p.name
+            })
+            setProfiles(map)
+          }
+        }
+      }
+    }
+    setLoaded(true)
+  }, [installationId])
+
+  useEffect(() => { load() }, [load])
+
+  const responseMap = new Map(responses.map(r => [r.item_id, r]))
+  const dayItems = items.filter(i => i.shift === 'day')
+  const midItems = items.filter(i => i.shift === 'mid')
+  const swingItems = items.filter(i => i.shift === 'swing')
+  const totalCount = items.length
+  const completedCount = items.filter(i => responseMap.get(i.id)?.completed).length
+  const allComplete = totalCount > 0 && completedCount === totalCount
+  const isCompleted = checklist?.status === 'completed'
+
+  async function handleToggle(itemId: string, currentlyCompleted: boolean) {
+    if (!checklist || isCompleted) return
+    setSaving(itemId)
+    const { upsertResponse } = await import('@/lib/supabase/shift-checklist')
+    const { error } = await upsertResponse({
+      checklist_id: checklist.id,
+      item_id: itemId,
+      completed: !currentlyCompleted,
+    })
+    if (error) toast.error(error)
+    else await load()
+    setSaving(null)
+  }
+
+  async function handleComplete() {
+    if (!checklist || !allComplete) return
+    if (!confirm('File this checklist as complete for today?')) return
+    setCompleting(true)
+    const { completeChecklist } = await import('@/lib/supabase/shift-checklist')
+    const { error } = await completeChecklist(checklist.id)
+    if (error) toast.error(error)
+    else { toast.success('Shift checklist filed'); await load() }
+    setCompleting(false)
+  }
+
+  async function handleReopen() {
+    if (!checklist) return
+    if (!confirm('Reopen this checklist?')) return
+    const { reopenChecklist } = await import('@/lib/supabase/shift-checklist')
+    const { error } = await reopenChecklist(checklist.id)
+    if (error) toast.error(error)
+    else await load()
+  }
+
+  const FREQ_COLORS: Record<string, string> = { daily: '#22D3EE', weekly: '#A78BFA', monthly: '#F59E0B' }
+
+  function renderItem(item: import('@/lib/supabase/shift-checklist').ShiftChecklistItem) {
+    const resp = responseMap.get(item.id)
+    const checked = resp?.completed ?? false
+    const isSaving = saving === item.id
+
+    return (
+      <div key={item.id} style={{
+        display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0',
+        borderBottom: '1px solid var(--color-border)',
+      }}>
+        <button
+          disabled={isCompleted || isSaving}
+          onClick={() => handleToggle(item.id, checked)}
+          style={{
+            width: 22, height: 22, borderRadius: 5, flexShrink: 0,
+            border: checked ? 'none' : '2px solid var(--color-border-mid)',
+            background: checked ? '#22C55E' : 'transparent',
+            cursor: isCompleted ? 'default' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          {checked && <span style={{ color: '#fff', fontSize: 12, fontWeight: 800 }}>&#10003;</span>}
+        </button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontSize: 'var(--fs-sm)', fontWeight: 600,
+            color: checked ? 'var(--color-text-3)' : 'var(--color-text-1)',
+            textDecoration: checked ? 'line-through' : 'none',
+          }}>{item.label}</div>
+          {checked && resp?.completed_by && (
+            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-4)', marginTop: 1 }}>
+              {profiles[resp.completed_by] || 'Unknown'}
+              {resp.completed_at && ` \u00b7 ${new Date(resp.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`}
+            </div>
+          )}
+        </div>
+        {item.frequency !== 'daily' && (
+          <span style={{
+            fontSize: 9, fontWeight: 700, color: FREQ_COLORS[item.frequency],
+            background: `${FREQ_COLORS[item.frequency]}15`, padding: '1px 6px', borderRadius: 8,
+          }}>{item.frequency.charAt(0).toUpperCase() + item.frequency.slice(1)}</span>
+        )}
+      </div>
+    )
+  }
+
+  function renderSection(label: string, sectionItems: import('@/lib/supabase/shift-checklist').ShiftChecklistItem[]) {
+    if (sectionItems.length === 0) return null
+    const done = sectionItems.filter(i => responseMap.get(i.id)?.completed).length
+    return (
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+          <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: done === sectionItems.length ? '#22C55E' : 'var(--color-text-3)' }}>{done}/{sectionItems.length}</div>
+        </div>
+        {sectionItems.map(renderItem)}
+      </div>
+    )
+  }
+
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 16, background: 'rgba(0,0,0,0.6)',
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="card"
+        style={{ width: '100%', maxWidth: 520, maxHeight: '85vh', display: 'flex', flexDirection: 'column', padding: 0 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>Shift Checklist</div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>{today} &middot; {completedCount}/{totalCount} complete</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{
+                fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '3px 8px', borderRadius: 8,
+                background: isCompleted ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
+                color: isCompleted ? '#22C55E' : '#EAB308',
+              }}>{isCompleted ? 'FILED' : 'IN PROGRESS'}</span>
+              <Link href="/shift-checklist" onClick={onClose} style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-cyan)', fontWeight: 600, textDecoration: 'none' }}>
+                Full Page →
+              </Link>
+            </div>
+          </div>
+          {/* Progress bar */}
+          {totalCount > 0 && (
+            <div style={{ marginTop: 10, height: 4, borderRadius: 2, background: 'var(--color-bg-elevated)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${(completedCount / totalCount) * 100}%`, background: allComplete ? '#22C55E' : 'var(--color-cyan)', borderRadius: 2, transition: 'width 0.3s' }} />
+            </div>
+          )}
+        </div>
+
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }}>
+          {!loaded ? (
+            <div style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>Loading...</div>
+          ) : totalCount === 0 ? (
+            <div style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>
+              No checklist items configured. Set them up in Settings → Base Configuration.
+            </div>
+          ) : (
+            <>
+              {renderSection('Day Shift', dayItems)}
+              {midItems.length > 0 && renderSection('Mid Shift', midItems)}
+              {renderSection('Swing Shift', swingItems)}
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        {totalCount > 0 && (
+          <div style={{ padding: '12px 20px', borderTop: '1px solid var(--color-border)', flexShrink: 0 }}>
+            {isCompleted ? (
+              <button onClick={handleReopen} style={{
+                width: '100%', padding: '10px 0', borderRadius: 8,
+                border: '1px solid var(--color-border-mid)', background: 'transparent',
+                color: 'var(--color-text-2)', fontWeight: 700, fontSize: 'var(--fs-sm)',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}>Reopen Checklist</button>
+            ) : (
+              <button disabled={!allComplete || completing} onClick={handleComplete} style={{
+                width: '100%', padding: '10px 0', borderRadius: 8, border: 'none',
+                background: allComplete ? '#22C55E' : 'var(--color-border)',
+                color: allComplete ? '#fff' : 'var(--color-text-3)',
+                fontWeight: 700, fontSize: 'var(--fs-sm)',
+                cursor: allComplete ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
+              }}>{completing ? 'Filing...' : allComplete ? 'File Checklist' : `${totalCount - completedCount} items remaining`}</button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
