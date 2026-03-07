@@ -47,14 +47,14 @@ const STATUS_HEX: Record<string, string> = {
 const DEFAULT_NAVAIDS: NavaidStatus[] = []
 
 type Advisory = {
-  type: 'INFO' | 'CAUTION' | 'WARNING'
+  type: 'WATCH' | 'WARNING' | 'ADVISORY'
   text: string
 }
 
 const ADVISORY_COLORS: Record<string, { bg: string; border: string; text: string }> = {
-  INFO: { bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.35)', text: 'var(--color-accent)' },
-  CAUTION: { bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.35)', text: 'var(--color-warning)' },
+  WATCH: { bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.35)', text: 'var(--color-warning)' },
   WARNING: { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)', text: 'var(--color-danger)' },
+  ADVISORY: { bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.35)', text: 'var(--color-accent)' },
 }
 
 export default function HomePage() {
@@ -75,7 +75,7 @@ export default function HomePage() {
   const [bwcDraftValue, setBwcDraftValue] = useState<string | null>(null)
   const [bwcDraftNotes, setBwcDraftNotes] = useState('')
   const [advisoryDialogOpen, setAdvisoryDialogOpen] = useState(false)
-  const [advisoryDraftType, setAdvisoryDraftType] = useState<'INFO' | 'CAUTION' | 'WARNING'>('INFO')
+  const [advisoryDraftType, setAdvisoryDraftType] = useState<'WATCH' | 'WARNING' | 'ADVISORY'>('ADVISORY')
   const [advisoryDraftText, setAdvisoryDraftText] = useState('')
 
   // Confirmation dialog state for runway changes
@@ -230,13 +230,13 @@ export default function HomePage() {
               </div>
               <div
                 onClick={() => {
-                  setAdvisoryDraftType(advisory?.type || 'INFO')
+                  setAdvisoryDraftType(advisory?.type || 'ADVISORY')
                   setAdvisoryDraftText(advisory?.text || '')
                   setAdvisoryDialogOpen(true)
                 }}
                 style={{ textAlign: 'right', cursor: 'pointer', minWidth: 60 }}
               >
-                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Advisory</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Weather Info</div>
                 {advisory ? (
                   <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: ADVISORY_COLORS[advisory.type].text }}>{advisory.type}</div>
                 ) : (
@@ -255,13 +255,13 @@ export default function HomePage() {
               </div>
               <div
                 onClick={() => {
-                  setAdvisoryDraftType(advisory?.type || 'INFO')
+                  setAdvisoryDraftType(advisory?.type || 'ADVISORY')
                   setAdvisoryDraftText(advisory?.text || '')
                   setAdvisoryDialogOpen(true)
                 }}
                 style={{ textAlign: 'right', cursor: 'pointer', minWidth: 60 }}
               >
-                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Advisory</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Weather Info</div>
                 {advisory ? (
                   <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: ADVISORY_COLORS[advisory.type].text }}>{advisory.type}</div>
                 ) : (
@@ -309,9 +309,9 @@ export default function HomePage() {
               border: '1px solid var(--color-border-mid)',
             }}
           >
-            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>Set Advisory</div>
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>Set Weather Info</div>
             <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-              {(['INFO', 'CAUTION', 'WARNING'] as const).map((t) => (
+              {(['WATCH', 'WARNING', 'ADVISORY'] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setAdvisoryDraftType(t)}
@@ -329,7 +329,7 @@ export default function HomePage() {
             </div>
             <input
               type="text"
-              placeholder="Advisory text..."
+              placeholder="Weather info text..."
               value={advisoryDraftText}
               onChange={(e) => setAdvisoryDraftText(e.target.value)}
               style={{
@@ -349,7 +349,7 @@ export default function HomePage() {
                       newAdvisoryType: null,
                       newAdvisoryText: null,
                     }, installationId)
-                    if (installationId) logActivity('updated', 'airfield_status', installationId, 'Advisory Cleared', { old_advisory: advisory?.type ?? null }, installationId)
+                    if (installationId) logActivity('updated', 'airfield_status', installationId, 'Weather Info Cleared', { old_type: advisory?.type ?? null }, installationId)
                     setAdvisory(null)
                     setAdvisoryDraftText('')
                     setAdvisoryDialogOpen(false)
@@ -370,7 +370,7 @@ export default function HomePage() {
                       newAdvisoryType: advisoryDraftType,
                       newAdvisoryText: advisoryDraftText.trim(),
                     }, installationId)
-                    if (installationId) logActivity('updated', 'airfield_status', installationId, `Advisory ${advisoryDraftType}`, { advisory_type: advisoryDraftType, advisory_text: advisoryDraftText.trim() }, installationId)
+                    if (installationId) logActivity('updated', 'airfield_status', installationId, `Weather ${advisoryDraftType}`, { type: advisoryDraftType, text: advisoryDraftText.trim() }, installationId)
                     setAdvisory({ type: advisoryDraftType, text: advisoryDraftText.trim() })
                   }
                   setAdvisoryDialogOpen(false)
@@ -790,6 +790,22 @@ export default function HomePage() {
                       background: c.btnBg,
                     }}
                   >{runways.length > 0 ? rwy.active_end : activeRunway}</button>
+                  {rwy.remarks && (rwy.status === 'suspended' || rwy.status === 'closed') && (
+                    <div style={{
+                      fontSize: 'var(--fs-sm)',
+                      color: c.color,
+                      background: 'var(--color-bg-inset)',
+                      border: `1px solid ${c.border}`,
+                      borderRadius: 6,
+                      padding: '4px 10px',
+                      textAlign: 'center',
+                      lineHeight: 1.3,
+                      width: '100%',
+                      boxSizing: 'border-box',
+                    }}>
+                      {rwy.remarks}
+                    </div>
+                  )}
                   <select
                     value={runways.length > 0 ? rwy.status : runwayStatus}
                     onChange={(e) => {
@@ -804,7 +820,7 @@ export default function HomePage() {
                         notes: '',
                         onConfirm: (remarks) => {
                           if (runways.length > 0) {
-                            setRunwayStatusForRunway(rwy.label, val)
+                            setRunwayStatusForRunway(rwy.label, val, remarks || null)
                             if (installationId) logActivity('status_updated', 'airfield_status', installationId, `RWY ${rwy.active_end} ${val.toUpperCase()}`, { runway: rwy.label, status: val, ...(remarks ? { notes: remarks } : {}) }, installationId)
                             logRunwayStatusChange({ oldRunwayStatus: rwy.status, newRunwayStatus: val }, installationId)
                           } else {

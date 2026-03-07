@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 
 type Advisory = {
-  type: 'INFO' | 'CAUTION' | 'WARNING'
+  type: 'WATCH' | 'WARNING' | 'ADVISORY'
   text: string
 }
 
@@ -23,7 +23,7 @@ type DashboardState = {
   // Multi-runway support
   runwayStatuses: RunwayStatuses
   setRunwayActiveEnd: (runwayLabel: string, activeEnd: string) => void
-  setRunwayStatusForRunway: (runwayLabel: string, status: 'open' | 'suspended' | 'closed') => void
+  setRunwayStatusForRunway: (runwayLabel: string, status: 'open' | 'suspended' | 'closed', remarks?: string | null) => void
   // ARFF
   arffCat: number | null
   setArffCat: (cat: number | null) => Promise<void>
@@ -210,8 +210,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   }, [runwayStatuses, runwayLabels, persistRunwayStatuses])
 
   // Multi-runway: set status for a specific runway
-  const setRunwayStatusForRunway = useCallback(async (runwayLabel: string, status: 'open' | 'suspended' | 'closed') => {
-    const updated = { ...runwayStatuses, [runwayLabel]: { ...runwayStatuses[runwayLabel], status } }
+  const setRunwayStatusForRunway = useCallback(async (runwayLabel: string, status: 'open' | 'suspended' | 'closed', remarks?: string | null) => {
+    const entry = { ...runwayStatuses[runwayLabel], status, remarks: (status === 'open') ? null : (remarks || null) }
+    const updated = { ...runwayStatuses, [runwayLabel]: entry }
     setRunwayStatusesLocal(updated)
     // Sync legacy if first runway
     if (runwayLabel === runwayLabels[0]) setRunwayStatusLocal(status)

@@ -3,6 +3,7 @@ import { createClient } from './client'
 export interface RunwayStatusEntry {
   status: 'open' | 'suspended' | 'closed'
   active_end: string
+  remarks?: string | null
 }
 
 export type RunwayStatuses = Record<string, RunwayStatusEntry>
@@ -10,7 +11,7 @@ export type RunwayStatuses = Record<string, RunwayStatusEntry>
 export interface AirfieldStatus {
   id: string
   base_id: string | null
-  advisory_type: 'INFO' | 'CAUTION' | 'WARNING' | null
+  advisory_type: 'WATCH' | 'WARNING' | 'ADVISORY' | null
   advisory_text: string | null
   active_runway: string
   runway_status: 'open' | 'suspended' | 'closed'
