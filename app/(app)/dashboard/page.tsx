@@ -1278,9 +1278,8 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
     if (error) toast.error(error)
     else {
       toast.success(`QRC-${exec?.qrc_number} cancelled`)
-      setActiveExecId(null)
-      await load()
       await onActivity()
+      onClose()
     }
   }
 
