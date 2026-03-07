@@ -2,40 +2,136 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/lib/supabase/client'
 import { USER_ROLES } from '@/lib/constants'
 import type { UserRole } from '@/lib/supabase/types'
 
-// "More" menu — full module list with role-gated entries
+// "More" menu — grouped to match sidebar nav structure
 
-const modules = [
-  { name: 'Dashboard', icon: '📊', color: '#38BDF8', badge: null, href: '/dashboard', adminOnly: false, sysAdminOnly: false },
-  { name: 'Events Log', icon: '📝', color: '#34D399', badge: null, href: '/activity', adminOnly: false, sysAdminOnly: false },
-  { name: 'Airfield Checks', icon: '✅', color: '#22D3EE', badge: null, href: '/checks', adminOnly: false, sysAdminOnly: false },
-  { name: 'All Inspections', icon: '📋', color: '#22D3EE', badge: null, href: '/inspections/all', adminOnly: false, sysAdminOnly: false },
-  { name: 'Personnel on Airfield', icon: '🚧', color: '#F59E0B', badge: null, href: '/contractors', adminOnly: false, sysAdminOnly: false },
-  { name: 'Airfield Discrepancies', icon: '⚠️', color: '#FBBF24', badge: null, href: '/discrepancies', adminOnly: false, sysAdminOnly: false },
-  { name: 'Obstruction Database', icon: '🗺️', color: '#F97316', badge: null, href: '/obstructions/history', adminOnly: false, sysAdminOnly: false },
-  { name: 'Airfield Waivers', icon: '📄', color: '#A78BFA', badge: null, href: '/waivers', adminOnly: false, sysAdminOnly: false },
-  { name: 'Reports & Analytics', icon: '📈', color: '#22D3EE', badge: null, href: '/reports', adminOnly: false, sysAdminOnly: false },
-  { name: 'NOTAMs', icon: '📡', color: '#22D3EE', badge: null, href: '/notams', adminOnly: false, sysAdminOnly: false },
-  { name: 'PDF Library', icon: '📖', color: '#A855F7', badge: null, href: '/library', adminOnly: true, sysAdminOnly: false },
-  { name: 'User Management', icon: '👥', color: '#64748B', badge: null, href: '/users', adminOnly: true, sysAdminOnly: false },
-  { name: 'Settings', icon: '⚙️', color: '#64748B', badge: null, href: '/settings', adminOnly: false, sysAdminOnly: false },
+type ModuleItem = { name: string; icon: string; color: string; href: string; adminOnly?: boolean; sysAdminOnly?: boolean }
+
+const mainItems: ModuleItem[] = [
+  { name: 'Dashboard', icon: '📊', color: '#38BDF8', href: '/dashboard' },
+  { name: 'NOTAMs', icon: '📡', color: '#22D3EE', href: '/notams' },
 ]
+
+const amToolsItems: ModuleItem[] = [
+  { name: 'Events Log', icon: '📝', color: '#34D399', href: '/activity' },
+  { name: 'Airfield Checks', icon: '✅', color: '#22D3EE', href: '/checks' },
+  { name: 'All Inspections', icon: '📋', color: '#22D3EE', href: '/inspections/all' },
+  { name: 'Personnel on Airfield', icon: '🚧', color: '#F59E0B', href: '/contractors' },
+  { name: 'Airfield Discrepancies', icon: '⚠️', color: '#FBBF24', href: '/discrepancies' },
+  { name: 'Airfield Waivers', icon: '📄', color: '#A78BFA', href: '/waivers' },
+  { name: 'Reports & Analytics', icon: '📈', color: '#22D3EE', href: '/reports' },
+]
+
+const moreItems: ModuleItem[] = [
+  { name: 'Obstruction Database', icon: '🗺️', color: '#F97316', href: '/obstructions/history' },
+  { name: 'Settings', icon: '⚙️', color: '#64748B', href: '/settings' },
+  { name: 'PDF Library', icon: '📖', color: '#A855F7', href: '/library', adminOnly: true },
+  { name: 'User Management', icon: '👥', color: '#64748B', href: '/users', adminOnly: true },
+]
+
+function NavItem({ item }: { item: ModuleItem }) {
+  return (
+    <Link
+      href={item.href}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 14px',
+        textDecoration: 'none',
+        color: 'inherit',
+        borderBottom: '1px solid var(--color-border)',
+      }}
+    >
+      <div
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 8,
+          background: `${item.color}10`,
+          border: `1px solid ${item.color}22`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 'var(--fs-2xl)',
+          flexShrink: 0,
+        }}
+      >
+        {item.icon}
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700 }}>{item.name}</div>
+      </div>
+      <span style={{ color: 'var(--color-text-4)', fontSize: 'var(--fs-lg)' }}>›</span>
+    </Link>
+  )
+}
+
+function CollapsibleGroup({ label, icon, items, defaultOpen }: { label: string; icon: string; items: ModuleItem[]; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen ?? false)
+
+  if (items.length === 0) return null
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(prev => !prev)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '10px 14px',
+          width: '100%',
+          background: 'none',
+          border: 'none',
+          borderBottom: '1px solid var(--color-border)',
+          cursor: 'pointer',
+          color: 'inherit',
+          fontFamily: 'inherit',
+        }}
+      >
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 8,
+            background: 'rgba(100,116,139,0.08)',
+            border: '1px solid rgba(100,116,139,0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 'var(--fs-2xl)',
+            flexShrink: 0,
+          }}
+        >
+          {icon}
+        </div>
+        <div style={{ flex: 1, textAlign: 'left' }}>
+          <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700 }}>{label}</div>
+        </div>
+        <span style={{ color: 'var(--color-text-4)', fontSize: 'var(--fs-lg)', transition: 'transform 0.2s', transform: open ? 'rotate(90deg)' : 'none' }}>›</span>
+      </button>
+      {open && items.map(item => (
+        <div key={item.href} style={{ paddingLeft: 16 }}>
+          <NavItem item={item} />
+        </div>
+      ))}
+    </>
+  )
+}
 
 export default function MorePage() {
   const [canManageUsers, setCanManageUsers] = useState(false)
   const [isSysAdmin, setIsSysAdmin] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
-
   useEffect(() => {
     async function checkRole() {
       const supabase = createClient()
       if (!supabase) {
-        // Demo mode — show everything
         setCanManageUsers(true)
         setIsSysAdmin(true)
         setLoaded(true)
@@ -67,19 +163,19 @@ export default function MorePage() {
     checkRole()
   }, [])
 
-  const visibleModules = loaded
-    ? modules.filter((m) => {
-        if (m.adminOnly && !canManageUsers) return false
-        if (m.sysAdminOnly && !isSysAdmin) return false
-        return true
-      })
-    : modules.filter((m) => !m.adminOnly && !m.sysAdminOnly)
+  function filterItems(items: ModuleItem[]) {
+    if (!loaded) return items.filter(m => !m.adminOnly && !m.sysAdminOnly)
+    return items.filter(m => {
+      if (m.adminOnly && !canManageUsers) return false
+      if (m.sysAdminOnly && !isSysAdmin) return false
+      return true
+    })
+  }
 
   return (
     <div className="page-container">
       <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>More</div>
 
-      {/* Modules */}
       <div style={{
         background: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
@@ -87,45 +183,17 @@ export default function MorePage() {
         marginBottom: 12,
         overflow: 'hidden',
       }}>
-        {visibleModules.map((m) => (
-          <Link
-            key={m.name}
-            href={m.href}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '10px 14px',
-              textDecoration: 'none',
-              color: 'inherit',
-              borderBottom: '1px solid var(--color-border)',
-            }}
-          >
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                background: `${m.color}10`,
-                border: `1px solid ${m.color}22`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 'var(--fs-2xl)',
-                flexShrink: 0,
-              }}
-            >
-              {m.icon}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700 }}>{m.name}</div>
-            </div>
-            {m.badge && <Badge label={m.badge} color={m.color} />}
-            <span style={{ color: 'var(--color-text-4)', fontSize: 'var(--fs-lg)' }}>›</span>
-          </Link>
+        {/* Main items */}
+        {filterItems(mainItems).map(item => (
+          <NavItem key={item.href} item={item} />
         ))}
-      </div>
 
+        {/* AM Tools dropdown */}
+        <CollapsibleGroup label="AM Tools" icon="🔧" items={filterItems(amToolsItems)} />
+
+        {/* More dropdown */}
+        <CollapsibleGroup label="More" icon="⋯" items={filterItems(moreItems)} />
+      </div>
     </div>
   )
 }
