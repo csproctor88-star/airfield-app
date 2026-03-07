@@ -713,10 +713,13 @@ export type Database = {
           scn_fields: Record<string, unknown> | null
           is_active: boolean
           sort_order: number
+          last_reviewed_at: string | null
+          last_reviewed_by: string | null
+          review_notes: string | null
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['qrc_templates']['Row'], 'id' | 'created_at' | 'updated_at' | 'is_active' | 'sort_order'>
+        Insert: Omit<Database['public']['Tables']['qrc_templates']['Row'], 'id' | 'created_at' | 'updated_at' | 'is_active' | 'sort_order' | 'last_reviewed_at' | 'last_reviewed_by' | 'review_notes'>
         Update: Partial<Database['public']['Tables']['qrc_templates']['Insert']>
         Relationships: []
       }

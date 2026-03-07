@@ -61,6 +61,31 @@ export async function updateQrcTemplate(
   return { error: error?.message || null }
 }
 
+export async function reviewQrcTemplate(
+  id: string,
+  reviewNotes?: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+
+  let userId: string | undefined
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) userId = user.id
+  } catch { /* */ }
+
+  const { error } = await supabase
+    .from('qrc_templates')
+    .update({
+      last_reviewed_at: new Date().toISOString(),
+      last_reviewed_by: userId || null,
+      review_notes: reviewNotes?.trim() || null,
+      updated_at: new Date().toISOString(),
+    } as any)
+    .eq('id', id)
+  return { error: error?.message || null }
+}
+
 export async function deleteQrcTemplate(id: string): Promise<{ error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }

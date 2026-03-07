@@ -14,6 +14,7 @@ import {
   updateScnData,
   closeQrcExecution,
   reopenQrcExecution,
+  reviewQrcTemplate,
 } from '@/lib/supabase/qrc'
 import type { QrcTemplate, QrcExecution, QrcStep, QrcStepResponse } from '@/lib/supabase/types'
 
@@ -21,6 +22,16 @@ type Tab = 'available' | 'active' | 'history'
 
 function zuluNow(): string {
   return new Date().toISOString().slice(11, 16).replace(':', '')
+}
+
+function isReviewOverdue(lastReviewed: string | null): boolean {
+  if (!lastReviewed) return true
+  const oneYear = 365 * 24 * 60 * 60 * 1000
+  return Date.now() - new Date(lastReviewed).getTime() > oneYear
+}
+
+function formatReviewDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 export default function QrcPage() {
@@ -160,8 +171,22 @@ export default function QrcPage() {
                 <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)', lineHeight: 1.3 }}>
                   {tmpl.title}
                 </div>
-                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
-                  {tmpl.steps.length} steps
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                    {tmpl.steps.length} steps
+                  </span>
+                  {tmpl.last_reviewed_at ? (
+                    <span style={{
+                      fontSize: 'var(--fs-xs)', fontWeight: 600,
+                      color: isReviewOverdue(tmpl.last_reviewed_at) ? '#EF4444' : '#22C55E',
+                    }}>
+                      {isReviewOverdue(tmpl.last_reviewed_at) ? 'Review overdue' : `Reviewed ${formatReviewDate(tmpl.last_reviewed_at)}`}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: '#EF4444' }}>
+                      Never reviewed
+                    </span>
+                  )}
                 </div>
               </button>
             ))}
@@ -295,9 +320,26 @@ function QrcExecutionView({
   const [closing, setClosing] = useState(false)
   const [closeInitials, setCloseInitials] = useState('')
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
+  const [showReview, setShowReview] = useState(false)
+  const [reviewNotes, setReviewNotes] = useState(template?.review_notes || '')
+  const [reviewing, setReviewing] = useState(false)
+  const [reviewerName, setReviewerName] = useState<string | null>(null)
 
   const isClosed = execution.status === 'closed'
   const steps = template?.steps || []
+
+  // Load reviewer name
+  useEffect(() => {
+    if (!template?.last_reviewed_by) return
+    const supabase = (async () => {
+      const { createClient } = await import('@/lib/supabase/client')
+      const sb = createClient()
+      if (!sb || !template.last_reviewed_by) return
+      const { data } = await sb.from('profiles').select('name, rank').eq('id', template.last_reviewed_by).single()
+      if (data) setReviewerName((data as { name: string; rank: string | null }).rank ? `${(data as { name: string; rank: string | null }).rank} ${(data as { name: string; rank: string | null }).name}` : (data as { name: string }).name)
+    })()
+    void supabase
+  }, [template?.last_reviewed_by])
 
   // Flatten steps for counting
   function flattenSteps(s: QrcStep[]): QrcStep[] {
@@ -380,6 +422,19 @@ function QrcExecutionView({
       toast.success('QRC reopened')
       await onUpdate()
     }
+  }
+
+  async function handleReview() {
+    if (!template) return
+    setReviewing(true)
+    const { error } = await reviewQrcTemplate(template.id, reviewNotes)
+    if (error) toast.error(error)
+    else {
+      toast.success(`QRC-${template.qrc_number} marked as reviewed`)
+      setShowReview(false)
+      await onUpdate()
+    }
+    setReviewing(false)
   }
 
   function renderStep(step: QrcStep, depth = 0) {
@@ -673,6 +728,86 @@ function QrcExecutionView({
                 )}
               </div>
             )
+          )}
+        </div>
+      )}
+
+      {/* Annual Review Section */}
+      {template && (
+        <div style={{
+          padding: 14, borderRadius: 10, marginBottom: 16,
+          background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Annual Review
+            </div>
+            {template.last_reviewed_at ? (
+              <span style={{
+                fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 8px', borderRadius: 6,
+                background: isReviewOverdue(template.last_reviewed_at) ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)',
+                color: isReviewOverdue(template.last_reviewed_at) ? '#EF4444' : '#22C55E',
+              }}>
+                {isReviewOverdue(template.last_reviewed_at) ? 'OVERDUE' : 'CURRENT'}
+              </span>
+            ) : (
+              <span style={{
+                fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 8px', borderRadius: 6,
+                background: 'rgba(239,68,68,0.12)', color: '#EF4444',
+              }}>NEVER REVIEWED</span>
+            )}
+          </div>
+          {template.last_reviewed_at && (
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 6 }}>
+              Last reviewed: {formatReviewDate(template.last_reviewed_at)}
+              {reviewerName && ` by ${reviewerName}`}
+            </div>
+          )}
+          {template.review_notes && !showReview && (
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic', marginBottom: 6 }}>
+              {template.review_notes}
+            </div>
+          )}
+          {showReview ? (
+            <div>
+              <textarea
+                className="input-dark"
+                placeholder="Review notes (optional) — e.g. steps verified, changes made, POC..."
+                value={reviewNotes}
+                onChange={e => setReviewNotes(e.target.value)}
+                rows={2}
+                style={{ width: '100%', fontSize: 'var(--fs-sm)', resize: 'vertical', marginBottom: 8 }}
+              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={handleReview}
+                  disabled={reviewing}
+                  style={{
+                    flex: 1, padding: '8px 0', borderRadius: 8, border: 'none',
+                    background: 'var(--color-cyan)', color: '#000', fontWeight: 700,
+                    fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >{reviewing ? 'Saving...' : 'Confirm Review'}</button>
+                <button
+                  onClick={() => setShowReview(false)}
+                  style={{
+                    padding: '8px 14px', borderRadius: 8, border: '1px solid var(--color-border)',
+                    background: 'transparent', color: 'var(--color-text-2)', fontWeight: 700,
+                    fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowReview(true)}
+              style={{
+                padding: '6px 14px', borderRadius: 8,
+                border: '1px solid var(--color-cyan)', background: 'rgba(34,211,238,0.06)',
+                color: 'var(--color-cyan)', fontWeight: 700, fontSize: 'var(--fs-sm)',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >Mark as Reviewed</button>
           )}
         </div>
       )}
