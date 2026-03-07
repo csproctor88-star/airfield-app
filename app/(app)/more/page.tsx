@@ -16,6 +16,7 @@ const mainItems: ModuleItem[] = [
 ]
 
 const amToolsItems: ModuleItem[] = [
+  { name: 'QRC', icon: '⚡', color: '#EAB308', href: '/qrc' },
   { name: 'Shift Checklist', icon: '☑️', color: '#38BDF8', href: '/shift-checklist' },
   { name: 'Events Log', icon: '📝', color: '#34D399', href: '/activity' },
   { name: 'Airfield Checks', icon: '✅', color: '#22D3EE', href: '/checks' },

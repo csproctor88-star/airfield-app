@@ -28,6 +28,7 @@ import {
   HardHat,
   Wrench,
   ListChecks,
+  Zap,
   MoreHorizontal,
   ChevronDown,
   ChevronRight,
@@ -47,6 +48,7 @@ const mainItems = [
 
 // "AM Tools" dropdown items
 const opsItems = [
+  { name: 'QRC', icon: Zap, href: '/qrc' },
   { name: 'Shift Checklist', icon: ListChecks, href: '/shift-checklist' },
   { name: 'Events Log', icon: Activity, href: '/activity' },
   { name: 'Airfield Checks', icon: ClipboardCheck, href: '/checks' },

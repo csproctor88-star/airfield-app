@@ -41,6 +41,7 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     airfield_status: 'Runway',
     arff_status: 'ARFF',
     contractor: 'Personnel on Airfield',
+    qrc: 'QRC',
     manual: 'Manual Entry',
   }
   const entity = typeLabel[entityType] || entityType
@@ -50,6 +51,8 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     updated: 'Updated',
     deleted: 'Deleted',
     completed: 'Completed',
+    opened: 'Opened',
+    closed: 'Closed',
     status_updated: 'Status changed on',
     saved: 'Saved',
     filed: 'Filed',
@@ -101,6 +104,7 @@ export default function AMDashboardPage() {
   const [submitting, setSubmitting] = useState(false)
   const [showContractorForm, setShowContractorForm] = useState(false)
   const [showShiftChecklist, setShowShiftChecklist] = useState(false)
+  const [showQrc, setShowQrc] = useState(false)
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
@@ -332,6 +336,26 @@ export default function AMDashboardPage() {
             Shift Checklist
           </span>
         </button>
+        <button
+          onClick={() => setShowQrc(true)}
+          style={{
+            background: 'var(--color-bg-surface)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 12,
+            padding: '14px 16px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+            fontFamily: 'inherit',
+          }}
+        >
+          <span style={{ fontSize: 'var(--fs-5xl)' }}>⚡</span>
+          <span style={{ fontSize: 'var(--fs-xl)', color: '#EAB308', letterSpacing: '0.04em', fontWeight: 700 }}>
+            QRC
+          </span>
+        </button>
       </div>
 
       {/* ===== Contractor Form Dialog ===== */}
@@ -350,6 +374,15 @@ export default function AMDashboardPage() {
           timezone={baseTimezone}
           resetTime={baseResetTime}
           onClose={() => setShowShiftChecklist(false)}
+        />
+      )}
+
+      {/* ===== QRC Dialog ===== */}
+      {showQrc && (
+        <QrcDialog
+          installationId={installationId}
+          onClose={() => setShowQrc(false)}
+          onActivity={loadActivity}
         />
       )}
 
@@ -1101,6 +1134,278 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
                 cursor: allComplete ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
               }}>{completing ? 'Filing...' : allComplete ? 'File Checklist' : `${totalCount - completedCount} items remaining`}</button>
             )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ===== QRC Dialog =====
+
+function QrcDialog({ installationId, onClose, onActivity }: { installationId: string | null; onClose: () => void; onActivity: () => Promise<void> }) {
+  const [templates, setTemplates] = useState<import('@/lib/supabase/types').QrcTemplate[]>([])
+  const [openExecs, setOpenExecs] = useState<import('@/lib/supabase/types').QrcExecution[]>([])
+  const [loaded, setLoaded] = useState(false)
+  const [starting, setStarting] = useState<string | null>(null)
+  const [activeExecId, setActiveExecId] = useState<string | null>(null)
+  const [responses, setResponses] = useState<Record<string, import('@/lib/supabase/types').QrcStepResponse>>({})
+  const [closing, setClosing] = useState(false)
+
+  const load = useCallback(async () => {
+    const { fetchQrcTemplates, fetchOpenExecutions } = await import('@/lib/supabase/qrc')
+    const [t, o] = await Promise.all([
+      fetchQrcTemplates(installationId),
+      fetchOpenExecutions(installationId),
+    ])
+    setTemplates(t)
+    setOpenExecs(o)
+    // Auto-select first open execution
+    if (o.length > 0 && !activeExecId) setActiveExecId(o[0].id)
+    setLoaded(true)
+  }, [installationId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { load() }, [load])
+
+  // Sync responses when execution changes
+  useEffect(() => {
+    const exec = openExecs.find(e => e.id === activeExecId)
+    if (exec) setResponses((exec.step_responses || {}) as Record<string, import('@/lib/supabase/types').QrcStepResponse>)
+  }, [activeExecId, openExecs])
+
+  async function handleStart(tmpl: import('@/lib/supabase/types').QrcTemplate) {
+    if (!installationId) return
+    setStarting(tmpl.id)
+    const { startQrcExecution } = await import('@/lib/supabase/qrc')
+    const { data, error } = await startQrcExecution({
+      base_id: installationId,
+      template_id: tmpl.id,
+      qrc_number: tmpl.qrc_number,
+      title: tmpl.title,
+    })
+    if (error) { toast.error(error); setStarting(null); return }
+    if (data) {
+      toast.success(`QRC-${tmpl.qrc_number} opened`)
+      setActiveExecId(data.id)
+      await load()
+      await onActivity()
+    }
+    setStarting(null)
+  }
+
+  async function handleStepToggle(stepId: string) {
+    if (!activeExecId) return
+    const { updateStepResponse } = await import('@/lib/supabase/qrc')
+    const current = responses[stepId] || {}
+    const newResp: import('@/lib/supabase/types').QrcStepResponse = {
+      ...current,
+      completed: !current.completed,
+      completed_at: !current.completed ? new Date().toISOString() : undefined,
+    }
+    const updated = { ...responses, [stepId]: newResp }
+    setResponses(updated)
+    await updateStepResponse(activeExecId, stepId, newResp)
+  }
+
+  async function handleClose() {
+    if (!activeExecId) return
+    setClosing(true)
+    const { closeQrcExecution } = await import('@/lib/supabase/qrc')
+    const exec = openExecs.find(e => e.id === activeExecId)
+    const { error } = await closeQrcExecution(activeExecId, undefined, installationId)
+    if (error) toast.error(error)
+    else {
+      toast.success(`QRC-${exec?.qrc_number} closed`)
+      setActiveExecId(null)
+      await load()
+      await onActivity()
+    }
+    setClosing(false)
+  }
+
+  const activeExec = openExecs.find(e => e.id === activeExecId)
+  const activeTemplate = activeExec ? templates.find(t => t.id === activeExec.template_id) : null
+  const steps = activeTemplate?.steps || []
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 16, background: 'rgba(0,0,0,0.6)',
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="card"
+        style={{ width: '100%', maxWidth: 560, maxHeight: '85vh', display: 'flex', flexDirection: 'column', padding: 0 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {activeExecId && (
+                <button onClick={() => setActiveExecId(null)} style={{
+                  background: 'none', border: 'none', color: 'var(--color-cyan)', cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600, padding: 0,
+                }}>&larr;</button>
+              )}
+              <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                {activeExec ? `QRC-${activeExec.qrc_number}` : 'Quick Reaction Checklists'}
+              </div>
+            </div>
+            <Link href="/qrc" onClick={onClose} style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontWeight: 600, textDecoration: 'none' }}>
+              Full Page &rarr;
+            </Link>
+          </div>
+          {activeExec && (
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
+              {activeExec.title}
+            </div>
+          )}
+        </div>
+
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }}>
+          {!loaded ? (
+            <div style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>Loading...</div>
+          ) : activeExec && activeTemplate ? (
+            /* Execution view */
+            <div>
+              {activeTemplate.notes && (
+                <div style={{
+                  padding: '6px 10px', borderRadius: 6, marginBottom: 10,
+                  background: 'rgba(239,68,68,0.08)', fontSize: 'var(--fs-xs)', fontWeight: 600, color: '#EF4444',
+                }}>{activeTemplate.notes}</div>
+              )}
+              {steps.map(step => {
+                const resp = responses[step.id] || {}
+                const checked = resp.completed ?? false
+                if (step.type === 'conditional') {
+                  return (
+                    <div key={step.id} style={{
+                      padding: '6px 10px', marginBottom: 4, fontSize: 'var(--fs-sm)',
+                      fontWeight: 600, color: 'var(--color-warning)', fontStyle: 'italic',
+                    }}>{step.id}. {step.label}</div>
+                  )
+                }
+                if (step.type === 'notify_agencies') {
+                  return (
+                    <div key={step.id} style={{ marginBottom: 6, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--color-border)' }}>
+                      <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>
+                        {step.id}. {step.label}
+                      </div>
+                      {(step.agencies || []).map(agency => {
+                        const agencyChecked = (resp.agencies_checked || []).includes(agency)
+                        return (
+                          <button key={agency} onClick={() => {
+                            const checked2 = resp.agencies_checked || []
+                            const next = checked2.includes(agency) ? checked2.filter((a: string) => a !== agency) : [...checked2, agency]
+                            const updated = { ...responses, [step.id]: { ...resp, agencies_checked: next, completed: next.length > 0 } }
+                            setResponses(updated)
+                            import('@/lib/supabase/qrc').then(m => m.updateStepResponse(activeExecId!, step.id, updated[step.id]))
+                          }} style={{
+                            display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none',
+                            cursor: 'pointer', padding: '1px 0', fontFamily: 'inherit', textAlign: 'left', width: '100%',
+                          }}>
+                            <span style={{
+                              width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                              border: agencyChecked ? 'none' : '2px solid var(--color-border-mid)',
+                              background: agencyChecked ? '#22C55E' : 'transparent',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>{agencyChecked && <span style={{ color: '#fff', fontSize: 8, fontWeight: 800 }}>&#10003;</span>}</span>
+                            <span style={{ fontSize: 'var(--fs-xs)', color: agencyChecked ? 'var(--color-text-3)' : 'var(--color-text-1)', textDecoration: agencyChecked ? 'line-through' : 'none' }}>{agency}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )
+                }
+                return (
+                  <button key={step.id} onClick={() => handleStepToggle(step.id)} style={{
+                    display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                    background: 'none', border: 'none', cursor: 'pointer', padding: '5px 0',
+                    fontFamily: 'inherit', textAlign: 'left', borderBottom: '1px solid var(--color-border)',
+                  }}>
+                    <span style={{
+                      width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                      border: checked ? 'none' : '2px solid var(--color-border-mid)',
+                      background: checked ? '#22C55E' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>{checked && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>&#10003;</span>}</span>
+                    <span style={{
+                      fontSize: 'var(--fs-sm)', fontWeight: 600,
+                      color: checked ? 'var(--color-text-3)' : 'var(--color-text-1)',
+                      textDecoration: checked ? 'line-through' : 'none', flex: 1,
+                    }}>{step.id}. {step.label}</span>
+                    {checked && resp.completed_at && (
+                      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)' }}>
+                        {new Date(resp.completed_at).toISOString().slice(11, 16)}Z
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            /* Template picker grid */
+            <>
+              {openExecs.length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EAB308', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Active</div>
+                  {openExecs.map(ex => (
+                    <button key={ex.id} onClick={() => setActiveExecId(ex.id)} style={{
+                      display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                      background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)',
+                      borderRadius: 8, padding: '8px 12px', cursor: 'pointer', fontFamily: 'inherit',
+                      textAlign: 'left', marginBottom: 4,
+                    }}>
+                      <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#000', background: '#EAB308', padding: '1px 6px', borderRadius: 4 }}>QRC-{ex.qrc_number}</span>
+                      <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', flex: 1 }}>{ex.title}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Start New</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                {templates.filter(t => t.is_active).map(tmpl => (
+                  <button
+                    key={tmpl.id}
+                    onClick={() => handleStart(tmpl)}
+                    disabled={starting === tmpl.id}
+                    style={{
+                      background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+                      borderRadius: 8, padding: '8px 10px', cursor: 'pointer',
+                      fontFamily: 'inherit', textAlign: 'left',
+                    }}
+                  >
+                    <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#000', background: 'var(--color-warning)', padding: '1px 5px', borderRadius: 4 }}>
+                      {tmpl.qrc_number}
+                    </span>
+                    <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-1)', marginTop: 4, lineHeight: 1.3 }}>
+                      {tmpl.title}
+                    </div>
+                  </button>
+                ))}
+              </div>
+              {templates.filter(t => t.is_active).length === 0 && (
+                <div style={{ textAlign: 'center', padding: 16, color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>
+                  No QRC templates configured. Set them up in Settings.
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        {activeExec && (
+          <div style={{ padding: '12px 20px', borderTop: '1px solid var(--color-border)', flexShrink: 0 }}>
+            <button onClick={handleClose} disabled={closing} style={{
+              width: '100%', padding: '10px 0', borderRadius: 8, border: 'none',
+              background: '#22C55E', color: '#fff', fontWeight: 700,
+              fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
+            }}>{closing ? 'Closing...' : 'Close QRC'}</button>
           </div>
         )}
       </div>

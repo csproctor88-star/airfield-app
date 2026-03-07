@@ -700,6 +700,49 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['shift_checklist_responses']['Insert']>
         Relationships: []
       }
+      qrc_templates: {
+        Row: {
+          id: string
+          base_id: string
+          qrc_number: number
+          title: string
+          notes: string | null
+          steps: QrcStep[]
+          references: string | null
+          has_scn_form: boolean
+          scn_fields: Record<string, unknown> | null
+          is_active: boolean
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['qrc_templates']['Row'], 'id' | 'created_at' | 'updated_at' | 'is_active' | 'sort_order'>
+        Update: Partial<Database['public']['Tables']['qrc_templates']['Insert']>
+        Relationships: []
+      }
+      qrc_executions: {
+        Row: {
+          id: string
+          base_id: string
+          template_id: string
+          qrc_number: number
+          title: string
+          status: 'open' | 'closed'
+          opened_by: string | null
+          opened_at: string
+          open_initials: string | null
+          closed_by: string | null
+          closed_at: string | null
+          close_initials: string | null
+          step_responses: Record<string, QrcStepResponse>
+          scn_data: Record<string, unknown> | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['qrc_executions']['Row'], 'id' | 'created_at' | 'updated_at' | 'status' | 'step_responses'>
+        Update: Partial<Database['public']['Tables']['qrc_executions']['Insert']>
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
@@ -789,6 +832,32 @@ export type AirfieldStatusRow = Database['public']['Tables']['airfield_status'][
 export type InstallationArffAircraft = Database['public']['Tables']['base_arff_aircraft']['Row']
 export type RunwayStatusLog = Database['public']['Tables']['runway_status_log']['Row']
 export type AirfieldContractor = Database['public']['Tables']['airfield_contractors']['Row']
+export type QrcTemplate = Database['public']['Tables']['qrc_templates']['Row']
+export type QrcExecution = Database['public']['Tables']['qrc_executions']['Row']
+
+// === QRC (Quick Reaction Checklist) Types ===
+
+export type QrcStepType = 'checkbox' | 'checkbox_with_note' | 'notify_agencies' | 'fill_field' | 'time_field' | 'conditional'
+
+export type QrcStep = {
+  id: string
+  type: QrcStepType
+  label: string
+  note?: string
+  agencies?: string[]
+  field_label?: string
+  cross_ref_qrc?: number
+  sub_steps?: QrcStep[]
+}
+
+export type QrcStepResponse = {
+  completed: boolean
+  completed_by?: string
+  completed_at?: string
+  value?: string
+  agencies_checked?: string[]
+  notes?: string
+}
 
 // === ACSI (Airfield Compliance and Safety Inspection) Types ===
 

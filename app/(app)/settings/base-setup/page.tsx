@@ -18,7 +18,7 @@ import {
 } from '@/lib/supabase/shift-checklist'
 import { fetchNavaidStatuses, type NavaidStatus } from '@/lib/supabase/navaids'
 
-type SetupTab = 'runways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'templates' | 'shiftchecklist'
+type SetupTab = 'runways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'templates' | 'shiftchecklist' | 'qrc'
 
 export default function BaseSetupPage() {
   const { installationId, currentInstallation, runways, areas, ceShops, arffAircraft, userRole } = useInstallation()
@@ -49,6 +49,7 @@ export default function BaseSetupPage() {
     { key: 'shops', label: 'CE Shops' },
     { key: 'templates', label: 'Templates' },
     { key: 'shiftchecklist', label: 'Shift Checklist' },
+    { key: 'qrc', label: 'QRC Templates' },
   ]
 
   return (
@@ -105,6 +106,7 @@ export default function BaseSetupPage() {
         {activeTab === 'shops' && <ShopsTab shops={ceShops} installationId={installationId} />}
         {activeTab === 'templates' && <TemplatesTab installationId={installationId} />}
         {activeTab === 'shiftchecklist' && <ShiftChecklistTab installationId={installationId} currentInstallation={currentInstallation} />}
+        {activeTab === 'qrc' && <QrcTemplatesTab installationId={installationId} />}
       </div>
 
       {/* Preview Dashboard Button */}
@@ -1404,6 +1406,108 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
           {renderItemList('Swing Shift', swingItems)}
           {midItems.length > 0 && renderItemList('Mid Shift', midItems)}
         </>
+      )}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// QRC Templates Tab
+// ═══════════════════════════════════════════════════════════════
+
+function QrcTemplatesTab({ installationId }: { installationId: string | null }) {
+  const [templates, setTemplates] = useState<{ id: string; qrc_number: number; title: string; is_active: boolean; steps: unknown[] }[]>([])
+  const [loaded, setLoaded] = useState(false)
+  const [seeding, setSeeding] = useState(false)
+
+  const load = useCallback(async () => {
+    if (!installationId) return
+    const { fetchQrcTemplates } = await import('@/lib/supabase/qrc')
+    const data = await fetchQrcTemplates(installationId)
+    setTemplates(data)
+    setLoaded(true)
+  }, [installationId])
+
+  useEffect(() => { load() }, [load])
+
+  async function handleSeed() {
+    if (!installationId) return
+    setSeeding(true)
+    const { seedQrcTemplates } = await import('@/lib/supabase/qrc')
+    const { count, error } = await seedQrcTemplates(installationId)
+    if (error) toast.error(error)
+    else {
+      toast.success(`Seeded ${count} QRC templates`)
+      await load()
+    }
+    setSeeding(false)
+  }
+
+  async function handleToggle(id: string, isActive: boolean) {
+    const { updateQrcTemplate } = await import('@/lib/supabase/qrc')
+    const { error } = await updateQrcTemplate(id, { is_active: !isActive })
+    if (error) toast.error(error)
+    else await load()
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Delete this QRC template? This cannot be undone.')) return
+    const { deleteQrcTemplate } = await import('@/lib/supabase/qrc')
+    const { error } = await deleteQrcTemplate(id)
+    if (error) toast.error(error)
+    else { toast.success('Template deleted'); await load() }
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>QRC Templates</div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Configure Quick Reaction Checklists for this base.</div>
+        </div>
+        <button onClick={handleSeed} disabled={seeding} style={{
+          background: 'var(--color-cyan)', color: '#000', border: 'none', borderRadius: 8,
+          padding: '8px 16px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
+        }}>{seeding ? 'Seeding...' : 'Seed 25 Defaults'}</button>
+      </div>
+
+      {!loaded ? (
+        <div style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)' }}>Loading...</div>
+      ) : templates.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>
+          No QRC templates. Click &quot;Seed 25 Defaults&quot; to load the standard set.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {templates.map(t => (
+            <div key={t.id} style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+              background: 'var(--color-bg-elevated)', borderRadius: 8,
+              border: '1px solid var(--color-border)',
+              opacity: t.is_active ? 1 : 0.5,
+            }}>
+              <span style={{
+                fontSize: 'var(--fs-xs)', fontWeight: 800,
+                color: '#000', background: t.is_active ? 'var(--color-warning)' : 'var(--color-text-4)',
+                padding: '2px 6px', borderRadius: 4, minWidth: 32, textAlign: 'center',
+              }}>{t.qrc_number}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)' }}>{t.title}</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{(t.steps as unknown[]).length} steps</div>
+              </div>
+              <button onClick={() => handleToggle(t.id, t.is_active)} style={{
+                background: 'none', border: '1px solid var(--color-border)', borderRadius: 6,
+                padding: '3px 10px', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer',
+                color: t.is_active ? 'var(--color-danger)' : 'var(--color-success)', fontFamily: 'inherit',
+              }}>{t.is_active ? 'Disable' : 'Enable'}</button>
+              <button onClick={() => handleDelete(t.id)} style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--color-text-4)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+                padding: '2px 6px',
+              }}>&#x2715;</button>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
