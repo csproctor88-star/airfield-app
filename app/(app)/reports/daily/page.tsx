@@ -319,6 +319,29 @@ export default function DailyOpsPage() {
         : 'No evaluations recorded',
       color: '#FBBF24',
     },
+    {
+      label: 'QRC Executions',
+      count: data.qrcExecutions.length,
+      detail: data.qrcExecutions.length > 0
+        ? (() => {
+            const open = data.qrcExecutions.filter((q) => q.status === 'open').length
+            const closed = data.qrcExecutions.filter((q) => q.status === 'closed').length
+            const parts: string[] = []
+            if (closed > 0) parts.push(`${closed} closed`)
+            if (open > 0) parts.push(`${open} open`)
+            return parts.join(', ')
+          })()
+        : 'No QRC executions',
+      color: '#EAB308',
+    },
+    {
+      label: 'Events Log',
+      count: data.activityEntries.length,
+      detail: data.activityEntries.length > 0
+        ? `${data.activityEntries.length} entr${data.activityEntries.length !== 1 ? 'ies' : 'y'} logged`
+        : 'No events logged',
+      color: '#8B5CF6',
+    },
   ]
 
   return (

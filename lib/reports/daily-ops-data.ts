@@ -63,6 +63,32 @@ export interface PhotoForDailyReport {
   dataUrl: string | null
 }
 
+export interface ActivityEntryForReport {
+  id: string
+  action: string
+  entity_type: string
+  entity_display_id: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+  user_name: string
+  user_rank: string | null
+}
+
+export interface QrcExecutionForReport {
+  id: string
+  qrc_number: number
+  title: string
+  status: string
+  opened_at: string
+  open_initials: string | null
+  closed_at: string | null
+  close_initials: string | null
+  scn_data: Record<string, unknown> | null
+  total_steps: number
+  completed_steps: number
+  scn_field_labels: { key: string; label: string }[]
+}
+
 export interface DailyReportData {
   inspections: (InspectionRow & { failed_items: InspectionItem[] })[]
   checks: CheckRow[]
@@ -70,6 +96,8 @@ export interface DailyReportData {
   newDiscrepancies: DiscrepancyWithReporter[]
   statusUpdates: StatusUpdateWithContext[]
   obstructionEvals: ObstructionEvalForReport[]
+  activityEntries: ActivityEntryForReport[]
+  qrcExecutions: QrcExecutionForReport[]
   /** Photos keyed by entity — e.g. "check:<id>", "discrepancy:<id>", "obstruction:<id>" */
   photos: Record<string, PhotoForDailyReport[]>
 }
@@ -90,11 +118,15 @@ export async function fetchDailyReportData(
     fetchNewDiscrepanciesForDate(supabase, startUTC, endUTC, baseId),
     fetchStatusUpdatesForDate(supabase, startUTC, endUTC, baseId),
     fetchObstructionEvalsForDate(supabase, startUTC, endUTC, baseId),
+    fetchActivityForDate(supabase, startUTC, endUTC, baseId),
+    fetchQrcExecutionsForDate(supabase, startUTC, endUTC, baseId),
   ])
 
   const checks = results[1] as CheckRow[]
   const newDiscrepancies = results[3] as DiscrepancyWithReporter[]
   const obstructionEvals = results[5] as ObstructionEvalForReport[]
+  const activityEntries = results[6] as ActivityEntryForReport[]
+  const qrcExecutions = results[7] as QrcExecutionForReport[]
 
   // Fetch photos for checks, discrepancies, and obstruction evaluations
   const photos = await fetchPhotosForDailyReport(
@@ -123,6 +155,8 @@ export async function fetchDailyReportData(
     newDiscrepancies,
     statusUpdates: results[4],
     obstructionEvals,
+    activityEntries,
+    qrcExecutions,
     photos,
   }
 }
@@ -366,6 +400,126 @@ async function fetchObstructionEvalsForDate(supabase: any, startUTC: string, end
     evaluator_name: 'Unknown',
     evaluator_rank: null,
   })) as ObstructionEvalForReport[]
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchActivityForDate(supabase: any, startUTC: string, endUTC: string, baseId?: string | null) {
+  if (!supabase) return []
+
+  let query = supabase
+    .from('activity_log')
+    .select('id, action, entity_type, entity_display_id, metadata, created_at, profiles:user_id(name, rank)')
+    .gte('created_at', startUTC)
+    .lte('created_at', endUTC)
+    .order('created_at', { ascending: true })
+
+  if (baseId) query = query.eq('base_id', baseId)
+
+  const { data, error } = await query
+
+  if (!error && data) {
+    return (data ?? []).map((row: Record<string, unknown>) => ({
+      ...row,
+      user_name: (row.profiles as { name?: string } | null)?.name || 'Unknown',
+      user_rank: (row.profiles as { rank?: string } | null)?.rank || null,
+    })) as ActivityEntryForReport[]
+  }
+
+  // Fallback without join
+  let fbQuery = supabase
+    .from('activity_log')
+    .select('*')
+    .gte('created_at', startUTC)
+    .lte('created_at', endUTC)
+    .order('created_at', { ascending: true })
+
+  if (baseId) fbQuery = fbQuery.eq('base_id', baseId)
+
+  const { data: fb, error: fbErr } = await fbQuery
+  if (fbErr) {
+    console.error('Report: failed to fetch activity:', fbErr.message)
+    return []
+  }
+
+  return ((fb ?? []) as Record<string, unknown>[]).map((r) => ({
+    ...r,
+    user_name: 'Unknown',
+    user_rank: null,
+  })) as ActivityEntryForReport[]
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchQrcExecutionsForDate(supabase: any, startUTC: string, endUTC: string, baseId?: string | null) {
+  if (!supabase) return []
+
+  const selectStr = '*, qrc_templates:template_id(steps, scn_fields, has_scn_form)'
+
+  // Fetch executions opened during range
+  let q1 = supabase.from('qrc_executions').select(selectStr)
+    .gte('opened_at', startUTC).lte('opened_at', endUTC)
+    .order('opened_at', { ascending: true })
+  if (baseId) q1 = q1.eq('base_id', baseId)
+
+  // Fetch executions closed during range (but opened before)
+  let q2 = supabase.from('qrc_executions').select(selectStr)
+    .lt('opened_at', startUTC)
+    .gte('closed_at', startUTC).lte('closed_at', endUTC)
+    .order('opened_at', { ascending: true })
+  if (baseId) q2 = q2.eq('base_id', baseId)
+
+  const [r1, r2] = await Promise.all([q1, q2])
+
+  if (r1.error && r2.error) {
+    console.error('Report: failed to fetch QRC executions:', r1.error.message)
+    return []
+  }
+
+  // Merge and deduplicate
+  const allRows = [...(r1.data || []), ...(r2.data || [])] as Record<string, unknown>[]
+  const seen = new Set<string>()
+  const unique = allRows.filter((r) => {
+    const id = r.id as string
+    if (seen.has(id)) return false
+    seen.add(id)
+    return true
+  })
+
+  return unique.map((row) => {
+    const template = row.qrc_templates as { steps?: unknown[]; scn_fields?: Record<string, unknown>; has_scn_form?: boolean } | null
+    const steps = (template?.steps || []) as { id: string; type?: string; sub_steps?: { id: string; type?: string }[] }[]
+
+    // Flatten steps to count total (exclude conditionals)
+    function flattenSteps(s: { id: string; type?: string; sub_steps?: { id: string; type?: string }[] }[]): string[] {
+      const ids: string[] = []
+      for (const step of s) {
+        if (step.type !== 'conditional') ids.push(step.id)
+        if (step.sub_steps) ids.push(...flattenSteps(step.sub_steps))
+      }
+      return ids
+    }
+    const allStepIds = flattenSteps(steps)
+    const responses = (row.step_responses || {}) as Record<string, { completed?: boolean }>
+    const completedCount = allStepIds.filter((id) => responses[id]?.completed).length
+
+    // Extract SCN field labels
+    const scnFields = template?.scn_fields as { fields?: { key: string; label: string }[] } | null
+    const scnFieldLabels = (scnFields?.fields || []).map((f) => ({ key: f.key, label: f.label }))
+
+    return {
+      id: row.id,
+      qrc_number: row.qrc_number,
+      title: row.title,
+      status: row.status,
+      opened_at: row.opened_at,
+      open_initials: row.open_initials,
+      closed_at: row.closed_at,
+      close_initials: row.close_initials,
+      scn_data: row.scn_data,
+      total_steps: allStepIds.length,
+      completed_steps: completedCount,
+      scn_field_labels: scnFieldLabels,
+    }
+  }) as QrcExecutionForReport[]
 }
 
 // ── Photo Fetching ──
