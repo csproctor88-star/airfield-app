@@ -170,7 +170,7 @@ export function SidebarNav() {
           <img
             src={resolvedTheme === 'dark' ? '/glidepathdarkmode3.png' : '/glidepath2.png'}
             alt="Glidepath"
-            style={{ height: 28, objectFit: 'contain', marginBottom: 2 }}
+            style={{ height: 40, objectFit: 'contain', marginBottom: 2 }}
           />
         )}
         <div style={{

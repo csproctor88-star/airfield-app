@@ -50,6 +50,7 @@
   --color-detail-box-value: #94A3B8;
   --color-search-bg: rgba(15, 23, 42, 0.6);
   --color-search-border: rgba(148, 163, 184, 0.1);
+  --color-header-title: #38BDF8;
 
   /* ── Responsive font-size scale (mobile defaults) ── */
   --fs-2xs: 9px;
@@ -66,6 +67,7 @@
 
   /* ── Header scaling ── */
   --header-padding: 6px 16px;
+  --header-title-size: 22px;
   --header-icon-size: 20px;
   --header-row-gap: 6px;
 
@@ -134,6 +136,7 @@
   --color-detail-box-value: #64748B;
   --color-search-bg: #FFFFFF;
   --color-search-border: #CBD5E1;
+  --color-header-title: #1E40AF;
 }
 
 /* Ensure html/body cover the full viewport — outside @layer for highest priority */
@@ -510,6 +513,7 @@ html, body {
     --obs-map-height-expanded: 50vh;
 
     --header-padding: 8px 24px;
+    --header-title-size: 28px;
     --header-icon-size: 22px;
     --header-row-gap: 8px;
 
@@ -702,6 +706,7 @@ html, body {
     --obs-map-height-expanded: 55vh;
 
     --header-padding: 8px 32px;
+    --header-title-size: 36px;
     --header-icon-size: 24px;
     --header-row-gap: 10px;
 

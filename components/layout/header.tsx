@@ -145,9 +145,9 @@ export function Header() {
         </button>
 
         <div style={{
-          fontSize: 'var(--fs-lg)',
-          fontWeight: 700,
-          color: 'var(--color-text-1)',
+          fontSize: 'var(--header-title-size)',
+          fontWeight: 800,
+          color: 'var(--color-header-title)',
           letterSpacing: '0.02em',
         }}>
           {currentPageLabel}
