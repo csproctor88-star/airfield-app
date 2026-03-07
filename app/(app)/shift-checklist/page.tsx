@@ -35,6 +35,10 @@ export default function ShiftChecklistPage() {
   const [saving, setSaving] = useState<string | null>(null) // item_id being saved
   const [completing, setCompleting] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const [viewingHistory, setViewingHistory] = useState<ShiftChecklist | null>(null)
+  const [historyItems, setHistoryItems] = useState<ShiftChecklistItem[]>([])
+  const [historyResponses, setHistoryResponses] = useState<ShiftChecklistResponse[]>([])
+  const [historyLoaded, setHistoryLoaded] = useState(false)
 
   const loadToday = useCallback(async () => {
     if (!installationId) return
@@ -86,6 +90,23 @@ export default function ShiftChecklistPage() {
       })
       setProfiles(map)
     }
+  }
+
+  async function viewHistoryChecklist(cl: ShiftChecklist) {
+    setViewingHistory(cl)
+    setHistoryLoaded(false)
+    const [allItems, resp] = await Promise.all([
+      fetchChecklistItems(installationId),
+      fetchResponses(cl.id),
+    ])
+    setHistoryItems(allItems)
+    setHistoryResponses(resp)
+
+    const userIds = new Set<string>()
+    resp.forEach(r => { if (r.completed_by) userIds.add(r.completed_by) })
+    if (cl.completed_by) userIds.add(cl.completed_by)
+    if (userIds.size > 0) await loadProfiles(Array.from(userIds))
+    setHistoryLoaded(true)
   }
 
   useEffect(() => { loadToday() }, [loadToday])
@@ -254,7 +275,7 @@ export default function ShiftChecklistPage() {
         {(['today', 'history'] as ViewTab[]).map(t => (
           <button
             key={t}
-            onClick={() => setTab(t)}
+            onClick={() => { setTab(t); setViewingHistory(null) }}
             style={{
               background: tab === t ? 'var(--color-bg-elevated)' : 'transparent',
               border: `1px solid ${tab === t ? 'var(--color-text-4)' : 'var(--color-bg-elevated)'}`,
@@ -377,7 +398,7 @@ export default function ShiftChecklistPage() {
         </>
       )}
 
-      {tab === 'history' && (
+      {tab === 'history' && !viewingHistory && (
         <div>
           {history.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)' }}>
@@ -388,14 +409,24 @@ export default function ShiftChecklistPage() {
               {history.map((h, i, arr) => {
                 const d = new Date(h.checklist_date + 'T12:00:00')
                 return (
-                  <div
+                  <button
                     key={h.id}
+                    onClick={() => viewHistoryChecklist(h)}
                     style={{
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       padding: '10px 14px',
                       borderBottom: i < arr.length - 1 ? '1px solid var(--color-border)' : 'none',
+                      width: '100%',
+                      background: 'none',
+                      border: 'none',
+                      borderBottomStyle: i < arr.length - 1 ? 'solid' : 'none',
+                      borderBottomWidth: i < arr.length - 1 ? 1 : 0,
+                      borderBottomColor: 'var(--color-border)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      fontFamily: 'inherit',
                     }}
                   >
                     <div>
@@ -409,23 +440,134 @@ export default function ShiftChecklistPage() {
                         </div>
                       )}
                     </div>
-                    <span style={{
-                      fontSize: 'var(--fs-xs)',
-                      fontWeight: 700,
-                      padding: '3px 8px',
-                      borderRadius: 8,
-                      background: h.status === 'completed' ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
-                      color: h.status === 'completed' ? '#22C55E' : '#EAB308',
-                    }}>
-                      {h.status === 'completed' ? 'FILED' : 'IN PROGRESS'}
-                    </span>
-                  </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{
+                        fontSize: 'var(--fs-xs)',
+                        fontWeight: 700,
+                        padding: '3px 8px',
+                        borderRadius: 8,
+                        background: h.status === 'completed' ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
+                        color: h.status === 'completed' ? '#22C55E' : '#EAB308',
+                      }}>
+                        {h.status === 'completed' ? 'FILED' : 'IN PROGRESS'}
+                      </span>
+                      <span style={{ color: 'var(--color-text-4)', fontSize: 'var(--fs-lg)' }}>›</span>
+                    </div>
+                  </button>
                 )
               })}
             </div>
           )}
         </div>
       )}
+
+      {tab === 'history' && viewingHistory && (() => {
+        const hDate = new Date(viewingHistory.checklist_date + 'T12:00:00')
+        const hDateStr = hDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+        const hResponseMap = new Map(historyResponses.map(r => [r.item_id, r]))
+        const hDayItems = historyItems.filter(i => i.shift === 'day')
+        const hMidItems = historyItems.filter(i => i.shift === 'mid')
+        const hSwingItems = historyItems.filter(i => i.shift === 'swing')
+        // Only show items that have a response for this checklist
+        const hAllRespondedIds = new Set(historyResponses.map(r => r.item_id))
+        const filterResponded = (list: ShiftChecklistItem[]) => list.filter(i => hAllRespondedIds.has(i.id))
+
+        function renderHistorySection(label: string, sectionItems: ShiftChecklistItem[]) {
+          const filtered = filterResponded(sectionItems)
+          if (filtered.length === 0) return null
+          const done = filtered.filter(i => hResponseMap.get(i.id)?.completed).length
+          return (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span className="section-label" style={{ marginBottom: 0 }}>{label}</span>
+                <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: done === filtered.length ? '#22C55E' : 'var(--color-text-3)' }}>
+                  {done}/{filtered.length}
+                </span>
+              </div>
+              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                {filtered.map(item => {
+                  const resp = hResponseMap.get(item.id)
+                  const checked = resp?.completed ?? false
+                  return (
+                    <div key={item.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                      borderBottom: '1px solid var(--color-border)',
+                    }}>
+                      <div style={{
+                        width: 24, height: 24, borderRadius: 6, flexShrink: 0,
+                        border: checked ? 'none' : '2px solid var(--color-border-mid)',
+                        background: checked ? '#22C55E' : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {checked && <span style={{ color: '#fff', fontSize: 14, fontWeight: 800 }}>&#10003;</span>}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: 'var(--fs-base)', fontWeight: 600,
+                          color: checked ? 'var(--color-text-3)' : 'var(--color-text-1)',
+                          textDecoration: checked ? 'line-through' : 'none',
+                        }}>{item.label}</div>
+                        {checked && resp?.completed_by && (
+                          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+                            {profiles[resp.completed_by] || 'Unknown'}
+                            {resp.completed_at && ` \u00b7 ${new Date(resp.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`}
+                          </div>
+                        )}
+                      </div>
+                      {item.frequency !== 'daily' && (
+                        <span style={{
+                          fontSize: 'var(--fs-xs)', fontWeight: 700, color: FREQ_COLORS[item.frequency],
+                          background: `${FREQ_COLORS[item.frequency]}15`, padding: '2px 8px', borderRadius: 10,
+                        }}>{FREQ_LABELS[item.frequency]}</span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        }
+
+        return (
+          <>
+            <button
+              onClick={() => { setViewingHistory(null); setHistoryItems([]); setHistoryResponses([]) }}
+              style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0, marginBottom: 12 }}
+            >
+              &larr; Back to History
+            </button>
+
+            <div className="card" style={{ padding: '12px 14px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>{hDateStr}</div>
+                {viewingHistory.completed_by && (
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
+                    Filed by {profiles[viewingHistory.completed_by] || 'Unknown'}
+                    {viewingHistory.completed_at && ` at ${new Date(viewingHistory.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`}
+                  </div>
+                )}
+              </div>
+              <div style={{
+                fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '4px 10px', borderRadius: 10,
+                background: viewingHistory.status === 'completed' ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
+                color: viewingHistory.status === 'completed' ? '#22C55E' : '#EAB308',
+              }}>
+                {viewingHistory.status === 'completed' ? 'FILED' : 'IN PROGRESS'}
+              </div>
+            </div>
+
+            {!historyLoaded ? (
+              <div style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)' }}>Loading...</div>
+            ) : (
+              <>
+                {renderHistorySection('Day Shift', hDayItems)}
+                {hMidItems.length > 0 && renderHistorySection('Mid Shift', hMidItems)}
+                {renderHistorySection('Swing Shift', hSwingItems)}
+              </>
+            )}
+          </>
+        )
+      })()}
     </div>
   )
 }
