@@ -337,7 +337,20 @@ export async function saveInspectionDraft(input: {
     }
 
     const updated = data as InspectionRow
-    logActivity('saved', 'inspection', updated.id, updated.display_id, { details: `AFLD INSPECTION IN-PROGRESS, ${completion_percent}% CMPLT` }, input.base_id)
+    if (completion_percent >= 100) {
+      const typeLabel = input.inspection_type === 'lighting' ? 'LIGHTING' : input.inspection_type === 'construction_meeting' ? 'PRE/POST CONSTRUCTION' : input.inspection_type === 'joint_monthly' ? 'MONTHLY JOINT' : 'AFLD'
+      const draftFailed = (input.items || []).filter(i => i.response === 'fail')
+      const draftDiscStr = draftFailed.length > 0
+        ? draftFailed.map(i => i.item).join(', ').toUpperCase()
+        : 'NO NEW DISCREPANCIES'
+      let cmpltDetails = `${typeLabel} INSPECTION CMPLT; ${draftDiscStr}`
+      if (input.rsc_condition && input.bwc_value) cmpltDetails += `. ADVISES RSC/${input.rsc_condition.toUpperCase()} & BWC/${input.bwc_value.toUpperCase()}`
+      else if (input.rsc_condition) cmpltDetails += `. ADVISES RSC/${input.rsc_condition.toUpperCase()}`
+      else if (input.bwc_value) cmpltDetails += `. ADVISES BWC/${input.bwc_value.toUpperCase()}`
+      logActivity('completed', 'inspection', updated.id, updated.display_id, { details: cmpltDetails }, input.base_id)
+    } else {
+      logActivity('saved', 'inspection', updated.id, updated.display_id, { details: `AFLD INSPECTION IN-PROGRESS, ${completion_percent}% CMPLT` }, input.base_id)
+    }
     return { data: updated, error: null }
   }
 
@@ -394,7 +407,20 @@ export async function saveInspectionDraft(input: {
   }
 
   const created = data as InspectionRow
-  logActivity('saved', 'inspection', created.id, created.display_id, { details: `AFLD INSPECTION IN-PROGRESS, ${completion_percent}% CMPLT` }, input.base_id)
+  if (completion_percent >= 100) {
+    const newTypeLabel = input.inspection_type === 'lighting' ? 'LIGHTING' : input.inspection_type === 'construction_meeting' ? 'PRE/POST CONSTRUCTION' : input.inspection_type === 'joint_monthly' ? 'MONTHLY JOINT' : 'AFLD'
+    const newDraftFailed = (input.items || []).filter(i => i.response === 'fail')
+    const newDraftDiscStr = newDraftFailed.length > 0
+      ? newDraftFailed.map(i => i.item).join(', ').toUpperCase()
+      : 'NO NEW DISCREPANCIES'
+    let newCmpltDetails = `${newTypeLabel} INSPECTION CMPLT; ${newDraftDiscStr}`
+    if (input.rsc_condition && input.bwc_value) newCmpltDetails += `. ADVISES RSC/${input.rsc_condition.toUpperCase()} & BWC/${input.bwc_value.toUpperCase()}`
+    else if (input.rsc_condition) newCmpltDetails += `. ADVISES RSC/${input.rsc_condition.toUpperCase()}`
+    else if (input.bwc_value) newCmpltDetails += `. ADVISES BWC/${input.bwc_value.toUpperCase()}`
+    logActivity('completed', 'inspection', created.id, created.display_id, { details: newCmpltDetails }, input.base_id)
+  } else {
+    logActivity('saved', 'inspection', created.id, created.display_id, { details: `AFLD INSPECTION IN-PROGRESS, ${completion_percent}% CMPLT` }, input.base_id)
+  }
   return { data: created, error: null }
 }
 

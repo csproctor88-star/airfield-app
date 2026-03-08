@@ -662,10 +662,6 @@ export default function InspectionsPage() {
       updateHalf(targetTab, (h) => ({ ...h, dbRowId: saved.id }))
     }
 
-    if (saved) {
-      logActivity('completed', 'inspection', saved.id, saved.display_id, { details: `AFLD INSPECTION CMPLT` }, installationId)
-    }
-
     // Push BWC/RSC/RCR to dashboard on complete (always, even if draft save had issues)
     const nowIso = new Date().toISOString()
     if (completedHalf.bwcValue) {
