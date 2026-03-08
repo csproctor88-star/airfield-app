@@ -1,6 +1,7 @@
 export const maxDuration = 30
 
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { Resend } from 'resend'
@@ -20,6 +21,7 @@ export async function POST(request: Request) {
     // Authenticate caller via cookie
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim().replace(/^["']|["']$/g, '')
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim().replace(/^["']|["']$/g, '')
     if (!url || !key) {
       return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
     }
@@ -40,16 +42,24 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { pdfBase64, filename, to, subject } = body as {
+    const { storagePath, pdfBase64, filename, to, subject } = body as {
+      storagePath?: string
       pdfBase64?: string
       filename?: string
       to?: string
       subject?: string
     }
 
-    if (!pdfBase64 || !filename || !to || !subject) {
+    if (!filename || !to || !subject) {
       return NextResponse.json(
-        { error: 'Missing required fields: pdfBase64, filename, to, subject' },
+        { error: 'Missing required fields: filename, to, subject' },
+        { status: 400 },
+      )
+    }
+
+    if (!storagePath && !pdfBase64) {
+      return NextResponse.json(
+        { error: 'Missing PDF data: provide storagePath or pdfBase64' },
         { status: 400 },
       )
     }
@@ -57,6 +67,27 @@ export async function POST(request: Request) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(to)) {
       return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
+    }
+
+    // Get PDF content — either from Supabase Storage or from base64 payload
+    let pdfBuffer: Buffer
+    if (storagePath) {
+      // Use service role key to bypass RLS, or fall back to anon key
+      const storageClient = serviceKey
+        ? createClient(url, serviceKey)
+        : supabase
+      const { data: fileData, error: downloadError } = await storageClient.storage
+        .from('photos')
+        .download(storagePath)
+      if (downloadError || !fileData) {
+        return NextResponse.json(
+          { error: `Failed to download PDF: ${downloadError?.message || 'File not found'}` },
+          { status: 500 },
+        )
+      }
+      pdfBuffer = Buffer.from(await fileData.arrayBuffer())
+    } else {
+      pdfBuffer = Buffer.from(pdfBase64!, 'base64')
     }
 
     const safeFilename = escapeHtml(filename)
@@ -68,7 +99,7 @@ export async function POST(request: Request) {
       attachments: [
         {
           filename,
-          content: Buffer.from(pdfBase64, 'base64'),
+          content: pdfBuffer,
         },
       ],
     })
