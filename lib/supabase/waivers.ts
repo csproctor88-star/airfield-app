@@ -1,5 +1,4 @@
 import { createClient } from './client'
-import { logActivity } from './activity'
 import type {
   WaiverStatus,
   WaiverClassification,
@@ -237,11 +236,6 @@ export async function createWaiver(input: {
   }
 
   const created = data as WaiverRow
-  const waiverMeta: Record<string, unknown> = { classification: input.classification }
-  if (input.location_description) waiverMeta.location = input.location_description
-  if (input.description) waiverMeta.description = input.description
-  if (input.hazard_rating) waiverMeta.hazard_rating = input.hazard_rating
-  logActivity('created', 'waiver', created.id, created.waiver_number, waiverMeta, input.base_id)
 
   return { data: created, error: null }
 }
@@ -274,7 +268,6 @@ export async function updateWaiver(
   }
 
   const updated = data as WaiverRow
-  logActivity('updated', 'waiver', updated.id, updated.waiver_number, { fields: Object.keys(fields) }, updated.base_id)
 
   return { data: updated, error: null }
 }
@@ -325,7 +318,6 @@ export async function updateWaiverStatus(
   }
 
   const updated = data as WaiverRow
-  logActivity('status_updated', 'waiver', updated.id, updated.waiver_number, { new_status: newStatus }, updated.base_id)
 
   return { data: updated, error: null }
 }
@@ -342,8 +334,6 @@ export async function deleteWaiver(id: string): Promise<{ error: string | null }
     console.error('Delete waiver failed:', error.message)
     return { error: error.message }
   }
-
-  logActivity('deleted', 'waiver', id, existing?.waiver_number, {}, existing?.base_id)
 
   return { error: null }
 }
@@ -632,14 +622,6 @@ export async function createWaiverReview(input: {
     updated_at: new Date().toISOString(),
   }).eq('id', input.waiver_id)
 
-  const reviewMeta: Record<string, unknown> = { review_year: input.review_year }
-  if (input.recommendation) reviewMeta.recommendation = input.recommendation
-  if (input.mitigation_verified) reviewMeta.mitigation_verified = input.mitigation_verified
-  if (input.project_status_update) reviewMeta.project_status = input.project_status_update
-  if (input.notes) reviewMeta.notes = input.notes
-  if (input.presented_to_facilities_board) reviewMeta.facilities_board = true
-  logActivity('reviewed', 'waiver', input.waiver_id, undefined, reviewMeta)
-
   return { data: data as WaiverReviewRow, error: null }
 }
 
@@ -687,8 +669,6 @@ export async function deleteWaiverReview(
     .from('waivers')
     .update({ last_reviewed_date: null, next_review_due: null })
     .eq('id', waiverId)
-
-  logActivity('waiver_review_deleted', 'waiver_reviews', id)
 
   return { error: null }
 }

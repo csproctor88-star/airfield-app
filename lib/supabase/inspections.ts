@@ -206,27 +206,26 @@ export async function createInspection(input: {
 
   const created = data as InspectionRow
 
-  // Build rich metadata for activity log
-  const activityMeta: Record<string, unknown> = { inspection_type: input.inspection_type }
-  if (input.bwc_value) activityMeta.bwc = input.bwc_value
-  if (input.rsc_condition) activityMeta.rsc = input.rsc_condition
-  if (input.rcr_value) activityMeta.rcr = input.rcr_value
+  // Build formatted details matching manual entry template verbiage
   const failedItems = (input.items || []).filter(i => i.response === 'fail')
-  if (failedItems.length > 0) {
-    activityMeta.failed_items = failedItems.map(i => i.item).join(', ')
-    const discNotes = failedItems.flatMap(i => {
-      const notes: string[] = []
-      if (i.notes) notes.push(i.notes)
-      if (i.discrepancies) {
-        for (const d of i.discrepancies) {
-          if (d.comment) notes.push(d.comment)
-        }
+  const discNotes = failedItems.flatMap(i => {
+    const notes: string[] = []
+    if (i.notes) notes.push(i.notes)
+    if (i.discrepancies) {
+      for (const d of i.discrepancies) {
+        if (d.comment) notes.push(d.comment)
       }
-      return notes
-    }).filter(Boolean)
-    if (discNotes.length > 0) activityMeta.discrepancy_notes = discNotes.join('; ')
-  }
-  logActivity('completed', 'inspection', created.id, created.display_id, activityMeta, input.base_id)
+    }
+    return notes
+  }).filter(Boolean)
+  const discStr = failedItems.length > 0
+    ? `${failedItems.map(i => i.item).join(', ').toUpperCase()}${discNotes.length > 0 ? ` — ${discNotes.join('; ').toUpperCase()}` : ''}`
+    : 'NO NEW DISCREPANCIES'
+  let inspDetails = `AFLD INSPECTION CMPLT; ${discStr}`
+  if (input.rsc_condition && input.bwc_value) inspDetails += `. ADVISES RSC/${input.rsc_condition.toUpperCase()} & BWC/${input.bwc_value.toUpperCase()}`
+  else if (input.rsc_condition) inspDetails += `. ADVISES RSC/${input.rsc_condition.toUpperCase()}`
+  else if (input.bwc_value) inspDetails += `. ADVISES BWC/${input.bwc_value.toUpperCase()}`
+  logActivity('completed', 'inspection', created.id, created.display_id, { details: inspDetails }, input.base_id)
 
   // Auto-update airfield_status BWC from inspection
   if (input.bwc_value) {
@@ -337,11 +336,7 @@ export async function saveInspectionDraft(input: {
     }
 
     const updated = data as InspectionRow
-    logActivity('saved', 'inspection', updated.id, updated.display_id, {
-      inspection_type: input.inspection_type,
-      completion_percent: completion_percent,
-      failed_count: input.failed_count,
-    }, input.base_id)
+    logActivity('saved', 'inspection', updated.id, updated.display_id, { details: `AFLD INSPECTION IN-PROGRESS, ${completion_percent}%${savedByName ? `, BY: ${savedByName.toUpperCase()}` : ''}` }, input.base_id)
     return { data: updated, error: null }
   }
 
@@ -398,11 +393,7 @@ export async function saveInspectionDraft(input: {
   }
 
   const created = data as InspectionRow
-  logActivity('saved', 'inspection', created.id, created.display_id, {
-    inspection_type: input.inspection_type,
-    completion_percent: completion_percent,
-    failed_count: input.failed_count,
-  }, input.base_id)
+  logActivity('saved', 'inspection', created.id, created.display_id, { details: `AFLD INSPECTION IN-PROGRESS, ${completion_percent}%${savedByName ? `, BY: ${savedByName.toUpperCase()}` : ''}` }, input.base_id)
   return { data: created, error: null }
 }
 
@@ -482,30 +473,25 @@ export async function fileInspection(input: {
   }
 
   const filed = data as InspectionRow
-  const fileMeta: Record<string, unknown> = { inspection_type: filed.inspection_type }
-  // Determine airfield vs lighting from daily_group_id context
-  if (filed.daily_group_id && (filed.inspection_type === 'airfield' || filed.inspection_type === 'lighting')) {
-    fileMeta.daily_group = true
-  }
-  if (input.bwc_value) fileMeta.bwc = input.bwc_value
-  if (input.rsc_condition) fileMeta.rsc = input.rsc_condition
-  if (input.rcr_value) fileMeta.rcr = input.rcr_value
   const filedFailedItems = (input.items || []).filter(i => i.response === 'fail')
-  if (filedFailedItems.length > 0) {
-    fileMeta.failed_items = filedFailedItems.map(i => i.item).join(', ')
-    const filedDiscNotes = filedFailedItems.flatMap(i => {
-      const notes: string[] = []
-      if (i.notes) notes.push(i.notes)
-      if (i.discrepancies) {
-        for (const d of i.discrepancies) {
-          if (d.comment) notes.push(d.comment)
-        }
+  const filedDiscNotes = filedFailedItems.flatMap(i => {
+    const notes: string[] = []
+    if (i.notes) notes.push(i.notes)
+    if (i.discrepancies) {
+      for (const d of i.discrepancies) {
+        if (d.comment) notes.push(d.comment)
       }
-      return notes
-    }).filter(Boolean)
-    if (filedDiscNotes.length > 0) fileMeta.discrepancy_notes = filedDiscNotes.join('; ')
-  }
-  logActivity('filed', 'inspection', filed.id, filed.display_id, fileMeta, input.base_id)
+    }
+    return notes
+  }).filter(Boolean)
+  const filedDiscStr = filedFailedItems.length > 0
+    ? `${filedFailedItems.map(i => i.item).join(', ').toUpperCase()}${filedDiscNotes.length > 0 ? ` — ${filedDiscNotes.join('; ').toUpperCase()}` : ''}`
+    : 'NO NEW DISCREPANCIES'
+  let filedDetails = `AFLD INSPECTION CMPLT; ${filedDiscStr}`
+  if (input.rsc_condition && input.bwc_value) filedDetails += `. ADVISES RSC/${input.rsc_condition.toUpperCase()} & BWC/${input.bwc_value.toUpperCase()}`
+  else if (input.rsc_condition) filedDetails += `. ADVISES RSC/${input.rsc_condition.toUpperCase()}`
+  else if (input.bwc_value) filedDetails += `. ADVISES BWC/${input.bwc_value.toUpperCase()}`
+  logActivity('filed', 'inspection', filed.id, filed.display_id, { details: filedDetails }, input.base_id)
 
   // Auto-update airfield_status BWC from filed inspection
   if (input.bwc_value) {
@@ -695,7 +681,7 @@ export async function deleteInspection(id: string): Promise<{ error: string | nu
     return { error: error.message }
   }
 
-  logActivity('deleted', 'inspection', id, existing?.display_id, { inspection_type: existing?.inspection_type }, existing?.base_id)
+  logActivity('deleted', 'inspection', id, existing?.display_id, { details: 'AFLD INSPECTION DELETED' }, existing?.base_id)
 
   return { error: null }
 }
@@ -716,7 +702,7 @@ export async function updateInspectionNotes(id: string, notes: string | null): P
     return { error: error.message }
   }
 
-  logActivity('updated', 'inspection', id, existing?.display_id, { field: 'notes', notes: notes || 'cleared' }, existing?.base_id)
+  logActivity('updated', 'inspection', id, existing?.display_id, { details: 'UPDATED AIRFIELD INSPECTION FORM' }, existing?.base_id)
 
   return { error: null }
 }

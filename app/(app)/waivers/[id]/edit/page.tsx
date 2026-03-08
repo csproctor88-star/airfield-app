@@ -12,7 +12,6 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { DEMO_WAIVERS, DEMO_WAIVER_CRITERIA } from '@/lib/demo-data'
 import { useInstallation } from '@/lib/installation-context'
-import { logActivity } from '@/lib/supabase/activity'
 import { toast } from 'sonner'
 import type { WaiverClassification, WaiverCriteriaSource, WaiverAttachmentType } from '@/lib/supabase/types'
 
@@ -294,9 +293,6 @@ export default function EditWaiverPage() {
     const validCriteria = criteria.filter(c => c.reference || c.description)
     await upsertWaiverCriteria(params.id as string, validCriteria)
 
-    if (installationId) {
-      logActivity('updated', 'waiver', params.id as string, formData.waiver_number || (params.id as string), { classification: formData.classification }, installationId)
-    }
     toast.success('Waiver updated')
     router.push(`/waivers/${params.id}`)
   }

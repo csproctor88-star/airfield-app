@@ -111,11 +111,13 @@ export async function createObstructionEvaluation(input: {
   }
 
   const created = data as ObstructionRow
-  const obsMeta: Record<string, unknown> = { has_violation: input.has_violation }
-  if (input.description) obsMeta.description = input.description
-  if (input.controlling_surface) obsMeta.controlling_surface = input.controlling_surface
-  if (input.violated_surfaces.length > 0) obsMeta.violated_surfaces = input.violated_surfaces.join(', ')
-  logActivity('created', 'obstruction_evaluation', created.id, created.display_id ?? undefined, obsMeta, base_id)
+  if (input.has_violation) {
+    const obsParts = [`OBSTRUCTION EVALUATION CMPLT; VIOLATION FOUND — ${(input.description || 'UNNAMED').toUpperCase()}`]
+    if (input.violated_surfaces.length > 0) obsParts.push(`SURFACES: ${input.violated_surfaces.join(', ').toUpperCase()}`)
+    obsParts.push(`${input.object_height_agl} FT AGL`)
+    if (input.notes) obsParts.push(input.notes.toUpperCase())
+    logActivity('created', 'obstruction_evaluation', created.id, created.display_id ?? undefined, { details: obsParts.join('. ') }, base_id)
+  }
 
   return { data: created, error: null }
 }

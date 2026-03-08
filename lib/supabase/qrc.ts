@@ -164,7 +164,7 @@ export async function startQrcExecution(input: {
   const exec = data as QrcExecution
   // Log activity
   if (exec) {
-    await logActivity('opened', 'qrc', exec.id, `QRC-${input.qrc_number}`, { title: input.title }, input.base_id)
+    await logActivity('opened', 'qrc', exec.id, `QRC-${input.qrc_number}`, { details: `QRC #${input.qrc_number} INITIATED — ${input.title.toUpperCase()}` }, input.base_id)
   }
 
   return { data: exec, error: null }
@@ -274,7 +274,7 @@ export async function closeQrcExecution(
   if (error) return { error: error.message }
 
   if (data) {
-    await logActivity('closed', 'qrc', executionId, `QRC-${data.qrc_number}`, { title: data.title }, baseId)
+    await logActivity('closed', 'qrc', executionId, `QRC-${data.qrc_number}`, { details: `QRC #${data.qrc_number} COMPLETED — ${data.title.toUpperCase()}` }, baseId)
   }
 
   return { error: null }
@@ -318,7 +318,7 @@ export async function cancelQrcExecution(
   if (error) return { error: error.message }
 
   if (data) {
-    await logActivity('cancelled', 'qrc', executionId, `QRC-${data.qrc_number}`, { title: data.title }, baseId)
+    await logActivity('cancelled', 'qrc', executionId, `QRC-${data.qrc_number}`, { details: `QRC #${data.qrc_number} CANCELLED — ${data.title.toUpperCase()}` }, baseId)
   }
 
   return { error: null }

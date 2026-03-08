@@ -116,7 +116,7 @@ export default function ConstructionInspectionPage() {
     photos.forEach((p) => URL.revokeObjectURL(p.url))
 
     if (data?.id) {
-      logActivity('filed', 'inspection', data.id, data.display_id, { inspection_type: 'construction_meeting' }, installationId)
+      logActivity('filed', 'inspection', data.id, data.display_id, { details: 'PRE/POST CONSTRUCTION INSPECTION FILED' }, installationId)
     }
 
     setFiling(false)

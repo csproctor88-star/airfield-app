@@ -107,24 +107,23 @@ export async function createCheck(input: {
     }
   }
 
-  // Build rich metadata for activity log
-  const checkMeta: Record<string, unknown> = {
-    check_type: input.check_type,
-    areas: input.areas,
+  // Build formatted details matching manual entry template verbiage
+  const checkTypeMap: Record<string, string> = {
+    fod: 'FOD', bash: 'BASH', construction: 'CONSTRUCTION',
+    rsc: 'RSC/RCR', rcr: 'RSC/RCR', ife: 'IFE',
+    ground_emergency: 'GROUND EMERGENCY', heavy_aircraft: 'HEAVY ACFT',
   }
-  // Include all check-specific data fields
-  if (input.data) {
-    for (const [k, v] of Object.entries(input.data)) {
-      if (v != null && v !== '' && !(Array.isArray(v) && v.length === 0)) {
-        checkMeta[k] = v
-      }
-    }
-  }
-  // Include comments
-  if (input.comments.length > 0) {
-    checkMeta.comments = input.comments.map(c => c.comment).join('; ')
-  }
-  logActivity('completed', 'check', created.id, created.display_id, checkMeta, input.base_id)
+  const checkLabel = checkTypeMap[input.check_type] || input.check_type.toUpperCase()
+  const issuesList = input.comments.map(c => c.comment).filter(Boolean)
+  const discStr = issuesList.length > 0 ? issuesList.join('; ').toUpperCase() : 'NO NEW DISCREPANCIES'
+  let checkDetails = `${checkLabel} CHECK CMPLT; ${discStr}`
+  // Append RSC/BWC if reported
+  const bwcVal = (input.data.condition_code as string) || ''
+  const rscVal = (input.data.condition as string) || (input.data.runway_condition as string) || ''
+  if (rscVal && bwcVal) checkDetails += `. ADVISES RSC/${rscVal.toUpperCase()} & BWC/${bwcVal.toUpperCase()}`
+  else if (rscVal) checkDetails += `. ADVISES RSC/${rscVal.toUpperCase()}`
+  else if (bwcVal) checkDetails += `. ADVISES BWC/${bwcVal.toUpperCase()}`
+  logActivity('completed', 'check', created.id, created.display_id, { details: checkDetails }, input.base_id)
 
   // Auto-update airfield_status RSC/BWC from check data
   const nowIso = now.toISOString()
@@ -291,7 +290,7 @@ export async function deleteCheck(id: string): Promise<{ error: string | null }>
     return { error: error.message }
   }
 
-  logActivity('deleted', 'check', id, existing?.display_id, { check_type: existing?.check_type }, existing?.base_id)
+  logActivity('deleted', 'check', id, existing?.display_id, { details: `AFLD CHECK DELETED` }, existing?.base_id)
 
   return { error: null }
 }
@@ -314,7 +313,7 @@ export async function updateCheckNotes(id: string, notes: string | null): Promis
     return { error: error.message }
   }
 
-  logActivity('updated', 'check', id, existing?.display_id, { field: 'notes', notes: notes || 'cleared' }, existing?.base_id)
+  logActivity('updated', 'check', id, existing?.display_id, { details: 'AFLD CHECK UPDATED' }, existing?.base_id)
 
   return { error: null }
 }
@@ -464,7 +463,7 @@ export async function saveCheckDraftToDb(input: {
     }
 
     const updated = data as CheckRow
-    logActivity('saved', 'check', updated.id, updated.display_id, { check_type: input.draft_data.checkType || 'draft' }, input.base_id)
+    logActivity('saved', 'check', updated.id, updated.display_id, { details: 'AFLD CHECK DRAFT SAVED, NOT CMPLT' }, input.base_id)
     return { data: updated, error: null }
   }
 
@@ -497,7 +496,7 @@ export async function saveCheckDraftToDb(input: {
   }
 
   const created = data as CheckRow
-  logActivity('saved', 'check', created.id, created.display_id, { check_type: input.draft_data.checkType || 'draft' }, input.base_id)
+  logActivity('saved', 'check', created.id, created.display_id, { details: 'AFLD CHECK DRAFT SAVED, NOT CMPLT' }, input.base_id)
   return { data: created, error: null }
 }
 

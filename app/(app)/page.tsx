@@ -265,7 +265,7 @@ export default function HomePage() {
     const ok = await updateNavaidStatus(navaid.id, newStatus, notes)
     if (ok) {
       loadNavaids()
-      logActivity('updated', 'navaid_status', navaid.id, navaid.navaid_name, { navaid: navaid.navaid_name, changed_to: newStatus, reason: notes || undefined }, installationId)
+      logActivity('updated', 'navaid_status', navaid.id, navaid.navaid_name, { details: `${navaid.navaid_name.toUpperCase()} STATUS CHANGED TO ${newStatus === 'green' ? 'OPERATIONAL' : newStatus === 'yellow' ? 'DEGRADED' : 'OUTAGE'}${notes ? `. ${notes.toUpperCase()}` : ''}` }, installationId)
     }
   }
 
@@ -273,7 +273,7 @@ export default function HomePage() {
     const notes = overrideNotes ?? (navaidNotes[navaid.id] || null)
     await updateNavaidStatus(navaid.id, navaid.status, notes)
     loadNavaids()
-    logActivity('updated', 'navaid_status', navaid.id, navaid.navaid_name, { navaid: navaid.navaid_name, reason: notes || undefined }, installationId)
+    logActivity('updated', 'navaid_status', navaid.id, navaid.navaid_name, { details: `${navaid.navaid_name.toUpperCase()} REMARKS UPDATED${notes ? `. ${notes.toUpperCase()}` : ''}` }, installationId)
   }
 
   return (
@@ -428,7 +428,7 @@ export default function HomePage() {
                       newAdvisoryType: null,
                       newAdvisoryText: null,
                     }, installationId)
-                    if (installationId) logActivity('updated', 'airfield_status', installationId, 'Weather Info Cleared', { old_type: advisory?.type ?? null }, installationId)
+                    if (installationId) logActivity('updated', 'airfield_status', installationId, 'Weather Info Cleared', { details: `WX ${(advisory?.type ?? 'INFO').toUpperCase()} CANCELLED` }, installationId)
                     setAdvisory(null)
                     setAdvisoryDraftText('')
                     setAdvisoryDialogOpen(false)
@@ -449,7 +449,7 @@ export default function HomePage() {
                       newAdvisoryType: advisoryDraftType,
                       newAdvisoryText: advisoryDraftText.trim(),
                     }, installationId)
-                    if (installationId) logActivity('updated', 'airfield_status', installationId, `Weather ${advisoryDraftType}`, { type: advisoryDraftType, text: advisoryDraftText.trim() }, installationId)
+                    if (installationId) logActivity('updated', 'airfield_status', installationId, `Weather ${advisoryDraftType}`, { details: `WX ${advisoryDraftType.toUpperCase()}, ${advisoryDraftText.trim().toUpperCase()}` }, installationId)
                     setAdvisory({ type: advisoryDraftType, text: advisoryDraftText.trim() })
                   }
                   setAdvisoryDialogOpen(false)
@@ -683,9 +683,7 @@ export default function HomePage() {
                   if (rscDraftValue) {
                     setRscCondition(rscDraftValue)
                     if (installationId) {
-                      const details: Record<string, unknown> = { old_value: rscCondition, new_value: rscDraftValue }
-                      if (rscDraftNotes.trim()) details.notes = rscDraftNotes.trim()
-                      logActivity('updated', 'airfield_status', installationId, `RSC ${rscDraftValue}`, details, installationId)
+                      logActivity('updated', 'airfield_status', installationId, `RSC ${rscDraftValue}`, { details: `ADVISES RSC/${rscDraftValue.toUpperCase()}` }, installationId)
                     }
                   }
                   setRscDialogOpen(false)
@@ -766,9 +764,7 @@ export default function HomePage() {
                   if (bwcDraftValue) {
                     setBwcValue(bwcDraftValue)
                     if (installationId) {
-                      const details: Record<string, unknown> = { old_value: bwcValue, new_value: bwcDraftValue }
-                      if (bwcDraftNotes.trim()) details.notes = bwcDraftNotes.trim()
-                      logActivity('updated', 'airfield_status', installationId, `BWC ${bwcDraftValue}`, details, installationId)
+                      logActivity('updated', 'airfield_status', installationId, `BWC ${bwcDraftValue}`, { details: `REPORTS BWC CHANGE, BWC/${bwcDraftValue.toUpperCase()}` }, installationId)
                     }
                   }
                   setBwcDialogOpen(false)
@@ -844,11 +840,9 @@ export default function HomePage() {
                         color: c.color,
                         notes: '',
                         onConfirm: (remarks) => {
-                          const details: Record<string, unknown> = { runway: rwy.label, active_end: newEnd }
-                          if (remarks) details.notes = remarks
                           if (runways.length > 0) {
                             setRunwayActiveEnd(rwy.label, newEnd)
-                            if (installationId) logActivity('updated', 'airfield_status', installationId, `Active runway changed to ${newEnd}`, details, installationId)
+                            if (installationId) logActivity('updated', 'airfield_status', installationId, `Active runway changed to ${newEnd}`, { details: `ADVISES RWY ${newEnd} IN USE${remarks ? `. ${remarks.toUpperCase()}` : ''}` }, installationId)
                             logRunwayStatusChange({ oldActiveRunway: rwy.active_end, newActiveRunway: newEnd }, installationId)
                           } else {
                             const designators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
@@ -856,7 +850,7 @@ export default function HomePage() {
                             const idx = designators.indexOf(activeRunway)
                             const next = designators[(idx + 1) % designators.length]
                             setActiveRunway(next)
-                            if (installationId) logActivity('updated', 'airfield_status', installationId, `Active runway changed to ${next}`, { active_runway: next, ...(remarks ? { notes: remarks } : {}) }, installationId)
+                            if (installationId) logActivity('updated', 'airfield_status', installationId, `Active runway changed to ${next}`, { details: `ADVISES RWY ${next} IN USE${remarks ? `. ${remarks.toUpperCase()}` : ''}` }, installationId)
                             logRunwayStatusChange({ oldActiveRunway: activeRunway, newActiveRunway: next }, installationId)
                           }
                         },
@@ -900,11 +894,17 @@ export default function HomePage() {
                         onConfirm: (remarks) => {
                           if (runways.length > 0) {
                             setRunwayStatusForRunway(rwy.label, val, remarks || null)
-                            if (installationId) logActivity('status_updated', 'airfield_status', installationId, `RWY ${rwy.active_end} ${val.toUpperCase()}`, { runway: rwy.label, status: val, ...(remarks ? { notes: remarks } : {}) }, installationId)
+                            if (installationId) {
+                              const rwyStatusText = val === 'open' ? 'OPS RESUMED' : val.toUpperCase()
+                              logActivity('status_updated', 'airfield_status', installationId, `RWY ${rwy.active_end} ${val.toUpperCase()}`, { details: `ADVISES RWY ${rwy.active_end} ${rwyStatusText}${remarks ? `. ${remarks.toUpperCase()}` : ''}` }, installationId)
+                            }
                             logRunwayStatusChange({ oldRunwayStatus: rwy.status, newRunwayStatus: val }, installationId)
                           } else {
                             setRunwayStatus(val)
-                            if (installationId) logActivity('status_updated', 'airfield_status', installationId, `RWY ${activeRunway} ${val.toUpperCase()}`, { status: val, ...(remarks ? { notes: remarks } : {}) }, installationId)
+                            if (installationId) {
+                              const rwyStatusText2 = val === 'open' ? 'OPS RESUMED' : val.toUpperCase()
+                              logActivity('status_updated', 'airfield_status', installationId, `RWY ${activeRunway} ${val.toUpperCase()}`, { details: `ADVISES RWY ${activeRunway} ${rwyStatusText2}${remarks ? `. ${remarks.toUpperCase()}` : ''}` }, installationId)
+                            }
                             logRunwayStatusChange({ oldRunwayStatus: runwayStatus, newRunwayStatus: val }, installationId)
                           }
                         },
@@ -996,9 +996,7 @@ export default function HomePage() {
                 onConfirm: (remarks) => {
                   setArffCat(val)
                   if (installationId) {
-                    const details: Record<string, unknown> = { old_cat: current, new_cat: val }
-                    if (remarks) details.notes = remarks
-                    logActivity('updated', 'arff_status', installationId, `ARFF CAT ${val ?? 'None'}`, details, installationId)
+                    logActivity('updated', 'arff_status', installationId, `ARFF CAT ${val ?? 'None'}`, { details: `REPORTS ARFF CAT CHANGED TO ${val ?? 'NONE'}${remarks ? `. ${remarks.toUpperCase()}` : ''}` }, installationId)
                   }
                 },
               })
@@ -1123,9 +1121,7 @@ export default function HomePage() {
                       const { aircraft, selectedStatus, notes } = arffDialog
                       setArffStatusForAircraft(aircraft, selectedStatus)
                       if (installationId) {
-                        const details: Record<string, unknown> = { status: selectedStatus.toUpperCase() }
-                        if (notes.trim()) details.remarks = notes.trim()
-                        logActivity('updated', 'arff_status', installationId, `${aircraft} ${selectedStatus.toUpperCase()}`, details, installationId)
+                        logActivity('updated', 'arff_status', installationId, `${aircraft} ${selectedStatus.toUpperCase()}`, { details: `REPORTS ${aircraft.toUpperCase()} ${selectedStatus.toUpperCase()}${notes.trim() ? `. ${notes.trim().toUpperCase()}` : ''}` }, installationId)
                       }
                       setArffDialog(null)
                     }}

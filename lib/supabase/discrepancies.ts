@@ -129,11 +129,10 @@ export async function createDiscrepancy(input: {
   }
 
   const created = data as DiscrepancyRow
-  const createMeta: Record<string, unknown> = { title: input.title, type: input.type, location: input.location_text }
-  if (input.description) createMeta.description = input.description
-  if (input.severity && input.severity !== 'no') createMeta.severity = input.severity
-  if (input.notam_reference) createMeta.notam_reference = input.notam_reference
-  logActivity('created', 'discrepancy', created.id, created.display_id, createMeta, input.base_id)
+  let discDetails = `NEW DISCREPANCY — ${input.title.toUpperCase()}`
+  if (input.location_text) discDetails += `, ${input.location_text.toUpperCase()}`
+  if (input.notam_reference) discDetails += `. NOTAM: ${input.notam_reference.toUpperCase()}`
+  logActivity('created', 'discrepancy', created.id, created.display_id, { details: discDetails }, input.base_id)
 
   return { data: created, error: null }
 }
@@ -169,15 +168,11 @@ export async function updateDiscrepancy(
   }
 
   const updated = data as DiscrepancyRow
-  const updateMeta: Record<string, unknown> = {}
-  if (fields.current_status) updateMeta.status = fields.current_status
-  if (fields.severity) updateMeta.severity = fields.severity
-  if (fields.resolution_notes) updateMeta.resolution_notes = fields.resolution_notes
-  if (fields.title) updateMeta.title = fields.title
-  if (fields.assigned_shop) updateMeta.assigned_shop = fields.assigned_shop
-  if (fields.work_order_number) updateMeta.work_order = fields.work_order_number
-  if (fields.description) updateMeta.description = fields.description
-  logActivity('updated', 'discrepancy', updated.id, updated.display_id, updateMeta, updated.base_id)
+  const updateParts = [`DISCREPANCY ${updated.display_id} UPDATED`]
+  if (fields.title) updateParts.push(fields.title.toUpperCase())
+  if (fields.assigned_shop) updateParts.push(`ASSIGNED TO ${fields.assigned_shop.toUpperCase()}`)
+  if (fields.work_order_number) updateParts.push(`WO: ${fields.work_order_number.toUpperCase()}`)
+  logActivity('updated', 'discrepancy', updated.id, updated.display_id, { details: updateParts.join('. ') }, updated.base_id)
 
   return { data: updated, error: null }
 }
@@ -234,13 +229,13 @@ export async function updateDiscrepancyStatus(
   } catch (e) {
     console.error('Audit trail insert failed:', e)
   }
-  const statusMeta: Record<string, unknown> = { new_status: newStatus }
-  if (notes) statusMeta.notes = notes
-  if (extraFields?.resolution_notes) statusMeta.resolution_notes = extraFields.resolution_notes
-  if (extraFields?.assigned_shop) statusMeta.assigned_shop = extraFields.assigned_shop
+  const statusParts = [`DISCREPANCY ${statusUpdated.display_id} ${newStatus.toUpperCase()}`]
+  if (extraFields?.assigned_shop) statusParts.push(`ASSIGNED TO ${extraFields.assigned_shop.toUpperCase()}`)
+  if (extraFields?.resolution_notes) statusParts.push(extraFields.resolution_notes.toUpperCase())
+  if (notes) statusParts.push(notes.toUpperCase())
   logActivity(
     newStatus === 'cancelled' ? 'cancelled' : 'status_updated',
-    'discrepancy', statusUpdated.id, statusUpdated.display_id, statusMeta, statusUpdated.base_id
+    'discrepancy', statusUpdated.id, statusUpdated.display_id, { details: statusParts.join('. ') }, statusUpdated.base_id
   )
 
   return { data: statusUpdated, error: null }
@@ -263,7 +258,7 @@ export async function deleteDiscrepancy(
     return { error: error.message }
   }
 
-  logActivity('deleted', 'discrepancy', id, existing?.display_id, { title: existing?.title }, existing?.base_id)
+  logActivity('deleted', 'discrepancy', id, existing?.display_id, { details: `DISCREPANCY ${existing?.display_id || ''} DELETED${existing?.title ? ` — ${existing.title.toUpperCase()}` : ''}` }, existing?.base_id)
 
   return { error: null }
 }

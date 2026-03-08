@@ -116,18 +116,7 @@ export async function createContractor(input: {
   }
 
   const created = data as ContractorRow
-  const details: Record<string, unknown> = {
-    company: input.company_name,
-    location: input.location,
-    work: input.work_description,
-  }
-  if (input.contact_name) details.contact = input.contact_name
-  if (input.radio_number) details.radio = input.radio_number
-  if (input.callsign) details.callsign = input.callsign
-  if (input.flag_number) details.flag = input.flag_number
-  if (input.start_date) details.start_date = input.start_date
-  if (input.notes) details.notes = input.notes
-  logActivity('logged_personnel', 'contractor', created.id, undefined, details, input.base_id)
+  logActivity('logged_personnel', 'contractor', created.id, undefined, { details: `${input.company_name.toUpperCase()} ON AIRFIELD FOR ${(input.work_description || 'WORK').toUpperCase()}` }, input.base_id)
 
   return { data: created, error: null }
 }
@@ -176,25 +165,9 @@ export async function updateContractor(
   const updated = data as ContractorRow
 
   if (fields.status === 'completed') {
-    // Personnel marked off airfield
-    const details: Record<string, unknown> = {
-      company: updated.company_name,
-    }
-    if (updated.callsign) details.callsign = updated.callsign
-    if (updated.location) details.location = updated.location
-    logActivity('personnel_off_airfield', 'contractor', updated.id, undefined, details, updated.base_id)
+    logActivity('personnel_off_airfield', 'contractor', updated.id, undefined, { details: `${updated.company_name.toUpperCase()} OFF AIRFIELD` }, updated.base_id)
   } else {
-    // Regular edit
-    const details: Record<string, unknown> = {}
-    if (fields.company_name) details.company = fields.company_name
-    if (fields.location) details.location = fields.location
-    if (fields.callsign !== undefined) details.callsign = fields.callsign
-    if (fields.contact_name !== undefined) details.contact = fields.contact_name
-    if (fields.radio_number !== undefined) details.radio = fields.radio_number
-    if (fields.flag_number !== undefined) details.flag = fields.flag_number
-    if (fields.work_description) details.work = fields.work_description
-    if (fields.notes !== undefined) details.notes = fields.notes
-    logActivity('updated', 'contractor', updated.id, updated.company_name, details, updated.base_id)
+    logActivity('updated', 'contractor', updated.id, updated.company_name, { details: `${updated.company_name.toUpperCase()} INFO UPDATED${fields.work_description ? `. ${fields.work_description.toUpperCase()}` : ''}` }, updated.base_id)
   }
 
   return { data: updated, error: null }

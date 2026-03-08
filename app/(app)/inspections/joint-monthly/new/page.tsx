@@ -116,7 +116,7 @@ export default function JointMonthlyInspectionPage() {
     photos.forEach((p) => URL.revokeObjectURL(p.url))
 
     if (data?.id) {
-      logActivity('filed', 'inspection', data.id, data.display_id, { inspection_type: 'joint_monthly' }, installationId)
+      logActivity('filed', 'inspection', data.id, data.display_id, { details: 'MONTHLY JOINT INSPECTION FILED' }, installationId)
     }
 
     setFiling(false)

@@ -601,7 +601,7 @@ export default function InspectionsPage() {
     if (afMember) setActiveTab('airfield')
     else if (ltMember) setActiveTab('lighting')
 
-    logActivity('resumed', 'inspection', members[0].id, members[0].display_id, { inspection_type: members[0].inspection_type }, installationId)
+    logActivity('resumed', 'inspection', members[0].id, members[0].display_id, { details: 'AFLD INSPECTION RESUMED' }, installationId)
     window.scrollTo(0, 0)
     toast.success('Inspection resumed')
   }
@@ -663,7 +663,7 @@ export default function InspectionsPage() {
     }
 
     if (saved) {
-      logActivity('completed', 'inspection', saved.id, saved.display_id, { inspection_type: targetTab }, installationId)
+      logActivity('completed', 'inspection', saved.id, saved.display_id, { details: `AFLD INSPECTION CMPLT` }, installationId)
     }
 
     // Push BWC/RSC/RCR to dashboard on complete (always, even if draft save had issues)

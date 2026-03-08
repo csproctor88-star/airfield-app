@@ -1,5 +1,4 @@
 import { createClient } from './client'
-import { logActivity } from './activity'
 import type { AcsiInspection, AcsiItem, AcsiTeamMember, AcsiSignatureBlock, AcsiDraftData } from './types'
 
 export async function fetchAcsiInspections(baseId?: string | null): Promise<AcsiInspection[]> {
@@ -117,14 +116,6 @@ export async function saveAcsiDraft(input: {
     }
 
     const updated = data as AcsiInspection
-    const acsiCompletion = input.total_items > 0
-      ? Math.round(((input.passed_count + input.failed_count + input.na_count) / input.total_items) * 100)
-      : 0
-    logActivity('saved', 'acsi_inspection', updated.id, updated.display_id, {
-      completion_percent: acsiCompletion,
-      items_reviewed: input.passed_count + input.failed_count + input.na_count,
-      total_items: input.total_items,
-    }, input.base_id)
     return { data: updated, error: null }
   }
 
@@ -168,14 +159,6 @@ export async function saveAcsiDraft(input: {
   }
 
   const created = data as AcsiInspection
-  const newAcsiCompletion = input.total_items > 0
-    ? Math.round(((input.passed_count + input.failed_count + input.na_count) / input.total_items) * 100)
-    : 0
-  logActivity('saved', 'acsi_inspection', created.id, created.display_id, {
-    completion_percent: newAcsiCompletion,
-    items_reviewed: input.passed_count + input.failed_count + input.na_count,
-    total_items: input.total_items,
-  }, input.base_id)
   return { data: created, error: null }
 }
 
@@ -240,28 +223,6 @@ export async function fileAcsiInspection(input: {
   }
 
   const filed = data as AcsiInspection
-  const filedMeta: Record<string, unknown> = {
-    items_reviewed: input.passed_count + input.failed_count + input.na_count,
-    total_items: input.total_items,
-  }
-  if (input.failed_count > 0) filedMeta.failed_count = input.failed_count
-  // Collect discrepancy notes from failed items
-  const acsiFailedItems = (input.items || []).filter(i => i.response === 'fail')
-  if (acsiFailedItems.length > 0) {
-    filedMeta.failed_items = acsiFailedItems.map(i => i.item_number).join(', ')
-    const acsiDiscNotes = acsiFailedItems.flatMap(i => {
-      const notes: string[] = []
-      if (i.discrepancy?.comment) notes.push(i.discrepancy.comment)
-      if (i.discrepancies) {
-        for (const d of i.discrepancies) {
-          if (d.comment) notes.push(d.comment)
-        }
-      }
-      return notes
-    }).filter(Boolean)
-    if (acsiDiscNotes.length > 0) filedMeta.discrepancy_notes = acsiDiscNotes.join('; ')
-  }
-  logActivity('filed', 'acsi_inspection', filed.id, filed.display_id, filedMeta, input.base_id)
   return { data: filed, error: null }
 }
 
@@ -317,7 +278,6 @@ export async function deleteAcsiInspection(id: string): Promise<{ error: string 
     return { error: error.message }
   }
 
-  logActivity('deleted', 'acsi_inspection', id, existing?.display_id, {}, existing?.base_id)
   return { error: null }
 }
 

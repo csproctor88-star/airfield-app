@@ -116,14 +116,14 @@ const SKIP_META_KEYS = new Set(['fields', 'field'])
 
 function formatMetadata(metadata: Record<string, unknown> | null): string {
   if (!metadata) return ''
-  // If metadata was replaced by a user edit, return the flat string
-  if (typeof metadata.details === 'string') return metadata.details
+  // If metadata has a pre-formatted details string, return it uppercased
+  if (typeof metadata.details === 'string') return metadata.details.toUpperCase()
   const parts: string[] = []
   for (const [key, val] of Object.entries(metadata)) {
     if (val == null || val === '' || SKIP_META_KEYS.has(key)) continue
     parts.push(formatMetadataValue(val))
   }
-  return parts.join(' | ')
+  return parts.join(' | ').toUpperCase()
 }
 
 function buildDetailsString(a: ActivityEntry, detailsMap: Map<string, EntityDetails>): string {
