@@ -59,8 +59,12 @@ export default function AcsiDetailPage() {
   }
 
   const statusCfg = ACSI_STATUS_CONFIG[insp.status as AcsiStatus] || ACSI_STATUS_CONFIG.draft
-  const total = insp.passed_count + insp.failed_count + insp.na_count
-  const pct = insp.total_items > 0 ? Math.round((total / insp.total_items) * 100) : 0
+  // Compute counts dynamically from items array for accuracy
+  const computedPassed = (insp.items || []).filter(i => i.response === 'pass').length
+  const computedFailed = (insp.items || []).filter(i => i.response === 'fail').length
+  const computedNa = (insp.items || []).filter(i => i.response === 'na').length
+  const computedTotal = computedPassed + computedFailed + computedNa
+  const pct = insp.total_items > 0 ? Math.round((computedTotal / insp.total_items) * 100) : 0
 
   // Group items by section
   const itemsBySection: Record<string, AcsiItem[]> = {}
@@ -227,9 +231,9 @@ export default function AcsiDetailPage() {
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
         {[
           { label: 'Total Items', value: insp.total_items, color: 'var(--color-text-1)' },
-          { label: 'Passed', value: insp.passed_count, color: '#10B981' },
-          { label: 'Failed', value: insp.failed_count, color: '#EF4444' },
-          { label: 'N/A', value: insp.na_count, color: '#6B7280' },
+          { label: 'Passed', value: computedPassed, color: '#10B981' },
+          { label: 'Failed', value: computedFailed, color: '#EF4444' },
+          { label: 'N/A', value: computedNa, color: '#6B7280' },
           { label: 'Completion', value: `${pct}%`, color: 'var(--color-accent)' },
         ].map(kpi => (
           <div key={kpi.label} style={{

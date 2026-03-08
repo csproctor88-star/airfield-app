@@ -23,8 +23,8 @@
   --color-border-active: rgba(56, 189, 248, 0.2);
   --color-border-mid: rgba(56, 189, 248, 0.12);
   --color-text-1: #F1F5F9;
-  --color-text-2: #94A3B8;
-  --color-text-3: #64748B;
+  --color-text-2: #B0BEC5;
+  --color-text-3: #8899A6;
   --color-text-4: #334155;
   --color-accent: #38BDF8;
   --color-accent-secondary: #0EA5E9;
@@ -220,6 +220,10 @@ html, body {
   .input-dark:focus {
     outline: none;
     border-color: var(--color-border-active);
+  }
+  .input-dark::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
   }
 
   /* Primary CTA button gradient */

@@ -19,7 +19,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
   const map = useRef<mapboxgl.Map | null>(null)
   const marker = useRef<mapboxgl.Marker | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
-  const { runways } = useInstallation()
+  const { runways, installationId } = useInstallation()
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const mapboxReady = isMapboxConfigured()
@@ -35,7 +35,11 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
   // Initialize map
   useEffect(() => {
     if (!mapContainer.current || !mapboxReady || !token) return
-    if (map.current) return
+    if (map.current) {
+      map.current.remove()
+      map.current = null
+      setMapLoaded(false)
+    }
 
     mapboxgl.accessToken = token
 
@@ -71,7 +75,7 @@ export default function DiscrepancyLocationMap({ onPointSelected, selectedLat, s
       map.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token])
+  }, [token, installationId])
 
   // Update click handler when callback changes
   useEffect(() => {

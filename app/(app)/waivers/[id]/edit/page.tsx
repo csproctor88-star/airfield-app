@@ -4,12 +4,17 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { WAIVER_CLASSIFICATIONS, WAIVER_HAZARD_RATINGS, WAIVER_CRITERIA_SOURCES } from '@/lib/constants'
-import { fetchWaiver, fetchWaiverCriteria, updateWaiver, upsertWaiverCriteria, type WaiverRow, type WaiverCriteriaRow } from '@/lib/supabase/waivers'
+import {
+  fetchWaiver, fetchWaiverCriteria, updateWaiver, upsertWaiverCriteria,
+  fetchWaiverAttachments, uploadWaiverAttachment, deleteWaiverAttachment,
+  type WaiverRow, type WaiverCriteriaRow, type WaiverAttachmentRow,
+} from '@/lib/supabase/waivers'
 import { createClient } from '@/lib/supabase/client'
 import { DEMO_WAIVERS, DEMO_WAIVER_CRITERIA } from '@/lib/demo-data'
 import { useInstallation } from '@/lib/installation-context'
+import { logActivity } from '@/lib/supabase/activity'
 import { toast } from 'sonner'
-import type { WaiverClassification, WaiverCriteriaSource } from '@/lib/supabase/types'
+import type { WaiverClassification, WaiverCriteriaSource, WaiverAttachmentType } from '@/lib/supabase/types'
 
 const WaiverLocationMap = dynamic(
   () => import('@/components/waivers/location-map'),
@@ -21,14 +26,25 @@ type CriteriaEntry = { criteria_source: WaiverCriteriaSource; reference: string;
 export default function EditWaiverPage() {
   const params = useParams()
   const router = useRouter()
-  const { areas: installationAreas } = useInstallation()
+  const { installationId, areas: installationAreas } = useInstallation()
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
   const [gpsLoading, setGpsLoading] = useState(false)
+
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    basic: true, criteria: true, risk: false, project: false, location: false,
+    basic: true, criteria: true, risk: false, project: false, location: false, attachments: false,
   })
+
+  // Attachments state
+  const [attachments, setAttachments] = useState<WaiverAttachmentRow[]>([])
+  const [attachmentUrls, setAttachmentUrls] = useState<Record<string, string>>({})
+  const [showAttachModal, setShowAttachModal] = useState(false)
+  const [attachFile, setAttachFile] = useState<File | null>(null)
+  const [attachType, setAttachType] = useState<WaiverAttachmentType>('site_map')
+  const [attachCaption, setAttachCaption] = useState('')
+  const [attachUploading, setAttachUploading] = useState(false)
+  const [deletingAttachId, setDeletingAttachId] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     classification: '', action_requested: 'new', waiver_number: '', description: '', justification: '',
@@ -71,11 +87,13 @@ export default function EditWaiverPage() {
         return
       }
 
-      const [w, cr] = await Promise.all([
+      const [w, cr, at] = await Promise.all([
         fetchWaiver(params.id as string),
         fetchWaiverCriteria(params.id as string),
+        fetchWaiverAttachments(params.id as string),
       ])
       if (w) populateForm(w, cr)
+      setAttachments(at)
       setLoading(false)
     }
     load()
@@ -111,6 +129,77 @@ export default function EditWaiverPage() {
       ? cr.map(c => ({ criteria_source: c.criteria_source, reference: c.reference || '', description: c.description || '' }))
       : [{ criteria_source: 'ufc_3_260_01', reference: '', description: '' }]
     )
+  }
+
+  // Generate signed URLs for attachments
+  useEffect(() => {
+    if (attachments.length === 0) return
+    const supabase = createClient()
+    if (!supabase) return
+
+    Promise.all(
+      attachments.map(async (a) => {
+        const { data } = await supabase.storage
+          .from('waiver-attachments')
+          .createSignedUrl(a.file_path, 3600)
+        return { id: a.id, url: data?.signedUrl || '' }
+      })
+    ).then(results => {
+      const urls: Record<string, string> = {}
+      for (const r of results) {
+        if (r.url) urls[r.id] = r.url
+      }
+      setAttachmentUrls(urls)
+    })
+  }, [attachments])
+
+  const ACRONYMS = new Set(['ufc', 'faa', 'af'])
+  const titleCase = (s: string) => s.replace(/_/g, ' ').replace(/\b\w+/g, w => ACRONYMS.has(w.toLowerCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1))
+
+  const handleUploadAttachment = async () => {
+    if (!attachFile) return
+    if (usingDemo) {
+      toast.success('Attachment uploaded (demo mode)')
+      setShowAttachModal(false)
+      return
+    }
+
+    setAttachUploading(true)
+    const { data, error } = await uploadWaiverAttachment({
+      waiver_id: params.id as string,
+      file: attachFile,
+      file_type: attachType,
+      caption: attachCaption || undefined,
+    })
+    if (error) {
+      toast.error(error)
+    } else if (data) {
+      toast.success('Attachment uploaded')
+      setAttachments(prev => [data, ...prev])
+    }
+    setAttachUploading(false)
+    setShowAttachModal(false)
+    setAttachFile(null)
+    setAttachCaption('')
+    setAttachType('site_map')
+  }
+
+  const handleDeleteAttachment = async (att: WaiverAttachmentRow) => {
+    if (usingDemo) {
+      toast.success('Attachment removed (demo mode)')
+      return
+    }
+    if (!confirm(`Delete "${att.file_name}"? This cannot be undone.`)) return
+
+    setDeletingAttachId(att.id)
+    const { error } = await deleteWaiverAttachment(att.id, params.id as string)
+    if (error) {
+      toast.error(error)
+    } else {
+      toast.success('Attachment deleted')
+      setAttachments(prev => prev.filter(a => a.id !== att.id))
+    }
+    setDeletingAttachId(null)
   }
 
   const toggleSection = (key: string) => {
@@ -205,6 +294,9 @@ export default function EditWaiverPage() {
     const validCriteria = criteria.filter(c => c.reference || c.description)
     await upsertWaiverCriteria(params.id as string, validCriteria)
 
+    if (installationId) {
+      logActivity('updated', 'waiver', params.id as string, formData.waiver_number || (params.id as string), { classification: formData.classification }, installationId)
+    }
     toast.success('Waiver updated')
     router.push(`/waivers/${params.id}`)
   }
@@ -215,7 +307,7 @@ export default function EditWaiverPage() {
     setCriteria(prev => prev.map((c, i) => i === index ? { ...c, [field]: value } : c))
   }
 
-  const sectionHeader = (key: string, title: string, expanded: boolean) => (
+  const sectionHeader = (key: string, title: string, expanded: boolean, count?: number) => (
     <button
       type="button"
       onClick={() => toggleSection(key)}
@@ -226,7 +318,7 @@ export default function EditWaiverPage() {
         marginBottom: expanded ? 12 : 0,
       }}
     >
-      <span>{title}</span>
+      <span>{title}{count !== undefined && count > 0 ? ` (${count})` : ''}</span>
       <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{expanded ? '▲' : '▼'}</span>
     </button>
   )
@@ -493,6 +585,72 @@ export default function EditWaiverPage() {
         )}
       </div>
 
+      {/* Section 6: Attachments */}
+      <div className="card" style={{ marginBottom: 8 }}>
+        {sectionHeader('attachments', '6. Attachments', expandedSections.attachments, attachments.length)}
+        {expandedSections.attachments && (
+          <>
+            {attachments.length === 0 ? (
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', padding: '8px 0' }}>No attachments</div>
+            ) : (
+              attachments.map((a, i) => (
+                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < attachments.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.file_name}</div>
+                    <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
+                      {titleCase(a.file_type)} {a.file_size ? `\u2022 ${(a.file_size / 1024).toFixed(0)} KB` : ''}
+                    </div>
+                    {a.caption && <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>{a.caption}</div>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = attachmentUrls[a.id]
+                        if (url) window.open(url, '_blank')
+                      }}
+                      style={{
+                        padding: '5px 12px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 600,
+                        background: '#3B82F614', border: '1px solid #3B82F633', color: '#3B82F6',
+                        cursor: attachmentUrls[a.id] ? 'pointer' : 'default', fontFamily: 'inherit',
+                        opacity: attachmentUrls[a.id] ? 1 : 0.5,
+                      }}
+                      disabled={!attachmentUrls[a.id]}
+                    >
+                      View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteAttachment(a)}
+                      disabled={deletingAttachId === a.id}
+                      style={{
+                        padding: '5px 12px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 600,
+                        background: '#EF444414', border: '1px solid #EF444433', color: '#EF4444',
+                        cursor: 'pointer', fontFamily: 'inherit',
+                        opacity: deletingAttachId === a.id ? 0.5 : 1,
+                      }}
+                    >
+                      {deletingAttachId === a.id ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+            <button
+              type="button"
+              onClick={() => setShowAttachModal(true)}
+              style={{
+                marginTop: 8, width: '100%', padding: 8, borderRadius: 6, border: '1px dashed var(--color-border)',
+                background: 'transparent', color: 'var(--color-cyan)', fontSize: 'var(--fs-base)', fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              + Upload Attachment
+            </button>
+          </>
+        )}
+      </div>
+
       {/* Save Button */}
       <button
         type="button"
@@ -503,6 +661,60 @@ export default function EditWaiverPage() {
       >
         {saving ? 'Saving...' : 'Save Changes'}
       </button>
+
+      {/* Attachment Upload Modal */}
+      {showAttachModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--color-bg-surface)', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)' }}>
+            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, marginBottom: 12 }}>Upload Attachment</div>
+            <div style={{ marginBottom: 12 }}>
+              <span className="section-label">File</span>
+              <input type="file" accept=".pdf,.docx,.xlsx,.xls,.doc,.pptx,.ppt,.csv,.txt,.jpg,.jpeg,.png"
+                onChange={(e) => setAttachFile(e.target.files?.[0] || null)}
+                style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)' }} />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <span className="section-label">Type</span>
+              <select className="input-dark" value={attachType} onChange={(e) => setAttachType(e.target.value as WaiverAttachmentType)} style={{ width: '100%' }}>
+                {[
+                  { value: 'photo', label: 'Photo' },
+                  { value: 'site_map', label: 'Site Map' },
+                  { value: 'risk_assessment', label: 'Risk Assessment' },
+                  { value: 'ufc_excerpt', label: 'UFC Excerpt' },
+                  { value: 'faa_report', label: 'FAA Report' },
+                  { value: 'coordination_sheet', label: 'Coordination Sheet' },
+                  { value: 'af_form_505', label: 'AF Form 505' },
+                  { value: 'other', label: 'Other' },
+                ].map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <span className="section-label">Caption</span>
+              <input type="text" className="input-dark" placeholder="Optional caption..." value={attachCaption} onChange={(e) => setAttachCaption(e.target.value)} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => { setShowAttachModal(false); setAttachFile(null); setAttachCaption(''); setAttachType('site_map') }}
+                style={{ padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleUploadAttachment}
+                disabled={!attachFile || attachUploading}
+                style={{ opacity: !attachFile || attachUploading ? 0.5 : 1 }}
+              >
+                {attachUploading ? 'Uploading...' : 'Upload'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

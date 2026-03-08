@@ -21,7 +21,13 @@ export async function sendPdfViaEmail(
       body: JSON.stringify({ pdfBase64, filename, to, subject }),
     })
 
-    const data = await res.json()
+    let data: { error?: string }
+    try {
+      data = await res.json()
+    } catch {
+      const text = await res.text().catch(() => '')
+      return { success: false, error: `Server error (${res.status}): ${text.slice(0, 100) || 'Non-JSON response'}` }
+    }
     if (!res.ok) return { success: false, error: data.error || 'Failed to send email' }
     return { success: true }
   } catch (err) {

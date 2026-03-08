@@ -1,9 +1,15 @@
+export const maxDuration = 30
+
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+let _resend: Resend | null = null
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY)
+  return _resend
+}
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -54,7 +60,7 @@ export async function POST(request: Request) {
     }
 
     const safeFilename = escapeHtml(filename)
-    const { error } = await resend.emails.send({
+    const { error } = await getResend().emails.send({
       from: 'Glidepath <info@glidepathops.com>',
       to,
       subject,

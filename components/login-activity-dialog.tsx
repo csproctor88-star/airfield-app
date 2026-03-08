@@ -79,9 +79,11 @@ export default function LoginActivityDialog() {
         if (lastSeenAt) sessionStorage.removeItem('glidepath_previous_login_at')
       } catch { /* noop */ }
 
+      // Always read profile first (before anything else updates last_seen_at)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
       if (!lastSeenAt) {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
         const { data: profile } = await supabase
           .from('profiles')
           .select('last_seen_at')
@@ -94,16 +96,14 @@ export default function LoginActivityDialog() {
 
       // Update last_seen_at now so the header heartbeat doesn't clobber
       // the old value before we finish querying
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        await supabase.from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', user.id)
-      }
+      await supabase.from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', user.id)
 
-      // Query activity since last seen
+      // Query activity since last seen (exclude own activity)
       let query = supabase
         .from('activity_log')
         .select('id, action, entity_type, entity_display_id, created_at, metadata, user_id, profiles:user_id(name, rank)')
         .gt('created_at', lastSeenAt)
+        .neq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50)
 
@@ -119,6 +119,7 @@ export default function LoginActivityDialog() {
           .from('activity_log')
           .select('*')
           .gt('created_at', lastSeenAt)
+          .neq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(50)
         if (installationId) fallbackQuery = fallbackQuery.eq('base_id', installationId)

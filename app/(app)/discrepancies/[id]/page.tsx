@@ -11,6 +11,9 @@ import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
 import { CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS, DISCREPANCY_TYPES } from '@/lib/constants'
 
 import { EditDiscrepancyModal, StatusUpdateModal, WorkOrderModal, PhotoViewerModal } from '@/components/discrepancies/modals'
+import { sendPdfViaEmail } from '@/lib/email-pdf'
+import EmailPdfModal from '@/components/ui/email-pdf-modal'
+import { fetchMapImageDataUrl } from '@/lib/utils'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
@@ -20,7 +23,7 @@ type ModalType = 'edit' | 'status' | 'workorder' | null
 export default function DiscrepancyDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { installationId, userRole } = useInstallation()
+  const { installationId, userRole, defaultPdfEmail, currentInstallation } = useInstallation()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const [dbPhotos, setDbPhotos] = useState<PhotoRow[]>([])
@@ -31,6 +34,11 @@ export default function DiscrepancyDetailPage() {
   const [activeModal, setActiveModal] = useState<ModalType>(null)
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
+  const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
   const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
 
   const loadData = useCallback(async () => {
@@ -148,6 +156,41 @@ export default function DiscrepancyDetailPage() {
     ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${lng},${lat})/${lng},${lat},15,0/600x300@2x?access_token=${mapboxToken}`
     : null
 
+  const buildPdf = async () => {
+    const photoDataUrls: string[] = []
+    for (const p of allPhotos) {
+      if (p.url.startsWith('data:')) {
+        photoDataUrls.push(p.url)
+      } else {
+        try {
+          const resp = await fetch(p.url)
+          if (resp.ok) {
+            const blob = await resp.blob()
+            const reader = new FileReader()
+            const dataUrl = await new Promise<string>((resolve, reject) => {
+              reader.onload = () => resolve(reader.result as string)
+              reader.onerror = reject
+              reader.readAsDataURL(blob)
+            })
+            photoDataUrls.push(dataUrl)
+          }
+        } catch { /* skip */ }
+      }
+    }
+    let mapDataUrl: string | null = null
+    if (lat != null && lng != null) {
+      mapDataUrl = await fetchMapImageDataUrl(lat, lng)
+    }
+    const { generateDiscrepancyPdf } = await import('@/lib/discrepancy-pdf')
+    return generateDiscrepancyPdf({
+      discrepancy: d,
+      photoDataUrls,
+      mapDataUrl,
+      baseName: currentInstallation?.name,
+      baseIcao: currentInstallation?.icao,
+    })
+  }
+
   return (
     <div className="page-container">
       <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
@@ -251,7 +294,7 @@ export default function DiscrepancyDetailPage() {
 
       <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 8 }}>
         <ActionButton color="#38BDF8" onClick={() => setActiveModal('edit')}>✏️ Edit</ActionButton>
         <div>
           <PhotoPickerButton
@@ -263,6 +306,40 @@ export default function DiscrepancyDetailPage() {
         </div>
         <ActionButton color="#FBBF24" onClick={() => setActiveModal('status')}>🔄 Status</ActionButton>
         <ActionButton color="#34D399" onClick={() => setActiveModal('workorder')}>📋 Work Order</ActionButton>
+        <ActionButton
+          color="#A78BFA"
+          onClick={async () => {
+            setGeneratingPdf(true)
+            try {
+              const { doc, filename } = await buildPdf()
+              doc.save(filename)
+              toast.success('PDF exported')
+            } catch (e) {
+              console.error(e)
+              toast.error('PDF export failed')
+            }
+            setGeneratingPdf(false)
+          }}
+        >
+          {generatingPdf ? 'Generating...' : '📄 Export PDF'}
+        </ActionButton>
+        <ActionButton
+          color="#A78BFA"
+          onClick={async () => {
+            setGeneratingPdf(true)
+            try {
+              const result = await buildPdf()
+              setEmailPdfData(result)
+              setEmailModalOpen(true)
+            } catch (e) {
+              console.error(e)
+              toast.error('PDF generation failed')
+            }
+            setGeneratingPdf(false)
+          }}
+        >
+          {generatingPdf ? 'Preparing...' : '✉️ Email PDF'}
+        </ActionButton>
       </div>
 
       {/* Admin: Delete Discrepancy */}
@@ -316,6 +393,31 @@ export default function DiscrepancyDetailPage() {
       )}
       {viewerIndex !== null && allPhotos.length > 0 && (
         <PhotoViewerModal photos={allPhotos} initialIndex={viewerIndex} onClose={() => setViewerIndex(null)} />
+      )}
+      {emailModalOpen && emailPdfData && (
+        <EmailPdfModal
+          open={emailModalOpen}
+          defaultEmail={defaultPdfEmail || ''}
+          onClose={() => { setEmailModalOpen(false); setEmailPdfData(null) }}
+          onSend={async (email) => {
+            setSendingEmail(true)
+            const { success, error } = await sendPdfViaEmail(
+              emailPdfData.doc,
+              emailPdfData.filename,
+              email,
+              `Discrepancy Report — ${d.work_order_number || d.title}`,
+            )
+            setSendingEmail(false)
+            if (success) {
+              toast.success('Email sent')
+              setEmailModalOpen(false)
+              setEmailPdfData(null)
+            } else {
+              toast.error(error || 'Failed to send email')
+            }
+          }}
+          sending={sendingEmail}
+        />
       )}
     </div>
   )

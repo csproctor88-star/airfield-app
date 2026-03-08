@@ -85,7 +85,7 @@ export default function ObstructionMapView({ evaluations }: Props) {
       map.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, installationId])
+  }, [token, installationId, runways])
 
   // Add/update markers
   useEffect(() => {

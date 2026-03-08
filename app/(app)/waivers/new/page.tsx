@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { WAIVER_CLASSIFICATIONS, WAIVER_HAZARD_RATINGS, WAIVER_CRITERIA_SOURCES } from '@/lib/constants'
 import { createWaiver, upsertWaiverCriteria, uploadWaiverAttachment } from '@/lib/supabase/waivers'
+import { logActivity } from '@/lib/supabase/activity'
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
@@ -249,6 +250,9 @@ export default function NewWaiverPage() {
     // Clean up preview URLs
     photos.forEach(p => URL.revokeObjectURL(p.preview))
 
+    if (data?.id && installationId) {
+      logActivity('created', 'waiver', data.id, formData.waiver_number || data.id, { classification: formData.classification, status }, installationId)
+    }
     toast.success(status === 'draft' ? 'Waiver saved as draft' : 'Waiver submitted for review')
     router.push('/waivers')
   }
@@ -265,7 +269,8 @@ export default function NewWaiverPage() {
     setCriteria(prev => prev.map((c, i) => i === index ? { ...c, [field]: value } : c))
   }
 
-  const titleCase = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  const ACRONYMS = new Set(['ufc', 'faa', 'af'])
+  const titleCase = (s: string) => s.replace(/_/g, ' ').replace(/\b\w+/g, w => ACRONYMS.has(w.toLowerCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1))
 
   const sectionHeader = (key: string, title: string, expanded: boolean, count?: number) => (
     <button

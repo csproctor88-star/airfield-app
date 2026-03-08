@@ -779,7 +779,7 @@ export default function HomePage() {
                           if (remarks) details.notes = remarks
                           if (runways.length > 0) {
                             setRunwayActiveEnd(rwy.label, newEnd)
-                            if (installationId) logActivity('updated', 'airfield_status', installationId, `RWY ${newEnd}`, details, installationId)
+                            if (installationId) logActivity('updated', 'airfield_status', installationId, `Active runway changed to ${newEnd}`, details, installationId)
                             logRunwayStatusChange({ oldActiveRunway: rwy.active_end, newActiveRunway: newEnd }, installationId)
                           } else {
                             const designators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
@@ -787,7 +787,7 @@ export default function HomePage() {
                             const idx = designators.indexOf(activeRunway)
                             const next = designators[(idx + 1) % designators.length]
                             setActiveRunway(next)
-                            if (installationId) logActivity('updated', 'airfield_status', installationId, `RWY ${next}`, { active_runway: next, ...(remarks ? { notes: remarks } : {}) }, installationId)
+                            if (installationId) logActivity('updated', 'airfield_status', installationId, `Active runway changed to ${next}`, { active_runway: next, ...(remarks ? { notes: remarks } : {}) }, installationId)
                             logRunwayStatusChange({ oldActiveRunway: activeRunway, newActiveRunway: next }, installationId)
                           }
                         },
@@ -1054,8 +1054,7 @@ export default function HomePage() {
                       const { aircraft, selectedStatus, notes } = arffDialog
                       setArffStatusForAircraft(aircraft, selectedStatus)
                       if (installationId) {
-                        const details: Record<string, unknown> = { aircraft, status: selectedStatus, old_status: currentReadiness }
-                        if (notes.trim()) details.notes = notes.trim()
+                        const details: Record<string, unknown> = { details: `${selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1)}${notes.trim() ? ` — ${notes.trim()}` : ''}` }
                         logActivity('updated', 'arff_status', installationId, `${aircraft} ${selectedStatus.toUpperCase()}`, details, installationId)
                       }
                       setArffDialog(null)
@@ -1307,6 +1306,7 @@ export default function HomePage() {
                       </div>
                       <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
                         {c.location}
+                        {c.work_description ? ` · ${c.work_description}` : ''}
                         {c.callsign ? ` · ${c.callsign}` : ''}
                       </div>
                     </div>

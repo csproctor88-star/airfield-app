@@ -62,7 +62,11 @@ export default function SetupAccountPage() {
       })
 
       if (updateError) {
-        setError(updateError.message)
+        setError(
+          updateError.message === 'Unauthorized' || updateError.message?.toLowerCase().includes('unauthorized')
+            ? 'Contact Base Admin for Account Access'
+            : updateError.message,
+        )
         return
       }
 

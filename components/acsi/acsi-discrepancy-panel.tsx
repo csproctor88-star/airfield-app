@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useInstallation } from '@/lib/installation-context'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
-import { uploadAcsiPhoto } from '@/lib/supabase/acsi-inspections'
+import { uploadAcsiPhoto, fetchAcsiPhotos } from '@/lib/supabase/acsi-inspections'
 import { toast } from 'sonner'
 import { X, Check } from 'lucide-react'
 import type { AcsiDiscrepancyDetail } from '@/lib/supabase/types'
@@ -23,6 +23,30 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
+
+  // Load existing photos from DB when draft is loaded on another device
+  useEffect(() => {
+    if (!inspectionId || !detail.photo_ids?.length || photoUrls.length > 0) return
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
+    let cancelled = false
+
+    fetchAcsiPhotos(inspectionId).then(allPhotos => {
+      if (cancelled) return
+      const photoIdSet = new Set(detail.photo_ids)
+      const matched = allPhotos.filter(p => photoIdSet.has(p.id))
+      if (matched.length > 0) {
+        setPhotoUrls(matched.map(p => ({
+          url: p.storage_path.startsWith('data:')
+            ? p.storage_path
+            : supabaseUrl ? `${supabaseUrl}/storage/v1/object/public/photos/${p.storage_path}` : p.storage_path,
+          name: p.file_name,
+        })))
+      }
+    })
+
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inspectionId])
 
   const update = (field: keyof AcsiDiscrepancyDetail, value: unknown) => {
     onChange(itemId, index, { ...detail, [field]: value })

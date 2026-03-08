@@ -3,18 +3,18 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
-  Home,
-  Plane,
-  BookOpen,
+  Radio,
+  LayoutDashboard,
   MapPin,
+  ClipboardList,
   Menu,
 } from 'lucide-react'
 
 const tabs = [
-  { href: '/', label: 'HOME', icon: Home },
-  { href: '/aircraft', label: 'AIRCRAFT', icon: Plane },
-  { href: '/regulations', label: 'REFERENCES', icon: BookOpen },
+  { href: '/', label: 'STATUS', icon: Radio },
+  { href: '/dashboard', label: 'DASHBOARD', icon: LayoutDashboard },
   { href: '/obstructions', label: 'OBSTRUCTION', icon: MapPin },
+  { href: '/activity', label: 'EVENTS LOG', icon: ClipboardList },
   { href: '/more', label: 'MORE', icon: Menu },
 ] as const
 

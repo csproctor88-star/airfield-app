@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import { fetchAirfieldStatus, updateAirfieldStatus, type AirfieldStatus, type RunwayStatuses } from '@/lib/supabase/airfield-status'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
@@ -64,6 +64,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [constructionRemarks, setConstructionRemarksLocal] = useState<string | null>(null)
   const [miscRemarks, setMiscRemarksLocal] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
+  const lastLocalUpdate = useRef(0)
 
   // Build runway labels from installation runways (e.g., "06L/24R")
   const runwayLabels = runways.map(r => `${r.end1_designator}/${r.end2_designator}`)
@@ -179,6 +180,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   // Helper: persist runway_statuses and sync legacy fields from first runway
   const persistRunwayStatuses = useCallback(async (updated: RunwayStatuses) => {
+    lastLocalUpdate.current = Date.now()
     // Sync legacy fields from first runway label
     const firstLabel = runwayLabels[0]
     const firstEntry = firstLabel ? updated[firstLabel] : undefined
@@ -193,6 +195,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   // Persist advisory changes
   const setAdvisory = useCallback(async (a: Advisory | null) => {
     setAdvisoryLocal(a)
+    lastLocalUpdate.current = Date.now()
     await updateAirfieldStatus({
       advisory_type: a?.type ?? null,
       advisory_text: a?.text ?? null,
@@ -202,12 +205,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   // Legacy: Persist active runway changes (single-runway compat)
   const setActiveRunway = useCallback(async (r: string) => {
     setActiveRunwayLocal(r)
+    lastLocalUpdate.current = Date.now()
     await updateAirfieldStatus({ active_runway: r }, installationId)
   }, [installationId])
 
   // Legacy: Persist runway status changes (single-runway compat)
   const setRunwayStatus = useCallback(async (s: 'open' | 'suspended' | 'closed') => {
     setRunwayStatusLocal(s)
+    lastLocalUpdate.current = Date.now()
     await updateAirfieldStatus({ runway_status: s }, installationId)
   }, [installationId])
 
@@ -233,6 +238,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   // ARFF: set ARFF CAT
   const setArffCat = useCallback(async (cat: number | null) => {
     setArffCatLocal(cat)
+    lastLocalUpdate.current = Date.now()
     await updateAirfieldStatus({ arff_cat: cat }, installationId)
   }, [installationId])
 
@@ -240,6 +246,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const setArffStatusForAircraft = useCallback(async (name: string, status: ArffReadiness) => {
     const updated = { ...arffStatuses, [name]: status }
     setArffStatusesLocal(updated)
+    lastLocalUpdate.current = Date.now()
     await updateAirfieldStatus({ arff_statuses: updated }, installationId)
   }, [arffStatuses, installationId])
 
@@ -248,6 +255,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     const now = new Date().toISOString()
     setRscConditionLocal(val)
     setRscUpdatedAtLocal(now)
+    lastLocalUpdate.current = Date.now()
     await updateAirfieldStatus({ rsc_condition: val, rsc_updated_at: now }, installationId)
   }, [installationId])
 
@@ -256,23 +264,29 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     const now = new Date().toISOString()
     setBwcValueLocal(val)
     setBwcUpdatedAtLocal(now)
+    lastLocalUpdate.current = Date.now()
     await updateAirfieldStatus({ bwc_value: val, bwc_updated_at: now }, installationId)
   }, [installationId])
 
   // Construction remarks
   const setConstructionRemarks = useCallback(async (val: string | null) => {
     setConstructionRemarksLocal(val)
+    lastLocalUpdate.current = Date.now()
     await updateAirfieldStatus({ construction_remarks: val }, installationId)
   }, [installationId])
 
   // Misc remarks
   const setMiscRemarks = useCallback(async (val: string | null) => {
     setMiscRemarksLocal(val)
+    lastLocalUpdate.current = Date.now()
     await updateAirfieldStatus({ misc_remarks: val }, installationId)
   }, [installationId])
 
   // Re-fetch airfield_status (called on mount, by dashboard realtime, and by polling fallback)
   const refreshStatus = useCallback(async () => {
+    // Skip polling refresh if a local update was made within the last 15 seconds
+    // to prevent race conditions where polling overwrites optimistic updates
+    if (Date.now() - lastLocalUpdate.current < 15000) return
     const status = await fetchAirfieldStatus(installationId)
     if (status) {
       if (status.advisory_type && status.advisory_text) {
@@ -300,10 +314,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
   }, [installationId])
 
-  // Polling fallback: re-fetch airfield_status every 10s in case realtime is unavailable
+  // Polling fallback: re-fetch airfield_status every 30s in case realtime is unavailable
   useEffect(() => {
     if (!loaded) return
-    const interval = setInterval(refreshStatus, 10000)
+    const interval = setInterval(refreshStatus, 30000)
     return () => clearInterval(interval)
   }, [loaded, refreshStatus])
 

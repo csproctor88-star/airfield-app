@@ -37,7 +37,7 @@ export default function CheckDetailPage() {
   const [sendingEmail, setSendingEmail] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
-  const { currentInstallation, userRole, defaultPdfEmail } = useInstallation()
+  const { installationId, currentInstallation, userRole, defaultPdfEmail } = useInstallation()
   const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
 
   useEffect(() => {
@@ -128,7 +128,7 @@ export default function CheckDetailPage() {
     setUploading(true)
     let uploaded = 0
     for (const file of Array.from(files)) {
-      const { error } = await uploadCheckPhoto(liveData.id, file)
+      const { error } = await uploadCheckPhoto(liveData.id, file, installationId)
       if (!error) uploaded++
     }
 

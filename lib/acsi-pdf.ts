@@ -311,16 +311,14 @@ export async function generateAcsiPdf(
           photoDataUrls.push(await fetchImageAsDataUrl(p.url))
         }
 
-        // Fetch map data URLs (only on first discrepancy — pins are shared)
+        // Fetch map data URLs for each discrepancy's own pins
         const mapDataUrls: (string | null)[] = []
-        if (di === 0) {
-          const pins = disc.pins || []
-          if (pins.length === 0 && disc.latitude != null && disc.longitude != null) {
-            pins.push({ lat: disc.latitude, lng: disc.longitude })
-          }
-          for (const pin of pins) {
-            mapDataUrls.push(await fetchCleanMapDataUrl(pin.lat, pin.lng))
-          }
+        const pins = disc.pins || []
+        if (pins.length === 0 && disc.latitude != null && disc.longitude != null) {
+          pins.push({ lat: disc.latitude, lng: disc.longitude })
+        }
+        for (const pin of pins) {
+          mapDataUrls.push(await fetchCleanMapDataUrl(pin.lat, pin.lng))
         }
 
         discImagesMap[detailKey] = { photos: photoDataUrls, maps: mapDataUrls }

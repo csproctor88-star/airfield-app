@@ -540,7 +540,8 @@ export default function WaiverDetailPage() {
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   }
 
-  const titleCase = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  const ACRONYMS = new Set(['ufc', 'faa', 'af'])
+  const titleCase = (s: string) => s.replace(/_/g, ' ').replace(/\b\w+/g, w => ACRONYMS.has(w.toLowerCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1))
 
   const sectionHeader = (key: string, title: string, count?: number) => (
     <button
