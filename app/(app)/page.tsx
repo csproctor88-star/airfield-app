@@ -207,6 +207,23 @@ export default function HomePage() {
 
   useEffect(() => { loadContractors() }, [loadContractors])
 
+  // Realtime: subscribe to airfield_contractors changes for cross-device sync
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase || !installationId) return
+
+    const channel = supabase
+      .channel(`airfield_contractors:${installationId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'airfield_contractors', filter: `base_id=eq.${installationId}` },
+        () => { loadContractors() }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [installationId, loadContractors])
+
   // --- NAVAID status toggle handler ---
   async function handleNavaidToggle(navaid: NavaidStatus, newStatus: 'green' | 'yellow' | 'red', dialogNotes?: string) {
     const notes = newStatus === 'green' ? null : (dialogNotes ?? (navaidNotes[navaid.id] || null))
