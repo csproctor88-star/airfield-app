@@ -207,6 +207,19 @@ export default function HomePage() {
 
   useEffect(() => { loadContractors() }, [loadContractors])
 
+  // Re-fetch all data when page regains visibility (tab switch or navigate back)
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') {
+        loadNavaids()
+        loadContractors()
+        refreshStatus()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [loadNavaids, loadContractors, refreshStatus])
+
   // Realtime: subscribe to airfield_contractors changes for cross-device sync
   useEffect(() => {
     const supabase = createClient()
