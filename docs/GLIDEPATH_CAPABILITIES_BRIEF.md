@@ -1,6 +1,6 @@
 # GLIDEPATH — Comprehensive Capabilities Brief
 
-**Version 2.14.0 | March 2026**
+**Version 2.16.1 | March 2026**
 **"Guiding You to Mission Success"**
 
 ---
@@ -23,9 +23,11 @@
    - 5.9 [Regulations & Reference Library](#59-regulations--reference-library)
    - 5.10 [Waiver Lifecycle Management](#510-waiver-lifecycle-management)
    - 5.11 [NOTAMs — Live FAA Feed](#511-notams--live-faa-feed)
-   - 5.12 [Activity Log & Audit Trail](#512-activity-log--audit-trail)
+   - 5.12 [Events Log & Audit Trail](#512-events-log--audit-trail)
    - 5.13 [User Management & Access Control](#513-user-management--access-control)
-   - 5.14 [Settings & Base Configuration](#514-settings--base-configuration)
+   - 5.14 [QRC — Quick Reaction Checklists](#514-qrc--quick-reaction-checklists)
+   - 5.15 [Shift Checklist](#515-shift-checklist)
+   - 5.16 [Settings & Base Configuration](#516-settings--base-configuration)
 6. [Multi-Base Architecture](#6-multi-base-architecture)
 7. [Offline & Field Operations](#7-offline--field-operations)
 8. [Export & Reporting Capabilities](#8-export--reporting-capabilities)
@@ -50,20 +52,21 @@ Every change made by any user — a runway status update, a completed inspection
 
 | Metric | Value |
 |--------|-------|
-| Application Routes | 53 |
-| Source Files | 157 |
-| Database Tables | 28+ |
-| Database Migrations | 61 |
+| Application Routes | 57 |
+| Source Files | 160 |
+| Database Tables | 36 |
+| Database Migrations | 79 |
 | Aircraft Records | 200+ |
 | Regulatory References | 70 |
 | Military Installations in Directory | 155 |
 | Airfield Check Types | 7 |
+| QRC Templates | 25 |
 | Report Types | 4 |
-| PDF Export Types | 8 |
+| PDF Export Types | 11 |
 | Excel Export Types | 4 |
 | User Roles | 9 |
 | TypeScript Errors | 0 |
-| Lines of Code | ~51,700 |
+| Lines of Code | ~61,000 |
 
 ---
 
@@ -452,18 +455,21 @@ Live FAA NOTAM feed directly integrated into the airfield management workflow.
 
 ---
 
-### 5.12 Activity Log & Audit Trail
+### 5.12 Events Log & Audit Trail
 
-Complete audit trail for every action taken in the application, plus manual entry support for events that happen outside the app.
+Complete audit trail for every action taken in the application, plus manual entry support for events that happen outside the app. Renamed from "Activity Log" in v2.15.0 to better reflect its role as a comprehensive events ledger.
 
 **Features:**
 - Columnar table display: Time (Z), User, Action, Details — grouped by date headers
 - Date-range filtering: Today, 7 Days, 30 Days, Custom
 - Per-column text search filters for narrowing results
 - Manual text entry for events not captured by the system (shift turnovers, phone calls, etc.)
+- Activity templates: pre-built entry templates for common events (e.g., "Shift Turnover", "Phone Call from Base Ops")
 - Edit/delete entries via modal dialog with Zulu time editing
+- Clickable user IDs showing role and masked EDIPI
 - Clickable items link to source entity (discrepancy, check, inspection, etc.)
 - Excel export with styled formatting
+- Integrated into Daily Operations Report PDF as a chronological Events Log section
 
 ---
 
@@ -488,7 +494,54 @@ Admin module for managing users across installations.
 
 ---
 
-### 5.14 Settings & Base Configuration
+### 5.14 QRC — Quick Reaction Checklists
+
+Interactive execution of 25 digitized Quick Reaction Checklists for airfield emergencies and operational events. Replaces the paper QRC binder with a tracked, auditable, real-time digital system.
+
+**25 QRC Templates:**
+IFE/Ground Emergency, Aircraft Mishap, ARFF Status, Airfield Restrictions & Closures, Hot Brakes/Hung Ordnance, Building Evacuation, Air Evacuation, CMAV, Hazardous Cargo, Overdue Aircraft, Fuel Spill, Tornado Warning, Bomb Threat, Bird Strike, BWC Change, Anti-Hijacking, Alert/Recall Procedures, Unauthorized Aircraft Landing, DV Inbound/Outbound, Hydrazine Incident, ELT, Pyrotechnics Use, Customs/Agriculture, Civil/Foreign Aircraft Inbounds, Mishap Notification.
+
+**Features:**
+- Three tabs: Available (template grid), Active (open executions in progress), History (closed/all)
+- 6 step types: checkbox, checkbox with note, agency notification tracking, fill-in fields, time fields with "Now (Z)" auto-fill, conditional cross-references to other QRCs
+- SCN (Secondary Crash Net) form: data entry fields (aircraft type, callsign, tail number, etc.) displayed above steps for applicable QRCs
+- Lifecycle: Open (start execution) → Close (with initials/timestamp) or Cancel (permanently delete accidental openings)
+- Dashboard KPI badge with active QRC count
+- Quick-launch dialog: start new QRC or resume active execution directly from dashboard without navigating away
+- Admin-only template management in Base Configuration with selective seeding from 25 built-in templates
+- Annual review tracking: last reviewed date, reviewer, and review notes per template
+- Activity logging for open, close, cancel, and reopen actions
+- Daily ops report integration: QRC executions section with step completion counts and SCN data sub-tables
+
+**Operational Impact:**
+- Eliminates paper QRC binder management and ensures checklists are always current
+- Provides real-time visibility into active emergency responses across the team
+- Creates an auditable record of every step completed during an emergency
+- SCN form data automatically captured and available for post-incident reporting
+
+---
+
+### 5.15 Shift Checklist
+
+Per-shift task tracking with configurable items per base. Ensures recurring duties (daily, weekly, monthly) are completed and documented by shift personnel.
+
+**Features:**
+- Three shifts: Day, Swing, Mid — each with independently configurable items
+- Item frequency: daily, weekly, monthly
+- Timezone-aware date calculation: uses the base's configured timezone and reset time (default 06:00) to determine the current checklist date. Before the reset time, items belong to the previous day
+- Today tab: progress bar per shift showing completion percentage, check-off items with optional notes, file/reopen workflow with per-user tracking
+- History tab: clickable historical checklists with read-only detail view showing who completed each item and when
+- Dashboard KPI badge: quick access dialog for marking items complete without leaving the dashboard
+- Base Configuration: add/edit/delete/toggle items per shift, configurable daily reset time per base
+
+**Operational Impact:**
+- Standardizes shift turnover procedures across all personnel
+- Provides documentation that recurring duties were completed (important for compliance audits)
+- Dashboard integration means shift duties don't get forgotten during busy periods
+
+---
+
+### 5.16 Settings & Base Configuration
 
 Comprehensive settings system with collapsible dropdown sections.
 
@@ -497,7 +550,7 @@ Comprehensive settings system with collapsible dropdown sections.
 - **Installation** — Current base display; switching/adding for sys_admin
 - **Data & Storage** — View/clear cached data, estimated storage
 - **Regulations Library** — Download all PDFs for offline, manage cache
-- **Base Configuration** (`/settings/base-setup`) — Runways, NAVAIDs, areas, CE shops, airfield diagram upload
+- **Base Configuration** (`/settings/base-setup`) — Runways, NAVAIDs, areas, CE shops, ARFF aircraft, airfield diagram upload, shift checklist items, checklist reset time, QRC templates
 - **Inspection Templates** (`/settings/templates`) — Customize airfield/lighting checklist sections and items
 - **Appearance** — Day/Night/Auto theme toggle
 - **About** — Version, environment, branding
@@ -557,17 +610,20 @@ Glidepath is designed for use in the field — on the flightline, during FOD wal
 
 ## 8. EXPORT & REPORTING CAPABILITIES
 
-### PDF Reports (8 Types)
+### PDF Reports (11 Types)
 
 | Report | Content |
 |--------|---------|
-| Daily Operations Summary | All activity for date/range with location maps and photos |
+| Daily Operations Summary | All activity for date/range with Events Log, QRC details, location maps, and photos |
 | Open Discrepancies | Current snapshot with area/type breakdowns and satellite thumbnails |
 | Discrepancy Trends | Historical opened vs. closed with area/type analysis |
 | Aging Discrepancies | Open items by age tier with severity and shop breakdowns |
 | Individual Inspection | Section-by-section pass/fail with per-discrepancy photos and maps |
+| Combined Inspection | Multi-inspection combined PDF with all discrepancy photos |
+| Special Inspection | Construction/Joint Monthly with personnel attendance |
 | Individual Waiver | Full AF-505 format with criteria, coordination, and photos |
 | Individual Check | Check detail with location map and per-issue photos |
+| Individual Discrepancy | Single discrepancy detail with photos and location map |
 | ACSI Inspection | Annual compliance report with parent/sub-field hierarchy and inline photos |
 
 All PDFs include branded headers, page numbers, and timestamps. Every PDF can be downloaded directly or emailed via Resend.
@@ -687,30 +743,33 @@ Glidepath is built directly from and in support of the following governing regul
 
 ## 13. CURRENT MATURITY & ROADMAP
 
-### Current Status (v2.14.0)
+### Current Status (v2.16.1)
 
 | Component | Status |
 |-----------|--------|
-| Dashboard (with Supabase Realtime push updates) | Complete |
-| Discrepancy Tracking (with COP map) | Complete |
+| Dashboard (Supabase Realtime push, KPI badges, QRC/Shift Checklist dialogs) | Complete |
+| Airfield Status (inline personnel, construction/misc, advisory) | Complete |
+| Discrepancy Tracking (COP map, individual PDF export) | Complete |
 | Airfield Checks (7 types, cross-device drafts) | Complete |
-| Daily Inspections (multi-discrepancy, default-to-pass) | Complete |
-| ACSI — Annual Compliance Inspection | Complete |
-| Reports (4 types with email delivery) | Complete |
+| Daily Inspections (multi-discrepancy, per-issue photos, default-to-pass) | Complete |
+| ACSI — Annual Compliance Inspection (PDF/Excel export) | Complete |
+| Reports (4 types with Events Log + QRC details in daily ops PDF) | Complete |
 | Obstruction Evaluations (multi-runway, map overlays) | Complete |
 | Aircraft Database (200+ aircraft, ACN/PCN) | Complete |
-| Regulations Library (70 refs, offline caching) | Complete |
-| Waiver Management (full lifecycle, annual review) | Complete |
-| NOTAMs (live FAA feed) | Complete |
-| Activity Log (manual entries, edit/delete) | Complete |
+| Regulations Library (70 refs, offline caching, My Documents) | Complete |
+| Waiver Management (full lifecycle, annual review, attachment management) | Complete |
+| NOTAMs (live FAA feed, expiry alerts) | Complete |
+| QRC — Quick Reaction Checklists (25 templates, interactive execution, dashboard dialog) | Complete |
+| Shift Checklist (per-shift tasks, timezone-aware dates, dashboard dialog) | Complete |
+| Events Log (manual entries, activity templates, edit/delete, Excel export) | Complete |
 | User Management (invite/edit/reset/delete, email privacy) | Complete |
-| Email PDF Delivery (all 8 export pages) | Complete |
-| Settings & Base Configuration | Complete |
+| Email PDF Delivery (all 11 export pages) | Complete |
+| Settings & Base Configuration (runways, NAVAIDs, areas, CE shops, ARFF, QRC templates, shift checklist) | Complete |
 | Light/Dark/Auto Theme | Complete |
 | PWA / Offline Capability | Complete |
 | Multi-Base Architecture (155+ installations) | Complete |
 | Responsive Layout (mobile/tablet/desktop) | Complete |
-| Row-Level Security (all tables) | Complete |
+| Row-Level Security (all 36 tables) | Complete |
 | TypeScript Build | Clean (0 errors) |
 
 ### Near-Term Roadmap
@@ -762,5 +821,5 @@ Glidepath is built directly from and in support of the following governing regul
 
 ---
 
-*Glidepath Capabilities Brief — v2.14.0 — March 2026*
+*Glidepath Capabilities Brief — v2.16.1 — March 2026*
 *Built by MSgt Chris Proctor, 127th Wing Airfield Management, Selfridge ANGB (KMTC)*

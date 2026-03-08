@@ -8,8 +8,84 @@ All notable changes to Glidepath.
 - METAR weather API integration (aviationweather.gov)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
-- Sync & Data module (offline queue, export, import)
 - Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~57 `as any` casts
+
+---
+
+## [2.16.1] — 2026-03-07
+
+### Bug Fixes — Comprehensive Functional Testing
+
+Full functional test pass across all modules with 21 files changed (+695, -108). Fixes span dashboard state management, map lifecycle, PDF exports, email delivery, and UI polish.
+
+#### Dashboard & State Management
+- **Advisory toggle persistence** — Polling `refreshStatus` was overwriting optimistic local updates after 10 seconds. Added `lastLocalUpdate` ref guard (15s cooldown) and increased polling interval from 10s to 30s
+- **Personnel display** — Added work description to personnel cards on Airfield Status page
+- **Runway change logging** — Improved log message to "Active runway changed to [value]"
+- **ARFF status logging** — Simplified to show just status + remarks
+
+#### Map Components (3 fixes)
+- **Discrepancy location map** — Added `installationId` to `useEffect` deps and changed from early-return pattern to destroy+recreate for proper re-initialization on installation switch
+- **ACSI location map** — Same destroy+recreate fix for installation switching
+- **Obstruction map view** — Added `runways` to `useEffect` deps for re-initialization when runway data changes
+
+#### ACSI Module
+- **Detail page counters** — Changed from stored DB values to dynamically computed pass/fail/na counts from items array, fixing stale counter display
+- **PDF map pins** — Removed `if (di === 0)` gate so each discrepancy gets its own map pins instead of all pins on the first discrepancy
+- **Photo persistence** — Added `useEffect` to load photos from DB via `photo_ids` on mount for cross-device photo display
+
+#### Discrepancy Detail Page
+- **PDF export + email** — Added PDF export and email PDF buttons to individual discrepancy detail page
+- **New file**: `lib/discrepancy-pdf.ts` — Single-discrepancy PDF generator following check-pdf.ts pattern
+
+#### Waiver Module
+- **Attachment management** — Full upload/delete attachment management on waiver edit page
+- **Activity logging** — Added `logActivity` calls for waiver create and update operations
+- **Acronym-aware titleCase** — UFC, FAA, AF now render correctly as uppercase in waiver type displays
+
+#### Email PDF Infrastructure
+- **Non-JSON error handling** — `lib/email-pdf.ts` now gracefully handles non-JSON server responses instead of throwing parse errors
+- **API route hardening** — Lazy Resend SDK initialization + `maxDuration = 30` for large PDF payloads
+
+#### Login & Auth
+- **Login activity dialog** — Fixed race condition (read `last_seen_at` before updating it), exclude user's own activity from the feed
+- **Setup account** — Changed "Unauthorized" error to user-friendly "Contact Base Admin for Account Access"
+
+#### UI & Navigation
+- **Bottom nav** — Updated tabs: Status, Dashboard, Obstruction, Events Log, More (with new icons: Radio, LayoutDashboard, MapPin, ClipboardList, Menu)
+- **Text brightness** — Increased `--color-text-2` from `#94A3B8` to `#B0BEC5` and `--color-text-3` from `#64748B` to `#8899A6`
+- **Calendar picker** — Added `filter: invert(1)` for dark theme date input icons
+- **Sync page removed** — Deleted placeholder "Coming Soon" page (`app/(app)/sync/page.tsx`)
+
+#### Check Photos
+- **InstallationId passthrough** — Added `installationId` to `uploadCheckPhoto` call for RLS compliance
+
+#### Files Created (1)
+- `lib/discrepancy-pdf.ts` — Individual discrepancy PDF export
+
+#### Files Modified (20)
+- `app/(app)/acsi/[id]/page.tsx` — Dynamic counters
+- `app/(app)/checks/[id]/page.tsx` — installationId passthrough
+- `app/(app)/discrepancies/[id]/page.tsx` — PDF/email export
+- `app/(app)/page.tsx` — Personnel display, runway/ARFF logging
+- `app/(app)/waivers/[id]/edit/page.tsx` — Attachment management, activity logging, titleCase
+- `app/(app)/waivers/[id]/page.tsx` — titleCase fix
+- `app/(app)/waivers/new/page.tsx` — Activity logging, titleCase fix
+- `app/api/send-pdf-email/route.ts` — Lazy Resend, maxDuration
+- `app/globals.css` — Text brightness, calendar picker
+- `app/setup-account/page.tsx` — Friendly error message
+- `components/acsi/acsi-discrepancy-panel.tsx` — Photo persistence from DB
+- `components/acsi/acsi-location-map.tsx` — installationId dep
+- `components/discrepancies/location-map.tsx` — installationId dep
+- `components/layout/bottom-nav.tsx` — Updated tabs and icons
+- `components/login-activity-dialog.tsx` — Race condition fix
+- `components/obstructions/obstruction-map-view.tsx` — runways dep
+- `lib/acsi-pdf.ts` — Per-discrepancy map pins
+- `lib/dashboard-context.tsx` — Advisory persistence fix
+- `lib/email-pdf.ts` — Non-JSON error handling
+
+#### Files Deleted (1)
+- `app/(app)/sync/page.tsx` — Placeholder removed
 
 ---
 

@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, ACSI (annual compliance), NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.16.0 | **Build:** Clean | **58 routes** | **160 source files** | **79 migrations** | **~60,400 lines**
+**Version:** 2.16.1 | **Build:** Clean | **57 routes** | **160 source files** | **79 migrations** | **~61,000 lines**
 
 ## Tech Stack
 
@@ -187,12 +187,6 @@ Admin-only module for managing users across installations. System admins see all
 - **Account lifecycle**: Deactivate/reactivate users, delete accounts (sys_admin only)
 - **Three-tier role hierarchy**: sys_admin > base_admin/AFM/NAMO > regular roles
 
-### Activity Log (`/activity`)
-Full audit trail with date-range filtering (Today, 7 Days, 30 Days, Custom). Columnar table display (Time Z, User, Action, Details) grouped by date headers with per-column search filters. Manual text entry for events not captured by the system. Edit/delete entries via modal dialog with Zulu time editing. Clickable items link to source entity (discrepancy, check, inspection). Excel export with styled formatting.
-
-### Airfield Status (`/`)
-Inline personnel creation with "+ Add" form directly on the Airfield Status page. Construction/Closures and Miscellaneous Info sections with rich text remarks. Weather Info (Watch/Warning/Advisory) with runway-specific remarks.
-
 ### Events Log (`/activity`)
 Full audit trail with date-range filtering (Today, 7 Days, 30 Days, Custom). Columnar table display (Time Z, User, Action, Details) grouped by date headers with per-column search filters. Manual text entry with activity templates. Edit/delete entries via modal dialog with Zulu time editing. Clickable user IDs showing role and masked EDIPI. Clickable items link to source entity. Excel export with styled formatting.
 
@@ -231,7 +225,6 @@ airfield-app/
 │       ├── shift-checklist/page.tsx       # Shift checklist (today + history)
 │       ├── contractors/page.tsx          # Personnel on Airfield
 │       ├── more/page.tsx                 # Module directory
-│       ├── sync/page.tsx                 # Data sync (coming soon)
 │       └── users/page.tsx                # User Management (admin)
 ├── components/
 │   ├── acsi/                              # ACSI form sub-components (6 files)
@@ -342,17 +335,16 @@ airfield-app/
 
 **Build**: TypeScript compiles clean (`npm run build` passes with zero errors)
 
-**Complete modules**: Dashboard (with Supabase Realtime push + installation switcher + presence tracking + KPI badges), Airfield Status (with inline personnel + construction/misc), Discrepancies, Airfield Checks, Daily Inspections, ACSI (annual compliance with PDF/Excel export), NOTAMs (live FAA feed + expiry alerts), Obstruction Evaluations, References (with My Documents), Reports (4 types with KPI badges + Events Log + QRC details), Aircraft Database, Waivers (full lifecycle with annual review, PDF/Excel export), QRC (25 Quick Reaction Checklists with interactive execution + dashboard dialog), Shift Checklist (per-shift tasks + history + dashboard dialog), Settings (with Base Setup, Templates, Shift Checklist config, QRC Templates, and Default PDF Email), User Management (with delete cascade + email privacy), Events Log (manual entries, edit/delete, templates, columnar display), All Inspections hub, Email PDF (all 10 export pages), More hub, Personnel on Airfield
-
-**Placeholder modules**: Sync & Data
+**Complete modules**: Dashboard (Supabase Realtime push + installation switcher + presence tracking + KPI badges), Airfield Status (inline personnel + construction/misc), Discrepancies (COP map + individual PDF export), Airfield Checks (7 types + cross-device drafts), Daily Inspections (multi-discrepancy + per-issue photos), ACSI (annual compliance with PDF/Excel export), NOTAMs (live FAA feed + expiry alerts), Obstruction Evaluations (UFC 3-260-01 + interactive map), References (70 refs + My Documents + offline caching), Reports (4 types + Events Log + QRC details in daily ops PDF), Aircraft Database (200+ aircraft + ACN/PCN), Waivers (full lifecycle with annual review + attachment management + PDF/Excel export), QRC (25 Quick Reaction Checklists + interactive execution + dashboard dialog), Shift Checklist (per-shift tasks + timezone-aware dates + dashboard dialog), Settings (Base Setup + Templates + Shift Checklist config + QRC Templates + Default PDF Email), User Management (invite/edit/delete cascade + email privacy), Events Log (manual entries + edit/delete + activity templates + Excel export), All Inspections hub, Email PDF (all 11 export pages), More hub, Personnel on Airfield
 
 See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 
 ## Reference Documents
 
-- [`docs/Glidepath_SRS_v4.0.md`](./docs/Glidepath_SRS_v4.0.md) — Software Requirements Specification
+- [`docs/Glidepath_SRS_v5.0.md`](./docs/Glidepath_SRS_v5.0.md) — Software Requirements Specification
 - [`docs/BASE-ONBOARDING.md`](./docs/BASE-ONBOARDING.md) — Guide for adding new installations
 - [`docs/GLIDEPATH_CAPABILITIES_BRIEF.md`](./docs/GLIDEPATH_CAPABILITIES_BRIEF.md) — Capabilities brief
+- [`docs/COMPONENT_CAPABILITIES.md`](./docs/COMPONENT_CAPABILITIES.md) — In-depth per-component capability reference
 - [`docs/GLIDEPATH_BETA_TESTER_OVERVIEW.md`](./docs/GLIDEPATH_BETA_TESTER_OVERVIEW.md) — Beta tester overview
 - [`docs/Glidepath_AFWERX_Proposal.md`](./docs/Glidepath_AFWERX_Proposal.md) — AFWERX innovation proposal
 - [`docs/RLS_TEST_CHECKLIST.md`](./docs/RLS_TEST_CHECKLIST.md) — Row-Level Security test results

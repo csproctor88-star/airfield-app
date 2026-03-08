@@ -1,8 +1,8 @@
 # GLIDEPATH — Software Requirements Specification
-## Version 4.0 | March 2026
+## Version 5.0 | March 2026
 
 **Application:** Glidepath
-**Current Release:** v2.14.0
+**Current Release:** v2.16.1
 **Stack:** Next.js 14.2 (App Router) · TypeScript 5.9 · CSS Custom Properties + Tailwind · Supabase · Mapbox GL JS
 **Primary Regulation:** DAFMAN 13-204 (Volumes 1–3) — Airfield Management
 **Target Installation:** 127th Wing, Selfridge ANGB (KMTC), Michigan
@@ -56,29 +56,32 @@ The application covers the full spectrum of Airfield Management duties as define
 | Aircraft Database | 200+ aircraft reference with ACN/PCN pavement analysis | ✅ Complete |
 | Regulations Library | 70 references with in-app PDF viewer, offline caching, personal documents | ✅ Complete |
 | Waiver Management | Full AF Form 505 lifecycle with coordination, annual review, PDF/Excel export | ✅ Complete |
-| NOTAMs | Live FAA feed + local NOTAM drafting | ✅ Complete |
-| Activity Log | Comprehensive audit trail with manual entries, edit/delete, and Excel export | ✅ Complete |
+| NOTAMs | Live FAA feed + local NOTAM drafting + expiry alerts | ✅ Complete |
+| Events Log | Comprehensive audit trail with manual entries, activity templates, edit/delete, Excel export | ✅ Complete |
 | User Management | Admin invite, role assignment, password reset, account lifecycle, email privacy | ✅ Complete |
-| Settings & Config | Per-base runways, NAVAIDs, areas, CE shops, inspection templates, themes | ✅ Complete |
+| QRC | 25 digitized Quick Reaction Checklists with interactive execution, SCN forms, dashboard integration | ✅ Complete |
+| Shift Checklist | Per-shift task tracking with timezone-aware dates, configurable items, dashboard dialog | ✅ Complete |
+| Settings & Config | Per-base runways, NAVAIDs, areas, CE shops, inspection templates, QRC templates, shift checklist, themes | ✅ Complete |
 
 ### By the Numbers
 
 | Metric | Value |
 |--------|-------|
-| Application Routes | 53 |
-| Source Files | 157 |
-| Database Tables | 28+ |
-| Database Migrations | 61 |
+| Application Routes | 57 |
+| Source Files | 160 |
+| Database Tables | 36 |
+| Database Migrations | 79 |
 | Aircraft Records | 200+ |
 | Regulatory References | 70 |
 | Military Installations | 155 |
 | Check Types | 7 |
+| QRC Templates | 25 |
 | Report Types | 4 |
-| PDF Export Types | 8 |
+| PDF Export Types | 11 |
 | Excel Export Types | 4 |
 | User Roles | 9 |
 | TypeScript Errors | 0 |
-| Lines of Code | ~51,700 |
+| Lines of Code | ~61,000 |
 
 ---
 
@@ -129,7 +132,7 @@ This fragmentation creates delayed response times, lost institutional knowledge 
 
 ### 3.2 In Scope (Built)
 
-All 14 modules listed in the Executive Summary are implemented and functional as of v2.14.0.
+All 17 modules listed in the Executive Summary are implemented and functional as of v2.16.1.
 
 ### 3.3 Out of Scope (Future)
 
@@ -244,7 +247,7 @@ RESEND_API_KEY=[resend-api-key]
 
 ## 6. DATABASE SCHEMA
 
-### 6.1 Tables (28+)
+### 6.1 Tables (36)
 
 **Core Configuration:**
 
@@ -292,6 +295,28 @@ RESEND_API_KEY=[resend-api-key]
 | `activity_log` | Audit trail for all mutations (user, action, entity_type, entity_id, details, timestamp) |
 | `navaid_statuses` | G/Y/R status per approach system with notes |
 
+**Shift Checklist (3 tables):**
+
+| Table | Purpose |
+|-------|---------|
+| `shift_checklist_items` | Configurable per-base checklist items (day/swing/mid shift, daily/weekly/monthly frequency) |
+| `shift_checklists` | Daily checklist instances per base (date, status, shift completion tracking) |
+| `shift_checklist_responses` | Per-item responses with completion tracking (completed_by, completed_at, notes) |
+
+**QRC (2 tables):**
+
+| Table | Purpose |
+|-------|---------|
+| `qrc_templates` | Admin-configured QRC definitions per base (JSONB steps, SCN fields, review tracking) |
+| `qrc_executions` | QRC execution instances with JSONB step responses, SCN data, open/close lifecycle |
+
+**Personnel & ARFF:**
+
+| Table | Purpose |
+|-------|---------|
+| `airfield_contractors` | Personnel on airfield tracking (name, company, location, work description, callsign) |
+| `base_arff_aircraft` | ARFF aircraft per base (name, type, status, remarks) |
+
 **Reference & Documents:**
 
 | Table | Purpose |
@@ -331,7 +356,7 @@ Three tables enabled for Supabase Realtime via `supabase_realtime` publication:
 
 The complete database schema is maintained in the repository:
 - `supabase/schema.sql` — Base table definitions and sequences
-- `supabase/migrations/` — 61 migration files applied in order
+- `supabase/migrations/` — 79 migration files applied in order
 - `lib/supabase/types.ts` — Full TypeScript type definitions for all tables
 
 ---
@@ -532,7 +557,38 @@ The Obstruction Evaluation Tool automates UFC 3-260-01 imaginary surface analysi
 | FR-USR-007 | Account lifecycle: deactivate, reactivate, delete (sys_admin only with type-to-confirm) | ✅ |
 | FR-USR-008 | User deletion cascade: nullifies 12 FK columns across 10 tables before deleting profile and auth | ✅ |
 
-### 7.14 Settings & Base Configuration (`/settings`)
+### 7.14 QRC — Quick Reaction Checklists (`/qrc`)
+
+Interactive execution of 25 digitized Quick Reaction Checklists for airfield emergencies and operational events. Replaces paper QRC binders with a tracked, auditable digital system.
+
+| ID | Requirement | Status |
+|----|-------------|--------|
+| FR-QRC-001 | 25 pre-built QRC templates transcribed from source PDFs (IFE, aircraft mishap, ARFF status, bird strike, tornado, bomb threat, etc.) | ✅ |
+| FR-QRC-002 | Three tabs: Available (template grid), Active (open executions), History (closed/all) | ✅ |
+| FR-QRC-003 | 6 step types: checkbox, checkbox_with_note, notify_agencies, fill_field, time_field, conditional | ✅ |
+| FR-QRC-004 | SCN (Secondary Crash Net) form: data entry fields (aircraft type, callsign, tail number, etc.) for applicable QRCs | ✅ |
+| FR-QRC-005 | Per-step checkboxes, agency notification tracking, fill-in fields, time fields with "Now (Z)" auto-fill | ✅ |
+| FR-QRC-006 | Lifecycle: Open → Close (with initials/timestamp) or Cancel (permanent delete with confirmation) | ✅ |
+| FR-QRC-007 | Dashboard KPI badge with active QRC count, quick-launch dialog for starting/resuming without leaving dashboard | ✅ |
+| FR-QRC-008 | Admin-only template management in Base Configuration with selective seeding, annual review tracking | ✅ |
+| FR-QRC-009 | Daily ops report integration: QRC executions section with step counts and SCN data sub-tables | ✅ |
+| FR-QRC-010 | Activity logging for open, close, cancel, and reopen actions | ✅ |
+
+### 7.15 Shift Checklist (`/shift-checklist`)
+
+Per-shift task tracking with configurable items per base. Enables shift turnovers and ensures recurring duties are completed and documented.
+
+| ID | Requirement | Status |
+|----|-------------|--------|
+| FR-SCL-001 | Three shifts: Day, Swing, Mid with per-shift item assignment | ✅ |
+| FR-SCL-002 | Item frequency: daily, weekly, monthly | ✅ |
+| FR-SCL-003 | Timezone-aware date calculation: uses base's configured timezone and reset time (default 06:00) to determine current checklist date | ✅ |
+| FR-SCL-004 | Today tab: progress bar per shift, check-off items with notes, file/reopen workflow | ✅ |
+| FR-SCL-005 | History tab: clickable historical checklists with read-only detail view | ✅ |
+| FR-SCL-006 | Dashboard KPI badge: quick access dialog for marking items complete without leaving dashboard | ✅ |
+| FR-SCL-007 | Base Configuration: add/edit/delete/toggle items per shift, configurable daily reset time | ✅ |
+
+### 7.16 Settings & Base Configuration (`/settings`)
 
 | ID | Requirement | Status |
 |----|-------------|--------|
@@ -540,10 +596,12 @@ The Obstruction Evaluation Tool automates UFC 3-260-01 imaginary surface analysi
 | FR-SET-002 | Installation display with switching (sys_admin can add new bases) | ✅ |
 | FR-SET-003 | Data & Storage: view/clear cached data, estimated storage used | ✅ |
 | FR-SET-004 | Regulations Library: bulk PDF download for offline access | ✅ |
-| FR-SET-005 | Base Configuration: runways, NAVAIDs, areas, CE shops, airfield diagram upload | ✅ |
+| FR-SET-005 | Base Configuration: runways, NAVAIDs, areas, CE shops, ARFF aircraft, airfield diagram upload | ✅ |
 | FR-SET-006 | Inspection Templates: customize airfield/lighting checklist sections and items | ✅ |
 | FR-SET-007 | Appearance: Day/Night/Auto theme toggle | ✅ |
 | FR-SET-008 | About: version, environment, branding | ✅ |
+| FR-SET-009 | Shift Checklist Configuration: add/edit/delete/toggle items per shift, configurable reset time | ✅ |
+| FR-SET-010 | QRC Templates: seed from 25 built-in templates, edit steps, toggle active/inactive, annual review tracking | ✅ |
 
 ---
 
@@ -552,9 +610,9 @@ The Obstruction Evaluation Tool automates UFC 3-260-01 imaginary surface analysi
 | Enhancement | Description | Priority |
 |------------|-------------|----------|
 | METAR Weather Integration | Live aviation weather from aviationweather.gov replacing Open-Meteo | High |
-| Offline Sync Queue | Store mutations while offline; auto-sync when connectivity returns | Medium |
 | Unit & Integration Testing | Automated test suite for all modules | Medium |
-| Regenerate Supabase Types | Eliminate remaining ~35 `as any` casts | Low |
+| Offline Sync Queue | Store mutations while offline; auto-sync when connectivity returns | Medium |
+| Regenerate Supabase Types | Eliminate remaining ~57 `as any` casts | Low |
 
 ---
 
@@ -772,17 +830,20 @@ Implements DAFMAN 13-204v2, Para 5.4.3 annual compliance inspection covering: Ob
 
 ## 14. EXPORT & REPORTING
 
-### PDF Reports (8 Types)
+### PDF Reports (11 Types)
 
 | Report | Content | Embedded Media |
 |--------|---------|----------------|
-| Daily Operations Summary | All activity for date/range | Check location maps, photos |
+| Daily Operations Summary | All activity for date/range with Events Log and QRC details | Check location maps, photos |
 | Open Discrepancies | Current snapshot with breakdowns | Photos, satellite map thumbnails |
 | Discrepancy Trends | Historical opened vs. closed | Trend charts, area/type breakdowns |
 | Aging Discrepancies | Open items by age tier | Severity and shop breakdowns |
 | Individual Inspection | Section-by-section pass/fail | Per-discrepancy location maps and photos |
+| Combined Inspection | Multi-inspection combined PDF | All discrepancy photos and maps |
+| Special Inspection | Construction/Joint Monthly | Personnel attendance, checklist items |
 | Individual Waiver | Full AF-505 format | Criteria tables, coordination stamps, photos |
 | Individual Check | Check detail record | Location map, per-issue photos |
+| Individual Discrepancy | Single discrepancy detail | Photos, location map |
 | ACSI Inspection | Annual compliance report | Parent/sub-field hierarchy, inline discrepancy photos |
 
 All PDFs include branded headers with installation name/ICAO, page numbers, and generation timestamps. Every PDF can be downloaded directly or emailed via Resend with a branded sender (`Glidepath <info@glidepathops.com>`).
@@ -996,6 +1057,9 @@ Platform One (P1) is the DoD's enterprise DevSecOps platform. It provides secure
 | 2.12.0 | 2026-03-02 | Email PDF delivery (Resend), default PDF email, map standardization |
 | 2.13.0 | 2026-03-03 | Multi-discrepancy per item, per-issue photos, Supabase draft persistence, default-to-pass |
 | 2.14.0 | 2026-03-04 | Supabase Realtime dashboard updates, map lifecycle fixes, UI polish |
+| 2.15.0 | 2026-03-06 | Feature requests batch 1 + Shift Checklist module, Events Log overhaul, RSC/RCR enhancements |
+| 2.16.0 | 2026-03-07 | QRC module (25 Quick Reaction Checklists), dashboard QRC dialog, daily ops report integration |
+| 2.16.1 | 2026-03-07 | Comprehensive bug fixes from functional testing (21 files, dashboard/map/PDF/UI fixes) |
 
 ### Development Approach
 
@@ -1004,9 +1068,9 @@ Built iteratively using Claude Code (AI coding agent) with the developer (MSgt C
 ### Development Period
 
 - **Start:** February 8, 2026
-- **Current Release:** v2.14.0 (March 5, 2026)
-- **Duration:** 25 days
-- **Releases:** 25 version releases
+- **Current Release:** v2.16.1 (March 7, 2026)
+- **Duration:** 28 days
+- **Releases:** 28 version releases
 
 ---
 
@@ -1067,9 +1131,10 @@ Built iteratively using Claude Code (AI coding agent) with the developer (MSgt C
 | Artifact | Location | Description |
 |----------|----------|-------------|
 | Database Schema | `supabase/schema.sql` | Complete table definitions |
-| Migrations | `supabase/migrations/` | 61 migration files |
+| Migrations | `supabase/migrations/` | 79 migration files |
 | TypeScript Types | `lib/supabase/types.ts` | Full type definitions for all tables |
-| Capabilities Brief | `docs/GLIDEPATH_CAPABILITIES_BRIEF.md` | Detailed module-by-module capabilities |
+| Capabilities Brief | `docs/GLIDEPATH_CAPABILITIES_BRIEF.md` | Executive capabilities overview |
+| Component Capabilities | `docs/COMPONENT_CAPABILITIES.md` | In-depth per-component technical reference |
 | AFWERX Proposal | `docs/Glidepath_AFWERX_Proposal.md` | Innovation proposal for enterprise deployment |
 | Changelog | `CHANGELOG.md` | Complete version history |
 | README | `README.md` | Technical overview and project structure |
@@ -1077,5 +1142,5 @@ Built iteratively using Claude Code (AI coding agent) with the developer (MSgt C
 
 ---
 
-*Glidepath SRS v4.0 — March 2026*
+*Glidepath SRS v5.0 — March 2026*
 *Built by MSgt Chris Proctor, 127th Wing Airfield Management, Selfridge ANGB (KMTC)*
