@@ -186,8 +186,11 @@ export default function HomePage() {
       .channel(`navaid_statuses:${installationId}`)
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'navaid_statuses', filter: `base_id=eq.${installationId}` },
-        () => { loadNavaids() }
+        { event: 'UPDATE', schema: 'public', table: 'navaid_statuses' },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>
+          if (row.base_id === installationId) loadNavaids()
+        }
       )
       .subscribe()
 
@@ -229,8 +232,27 @@ export default function HomePage() {
       .channel(`airfield_contractors:${installationId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'airfield_contractors', filter: `base_id=eq.${installationId}` },
-        () => { loadContractors() }
+        { event: 'INSERT', schema: 'public', table: 'airfield_contractors' },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>
+          if (row.base_id === installationId) loadContractors()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'airfield_contractors' },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>
+          if (row.base_id === installationId) loadContractors()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'airfield_contractors' },
+        (payload) => {
+          const row = payload.old as Record<string, unknown>
+          if (row.base_id === installationId) loadContractors()
+        }
       )
       .subscribe()
 
