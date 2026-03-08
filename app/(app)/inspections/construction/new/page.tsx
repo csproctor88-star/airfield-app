@@ -7,7 +7,6 @@ import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
 import { INSPECTION_PERSONNEL } from '@/lib/constants'
 import { createInspection, uploadInspectionPhoto, getInspectorName } from '@/lib/supabase/inspections'
-import { logActivity } from '@/lib/supabase/activity'
 import { useInstallation } from '@/lib/installation-context'
 import { fetchCurrentWeather } from '@/lib/weather'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
@@ -114,10 +113,6 @@ export default function ConstructionInspectionPage() {
 
     // Clean up
     photos.forEach((p) => URL.revokeObjectURL(p.url))
-
-    if (data?.id) {
-      logActivity('filed', 'inspection', data.id, data.display_id, { details: 'PRE/POST CONSTRUCTION INSPECTION FILED' }, installationId)
-    }
 
     setFiling(false)
     toast.success('Pre/Post Construction inspection filed')
