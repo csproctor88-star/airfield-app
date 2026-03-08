@@ -177,6 +177,23 @@ export default function HomePage() {
     return () => { supabase.removeChannel(channel) }
   }, [installationId, refreshStatus])
 
+  // Realtime: subscribe to navaid_statuses UPDATE events for cross-device sync
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase || !installationId) return
+
+    const channel = supabase
+      .channel(`navaid_statuses:${installationId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'navaid_statuses', filter: `base_id=eq.${installationId}` },
+        () => { loadNavaids() }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [installationId, loadNavaids])
+
   // --- Load Active Contractors ---
   const loadContractors = useCallback(async () => {
     const supabase = createClient()
