@@ -208,18 +208,13 @@ export async function createInspection(input: {
 
   // Build formatted details matching manual entry template verbiage
   const failedItems = (input.items || []).filter(i => i.response === 'fail')
-  const discNotes = failedItems.flatMap(i => {
-    const notes: string[] = []
-    if (i.notes) notes.push(i.notes)
-    if (i.discrepancies) {
-      for (const d of i.discrepancies) {
-        if (d.comment) notes.push(d.comment)
-      }
-    }
-    return notes
-  }).filter(Boolean)
   const discStr = failedItems.length > 0
-    ? `DISCREPANCIES FOUND: ${failedItems.map(i => i.item).join(', ').toUpperCase()}${discNotes.length > 0 ? ` — ${discNotes.join('; ').toUpperCase()}` : ''}`
+    ? `DISCREPANCIES FOUND: ${failedItems.map(i => {
+        const remarks: string[] = []
+        if (i.notes) remarks.push(i.notes)
+        if (i.discrepancies) { for (const d of i.discrepancies) { if (d.comment) remarks.push(d.comment) } }
+        return remarks.length > 0 ? `${i.item.toUpperCase()} — ${remarks.join('; ').toUpperCase()}` : i.item.toUpperCase()
+      }).join(', ')}`
     : 'NO NEW DISCREPANCIES'
   const inspTypeLabel = input.inspection_type === 'lighting' ? 'LIGHTING' : input.inspection_type === 'construction_meeting' ? 'PRE/POST CONSTRUCTION' : input.inspection_type === 'joint_monthly' ? 'MONTHLY JOINT' : 'AFLD'
   let inspDetails = `${inspTypeLabel} INSPECTION CMPLT; ${discStr}`
@@ -341,7 +336,12 @@ export async function saveInspectionDraft(input: {
       const typeLabel = input.inspection_type === 'lighting' ? 'LIGHTING' : input.inspection_type === 'construction_meeting' ? 'PRE/POST CONSTRUCTION' : input.inspection_type === 'joint_monthly' ? 'MONTHLY JOINT' : 'AFLD'
       const draftFailed = (input.items || []).filter(i => i.response === 'fail')
       const draftDiscStr = draftFailed.length > 0
-        ? `DISCREPANCIES FOUND: ${draftFailed.map(i => i.item).join(', ').toUpperCase()}`
+        ? `DISCREPANCIES FOUND: ${draftFailed.map(i => {
+            const r: string[] = []
+            if (i.notes) r.push(i.notes)
+            if (i.discrepancies) { for (const d of i.discrepancies) { if (d.comment) r.push(d.comment) } }
+            return r.length > 0 ? `${i.item.toUpperCase()} — ${r.join('; ').toUpperCase()}` : i.item.toUpperCase()
+          }).join(', ')}`
         : 'NO NEW DISCREPANCIES'
       let cmpltDetails = `${typeLabel} INSPECTION CMPLT; ${draftDiscStr}`
       if (input.rsc_condition && input.bwc_value) cmpltDetails += `. ADVISES RSC/${input.rsc_condition.toUpperCase()} & BWC/${input.bwc_value.toUpperCase()}`
