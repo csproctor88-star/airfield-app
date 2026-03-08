@@ -1123,7 +1123,8 @@ export default function HomePage() {
                       const { aircraft, selectedStatus, notes } = arffDialog
                       setArffStatusForAircraft(aircraft, selectedStatus)
                       if (installationId) {
-                        const details: Record<string, unknown> = { details: `${selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1)}${notes.trim() ? ` — ${notes.trim()}` : ''}` }
+                        const details: Record<string, unknown> = { status: selectedStatus.toUpperCase() }
+                        if (notes.trim()) details.remarks = notes.trim()
                         logActivity('updated', 'arff_status', installationId, `${aircraft} ${selectedStatus.toUpperCase()}`, details, installationId)
                       }
                       setArffDialog(null)
