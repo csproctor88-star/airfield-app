@@ -17,7 +17,7 @@ import { toast } from 'sonner'
 import type { WaiverClassification, WaiverCriteriaSource, WaiverAttachmentType } from '@/lib/supabase/types'
 
 const WaiverLocationMap = dynamic(
-  () => import('@/components/waivers/location-map'),
+  () => import('@/components/ui/location-picker-map'),
   { ssr: false },
 )
 
@@ -539,6 +539,7 @@ export default function EditWaiverPage() {
                 onPointSelected={handlePointSelected}
                 selectedLat={formData.location_lat}
                 selectedLng={formData.location_lng}
+                markerColor="#F59E0B"
               />
             </div>
 

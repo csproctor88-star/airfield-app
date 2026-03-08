@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 import type { SimpleDiscrepancy } from '@/lib/supabase/types'
 
 const LocationMap = dynamic(
-  () => import('@/components/discrepancies/location-map'),
+  () => import('@/components/ui/location-picker-map'),
   { ssr: false },
 )
 

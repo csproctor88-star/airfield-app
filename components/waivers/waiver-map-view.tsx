@@ -31,7 +31,7 @@ export default function WaiverMapView({ waivers }: Props) {
   const markersRef = useRef<mapboxgl.Marker[]>([])
   const [mapLoaded, setMapLoaded] = useState(false)
   const [activeClassFilter, setActiveClassFilter] = useState<string | null>(null)
-  const { runways } = useInstallation()
+  const { runways, installationId } = useInstallation()
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const mapboxReady = isMapboxConfigured()
@@ -51,7 +51,11 @@ export default function WaiverMapView({ waivers }: Props) {
   // Initialize map
   useEffect(() => {
     if (!mapContainer.current || !mapboxReady || !token) return
-    if (map.current) return
+    if (map.current) {
+      map.current.remove()
+      map.current = null
+      setMapLoaded(false)
+    }
 
     mapboxgl.accessToken = token
 
@@ -86,7 +90,7 @@ export default function WaiverMapView({ waivers }: Props) {
       map.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token])
+  }, [token, installationId])
 
   // Add/update markers when waivers, classification filter, or map changes
   useEffect(() => {

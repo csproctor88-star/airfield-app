@@ -10,7 +10,7 @@ import { toast } from 'sonner'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 
 const DiscrepancyLocationMap = dynamic(
-  () => import('@/components/discrepancies/location-map'),
+  () => import('@/components/ui/location-picker-map'),
   { ssr: false },
 )
 
@@ -265,6 +265,7 @@ export default function NewDiscrepancyPage() {
             onPointSelected={handlePointSelected}
             selectedLat={formData.latitude}
             selectedLng={formData.longitude}
+            aspectRatio="1 / 1"
           />
         </div>
 

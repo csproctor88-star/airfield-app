@@ -33,13 +33,7 @@ import { DEMO_INSPECTIONS } from '@/lib/demo-data'
 import { getAirfieldDiagram } from '@/lib/airfield-diagram'
 import { uploadInspectionPhoto } from '@/lib/supabase/inspections'
 import type { InspectionItem, SimpleDiscrepancy } from '@/lib/supabase/types'
-import dynamic from 'next/dynamic'
 import { SimpleDiscrepancyPanelGroup } from '@/components/ui/simple-discrepancy-panel-group'
-
-const InspectionLocationMap = dynamic(
-  () => import('@/components/discrepancies/location-map'),
-  { ssr: false },
-)
 
 type BwcValue = null | (typeof BWC_OPTIONS)[number]
 type TabType = 'airfield' | 'lighting'

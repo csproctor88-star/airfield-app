@@ -12,14 +12,26 @@ type Props = {
   selectedLng: number | null
   promptText?: string
   flyToPoint?: { lat: number; lng: number } | null
+  markerColor?: string
+  aspectRatio?: string
+  maxHeight?: string
 }
 
-export default function WaiverLocationMap({ onPointSelected, selectedLat, selectedLng, promptText, flyToPoint }: Props) {
+export default function LocationPickerMap({
+  onPointSelected,
+  selectedLat,
+  selectedLng,
+  promptText = 'Tap map to mark location',
+  flyToPoint,
+  markerColor = '#EF4444',
+  aspectRatio = '3 / 4',
+  maxHeight = '70vh',
+}: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const marker = useRef<mapboxgl.Marker | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
-  const { runways } = useInstallation()
+  const { runways, installationId } = useInstallation()
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const mapboxReady = isMapboxConfigured()
@@ -35,7 +47,11 @@ export default function WaiverLocationMap({ onPointSelected, selectedLat, select
   // Initialize map
   useEffect(() => {
     if (!mapContainer.current || !mapboxReady || !token) return
-    if (map.current) return
+    if (map.current) {
+      map.current.remove()
+      map.current = null
+      setMapLoaded(false)
+    }
 
     mapboxgl.accessToken = token
 
@@ -71,7 +87,7 @@ export default function WaiverLocationMap({ onPointSelected, selectedLat, select
       map.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token])
+  }, [token, installationId])
 
   // Update click handler when callback changes
   useEffect(() => {
@@ -99,7 +115,7 @@ export default function WaiverLocationMap({ onPointSelected, selectedLat, select
       el.style.height = '28px'
       el.style.borderRadius = '50%'
       el.style.border = '3px solid #FFFFFF'
-      el.style.background = '#F59E0B'
+      el.style.background = markerColor
       el.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)'
       el.style.cursor = 'pointer'
 
@@ -107,7 +123,7 @@ export default function WaiverLocationMap({ onPointSelected, selectedLat, select
         .setLngLat([selectedLng, selectedLat])
         .addTo(map.current)
     }
-  }, [selectedLat, selectedLng, mapLoaded])
+  }, [selectedLat, selectedLng, mapLoaded, markerColor])
 
   // Fly to point when GPS location is captured
   useEffect(() => {
@@ -144,8 +160,8 @@ export default function WaiverLocationMap({ onPointSelected, selectedLat, select
         ref={mapContainer}
         style={{
           width: '100%',
-          aspectRatio: '3 / 4',
-          maxHeight: '70vh',
+          aspectRatio,
+          maxHeight,
           borderRadius: 10,
           overflow: 'hidden',
           border: '1px solid var(--color-border-mid)',
@@ -167,7 +183,7 @@ export default function WaiverLocationMap({ onPointSelected, selectedLat, select
             whiteSpace: 'nowrap',
           }}
         >
-          {promptText || 'Tap map to mark waiver location'}
+          {promptText}
         </div>
       )}
       {selectedLat != null && selectedLng != null && (
@@ -180,7 +196,7 @@ export default function WaiverLocationMap({ onPointSelected, selectedLat, select
             borderRadius: 6,
             padding: '4px 8px',
             fontSize: 'var(--fs-sm)',
-            color: '#F59E0B',
+            color: markerColor,
             fontWeight: 600,
             fontFamily: 'monospace',
           }}
