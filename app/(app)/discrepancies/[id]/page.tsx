@@ -25,7 +25,7 @@ export default function DiscrepancyDetailPage() {
   const router = useRouter()
   const { installationId, userRole, defaultPdfEmail, currentInstallation } = useInstallation()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const cameraInputRef = useRef<HTMLInputElement>(null)
+
   const [dbPhotos, setDbPhotos] = useState<PhotoRow[]>([])
   const [statusUpdates, setStatusUpdates] = useState<StatusUpdateRow[]>([])
   const [liveData, setLiveData] = useState<DiscrepancyRow | null>(null)
@@ -293,13 +293,11 @@ export default function DiscrepancyDetailPage() {
       )}
 
       <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
-      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 8 }}>
         <ActionButton color="#38BDF8" onClick={() => setActiveModal('edit')}>✏️ Edit</ActionButton>
         <div>
           <PhotoPickerButton
             onUpload={() => fileInputRef.current?.click()}
-            onCapture={() => cameraInputRef.current?.click()}
             disabled={uploading}
             label={uploading ? 'Uploading...' : allPhotos.length > 0 ? `Add Photo (${allPhotos.length})` : undefined}
           />

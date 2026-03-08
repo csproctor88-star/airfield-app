@@ -104,7 +104,7 @@ export default function InspectionsPage() {
   const [itemPhotos, setItemPhotos] = useState<Record<string, { file: File; url: string; name: string }[]>>({})
   const [activePhotoItemId, setActivePhotoItemId] = useState<string | null>(null)
   const itemFileRef = useRef<HTMLInputElement>(null)
-  const itemCameraRef = useRef<HTMLInputElement>(null)
+
 
   // ── Discrepancy photos: Record<itemId, photos[][]> — one array per discrepancy ──
   const [discPhotos, setDiscPhotos] = useState<Record<string, { file: File; url: string; name: string }[][]>>({})
@@ -1561,7 +1561,7 @@ export default function InspectionsPage() {
 
         {/* Hidden file inputs for photo capture */}
         <input ref={itemFileRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleItemPhoto} />
-        <input ref={itemCameraRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleItemPhoto} />
+
 
         {/* ── Lighting Incomplete Confirmation Dialog ── */}
         {showLightingWarning && (

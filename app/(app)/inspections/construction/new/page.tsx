@@ -32,7 +32,7 @@ export default function ConstructionInspectionPage() {
   const [filing, setFiling] = useState(false)
 
   const fileRef = useRef<HTMLInputElement>(null)
-  const cameraRef = useRef<HTMLInputElement>(null)
+
 
   const togglePersonnel = (person: string) => {
     setSelectedPersonnel((prev) =>
@@ -247,7 +247,6 @@ export default function ConstructionInspectionPage() {
 
           <PhotoPickerButton
             onUpload={() => fileRef.current?.click()}
-            onCapture={() => cameraRef.current?.click()}
           />
         </div>
 
@@ -268,7 +267,7 @@ export default function ConstructionInspectionPage() {
 
         {/* Hidden file inputs */}
         <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handlePhotoChange} />
-        <input ref={cameraRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handlePhotoChange} />
+
       </div>
     </div>
   )

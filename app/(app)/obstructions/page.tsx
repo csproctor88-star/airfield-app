@@ -54,7 +54,7 @@ function ObstructionsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const cameraInputRef = useRef<HTMLInputElement>(null)
+
   const { installationId, currentInstallation, runways } = useInstallation()
 
   // Airfield elevation from base config
@@ -654,18 +654,9 @@ function ObstructionsContent() {
           onChange={handlePhoto}
           style={{ display: 'none' }}
         />
-        <input
-          ref={cameraInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handlePhoto}
-          style={{ display: 'none' }}
-        />
         <div style={{ marginBottom: 10 }}>
           <PhotoPickerButton
             onUpload={() => fileInputRef.current?.click()}
-            onCapture={() => cameraInputRef.current?.click()}
           />
           {photos.length > 0 && (
             <div className="photo-grid" style={{ marginTop: 8 }}>

@@ -45,7 +45,7 @@ export function SimpleDiscrepancyPanel({
   draftSaving,
 }: SimpleDiscrepancyPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const cameraInputRef = useRef<HTMLInputElement>(null)
+
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,10 +157,8 @@ export function SimpleDiscrepancyPanel({
 
           {/* Upload Photos */}
           <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
-          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
           <PhotoPickerButton
             onUpload={() => fileInputRef.current?.click()}
-            onCapture={() => cameraInputRef.current?.click()}
             variant="full"
             label={localPhotos.length > 0 ? `Add Photo (${localPhotos.length})` : 'Add Photo'}
           />

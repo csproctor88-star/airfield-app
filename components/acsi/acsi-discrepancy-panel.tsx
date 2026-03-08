@@ -22,7 +22,7 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
   const [photoUrls, setPhotoUrls] = useState<{ url: string; name: string }[]>([])
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const cameraInputRef = useRef<HTMLInputElement>(null)
+
 
   // Load existing photos from DB when draft is loaded on another device
   useEffect(() => {
@@ -227,7 +227,6 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
 
         {/* Hidden file inputs */}
         <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
-        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
 
         {/* Photo thumbnails */}
         {photoUrls.length > 0 && (
@@ -249,7 +248,6 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
 
         <PhotoPickerButton
           onUpload={() => fileInputRef.current?.click()}
-          onCapture={() => cameraInputRef.current?.click()}
           disabled={uploading}
           variant="compact"
           label={uploading ? 'Uploading...' : photoUrls.length > 0 ? `Add Photo (${photoUrls.length})` : 'Add Photo'}

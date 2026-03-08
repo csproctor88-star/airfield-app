@@ -77,7 +77,7 @@ export default function NewWaiverPage() {
   const [attachType, setAttachType] = useState<WaiverAttachmentType>('site_map')
   const [attachCaption, setAttachCaption] = useState('')
   const photoInputRef = useRef<HTMLInputElement>(null)
-  const cameraInputRef = useRef<HTMLInputElement>(null)
+
 
   // Close dropdowns on click outside
   useEffect(() => {
@@ -615,8 +615,6 @@ export default function NewWaiverPage() {
             {/* Hidden file inputs */}
             <input ref={photoInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }}
               onChange={(e) => { handlePhotoSelected(e.target.files); e.target.value = '' }} />
-            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-              onChange={(e) => { handlePhotoSelected(e.target.files); e.target.value = '' }} />
 
             {/* Photo previews */}
             {photos.length > 0 && (
@@ -644,7 +642,6 @@ export default function NewWaiverPage() {
             {/* Upload / Capture button */}
             <PhotoPickerButton
               onUpload={() => photoInputRef.current?.click()}
-              onCapture={() => cameraInputRef.current?.click()}
             />
           </>
         )}

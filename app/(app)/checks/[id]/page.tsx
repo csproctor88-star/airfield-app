@@ -20,7 +20,7 @@ export default function CheckDetailPage() {
   const params = useParams()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const cameraInputRef = useRef<HTMLInputElement>(null)
+
   const [liveData, setLiveData] = useState<CheckRow | null>(null)
   const [comments, setComments] = useState<CheckCommentRow[]>([])
   const [dbPhotos, setDbPhotos] = useState<CheckPhotoRow[]>([])
@@ -540,10 +540,8 @@ export default function CheckDetailPage() {
       {!usingDemo && (
         <div style={{ marginBottom: 8 }}>
           <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
-          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
           <PhotoPickerButton
             onUpload={() => fileInputRef.current?.click()}
-            onCapture={() => cameraInputRef.current?.click()}
             disabled={uploading}
             label={uploading ? 'Uploading...' : undefined}
           />

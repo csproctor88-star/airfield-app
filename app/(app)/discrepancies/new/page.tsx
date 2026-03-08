@@ -18,7 +18,7 @@ export default function NewDiscrepancyPage() {
   const router = useRouter()
   const { installationId, areas: installationAreas } = useInstallation()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const cameraInputRef = useRef<HTMLInputElement>(null)
+
   const [photos, setPhotos] = useState<{ file: File; url: string; name: string }[]>([])
   const [saving, setSaving] = useState(false)
   const [gpsLoading, setGpsLoading] = useState(false)
@@ -302,11 +302,9 @@ export default function NewDiscrepancyPage() {
         )}
 
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
-        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
         <div style={{ marginBottom: 12 }}>
           <PhotoPickerButton
             onUpload={() => fileInputRef.current?.click()}
-            onCapture={() => cameraInputRef.current?.click()}
           />
         </div>
 
