@@ -115,7 +115,7 @@ export async function createCheck(input: {
   }
   const checkLabel = checkTypeMap[input.check_type] || input.check_type.toUpperCase()
   const issuesList = input.comments.map(c => c.comment).filter(Boolean)
-  const discStr = issuesList.length > 0 ? issuesList.join('; ').toUpperCase() : 'NO NEW DISCREPANCIES'
+  const discStr = issuesList.length > 0 ? `DISCREPANCIES FOUND: ${issuesList.join('; ').toUpperCase()}` : 'NO NEW DISCREPANCIES'
   let checkDetails = `${checkLabel} CHECK CMPLT; ${discStr}`
   // Append RSC/BWC if reported
   const bwcVal = (input.data.condition_code as string) || ''

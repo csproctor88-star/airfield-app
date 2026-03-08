@@ -219,7 +219,7 @@ export async function createInspection(input: {
     return notes
   }).filter(Boolean)
   const discStr = failedItems.length > 0
-    ? `${failedItems.map(i => i.item).join(', ').toUpperCase()}${discNotes.length > 0 ? ` — ${discNotes.join('; ').toUpperCase()}` : ''}`
+    ? `DISCREPANCIES FOUND: ${failedItems.map(i => i.item).join(', ').toUpperCase()}${discNotes.length > 0 ? ` — ${discNotes.join('; ').toUpperCase()}` : ''}`
     : 'NO NEW DISCREPANCIES'
   const inspTypeLabel = input.inspection_type === 'lighting' ? 'LIGHTING' : input.inspection_type === 'construction_meeting' ? 'PRE/POST CONSTRUCTION' : input.inspection_type === 'joint_monthly' ? 'MONTHLY JOINT' : 'AFLD'
   let inspDetails = `${inspTypeLabel} INSPECTION CMPLT; ${discStr}`
@@ -341,7 +341,7 @@ export async function saveInspectionDraft(input: {
       const typeLabel = input.inspection_type === 'lighting' ? 'LIGHTING' : input.inspection_type === 'construction_meeting' ? 'PRE/POST CONSTRUCTION' : input.inspection_type === 'joint_monthly' ? 'MONTHLY JOINT' : 'AFLD'
       const draftFailed = (input.items || []).filter(i => i.response === 'fail')
       const draftDiscStr = draftFailed.length > 0
-        ? draftFailed.map(i => i.item).join(', ').toUpperCase()
+        ? `DISCREPANCIES FOUND: ${draftFailed.map(i => i.item).join(', ').toUpperCase()}`
         : 'NO NEW DISCREPANCIES'
       let cmpltDetails = `${typeLabel} INSPECTION CMPLT; ${draftDiscStr}`
       if (input.rsc_condition && input.bwc_value) cmpltDetails += `. ADVISES RSC/${input.rsc_condition.toUpperCase()} & BWC/${input.bwc_value.toUpperCase()}`
