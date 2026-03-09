@@ -81,6 +81,7 @@ type ActivityEntry = {
   user_rank: string | null
   user_role: string | null
   user_edipi: string | null
+  user_operating_initials: string | null
 }
 
 function getEntityLink(entityType: string, entityId: string | null): string | null {
@@ -480,9 +481,9 @@ export default function AMDashboardPage() {
             <thead>
               <tr>
                 <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '2px solid var(--color-border)', width: 52 }}>Time (Z)</th>
-                <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '2px solid var(--color-border)', width: 140 }}>User</th>
                 <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '2px solid var(--color-border)', width: 140 }}>Action</th>
                 <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}>Details</th>
+                <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'left', borderBottom: '2px solid var(--color-border)', width: 50 }}>OI</th>
                 <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'right', borderBottom: '2px solid var(--color-border)', width: 60 }}></th>
               </tr>
             </thead>
@@ -517,19 +518,12 @@ export default function AMDashboardPage() {
                   }
                 }
 
+                const initials = a.user_operating_initials || null
+
                 return (
                   <tr key={a.id}>
                     <td style={{ padding: '6px 8px', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                       {timeStr}
-                    </td>
-                    <td
-                      onClick={(e) => {
-                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                        setUserPopover({ id: a.id, x: rect.left, y: rect.bottom + 4, name: userName, role: a.user_role, edipi: a.user_edipi })
-                      }}
-                      style={{ padding: '6px 8px', fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }}
-                    >
-                      {userName}
                     </td>
                     <td
                       onClick={link ? () => router.push(link) : undefined}
@@ -542,6 +536,16 @@ export default function AMDashboardPage() {
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
                         {detailsText || '\u2014'}
                       </span>
+                    </td>
+                    <td
+                      onClick={(e) => {
+                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                        setUserPopover({ id: a.id, x: rect.left, y: rect.bottom + 4, name: userName, role: a.user_role, edipi: a.user_edipi })
+                      }}
+                      style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', color: 'var(--color-cyan)', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer', textAlign: 'center', letterSpacing: '0.04em' }}
+                      title={userName}
+                    >
+                      {initials || '—'}
                     </td>
                     <td style={{ padding: '6px 8px', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <button
