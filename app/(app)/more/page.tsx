@@ -25,10 +25,10 @@ const amToolsItems: ModuleItem[] = [
   { name: 'Airfield Discrepancies', icon: '⚠️', color: '#FBBF24', href: '/discrepancies' },
   { name: 'Airfield Waivers', icon: '📄', color: '#A78BFA', href: '/waivers' },
   { name: 'Reports & Analytics', icon: '📈', color: '#22D3EE', href: '/reports' },
+  { name: 'Obstruction Database', icon: '🗺️', color: '#F97316', href: '/obstructions/history' },
 ]
 
 const moreItems: ModuleItem[] = [
-  { name: 'Obstruction Database', icon: '🗺️', color: '#F97316', href: '/obstructions/history' },
   { name: 'Settings', icon: '⚙️', color: '#64748B', href: '/settings' },
   { name: 'PDF Library', icon: '📖', color: '#A855F7', href: '/library', adminOnly: true },
   { name: 'User Management', icon: '👥', color: '#64748B', href: '/users', adminOnly: true },
