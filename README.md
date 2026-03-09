@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, ACSI (annual compliance), NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.16.1 | **Build:** Clean | **57 routes** | **160 source files** | **79 migrations** | **~61,000 lines**
+**Version:** 2.17.0 | **Build:** Clean | **48 routes** | **158 source files** | **82 migrations** | **~60,800 lines**
 
 ## Tech Stack
 
@@ -54,7 +54,7 @@ RESEND_API_KEY=[resend-api-key]
 Apply the schema and migrations to a Supabase project:
 
 1. Run `supabase/schema.sql` to create the base tables and sequences
-2. Apply the 79 migrations in order from `supabase/migrations/`
+2. Apply the 82 migrations in order from `supabase/migrations/`
 
 See [docs/BASE-ONBOARDING.md](./docs/BASE-ONBOARDING.md) for adding new installations.
 
@@ -168,7 +168,7 @@ Interactive execution of 25 digitized Quick Reaction Checklists for airfield eme
 
 ### Settings (`/settings`)
 Collapsible dropdown sections — Profile and About default open, all others collapsed.
-- **Profile** — read-only display of user info, rank, role, primary base, configurable default PDF email
+- **Profile** — read-only display of user info, rank, role, primary base, configurable default PDF email, operating initials
 - **Installation** — current base display; switching/adding restricted to sys_admin only
 - **Data & Storage** — view/clear cached data, estimated storage used
 - **Regulations Library** — download all PDFs for offline, manage cache
@@ -188,7 +188,7 @@ Admin-only module for managing users across installations. System admins see all
 - **Three-tier role hierarchy**: sys_admin > base_admin/AFM/NAMO > regular roles
 
 ### Events Log (`/activity`)
-Full audit trail with date-range filtering (Today, 7 Days, 30 Days, Custom). Columnar table display (Time Z, User, Action, Details) grouped by date headers with per-column search filters. Manual text entry with activity templates. Edit/delete entries via modal dialog with Zulu time editing. Clickable user IDs showing role and masked EDIPI. Clickable items link to source entity. Excel export with styled formatting.
+Full audit trail with date-range filtering (Today, 7 Days, 30 Days, Custom). Columnar table display (Time Z, Action, Details, OI) grouped by date headers with per-column search filters. Operating initials column with click-to-reveal popover showing full name, role, and masked EDIPI. Manual text entry with activity templates. Edit/delete entries via modal dialog with Zulu time editing. Clickable items link to source entity. Excel export with styled formatting. All timestamps in Zulu (UTC).
 
 ### More Menu (`/more`)
 Module directory with collapsible dropdown groups (AM Tools, More) matching the sidebar structure. Role-gated visibility (admin-only modules hidden for non-admin users). "All Inspections" hub at top for quick access to all inspection forms.
@@ -256,7 +256,7 @@ airfield-app/
 │   └── supabase/                         # Client, server, types, CRUD modules (18 files)
 ├── supabase/
 │   ├── schema.sql                        # Full database schema
-│   ├── migrations/                       # 79 migration files
+│   ├── migrations/                       # 82 migration files
 │   └── functions/                        # Edge functions (PDF text extraction)
 ├── middleware.ts                          # Auth guard + demo mode bypass
 ├── public/                               # Static assets, PWA manifest, aircraft images
@@ -270,7 +270,7 @@ airfield-app/
 
 | Table | Purpose |
 |-------|---------|
-| `profiles` | User accounts, roles, rank, shop, primary base, presence, default PDF email |
+| `profiles` | User accounts, roles, rank, shop, primary base, presence, default PDF email, operating initials |
 | `bases` | Installation definitions (name, ICAO, location, timezone, checklist reset time) |
 | `base_runways` | Runway geometry per base (ends, heading, class, dimensions) |
 | `base_navaids` | Navigation aids per base |
@@ -329,7 +329,8 @@ airfield-app/
 | No test suite | High | No unit or integration tests |
 | 57 `as any` casts | Medium | Across ~18 files — mostly `Record<string,unknown>` row inserts and jspdf-autotable hooks. Regenerate Supabase types to eliminate |
 | 41 files > 500 lines | Low | Largest: `inspections/page.tsx` (1,913), `base-setup/page.tsx` (1,856), `regulations/page.tsx` (1,638) |
-| No `.env.example` | Low | Should create a template for onboarding |
+| Map init duplication | Low | 5 Mapbox components share similar init logic |
+| PDF boilerplate duplication | Low | 11 PDF generators share similar header/footer patterns |
 
 ## Current Status
 

@@ -12,6 +12,45 @@ All notable changes to Glidepath.
 
 ---
 
+## [2.17.0] — 2026-03-08
+
+### Features
+
+#### Operating Initials & Events Log Overhaul
+- **Operating initials field** — New `operating_initials` column on profiles, editable in Settings (self-service) and User Management (admin). Max 4 chars, auto-uppercase
+- **Events log OI column** — User column replaced with compact Operating Initials column (50px). Click to reveal popover with full name, role, and masked EDIPI
+- **Column reorder** — Events log columns reordered: Time (Z) → Action → Details → OI → Actions
+- **Dashboard events log** — Same OI column changes applied to dashboard activity feed
+- **Migration** — `2026030802_add_operating_initials.sql`
+
+#### QRC Emergency Verbiage (SCN)
+- **SCN ACTIVATED** — Emergency QRCs with `has_scn_form` flag now log "SECONDARY CRASH NET ACTIVATED" instead of generic "QRC INITIATED/COMPLETED"
+- **SCN field details** — When a QRC with fillable SCN fields is completed, field values are appended to the events log details
+- **Cancel deletes entries** — Cancelling a QRC now deletes its activity_log entries (both initiated and completed) instead of creating a new "cancelled" entry
+
+#### Zulu Time Standardization
+- **4 utility functions** — Added `formatZuluTime()`, `formatZuluDate()`, `formatZuluDateTime()`, `formatZuluDateShort()` to `lib/utils.ts`
+- **App-wide conversion** — Replaced ~150 instances of `toLocaleTimeString`, `toLocaleDateString`, `toTimeString`, and manual date formatting across 30+ files with Zulu utility functions
+- **Daily ops exception** — Daily ops report date picker intentionally uses local time so users can select their local day. All exports still display UTC times
+- **Scope** — All pages, all PDF generators (11), all components, login activity dialog, admin modals
+
+### Bug Fixes
+- **Inspection discrepancy comments** — Fixed the INSERT path in `saveInspectionDraft` which never included "DISCREPANCIES FOUND:" prefix or per-item comments in events log details
+- **Dashboard events log mismatch** — Dashboard had its own local `ActivityEntry` type missing `user_operating_initials` and used old column order. Fixed to match main events log
+
+### UI Improvements
+- **Shift checklist dialog** — Widened from 520px to 620px on dashboard
+- **All Inspections page** — Start buttons now fill available width (`flex: 1`), history link right-aligned
+- **Personnel on Airfield** — Added 16px top padding for spacing between page title and top of page
+- **Obstruction Database** — Moved from "More" dropdown to "AM Tools" dropdown on mobile More page
+
+### Stats
+- 47 files changed (+338, -197)
+- 1 new migration
+- 158 source files | 48 routes | 82 migrations | ~60,800 lines
+
+---
+
 ## [2.16.1] — 2026-03-07
 
 ### Bug Fixes — Comprehensive Functional Testing
