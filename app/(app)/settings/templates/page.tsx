@@ -261,7 +261,7 @@ export default function TemplateManagementPage() {
                 fontSize: 'var(--fs-md)',
                 fontWeight: 700,
                 fontFamily: 'inherit',
-                background: isActive ? 'rgba(56,189,248,0.12)' : 'var(--color-surface-2)',
+                background: isActive ? 'rgba(56,189,248,0.12)' : 'var(--color-bg-inset)',
                 color: isActive ? 'var(--color-accent)' : 'var(--color-text-2)',
                 transition: 'all 0.15s',
               }}
@@ -297,7 +297,7 @@ export default function TemplateManagementPage() {
                   justifyContent: 'space-between',
                   padding: '10px 14px',
                   cursor: 'pointer',
-                  background: 'var(--color-surface-2)',
+                  background: 'var(--color-bg-inset)',
                 }}
                 onClick={() => toggleSection(section.id)}
               >
@@ -453,7 +453,7 @@ export default function TemplateManagementPage() {
                             padding: '4px 8px',
                             borderRadius: 4,
                             border: '1px solid var(--color-primary)',
-                            background: 'var(--color-surface-2)',
+                            background: 'var(--color-bg-inset)',
                             color: 'var(--color-text-1)',
                             fontSize: 'var(--fs-md)',
                           }}
@@ -475,7 +475,7 @@ export default function TemplateManagementPage() {
                           padding: '2px 6px',
                           borderRadius: 4,
                           border: '1px solid var(--color-border)',
-                          background: item.item_type === 'bwc' ? 'var(--color-warning)' : item.item_type === 'rsc' ? '#3B82F620' : item.item_type === 'rcr' ? '#8B5CF620' : 'var(--color-surface-2)',
+                          background: item.item_type === 'bwc' ? 'var(--color-warning)' : item.item_type === 'rsc' ? '#3B82F620' : item.item_type === 'rcr' ? '#8B5CF620' : 'var(--color-bg-inset)',
                           color: item.item_type === 'bwc' ? '#000' : item.item_type === 'rsc' ? '#3B82F6' : item.item_type === 'rcr' ? '#8B5CF6' : 'var(--color-text-2)',
                           cursor: 'pointer',
                           flexShrink: 0,
@@ -517,7 +517,7 @@ export default function TemplateManagementPage() {
                           padding: '6px 10px',
                           borderRadius: 6,
                           border: '1px solid var(--color-border)',
-                          background: 'var(--color-surface-2)',
+                          background: 'var(--color-bg-inset)',
                           color: 'var(--color-text-1)',
                           fontSize: 'var(--fs-md)',
                         }}
@@ -543,7 +543,7 @@ export default function TemplateManagementPage() {
                           padding: '6px 12px',
                           borderRadius: 6,
                           border: '1px solid var(--color-border)',
-                          background: 'var(--color-surface-2)',
+                          background: 'var(--color-bg-inset)',
                           color: 'var(--color-text-2)',
                           cursor: 'pointer',
                           fontSize: 'var(--fs-base)',
@@ -594,7 +594,7 @@ export default function TemplateManagementPage() {
                   padding: '6px 10px',
                   borderRadius: 6,
                   border: '1px solid var(--color-border)',
-                  background: 'var(--color-surface-2)',
+                  background: 'var(--color-bg-inset)',
                   color: 'var(--color-text-1)',
                   fontSize: 'var(--fs-md)',
                 }}
@@ -620,7 +620,7 @@ export default function TemplateManagementPage() {
                   padding: '6px 14px',
                   borderRadius: 6,
                   border: '1px solid var(--color-border)',
-                  background: 'var(--color-surface-2)',
+                  background: 'var(--color-bg-inset)',
                   color: 'var(--color-text-2)',
                   cursor: 'pointer',
                   fontSize: 'var(--fs-base)',

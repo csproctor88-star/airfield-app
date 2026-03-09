@@ -80,7 +80,7 @@ export default function BaseSetupPage() {
                 fontSize: 'var(--fs-md)',
                 fontWeight: 700,
                 fontFamily: 'inherit',
-                background: isActive ? 'rgba(56,189,248,0.12)' : 'var(--color-surface-2)',
+                background: isActive ? 'rgba(56,189,248,0.12)' : 'var(--color-bg-inset)',
                 color: isActive ? 'var(--color-accent)' : 'var(--color-text-2)',
                 transition: 'all 0.15s',
               }}
@@ -235,7 +235,7 @@ function RunwayTab({
     padding: '8px 10px',
     borderRadius: 6,
     border: '1px solid var(--color-border)',
-    background: 'var(--color-surface-2)',
+    background: 'var(--color-bg-inset)',
     color: 'var(--color-text-1)',
     fontSize: 'var(--fs-md)',
     fontFamily: 'inherit',
@@ -254,7 +254,7 @@ function RunwayTab({
       {runways.map(rwy => (
         <div key={rwy.id} style={{
           padding: 12,
-          background: 'var(--color-surface-2)',
+          background: 'var(--color-bg-inset)',
           borderRadius: 8,
           marginBottom: 8,
           display: 'flex',
@@ -293,7 +293,7 @@ function RunwayTab({
       {adding ? (
         <div style={{
           padding: 14,
-          background: 'var(--color-surface-2)',
+          background: 'var(--color-bg-inset)',
           borderRadius: 8,
           marginTop: 8,
           display: 'flex',
@@ -400,7 +400,7 @@ function RunwayTab({
               style={{
                 padding: '10px 16px', borderRadius: 8,
                 border: '1px solid var(--color-border)',
-                background: 'var(--color-surface-2)',
+                background: 'var(--color-bg-inset)',
                 color: 'var(--color-text-2)',
                 fontSize: 'var(--fs-md)', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit',
@@ -599,7 +599,7 @@ function NavaidTab({ installationId }: { installationId: string | null }) {
           style={{
             flex: 1, padding: '8px 10px', borderRadius: 6,
             border: '1px solid var(--color-border)',
-            background: 'var(--color-surface-2)',
+            background: 'var(--color-bg-inset)',
             color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
           }}
         />
@@ -708,7 +708,7 @@ function SimpleListTab({
           style={{
             flex: 1, padding: '8px 10px', borderRadius: 6,
             border: '1px solid var(--color-border)',
-            background: 'var(--color-surface-2)',
+            background: 'var(--color-bg-inset)',
             color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
           }}
         />
@@ -799,7 +799,7 @@ function ShopsTab({ shops, installationId }: { shops: string[]; installationId: 
           style={{
             flex: 1, padding: '8px 10px', borderRadius: 6,
             border: '1px solid var(--color-border)',
-            background: 'var(--color-surface-2)',
+            background: 'var(--color-bg-inset)',
             color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
           }}
         />
@@ -1084,7 +1084,7 @@ function DashboardPreview({
                 <span key={a} style={{
                   padding: '4px 10px',
                   borderRadius: 6,
-                  background: 'var(--color-surface-2)',
+                  background: 'var(--color-bg-inset)',
                   border: '1px solid var(--color-border)',
                   fontSize: 'var(--fs-base)',
                   color: 'var(--color-text-1)',
@@ -1300,7 +1300,7 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
                     </div>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                       <button onClick={() => setEditingId(null)} style={{ background: 'none', border: 'none', color: 'var(--color-text-3)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)' }}>Cancel</button>
-                      <button onClick={handleUpdate} disabled={saving || !editLabel.trim()} style={{ background: 'var(--color-cyan)', color: '#000', border: 'none', borderRadius: 6, padding: '6px 14px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit' }}>Save</button>
+                      <button onClick={handleUpdate} disabled={saving || !editLabel.trim()} style={{ background: 'var(--color-cyan)', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit' }}>Save</button>
                     </div>
                   </div>
                 ) : (
@@ -1371,7 +1371,7 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Configure items for day and swing shift checklists.</div>
         </div>
         <button onClick={() => setShowForm(!showForm)} style={{
-          background: 'var(--color-cyan)', color: '#000', border: 'none', borderRadius: 8,
+          background: 'var(--color-cyan)', color: '#fff', border: 'none', borderRadius: 8,
           padding: '8px 16px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
         }}>{showForm ? 'Cancel' : '+ Add Item'}</button>
       </div>
@@ -1500,7 +1500,7 @@ function QrcTemplatesTab({ installationId }: { installationId: string | null }) 
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Configure Quick Reaction Checklists for this base.</div>
         </div>
         <button onClick={openSeedPicker} style={{
-          background: 'var(--color-cyan)', color: '#000', border: 'none', borderRadius: 8,
+          background: 'var(--color-cyan)', color: '#fff', border: 'none', borderRadius: 8,
           padding: '8px 16px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
         }}>+ Add from Defaults</button>
       </div>
@@ -1544,7 +1544,7 @@ function QrcTemplatesTab({ installationId }: { installationId: string | null }) 
             }}>
               <span style={{
                 fontSize: 'var(--fs-xs)', fontWeight: 800,
-                color: '#000', background: t.is_active ? 'var(--color-warning)' : 'var(--color-text-4)',
+                color: '#fff', background: t.is_active ? '#D97706' : 'var(--color-text-4)',
                 padding: '2px 6px', borderRadius: 4, minWidth: 32, textAlign: 'center',
               }}>{t.qrc_number}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -1660,8 +1660,8 @@ function SeedPickerDialog({
                     border: seedSelected.has(q.qrc_number) ? 'none' : '2px solid var(--color-border-mid)',
                     background: seedSelected.has(q.qrc_number) ? 'var(--color-cyan)' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{seedSelected.has(q.qrc_number) && <span style={{ color: '#000', fontSize: 10, fontWeight: 800 }}>&#10003;</span>}</span>
-                  <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#000', background: 'var(--color-warning)', padding: '1px 5px', borderRadius: 4 }}>{q.qrc_number}</span>
+                  }}>{seedSelected.has(q.qrc_number) && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>&#10003;</span>}</span>
+                  <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#fff', background: '#D97706', padding: '1px 5px', borderRadius: 4 }}>{q.qrc_number}</span>
                   <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', flex: 1 }}>{q.title}</span>
                 </button>
               ))}
@@ -1841,7 +1841,7 @@ function EditQrcDialog({
         <div style={{ padding: '12px 20px', borderTop: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', gap: 8 }}>
           <button onClick={handleSave} disabled={saving} style={{
             flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
-            background: 'var(--color-cyan)', color: '#000', fontWeight: 700,
+            background: 'var(--color-cyan)', color: '#fff', fontWeight: 700,
             fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
           }}>{saving ? 'Saving...' : 'Save Changes'}</button>
           <button onClick={onClose} style={{

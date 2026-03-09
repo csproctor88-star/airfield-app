@@ -123,7 +123,7 @@ export default function QrcPage() {
               padding: '8px 16px', borderRadius: 8, fontFamily: 'inherit',
               border: tab === t.key ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
               cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700,
-              background: tab === t.key ? 'rgba(56,189,248,0.12)' : 'var(--color-surface-2)',
+              background: tab === t.key ? 'rgba(56,189,248,0.12)' : 'var(--color-bg-inset)',
               color: tab === t.key ? 'var(--color-accent)' : 'var(--color-text-2)',
             }}
           >
@@ -164,7 +164,7 @@ export default function QrcPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                   <span style={{
                     fontSize: 'var(--fs-sm)', fontWeight: 800,
-                    color: '#000', background: 'var(--color-warning)',
+                    color: '#fff', background: '#D97706',
                     padding: '2px 8px', borderRadius: 6, minWidth: 44, textAlign: 'center',
                   }}>
                     QRC-{tmpl.qrc_number}
@@ -230,7 +230,7 @@ export default function QrcPage() {
                 >
                   <span style={{
                     fontSize: 'var(--fs-sm)', fontWeight: 800,
-                    color: '#000', background: '#EAB308',
+                    color: '#fff', background: '#D97706',
                     padding: '2px 8px', borderRadius: 6,
                   }}>QRC-{ex.qrc_number}</span>
                   <div style={{ flex: 1 }}>
@@ -273,7 +273,7 @@ export default function QrcPage() {
               >
                 <span style={{
                   fontSize: 'var(--fs-sm)', fontWeight: 800,
-                  color: '#000', background: ex.status === 'open' ? '#EAB308' : '#22C55E',
+                  color: '#fff', background: ex.status === 'open' ? '#D97706' : '#16A34A',
                   padding: '2px 8px', borderRadius: 6,
                 }}>QRC-{ex.qrc_number}</span>
                 <div style={{ flex: 1 }}>
@@ -626,7 +626,7 @@ function QrcExecutionView({
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{
               fontSize: 'var(--fs-md)', fontWeight: 800,
-              color: '#000', background: isClosed ? '#22C55E' : '#EAB308',
+              color: '#fff', background: isClosed ? '#16A34A' : '#D97706',
               padding: '3px 10px', borderRadius: 6,
             }}>QRC-{execution.qrc_number}</span>
             <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
@@ -780,7 +780,7 @@ function QrcExecutionView({
                   disabled={reviewing}
                   style={{
                     flex: 1, padding: '8px 0', borderRadius: 8, border: 'none',
-                    background: 'var(--color-cyan)', color: '#000', fontWeight: 700,
+                    background: 'var(--color-cyan)', color: '#fff', fontWeight: 700,
                     fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
                   }}
                 >{reviewing ? 'Saving...' : 'Confirm Review'}</button>
