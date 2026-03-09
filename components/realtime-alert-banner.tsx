@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import type { AirfieldStatus } from '@/lib/supabase/airfield-status'
@@ -8,94 +9,100 @@ import type { AirfieldStatus } from '@/lib/supabase/airfield-status'
 type Alert = {
   id: number
   message: string
+  link: string
 }
 
-function describeChanges(prev: AirfieldStatus | null, row: AirfieldStatus): string[] {
+type Change = {
+  message: string
+  link: string  // where to navigate when clicked
+}
+
+function describeChanges(prev: AirfieldStatus | null, row: AirfieldStatus): Change[] {
   if (!prev) return []
 
-  const parts: string[] = []
+  const parts: Change[] = []
 
-  // Advisory
+  // Advisory → Airfield Status page (/)
   if (row.advisory_type !== prev.advisory_type || row.advisory_text !== prev.advisory_text) {
     if (row.advisory_type && row.advisory_text) {
-      parts.push(`set the Advisory to ${row.advisory_type} — ${row.advisory_text}`)
+      parts.push({ message: `set the Advisory to ${row.advisory_type} — ${row.advisory_text}`, link: '/' })
     } else if (prev.advisory_type) {
-      parts.push('cleared the Advisory')
+      parts.push({ message: 'cleared the Advisory', link: '/' })
     }
   }
 
-  // Runway status changes (multi-runway)
+  // Runway status changes → Airfield Status page
   if (JSON.stringify(row.runway_statuses) !== JSON.stringify(prev.runway_statuses) && row.runway_statuses) {
     const rs = row.runway_statuses as Record<string, { status?: string; active_end?: string }>
     const prevRs = (prev.runway_statuses || {}) as Record<string, { status?: string; active_end?: string }>
     for (const [label, entry] of Object.entries(rs)) {
       const prevEntry = prevRs[label]
       if (prevEntry?.status !== entry.status) {
-        parts.push(`updated RWY ${label} status to ${(entry.status || 'open').toUpperCase()}`)
+        parts.push({ message: `updated RWY ${label} status to ${(entry.status || 'open').toUpperCase()}`, link: '/' })
       }
       if (prevEntry?.active_end !== entry.active_end) {
-        parts.push(`updated the Active RWY to RWY ${entry.active_end}`)
+        parts.push({ message: `updated the Active RWY to RWY ${entry.active_end}`, link: '/' })
       }
     }
   }
 
-  // BWC
+  // BWC → Dashboard
   if (row.bwc_value !== prev.bwc_value) {
     if (row.bwc_value) {
-      parts.push(`updated the BWC to ${row.bwc_value.toUpperCase()}`)
+      parts.push({ message: `updated the BWC to ${row.bwc_value.toUpperCase()}`, link: '/dashboard' })
     } else {
-      parts.push('cleared the BWC')
+      parts.push({ message: 'cleared the BWC', link: '/dashboard' })
     }
   }
 
-  // RSC
+  // RSC → Dashboard
   if (row.rsc_condition !== prev.rsc_condition) {
     if (row.rsc_condition) {
-      parts.push(`updated the RSC to ${row.rsc_condition.toUpperCase()}`)
+      parts.push({ message: `updated the RSC to ${row.rsc_condition.toUpperCase()}`, link: '/dashboard' })
     } else {
-      parts.push('cleared the RSC')
+      parts.push({ message: 'cleared the RSC', link: '/dashboard' })
     }
   }
 
-  // ARFF CAT
+  // ARFF CAT → Airfield Status page
   if (row.arff_cat !== prev.arff_cat) {
     if (row.arff_cat != null) {
-      parts.push(`updated the ARFF CAT to CAT ${row.arff_cat}`)
+      parts.push({ message: `updated the ARFF CAT to CAT ${row.arff_cat}`, link: '/' })
     } else {
-      parts.push('cleared the ARFF CAT')
+      parts.push({ message: 'cleared the ARFF CAT', link: '/' })
     }
   }
 
-  // ARFF aircraft statuses
+  // ARFF aircraft statuses → Airfield Status page
   if (JSON.stringify(row.arff_statuses) !== JSON.stringify(prev.arff_statuses) && row.arff_statuses) {
     const curr = row.arff_statuses as Record<string, string>
     const prevS = (prev.arff_statuses || {}) as Record<string, string>
     for (const [name, status] of Object.entries(curr)) {
       if (prevS[name] !== status) {
-        parts.push(`updated ${name} readiness to ${status.toUpperCase()}`)
+        parts.push({ message: `updated ${name} readiness to ${status.toUpperCase()}`, link: '/' })
       }
     }
   }
 
-  // Construction remarks
+  // Construction remarks → Airfield Status page
   if (row.construction_remarks !== prev.construction_remarks) {
     if (row.construction_remarks) {
-      parts.push('updated the Construction Remarks')
+      parts.push({ message: 'updated the Construction Remarks', link: '/' })
     } else {
-      parts.push('cleared the Construction Remarks')
+      parts.push({ message: 'cleared the Construction Remarks', link: '/' })
     }
   }
 
-  // Misc remarks
+  // Misc remarks → Airfield Status page
   if (row.misc_remarks !== prev.misc_remarks) {
     if (row.misc_remarks) {
-      parts.push('updated the Misc Remarks')
+      parts.push({ message: 'updated the Misc Remarks', link: '/' })
     } else {
-      parts.push('cleared the Misc Remarks')
+      parts.push({ message: 'cleared the Misc Remarks', link: '/' })
     }
   }
 
-  if (parts.length === 0) parts.push('updated the Airfield Status')
+  if (parts.length === 0) parts.push({ message: 'updated the Airfield Status', link: '/' })
   return parts
 }
 
@@ -120,6 +127,7 @@ async function lookupUserName(userId: string): Promise<string> {
 
 export function RealtimeAlertBanner() {
   const { installationId } = useInstallation()
+  const router = useRouter()
   const [alerts, setAlerts] = useState<Alert[]>([])
   const prevStatus = useRef<AirfieldStatus | null>(null)
   const idCounter = useRef(0)
@@ -132,9 +140,9 @@ export function RealtimeAlertBanner() {
     return () => window.removeEventListener('glidepath:local-status-update', handler)
   }, [])
 
-  const showAlert = useCallback((message: string) => {
+  const showAlert = useCallback((message: string, link: string) => {
     const id = ++idCounter.current
-    setAlerts(prev => [...prev, { id, message }])
+    setAlerts(prev => [...prev, { id, message, link }])
     setTimeout(() => {
       setAlerts(prev => prev.filter(a => a.id !== id))
     }, 5000)
@@ -174,7 +182,7 @@ export function RealtimeAlertBanner() {
             : 'Someone'
 
           for (const change of changes) {
-            showAlert(`${userName} ${change}`)
+            showAlert(`${userName} ${change.message}`, change.link)
           }
         }
       )
@@ -202,11 +210,15 @@ export function RealtimeAlertBanner() {
       {alerts.map(alert => (
         <div
           key={alert.id}
+          role="button"
+          tabIndex={0}
+          onClick={() => { router.push(alert.link); setAlerts(prev => prev.filter(a => a.id !== alert.id)) }}
+          onKeyDown={(e) => { if (e.key === 'Enter') { router.push(alert.link); setAlerts(prev => prev.filter(a => a.id !== alert.id)) } }}
           style={{
             background: 'var(--color-cyan)',
             color: '#fff',
             fontSize: 'var(--fs-base)',
-            fontWeight: 700,
+            fontWeight: 500,
             padding: '10px 24px',
             borderRadius: 8,
             boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
@@ -215,6 +227,7 @@ export function RealtimeAlertBanner() {
             width: '100%',
             maxWidth: 900,
             textAlign: 'center',
+            cursor: 'pointer',
           }}
         >
           {alert.message}
