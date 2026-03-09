@@ -1,20 +1,17 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
-import { fetchAirfieldStatus, updateAirfieldStatus, type AirfieldStatus, type RunwayStatuses } from '@/lib/supabase/airfield-status'
+import { fetchAirfieldStatus, updateAirfieldStatus, type AirfieldStatus, type AdvisoryItem, type RunwayStatuses } from '@/lib/supabase/airfield-status'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
-
-type Advisory = {
-  type: 'WATCH' | 'WARNING' | 'ADVISORY'
-  text: string
-}
 
 type ArffReadiness = 'inadequate' | 'critical' | 'reduced' | 'optimum'
 
 type DashboardState = {
-  advisory: Advisory | null
-  setAdvisory: (a: Advisory | null) => void
+  advisories: AdvisoryItem[]
+  addAdvisory: (type: AdvisoryItem['type'], text: string) => Promise<void>
+  updateAdvisory: (id: string, type: AdvisoryItem['type'], text: string) => Promise<void>
+  removeAdvisory: (id: string) => Promise<void>
   // Legacy single-runway accessors (first runway)
   activeRunway: string
   setActiveRunway: (r: string) => void
@@ -49,7 +46,7 @@ const DashboardContext = createContext<DashboardState | null>(null)
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const { installationId, runways } = useInstallation()
-  const [advisory, setAdvisoryLocal] = useState<Advisory | null>(null)
+  const [advisories, setAdvisoriesLocal] = useState<AdvisoryItem[]>([])
   const [activeRunway, setActiveRunwayLocal] = useState('01')
   const [runwayStatus, setRunwayStatusLocal] = useState<'open' | 'suspended' | 'closed'>('open')
   const [runwayStatuses, setRunwayStatusesLocal] = useState<RunwayStatuses>({})
@@ -75,10 +72,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setLoaded(false)
       const status = await fetchAirfieldStatus(installationId)
       if (status) {
-        if (status.advisory_type && status.advisory_text) {
-          setAdvisoryLocal({ type: status.advisory_type, text: status.advisory_text })
+        // Load advisories array, fall back to legacy single advisory
+        if (Array.isArray(status.advisories) && status.advisories.length > 0) {
+          setAdvisoriesLocal(status.advisories)
+        } else if (status.advisory_type && status.advisory_text) {
+          setAdvisoriesLocal([{ id: crypto.randomUUID(), type: status.advisory_type, text: status.advisory_text, created_at: new Date().toISOString() }])
         } else {
-          setAdvisoryLocal(null)
+          setAdvisoriesLocal([])
         }
         setActiveRunwayLocal(status.active_runway)
         setRunwayStatusLocal(status.runway_status)
@@ -129,10 +129,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         { event: 'UPDATE', schema: 'public', table: 'airfield_status', filter: `base_id=eq.${installationId}` },
         (payload) => {
           const row = payload.new as AirfieldStatus
-          if (row.advisory_type && row.advisory_text) {
-            setAdvisoryLocal({ type: row.advisory_type, text: row.advisory_text })
-          } else {
-            setAdvisoryLocal(null)
+          // Advisories realtime
+          if (Array.isArray(row.advisories)) {
+            setAdvisoriesLocal(row.advisories)
           }
           setActiveRunwayLocal(row.active_runway)
           setRunwayStatusLocal(row.runway_status)
@@ -198,15 +197,32 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     await updateAirfieldStatus(legacyUpdates, installationId)
   }, [installationId, runwayLabels])
 
-  // Persist advisory changes
-  const setAdvisory = useCallback(async (a: Advisory | null) => {
-    setAdvisoryLocal(a)
+  // Helper: persist advisories array + sync legacy fields from first item
+  const persistAdvisories = useCallback(async (items: AdvisoryItem[]) => {
+    setAdvisoriesLocal(items)
     markLocalUpdate()
+    const first = items[0] ?? null
     await updateAirfieldStatus({
-      advisory_type: a?.type ?? null,
-      advisory_text: a?.text ?? null,
+      advisories: items,
+      advisory_type: first?.type ?? null,
+      advisory_text: first?.text ?? null,
     }, installationId)
-  }, [installationId])
+  }, [installationId, markLocalUpdate])
+
+  const addAdvisory = useCallback(async (type: AdvisoryItem['type'], text: string) => {
+    const item: AdvisoryItem = { id: crypto.randomUUID(), type, text, created_at: new Date().toISOString() }
+    await persistAdvisories([...advisories, item])
+  }, [advisories, persistAdvisories])
+
+  const updateAdvisoryFn = useCallback(async (id: string, type: AdvisoryItem['type'], text: string) => {
+    const updated = advisories.map(a => a.id === id ? { ...a, type, text } : a)
+    await persistAdvisories(updated)
+  }, [advisories, persistAdvisories])
+
+  const removeAdvisory = useCallback(async (id: string) => {
+    const updated = advisories.filter(a => a.id !== id)
+    await persistAdvisories(updated)
+  }, [advisories, persistAdvisories])
 
   // Legacy: Persist active runway changes (single-runway compat)
   const setActiveRunway = useCallback(async (r: string) => {
@@ -295,10 +311,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     if (Date.now() - lastLocalUpdate.current < 15000) return
     const status = await fetchAirfieldStatus(installationId)
     if (status) {
-      if (status.advisory_type && status.advisory_text) {
-        setAdvisoryLocal({ type: status.advisory_type, text: status.advisory_text })
+      if (Array.isArray(status.advisories) && status.advisories.length > 0) {
+        setAdvisoriesLocal(status.advisories)
+      } else if (status.advisory_type && status.advisory_text) {
+        setAdvisoriesLocal([{ id: crypto.randomUUID(), type: status.advisory_type, text: status.advisory_text, created_at: new Date().toISOString() }])
       } else {
-        setAdvisoryLocal(null)
+        setAdvisoriesLocal([])
       }
       setActiveRunwayLocal(status.active_runway)
       setRunwayStatusLocal(status.runway_status)
@@ -333,7 +351,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   return (
     <DashboardContext.Provider
       value={{
-        advisory, setAdvisory,
+        advisories, addAdvisory, updateAdvisory: updateAdvisoryFn, removeAdvisory,
         activeRunway, setActiveRunway,
         runwayStatus, setRunwayStatus,
         runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway,

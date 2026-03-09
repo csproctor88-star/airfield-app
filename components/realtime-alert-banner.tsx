@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
-import type { AirfieldStatus } from '@/lib/supabase/airfield-status'
+import type { AirfieldStatus, AdvisoryItem } from '@/lib/supabase/airfield-status'
 
 type Alert = {
   id: number
@@ -22,12 +22,24 @@ function describeChanges(prev: AirfieldStatus | null, row: AirfieldStatus): Chan
 
   const parts: Change[] = []
 
-  // Advisory → Airfield Status page (/)
-  if (row.advisory_type !== prev.advisory_type || row.advisory_text !== prev.advisory_text) {
-    if (row.advisory_type && row.advisory_text) {
-      parts.push({ message: `set the Advisory to ${row.advisory_type} — ${row.advisory_text}`, link: '/' })
-    } else if (prev.advisory_type) {
-      parts.push({ message: 'cleared the Advisory', link: '/' })
+  // Advisories array diff
+  const prevAdv = (Array.isArray(prev.advisories) ? prev.advisories : []) as AdvisoryItem[]
+  const newAdv = (Array.isArray(row.advisories) ? row.advisories : []) as AdvisoryItem[]
+  const prevIds = new Set(prevAdv.map(a => a.id))
+  const newIds = new Set(newAdv.map(a => a.id))
+  for (const a of newAdv) {
+    if (!prevIds.has(a.id)) {
+      parts.push({ message: `added a ${a.type} — ${a.text}`, link: '/' })
+    } else {
+      const old = prevAdv.find(p => p.id === a.id)
+      if (old && (old.type !== a.type || old.text !== a.text)) {
+        parts.push({ message: `updated a ${a.type} — ${a.text}`, link: '/' })
+      }
+    }
+  }
+  for (const a of prevAdv) {
+    if (!newIds.has(a.id)) {
+      parts.push({ message: `cleared a ${a.type} — ${a.text}`, link: '/' })
     }
   }
 

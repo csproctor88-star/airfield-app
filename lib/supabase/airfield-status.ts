@@ -8,11 +8,19 @@ export interface RunwayStatusEntry {
 
 export type RunwayStatuses = Record<string, RunwayStatusEntry>
 
+export interface AdvisoryItem {
+  id: string
+  type: 'WATCH' | 'WARNING' | 'ADVISORY'
+  text: string
+  created_at: string
+}
+
 export interface AirfieldStatus {
   id: string
   base_id: string | null
   advisory_type: 'WATCH' | 'WARNING' | 'ADVISORY' | null
   advisory_text: string | null
+  advisories: AdvisoryItem[]
   active_runway: string
   runway_status: 'open' | 'suspended' | 'closed'
   runway_statuses: RunwayStatuses
@@ -74,7 +82,7 @@ export async function fetchAirfieldStatus(baseId?: string | null): Promise<Airfi
 }
 
 export async function updateAirfieldStatus(
-  updates: Partial<Pick<AirfieldStatus, 'advisory_type' | 'advisory_text' | 'active_runway' | 'runway_status' | 'runway_statuses' | 'arff_cat' | 'arff_statuses' | 'rsc_condition' | 'rsc_updated_at' | 'rcr_touchdown' | 'rcr_midpoint' | 'rcr_rollout' | 'rcr_condition' | 'rcr_updated_at' | 'bwc_value' | 'bwc_updated_at' | 'construction_remarks' | 'misc_remarks'>>,
+  updates: Partial<Pick<AirfieldStatus, 'advisory_type' | 'advisory_text' | 'advisories' | 'active_runway' | 'runway_status' | 'runway_statuses' | 'arff_cat' | 'arff_statuses' | 'rsc_condition' | 'rsc_updated_at' | 'rcr_touchdown' | 'rcr_midpoint' | 'rcr_rollout' | 'rcr_condition' | 'rcr_updated_at' | 'bwc_value' | 'bwc_updated_at' | 'construction_remarks' | 'misc_remarks'>>,
   baseId?: string | null,
 ): Promise<boolean> {
   const supabase = createClient()

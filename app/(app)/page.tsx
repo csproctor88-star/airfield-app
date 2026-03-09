@@ -46,11 +46,6 @@ const STATUS_HEX: Record<string, string> = {
 // --- Empty NAVAID default (NAVAIDs are fetched per-base from DB) ---
 const DEFAULT_NAVAIDS: NavaidStatus[] = []
 
-type Advisory = {
-  type: 'WATCH' | 'WARNING' | 'ADVISORY'
-  text: string
-}
-
 const ADVISORY_COLORS: Record<string, { bg: string; border: string; text: string }> = {
   WATCH: { bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.35)', text: 'var(--color-warning)' },
   WARNING: { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)', text: 'var(--color-danger)' },
@@ -59,7 +54,7 @@ const ADVISORY_COLORS: Record<string, { bg: string; border: string; text: string
 
 export default function HomePage() {
   const router = useRouter()
-  const { advisory, setAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, setRscCondition, rcrValue, rcrCondition, bwcValue, setBwcValue, constructionRemarks, setConstructionRemarks, miscRemarks, setMiscRemarks, refreshStatus } = useDashboard()
+  const { advisories, addAdvisory, updateAdvisory, removeAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, setRscCondition, rcrValue, rcrCondition, bwcValue, setBwcValue, constructionRemarks, setConstructionRemarks, miscRemarks, setMiscRemarks, refreshStatus } = useDashboard()
   const { installationId, runways, arffAircraft } = useInstallation()
   const [weather, setWeather] = useState<WeatherResult | null>(null)
   const [weatherLoaded, setWeatherLoaded] = useState(false)
@@ -85,6 +80,7 @@ export default function HomePage() {
   const [bwcDraftValue, setBwcDraftValue] = useState<string | null>(null)
   const [bwcDraftNotes, setBwcDraftNotes] = useState('')
   const [advisoryDialogOpen, setAdvisoryDialogOpen] = useState(false)
+  const [editingAdvisoryId, setEditingAdvisoryId] = useState<string | null>(null)
   const [advisoryDraftType, setAdvisoryDraftType] = useState<'WATCH' | 'WARNING' | 'ADVISORY'>('ADVISORY')
   const [advisoryDraftText, setAdvisoryDraftText] = useState('')
 
@@ -309,15 +305,18 @@ export default function HomePage() {
               </div>
               <div
                 onClick={() => {
-                  setAdvisoryDraftType(advisory?.type || 'ADVISORY')
-                  setAdvisoryDraftText(advisory?.text || '')
+                  setEditingAdvisoryId(null)
+                  setAdvisoryDraftType('ADVISORY')
+                  setAdvisoryDraftText('')
                   setAdvisoryDialogOpen(true)
                 }}
                 style={{ textAlign: 'right', cursor: 'pointer', minWidth: 60 }}
               >
                 <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Weather Info</div>
-                {advisory ? (
-                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: ADVISORY_COLORS[advisory.type].text }}>{advisory.type}</div>
+                {advisories.length > 0 ? (
+                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: ADVISORY_COLORS[advisories.some(a => a.type === 'WARNING') ? 'WARNING' : advisories.some(a => a.type === 'WATCH') ? 'WATCH' : 'ADVISORY'].text }}>
+                    {advisories.length} Active
+                  </div>
                 ) : (
                   <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-3)' }}>None</div>
                 )}
@@ -334,15 +333,18 @@ export default function HomePage() {
               </div>
               <div
                 onClick={() => {
-                  setAdvisoryDraftType(advisory?.type || 'ADVISORY')
-                  setAdvisoryDraftText(advisory?.text || '')
+                  setEditingAdvisoryId(null)
+                  setAdvisoryDraftType('ADVISORY')
+                  setAdvisoryDraftText('')
                   setAdvisoryDialogOpen(true)
                 }}
                 style={{ textAlign: 'right', cursor: 'pointer', minWidth: 60 }}
               >
                 <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Weather Info</div>
-                {advisory ? (
-                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: ADVISORY_COLORS[advisory.type].text }}>{advisory.type}</div>
+                {advisories.length > 0 ? (
+                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: ADVISORY_COLORS[advisories.some(a => a.type === 'WARNING') ? 'WARNING' : advisories.some(a => a.type === 'WATCH') ? 'WATCH' : 'ADVISORY'].text }}>
+                    {advisories.length} Active
+                  </div>
                 ) : (
                   <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-3)' }}>None</div>
                 )}
@@ -354,25 +356,53 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Advisory banner */}
-      {advisory && (
+      {/* Advisory banners — stacked, each clickable to edit */}
+      {advisories.map((adv) => (
         <div
-          onClick={() => setAdvisoryDialogOpen(true)}
+          key={adv.id}
+          onClick={() => {
+            setEditingAdvisoryId(adv.id)
+            setAdvisoryDraftType(adv.type)
+            setAdvisoryDraftText(adv.text)
+            setAdvisoryDialogOpen(true)
+          }}
           style={{
             padding: 'var(--advisory-padding)',
-            marginBottom: 12,
+            marginBottom: 8,
             borderRadius: 10,
-            background: ADVISORY_COLORS[advisory.type].bg,
-            border: `1px solid ${ADVISORY_COLORS[advisory.type].border}`,
+            background: ADVISORY_COLORS[adv.type].bg,
+            border: `1px solid ${ADVISORY_COLORS[adv.type].border}`,
             cursor: 'pointer',
           }}
         >
-          <div style={{ fontSize: 'var(--fs-base)', fontWeight: 800, color: ADVISORY_COLORS[advisory.type].text, marginBottom: 2 }}>{advisory.type}</div>
-          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: 1.4 }}>{advisory.text}</div>
+          <div style={{ fontSize: 'var(--fs-base)', fontWeight: 800, color: ADVISORY_COLORS[adv.type].text, marginBottom: 2 }}>{adv.type}</div>
+          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: 1.4 }}>{adv.text}</div>
         </div>
-      )}
+      ))}
+      {/* + Add Weather Info button */}
+      <div
+        onClick={() => {
+          setEditingAdvisoryId(null)
+          setAdvisoryDraftType('ADVISORY')
+          setAdvisoryDraftText('')
+          setAdvisoryDialogOpen(true)
+        }}
+        style={{
+          padding: '8px 14px',
+          marginBottom: 12,
+          borderRadius: 8,
+          border: '1px dashed var(--color-border-mid)',
+          color: 'var(--color-text-3)',
+          fontSize: 'var(--fs-sm)',
+          fontWeight: 600,
+          cursor: 'pointer',
+          textAlign: 'center',
+        }}
+      >
+        + Add Weather Info
+      </div>
 
-      {/* Advisory dialog */}
+      {/* Advisory dialog (add or edit) */}
       {advisoryDialogOpen && (
         <div
           onClick={() => setAdvisoryDialogOpen(false)}
@@ -388,7 +418,9 @@ export default function HomePage() {
               border: '1px solid var(--color-border-mid)',
             }}
           >
-            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>Set Weather Info</div>
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>
+              {editingAdvisoryId ? 'Edit Weather Info' : 'Add Weather Info'}
+            </div>
             <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
               {(['WATCH', 'WARNING', 'ADVISORY'] as const).map((t) => (
                 <button
@@ -419,18 +451,18 @@ export default function HomePage() {
               }}
             />
             <div style={{ display: 'flex', gap: 8 }}>
-              {advisory && (
+              {editingAdvisoryId && (
                 <button
-                  onClick={() => {
+                  onClick={async () => {
+                    const existing = advisories.find(a => a.id === editingAdvisoryId)
                     logRunwayStatusChange({
-                      oldAdvisoryType: advisory?.type ?? null,
-                      oldAdvisoryText: advisory?.text ?? null,
+                      oldAdvisoryType: existing?.type ?? null,
+                      oldAdvisoryText: existing?.text ?? null,
                       newAdvisoryType: null,
                       newAdvisoryText: null,
                     }, installationId)
-                    if (installationId) logActivity('updated', 'airfield_status', installationId, 'Weather Info Cleared', { details: `WX ${(advisory?.type ?? 'INFO').toUpperCase()} CANCELLED` }, installationId)
-                    setAdvisory(null)
-                    setAdvisoryDraftText('')
+                    if (installationId) logActivity('updated', 'airfield_status', installationId, 'Weather Info Cleared', { details: `WX ${(existing?.type ?? 'INFO').toUpperCase()} CANCELLED` }, installationId)
+                    await removeAdvisory(editingAdvisoryId)
                     setAdvisoryDialogOpen(false)
                   }}
                   style={{
@@ -441,16 +473,26 @@ export default function HomePage() {
                 >Clear</button>
               )}
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (advisoryDraftText.trim()) {
-                    logRunwayStatusChange({
-                      oldAdvisoryType: advisory?.type ?? null,
-                      oldAdvisoryText: advisory?.text ?? null,
-                      newAdvisoryType: advisoryDraftType,
-                      newAdvisoryText: advisoryDraftText.trim(),
-                    }, installationId)
-                    if (installationId) logActivity('updated', 'airfield_status', installationId, `Weather ${advisoryDraftType}`, { details: `WX ${advisoryDraftType.toUpperCase()}, ${advisoryDraftText.trim().toUpperCase()}` }, installationId)
-                    setAdvisory({ type: advisoryDraftType, text: advisoryDraftText.trim() })
+                    if (editingAdvisoryId) {
+                      const existing = advisories.find(a => a.id === editingAdvisoryId)
+                      logRunwayStatusChange({
+                        oldAdvisoryType: existing?.type ?? null,
+                        oldAdvisoryText: existing?.text ?? null,
+                        newAdvisoryType: advisoryDraftType,
+                        newAdvisoryText: advisoryDraftText.trim(),
+                      }, installationId)
+                      if (installationId) logActivity('updated', 'airfield_status', installationId, `Weather ${advisoryDraftType}`, { details: `WX ${advisoryDraftType.toUpperCase()}, ${advisoryDraftText.trim().toUpperCase()}` }, installationId)
+                      await updateAdvisory(editingAdvisoryId, advisoryDraftType, advisoryDraftText.trim())
+                    } else {
+                      logRunwayStatusChange({
+                        newAdvisoryType: advisoryDraftType,
+                        newAdvisoryText: advisoryDraftText.trim(),
+                      }, installationId)
+                      if (installationId) logActivity('updated', 'airfield_status', installationId, `Weather ${advisoryDraftType}`, { details: `WX ${advisoryDraftType.toUpperCase()}, ${advisoryDraftText.trim().toUpperCase()}` }, installationId)
+                      await addAdvisory(advisoryDraftType, advisoryDraftText.trim())
+                    }
                   }
                   setAdvisoryDialogOpen(false)
                 }}
