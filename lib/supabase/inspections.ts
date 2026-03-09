@@ -413,7 +413,12 @@ export async function saveInspectionDraft(input: {
     const newTypeLabel = input.inspection_type === 'lighting' ? 'LIGHTING' : input.inspection_type === 'construction_meeting' ? 'PRE/POST CONSTRUCTION' : input.inspection_type === 'joint_monthly' ? 'MONTHLY JOINT' : 'AFLD'
     const newDraftFailed = (input.items || []).filter(i => i.response === 'fail')
     const newDraftDiscStr = newDraftFailed.length > 0
-      ? newDraftFailed.map(i => i.item).join(', ').toUpperCase()
+      ? `DISCREPANCIES FOUND: ${newDraftFailed.map(i => {
+          const r: string[] = []
+          if (i.discrepancies) { for (const d of i.discrepancies) { if (d.comment) r.push(d.comment) } }
+          if (r.length === 0 && i.notes) r.push(i.notes)
+          return r.length > 0 ? `${i.item.toUpperCase()} — ${r.join('; ').toUpperCase()}` : i.item.toUpperCase()
+        }).join(', ')}`
       : 'NO NEW DISCREPANCIES'
     let newCmpltDetails = `${newTypeLabel} INSPECTION CMPLT; ${newDraftDiscStr}`
     if (input.rsc_condition && input.bwc_value) newCmpltDetails += `. ADVISES RSC/${input.rsc_condition.toUpperCase()} & BWC/${input.bwc_value.toUpperCase()}`
