@@ -699,17 +699,17 @@ html, body {
 /* ── Desktop (1024px+) ── */
 @media (min-width: 1024px) {
   :root, [data-theme="dark"], [data-theme="light"] {
-    --fs-2xs: 12px;
-    --fs-xs: 13px;
-    --fs-sm: 14px;
-    --fs-base: 14px;
-    --fs-md: 15px;
-    --fs-lg: 16px;
-    --fs-xl: 18px;
-    --fs-2xl: 20px;
-    --fs-3xl: 24px;
-    --fs-4xl: 28px;
-    --fs-5xl: 34px;
+    --fs-2xs: 10px;
+    --fs-xs: 11px;
+    --fs-sm: 12px;
+    --fs-base: 13px;
+    --fs-md: 14px;
+    --fs-lg: 15px;
+    --fs-xl: 16px;
+    --fs-2xl: 18px;
+    --fs-3xl: 21px;
+    --fs-4xl: 24px;
+    --fs-5xl: 28px;
 
     --map-height: 40vh;
     --map-height-expanded: 55vh;
@@ -730,8 +730,8 @@ html, body {
 
     --rwy-card-padding: 18px 24px;
     --rwy-card-gap: 10px;
-    --rwy-btn-padding: 14px 48px;
-    --rwy-btn-font: 36px;
+    --rwy-btn-padding: 12px 36px;
+    --rwy-btn-font: 28px;
     --rwy-select-padding: 6px 18px;
   }
 
@@ -741,38 +741,38 @@ html, body {
 
   /* ── Element scaling ── */
   .card {
-    padding: 22px;
-    border-radius: 14px;
+    padding: 18px;
+    border-radius: 12px;
   }
   .section-label {
-    font-size: 12px;
-    margin-bottom: 12px;
+    font-size: 11px;
+    margin-bottom: 10px;
   }
   .input-dark {
-    padding: 12px 16px;
-    font-size: 15px;
-    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    border-radius: 8px;
   }
   .btn-primary {
-    padding: 16px;
-    font-size: 16px;
-    border-radius: 12px;
+    padding: 12px;
+    font-size: 14px;
+    border-radius: 10px;
   }
   .action-button {
-    font-size: 14px;
-    padding: 14px;
-    border-radius: 12px;
-    min-height: 52px;
+    font-size: 13px;
+    padding: 12px;
+    border-radius: 10px;
+    min-height: 44px;
   }
   .badge-pill {
-    font-size: 12px;
-    padding: 4px 10px;
+    font-size: 11px;
+    padding: 3px 8px;
     border-radius: 6px;
   }
 
   .page-container {
-    padding: 32px 40px;
-    padding-bottom: 40px;
+    padding: 24px 32px;
+    padding-bottom: 32px;
   }
 
   .kpi-grid-2 {
@@ -784,13 +784,13 @@ html, body {
     gap: 12px;
   }
 
-  .kpi-badge { padding: 16px 14px; border-radius: 12px; }
-  .kpi-badge-lg { padding: 20px 20px; border-radius: 14px; }
-  .kpi-value { font-size: 2.25rem; }
-  .kpi-value-lg { font-size: 3rem; }
-  .kpi-value-sm { font-size: 1.75rem; }
-  .kpi-label { font-size: 0.8rem; }
-  .kpi-label-lg { font-size: 0.9rem; }
+  .kpi-badge { padding: 14px 12px; border-radius: 10px; }
+  .kpi-badge-lg { padding: 16px 16px; border-radius: 12px; }
+  .kpi-value { font-size: 1.75rem; }
+  .kpi-value-lg { font-size: 2.25rem; }
+  .kpi-value-sm { font-size: 1.4rem; }
+  .kpi-label { font-size: 0.7rem; }
+  .kpi-label-lg { font-size: 0.8rem; }
 
   .card-list { gap: 14px; }
   .actions-row { gap: 12px; }
@@ -851,4 +851,12 @@ html, body {
   background: #F1F5F9;
   color: #475569;
   border: 1px solid #E2E8F0;
+}
+
+/* ── Realtime alert banner animation ── */
+@keyframes alertSlide {
+  0% { opacity: 0; transform: translateY(-10px); }
+  8% { opacity: 1; transform: translateY(0); }
+  80% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-10px); }
 }

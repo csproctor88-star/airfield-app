@@ -178,9 +178,15 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     })
   }, [loaded, runways])
 
+  // Signal to the alert banner that this is a local update (skip showing alert)
+  const markLocalUpdate = useCallback(() => {
+    lastLocalUpdate.current = Date.now()
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('glidepath:local-status-update'))
+  }, [])
+
   // Helper: persist runway_statuses and sync legacy fields from first runway
   const persistRunwayStatuses = useCallback(async (updated: RunwayStatuses) => {
-    lastLocalUpdate.current = Date.now()
+    markLocalUpdate()
     // Sync legacy fields from first runway label
     const firstLabel = runwayLabels[0]
     const firstEntry = firstLabel ? updated[firstLabel] : undefined
@@ -195,7 +201,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   // Persist advisory changes
   const setAdvisory = useCallback(async (a: Advisory | null) => {
     setAdvisoryLocal(a)
-    lastLocalUpdate.current = Date.now()
+    markLocalUpdate()
     await updateAirfieldStatus({
       advisory_type: a?.type ?? null,
       advisory_text: a?.text ?? null,
@@ -205,14 +211,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   // Legacy: Persist active runway changes (single-runway compat)
   const setActiveRunway = useCallback(async (r: string) => {
     setActiveRunwayLocal(r)
-    lastLocalUpdate.current = Date.now()
+    markLocalUpdate()
     await updateAirfieldStatus({ active_runway: r }, installationId)
   }, [installationId])
 
   // Legacy: Persist runway status changes (single-runway compat)
   const setRunwayStatus = useCallback(async (s: 'open' | 'suspended' | 'closed') => {
     setRunwayStatusLocal(s)
-    lastLocalUpdate.current = Date.now()
+    markLocalUpdate()
     await updateAirfieldStatus({ runway_status: s }, installationId)
   }, [installationId])
 
@@ -238,7 +244,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   // ARFF: set ARFF CAT
   const setArffCat = useCallback(async (cat: number | null) => {
     setArffCatLocal(cat)
-    lastLocalUpdate.current = Date.now()
+    markLocalUpdate()
     await updateAirfieldStatus({ arff_cat: cat }, installationId)
   }, [installationId])
 
@@ -246,7 +252,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const setArffStatusForAircraft = useCallback(async (name: string, status: ArffReadiness) => {
     const updated = { ...arffStatuses, [name]: status }
     setArffStatusesLocal(updated)
-    lastLocalUpdate.current = Date.now()
+    markLocalUpdate()
     await updateAirfieldStatus({ arff_statuses: updated }, installationId)
   }, [arffStatuses, installationId])
 
@@ -255,7 +261,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     const now = new Date().toISOString()
     setRscConditionLocal(val)
     setRscUpdatedAtLocal(now)
-    lastLocalUpdate.current = Date.now()
+    markLocalUpdate()
     await updateAirfieldStatus({ rsc_condition: val, rsc_updated_at: now }, installationId)
   }, [installationId])
 
@@ -264,21 +270,21 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     const now = new Date().toISOString()
     setBwcValueLocal(val)
     setBwcUpdatedAtLocal(now)
-    lastLocalUpdate.current = Date.now()
+    markLocalUpdate()
     await updateAirfieldStatus({ bwc_value: val, bwc_updated_at: now }, installationId)
   }, [installationId])
 
   // Construction remarks
   const setConstructionRemarks = useCallback(async (val: string | null) => {
     setConstructionRemarksLocal(val)
-    lastLocalUpdate.current = Date.now()
+    markLocalUpdate()
     await updateAirfieldStatus({ construction_remarks: val }, installationId)
   }, [installationId])
 
   // Misc remarks
   const setMiscRemarks = useCallback(async (val: string | null) => {
     setMiscRemarksLocal(val)
-    lastLocalUpdate.current = Date.now()
+    markLocalUpdate()
     await updateAirfieldStatus({ misc_remarks: val }, installationId)
   }, [installationId])
 
