@@ -182,7 +182,7 @@ export default function ContractorsPage() {
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 16px 40px' }}>
+    <div style={{ maxWidth: 900, margin: '0 auto', padding: '16px 16px 40px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

@@ -140,13 +140,14 @@ export default function AllInspectionsPage() {
 
             {/* Actions row */}
             <div style={{
-              display: 'flex', gap: 8, padding: '10px 16px', justifyContent: 'center',
+              display: 'flex', gap: 8, padding: '10px 16px', alignItems: 'center',
             }}>
               {type.onClick ? (
                 <button
                   onClick={type.onClick}
                   disabled={!loaded}
                   style={{
+                    flex: 1,
                     padding: '10px 20px',
                     borderRadius: 8,
                     textAlign: 'center',
@@ -166,6 +167,7 @@ export default function AllInspectionsPage() {
                 <Link
                   href={type.href!}
                   style={{
+                    flex: 1,
                     padding: '10px 20px',
                     borderRadius: 8,
                     textAlign: 'center',
@@ -192,6 +194,7 @@ export default function AllInspectionsPage() {
                   fontSize: 'var(--fs-sm)',
                   fontWeight: 600,
                   textDecoration: 'none',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 History
