@@ -47,8 +47,11 @@ TRUNCATE acsi_inspections CASCADE;
 -- Obstruction evaluations
 TRUNCATE obstruction_evaluations CASCADE;
 
--- QRC executions
+-- QRC executions (must clear before templates due to FK)
 TRUNCATE qrc_executions;
+
+-- QRC templates (will be re-seeded from qrc-seed-data.ts)
+TRUNCATE qrc_templates;
 
 -- Shift checklists (daily instances)
 TRUNCATE shift_checklists CASCADE;
@@ -106,3 +109,4 @@ COMMIT;
 -- SELECT display_id FROM discrepancies;  -- should show only 202603070
 -- SELECT count(*) AS photos_count FROM photos;  -- should be only disc photos
 -- SELECT advisory_type, rsc_condition, bwc_value FROM airfield_status;
+-- SELECT count(*) AS qrc_templates_count FROM qrc_templates;  -- should be 0
