@@ -396,9 +396,10 @@ export default function ContractorsPage() {
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                       <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        {/* Header: Callsign (or company name fallback) + status badge */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                           <span style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
-                            {c.company_name}
+                            {c.callsign || c.company_name}
                           </span>
                           <span style={{
                             fontSize: 'var(--fs-2xs)',
@@ -416,24 +417,43 @@ export default function ContractorsPage() {
                             </span>
                           )}
                         </div>
-                        {c.contact_name && (
-                          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginBottom: 2 }}>
-                            Contact: {c.contact_name}
+                        {/* Labeled fields */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
+                            <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Company: </span>
+                            {c.company_name}
                           </div>
-                        )}
-                        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-                          <strong>Location:</strong> {c.location}
-                        </div>
-                        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-                          <strong>Work:</strong> {c.work_description}
-                        </div>
-                        {(c.radio_number || c.callsign || c.flag_number) && (
-                          <div style={{ display: 'flex', gap: 16, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginTop: 2, flexWrap: 'wrap' }}>
-                            {c.radio_number && <span><strong>Radio:</strong> {c.radio_number}</span>}
-                            {c.callsign && <span><strong>Callsign:</strong> {c.callsign}</span>}
-                            {c.flag_number && <span><strong>Flag:</strong> {c.flag_number}</span>}
+                          {c.contact_name && (
+                            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
+                              <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Contact: </span>
+                              {c.contact_name}
+                            </div>
+                          )}
+                          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
+                            <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Location: </span>
+                            {c.location}
                           </div>
-                        )}
+                          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
+                            <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Work: </span>
+                            {c.work_description}
+                          </div>
+                          {(c.radio_number || c.flag_number) && (
+                            <div style={{ display: 'flex', gap: 16, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', flexWrap: 'wrap' }}>
+                              {c.radio_number && (
+                                <span>
+                                  <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Radio: </span>
+                                  {c.radio_number}
+                                </span>
+                              )}
+                              {c.flag_number && (
+                                <span>
+                                  <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Flag: </span>
+                                  {c.flag_number}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                         <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
                           Started: {formatZuluDate(new Date(c.start_date))}
                           {c.end_date && (
