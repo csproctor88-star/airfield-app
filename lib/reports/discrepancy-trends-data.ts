@@ -52,11 +52,11 @@ function buildBuckets(startDate: Date, endDate: Date, type: 'week' | 'month'): T
       bucketEnd = new Date(cursor)
       bucketEnd.setDate(bucketEnd.getDate() + 6)
       if (bucketEnd > endDate) bucketEnd = new Date(endDate)
-      label = cursor.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      label = cursor.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' })
     } else {
       bucketEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 23, 59, 59, 999)
       if (bucketEnd > endDate) bucketEnd = new Date(endDate)
-      label = cursor.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+      label = cursor.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', year: 'numeric' })
     }
 
     buckets.push({

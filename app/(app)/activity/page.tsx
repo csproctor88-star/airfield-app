@@ -8,6 +8,7 @@ import { fetchActivityLog, fetchEntityDetails, type ActivityEntry, type EntityDe
 import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/supabase/activity'
 import { createClient } from '@/lib/supabase/client'
 import { TemplatePicker } from '@/components/ui/template-picker'
+import { formatZuluDate } from '@/lib/utils'
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'custom'
 
@@ -236,7 +237,7 @@ export default function ActivityPage() {
   for (const entry of filtered) {
     const d = new Date(entry.created_at)
     const dateKey = d.toISOString().split('T')[0]
-    const dateLabel = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+    const dateLabel = formatZuluDate(d)
     const existing = grouped.find((g) => g.date === dateKey)
     if (existing) {
       existing.items.push(entry)
@@ -331,7 +332,7 @@ export default function ActivityPage() {
         const d = new Date(a.created_at)
         const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
         return {
-          date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          date: formatZuluDate(d),
           time: d.toISOString().slice(11, 16),
           action: formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined),
           details: buildDetailsString(a, detailsMap),

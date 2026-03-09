@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
+import { formatZuluDateShort } from '@/lib/utils'
 
 type ActivityEntry = {
   id: string
@@ -165,7 +166,7 @@ export default function LoginActivityDialog() {
   const grouped: { date: string; items: ActivityEntry[] }[] = []
   entries.forEach((e) => {
     const d = new Date(e.created_at)
-    const dateKey = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    const dateKey = formatZuluDateShort(d)
     const last = grouped[grouped.length - 1]
     if (last && last.date === dateKey) {
       last.items.push(e)

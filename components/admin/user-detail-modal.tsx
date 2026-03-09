@@ -5,7 +5,7 @@ import { X, RotateCcw, UserX, UserCheck, Trash2, Send, ChevronDown, Eye, EyeOff 
 import { RANK_OPTIONS, USER_ROLES } from '@/lib/constants'
 import { RoleBadge } from './role-badge'
 import { UserStatusBadge } from './status-badge'
-import { formatRelativeTime } from '@/lib/utils'
+import { formatRelativeTime, formatZuluDate } from '@/lib/utils'
 import type { UserCardData } from './user-card'
 import type { Installation, UserRole } from '@/lib/supabase/types'
 
@@ -420,7 +420,7 @@ export function UserDetailModal({
             <div>
               <span className="section-label">Date Joined</span>
               <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>
-                {new Date(user.created_at).toLocaleDateString()}
+                {formatZuluDate(user.created_at)}
               </div>
             </div>
             <div>

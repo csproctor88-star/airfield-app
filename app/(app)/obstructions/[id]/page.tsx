@@ -8,6 +8,7 @@ import { PhotoViewerModal } from '@/components/discrepancies/modals'
 import { generateObstructionPdf } from '@/lib/obstruction-pdf'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
+import { formatZuluDateTime } from '@/lib/utils'
 import { toast } from 'sonner'
 
 type SurfaceResult = {
@@ -256,17 +257,7 @@ export default function ObstructionDetailPage() {
         Obstruction Evaluation
       </div>
       <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 14 }}>
-        {createdAt.toLocaleDateString('en-US', {
-          weekday: 'short',
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-        })}{' '}
-        at{' '}
-        {createdAt.toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-        })}
+        {formatZuluDateTime(createdAt)}
       </div>
 
       {/* Photos — hero + thumbnail gallery */}
