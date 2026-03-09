@@ -114,8 +114,10 @@ export async function createCheck(input: {
     ground_emergency: 'GROUND EMERGENCY', heavy_aircraft: 'HEAVY ACFT',
   }
   const checkLabel = checkTypeMap[input.check_type] || input.check_type.toUpperCase()
-  const issuesList = input.comments.map(c => c.comment).filter(Boolean)
-  const discStr = issuesList.length > 0 ? `DISCREPANCIES FOUND: ${issuesList.join('; ').toUpperCase()}` : 'NO NEW DISCREPANCIES'
+  // Issues are stored in data.issues as { comment: string }[]
+  const dataIssues = Array.isArray(input.data?.issues) ? (input.data.issues as { comment?: string }[]) : []
+  const issueDescs = dataIssues.map(i => i.comment).filter(Boolean) as string[]
+  const discStr = issueDescs.length > 0 ? `DISCREPANCIES FOUND: ${issueDescs.join('; ').toUpperCase()}` : 'NO NEW DISCREPANCIES'
   let checkDetails = `${checkLabel} CHECK CMPLT; ${discStr}`
   // Append RSC/BWC if reported
   const bwcVal = (input.data.condition_code as string) || ''
