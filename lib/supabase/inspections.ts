@@ -211,8 +211,10 @@ export async function createInspection(input: {
   const discStr = failedItems.length > 0
     ? `DISCREPANCIES FOUND: ${failedItems.map(i => {
         const remarks: string[] = []
-        if (i.notes) remarks.push(i.notes)
+        // Collect all discrepancy comments
         if (i.discrepancies) { for (const d of i.discrepancies) { if (d.comment) remarks.push(d.comment) } }
+        // Fall back to notes if no discrepancy comments
+        if (remarks.length === 0 && i.notes) remarks.push(i.notes)
         return remarks.length > 0 ? `${i.item.toUpperCase()} — ${remarks.join('; ').toUpperCase()}` : i.item.toUpperCase()
       }).join(', ')}`
     : 'NO NEW DISCREPANCIES'
@@ -338,8 +340,8 @@ export async function saveInspectionDraft(input: {
       const draftDiscStr = draftFailed.length > 0
         ? `DISCREPANCIES FOUND: ${draftFailed.map(i => {
             const r: string[] = []
-            if (i.notes) r.push(i.notes)
             if (i.discrepancies) { for (const d of i.discrepancies) { if (d.comment) r.push(d.comment) } }
+            if (r.length === 0 && i.notes) r.push(i.notes)
             return r.length > 0 ? `${i.item.toUpperCase()} — ${r.join('; ').toUpperCase()}` : i.item.toUpperCase()
           }).join(', ')}`
         : 'NO NEW DISCREPANCIES'
