@@ -217,7 +217,8 @@ export default function ActivityPage() {
   const filtered = entries.filter((a) => {
     if (fu) {
       const userName = (a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name).toLowerCase()
-      if (!userName.includes(fu)) return false
+      const oi = (a.user_operating_initials || '').toLowerCase()
+      if (!userName.includes(fu) && !oi.includes(fu)) return false
     }
     if (fa) {
       const actionStr = formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined).toLowerCase()
@@ -321,9 +322,10 @@ export default function ActivityPage() {
       const columns = [
         { header: 'Date', key: 'date', width: 14 },
         { header: 'Time (Z)', key: 'time', width: 10 },
-        { header: 'User', key: 'user', width: 24 },
         { header: 'Action', key: 'action', width: 40 },
         { header: 'Details', key: 'details', width: 60 },
+        { header: 'OI', key: 'oi', width: 8 },
+        { header: 'User', key: 'user', width: 24 },
       ]
       const rows = entries.map((a) => {
         const d = new Date(a.created_at)
@@ -331,9 +333,10 @@ export default function ActivityPage() {
         return {
           date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
           time: d.toISOString().slice(11, 16),
-          user: userName,
           action: formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined),
           details: buildDetailsString(a, detailsMap),
+          oi: a.user_operating_initials || '',
+          user: userName,
         }
       })
       const wb = await createStyledWorkbook()
@@ -525,23 +528,13 @@ export default function ActivityPage() {
               <thead>
                 <tr>
                   <th style={{ ...thStyle, width: 52 }}>Time (Z)</th>
-                  <th style={{ ...thStyle, width: 160 }}>User</th>
                   <th style={{ ...thStyle, width: 140 }}>Action</th>
                   <th style={thStyle}>Details</th>
+                  <th style={{ ...thStyle, width: 50 }}>OI</th>
                   <th style={{ ...thStyle, width: 60, textAlign: 'right' }}></th>
                 </tr>
                 <tr>
                   <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}></th>
-                  <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}>
-                    <input
-                      type="text"
-                      className="input-dark"
-                      placeholder="Search users..."
-                      value={filterUser}
-                      onChange={(e) => setFilterUser(e.target.value)}
-                      style={{ width: '100%', fontSize: 'var(--fs-2xs)', padding: '3px 6px' }}
-                    />
-                  </th>
                   <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}>
                     <input
                       type="text"
@@ -559,6 +552,16 @@ export default function ActivityPage() {
                       placeholder="Search details..."
                       value={filterDetails}
                       onChange={(e) => setFilterDetails(e.target.value)}
+                      style={{ width: '100%', fontSize: 'var(--fs-2xs)', padding: '3px 6px' }}
+                    />
+                  </th>
+                  <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}>
+                    <input
+                      type="text"
+                      className="input-dark"
+                      placeholder="Search..."
+                      value={filterUser}
+                      onChange={(e) => setFilterUser(e.target.value)}
                       style={{ width: '100%', fontSize: 'var(--fs-2xs)', padding: '3px 6px' }}
                     />
                   </th>
@@ -594,19 +597,12 @@ export default function ActivityPage() {
                       const detailsText = buildDetailsString(a, detailsMap)
                       const link = getEntityLink(a.entity_type, a.entity_id)
 
+                      const initials = a.user_operating_initials || null
+
                       return (
                         <tr key={a.id}>
                           <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>
                             {timeStr}
-                          </td>
-                          <td
-                            onClick={(e) => {
-                              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                              setUserPopover({ id: a.id, x: rect.left, y: rect.bottom + 4, name: userName, role: a.user_role, edipi: a.user_edipi })
-                            }}
-                            style={{ ...tdStyle, fontWeight: 600, color: 'var(--color-cyan)', whiteSpace: 'nowrap', cursor: 'pointer' }}
-                          >
-                            {userName}
                           </td>
                           <td
                             onClick={link ? () => router.push(link) : undefined}
@@ -619,6 +615,16 @@ export default function ActivityPage() {
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
                               {detailsText || '\u2014'}
                             </span>
+                          </td>
+                          <td
+                            onClick={(e) => {
+                              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                              setUserPopover({ id: a.id, x: rect.left, y: rect.bottom + 4, name: userName, role: a.user_role, edipi: a.user_edipi })
+                            }}
+                            style={{ ...tdStyle, fontWeight: 700, color: 'var(--color-cyan)', whiteSpace: 'nowrap', cursor: 'pointer', textAlign: 'center', fontSize: 'var(--fs-xs)', letterSpacing: '0.04em' }}
+                            title={userName}
+                          >
+                            {initials || '—'}
                           </td>
                           <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
                             <button

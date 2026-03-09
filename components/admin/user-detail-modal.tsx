@@ -38,6 +38,7 @@ export function UserDetailModal({
   const [firstName, setFirstName] = useState(user.first_name || '')
   const [lastName, setLastName] = useState(user.last_name || '')
   const [edipi, setEdipi] = useState(user.edipi || '')
+  const [operatingInitials, setOperatingInitials] = useState(user.operating_initials || '')
   const [role, setRole] = useState(user.role)
   const [baseId, setBaseId] = useState(user.primary_base_id || '')
   const [saving, setSaving] = useState(false)
@@ -88,6 +89,7 @@ export function UserDetailModal({
         first_name: firstName,
         last_name: lastName,
         edipi: edipi.trim() || null,
+        operating_initials: operatingInitials.trim().toUpperCase() || null,
       }
       if (isSysAdmin) {
         updates.role = role
@@ -269,6 +271,21 @@ export function UserDetailModal({
               disabled={anyLoading}
               maxLength={10}
               style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'monospace' }}
+            />
+          </div>
+
+          {/* Operating Initials */}
+          <div>
+            <span className="section-label">Operating Initials</span>
+            <input
+              type="text"
+              className="input-dark"
+              value={operatingInitials}
+              onChange={(e) => setOperatingInitials(e.target.value.toUpperCase().slice(0, 4))}
+              placeholder="e.g. JDS"
+              disabled={anyLoading}
+              maxLength={4}
+              style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'monospace', letterSpacing: '0.1em' }}
             />
           </div>
 

@@ -162,9 +162,14 @@ export async function startQrcExecution(input: {
   if (error) return { data: null, error: error.message }
 
   const exec = data as QrcExecution
-  // Log activity
+  // Log activity — use "SCN ACTIVATED" for emergency QRCs with SCN forms
   if (exec) {
-    await logActivity('opened', 'qrc', exec.id, `QRC-${input.qrc_number}`, { details: `QRC #${input.qrc_number} INITIATED — ${input.title.toUpperCase()}` }, input.base_id)
+    const { data: tmpl } = await supabase.from('qrc_templates').select('has_scn_form').eq('id', input.template_id).single()
+    const isScn = tmpl?.has_scn_form === true
+    const openDetail = isScn
+      ? `SECONDARY CRASH NET ACTIVATED — QRC #${input.qrc_number} ${input.title.toUpperCase()}`
+      : `QRC #${input.qrc_number} INITIATED — ${input.title.toUpperCase()}`
+    await logActivity('opened', 'qrc', exec.id, `QRC-${input.qrc_number}`, { details: openDetail }, input.base_id)
   }
 
   return { data: exec, error: null }
@@ -268,13 +273,36 @@ export async function closeQrcExecution(
       updated_at: new Date().toISOString(),
     } as any)
     .eq('id', executionId)
-    .select('qrc_number, title')
+    .select('qrc_number, title, scn_data, template_id')
     .single()
 
   if (error) return { error: error.message }
 
   if (data) {
-    await logActivity('closed', 'qrc', executionId, `QRC-${data.qrc_number}`, { details: `QRC #${data.qrc_number} COMPLETED — ${data.title.toUpperCase()}` }, baseId)
+    // Fetch template to check if SCN form and get field labels
+    const { data: tmpl } = data.template_id
+      ? await supabase.from('qrc_templates').select('has_scn_form, scn_fields').eq('id', data.template_id).single()
+      : { data: null }
+    const isScn = tmpl?.has_scn_form === true
+
+    let detailStr = isScn
+      ? `SECONDARY CRASH NET ACTIVATED — QRC #${data.qrc_number} ${data.title.toUpperCase()}`
+      : `QRC #${data.qrc_number} COMPLETED — ${data.title.toUpperCase()}`
+
+    // Append fillable field values if present
+    const scnData = (data.scn_data || {}) as Record<string, unknown>
+    const filledEntries = Object.entries(scnData).filter(([, v]) => v != null && v !== '')
+    if (filledEntries.length > 0 && tmpl?.scn_fields) {
+      const fields = ((tmpl.scn_fields as { fields?: { key: string; label: string }[] }).fields) || []
+      const labelMap = Object.fromEntries(fields.map(f => [f.key, f.label]))
+      const parts = filledEntries.map(([key, val]) => {
+        const label = labelMap[key] || key.toUpperCase()
+        return `${label.toUpperCase()}: ${String(val).toUpperCase()}`
+      })
+      detailStr += `. ${parts.join('; ')}`
+    }
+
+    await logActivity('closed', 'qrc', executionId, `QRC-${data.qrc_number}`, { details: detailStr }, baseId)
   }
 
   return { error: null }
@@ -303,13 +331,6 @@ export async function cancelQrcExecution(
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // Get QRC info before deleting for activity log
-  const { data } = await supabase
-    .from('qrc_executions')
-    .select('qrc_number, title')
-    .eq('id', executionId)
-    .single()
-
   const { error } = await supabase
     .from('qrc_executions')
     .delete()
@@ -317,9 +338,11 @@ export async function cancelQrcExecution(
 
   if (error) return { error: error.message }
 
-  if (data) {
-    await logActivity('cancelled', 'qrc', executionId, `QRC-${data.qrc_number}`, { details: `QRC #${data.qrc_number} CANCELLED — ${data.title.toUpperCase()}` }, baseId)
-  }
+  // Delete all activity log entries for this QRC execution
+  await supabase
+    .from('activity_log')
+    .delete()
+    .eq('entity_id', executionId)
 
   return { error: null }
 }

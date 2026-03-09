@@ -1070,7 +1070,7 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
     >
       <div
         className="card"
-        style={{ width: '100%', maxWidth: 520, maxHeight: '85vh', display: 'flex', flexDirection: 'column', padding: 0 }}
+        style={{ width: '100%', maxWidth: 620, maxHeight: '85vh', display: 'flex', flexDirection: 'column', padding: 0 }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

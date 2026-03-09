@@ -124,9 +124,12 @@ function ProfileSectionContent() {
     email: string
     role: UserRole
     installationName: string | null
+    operatingInitials: string | null
   } | null>(null)
   const [pdfEmail, setPdfEmail] = useState(defaultPdfEmail || '')
   const [savingEmail, setSavingEmail] = useState(false)
+  const [oi, setOi] = useState('')
+  const [savingOi, setSavingOi] = useState(false)
 
   useEffect(() => {
     setPdfEmail(defaultPdfEmail || '')
@@ -136,7 +139,8 @@ function ProfileSectionContent() {
     async function load() {
       const supabase = createClient()
       if (!supabase) {
-        setProfile({ name: 'Demo User', rank: 'MSgt', email: 'demo@glidepath.app', role: 'sys_admin', installationName: currentInstallation?.name ?? 'Demo Base' })
+        setProfile({ name: 'Demo User', rank: 'MSgt', email: 'demo@glidepath.app', role: 'sys_admin', installationName: currentInstallation?.name ?? 'Demo Base', operatingInitials: 'DU' })
+        setOi('DU')
         return
       }
 
@@ -145,7 +149,7 @@ function ProfileSectionContent() {
 
       const { data: p } = await supabase
         .from('profiles')
-        .select('name, rank, role, primary_base_id')
+        .select('name, rank, role, primary_base_id, operating_initials')
         .eq('id', user.id)
         .single()
 
@@ -170,7 +174,9 @@ function ProfileSectionContent() {
         email: user.email || '',
         role: (p?.role || 'read_only') as UserRole,
         installationName,
+        operatingInitials: p?.operating_initials || null,
       })
+      setOi(p?.operating_initials || '')
     }
     load()
   }, [])
@@ -180,6 +186,21 @@ function ProfileSectionContent() {
     await updateDefaultPdfEmail(pdfEmail.trim() || null)
     toast.success('Default email saved')
     setSavingEmail(false)
+  }
+
+  const handleSaveOi = async () => {
+    setSavingOi(true)
+    const supabase = createClient()
+    if (supabase) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const val = oi.trim().toUpperCase() || null
+        await supabase.from('profiles').update({ operating_initials: val } as any).eq('id', user.id)
+        setProfile((prev) => prev ? { ...prev, operatingInitials: val } : prev)
+      }
+    }
+    toast.success('Operating initials saved')
+    setSavingOi(false)
   }
 
   if (!profile) {
@@ -222,6 +243,43 @@ function ProfileSectionContent() {
           }}>
             {roleConfig?.label || profile.role}
           </span>
+        </div>
+
+        {/* Operating Initials */}
+        <div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>OPERATING INITIALS</div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <input
+              type="text"
+              value={oi}
+              onChange={(e) => setOi(e.target.value.toUpperCase().slice(0, 4))}
+              placeholder="e.g. JDS"
+              maxLength={4}
+              style={{
+                width: 80, padding: '8px 10px', borderRadius: 6,
+                background: 'var(--color-bg-elevated)',
+                border: '1px solid var(--color-border)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
+                fontFamily: 'monospace', letterSpacing: '0.1em', outline: 'none',
+                textAlign: 'center',
+              }}
+            />
+            {(oi.trim().toUpperCase() || '') !== (profile.operatingInitials || '') && (
+              <button
+                onClick={handleSaveOi}
+                disabled={savingOi}
+                style={{
+                  padding: '8px 12px', borderRadius: 6,
+                  background: '#22C55E', border: 'none',
+                  color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                  cursor: savingOi ? 'default' : 'pointer', fontFamily: 'inherit',
+                  opacity: savingOi ? 0.7 : 1,
+                }}
+              >
+                Save
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Default PDF Email */}

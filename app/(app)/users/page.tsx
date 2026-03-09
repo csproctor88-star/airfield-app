@@ -70,6 +70,7 @@ async function loadUsers(
         last_seen_at: (u.last_seen_at as string) || null,
         primary_base_id: (u.primary_base_id as string) || null,
         edipi: (u.edipi as string) || null,
+        operating_initials: (u.operating_initials as string) || null,
         created_at: u.created_at as string,
         bases: u.primary_base_id ? baseLookup.get(u.primary_base_id as string) || null : null,
       }

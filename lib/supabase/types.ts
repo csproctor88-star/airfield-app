@@ -107,6 +107,7 @@ export type Database = {
           primary_base_id: string | null
           default_pdf_email: string | null
           edipi: string | null
+          operating_initials: string | null
           created_at: string
           updated_at: string
         }
