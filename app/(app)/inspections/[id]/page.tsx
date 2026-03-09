@@ -15,6 +15,7 @@ import type { PdfBaseInfo, PdfPhotoMap, PdfGeneralPhotos, PdfDiscPhotoMap } from
 import { PhotoViewerModal } from '@/components/discrepancies/modals'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
+import { formatZuluTime, formatZuluDate, formatZuluDateTime } from '@/lib/utils'
 
 export default function InspectionDetailPage() {
   const params = useParams()
@@ -660,7 +661,7 @@ export default function InspectionDetailPage() {
             <div style={{ fontWeight: 600, color: 'var(--color-accent)' }}>{primary.filed_by_name || primary.inspector_name || 'Unknown'}</div>
             {primary.filed_at && (
               <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 1 }}>
-                {new Date(primary.filed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                {formatZuluTime(new Date(primary.filed_at))}Z
               </div>
             )}
           </div>
@@ -668,7 +669,7 @@ export default function InspectionDetailPage() {
             <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>Date</div>
             <div style={{ fontWeight: 500 }}>
               {primary.completed_at
-                ? `${new Date(primary.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${new Date(primary.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
+                ? formatZuluDateTime(new Date(primary.completed_at))
                 : primary.inspection_date}
             </div>
           </div>
@@ -984,7 +985,7 @@ export default function InspectionDetailPage() {
             const isExpanded = expandedSections[insp.inspection_type] !== false
             const completedBy = insp.completed_by_name || insp.inspector_name || 'Unknown'
             const completedTime = insp.completed_at
-              ? new Date(insp.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+              ? formatZuluTime(new Date(insp.completed_at)) + 'Z'
               : null
             const color = insp.inspection_type === 'airfield' ? '#34D399' : '#FBBF24'
             const bgAlpha = insp.inspection_type === 'airfield' ? 'rgba(52,211,153,' : 'rgba(251,191,36,'

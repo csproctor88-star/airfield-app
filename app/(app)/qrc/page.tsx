@@ -18,6 +18,7 @@ import {
   reviewQrcTemplate,
 } from '@/lib/supabase/qrc'
 import type { QrcTemplate, QrcExecution, QrcStep, QrcStepResponse } from '@/lib/supabase/types'
+import { formatZuluDate, formatZuluDateTime } from '@/lib/utils'
 
 type Tab = 'available' | 'active' | 'history'
 
@@ -32,7 +33,7 @@ function isReviewOverdue(lastReviewed: string | null): boolean {
 }
 
 function formatReviewDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return formatZuluDate(new Date(iso))
 }
 
 export default function QrcPage() {
@@ -278,8 +279,8 @@ export default function QrcPage() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)' }}>{ex.title}</div>
                   <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
-                    {new Date(ex.opened_at).toLocaleDateString()} {new Date(ex.opened_at).toISOString().slice(11, 16)}Z
-                    {ex.closed_at && ` — Closed ${new Date(ex.closed_at).toISOString().slice(11, 16)}Z`}
+                    {formatZuluDateTime(new Date(ex.opened_at))}
+                    {ex.closed_at && ` — Closed ${formatZuluDateTime(new Date(ex.closed_at))}`}
                   </div>
                 </div>
                 <span style={{

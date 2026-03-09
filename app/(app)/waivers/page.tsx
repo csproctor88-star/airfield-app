@@ -9,6 +9,7 @@ import { WAIVER_STATUS_CONFIG, WAIVER_CLASSIFICATIONS } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { Map, List } from 'lucide-react'
+import { formatZuluDate } from '@/lib/utils'
 
 const WaiverMapView = lazy(() => import('@/components/waivers/waiver-map-view'))
 
@@ -90,7 +91,7 @@ export default function WaiversPage() {
   const getStatusConfig = (status: string) => WAIVER_STATUS_CONFIG[status as keyof typeof WAIVER_STATUS_CONFIG]
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return null
-    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    return formatZuluDate(new Date(dateStr))
   }
 
   const handleExport = async () => {

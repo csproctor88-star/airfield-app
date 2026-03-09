@@ -15,6 +15,7 @@ import { ActionButton } from '@/components/ui/button'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
+import { formatZuluTime, formatZuluDate, formatZuluDateTime } from '@/lib/utils'
 
 export default function CheckDetailPage() {
   const params = useParams()
@@ -258,7 +259,7 @@ export default function CheckDetailPage() {
             <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Completed At</div>
             <div style={{ fontWeight: 500, marginTop: 2 }}>
               {completedAt
-                ? `${new Date(completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${new Date(completedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
+                ? formatZuluDateTime(new Date(completedAt))
                 : 'N/A'}
             </div>
           </div>
@@ -433,9 +434,7 @@ export default function CheckDetailPage() {
                 <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 2 }}>
                   <span style={{ fontWeight: 600, color: 'var(--color-accent)' }}>{c.user_name}</span>
                   {' — '}
-                  {new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  {' '}
-                  {new Date(c.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                  {formatZuluDateTime(new Date(c.created_at))}
                 </div>
                 <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.4 }}>{c.comment}</div>
               </div>

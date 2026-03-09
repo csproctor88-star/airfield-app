@@ -295,7 +295,9 @@ function formatBytes(bytes: number | undefined | null): string {
 
 function formatDate(iso: string | undefined | null): string {
   if (!iso) return "";
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const d = new Date(iso);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
 }
 
 function escapeHtml(str: string): string {

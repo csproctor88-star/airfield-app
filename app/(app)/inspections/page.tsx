@@ -18,6 +18,7 @@ import { fetchInspections, createInspection, saveInspectionDraft, fileInspection
 import { logActivity } from '@/lib/supabase/activity'
 import { updateAirfieldStatus } from '@/lib/supabase/airfield-status'
 import { useInstallation } from '@/lib/installation-context'
+import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort } from '@/lib/utils'
 import { fetchCurrentWeather } from '@/lib/weather'
 import { fetchInspectionTemplate, toInspectionSections } from '@/lib/supabase/inspection-templates'
 import {
@@ -1126,7 +1127,7 @@ export default function InspectionsPage() {
           <div>
             <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Daily Inspection</div>
             <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
-              Started {new Date(draft.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              Started {formatZuluDate(new Date(draft.createdAt))}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -1214,7 +1215,7 @@ export default function InspectionsPage() {
                 {draft.airfield.savedAt ? (
                   <>
                     <div style={{ color: '#22C55E', fontWeight: 600 }}>
-                      Completed {new Date(draft.airfield.savedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      Completed {formatZuluTime(new Date(draft.airfield.savedAt))}Z
                     </div>
                     <div style={{ color: 'var(--color-text-2)', fontSize: 'var(--fs-xs)' }}>{draft.airfield.inspectorName}</div>
                   </>
@@ -1229,7 +1230,7 @@ export default function InspectionsPage() {
                 {draft.lighting.savedAt ? (
                   <>
                     <div style={{ color: '#22C55E', fontWeight: 600 }}>
-                      Completed {new Date(draft.lighting.savedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      Completed {formatZuluTime(new Date(draft.lighting.savedAt))}Z
                     </div>
                     <div style={{ color: 'var(--color-text-2)', fontSize: 'var(--fs-xs)' }}>{draft.lighting.inspectorName}</div>
                   </>
@@ -1858,7 +1859,7 @@ export default function InspectionsPage() {
               </div>
               <span>
                 {report.completedAt
-                  ? `${new Date(report.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${new Date(report.completedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
+                  ? formatZuluDateTime(new Date(report.completedAt))
                   : report.date}
               </span>
             </div>

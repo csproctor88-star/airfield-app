@@ -8,6 +8,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { fetchActivityLog } from '@/lib/supabase/activity-queries'
 import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/supabase/activity'
 import { toast } from 'sonner'
+import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort } from '@/lib/utils'
 import { TemplatePicker } from '@/components/ui/template-picker'
 
 // --- Quick Actions (KPI badges) ---
@@ -139,7 +140,7 @@ export default function AMDashboardPage() {
     const { data } = await query
     setLastCheckType(data?.[0]?.check_type?.toUpperCase() || null)
     setLastCheckTime(data?.[0]?.completed_at
-      ? new Date(data[0].completed_at).toTimeString().slice(0, 5)
+      ? formatZuluTime(new Date(data[0].completed_at)) + 'Z'
       : null)
   }, [installationId])
 
@@ -1033,7 +1034,7 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
           {checked && resp?.completed_by && (
             <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', marginTop: 1 }}>
               {profiles[resp.completed_by] || 'Unknown'}
-              {resp.completed_at && ` \u00b7 ${new Date(resp.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`}
+              {resp.completed_at && ` \u00b7 ${formatZuluTime(new Date(resp.completed_at))}Z`}
             </div>
           )}
         </div>
@@ -1061,7 +1062,7 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
     )
   }
 
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  const today = formatZuluDateShort(new Date())
 
   return (
     <div

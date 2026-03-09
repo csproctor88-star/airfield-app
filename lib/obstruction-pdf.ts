@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import type { ObstructionRow } from '@/lib/supabase/obstructions'
 import { parsePhotoPaths } from '@/lib/supabase/obstructions'
+import { formatZuluTime, formatZuluDate } from '@/lib/utils'
 
 type SurfaceResult = {
   surfaceKey: string
@@ -64,10 +65,8 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
 
   // Status
   const createdAt = new Date(evaluation.created_at)
-  const dateStr = createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  const timeStr = createdAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
   doc.setFontSize(9)
-  doc.text(`${dateStr} @ ${timeStr}`, margin, y)
+  doc.text(`${formatZuluDate(createdAt)} @ ${formatZuluTime(createdAt)}Z`, margin, y)
   y += 8
 
   // ── Status Badge ──
@@ -299,7 +298,7 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
     doc.setTextColor(150)
     const footerY = pageHeight - 8
     doc.text(
-      `${displayId} — Page ${i} of ${totalPages} — Generated ${new Date().toLocaleDateString('en-US')}`,
+      `${displayId} — Page ${i} of ${totalPages} — Generated ${formatZuluDate(new Date())}`,
       margin,
       footerY,
     )

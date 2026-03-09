@@ -9,7 +9,7 @@ import type { UserRole, RegulationPubType } from '@/lib/supabase/types'
 import { createClient } from '@/lib/supabase/client'
 import { userDocService, type UserDocument } from '@/lib/userDocuments'
 import { idbGet, idbSet, idbGetAllKeys, idbDelete, STORE_BLOBS } from '@/lib/idb'
-import { sanitizeRegId as sanitizeFileName } from '@/lib/utils'
+import { sanitizeRegId as sanitizeFileName, formatZuluDate } from '@/lib/utils'
 
 const RegulationPDFViewer = dynamic(
   () => import('@/components/RegulationPDFViewer'),
@@ -1560,7 +1560,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
                 </span>
               )}
               <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600 }}>
-                {new Date(doc.uploaded_at).toLocaleDateString()}
+                {formatZuluDate(new Date(doc.uploaded_at))}
               </span>
             </div>
 

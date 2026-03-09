@@ -8,7 +8,7 @@ import { DEMO_DISCREPANCIES } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
-import { fetchMapImageDataUrl } from '@/lib/utils'
+import { fetchMapImageDataUrl, formatZuluDate, formatZuluDateTime } from '@/lib/utils'
 import { Map, List } from 'lucide-react'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
@@ -222,7 +222,7 @@ export default function DiscrepanciesPage() {
         assigned_shop: d.assigned_shop || '',
         work_order: d.work_order_number || '',
         days_open: usingDemo ? (d as typeof DEMO_DISCREPANCIES[number]).days_open : daysOpen(d.created_at),
-        created_at: new Date(d.created_at).toLocaleDateString('en-US'),
+        created_at: formatZuluDate(new Date(d.created_at)),
         ...(hasPhotos ? {
           photo_count: info?.count || 0,
           photo_files: info?.files.join(', ') || '',
@@ -327,7 +327,7 @@ export default function DiscrepanciesPage() {
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(60)
     const now = new Date()
-    doc.text(`Generated: ${now.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`, margin, y)
+    doc.text(`Generated: ${formatZuluDateTime(now)}`, margin, y)
     y += 4
     doc.text(`Total: ${filtered.length} discrepancies`, margin, y)
     y += 7
@@ -422,7 +422,7 @@ export default function DiscrepanciesPage() {
       doc.setFontSize(8)
       doc.setTextColor(150)
       doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 6, { align: 'center' })
-      doc.text(now.toLocaleDateString('en-US'), pageWidth - margin, pageHeight - 6, { align: 'right' })
+      doc.text(formatZuluDate(now), pageWidth - margin, pageHeight - 6, { align: 'right' })
     }
 
     const dateStr = now.toISOString().split('T')[0]

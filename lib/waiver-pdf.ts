@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type { WaiverRow, WaiverCriteriaRow, WaiverReviewRow, WaiverCoordinationRow, WaiverAttachmentRow } from '@/lib/supabase/waivers'
+import { formatZuluDate } from '@/lib/utils'
 
 const MARGIN = 15
 const PHOTO_W = 75 // mm — medium size photo
@@ -44,7 +45,7 @@ function titleCase(s: string) {
 
 function fmtDate(dateStr: string | null) {
   if (!dateStr) return 'N/A'
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return formatZuluDate(new Date(dateStr))
 }
 
 export function generateWaiverPdf(input: WaiverPdfInput) {
@@ -61,7 +62,7 @@ export function generateWaiverPdf(input: WaiverPdfInput) {
     doc.setFontSize(7)
     doc.setTextColor(150)
     doc.text(`Page ${pageNum}`, pageWidth / 2, pageHeight - 8, { align: 'center' })
-    doc.text(`Generated ${new Date().toLocaleDateString('en-US')}`, pageWidth - MARGIN, pageHeight - 8, { align: 'right' })
+    doc.text(`Generated ${formatZuluDate(new Date())}`, pageWidth - MARGIN, pageHeight - 8, { align: 'right' })
   }
 
   function checkPageBreak(needed: number) {

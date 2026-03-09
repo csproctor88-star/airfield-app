@@ -3,6 +3,7 @@
 import { useRouter, useParams } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { DEMO_NOTAMS } from '@/lib/demo-data'
+import { formatZuluDateTime } from '@/lib/utils'
 
 const SOURCE_COLORS: Record<string, string> = {
   faa: '#22D3EE',
@@ -15,13 +16,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return formatZuluDateTime(new Date(iso))
 }
 
 const infoLabelStyle: React.CSSProperties = {

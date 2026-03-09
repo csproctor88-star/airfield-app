@@ -31,19 +31,19 @@ const INSPECTION_TYPE_LABELS: Record<string, string> = {
   joint_monthly: 'Joint Monthly',
 }
 
-function formatDate(dateStr: string) {
+function formatDateLabel(dateStr: string) {
+  // Use local time for display — daily ops report is based on local day boundaries
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
   })
 }
 
 export default function DailyOpsPage() {
   const router = useRouter()
   const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
-  const today = new Date().toISOString().split('T')[0]
+  // Use local date for the picker — daily ops report covers the user's local day
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
   const [dateMode, setDateMode] = useState<DateMode>('single')
   const [startDate, setStartDate] = useState(today)
@@ -122,8 +122,8 @@ export default function DailyOpsPage() {
   }
 
   const dateLabel = dateMode === 'range' && startDate !== endDate
-    ? `${formatDate(startDate)} — ${formatDate(endDate)}`
-    : formatDate(startDate)
+    ? `${formatDateLabel(startDate)} — ${formatDateLabel(endDate)}`
+    : formatDateLabel(startDate)
 
   // ── Picker View ──
   if (viewState === 'picker') {

@@ -9,6 +9,7 @@ import { DEMO_CHECKS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { fetchChecks, type CheckRow } from '@/lib/supabase/checks'
 import { useInstallation } from '@/lib/installation-context'
+import { formatZuluDateShort, formatZuluTime } from '@/lib/utils'
 
 export default function CheckHistoryPage() {
   const { installationId } = useInstallation()
@@ -195,7 +196,7 @@ export default function CheckHistoryPage() {
               </div>
               <span>
                 {check.completed_at
-                  ? `${new Date(check.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${new Date(check.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
+                  ? formatZuluDateShort(new Date(check.completed_at)) + ' ' + formatZuluTime(new Date(check.completed_at)) + 'Z'
                   : 'N/A'}
               </span>
             </div>

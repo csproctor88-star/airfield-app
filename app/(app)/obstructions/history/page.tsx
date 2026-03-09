@@ -6,6 +6,7 @@ import { fetchObstructionEvaluations, deleteObstructionEvaluation, parsePhotoPat
 import { useInstallation } from '@/lib/installation-context'
 import { formatDistanceToNow } from 'date-fns'
 import { Map, List } from 'lucide-react'
+import { formatZuluDate } from '@/lib/utils'
 
 const ObstructionMapView = lazy(() => import('@/components/obstructions/obstruction-map-view'))
 
@@ -25,7 +26,7 @@ function matchesSearch(ev: ObstructionRow, query: string): boolean {
     ev.latitude != null ? `${ev.latitude}` : '',
     ev.longitude != null ? `${ev.longitude}` : '',
     ...(ev.violated_surfaces ?? []),
-    new Date(ev.created_at).toLocaleDateString(),
+    formatZuluDate(new Date(ev.created_at)),
   ]
   return fields.some((f) => f.toLowerCase().includes(q))
 }

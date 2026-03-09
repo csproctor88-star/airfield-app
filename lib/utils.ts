@@ -5,6 +5,27 @@ export function cn(...inputs: ClassValue[]) {
   return clsx(inputs)
 }
 
+// ── Zulu (UTC) time formatting ──────────────────────────────────────
+export function formatZuluTime(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  return d.toISOString().slice(11, 16)
+}
+
+export function formatZuluDate(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  return d.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+export function formatZuluDateTime(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  return `${formatZuluDate(d)} ${formatZuluTime(d)}Z`
+}
+
+export function formatZuluDateShort(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  return d.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' })
+}
+
 // Format relative time, e.g. "2h ago", "3d ago"
 export function formatRelativeTime(date: string | Date): string {
   const now = new Date()

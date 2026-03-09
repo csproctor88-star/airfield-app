@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf'
 import type { InspectionItem } from '@/lib/supabase/types'
-import { fetchMapImageDataUrl } from '@/lib/utils'
+import { fetchMapImageDataUrl, formatZuluTime, formatZuluDate, formatZuluDateTime } from '@/lib/utils'
 
 /** Convert a blob to a data URL for embedding in PDF */
 async function blobToDataUrl(blob: Blob): Promise<string> {
@@ -127,11 +127,11 @@ export async function generateInspectionPdf(inspection: InspectionData, baseInfo
   doc.setTextColor(0)
   const completedBy = inspection.completed_by_name || inspection.inspector_name || 'N/A'
   const completedTime = inspection.completed_at
-    ? new Date(inspection.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    ? formatZuluTime(new Date(inspection.completed_at))
     : ''
-  doc.text(`${completedBy}${completedTime ? ` @ ${completedTime}` : ''}`, col1, y + 10)
+  doc.text(`${completedBy}${completedTime ? ` @ ${completedTime}Z` : ''}`, col1, y + 10)
   const dateStr = inspection.completed_at
-    ? new Date(inspection.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? formatZuluDate(new Date(inspection.completed_at))
     : inspection.inspection_date
   doc.text(dateStr, col2, y + 10)
   doc.text(inspection.weather_conditions || 'N/A', col3, y + 10)
@@ -148,9 +148,9 @@ export async function generateInspectionPdf(inspection: InspectionData, baseInfo
   doc.text(inspection.bwc_value || 'N/A', col2, y + 21)
   const filedBy = inspection.filed_by_name || inspection.inspector_name || 'N/A'
   const filedTime = inspection.filed_at
-    ? new Date(inspection.filed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    ? formatZuluTime(new Date(inspection.filed_at))
     : ''
-  doc.text(`${filedBy}${filedTime ? ` @ ${filedTime}` : ''}`, col3, y + 21)
+  doc.text(`${filedBy}${filedTime ? ` @ ${filedTime}Z` : ''}`, col3, y + 21)
 
   y += 36
 
@@ -384,7 +384,7 @@ export async function generateInspectionPdf(inspection: InspectionData, baseInfo
     doc.setTextColor(150)
     const footerY = doc.internal.pageSize.getHeight() - 8
     doc.text(
-      `${inspection.display_id} — Page ${i} of ${totalPages} — Generated ${new Date().toLocaleDateString('en-US')}`,
+      `${inspection.display_id} — Page ${i} of ${totalPages} — Generated ${formatZuluDate(new Date())}`,
       margin,
       footerY,
     )
@@ -691,11 +691,11 @@ export async function generateCombinedInspectionPdf(inspections: InspectionData[
   doc.setTextColor(0)
   const filedBy = primary.filed_by_name || primary.inspector_name || 'N/A'
   const filedTime = primary.filed_at
-    ? new Date(primary.filed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    ? formatZuluTime(new Date(primary.filed_at))
     : ''
-  doc.text(`${filedBy}${filedTime ? ` @ ${filedTime}` : ''}`, col1, y + 10)
+  doc.text(`${filedBy}${filedTime ? ` @ ${filedTime}Z` : ''}`, col1, y + 10)
   const dateStr = primary.completed_at
-    ? new Date(primary.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? formatZuluDate(new Date(primary.completed_at))
     : primary.inspection_date
   doc.text(dateStr, col2, y + 10)
   doc.text(primary.weather_conditions || 'N/A', col3, y + 10)
@@ -718,7 +718,7 @@ export async function generateCombinedInspectionPdf(inspections: InspectionData[
   if (airfield) {
     const afBy = airfield.completed_by_name || airfield.inspector_name || 'N/A'
     const afTime = airfield.completed_at
-      ? new Date(airfield.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      ? formatZuluTime(new Date(airfield.completed_at))
       : ''
     doc.setFontSize(9)
     doc.setFont('helvetica', 'bold')
@@ -726,13 +726,13 @@ export async function generateCombinedInspectionPdf(inspections: InspectionData[
     doc.text('Airfield', col1, y)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(60)
-    doc.text(`Completed by ${afBy}${afTime ? ` at ${afTime}` : ''}`, col1 + 22, y)
+    doc.text(`Completed by ${afBy}${afTime ? ` at ${afTime}Z` : ''}`, col1 + 22, y)
     y += 5
   }
   if (lighting) {
     const ltBy = lighting.completed_by_name || lighting.inspector_name || 'N/A'
     const ltTime = lighting.completed_at
-      ? new Date(lighting.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      ? formatZuluTime(new Date(lighting.completed_at))
       : ''
     doc.setFontSize(9)
     doc.setFont('helvetica', 'bold')
@@ -740,7 +740,7 @@ export async function generateCombinedInspectionPdf(inspections: InspectionData[
     doc.text('Lighting', col1, y)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(60)
-    doc.text(`Completed by ${ltBy}${ltTime ? ` at ${ltTime}` : ''}`, col1 + 22, y)
+    doc.text(`Completed by ${ltBy}${ltTime ? ` at ${ltTime}Z` : ''}`, col1 + 22, y)
     y += 5
   }
   doc.setFont('helvetica', 'normal')
@@ -812,11 +812,11 @@ export async function generateCombinedInspectionPdf(inspections: InspectionData[
     // Per-half completed by line
     const inspCompletedBy = insp.completed_by_name || insp.inspector_name || 'N/A'
     const inspCompletedTime = insp.completed_at
-      ? new Date(insp.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      ? formatZuluTime(new Date(insp.completed_at))
       : ''
     doc.setFontSize(8)
     doc.setTextColor(80)
-    doc.text(`Completed by: ${inspCompletedBy}${inspCompletedTime ? ` @ ${inspCompletedTime}` : ''}`, margin, y)
+    doc.text(`Completed by: ${inspCompletedBy}${inspCompletedTime ? ` @ ${inspCompletedTime}Z` : ''}`, margin, y)
     y += 5
 
     y = await renderInspectionSections(doc, insp, y, margin, contentWidth, photoMap, discPhotoMap)
@@ -832,7 +832,7 @@ export async function generateCombinedInspectionPdf(inspections: InspectionData[
     doc.setTextColor(150)
     const footerY = doc.internal.pageSize.getHeight() - 8
     doc.text(
-      `Airfield Inspection Report — Page ${i} of ${totalPages} — Generated ${new Date().toLocaleDateString('en-US')}`,
+      `Airfield Inspection Report — Page ${i} of ${totalPages} — Generated ${formatZuluDate(new Date())}`,
       margin,
       footerY,
     )
@@ -902,7 +902,7 @@ export async function generateSpecialInspectionPdf(inspection: InspectionData, b
   doc.setTextColor(0)
   doc.text(inspection.inspector_name || 'N/A', col1, y + 10)
   const dateStr = inspection.completed_at
-    ? new Date(inspection.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? formatZuluDate(new Date(inspection.completed_at))
     : inspection.inspection_date
   doc.text(dateStr, col2, y + 10)
   const weatherStr = [
@@ -989,7 +989,7 @@ export async function generateSpecialInspectionPdf(inspection: InspectionData, b
     doc.setTextColor(150)
     const footerY = doc.internal.pageSize.getHeight() - 8
     doc.text(
-      `${inspection.display_id} — Page ${i} of ${totalPages} — Generated ${new Date().toLocaleDateString('en-US')}`,
+      `${inspection.display_id} — Page ${i} of ${totalPages} — Generated ${formatZuluDate(new Date())}`,
       margin,
       footerY,
     )

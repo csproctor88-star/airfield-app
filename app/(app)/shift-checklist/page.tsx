@@ -17,6 +17,7 @@ import {
   type ShiftChecklist,
   type ShiftChecklistResponse,
 } from '@/lib/supabase/shift-checklist'
+import { formatZuluTime, formatZuluDate } from '@/lib/utils'
 
 type ViewTab = 'today' | 'history'
 
@@ -213,7 +214,7 @@ export default function ShiftChecklistPage() {
           </div>
           {checked && resp?.completed_by && (
             <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
-              {profiles[resp.completed_by] || 'Unknown'} &middot; {resp.completed_at ? new Date(resp.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
+              {profiles[resp.completed_by] || 'Unknown'} &middot; {resp.completed_at ? formatZuluTime(new Date(resp.completed_at)) + 'Z' : ''}
             </div>
           )}
         </div>
@@ -264,7 +265,7 @@ export default function ShiftChecklistPage() {
   }
 
   const today = new Date()
-  const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+  const dateStr = formatZuluDate(today)
 
   return (
     <div className="page-container">
@@ -433,12 +434,12 @@ export default function ShiftChecklistPage() {
                   >
                     <div>
                       <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)' }}>
-                        {d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                        {formatZuluDate(d)}
                       </div>
                       {h.completed_by && (
                         <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
                           Filed by {profiles[h.completed_by] || 'Unknown'}
-                          {h.completed_at && ` at ${new Date(h.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`}
+                          {h.completed_at && ` at ${formatZuluTime(new Date(h.completed_at))}Z`}
                         </div>
                       )}
                     </div>
@@ -464,8 +465,8 @@ export default function ShiftChecklistPage() {
       )}
 
       {tab === 'history' && viewingHistory && (() => {
-        const hDate = new Date(viewingHistory.checklist_date + 'T12:00:00')
-        const hDateStr = hDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+        const hDate = new Date(viewingHistory.checklist_date + 'T00:00:00Z')
+        const hDateStr = formatZuluDate(hDate)
         const hResponseMap = new Map(historyResponses.map(r => [r.item_id, r]))
         const hDayItems = historyItems.filter(i => i.shift === 'day')
         const hMidItems = historyItems.filter(i => i.shift === 'mid')
@@ -512,7 +513,7 @@ export default function ShiftChecklistPage() {
                         {checked && resp?.completed_by && (
                           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
                             {profiles[resp.completed_by] || 'Unknown'}
-                            {resp.completed_at && ` \u00b7 ${new Date(resp.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`}
+                            {resp.completed_at && ` \u00b7 ${formatZuluTime(new Date(resp.completed_at))}Z`}
                           </div>
                         )}
                       </div>
@@ -545,7 +546,7 @@ export default function ShiftChecklistPage() {
                 {viewingHistory.completed_by && (
                   <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
                     Filed by {profiles[viewingHistory.completed_by] || 'Unknown'}
-                    {viewingHistory.completed_at && ` at ${new Date(viewingHistory.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`}
+                    {viewingHistory.completed_at && ` at ${formatZuluTime(new Date(viewingHistory.completed_at))}Z`}
                   </div>
                 )}
               </div>

@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf'
 import { CHECK_TYPE_CONFIG } from '@/lib/constants'
 import type { CheckCommentRow } from '@/lib/supabase/checks'
-import { fetchMapImageDataUrl } from '@/lib/utils'
+import { fetchMapImageDataUrl, formatZuluTime, formatZuluDate, formatZuluDateTime } from '@/lib/utils'
 
 interface CheckPdfInput {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -78,9 +78,7 @@ export async function generateCheckPdf(input: CheckPdfInput) {
   const completedAt = check.completed_at ? String(check.completed_at) : null
   if (completedAt) {
     const d = new Date(completedAt)
-    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-    doc.text(`${dateStr} @ ${timeStr}`, col3, y + 10)
+    doc.text(`${formatZuluDate(d)} @ ${formatZuluTime(d)}Z`, col3, y + 10)
   } else {
     doc.text('N/A', col3, y + 10)
   }
@@ -349,11 +347,7 @@ export async function generateCheckPdf(input: CheckPdfInput) {
       checkPageBreak(12)
       doc.setFontSize(8)
       doc.setTextColor(100)
-      const dateStr = new Date(c.created_at).toLocaleString('en-US', {
-        month: 'short', day: 'numeric', year: 'numeric',
-        hour: '2-digit', minute: '2-digit',
-      })
-      doc.text(`${c.user_name} — ${dateStr}`, margin, y)
+      doc.text(`${c.user_name} — ${formatZuluDateTime(new Date(c.created_at))}`, margin, y)
       y += 4
       doc.setFontSize(9)
       doc.setTextColor(40)
@@ -403,7 +397,7 @@ export async function generateCheckPdf(input: CheckPdfInput) {
     doc.setTextColor(150)
     const footerY = pageHeight - 8
     doc.text(
-      `${displayId} — Page ${i} of ${totalPages} — Generated ${new Date().toLocaleDateString('en-US')}`,
+      `${displayId} — Page ${i} of ${totalPages} — Generated ${formatZuluDate(new Date())}`,
       margin,
       footerY,
     )

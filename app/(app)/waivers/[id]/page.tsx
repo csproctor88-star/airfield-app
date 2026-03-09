@@ -23,6 +23,7 @@ import { toast } from 'sonner'
 import type { WaiverStatus, WaiverCoordinationOffice, WaiverCoordinationStatus, WaiverAttachmentType, WaiverReviewRecommendation } from '@/lib/supabase/types'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
+import { formatZuluDate } from '@/lib/utils'
 
 type ModalType = 'approve' | 'coordination' | 'review' | 'attachment' | 'status_change' | null
 
@@ -537,7 +538,7 @@ export default function WaiverDetailPage() {
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return 'N/A'
-    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    return formatZuluDate(new Date(dateStr))
   }
 
   const ACRONYMS = new Set(['ufc', 'faa', 'af'])

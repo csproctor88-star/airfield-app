@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import { DISCREPANCY_TYPES, SEVERITY_CONFIG, STATUS_CONFIG, LOCATION_OPTIONS, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
+import { formatZuluDateTime, formatZuluDate } from '@/lib/utils'
 
 interface DiscrepancyPdfInput {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -118,9 +119,7 @@ export async function generateDiscrepancyPdf(input: DiscrepancyPdfInput) {
     doc.text('Created:', margin + contentWidth / 3, y - 4)
     doc.setFontSize(9)
     doc.setTextColor(0)
-    const dateStr = createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    const timeStr = createdAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-    doc.text(`${dateStr} @ ${timeStr}`, margin + contentWidth / 3, y)
+    doc.text(formatZuluDateTime(createdAt), margin + contentWidth / 3, y)
   }
 
   y += 8
@@ -223,7 +222,7 @@ export async function generateDiscrepancyPdf(input: DiscrepancyPdfInput) {
     doc.setTextColor(150)
     const footerY = pageHeight - 8
     doc.text(
-      `Discrepancy: ${displayLabel} — Page ${i} of ${totalPages} — Generated ${new Date().toLocaleDateString('en-US')}`,
+      `Discrepancy: ${displayLabel} — Page ${i} of ${totalPages} — Generated ${formatZuluDate(new Date())}`,
       margin,
       footerY,
     )

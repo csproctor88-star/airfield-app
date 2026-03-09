@@ -18,6 +18,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { getAirfieldDiagram } from '@/lib/airfield-diagram'
 import { SimpleDiscrepancyPanelGroup } from '@/components/ui/simple-discrepancy-panel-group'
+import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort } from '@/lib/utils'
 import type { SimpleDiscrepancy } from '@/lib/supabase/types'
 import { loadCheckDraft, saveCheckDraft, clearCheckDraft, type CheckDraft } from '@/lib/check-draft'
 
@@ -558,7 +559,7 @@ export default function AirfieldChecksPage() {
                   <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>{cfg?.label}</span>
                 </div>
                 <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-                  {rc.completed_at ? new Date(rc.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+                  {rc.completed_at ? formatZuluDateShort(new Date(rc.completed_at)) : ''}
                 </span>
               </Link>
             )
@@ -1011,9 +1012,7 @@ export default function AirfieldChecksPage() {
                   <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 2 }}>
                     <span style={{ fontWeight: 600, color: 'var(--color-accent)' }}>{remark.user_name}</span>
                     {' — '}
-                    {new Date(remark.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    {' '}
-                    {new Date(remark.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    {formatZuluDateTime(new Date(remark.created_at))}
                   </div>
                   <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.4 }}>{remark.comment}</div>
                 </div>
@@ -1045,7 +1044,7 @@ export default function AirfieldChecksPage() {
           </button>
           {draftSavedAt && (
             <div style={{ textAlign: 'center', marginTop: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-              Last saved {new Date(draftSavedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} on {new Date(draftSavedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              Last saved {formatZuluDateTime(new Date(draftSavedAt))}
             </div>
           )}
         </div>

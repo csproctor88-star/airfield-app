@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { toast } from 'sonner'
+import { formatZuluDate, formatZuluTime, formatZuluDateTime } from '@/lib/utils'
 
 type FilterType = 'all' | 'faa' | 'local' | 'active' | 'expired'
 
@@ -49,20 +50,16 @@ function formatDate(str: string) {
   if (faaMatch) {
     const [, month, day, year, hour, minute] = faaMatch
     const d = new Date(Date.UTC(+year, +month - 1, +day, +hour, +minute))
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-      + ' ' + hour + minute + 'Z'
+    return formatZuluDate(d) + ' ' + hour + minute + 'Z'
   }
   // Try ISO format
   const d = new Date(str)
   if (isNaN(d.getTime())) return str // fallback: show raw string
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return formatZuluDate(d)
 }
 
 function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return formatZuluTime(new Date(iso)) + 'Z'
 }
 
 /** Check if a NOTAM is expiring within 24 hours */
@@ -198,7 +195,7 @@ export default function NotamsPage() {
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(60)
     const now = new Date()
-    doc.text(`Generated: ${now.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`, margin, y)
+    doc.text(`Generated: ${formatZuluDateTime(now)}`, margin, y)
     y += 4
     doc.text(`Total: ${filtered.length} NOTAMs`, margin, y)
     y += 7
@@ -251,7 +248,7 @@ export default function NotamsPage() {
       doc.setFontSize(8)
       doc.setTextColor(150)
       doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 6, { align: 'center' })
-      doc.text(now.toLocaleDateString('en-US'), pageWidth - margin, pageHeight - 6, { align: 'right' })
+      doc.text(formatZuluDate(now), pageWidth - margin, pageHeight - 6, { align: 'right' })
     }
 
     const dateStr = now.toISOString().split('T')[0]

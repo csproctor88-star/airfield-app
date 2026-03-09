@@ -7,6 +7,7 @@ import { fetchContractors, createContractor, updateContractor, type ContractorRo
 import { CONTRACTOR_STATUS_CONFIG } from '@/lib/constants'
 import { DEMO_CONTRACTORS } from '@/lib/demo-data'
 import { toast } from 'sonner'
+import { formatZuluDate } from '@/lib/utils'
 
 type FilterTab = 'active' | 'all' | 'completed'
 
@@ -434,9 +435,9 @@ export default function ContractorsPage() {
                           </div>
                         )}
                         <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
-                          Started: {new Date(c.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          Started: {formatZuluDate(new Date(c.start_date))}
                           {c.end_date && (
-                            <> &middot; Ended: {new Date(c.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</>
+                            <> &middot; Ended: {formatZuluDate(new Date(c.end_date))}</>
                           )}
                         </div>
                         {c.notes && (

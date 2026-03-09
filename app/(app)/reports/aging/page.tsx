@@ -10,6 +10,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { toast } from 'sonner'
+import { formatZuluDateTime } from '@/lib/utils'
 
 const SEVERITY_LABELS: Record<string, string> = {
   critical: 'Critical',
@@ -116,7 +117,7 @@ export default function AgingDiscrepanciesPage() {
         </button>
         <div>
           <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Aging Discrepancies</div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>As of {new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>As of {formatZuluDateTime(new Date())}</div>
         </div>
       </div>
 

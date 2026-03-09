@@ -13,7 +13,7 @@ import { CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS, DISCREPANCY_TYPES } from '@/l
 import { EditDiscrepancyModal, StatusUpdateModal, WorkOrderModal, PhotoViewerModal } from '@/components/discrepancies/modals'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
-import { fetchMapImageDataUrl } from '@/lib/utils'
+import { fetchMapImageDataUrl, formatZuluDateTime } from '@/lib/utils'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
@@ -242,9 +242,7 @@ export default function DiscrepancyDetailPage() {
                 <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 2 }}>
                   <span style={{ fontWeight: 600, color: 'var(--color-accent)' }}>{update.user_rank ? `${update.user_rank} ` : ''}{update.user_name || 'Unknown'}</span>
                   {' — '}
-                  {new Date(update.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  {' '}
-                  {new Date(update.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                  {formatZuluDateTime(new Date(update.created_at))}
                 </div>
                 {update.old_status && (
                   <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginBottom: 2 }}>
