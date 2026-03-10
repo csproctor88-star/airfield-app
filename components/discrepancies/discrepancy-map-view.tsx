@@ -47,6 +47,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
   const map = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [legendOpen, setLegendOpen] = useState(false)
   const [internalTypeFilter, setInternalTypeFilter] = useState<string | null>(null)
   const { runways, installationId } = useInstallation()
 
@@ -285,50 +286,58 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
             gap: 1,
           }}
         >
-          <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div
+            onClick={() => setLegendOpen(o => !o)}
+            style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', marginBottom: legendOpen ? 2 : 0, textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}
+          >
             Filter by Type
+            <span style={{ fontSize: '8px' }}>{legendOpen ? '▲' : '▼'}</span>
           </div>
-          {legendItems.map((t) => {
-            const isActive = activeTypeFilter === t.value
-            const isDimmed = activeTypeFilter !== null && !isActive
-            return (
-              <div
-                key={t.value}
-                onClick={() => handleLegendClick(t.value)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  padding: '2px 4px',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  background: isActive ? 'rgba(34, 211, 238, 0.12)' : 'transparent',
-                  opacity: isDimmed ? 0.4 : 1,
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <span style={{ fontSize: '12px', flexShrink: 0, width: 16, textAlign: 'center' }}>{t.emoji}</span>
-                <span style={{ fontSize: '10px', color: isActive ? '#22D3EE' : '#CBD5E1', fontWeight: 600 }}>{t.label}</span>
-              </div>
-            )
-          })}
-          {activeTypeFilter && (
-            <div
-              onClick={() => onTypeFilterChange ? onTypeFilterChange(null) : setInternalTypeFilter(null)}
-              style={{
-                fontSize: '9px',
-                fontWeight: 700,
-                color: '#94A3B8',
-                cursor: 'pointer',
-                textAlign: 'center',
-                marginTop: 2,
-                padding: '2px 4px',
-                borderRadius: 4,
-                borderTop: '1px solid rgba(148,163,184,0.15)',
-              }}
-            >
-              Show All
-            </div>
+          {legendOpen && (
+            <>
+              {legendItems.map((t) => {
+                const isActive = activeTypeFilter === t.value
+                const isDimmed = activeTypeFilter !== null && !isActive
+                return (
+                  <div
+                    key={t.value}
+                    onClick={() => handleLegendClick(t.value)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      padding: '2px 4px',
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                      background: isActive ? 'rgba(34, 211, 238, 0.12)' : 'transparent',
+                      opacity: isDimmed ? 0.4 : 1,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span style={{ fontSize: '12px', flexShrink: 0, width: 16, textAlign: 'center' }}>{t.emoji}</span>
+                    <span style={{ fontSize: '10px', color: isActive ? '#22D3EE' : '#CBD5E1', fontWeight: 600 }}>{t.label}</span>
+                  </div>
+                )
+              })}
+              {activeTypeFilter && (
+                <div
+                  onClick={() => onTypeFilterChange ? onTypeFilterChange(null) : setInternalTypeFilter(null)}
+                  style={{
+                    fontSize: '9px',
+                    fontWeight: 700,
+                    color: '#94A3B8',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    marginTop: 2,
+                    padding: '2px 4px',
+                    borderRadius: 4,
+                    borderTop: '1px solid rgba(148,163,184,0.15)',
+                  }}
+                >
+                  Show All
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

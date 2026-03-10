@@ -19,6 +19,7 @@ export default function ObstructionMapView({ evaluations }: Props) {
   const map = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [legendOpen, setLegendOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const { runways, installationId } = useInstallation()
 
@@ -282,72 +283,80 @@ export default function ObstructionMapView({ evaluations }: Props) {
             gap: 1,
           }}
         >
-          <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div
+            onClick={() => setLegendOpen(o => !o)}
+            style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', marginBottom: legendOpen ? 2 : 0, textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}
+          >
             Filter by Status
+            <span style={{ fontSize: '8px' }}>{legendOpen ? '▲' : '▼'}</span>
           </div>
-          {([
-            { key: 'violation' as StatusFilter, label: 'Violation', color: '#EF4444', icon: '\u26A0', count: violationCount },
-            { key: 'clear' as StatusFilter, label: 'Clear', color: '#22C55E', icon: '\u2713', count: clearCount },
-          ]).map((item) => {
-            const isActive = statusFilter === item.key
-            const isDimmed = statusFilter !== 'all' && !isActive
-            return (
-              <div
-                key={item.key}
-                onClick={() => handleLegendClick(item.key)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  padding: '2px 4px',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  background: isActive ? `${item.color}18` : 'transparent',
-                  opacity: isDimmed ? 0.4 : 1,
-                  transition: 'all 0.15s ease',
-                }}
-              >
+          {legendOpen && (
+            <>
+              {([
+                { key: 'violation' as StatusFilter, label: 'Violation', color: '#EF4444', icon: '\u26A0', count: violationCount },
+                { key: 'clear' as StatusFilter, label: 'Clear', color: '#22C55E', icon: '\u2713', count: clearCount },
+              ]).map((item) => {
+                const isActive = statusFilter === item.key
+                const isDimmed = statusFilter !== 'all' && !isActive
+                return (
+                  <div
+                    key={item.key}
+                    onClick={() => handleLegendClick(item.key)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      padding: '2px 4px',
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                      background: isActive ? `${item.color}18` : 'transparent',
+                      opacity: isDimmed ? 0.4 : 1,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        background: item.color,
+                        border: '1.5px solid #fff',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '8px',
+                        lineHeight: '1',
+                        color: '#fff',
+                      }}
+                    >
+                      {item.icon}
+                    </div>
+                    <span style={{ fontSize: '10px', color: isActive ? item.color : '#CBD5E1', fontWeight: 600 }}>
+                      {item.label} ({item.count})
+                    </span>
+                  </div>
+                )
+              })}
+              {statusFilter !== 'all' && (
                 <div
+                  onClick={() => setStatusFilter('all')}
                   style={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: '50%',
-                    background: item.color,
-                    border: '1.5px solid #fff',
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '8px',
-                    lineHeight: '1',
-                    color: '#fff',
+                    fontSize: '9px',
+                    fontWeight: 700,
+                    color: '#94A3B8',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    marginTop: 2,
+                    padding: '2px 4px',
+                    borderRadius: 4,
+                    borderTop: '1px solid rgba(148,163,184,0.15)',
                   }}
                 >
-                  {item.icon}
+                  Show All
                 </div>
-                <span style={{ fontSize: '10px', color: isActive ? item.color : '#CBD5E1', fontWeight: 600 }}>
-                  {item.label} ({item.count})
-                </span>
-              </div>
-            )
-          })}
-          {statusFilter !== 'all' && (
-            <div
-              onClick={() => setStatusFilter('all')}
-              style={{
-                fontSize: '9px',
-                fontWeight: 700,
-                color: '#94A3B8',
-                cursor: 'pointer',
-                textAlign: 'center',
-                marginTop: 2,
-                padding: '2px 4px',
-                borderRadius: 4,
-                borderTop: '1px solid rgba(148,163,184,0.15)',
-              }}
-            >
-              Show All
-            </div>
+              )}
+            </>
           )}
         </div>
       )}

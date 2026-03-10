@@ -30,6 +30,7 @@ export default function WaiverMapView({ waivers }: Props) {
   const map = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [legendOpen, setLegendOpen] = useState(false)
   const [activeClassFilter, setActiveClassFilter] = useState<string | null>(null)
   const { runways, installationId } = useInstallation()
 
@@ -272,50 +273,58 @@ export default function WaiverMapView({ waivers }: Props) {
             gap: 1,
           }}
         >
-          <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div
+            onClick={() => setLegendOpen(o => !o)}
+            style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', marginBottom: legendOpen ? 2 : 0, textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}
+          >
             Filter by Type
+            <span style={{ fontSize: '8px' }}>{legendOpen ? '▲' : '▼'}</span>
           </div>
-          {legendItems.map((c) => {
-            const isActive = activeClassFilter === c.value
-            const isDimmed = activeClassFilter !== null && !isActive
-            return (
-              <div
-                key={c.value}
-                onClick={() => handleLegendClick(c.value)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  padding: '2px 4px',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  background: isActive ? 'rgba(245, 158, 11, 0.12)' : 'transparent',
-                  opacity: isDimmed ? 0.4 : 1,
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <span style={{ fontSize: '12px', flexShrink: 0, width: 16, textAlign: 'center' }}>{c.emoji}</span>
-                <span style={{ fontSize: '10px', color: isActive ? '#F59E0B' : '#CBD5E1', fontWeight: 600 }}>{c.label}</span>
-              </div>
-            )
-          })}
-          {activeClassFilter && (
-            <div
-              onClick={() => setActiveClassFilter(null)}
-              style={{
-                fontSize: '9px',
-                fontWeight: 700,
-                color: '#94A3B8',
-                cursor: 'pointer',
-                textAlign: 'center',
-                marginTop: 2,
-                padding: '2px 4px',
-                borderRadius: 4,
-                borderTop: '1px solid rgba(148,163,184,0.15)',
-              }}
-            >
-              Show All
-            </div>
+          {legendOpen && (
+            <>
+              {legendItems.map((c) => {
+                const isActive = activeClassFilter === c.value
+                const isDimmed = activeClassFilter !== null && !isActive
+                return (
+                  <div
+                    key={c.value}
+                    onClick={() => handleLegendClick(c.value)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      padding: '2px 4px',
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                      background: isActive ? 'rgba(245, 158, 11, 0.12)' : 'transparent',
+                      opacity: isDimmed ? 0.4 : 1,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span style={{ fontSize: '12px', flexShrink: 0, width: 16, textAlign: 'center' }}>{c.emoji}</span>
+                    <span style={{ fontSize: '10px', color: isActive ? '#F59E0B' : '#CBD5E1', fontWeight: 600 }}>{c.label}</span>
+                  </div>
+                )
+              })}
+              {activeClassFilter && (
+                <div
+                  onClick={() => setActiveClassFilter(null)}
+                  style={{
+                    fontSize: '9px',
+                    fontWeight: 700,
+                    color: '#94A3B8',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    marginTop: 2,
+                    padding: '2px 4px',
+                    borderRadius: 4,
+                    borderTop: '1px solid rgba(148,163,184,0.15)',
+                  }}
+                >
+                  Show All
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
