@@ -197,7 +197,6 @@ export default function DiscrepanciesPage() {
       { header: 'Display ID', key: 'display_id', width: 16 },
       { header: 'Title', key: 'title', width: 36 },
       { header: 'Type', key: 'type', width: 22 },
-      { header: 'Severity', key: 'severity', width: 10 },
       { header: 'Status', key: 'status', width: 12 },
       { header: 'Current Status', key: 'current_status', width: 30 },
       { header: 'Location', key: 'location', width: 12 },
@@ -218,7 +217,6 @@ export default function DiscrepanciesPage() {
         display_id: d.display_id,
         title: d.title,
         type: getTypeLabel(d.type),
-        severity: titleCase(d.severity),
         status: titleCase(d.status),
         current_status: getCurrentStatusLabel(d.current_status),
         location: d.location_text,
@@ -341,7 +339,7 @@ export default function DiscrepanciesPage() {
     y += 7
 
     // Table columns
-    const headRow = ['ID', 'Title', 'Type', 'Severity', 'Status', 'Location', 'Work Order', 'Days']
+    const headRow = ['ID', 'Title', 'Type', 'Status', 'Location', 'Work Order', 'Days']
     if (hasAnyPhotos) headRow.push('Photos')
 
     const tableBody = filtered.map(d => {
@@ -349,7 +347,6 @@ export default function DiscrepanciesPage() {
         d.display_id,
         d.title,
         getTypeLabel(d.type),
-        d.severity,
         d.status,
         d.location_text,
         d.work_order_number || '',
@@ -762,7 +759,7 @@ export default function DiscrepanciesPage() {
                     id={d.id}
                     displayId={d.display_id}
                     title={d.title}
-                    severity={d.severity}
+
                     status={d.status}
                     locationText={d.location_text}
                     assignedShop={d.assigned_shop}
@@ -777,7 +774,7 @@ export default function DiscrepanciesPage() {
                     id={d.id}
                     displayId={d.display_id}
                     title={d.title}
-                    severity={d.severity}
+
                     status={d.status}
                     locationText={d.location_text}
                     assignedShop={d.assigned_shop}

@@ -160,7 +160,6 @@ export default function AirfieldChecksPage() {
       if ('discrepancy_title' in detail) merged.discrepancy_title = detail.discrepancy_title
       if ('discrepancy_location_text' in detail) merged.discrepancy_location_text = detail.discrepancy_location_text
       if ('discrepancy_type' in detail) merged.discrepancy_type = detail.discrepancy_type
-      if ('discrepancy_severity' in detail) merged.discrepancy_severity = detail.discrepancy_severity
       arr[index] = merged
       return arr
     })
@@ -470,7 +469,6 @@ export default function AirfieldChecksPage() {
         description: iss.comment,
         location_text: discLocation,
         type: discType,
-        severity: iss.discrepancy_severity || undefined,
         latitude: iss.location?.lat ?? null,
         longitude: iss.location?.lon ?? null,
         base_id: installationId,

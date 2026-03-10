@@ -12,13 +12,6 @@ import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { toast } from 'sonner'
 import { formatZuluDateTime } from '@/lib/utils'
 
-const SEVERITY_LABELS: Record<string, string> = {
-  critical: 'Critical',
-  high: 'High',
-  medium: 'Medium',
-  low: 'Low',
-  no: 'None',
-}
 
 export default function AgingDiscrepanciesPage() {
   const router = useRouter()
@@ -106,8 +99,6 @@ export default function AgingDiscrepanciesPage() {
 
   const { tiers, summary } = data
   const activeTiers = tiers.filter((t) => t.discrepancies.length > 0)
-  const sevEntries = Object.entries(summary.bySeverity).sort((a, b) => b[1] - a[1])
-
   return (
     <div className="page-container">
       {/* Header */}
@@ -160,31 +151,6 @@ export default function AgingDiscrepanciesPage() {
           ))}
         </div>
       </div>
-
-      {/* By Severity */}
-      {sevEntries.length > 0 && (
-        <div className="card" style={{ padding: 14, marginBottom: 8 }}>
-          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-            By Severity
-          </div>
-          <div className="badge-grid">
-            {sevEntries.map(([sev, count]) => {
-              const sevColor = sev === 'critical' ? '#DC2626' : sev === 'high' ? '#EF4444' : sev === 'medium' ? '#FBBF24' : '#22C55E'
-              return (
-                <div key={sev} style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  padding: '8px 14px', borderRadius: 10,
-                  background: `${sevColor}14`, border: `1px solid ${sevColor}33`,
-                  minWidth: 64,
-                }}>
-                  <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: sevColor }}>{count}</div>
-                  <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-2)', fontWeight: 600, textAlign: 'center', marginTop: 2 }}>{SEVERITY_LABELS[sev] || sev}</div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
 
       {/* By Shop */}
       {summary.byShop.length > 0 && (

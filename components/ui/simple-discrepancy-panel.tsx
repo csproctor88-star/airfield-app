@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 import { X, AlertTriangle } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import { DISCREPANCY_TYPES, SEVERITY_CONFIG } from '@/lib/constants'
+import { DISCREPANCY_TYPES } from '@/lib/constants'
 import type { SimpleDiscrepancy } from '@/lib/supabase/types'
 
 const LocationMap = dynamic(
@@ -308,33 +308,6 @@ export function SimpleDiscrepancyPanel({
               </select>
             </div>
 
-            {/* Severity */}
-            <div>
-              <label style={labelStyle}>Severity</label>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {(Object.keys(SEVERITY_CONFIG) as Array<keyof typeof SEVERITY_CONFIG>).map((sev) => {
-                  const cfg = SEVERITY_CONFIG[sev]
-                  const selected = detail.discrepancy_severity === sev
-                  return (
-                    <button
-                      key={sev}
-                      type="button"
-                      onClick={() => handleDiscrepancyFieldChange('discrepancy_severity', selected ? '' : sev)}
-                      style={{
-                        padding: '6px 12px', borderRadius: 6, fontFamily: 'inherit',
-                        fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer',
-                        border: selected ? `2px solid ${cfg.color}` : '1px solid var(--color-border)',
-                        background: selected ? cfg.bg : 'transparent',
-                        color: selected ? cfg.color : 'var(--color-text-3)',
-                        textTransform: 'uppercase', letterSpacing: '0.04em',
-                      }}
-                    >
-                      {cfg.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
           </div>
         )}
       </div>

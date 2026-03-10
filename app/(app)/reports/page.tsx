@@ -13,7 +13,7 @@ const REPORT_CARDS = [
   },
   {
     title: 'Generate Discrepancy Report',
-    description: 'Point-in-time snapshot of every open discrepancy — severity breakdown, aging analysis, and assigned shop summary.',
+    description: 'Point-in-time snapshot of every open discrepancy — aging analysis and assigned shop summary.',
     href: '/reports/discrepancies',
     icon: AlertTriangle,
     color: '#FBBF24',
@@ -27,7 +27,7 @@ const REPORT_CARDS = [
   },
   {
     title: 'Aging Discrepancies',
-    description: 'Open discrepancies grouped by aging tier — 0-7, 8-14, 15-30, 31-60, 61-90, and 90+ days with severity and shop breakdown.',
+    description: 'Open discrepancies grouped by aging tier — 0-7, 8-14, 15-30, 31-60, 61-90, and 90+ days with shop breakdown.',
     href: '/reports/aging',
     icon: Clock,
     color: '#EF4444',

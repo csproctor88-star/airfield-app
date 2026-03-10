@@ -707,7 +707,7 @@ export default function InspectionsPage() {
           description: d.comment,
           location_text: discLocation,
           type: discType,
-          severity: d.discrepancy_severity || undefined,
+
           latitude: d.location?.lat ?? null,
           longitude: d.location?.lon ?? null,
           base_id: installationId,
@@ -1024,7 +1024,7 @@ export default function InspectionsPage() {
               description: d.comment,
               location_text: discLocation,
               type: discType,
-              severity: d.discrepancy_severity || undefined,
+    
               latitude: d.location?.lat ?? null,
               longitude: d.location?.lon ?? null,
               base_id: installationId,

@@ -15,7 +15,6 @@ export interface AgingDiscrepancy {
   display_id: string
   title: string
   type: string
-  severity: string
   current_status: string
   location_text: string
   assigned_shop: string | null
@@ -30,7 +29,6 @@ export interface AgingDiscrepancy {
 
 export interface AgingSummary {
   total: number
-  bySeverity: Record<string, number>
   byShop: { shop: string; count: number }[]
   avgDaysOpen: number | null
   oldest: { display_id: string; title: string; days_open: number } | null
@@ -57,7 +55,7 @@ const TIER_DEFS: { label: string; min: number; max: number | null; color: string
 export async function fetchAgingDiscrepanciesData(baseId?: string | null): Promise<AgingDiscrepanciesData> {
   const empty: AgingDiscrepanciesData = {
     tiers: TIER_DEFS.map((t) => ({ ...t, discrepancies: [] })),
-    summary: { total: 0, bySeverity: {}, byShop: [], avgDaysOpen: null, oldest: null },
+    summary: { total: 0, byShop: [], avgDaysOpen: null, oldest: null },
   }
 
   const supabase = createClient()
@@ -87,7 +85,7 @@ export async function fetchAgingDiscrepanciesData(baseId?: string | null): Promi
         display_id: row.display_id as string,
         title: row.title as string,
         type: row.type as string,
-        severity: row.severity as string,
+
         current_status: row.current_status as string,
         location_text: row.location_text as string,
         assigned_shop: row.assigned_shop as string | null,
@@ -120,7 +118,7 @@ export async function fetchAgingDiscrepanciesData(baseId?: string | null): Promi
         display_id: row.display_id as string,
         title: row.title as string,
         type: row.type as string,
-        severity: row.severity as string,
+
         current_status: row.current_status as string,
         location_text: row.location_text as string,
         assigned_shop: row.assigned_shop as string | null,
@@ -181,12 +179,10 @@ export async function fetchAgingDiscrepanciesData(baseId?: string | null): Promi
   }
 
   // Compute summary
-  const bySeverity: Record<string, number> = {}
   const shopCounts: Record<string, number> = {}
   let totalDays = 0
 
   for (const d of rows) {
-    bySeverity[d.severity] = (bySeverity[d.severity] || 0) + 1
     const shop = d.assigned_shop || 'Unassigned'
     shopCounts[shop] = (shopCounts[shop] || 0) + 1
     totalDays += d.days_open
@@ -205,7 +201,6 @@ export async function fetchAgingDiscrepanciesData(baseId?: string | null): Promi
     tiers,
     summary: {
       total: rows.length,
-      bySeverity,
       byShop,
       avgDaysOpen: rows.length > 0 ? Math.round(totalDays / rows.length) : null,
       oldest,

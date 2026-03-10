@@ -10,7 +10,6 @@ interface DiscrepancyCardProps {
   id: string
   displayId: string
   title: string
-  severity?: string
   status: string
   locationText: string
   assignedShop: string | null

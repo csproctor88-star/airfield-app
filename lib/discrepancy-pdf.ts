@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf'
-import { DISCREPANCY_TYPES, SEVERITY_CONFIG, STATUS_CONFIG, LOCATION_OPTIONS, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
+import { DISCREPANCY_TYPES, STATUS_CONFIG, LOCATION_OPTIONS, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import { formatZuluDateTime, formatZuluDate } from '@/lib/utils'
 
 interface DiscrepancyPdfInput {
@@ -29,7 +29,6 @@ export async function generateDiscrepancyPdf(input: DiscrepancyPdfInput) {
 
   const workOrder = d.work_order_number || 'Pending'
   const statusConfig = STATUS_CONFIG[d.status as keyof typeof STATUS_CONFIG]
-  const severityConfig = SEVERITY_CONFIG[d.severity as keyof typeof SEVERITY_CONFIG]
   const typeLabels = d.type
     ? d.type.split(', ').map((v: string) => {
         const t = DISCREPANCY_TYPES.find((dt) => dt.value === v)
@@ -78,13 +77,13 @@ export async function generateDiscrepancyPdf(input: DiscrepancyPdfInput) {
   doc.setTextColor(120)
   doc.text('Work Order:', col1, y + 5)
   doc.text('Status:', col2, y + 5)
-  doc.text('Severity:', col3, y + 5)
+  doc.text('Current Status:', col3, y + 5)
 
   doc.setFontSize(9)
   doc.setTextColor(0)
   doc.text(workOrder, col1, y + 10)
   doc.text(statusConfig?.label || d.status || 'N/A', col2, y + 10)
-  doc.text(severityConfig?.label || d.severity || 'N/A', col3, y + 10)
+  doc.text(currentStatusLabel, col3, y + 10)
 
   // Row 2
   doc.setFontSize(7)

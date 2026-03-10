@@ -8,7 +8,6 @@ export interface OpenDiscrepancy {
   title: string
   description: string
   type: string
-  severity: string
   status: string
   current_status: string
   location_text: string

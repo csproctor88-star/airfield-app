@@ -1,13 +1,12 @@
 import { createClient } from './client'
 import { logActivity } from './activity'
-import type { Severity, DiscrepancyStatus, CurrentStatus } from './types'
+import type { DiscrepancyStatus, CurrentStatus } from './types'
 
 export type DiscrepancyRow = {
   id: string
   display_id: string
   base_id: string | null
   type: string
-  severity: Severity
   status: DiscrepancyStatus
   current_status: CurrentStatus
   title: string
@@ -75,7 +74,6 @@ export async function createDiscrepancy(input: {
   description: string
   location_text: string
   type: string
-  severity?: string
   notam_reference?: string
   current_status?: string
   latitude?: number | null
@@ -103,7 +101,6 @@ export async function createDiscrepancy(input: {
   const row: Record<string, unknown> = {
     display_id,
     type: input.type,
-    severity: input.severity || 'no',
     status,
     current_status: input.current_status || 'submitted_to_afm',
     notam_reference: input.notam_reference || null,
@@ -144,7 +141,6 @@ export async function updateDiscrepancy(
     description?: string
     location_text?: string
     type?: string
-    severity?: string
     current_status?: string
     notam_reference?: string | null
     assigned_shop?: string | null
@@ -474,14 +470,13 @@ export async function addStatusNote(discrepancyId: string, notes: string, baseId
 
 export async function fetchDiscrepancyKPIs(baseId?: string | null): Promise<{
   open: number
-  critical: number
 }> {
   const supabase = createClient()
-  if (!supabase) return { open: 0, critical: 0 }
+  if (!supabase) return { open: 0 }
 
   let query = supabase
     .from('discrepancies')
-    .select('severity, status')
+    .select('status')
     .not('status', 'in', '("completed","cancelled")')
 
   if (baseId) {
@@ -492,12 +487,11 @@ export async function fetchDiscrepancyKPIs(baseId?: string | null): Promise<{
 
   if (error) {
     console.error('Failed to fetch KPIs:', error.message)
-    return { open: 0, critical: 0 }
+    return { open: 0 }
   }
 
-  const rows = (data ?? []) as { severity: string; status: string }[]
+  const rows = (data ?? []) as { status: string }[]
   const open = rows.filter(r => !['completed', 'cancelled'].includes(r.status)).length
-  const critical = rows.filter(r => r.severity === 'critical' && !['completed', 'cancelled'].includes(r.status)).length
 
-  return { open, critical }
+  return { open }
 }

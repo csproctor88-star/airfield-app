@@ -3,8 +3,7 @@
 
 export const DEMO_DISCREPANCIES = [
   {
-    id: 'demo-001', display_id: 'D-2026-0042', type: 'pavement', severity: 'critical' as const,
-    status: 'open' as const, current_status: 'submitted_to_ces' as const,
+    id: 'demo-001', display_id: 'D-2026-0042', type: 'pavement',    status: 'open' as const, current_status: 'submitted_to_ces' as const,
     title: 'Pavement spall TWY A intersection',
     description: '12x18 inch spall, 2 inch depth. FOD potential from loose aggregate.',
     location_text: 'TWY', assigned_shop: 'CE Pavements', reported_by: 'demo-user',
@@ -13,8 +12,7 @@ export const DEMO_DISCREPANCIES = [
     days_open: 9,
   },
   {
-    id: 'demo-002', display_id: 'D-2026-0041', type: 'lighting', severity: 'critical' as const,
-    status: 'open' as const, current_status: 'awaiting_action_by_ces' as const,
+    id: 'demo-002', display_id: 'D-2026-0041', type: 'lighting',    status: 'open' as const, current_status: 'awaiting_action_by_ces' as const,
     title: 'MALSR RWY 01 Stations 7&8 OTS',
     description: 'MALSR stations 7 and 8 inoperative. Approach lighting degraded. Parts ETA Monday.',
     location_text: 'RWY', assigned_shop: 'CE Electrical', reported_by: 'demo-user',
@@ -23,8 +21,7 @@ export const DEMO_DISCREPANCIES = [
     days_open: 4,
   },
   {
-    id: 'demo-003', display_id: 'D-2026-0039', type: 'marking', severity: 'medium' as const,
-    status: 'open' as const, current_status: 'submitted_to_afm' as const,
+    id: 'demo-003', display_id: 'D-2026-0039', type: 'marking',    status: 'open' as const, current_status: 'submitted_to_afm' as const,
     title: 'TDZ marking faded RWY 01',
     description: 'Touchdown zone markings below minimum reflectivity per UFC 3-260-01.',
     location_text: 'RWY', assigned_shop: 'CE Pavements', reported_by: 'demo-user',
@@ -33,8 +30,7 @@ export const DEMO_DISCREPANCIES = [
     days_open: 16,
   },
   {
-    id: 'demo-004', display_id: 'D-2026-0038', type: 'lighting', severity: 'low' as const,
-    status: 'open' as const, current_status: 'submitted_to_afm' as const,
+    id: 'demo-004', display_id: 'D-2026-0038', type: 'lighting',    status: 'open' as const, current_status: 'submitted_to_afm' as const,
     title: 'TWY B edge light #14 lens cracked',
     description: 'Blue edge light lens cracked but illuminating. Replacement on order.',
     location_text: 'TWY', assigned_shop: 'CE Electrical', reported_by: 'demo-user',
@@ -43,8 +39,7 @@ export const DEMO_DISCREPANCIES = [
     days_open: 18,
   },
   {
-    id: 'demo-005', display_id: 'D-2026-0037', type: 'drainage', severity: 'medium' as const,
-    status: 'completed' as const, current_status: 'work_completed_awaiting_verification' as const,
+    id: 'demo-005', display_id: 'D-2026-0037', type: 'drainage',    status: 'completed' as const, current_status: 'work_completed_awaiting_verification' as const,
     title: 'Standing water near TWY C holdshort',
     description: 'Drain inlet cleared. Monitoring for recurrence.',
     location_text: 'TWY', assigned_shop: 'CE Grounds', reported_by: 'demo-user',
@@ -53,8 +48,7 @@ export const DEMO_DISCREPANCIES = [
     days_open: 0,
   },
   {
-    id: 'demo-006', display_id: 'D-2026-0036', type: 'signage', severity: 'low' as const,
-    status: 'completed' as const, current_status: 'work_completed_awaiting_verification' as const,
+    id: 'demo-006', display_id: 'D-2026-0036', type: 'signage',    status: 'completed' as const, current_status: 'work_completed_awaiting_verification' as const,
     title: 'Runway distance remaining sign tilted',
     description: 'Sign post base re-secured and leveled.',
     location_text: 'RWY', assigned_shop: 'CE Structures', reported_by: 'demo-user',

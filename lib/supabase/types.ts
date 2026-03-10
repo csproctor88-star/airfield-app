@@ -121,7 +121,6 @@ export type Database = {
           display_id: string
           base_id: string | null
           type: string
-          severity: Severity
           status: DiscrepancyStatus
           current_status: CurrentStatus
           title: string
@@ -769,7 +768,6 @@ export type UserRole =
 
 export type ProfileStatus = 'active' | 'deactivated' | 'pending'
 
-export type Severity = 'critical' | 'high' | 'medium' | 'low'
 export type DiscrepancyStatus = 'open' | 'completed' | 'cancelled'
 export type CurrentStatus = 'submitted_to_afm' | 'submitted_to_ces' | 'awaiting_action_by_ces' | 'work_completed_awaiting_verification'
 export type CheckType = 'fod' | 'rsc' | 'ife' | 'ground_emergency' | 'heavy_aircraft' | 'bash' | 'rcr'
@@ -800,8 +798,6 @@ export type SimpleDiscrepancy = {
   discrepancy_location_text?: string
   /** Discrepancy type value (from DISCREPANCY_TYPES) */
   discrepancy_type?: string
-  /** Severity override */
-  discrepancy_severity?: string
   /** ID of the created discrepancy (set after submission) */
   generated_discrepancy_id?: string | null
 }

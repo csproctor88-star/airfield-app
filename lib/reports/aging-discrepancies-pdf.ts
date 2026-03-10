@@ -18,13 +18,6 @@ const STATUS_LABELS: Record<string, string> = {
   open: 'Open',
 }
 
-const SEVERITY_LABELS: Record<string, string> = {
-  critical: 'Critical',
-  high: 'High',
-  medium: 'Medium',
-  low: 'Low',
-  no: 'None',
-}
 
 export function generateAgingDiscrepanciesPdf(data: AgingDiscrepanciesData, opts: Options) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' })
@@ -133,18 +126,9 @@ export function generateAgingDiscrepanciesPdf(data: AgingDiscrepanciesData, opts
   })
   y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4
 
-  // By severity
+  // By shop
   doc.setFontSize(9)
   doc.setTextColor(0)
-  const sevEntries = Object.entries(data.summary.bySeverity).sort((a, b) => b[1] - a[1])
-  if (sevEntries.length > 0) {
-    const sevText = 'By Severity: ' + sevEntries.map(([s, c]) => `${SEVERITY_LABELS[s] || s} (${c})`).join(', ')
-    const sevLines = doc.splitTextToSize(sevText, contentWidth)
-    doc.text(sevLines, margin, y)
-    y += sevLines.length * 4
-  }
-
-  // By shop
   if (data.summary.byShop.length > 0) {
     const shopText = 'By Shop: ' + data.summary.byShop.map((s) => `${s.shop} (${s.count})`).join(', ')
     const shopLines = doc.splitTextToSize(shopText, contentWidth)
@@ -172,7 +156,6 @@ export function generateAgingDiscrepanciesPdf(data: AgingDiscrepanciesData, opts
         d.display_id,
         d.title,
         formatDiscrepancyType(d.type),
-        SEVERITY_LABELS[d.severity] || d.severity,
         d.location_text,
         d.assigned_shop || 'Unassigned',
         d.work_order_number || '',
@@ -185,7 +168,7 @@ export function generateAgingDiscrepanciesPdf(data: AgingDiscrepanciesData, opts
     autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
-      head: [['ID', 'Title', 'Type', 'Severity', 'Location', 'Shop', 'W/O #', 'Status', 'Days', 'Last Update']],
+      head: [['ID', 'Title', 'Type', 'Location', 'Shop', 'W/O #', 'Status', 'Days', 'Last Update']],
       body,
       styles: { fontSize: 7, cellPadding: 1.5, textColor: [0, 0, 0] },
       headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
@@ -194,16 +177,6 @@ export function generateAgingDiscrepanciesPdf(data: AgingDiscrepanciesData, opts
         0: { cellWidth: 18 },
         1: { cellWidth: 32 },
         8: { cellWidth: 10, halign: 'center' },
-      },
-      didParseCell: (hookData) => {
-        if (hookData.section !== 'body') return
-        const disc = tier.discrepancies[hookData.row.index]
-        if (!disc) return
-        // Red for severity critical/high
-        if (hookData.column.index === 3 && (disc.severity === 'critical' || disc.severity === 'high')) {
-          hookData.cell.styles.textColor = [220, 38, 38]
-          hookData.cell.styles.fontStyle = 'bold'
-        }
       },
     })
     y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6

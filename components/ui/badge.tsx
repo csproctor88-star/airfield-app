@@ -23,23 +23,10 @@ export function Badge({ label, color, bg }: BadgeProps) {
   )
 }
 
-// Preset badges from SRS Section 6.2
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#EF4444',
-  high: '#F97316',
-  medium: '#FBBF24',
-  low: '#38BDF8',
-}
-
 const STATUS_COLORS: Record<string, string> = {
   open: '#3B82F6',
   completed: '#10B981',
   cancelled: '#9CA3AF',
-}
-
-export function SeverityBadge({ severity }: { severity: string }) {
-  const color = SEVERITY_COLORS[severity.toLowerCase()] || '#94A3B8'
-  return <Badge label={severity.toUpperCase()} color={color} />
 }
 
 const STATUS_LABELS: Record<string, string> = {
