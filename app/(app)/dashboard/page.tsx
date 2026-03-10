@@ -99,7 +99,16 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
 
 export default function AMDashboardPage() {
   const router = useRouter()
-  const { installationId, currentInstallation } = useInstallation()
+  const { installationId, currentInstallation, userRole } = useInstallation()
+  const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
+  const [customTemplates, setCustomTemplates] = useState<import('@/lib/activity-templates').TemplateCategory[] | null>(null)
+
+  useEffect(() => {
+    if (!installationId) return
+    import('@/lib/supabase/activity-templates').then(({ loadCustomActivityTemplates }) =>
+      loadCustomActivityTemplates(installationId).then(setCustomTemplates)
+    )
+  }, [installationId])
   const baseTimezone = currentInstallation?.timezone || 'America/New_York'
   const baseResetTime = (currentInstallation as Record<string, any>)?.checklist_reset_time || '06:00'
   const [activity, setActivity] = useState<ActivityEntry[]>([])
@@ -459,6 +468,10 @@ export default function AMDashboardPage() {
             }
           }}
           onClose={() => setShowTemplatePicker(false)}
+          isAdmin={isAdmin}
+          installationId={installationId}
+          customTemplates={customTemplates}
+          onTemplatesSaved={setCustomTemplates}
         />
       )}
 
@@ -742,6 +755,10 @@ export default function AMDashboardPage() {
             setShowEditTemplatePicker(false)
           }}
           onClose={() => setShowEditTemplatePicker(false)}
+          isAdmin={isAdmin}
+          installationId={installationId}
+          customTemplates={customTemplates}
+          onTemplatesSaved={setCustomTemplates}
         />
       )}
     </div>

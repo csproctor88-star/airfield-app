@@ -20,7 +20,6 @@ export type TemplateCategory = {
 }
 
 // Shared field helpers
-const initials: TemplateField = { key: 'initials', label: 'Initials' }
 const afld3: TemplateField = { key: 'callsign', label: 'Callsign', default: 'AFLD3/' }
 const twrCs: TemplateField = { key: 'callsign', label: 'Callsign', default: 'TWR/' }
 
@@ -31,47 +30,45 @@ export const ACTIVITY_TEMPLATES: TemplateCategory[] = [
     templates: [
       {
         label: 'On Airfield for Inspection',
-        text: '{callsign} ON AFLD FOR AFLD INSPECTION...{initials}',
-        fields: [afld3, initials],
+        text: '{callsign} on airfield for airfield inspection',
+        fields: [afld3],
       },
       {
         label: 'Advises RSC & BWC',
-        text: '{callsign} ADVISES RSC/{rsc} & BWC/{bwc}...{initials}',
-        fields: [afld3, { key: 'rsc', label: 'RSC Condition', default: 'DRY' }, { key: 'bwc', label: 'BWC Level', default: 'LOW' }, initials],
+        text: '{callsign} advises RSC/{rsc} and BWC/{bwc}',
+        fields: [afld3, { key: 'rsc', label: 'RSC Condition', default: 'DRY' }, { key: 'bwc', label: 'BWC Level', default: 'LOW' }],
       },
       {
         label: 'Off Airfield - Inspection Complete',
-        text: '{callsign} OFF AFLD. AFLD INSPECTION CMPLT; {discrepancies}...{initials}',
-        fields: [afld3, { key: 'discrepancies', label: 'Discrepancies', default: 'NO NEW DISCREPANCIES' }, initials],
+        text: '{callsign} off airfield. Airfield inspection complete; {discrepancies}',
+        fields: [afld3, { key: 'discrepancies', label: 'Discrepancies', default: 'no new discrepancies' }],
       },
       {
         label: 'On Airfield for Check',
-        text: '{callsign} ON AFLD FOR {check_types} CHECK...{initials}',
+        text: '{callsign} on airfield for {check_types} check',
         fields: [
           afld3,
           { key: 'check_types', label: 'Check Types', type: 'toggle-list', options: ['FOD', 'BASH', 'CONSTRUCTION', 'RSC/RCR', 'HEAVY ACFT'] },
-          initials,
         ],
       },
       {
         label: 'Off Airfield - Check Complete',
-        text: '{callsign} OFF AFLD. {check_types} CHECK CMPLT; {discrepancies}...{initials}',
+        text: '{callsign} off airfield. {check_types} check complete; {discrepancies}',
         fields: [
           afld3,
           { key: 'check_types', label: 'Check Types', type: 'toggle-list', options: ['FOD', 'BASH', 'CONSTRUCTION', 'RSC/RCR', 'HEAVY ACFT'] },
-          { key: 'discrepancies', label: 'Discrepancies', default: 'NO NEW DISCREPANCIES' },
-          initials,
+          { key: 'discrepancies', label: 'Discrepancies', default: 'no new discrepancies' },
         ],
       },
       {
         label: 'On Airfield for Lighting Check',
-        text: '{callsign} ON AFLD FOR LIGHTING CHECK...{initials}',
-        fields: [afld3, initials],
+        text: '{callsign} on airfield for lighting check',
+        fields: [afld3],
       },
       {
         label: 'Off Airfield - Lighting Check Complete',
-        text: '{callsign} OFF AFLD. AFLD LIGHTING CHECK CMPLT; {discrepancies}...{initials}',
-        fields: [afld3, { key: 'discrepancies', label: 'Discrepancies', default: 'NO NEW DISCREPANCIES' }, initials],
+        text: '{callsign} off airfield. Airfield lighting check complete; {discrepancies}',
+        fields: [afld3, { key: 'discrepancies', label: 'Discrepancies', default: 'no new discrepancies' }],
       },
     ],
   },
@@ -82,33 +79,33 @@ export const ACTIVITY_TEMPLATES: TemplateCategory[] = [
     templates: [
       {
         label: 'Area Closed',
-        text: '{callsign} ADVISES {area} CLOSED...{initials}',
-        fields: [afld3, { key: 'area', label: 'Area (e.g. RWY 18/36 / TWY A / EAST RAMP)' }, initials],
+        text: '{callsign} advises {area} closed',
+        fields: [afld3, { key: 'area', label: 'Area (e.g. RWY 18/36 / TWY A / EAST RAMP)' }],
       },
       {
         label: 'Area Suspended',
-        text: '{callsign} ADVISES {area} SUSPENDED...{initials}',
-        fields: [afld3, { key: 'area', label: 'Area (e.g. RWY 18/36 / TWY A / EAST RAMP)' }, initials],
+        text: '{callsign} advises {area} suspended',
+        fields: [afld3, { key: 'area', label: 'Area (e.g. RWY 18/36 / TWY A / EAST RAMP)' }],
       },
       {
         label: 'Area Ops Resumed',
-        text: '{callsign} ADVISES {area} OPS RESUMED...{initials}',
-        fields: [afld3, { key: 'area', label: 'Area (e.g. RWY 18/36 / TWY A / EAST RAMP)' }, initials],
+        text: '{callsign} advises {area} ops resumed',
+        fields: [afld3, { key: 'area', label: 'Area (e.g. RWY 18/36 / TWY A / EAST RAMP)' }],
       },
       {
         label: 'Area RCR Report',
-        text: '{callsign} ADVISES {area} RCR/{rcr}...{initials}',
-        fields: [afld3, { key: 'area', label: 'Area (e.g. RWY 18/36 / TWY A)' }, { key: 'rcr', label: 'RCR Value' }, initials],
+        text: '{callsign} advises {area} RCR/{rcr}',
+        fields: [afld3, { key: 'area', label: 'Area (e.g. RWY 18/36 / TWY A)' }, { key: 'rcr', label: 'RCR Value' }],
       },
       {
         label: 'Advises RSC & BWC',
-        text: '{callsign} ADVISES RSC/{rsc} & BWC/{bwc}...{initials}',
-        fields: [afld3, { key: 'rsc', label: 'RSC Condition' }, { key: 'bwc', label: 'BWC Level' }, initials],
+        text: '{callsign} advises RSC/{rsc} and BWC/{bwc}',
+        fields: [afld3, { key: 'rsc', label: 'RSC Condition' }, { key: 'bwc', label: 'BWC Level' }],
       },
       {
         label: 'Advises RSC, BWC & RCR',
-        text: '{callsign} ADVISES RSC/{rsc}, BWC/{bwc}, & RCR/{rcr}...{initials}',
-        fields: [afld3, { key: 'rsc', label: 'RSC Condition' }, { key: 'bwc', label: 'BWC Level' }, { key: 'rcr', label: 'RCR Value' }, initials],
+        text: '{callsign} advises RSC/{rsc}, BWC/{bwc}, and RCR/{rcr}',
+        fields: [afld3, { key: 'rsc', label: 'RSC Condition' }, { key: 'bwc', label: 'BWC Level' }, { key: 'rcr', label: 'RCR Value' }],
       },
     ],
   },
@@ -119,23 +116,23 @@ export const ACTIVITY_TEMPLATES: TemplateCategory[] = [
     templates: [
       {
         label: 'Tower Open',
-        text: '{callsign} ADVISES SELFRIDGE TWR IS NOW OPEN; RWY {runway} IN USE...{initials}',
-        fields: [twrCs, { key: 'runway', label: 'Runway' }, initials],
+        text: '{callsign} advises tower is now open; RWY {runway} in use',
+        fields: [twrCs, { key: 'runway', label: 'Runway' }],
       },
       {
         label: 'Runway In Use',
-        text: '{callsign} ADVISES RWY {runway} IN USE...{initials}',
-        fields: [twrCs, { key: 'runway', label: 'Runway' }, initials],
+        text: '{callsign} advises RWY {runway} in use',
+        fields: [twrCs, { key: 'runway', label: 'Runway' }],
       },
       {
         label: 'Area Closed',
-        text: '{callsign} ADVISES {area} CLOSED...{initials}',
-        fields: [twrCs, { key: 'area', label: 'Area (e.g. RWY 18/36 / TWY A)' }, initials],
+        text: '{callsign} advises {area} closed',
+        fields: [twrCs, { key: 'area', label: 'Area (e.g. RWY 18/36 / TWY A)' }],
       },
       {
         label: 'Area Suspended',
-        text: '{callsign} ADVISES {area} SUSPENDED...{initials}',
-        fields: [twrCs, { key: 'area', label: 'Area (e.g. RWY 18/36 / TWY A)' }, initials],
+        text: '{callsign} advises {area} suspended',
+        fields: [twrCs, { key: 'area', label: 'Area (e.g. RWY 18/36 / TWY A)' }],
       },
     ],
   },
@@ -146,27 +143,25 @@ export const ACTIVITY_TEMPLATES: TemplateCategory[] = [
     templates: [
       {
         label: 'AMOPS Open',
-        text: 'AMOPS OPEN. {amsl} AS AMSL AND {amoc} AS AMOC ON DUTY...{initials}',
+        text: 'AMOPS open. {amsl} as AMSL and {amoc} as AMOC on duty',
         fields: [
           { key: 'amsl', label: 'AMSL (e.g. A. Smith/01)' },
           { key: 'amoc', label: 'AMOC (e.g. B. Jones/02)' },
-          initials,
         ],
       },
       {
         label: 'Shift Change',
-        text: 'SHIFT CHANGE. {amsl_on} AS AMSL AND {amoc_on} AS AMOC ON DUTY. SHIFT BRIEFING COMPLETED. {off_duty} OFF DUTY...{initials}',
+        text: 'Shift change. {amsl_on} as AMSL and {amoc_on} as AMOC on duty. Shift briefing completed. {off_duty} off duty',
         fields: [
           { key: 'amsl_on', label: 'Incoming AMSL' },
           { key: 'amoc_on', label: 'Incoming AMOC' },
           { key: 'off_duty', label: 'Off Duty Personnel' },
-          initials,
         ],
       },
       {
         label: 'AMOPS Closed',
-        text: 'AMOPS CLSD. {off_duty} OFF DUTY...{initials}',
-        fields: [{ key: 'off_duty', label: 'Off Duty Personnel' }, initials],
+        text: 'AMOPS closed. {off_duty} off duty',
+        fields: [{ key: 'off_duty', label: 'Off Duty Personnel' }],
       },
     ],
   },
@@ -177,18 +172,18 @@ export const ACTIVITY_TEMPLATES: TemplateCategory[] = [
     templates: [
       {
         label: 'AISR Guard Removed',
-        text: 'AISR GUARD REMOVED...{initials}',
-        fields: [initials],
+        text: 'AISR guard removed',
+        fields: [],
       },
       {
         label: 'AISR Guard Transferred',
-        text: 'AISR GUARD TRANSFERRED TO {facility}...{initials}',
-        fields: [{ key: 'facility', label: 'Facility', default: 'FFO' }, initials],
+        text: 'AISR guard transferred to {facility}',
+        fields: [{ key: 'facility', label: 'Facility', default: 'FFO' }],
       },
       {
         label: 'NOTAMs Verified',
-        text: 'NOTAMS VERIFIED; {discrepancies}...{initials}',
-        fields: [{ key: 'discrepancies', label: 'Discrepancies', default: 'NO DISCREPANCIES' }, initials],
+        text: 'NOTAMs verified; {discrepancies}',
+        fields: [{ key: 'discrepancies', label: 'Discrepancies', default: 'no discrepancies' }],
       },
     ],
   },
@@ -199,23 +194,23 @@ export const ACTIVITY_TEMPLATES: TemplateCategory[] = [
     templates: [
       {
         label: 'QRC Initiated',
-        text: 'QRC #{number} INITIATED...{initials}',
-        fields: [{ key: 'number', label: 'QRC Number' }, initials],
+        text: 'QRC #{number} initiated',
+        fields: [{ key: 'number', label: 'QRC Number' }],
       },
       {
         label: 'QRC Continued',
-        text: 'QRC #{number} CONTINUED...{initials}',
-        fields: [{ key: 'number', label: 'QRC Number' }, initials],
+        text: 'QRC #{number} continued',
+        fields: [{ key: 'number', label: 'QRC Number' }],
       },
       {
         label: 'QRC Completed',
-        text: 'QRC #{number} COMPLETED...{initials}',
-        fields: [{ key: 'number', label: 'QRC Number' }, initials],
+        text: 'QRC #{number} completed',
+        fields: [{ key: 'number', label: 'QRC Number' }],
       },
       {
         label: 'QRC Updated',
-        text: 'QRC #{number} UPDATED...{initials}',
-        fields: [{ key: 'number', label: 'QRC Number' }, initials],
+        text: 'QRC #{number} updated',
+        fields: [{ key: 'number', label: 'QRC Number' }],
       },
     ],
   },
@@ -226,38 +221,38 @@ export const ACTIVITY_TEMPLATES: TemplateCategory[] = [
     templates: [
       {
         label: 'PCAS Tested',
-        text: 'PCAS TESTED L&C BY {callsign}...{initials}',
-        fields: [twrCs, initials],
+        text: 'PCAS tested loud and clear by {callsign}',
+        fields: [twrCs],
       },
       {
         label: 'SCN Check Complete - All L&C',
-        text: 'SCN CK COMPLT. ALL AGENCIES L&C...{initials}',
-        fields: [initials],
+        text: 'SCN check complete. All agencies loud and clear',
+        fields: [],
       },
       {
         label: 'SCN Check Complete - Exceptions',
-        text: 'SCN CK COMPLT. ALL AGENCIES L&C BESIDES STATIONS {stations} WHO WERE OUT OF OFFICE...{initials}',
-        fields: [{ key: 'stations', label: 'Stations Not Reached' }, initials],
+        text: 'SCN check complete. All agencies loud and clear besides stations {stations} who were out of office',
+        fields: [{ key: 'stations', label: 'Stations Not Reached' }],
       },
       {
         label: 'Monthly Backup SCN - All L&C',
-        text: 'MONTHLY BACKUP SCN CK CMPLT BY {callsign}. ALL AGENCIES L&C...{initials}',
-        fields: [{ key: 'callsign', label: 'Callsign', default: 'CP/' }, initials],
+        text: 'Monthly backup SCN check complete by {callsign}. All agencies loud and clear',
+        fields: [{ key: 'callsign', label: 'Callsign', default: 'CP/' }],
       },
       {
         label: 'Monthly Backup SCN - Exceptions',
-        text: 'MONTHLY BACKUP SCN CK CMPLT BY {callsign}. ALL AGENCIES L&C BESIDES STATIONS {stations}, WHO WERE OUT OF OFFICE...{initials}',
-        fields: [{ key: 'callsign', label: 'Callsign', default: 'CP/' }, { key: 'stations', label: 'Stations Not Reached' }, initials],
+        text: 'Monthly backup SCN check complete by {callsign}. All agencies loud and clear besides stations {stations}, who were out of office',
+        fields: [{ key: 'callsign', label: 'Callsign', default: 'CP/' }, { key: 'stations', label: 'Stations Not Reached' }],
       },
       {
         label: 'PCAS Activated',
-        text: 'PCAS ACTIVATED BY {callsign} FOR {reason}...{initials}',
-        fields: [twrCs, { key: 'reason', label: 'Reason for Activation' }, initials],
+        text: 'PCAS activated by {callsign} for {reason}',
+        fields: [twrCs, { key: 'reason', label: 'Reason for Activation' }],
       },
       {
         label: 'SCN Activated',
-        text: 'SCN ACTIVATED BY {activator} FOR {reason}...{initials}',
-        fields: [{ key: 'activator', label: 'Activated By' }, { key: 'reason', label: 'Reason for Activation' }, initials],
+        text: 'SCN activated by {activator} for {reason}',
+        fields: [{ key: 'activator', label: 'Activated By' }, { key: 'reason', label: 'Reason for Activation' }],
       },
     ],
   },
@@ -268,23 +263,23 @@ export const ACTIVITY_TEMPLATES: TemplateCategory[] = [
     templates: [
       {
         label: 'Personnel On Airfield',
-        text: '{name} ON AIRFIELD FOR {reason}...{initials}',
-        fields: [{ key: 'name', label: 'Company/Callsign' }, { key: 'reason', label: 'Reason on Airfield' }, initials],
+        text: '{name} on airfield for {reason}',
+        fields: [{ key: 'name', label: 'Company/Callsign' }, { key: 'reason', label: 'Reason on Airfield' }],
       },
       {
         label: 'Personnel Off Airfield',
-        text: '{name} OFF AIRFIELD...{initials}',
-        fields: [{ key: 'name', label: 'Company/Callsign' }, initials],
+        text: '{name} off airfield',
+        fields: [{ key: 'name', label: 'Company/Callsign' }],
       },
       {
         label: 'Personnel On Airfield - LMR Issued',
-        text: '{name} ON AFLD, LMR #{lmr} ISSUED...{initials}',
-        fields: [{ key: 'name', label: 'Company/Callsign' }, { key: 'lmr', label: 'LMR Number' }, initials],
+        text: '{name} on airfield, LMR #{lmr} issued',
+        fields: [{ key: 'name', label: 'Company/Callsign' }, { key: 'lmr', label: 'LMR Number' }],
       },
       {
         label: 'Personnel Off Airfield - LMR Returned',
-        text: '{name} OFF AFLD, LMR #{lmr} RETURNED...{initials}',
-        fields: [{ key: 'name', label: 'Company/Callsign' }, { key: 'lmr', label: 'LMR Number' }, initials],
+        text: '{name} off airfield, LMR #{lmr} returned',
+        fields: [{ key: 'name', label: 'Company/Callsign' }, { key: 'lmr', label: 'LMR Number' }],
       },
     ],
   },
@@ -295,49 +290,45 @@ export const ACTIVITY_TEMPLATES: TemplateCategory[] = [
     templates: [
       {
         label: 'NOTAM Issued',
-        text: 'NOTAM ISSUED: {notam_id} - {description}. {effective_dates}. QRC #{qrc} CMPLT...{initials}',
+        text: 'NOTAM issued: {notam_id} - {description}. {effective_dates}. QRC #{qrc} complete',
         fields: [
           { key: 'notam_id', label: 'NOTAM ID (e.g. M0414/24)' },
           { key: 'description', label: 'Description' },
           { key: 'effective_dates', label: 'Effective Dates' },
           { key: 'qrc', label: 'QRC Number' },
-          initials,
         ],
       },
       {
         label: 'NOTAM Extended',
-        text: 'NOTAM EXTENDED: {notam_id} NOTAMR {replaces_id} - {description}. {effective_dates}. QRC #{qrc} CMPLT...{initials}',
+        text: 'NOTAM extended: {notam_id} NOTAMR {replaces_id} - {description}. {effective_dates}. QRC #{qrc} complete',
         fields: [
           { key: 'notam_id', label: 'New NOTAM ID' },
           { key: 'replaces_id', label: 'Replaces NOTAM ID' },
           { key: 'description', label: 'Description' },
           { key: 'effective_dates', label: 'Effective Dates' },
           { key: 'qrc', label: 'QRC Number' },
-          initials,
         ],
       },
       {
         label: 'NOTAM Replaced',
-        text: 'NOTAM REPLACED: {notam_id} NOTAMR {replaces_id} - {description}. {effective_dates}. QRC #{qrc} CMPLT...{initials}',
+        text: 'NOTAM replaced: {notam_id} NOTAMR {replaces_id} - {description}. {effective_dates}. QRC #{qrc} complete',
         fields: [
           { key: 'notam_id', label: 'New NOTAM ID' },
           { key: 'replaces_id', label: 'Replaces NOTAM ID' },
           { key: 'description', label: 'Description' },
           { key: 'effective_dates', label: 'Effective Dates' },
           { key: 'qrc', label: 'QRC Number' },
-          initials,
         ],
       },
       {
         label: 'NOTAM Canceled',
-        text: 'NOTAM CANCELED: {notam_id} NOTAMC {cancels_id} - {description}. {effective_dates}. QRC #{qrc} CMPLT...{initials}',
+        text: 'NOTAM canceled: {notam_id} NOTAMC {cancels_id} - {description}. {effective_dates}. QRC #{qrc} complete',
         fields: [
           { key: 'notam_id', label: 'New NOTAM ID' },
           { key: 'cancels_id', label: 'Cancels NOTAM ID' },
           { key: 'description', label: 'Description' },
           { key: 'effective_dates', label: 'Effective Dates' },
           { key: 'qrc', label: 'QRC Number' },
-          initials,
         ],
       },
     ],
@@ -349,18 +340,18 @@ export const ACTIVITY_TEMPLATES: TemplateCategory[] = [
     templates: [
       {
         label: 'ARFF Daily Status - No Changes',
-        text: 'ARFF DAILY STATUS REPORT REVIEWED, NO CHANGES...{initials}',
-        fields: [initials],
+        text: 'ARFF daily status report reviewed, no changes',
+        fields: [],
       },
       {
         label: 'ARFF Status Reduced',
-        text: '{callsign} REPORTS ARFF STATUS IS REDUCED. QRC #{qrc} INITIATED...{initials}',
-        fields: [{ key: 'callsign', label: 'Callsign', default: 'FD/' }, { key: 'qrc', label: 'QRC Number' }, initials],
+        text: '{callsign} reports ARFF status is reduced. QRC #{qrc} initiated',
+        fields: [{ key: 'callsign', label: 'Callsign', default: 'FD/' }, { key: 'qrc', label: 'QRC Number' }],
       },
       {
         label: 'ARFF Daily Status Reported',
-        text: 'ARFF DAILY STATUS REPORTED BY {callsign} NO CHANGES...{initials}',
-        fields: [{ key: 'callsign', label: 'Callsign', default: 'FD/' }, initials],
+        text: 'ARFF daily status reported by {callsign}, no changes',
+        fields: [{ key: 'callsign', label: 'Callsign', default: 'FD/' }],
       },
     ],
   },
@@ -371,33 +362,33 @@ export const ACTIVITY_TEMPLATES: TemplateCategory[] = [
     templates: [
       {
         label: 'PCAS Activated',
-        text: 'PCAS ACTIVATED BY {callsign} FOR {reason}...{initials}',
-        fields: [twrCs, { key: 'reason', label: 'Reason for Activation' }, initials],
+        text: 'PCAS activated by {callsign} for {reason}',
+        fields: [twrCs, { key: 'reason', label: 'Reason for Activation' }],
       },
       {
         label: 'Chief Reports',
-        text: '{callsign} REPORTS {details}...{initials}',
-        fields: [{ key: 'callsign', label: 'Callsign', default: 'CHIEF2/' }, { key: 'details', label: 'Details' }, initials],
+        text: '{callsign} reports {details}',
+        fields: [{ key: 'callsign', label: 'Callsign', default: 'CHIEF2/' }, { key: 'details', label: 'Details' }],
       },
       {
         label: 'Runway Operations Suspended',
-        text: '{callsign} REPORTS RWY OPERATIONS SUSPENDED...{initials}',
-        fields: [twrCs, initials],
+        text: '{callsign} reports runway operations suspended',
+        fields: [twrCs],
       },
       {
         label: 'Runway Operations Resumed',
-        text: '{callsign} REPORTS RWY OPERATIONS RESUMED...{initials}',
-        fields: [afld3, initials],
+        text: '{callsign} reports runway operations resumed',
+        fields: [afld3],
       },
       {
         label: 'Area Closed',
-        text: '{callsign} REPORTS {area} CLOSED...{initials}',
-        fields: [afld3, { key: 'area', label: 'Area (e.g. RWY/TAXIWAY/RAMP)' }, initials],
+        text: '{callsign} reports {area} closed',
+        fields: [afld3, { key: 'area', label: 'Area (e.g. RWY/TAXIWAY/RAMP)' }],
       },
       {
         label: 'On Airfield for Emergency Check',
-        text: '{callsign} ON AFLD FOR EMERGENCY CK...{initials}',
-        fields: [afld3, initials],
+        text: '{callsign} on airfield for emergency check',
+        fields: [afld3],
       },
     ],
   },
@@ -408,13 +399,13 @@ export const ACTIVITY_TEMPLATES: TemplateCategory[] = [
     templates: [
       {
         label: 'Unauthorized Vehicle Report',
-        text: '{callsign} REPORTS UNAUTHORIZED VEHICLE {details}...{initials}',
-        fields: [twrCs, { key: 'details', label: 'Details' }, initials],
+        text: '{callsign} reports unauthorized vehicle {details}',
+        fields: [twrCs, { key: 'details', label: 'Details' }],
       },
       {
         label: 'On Airfield for CMAV',
-        text: '{callsign} ON AFLD FOR CMAV...{initials}',
-        fields: [afld3, initials],
+        text: '{callsign} on airfield for CMAV',
+        fields: [afld3],
       },
     ],
   },
@@ -425,8 +416,8 @@ export const ACTIVITY_TEMPLATES: TemplateCategory[] = [
     templates: [
       {
         label: 'BWC Change',
-        text: '{callsign} REPORTS BWC CHANGE, BWC/{bwc}. QRC #{qrc} INITIATED...{initials}',
-        fields: [afld3, { key: 'bwc', label: 'BWC Level (e.g. MODERATE)' }, { key: 'qrc', label: 'QRC Number' }, initials],
+        text: '{callsign} reports BWC change, BWC/{bwc}. QRC #{qrc} initiated',
+        fields: [afld3, { key: 'bwc', label: 'BWC Level (e.g. MODERATE)' }, { key: 'qrc', label: 'QRC Number' }],
       },
     ],
   },
@@ -437,18 +428,18 @@ export const ACTIVITY_TEMPLATES: TemplateCategory[] = [
     templates: [
       {
         label: 'Out of Office',
-        text: '{callsign} OUT OF OFFICE TO {reason}...{initials}',
-        fields: [afld3, { key: 'reason', label: 'Reason' }, initials],
+        text: '{callsign} out of office to {reason}',
+        fields: [afld3, { key: 'reason', label: 'Reason' }],
       },
       {
         label: 'Back in Office',
-        text: '{callsign} BACK IN OFFICE. {result}...{initials}',
-        fields: [afld3, { key: 'result', label: 'Result (e.g. IMAGINARY SURFACES INSPECTED; NO DISCREPANCIES)' }, initials],
+        text: '{callsign} back in office. {result}',
+        fields: [afld3, { key: 'result', label: 'Result (e.g. Imaginary surfaces inspected; no discrepancies)' }],
       },
       {
         label: 'General Report',
-        text: '{callsign} {details}...{initials}',
-        fields: [afld3, { key: 'details', label: 'Details', type: 'textarea' }, initials],
+        text: '{callsign} {details}',
+        fields: [afld3, { key: 'details', label: 'Details', type: 'textarea' }],
       },
     ],
   },

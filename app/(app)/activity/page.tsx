@@ -150,7 +150,16 @@ function buildDetailsString(a: ActivityEntry, detailsMap: Map<string, EntityDeta
 
 export default function ActivityPage() {
   const router = useRouter()
-  const { installationId } = useInstallation()
+  const { installationId, userRole } = useInstallation()
+  const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
+  const [customTemplates, setCustomTemplates] = useState<import('@/lib/activity-templates').TemplateCategory[] | null>(null)
+
+  useEffect(() => {
+    if (!installationId) return
+    import('@/lib/supabase/activity-templates').then(({ loadCustomActivityTemplates }) =>
+      loadCustomActivityTemplates(installationId).then(setCustomTemplates)
+    )
+  }, [installationId])
   const today = new Date().toISOString().split('T')[0]
 
   const [period, setPeriod] = useState<PeriodPreset>('7d')
@@ -471,6 +480,10 @@ export default function ActivityPage() {
             }
           }}
           onClose={() => setShowTemplatePicker(false)}
+          isAdmin={isAdmin}
+          installationId={installationId}
+          customTemplates={customTemplates}
+          onTemplatesSaved={setCustomTemplates}
         />
       )}
 
@@ -824,6 +837,10 @@ export default function ActivityPage() {
             setShowEditTemplatePicker(false)
           }}
           onClose={() => setShowEditTemplatePicker(false)}
+          isAdmin={isAdmin}
+          installationId={installationId}
+          customTemplates={customTemplates}
+          onTemplatesSaved={setCustomTemplates}
         />
       )}
     </div>
