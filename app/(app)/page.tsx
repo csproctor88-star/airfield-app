@@ -10,9 +10,10 @@ import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
 import { logActivity } from '@/lib/supabase/activity'
 import { logRunwayStatusChange } from '@/lib/supabase/airfield-status'
-import { RSC_CONDITIONS, BWC_OPTIONS, RCR_CONDITION_TYPES } from '@/lib/constants'
+import { RSC_CONDITIONS, BWC_OPTIONS, RCR_CONDITION_TYPES, CONTRACTOR_STATUS_CONFIG } from '@/lib/constants'
 import { fetchActiveContractors, updateContractor, createContractor, type ContractorRow } from '@/lib/supabase/contractors'
 import { DEMO_CONTRACTORS } from '@/lib/demo-data'
+import { formatZuluDate } from '@/lib/utils'
 import LoginActivityDialog from '@/components/login-activity-dialog'
 
 // --- Weather emoji mapping ---
@@ -1393,75 +1394,112 @@ export default function HomePage() {
           <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>No active contractors</div>
         </div>
       ) : (
-        <div className="card" style={{ padding: '6px 14px', marginBottom: 12 }}>
-              {activeContractors.map((c, i, arr) => {
-                const startDate = new Date(c.start_date)
-                const dayNum = Math.max(1, Math.ceil((Date.now() - startDate.getTime()) / 86400000))
-                return (
-                  <div
-                    key={c.id}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '8px 0',
-                      borderBottom: i < arr.length - 1 ? '1px solid var(--color-border)' : 'none',
-                    }}
-                  >
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-cyan)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
+          {activeContractors.map(c => {
+            const cfg = CONTRACTOR_STATUS_CONFIG[c.status]
+            const daysSinceStart = Math.max(1, Math.ceil((Date.now() - new Date(c.start_date).getTime()) / 86400000))
+            return (
+              <div key={c.id} className="card" style={{ padding: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    {/* Header: Callsign (or company name fallback) + status badge + day counter */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <span style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                        {c.callsign || c.company_name}
+                      </span>
+                      <span style={{
+                        fontSize: 'var(--fs-2xs)',
+                        fontWeight: 700,
+                        color: cfg.color,
+                        background: cfg.bg,
+                        padding: '1px 8px',
+                        borderRadius: 8,
+                      }}>
+                        {cfg.label}
+                      </span>
+                      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600 }}>
+                        Day {daysSinceStart}
+                      </span>
+                    </div>
+                    {/* Labeled fields */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Company: </span>
                         {c.company_name}
                       </div>
+                      {c.contact_name && (
+                        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Contact: </span>
+                          {c.contact_name}
+                        </div>
+                      )}
                       <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Location: </span>
                         {c.location}
-                        {c.work_description ? ` · ${c.work_description}` : ''}
-                        {c.callsign ? ` · ${c.callsign}` : ''}
                       </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                      <div style={{
-                        fontSize: 'var(--fs-xs)',
-                        color: 'var(--color-text-3)',
-                        background: 'var(--color-bg-surface)',
-                        padding: '2px 8px',
-                        borderRadius: 8,
-                        fontWeight: 600,
-                        whiteSpace: 'nowrap',
-                      }}>
-                        Day {dayNum}
+                      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Work: </span>
+                        {c.work_description}
                       </div>
-                      <button
-                        onClick={async () => {
-                          if (!confirm(`Mark ${c.company_name} as completed / off airfield?`)) return
-                          const { error } = await updateContractor(c.id, { status: 'completed' })
-                          if (error) {
-                            const { toast } = await import('sonner')
-                            toast.error(error)
-                          } else {
-                            await loadContractors()
-                          }
-                        }}
-                        style={{
-                          background: 'none',
-                          border: '1px solid rgba(34,197,94,0.4)',
-                          borderRadius: 6,
-                          padding: '3px 8px',
-                          fontSize: 'var(--fs-xs)',
-                          fontWeight: 600,
-                          color: '#22C55E',
-                          cursor: 'pointer',
-                          fontFamily: 'inherit',
-                          whiteSpace: 'nowrap',
-                        }}
-                        title="Mark completed / off airfield"
-                      >
-                        ✓ Complete
-                      </button>
+                      {(c.radio_number || c.flag_number) && (
+                        <div style={{ display: 'flex', gap: 16, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', flexWrap: 'wrap' }}>
+                          {c.radio_number && (
+                            <span>
+                              <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Radio: </span>
+                              {c.radio_number}
+                            </span>
+                          )}
+                          {c.flag_number && (
+                            <span>
+                              <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Flag: </span>
+                              {c.flag_number}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
+                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
+                      Started: {formatZuluDate(new Date(c.start_date))}
+                    </div>
+                    {c.notes && (
+                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 4 }}>
+                        {c.notes}
+                      </div>
+                    )}
                   </div>
-                )
-              })}
-            </div>
+                  <button
+                    onClick={async () => {
+                      if (!confirm(`Mark ${c.company_name} as completed / off airfield?`)) return
+                      const { error } = await updateContractor(c.id, { status: 'completed' })
+                      if (error) {
+                        const { toast } = await import('sonner')
+                        toast.error(error)
+                      } else {
+                        await loadContractors()
+                      }
+                    }}
+                    style={{
+                      background: 'var(--color-success)',
+                      color: '#000',
+                      border: 'none',
+                      borderRadius: 8,
+                      padding: '6px 12px',
+                      fontWeight: 700,
+                      fontSize: 'var(--fs-sm)',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      flexShrink: 0,
+                      whiteSpace: 'nowrap',
+                    }}
+                    title="Mark completed / off airfield"
+                  >
+                    Mark Completed
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       )}
 
       {/* ===== Construction / Closures ===== */}
