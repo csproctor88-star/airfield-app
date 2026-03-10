@@ -42,6 +42,7 @@ export default function DiscrepanciesPage() {
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
   const [viewMode, setViewMode] = useState<'list' | 'map'>('map')
+  const [typeFilter, setTypeFilter] = useState<string | null>(null)
   const [discrepancyPhotoMap, setDiscrepancyPhotoMap] = useState<Record<string, string>>({})
   const [emailModalOpen, setEmailModalOpen] = useState(false)
   const [sendingEmail, setSendingEmail] = useState(false)
@@ -129,16 +130,23 @@ export default function DiscrepanciesPage() {
     amops: allItems.filter(d => d.status === 'open' && KPI_DEFS[2].match(d.current_status)).length,
   }
 
+  const matchesType = (type: string) => {
+    if (!typeFilter) return true
+    return type.split(',').map(v => v.trim()).includes(typeFilter)
+  }
+
   const demoFiltered = DEMO_DISCREPANCIES
     .filter(d => filter === 'all' || d.status === filter)
     .filter(d => !over30Only || (d.status === 'open' && daysOpen(d.created_at) > 30))
     .filter(d => matchesCurrentStatus(d.current_status))
+    .filter(d => matchesType(d.type))
     .filter(matchesSearch)
 
   const liveFiltered = discrepancies
     .filter(d => filter === 'all' || d.status === filter)
     .filter(d => !over30Only || (d.status === 'open' && daysOpen(d.created_at) > 30))
     .filter(d => matchesCurrentStatus(d.current_status))
+    .filter(d => matchesType(d.type))
     .filter(matchesSearch)
 
   const filtered = usingDemo ? demoFiltered : liveFiltered
@@ -685,9 +693,60 @@ export default function DiscrepanciesPage() {
                 discrepancies={filtered as DiscrepancyRow[]}
                 daysOpenFn={daysOpen}
                 photoMap={discrepancyPhotoMap}
+                activeTypeFilter={typeFilter}
+                onTypeFilterChange={setTypeFilter}
               />
             </Suspense>
           )}
+
+          {/* Type Filters */}
+          {(() => {
+            // Count per type from items matching status/search filters but NOT type filter
+            const baseItems = (usingDemo ? DEMO_DISCREPANCIES : discrepancies)
+              .filter(d => filter === 'all' || d.status === filter)
+              .filter(d => !over30Only || (d.status === 'open' && daysOpen(d.created_at) > 30))
+              .filter(d => matchesCurrentStatus(d.current_status))
+              .filter(matchesSearch)
+            const typeCounts: Record<string, number> = {}
+            for (const d of baseItems) {
+              for (const v of d.type.split(',').map(t => t.trim())) {
+                typeCounts[v] = (typeCounts[v] || 0) + 1
+              }
+            }
+            // Only show types that have at least 1 match
+            const activeTypes = DISCREPANCY_TYPES.filter(t => typeCounts[t.value])
+            if (activeTypes.length === 0) return null
+            return (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 10, marginBottom: 4 }}>
+                {activeTypes.map((t) => {
+                  const active = typeFilter === t.value
+                  return (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => setTypeFilter(active ? null : t.value)}
+                      style={{
+                        padding: '4px 10px', borderRadius: 6, fontSize: 'var(--fs-xs)', fontWeight: 700,
+                        cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                        border: active ? '1.5px solid var(--color-cyan)' : '1px solid var(--color-border)',
+                        background: active ? 'rgba(34,211,238,0.12)' : 'var(--color-bg-inset)',
+                        color: active ? 'var(--color-cyan)' : 'var(--color-text-2)',
+                        display: 'flex', alignItems: 'center', gap: 4,
+                      }}
+                    >
+                      {t.label}
+                      <span style={{
+                        fontSize: 'var(--fs-xs)', fontWeight: 600,
+                        color: active ? 'var(--color-cyan)' : 'var(--color-text-4)',
+                      }}>
+                        {typeCounts[t.value]}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )
+          })()}
 
           {/* Card list — always shown (below map when in map mode) */}
           {viewMode === 'map' && filtered.length > 0 && (

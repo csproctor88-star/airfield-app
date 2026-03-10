@@ -107,7 +107,7 @@ export function SimpleDiscrepancyPanel({
               rows={4}
               style={{
                 width: '100%', padding: '10px 12px', borderRadius: 6,
-                border: '1px solid var(--color-border)', background: 'var(--color-bg-input)',
+                border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
                 color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
                 fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box',
               }}
@@ -123,7 +123,7 @@ export function SimpleDiscrepancyPanel({
                 onChange={(e) => handleDiscrepancyFieldChange('location_text', e.target.value)}
                 style={{
                   width: '100%', padding: '8px 10px', borderRadius: 6,
-                  border: '1px solid var(--color-border)', background: 'var(--color-bg-input)',
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
                   color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
                   fontFamily: 'inherit', boxSizing: 'border-box',
                 }}
@@ -273,7 +273,7 @@ export function SimpleDiscrepancyPanel({
                 placeholder="Short title for the discrepancy..."
                 style={{
                   width: '100%', padding: '8px 10px', borderRadius: 6,
-                  border: '1px solid var(--color-border)', background: 'var(--color-bg-input)',
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
                   color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
                   fontFamily: 'inherit', boxSizing: 'border-box',
                 }}
@@ -296,7 +296,7 @@ export function SimpleDiscrepancyPanel({
                 onChange={(e) => handleDiscrepancyFieldChange('discrepancy_type', e.target.value)}
                 style={{
                   width: '100%', padding: '8px 10px', borderRadius: 6,
-                  border: '1px solid var(--color-border)', background: 'var(--color-bg-input)',
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
                   color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
                   fontFamily: 'inherit', boxSizing: 'border-box',
                 }}

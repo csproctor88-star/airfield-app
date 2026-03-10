@@ -12,6 +12,10 @@ type Props = {
   discrepancies: DiscrepancyRow[]
   daysOpenFn: (createdAt: string) => number
   photoMap?: Record<string, string> // discrepancy_id → first photo URL
+  /** Controlled type filter — when provided, the map uses this instead of internal state */
+  activeTypeFilter?: string | null
+  /** Callback when legend item is clicked */
+  onTypeFilterChange?: (typeValue: string | null) => void
 }
 
 // Map discrepancy type value → emoji from constants
@@ -38,13 +42,16 @@ function getTypes(typeStr: string): string[] {
   return typeStr.split(',').map((v) => v.trim())
 }
 
-export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap }: Props) {
+export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap, activeTypeFilter: controlledTypeFilter, onTypeFilterChange }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
   const [mapLoaded, setMapLoaded] = useState(false)
-  const [activeTypeFilter, setActiveTypeFilter] = useState<string | null>(null)
+  const [internalTypeFilter, setInternalTypeFilter] = useState<string | null>(null)
   const { runways, installationId } = useInstallation()
+
+  // Use controlled filter if provided, otherwise internal
+  const activeTypeFilter = controlledTypeFilter !== undefined ? controlledTypeFilter : internalTypeFilter
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const mapboxReady = isMapboxConfigured()
@@ -203,8 +210,13 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
   }, [mapLoaded, discrepancies, photoMap, activeTypeFilter])
 
   const handleLegendClick = useCallback((typeValue: string) => {
-    setActiveTypeFilter((prev) => (prev === typeValue ? null : typeValue))
-  }, [])
+    const next = activeTypeFilter === typeValue ? null : typeValue
+    if (onTypeFilterChange) {
+      onTypeFilterChange(next)
+    } else {
+      setInternalTypeFilter(next)
+    }
+  }, [activeTypeFilter, onTypeFilterChange])
 
   if (!mapboxReady) {
     return (
@@ -293,7 +305,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
           })}
           {activeTypeFilter && (
             <div
-              onClick={() => setActiveTypeFilter(null)}
+              onClick={() => onTypeFilterChange ? onTypeFilterChange(null) : setInternalTypeFilter(null)}
               style={{
                 fontSize: '9px',
                 fontWeight: 700,

@@ -664,30 +664,76 @@ export default function InspectionsPage() {
       updateHalf(targetTab, (h) => ({ ...h, dbRowId: saved.id }))
     }
 
-    // Push BWC/RSC/RCR to dashboard on complete (always, even if draft save had issues)
+    // Push BWC/RSC/RCR to dashboard in a single update (avoids multiple realtime alerts)
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('glidepath:local-status-update'))
     const nowIso = new Date().toISOString()
+    const statusBatch: Record<string, unknown> = {}
     if (completedHalf.bwcValue) {
-      await updateAirfieldStatus({ bwc_value: completedHalf.bwcValue, bwc_updated_at: nowIso }, installationId)
+      statusBatch.bwc_value = completedHalf.bwcValue
+      statusBatch.bwc_updated_at = nowIso
     }
     if (completedHalf.rscCondition) {
-      await updateAirfieldStatus({ rsc_condition: completedHalf.rscCondition, rsc_updated_at: nowIso }, installationId)
+      statusBatch.rsc_condition = completedHalf.rscCondition
+      statusBatch.rsc_updated_at = nowIso
     }
     if (completedHalf.rcrReported && completedHalf.rcrValue) {
-      // RCR reported — update dashboard with RCR (replaces RSC display)
-      await updateAirfieldStatus({
-        rcr_touchdown: completedHalf.rcrValue,
-        rcr_condition: completedHalf.rcrConditionType || null,
-        rcr_updated_at: nowIso,
-      }, installationId)
+      statusBatch.rcr_touchdown = completedHalf.rcrValue
+      statusBatch.rcr_condition = completedHalf.rcrConditionType || null
+      statusBatch.rcr_updated_at = nowIso
     } else if (completedHalf.rscCondition && !completedHalf.rcrReported) {
-      // RSC only — clear any existing RCR so dashboard shows RSC
-      await updateAirfieldStatus({
-        rcr_touchdown: null,
-        rcr_midpoint: null,
-        rcr_rollout: null,
-        rcr_condition: null,
-        rcr_updated_at: null,
-      }, installationId)
+      statusBatch.rcr_touchdown = null
+      statusBatch.rcr_midpoint = null
+      statusBatch.rcr_rollout = null
+      statusBatch.rcr_condition = null
+      statusBatch.rcr_updated_at = null
+    }
+    if (Object.keys(statusBatch).length > 0) {
+      await updateAirfieldStatus(statusBatch as any, installationId)
+    }
+
+    // ── Create discrepancies for any issues toggled "Log as Discrepancy" ──
+    let discCreated = 0
+    for (const [itemId, discs] of Object.entries(completedHalf.discrepancies || {})) {
+      for (let discIdx = 0; discIdx < discs.length; discIdx++) {
+        const d = discs[discIdx]
+        if (!d.log_as_discrepancy) continue
+
+        const discTitle = d.discrepancy_title || d.comment.slice(0, 100) || 'Untitled'
+        const discType = d.discrepancy_type || 'other'
+        const discLocation = d.discrepancy_location_text || d.location_text || 'Unknown'
+
+        const { data: disc, error: discErr } = await createDiscrepancy({
+          title: discTitle,
+          description: d.comment,
+          location_text: discLocation,
+          type: discType,
+          severity: d.discrepancy_severity || undefined,
+          latitude: d.location?.lat ?? null,
+          longitude: d.location?.lon ?? null,
+          base_id: installationId,
+        })
+
+        if (discErr || !disc) {
+          toast.error(`Failed to create discrepancy: ${discErr}`)
+          continue
+        }
+
+        // Upload photos to the new discrepancy record
+        const photos = discPhotos[itemId]?.[discIdx] || []
+        for (const photo of photos) {
+          await uploadDiscrepancyPhoto(disc.id, photo.file, installationId)
+        }
+
+        // Clear the flag so handleFile won't re-create this discrepancy
+        d.log_as_discrepancy = false
+        d.generated_discrepancy_id = disc.id
+        discCreated++
+      }
+    }
+    // Persist the cleared flags back into the draft
+    if (discCreated > 0) {
+      updateHalf(targetTab, (h) => ({ ...h, discrepancies: { ...completedHalf.discrepancies } }))
+      toast.success(`${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'} logged`)
     }
 
     const tabLabels: Record<TabType, string> = { airfield: 'Airfield', lighting: 'Lighting' }
@@ -907,26 +953,32 @@ export default function InspectionsPage() {
     }
 
     if (filed > 0 || usingDemo) {
-      // Push RSC/RCR/BWC to dashboard directly (belt-and-suspenders with create/fileInspection)
+      // Push RSC/RCR/BWC to dashboard in a single update (avoids multiple realtime alerts)
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('glidepath:local-status-update'))
       const filedHalf = airfieldSaved ? airfieldHalf : lightingHalf
       const fileNow = new Date().toISOString()
+      const fileBatch: Record<string, unknown> = {}
       if (filedHalf.bwcValue) {
-        await updateAirfieldStatus({ bwc_value: filedHalf.bwcValue, bwc_updated_at: fileNow }, installationId)
+        fileBatch.bwc_value = filedHalf.bwcValue
+        fileBatch.bwc_updated_at = fileNow
       }
       if (filedHalf.rscCondition) {
-        await updateAirfieldStatus({ rsc_condition: filedHalf.rscCondition, rsc_updated_at: fileNow }, installationId)
+        fileBatch.rsc_condition = filedHalf.rscCondition
+        fileBatch.rsc_updated_at = fileNow
       }
       if (filedHalf.rcrReported && filedHalf.rcrValue) {
-        await updateAirfieldStatus({
-          rcr_touchdown: filedHalf.rcrValue,
-          rcr_condition: filedHalf.rcrConditionType || null,
-          rcr_updated_at: fileNow,
-        }, installationId)
+        fileBatch.rcr_touchdown = filedHalf.rcrValue
+        fileBatch.rcr_condition = filedHalf.rcrConditionType || null
+        fileBatch.rcr_updated_at = fileNow
       } else if (filedHalf.rscCondition && !filedHalf.rcrReported) {
-        await updateAirfieldStatus({
-          rcr_touchdown: null, rcr_midpoint: null, rcr_rollout: null,
-          rcr_condition: null, rcr_updated_at: null,
-        }, installationId)
+        fileBatch.rcr_touchdown = null
+        fileBatch.rcr_midpoint = null
+        fileBatch.rcr_rollout = null
+        fileBatch.rcr_condition = null
+        fileBatch.rcr_updated_at = null
+      }
+      if (Object.keys(fileBatch).length > 0) {
+        await updateAirfieldStatus(fileBatch as any, installationId)
       }
 
       // Upload photos per-discrepancy with their discrepancy index
