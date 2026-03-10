@@ -25,6 +25,8 @@ interface SimpleDiscrepancyPanelGroupProps {
   onSaveDraft?: () => void
   /** Whether a draft save is currently in progress */
   draftSaving?: boolean
+  /** Available areas for the discrepancy location dropdown */
+  areaOptions?: string[]
 }
 
 export function SimpleDiscrepancyPanelGroup({
@@ -43,6 +45,7 @@ export function SimpleDiscrepancyPanelGroup({
   addLabel = 'Add Discrepancy',
   onSaveDraft,
   draftSaving,
+  areaOptions,
 }: SimpleDiscrepancyPanelGroupProps) {
   return (
     <div style={{ marginTop: 4 }}>
@@ -109,6 +112,7 @@ export function SimpleDiscrepancyPanelGroup({
             flyToPoint={flyToPoints[i] || null}
             onSaveDraft={onSaveDraft}
             draftSaving={draftSaving}
+            areaOptions={areaOptions}
           />
         </div>
       ))}

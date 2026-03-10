@@ -2,9 +2,9 @@
 
 import { useState, useRef } from 'react'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
-import { X } from 'lucide-react'
+import { X, AlertTriangle } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import { toast } from 'sonner'
+import { DISCREPANCY_TYPES, SEVERITY_CONFIG } from '@/lib/constants'
 import type { SimpleDiscrepancy } from '@/lib/supabase/types'
 
 const LocationMap = dynamic(
@@ -28,6 +28,8 @@ interface SimpleDiscrepancyPanelProps {
   onSaveDraft?: () => void
   /** Whether a draft save is currently in progress */
   draftSaving?: boolean
+  /** Available areas for the discrepancy location dropdown */
+  areaOptions?: string[]
 }
 
 export function SimpleDiscrepancyPanel({
@@ -43,6 +45,7 @@ export function SimpleDiscrepancyPanel({
   flyToPoint,
   onSaveDraft,
   draftSaving,
+  areaOptions,
 }: SimpleDiscrepancyPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -54,6 +57,12 @@ export function SimpleDiscrepancyPanel({
     onAddPhotos(index, files)
     e.target.value = ''
   }
+
+  const handleDiscrepancyFieldChange = (field: string, value: string | boolean) => {
+    onChange(index, { [field]: value } as unknown as SimpleDiscrepancy)
+  }
+
+  const logAsDisc = detail.log_as_discrepancy || false
 
   const labelStyle: React.CSSProperties = {
     fontSize: 'var(--fs-xs)',
@@ -104,6 +113,28 @@ export function SimpleDiscrepancyPanel({
               }}
             />
           </div>
+
+          {/* Location / Area */}
+          {areaOptions && areaOptions.length > 0 && (
+            <div>
+              <label style={labelStyle}>Location / Area</label>
+              <select
+                value={detail.location_text || ''}
+                onChange={(e) => handleDiscrepancyFieldChange('location_text', e.target.value)}
+                style={{
+                  width: '100%', padding: '8px 10px', borderRadius: 6,
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg-input)',
+                  color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
+                  fontFamily: 'inherit', boxSizing: 'border-box',
+                }}
+              >
+                <option value="">Select area...</option>
+                {areaOptions.map((a) => (
+                  <option key={a} value={a}>{a}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Photo thumbnails */}
           {localPhotos.length > 0 && (
@@ -188,6 +219,124 @@ export function SimpleDiscrepancyPanel({
             </button>
           )}
         </div>
+      </div>
+
+      {/* ── Log as Discrepancy Toggle ── */}
+      <div style={{ marginTop: 10 }}>
+        <button
+          type="button"
+          onClick={() => handleDiscrepancyFieldChange('log_as_discrepancy', !logAsDisc)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+            fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 700,
+            width: '100%', padding: '10px 12px', borderRadius: 8,
+            border: logAsDisc ? '2px solid #D97706' : '2px solid var(--color-text-4)',
+            background: logAsDisc ? 'rgba(217, 119, 6, 0.08)' : 'transparent',
+            color: logAsDisc ? '#D97706' : 'var(--color-text-2)',
+          }}
+        >
+          <span style={{
+            width: 20, height: 20, borderRadius: 5, flexShrink: 0,
+            border: logAsDisc ? '2px solid #D97706' : '2px solid var(--color-text-3)',
+            background: logAsDisc ? '#D97706' : 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 14, fontWeight: 800, color: '#FFFFFF',
+          }}>
+            {logAsDisc ? '\u2713' : ''}
+          </span>
+          <AlertTriangle size={16} />
+          Log as Airfield Discrepancy
+        </button>
+
+        {/* ── Discrepancy Form Fields (shown when toggle is on) ── */}
+        {logAsDisc && (
+          <div style={{
+            marginTop: 8, padding: '10px 12px', borderRadius: 8,
+            background: 'rgba(217, 119, 6, 0.04)',
+            border: '1px solid rgba(217, 119, 6, 0.2)',
+            display: 'flex', flexDirection: 'column', gap: 10,
+          }}>
+            <div style={{
+              fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#D97706',
+              textTransform: 'uppercase', letterSpacing: '0.05em',
+            }}>
+              Discrepancy Details
+            </div>
+
+            {/* Title */}
+            <div>
+              <label style={labelStyle}>Title</label>
+              <input
+                type="text"
+                value={detail.discrepancy_title ?? detail.comment.slice(0, 100)}
+                onChange={(e) => handleDiscrepancyFieldChange('discrepancy_title', e.target.value)}
+                placeholder="Short title for the discrepancy..."
+                style={{
+                  width: '100%', padding: '8px 10px', borderRadius: 6,
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg-input)',
+                  color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
+                  fontFamily: 'inherit', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Area — auto-filled from issue location_text */}
+            {detail.location_text && (
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
+                <span style={{ fontWeight: 600, color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Area: </span>
+                {detail.location_text}
+              </div>
+            )}
+
+            {/* Type */}
+            <div>
+              <label style={labelStyle}>Type</label>
+              <select
+                value={detail.discrepancy_type || ''}
+                onChange={(e) => handleDiscrepancyFieldChange('discrepancy_type', e.target.value)}
+                style={{
+                  width: '100%', padding: '8px 10px', borderRadius: 6,
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg-input)',
+                  color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
+                  fontFamily: 'inherit', boxSizing: 'border-box',
+                }}
+              >
+                <option value="">Select type...</option>
+                {DISCREPANCY_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Severity */}
+            <div>
+              <label style={labelStyle}>Severity</label>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {(Object.keys(SEVERITY_CONFIG) as Array<keyof typeof SEVERITY_CONFIG>).map((sev) => {
+                  const cfg = SEVERITY_CONFIG[sev]
+                  const selected = detail.discrepancy_severity === sev
+                  return (
+                    <button
+                      key={sev}
+                      type="button"
+                      onClick={() => handleDiscrepancyFieldChange('discrepancy_severity', selected ? '' : sev)}
+                      style={{
+                        padding: '6px 12px', borderRadius: 6, fontFamily: 'inherit',
+                        fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer',
+                        border: selected ? `2px solid ${cfg.color}` : '1px solid var(--color-border)',
+                        background: selected ? cfg.bg : 'transparent',
+                        color: selected ? cfg.color : 'var(--color-text-3)',
+                        textTransform: 'uppercase', letterSpacing: '0.04em',
+                      }}
+                    >
+                      {cfg.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Photo viewer modal */}

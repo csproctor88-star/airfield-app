@@ -13,6 +13,7 @@ import {
 } from '@/lib/constants'
 import type { CheckType } from '@/lib/supabase/types'
 import { createCheck, uploadCheckPhoto, fetchRecentChecks, saveCheckDraftToDb, loadCheckDraftFromDb, deleteCheckDraft, type CheckRow } from '@/lib/supabase/checks'
+import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
 import { DEMO_CHECKS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
@@ -33,7 +34,7 @@ export default function AirfieldChecksPage() {
   const router = useRouter()
   const { installationId, areas: installationAreas } = useInstallation()
   const [checkType, setCheckType] = useState<CheckType | ''>('')
-  const [areas, setAreas] = useState<string[]>([])
+  const [areas, setAreas] = useState<string[]>(['Entire Airfield'])
   const [saving, setSaving] = useState(false)
   const [currentUser, setCurrentUser] = useState('Inspector')
   const [recentChecks, setRecentChecks] = useState<CheckRow[]>([])
@@ -151,9 +152,16 @@ export default function AirfieldChecksPage() {
   const handleIssueChange = useCallback((index: number, detail: SimpleDiscrepancy) => {
     setIssues((prev) => {
       const arr = [...prev]
-      // Merge: only take comment from onChange, preserve location/photo_ids from state
-      // This prevents stale render props from overwriting locations set via onPointSelected
-      arr[index] = { ...arr[index], comment: detail.comment }
+      // Merge selectively — preserve location/photo_ids from state to prevent stale overwrites
+      const merged = { ...arr[index] }
+      if ('comment' in detail) merged.comment = detail.comment
+      if ('location_text' in detail) merged.location_text = detail.location_text
+      if ('log_as_discrepancy' in detail) merged.log_as_discrepancy = detail.log_as_discrepancy
+      if ('discrepancy_title' in detail) merged.discrepancy_title = detail.discrepancy_title
+      if ('discrepancy_location_text' in detail) merged.discrepancy_location_text = detail.discrepancy_location_text
+      if ('discrepancy_type' in detail) merged.discrepancy_type = detail.discrepancy_type
+      if ('discrepancy_severity' in detail) merged.discrepancy_severity = detail.discrepancy_severity
+      arr[index] = merged
       return arr
     })
   }, [])
@@ -346,6 +354,10 @@ export default function AirfieldChecksPage() {
       base.issues = issues.map((iss) => ({
         comment: iss.comment,
         location: iss.location,
+        location_text: iss.location_text,
+        log_as_discrepancy: iss.log_as_discrepancy || false,
+        discrepancy_title: iss.discrepancy_title,
+        discrepancy_type: iss.discrepancy_type,
       }))
     }
     switch (checkType) {
@@ -454,6 +466,43 @@ export default function AirfieldChecksPage() {
       toast.error(`${totalPhotos - uploadedPhotos} photo(s) failed to upload`)
     }
 
+    // ── Create discrepancies for issues with "Log as Discrepancy" toggled on ──
+    let discCreated = 0
+    for (let issueIdx = 0; issueIdx < issues.length; issueIdx++) {
+      const iss = issues[issueIdx]
+      if (!iss.log_as_discrepancy) continue
+
+      const discTitle = iss.discrepancy_title || iss.comment.slice(0, 100) || 'Untitled'
+      const discType = iss.discrepancy_type || 'other'
+      const discLocation = iss.discrepancy_location_text || iss.location_text || areas[0] || 'Unknown'
+
+      const { data: disc, error: discErr } = await createDiscrepancy({
+        title: discTitle,
+        description: iss.comment,
+        location_text: discLocation,
+        type: discType,
+        severity: iss.discrepancy_severity || undefined,
+        latitude: iss.location?.lat ?? null,
+        longitude: iss.location?.lon ?? null,
+        base_id: installationId,
+      })
+
+      if (discErr || !disc) {
+        toast.error(`Failed to create discrepancy for issue ${issueIdx + 1}: ${discErr}`)
+        continue
+      }
+
+      // Upload photos to the new discrepancy record (shared copies for fast loading)
+      const photos = issuePhotos[issueIdx] || []
+      for (const photo of photos) {
+        await uploadDiscrepancyPhoto(disc.id, photo.file, installationId)
+      }
+      discCreated++
+    }
+    if (discCreated > 0) {
+      toast.success(`${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'} logged`)
+    }
+
     // Clean up draft (DB + localStorage)
     if (draftDbRowId) {
       await deleteCheckDraft(draftDbRowId)
@@ -510,10 +559,13 @@ export default function AirfieldChecksPage() {
             const newType = e.target.value as CheckType | ''
             setCheckType(newType)
             resetTypeFields()
-            setAreas([])
-            // Auto-select all runway areas for RSC
+            // Auto-select areas based on type
             if (newType === 'rsc') {
               setAreas(installationAreas.filter(a => a.toUpperCase().startsWith('RWY')))
+            } else if (newType) {
+              setAreas(['Entire Airfield'])
+            } else {
+              setAreas(['Entire Airfield'])
             }
           }}
           style={{ fontSize: 'var(--fs-lg)' }}
@@ -963,6 +1015,7 @@ export default function AirfieldChecksPage() {
             addLabel="Add Issue"
             onSaveDraft={handleSaveDraft}
             draftSaving={draftSaving}
+            areaOptions={installationAreas}
           />
         </div>
       )}

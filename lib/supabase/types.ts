@@ -790,6 +790,20 @@ export type SimpleDiscrepancy = {
   comment: string
   location: { lat: number; lon: number } | null
   photo_ids: string[]
+  /** Area / location text for this issue (e.g. "TWY A", "RWY 13/31") */
+  location_text?: string
+  /** When true, this issue will also be logged as an airfield discrepancy */
+  log_as_discrepancy?: boolean
+  /** Discrepancy title (auto-populated from comment, editable) */
+  discrepancy_title?: string
+  /** Area / location text for the discrepancy (defaults from location_text) */
+  discrepancy_location_text?: string
+  /** Discrepancy type value (from DISCREPANCY_TYPES) */
+  discrepancy_type?: string
+  /** Severity override */
+  discrepancy_severity?: string
+  /** ID of the created discrepancy (set after submission) */
+  generated_discrepancy_id?: string | null
 }
 
 export type InspectionItem = {

@@ -33,6 +33,7 @@ import {
 import { DEMO_INSPECTIONS } from '@/lib/demo-data'
 import { getAirfieldDiagram } from '@/lib/airfield-diagram'
 import { uploadInspectionPhoto } from '@/lib/supabase/inspections'
+import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
 import type { InspectionItem, SimpleDiscrepancy } from '@/lib/supabase/types'
 import { SimpleDiscrepancyPanelGroup } from '@/components/ui/simple-discrepancy-panel-group'
 
@@ -41,7 +42,7 @@ type TabType = 'airfield' | 'lighting'
 
 export default function InspectionsPage() {
   const router = useRouter()
-  const { installationId, runways } = useInstallation()
+  const { installationId, runways, areas: installationAreas } = useInstallation()
 
   // Base coordinates for weather (midpoint of first runway)
   const rwy0 = runways[0]
@@ -950,6 +951,51 @@ export default function InspectionsPage() {
         }
       }
 
+      // ── Create discrepancies for any issues toggled "Log as Discrepancy" ──
+      let discCreated = 0
+      const allHalves: { half: InspectionHalfDraft; tab: TabType }[] = []
+      if (airfieldSaved) allHalves.push({ half: airfieldHalf, tab: 'airfield' })
+      if (lightingSaved) allHalves.push({ half: lightingHalf, tab: 'lighting' })
+
+      for (const { half } of allHalves) {
+        for (const [itemId, discs] of Object.entries(half.discrepancies || {})) {
+          for (let discIdx = 0; discIdx < discs.length; discIdx++) {
+            const d = discs[discIdx]
+            if (!d.log_as_discrepancy) continue
+
+            const discTitle = d.discrepancy_title || d.comment.slice(0, 100) || 'Untitled'
+            const discType = d.discrepancy_type || 'other'
+            const discLocation = d.discrepancy_location_text || d.location_text || 'Unknown'
+
+            const { data: disc, error: discErr } = await createDiscrepancy({
+              title: discTitle,
+              description: d.comment,
+              location_text: discLocation,
+              type: discType,
+              severity: d.discrepancy_severity || undefined,
+              latitude: d.location?.lat ?? null,
+              longitude: d.location?.lon ?? null,
+              base_id: installationId,
+            })
+
+            if (discErr || !disc) {
+              toast.error(`Failed to create discrepancy: ${discErr}`)
+              continue
+            }
+
+            // Upload photos to the new discrepancy record
+            const photos = discPhotos[itemId]?.[discIdx] || []
+            for (const photo of photos) {
+              await uploadDiscrepancyPhoto(disc.id, photo.file, installationId)
+            }
+            discCreated++
+          }
+        }
+      }
+      if (discCreated > 0) {
+        toast.success(`${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'} logged`)
+      }
+
       // Clean up object URLs
       Object.values(itemPhotos).flat().forEach((p) => URL.revokeObjectURL(p.url))
       Object.values(discPhotos).flat().flat().forEach((p) => URL.revokeObjectURL(p.url))
@@ -1477,6 +1523,7 @@ export default function InspectionsPage() {
                               flyToPoints={(currentHalf.discrepancies[item.id] || []).map((_, i) => discFlyTo[`${item.id}:${i}`] || null)}
                               onSaveDraft={handleSave}
                               draftSaving={saving}
+                              areaOptions={installationAreas}
                             />
                           </div>
                         )}

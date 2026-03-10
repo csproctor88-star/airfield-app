@@ -511,6 +511,22 @@ export default function InspectionDetailPage() {
                               </div>
                             )}
                             {renderDiscPhotos(discPhotosForIdx)}
+                            {disc.log_as_discrepancy && (
+                              <div style={{
+                                marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 5,
+                                padding: '3px 8px', borderRadius: 5,
+                                background: 'rgba(217, 119, 6, 0.1)', border: '1px solid rgba(217, 119, 6, 0.3)',
+                                fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#D97706',
+                                textTransform: 'uppercase', letterSpacing: '0.04em',
+                              }}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                                  <line x1="12" y1="9" x2="12" y2="13" />
+                                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                                </svg>
+                                Logged as Discrepancy
+                              </div>
+                            )}
                           </div>
                         )
                       })}
@@ -955,6 +971,22 @@ export default function InspectionDetailPage() {
                             </div>
                           )}
                           {renderDiscPhotos(discPhotosForIdx)}
+                          {disc.log_as_discrepancy && (
+                            <div style={{
+                              marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 5,
+                              padding: '3px 8px', borderRadius: 5,
+                              background: 'rgba(217, 119, 6, 0.1)', border: '1px solid rgba(217, 119, 6, 0.3)',
+                              fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#D97706',
+                              textTransform: 'uppercase', letterSpacing: '0.04em',
+                            }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                                <line x1="12" y1="9" x2="12" y2="13" />
+                                <line x1="12" y1="17" x2="12.01" y2="17" />
+                              </svg>
+                              Logged as Discrepancy
+                            </div>
+                          )}
                         </div>
                         )
                       })}
