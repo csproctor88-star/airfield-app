@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { InspectionRow } from '@/lib/supabase/inspections'
 import type { CheckRow } from '@/lib/supabase/checks'
-import type { RunwayStatusLogRow } from '@/lib/supabase/airfield-status'
 import type { InspectionItem } from '@/lib/supabase/types'
 import { fetchMapImageDataUrl } from '@/lib/utils'
 
@@ -91,7 +90,6 @@ export interface QrcExecutionForReport {
 export interface DailyReportData {
   inspections: (InspectionRow & { failed_items: InspectionItem[] })[]
   checks: CheckRow[]
-  runwayChanges: RunwayStatusLogRow[]
   newDiscrepancies: DiscrepancyWithReporter[]
   statusUpdates: StatusUpdateWithContext[]
   obstructionEvals: ObstructionEvalForReport[]
@@ -113,7 +111,6 @@ export async function fetchDailyReportData(
   const results = await Promise.all([
     fetchInspectionsForDate(supabase, startUTC, endUTC, baseId),
     fetchChecksForDate(supabase, startUTC, endUTC, baseId),
-    fetchRunwayChangesForDate(supabase, startUTC, endUTC, baseId),
     fetchNewDiscrepanciesForDate(supabase, startUTC, endUTC, baseId),
     fetchStatusUpdatesForDate(supabase, startUTC, endUTC, baseId),
     fetchObstructionEvalsForDate(supabase, startUTC, endUTC, baseId),
@@ -122,10 +119,10 @@ export async function fetchDailyReportData(
   ])
 
   const checks = results[1] as CheckRow[]
-  const newDiscrepancies = results[3] as DiscrepancyWithReporter[]
-  const obstructionEvals = results[5] as ObstructionEvalForReport[]
-  const activityEntries = results[6] as ActivityEntryForReport[]
-  const qrcExecutions = results[7] as QrcExecutionForReport[]
+  const newDiscrepancies = results[2] as DiscrepancyWithReporter[]
+  const obstructionEvals = results[4] as ObstructionEvalForReport[]
+  const activityEntries = results[5] as ActivityEntryForReport[]
+  const qrcExecutions = results[6] as QrcExecutionForReport[]
 
   // Fetch photos for checks, discrepancies, and obstruction evaluations
   const photos = await fetchPhotosForDailyReport(
@@ -150,9 +147,8 @@ export async function fetchDailyReportData(
   return {
     inspections: results[0],
     checks,
-    runwayChanges: results[2],
     newDiscrepancies,
-    statusUpdates: results[4],
+    statusUpdates: results[3],
     obstructionEvals,
     activityEntries,
     qrcExecutions,
@@ -207,50 +203,6 @@ async function fetchChecksForDate(supabase: any, startUTC: string, endUTC: strin
   }
 
   return (data ?? []) as CheckRow[]
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchRunwayChangesForDate(supabase: any, startUTC: string, endUTC: string, baseId?: string | null) {
-  if (!supabase) return []
-
-  // Try with profile join
-  let query = supabase
-    .from('runway_status_log')
-    .select('*, profiles:changed_by(name, rank)')
-    .gte('created_at', startUTC)
-    .lte('created_at', endUTC)
-    .order('created_at', { ascending: true })
-
-  if (baseId) query = query.eq('base_id', baseId)
-
-  const { data, error } = await query
-
-  if (!error && data) {
-    return (data ?? []).map((row: Record<string, unknown>) => ({
-      ...row,
-      user_name: (row.profiles as { name?: string } | null)?.name || 'Unknown',
-      user_rank: (row.profiles as { rank?: string } | null)?.rank || undefined,
-    })) as RunwayStatusLogRow[]
-  }
-
-  // Fallback
-  let fbQuery = supabase
-    .from('runway_status_log')
-    .select('*')
-    .gte('created_at', startUTC)
-    .lte('created_at', endUTC)
-    .order('created_at', { ascending: true })
-
-  if (baseId) fbQuery = fbQuery.eq('base_id', baseId)
-
-  const { data: fb, error: fbErr } = await fbQuery
-
-  if (fbErr) {
-    console.error('Report: failed to fetch runway status log:', fbErr.message)
-    return []
-  }
-
-  return ((fb ?? []) as Record<string, unknown>[]).map((r) => ({ ...r, user_name: 'Unknown' })) as RunwayStatusLogRow[]
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

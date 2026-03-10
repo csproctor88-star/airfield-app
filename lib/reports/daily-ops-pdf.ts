@@ -104,7 +104,6 @@ function filterDataForDate(data: DailyReportData, dateStr: string): DailyReportD
   return {
     inspections: data.inspections.filter((i) => inRange(i.created_at)),
     checks: data.checks.filter((c) => inRange(c.created_at)),
-    runwayChanges: data.runwayChanges.filter((r) => inRange(r.created_at)),
     newDiscrepancies: data.newDiscrepancies.filter((d) => inRange(d.created_at)),
     statusUpdates: data.statusUpdates.filter((u) => inRange(u.created_at)),
     obstructionEvals: data.obstructionEvals.filter((e) => inRange(e.created_at)),
@@ -267,73 +266,7 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
       y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4
     }
 
-    // 3. CURRENT STATUS HISTORY
-    sectionHeader('CURRENT STATUS HISTORY')
-
-    type StatusHistoryRow = [string, string, string, string, string]
-    const statusHistoryRows: StatusHistoryRow[] = []
-
-    for (const r of dayData.runwayChanges) {
-      const time = fmtTime(r.created_at)
-      const name = r.user_rank ? `${r.user_rank} ${r.user_name}` : (r.user_name || 'Unknown')
-
-      if (r.new_runway_status && r.old_runway_status !== r.new_runway_status) {
-        const change = `${(r.old_runway_status || '').toUpperCase()} -> ${(r.new_runway_status || '').toUpperCase()}`
-        statusHistoryRows.push([time, 'Runway Status', change, name, r.reason || ''])
-      }
-      if (r.old_active_runway !== r.new_active_runway) {
-        const change = `RWY ${r.old_active_runway} -> RWY ${r.new_active_runway}`
-        statusHistoryRows.push([time, 'Active Runway', change, name, r.reason || ''])
-      }
-      if (r.old_advisory_type !== r.new_advisory_type || r.old_advisory_text !== r.new_advisory_text) {
-        const oldAdv = r.old_advisory_type ? `${r.old_advisory_type}` : 'None'
-        const newAdv = r.new_advisory_type ? `${r.new_advisory_type}` : 'None'
-        const change = oldAdv !== newAdv ? `${oldAdv} -> ${newAdv}` : `${newAdv} (text updated)`
-        const detail = r.new_advisory_text || r.reason || ''
-        statusHistoryRows.push([time, 'Advisory', change, name, detail])
-      }
-    }
-
-    for (const insp of dayData.inspections) {
-      if (insp.bwc_value) {
-        const time = insp.completed_at ? fmtTime(insp.completed_at) : ''
-        const name = insp.completed_by_name || insp.inspector_name || 'Unknown'
-        statusHistoryRows.push([time, 'BWC', insp.bwc_value, name, '—'])
-      }
-    }
-
-    const rscChecks = dayData.checks.filter((c) => c.check_type === 'rsc')
-    for (const c of rscChecks) {
-      const time = c.completed_at ? fmtTime(c.completed_at) : ''
-      const d = c.data as Record<string, unknown>
-      const condition = (d?.condition as string) || (d?.runway_condition as string) || 'Reported'
-      const detail = [
-        d?.contaminant ? `Contaminant: ${d.contaminant}` : '',
-        d?.braking_action ? `Braking: ${d.braking_action}` : '',
-        d?.treatment ? `Treatment: ${d.treatment}` : '',
-      ].filter(Boolean).join(', ') || '—'
-      statusHistoryRows.push([time, 'RSC', condition, c.completed_by || 'Unknown', detail])
-    }
-
-    if (statusHistoryRows.length === 0) {
-      emptyState('No status changes recorded.')
-    } else {
-      statusHistoryRows.sort((a, b) => a[0].localeCompare(b[0]))
-
-      autoTable(doc, {
-        startY: y,
-        margin: { left: margin, right: margin },
-        head: [['Time', 'Category', 'Change', 'Changed By', 'Details']],
-        body: statusHistoryRows,
-        styles: { fontSize: 8, cellPadding: 2, textColor: [0, 0, 0] },
-        headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
-        alternateRowStyles: { fillColor: [245, 245, 245] },
-        columnStyles: { 0: { cellWidth: 20 }, 1: { cellWidth: 25 } },
-      })
-      y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4
-    }
-
-    // 4. NEW DISCREPANCIES
+    // 3. NEW DISCREPANCIES
     sectionHeader(`NEW DISCREPANCIES (${dayData.newDiscrepancies.length})`)
 
     if (dayData.newDiscrepancies.length === 0) {
@@ -373,7 +306,7 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
       y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4
     }
 
-    // 5. DISCREPANCY UPDATES
+    // 4. DISCREPANCY UPDATES
     const uniqueUpdatedDiscs = new Set(dayData.statusUpdates.map((u) => u.discrepancy_id))
     sectionHeader(`DISCREPANCY UPDATES (${dayData.statusUpdates.length} update${dayData.statusUpdates.length !== 1 ? 's' : ''} across ${uniqueUpdatedDiscs.size} discrepanc${uniqueUpdatedDiscs.size !== 1 ? 'ies' : 'y'})`)
 
@@ -401,7 +334,7 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
       y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4
     }
 
-    // 6. OBSTRUCTION EVALUATIONS
+    // 5. OBSTRUCTION EVALUATIONS
     sectionHeader('OBSTRUCTION EVALUATIONS')
 
     if (dayData.obstructionEvals.length === 0) {
@@ -449,10 +382,10 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
       y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4
     }
 
-    // 7. QRC EXECUTIONS
+    // 6. QRC EXECUTIONS
     renderQrcSection(dayData.qrcExecutions)
 
-    // 8. EVENTS LOG
+    // 7. EVENTS LOG
     renderEventsLogSection(dayData.activityEntries)
   }
 
