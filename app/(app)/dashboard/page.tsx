@@ -1435,8 +1435,8 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {activeExec && (
                   <span style={{
-                    fontSize: 'var(--fs-sm)', fontWeight: 800, color: '#fff',
-                    background: '#D97706', padding: '2px 8px', borderRadius: 6,
+                    fontSize: 'var(--fs-sm)', fontWeight: 800, color: '#0F172A',
+                    background: '#67E8F9', padding: '2px 8px', borderRadius: 6,
                   }}>QRC-{activeExec.qrc_number}</span>
                 )}
                 <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
@@ -1523,7 +1523,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                       borderRadius: 8, padding: '8px 12px', cursor: 'pointer', fontFamily: 'inherit',
                       textAlign: 'left', marginBottom: 4,
                     }}>
-                      <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#fff', background: '#D97706', padding: '1px 6px', borderRadius: 4 }}>QRC-{ex.qrc_number}</span>
+                      <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#0F172A', background: '#67E8F9', padding: '1px 6px', borderRadius: 4 }}>QRC-{ex.qrc_number}</span>
                       <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', flex: 1 }}>{ex.title}</span>
                     </button>
                   ))}
@@ -1538,7 +1538,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                       borderRadius: 8, padding: '8px 10px', cursor: 'pointer',
                       fontFamily: 'inherit', textAlign: 'left',
                     }}>
-                    <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#fff', background: '#D97706', padding: '1px 5px', borderRadius: 4 }}>
+                    <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#0F172A', background: '#67E8F9', padding: '1px 5px', borderRadius: 4 }}>
                       {tmpl.qrc_number}
                     </span>
                     <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-1)', marginTop: 4, lineHeight: 1.3 }}>
