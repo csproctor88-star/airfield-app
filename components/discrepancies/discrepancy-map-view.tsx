@@ -100,6 +100,15 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
 
     m.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-right')
 
+    m.addControl(
+      new mapboxgl.GeolocateControl({
+        positionOptions: { enableHighAccuracy: true },
+        trackUserLocation: true,
+        showUserHeading: true,
+      }),
+      'top-right',
+    )
+
     m.on('load', () => {
       setMapLoaded(true)
     })

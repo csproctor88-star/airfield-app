@@ -1,9 +1,15 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useState, useCallback, type ReactNode } from 'react'
+import dynamic from 'next/dynamic'
 import type { DiscrepancyRow } from '@/lib/supabase/discrepancies'
 import { DISCREPANCY_TYPES, ALLOWED_TRANSITIONS, STATUS_CONFIG, CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS } from '@/lib/constants'
 import { useInstallation } from '@/lib/installation-context'
+
+const LocationPickerMap = dynamic(
+  () => import('@/components/ui/location-picker-map'),
+  { ssr: false },
+)
 
 // ─── Generic overlay ────────────────────────────────────────────────
 
@@ -60,6 +66,7 @@ export function EditDiscrepancyModal({
   onSaved: (updated: DiscrepancyRow) => void
 }) {
   const [saving, setSaving] = useState(false)
+  const [gpsLoading, setGpsLoading] = useState(false)
   const [form, setForm] = useState({
     title: discrepancy.title,
     description: discrepancy.description,
@@ -67,7 +74,53 @@ export function EditDiscrepancyModal({
     type: discrepancy.type,
     notam_reference: ((discrepancy as DiscrepancyRow & { notam_reference?: string }).notam_reference || '') as string,
     current_status: ((discrepancy as DiscrepancyRow & { current_status?: string }).current_status || 'submitted_to_afm') as string,
+    latitude: discrepancy.latitude,
+    longitude: discrepancy.longitude,
   })
+
+  const handlePointSelected = useCallback((lat: number, lng: number) => {
+    setForm((prev) => ({ ...prev, latitude: lat, longitude: lng }))
+  }, [])
+
+  const captureLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      import('sonner').then(({ toast }) => toast.error('Geolocation is not supported by your browser'))
+      return
+    }
+    setGpsLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setForm((prev) => ({
+          ...prev,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        }))
+        setGpsLoading(false)
+        import('sonner').then(({ toast }) =>
+          toast.success(`Location: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`)
+        )
+      },
+      (error) => {
+        setGpsLoading(false)
+        import('sonner').then(({ toast }) => {
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              toast.error('Location access denied. Enable in browser settings.')
+              break
+            case error.POSITION_UNAVAILABLE:
+              toast.error('Location information unavailable.')
+              break
+            case error.TIMEOUT:
+              toast.error('Location request timed out.')
+              break
+            default:
+              toast.error('Unable to get your location.')
+          }
+        })
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    )
+  }, [])
 
   const handleSave = async () => {
     if (!form.title || !form.description || !form.location_text) return
@@ -80,6 +133,8 @@ export function EditDiscrepancyModal({
       type: form.type,
       notam_reference: form.notam_reference || null,
       current_status: form.current_status,
+      latitude: form.latitude,
+      longitude: form.longitude,
     })
     setSaving(false)
     if (error) {
@@ -136,6 +191,40 @@ export function EditDiscrepancyModal({
           {CURRENT_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </div>
+
+      {/* Pin Location on Map */}
+      <div style={{ marginBottom: 12 }}>
+        <FieldLabel>Pin Location on Map</FieldLabel>
+        <LocationPickerMap
+          onPointSelected={handlePointSelected}
+          selectedLat={form.latitude}
+          selectedLng={form.longitude}
+          flyToPoint={form.latitude != null && form.longitude != null ? { lat: form.latitude, lng: form.longitude } : null}
+          aspectRatio="1 / 1"
+          maxHeight="300px"
+        />
+      </div>
+
+      {/* Use My Location */}
+      <button
+        type="button"
+        onClick={captureLocation}
+        disabled={gpsLoading}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          width: '100%', padding: '10px 16px', marginBottom: 12, borderRadius: 8,
+          border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
+          color: 'var(--color-accent)', fontSize: 'var(--fs-md)', fontWeight: 600,
+          cursor: gpsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
+          opacity: gpsLoading ? 0.6 : 1,
+        }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+        </svg>
+        {gpsLoading ? 'Getting Location...' : 'Use My Location'}
+      </button>
 
       <SaveButton saving={saving} onClick={handleSave} />
     </ModalOverlay>
