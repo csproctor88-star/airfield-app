@@ -696,7 +696,11 @@ export async function deleteInspection(id: string): Promise<{ error: string | nu
     return { error: error.message }
   }
 
-  logActivity('deleted', 'inspection', id, existing?.display_id, { details: 'AFLD INSPECTION DELETED' }, existing?.base_id)
+  // Delete all activity log entries for this inspection so they don't appear in Daily Ops
+  await supabase
+    .from('activity_log')
+    .delete()
+    .eq('entity_id', id)
 
   return { error: null }
 }

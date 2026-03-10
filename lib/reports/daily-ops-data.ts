@@ -453,16 +453,18 @@ async function fetchQrcExecutionsForDate(supabase: any, startUTC: string, endUTC
 
   const selectStr = '*, qrc_templates:template_id(steps, scn_fields, has_scn_form)'
 
-  // Fetch executions opened during range
+  // Fetch executions opened during range (exclude cancelled)
   let q1 = supabase.from('qrc_executions').select(selectStr)
     .gte('opened_at', startUTC).lte('opened_at', endUTC)
+    .neq('status', 'cancelled')
     .order('opened_at', { ascending: true })
   if (baseId) q1 = q1.eq('base_id', baseId)
 
-  // Fetch executions closed during range (but opened before)
+  // Fetch executions closed during range (but opened before, exclude cancelled)
   let q2 = supabase.from('qrc_executions').select(selectStr)
     .lt('opened_at', startUTC)
     .gte('closed_at', startUTC).lte('closed_at', endUTC)
+    .neq('status', 'cancelled')
     .order('opened_at', { ascending: true })
   if (baseId) q2 = q2.eq('base_id', baseId)
 

@@ -292,7 +292,11 @@ export async function deleteCheck(id: string): Promise<{ error: string | null }>
     return { error: error.message }
   }
 
-  logActivity('deleted', 'check', id, existing?.display_id, { details: `AFLD CHECK DELETED` }, existing?.base_id)
+  // Delete all activity log entries for this check so they don't appear in Daily Ops
+  await supabase
+    .from('activity_log')
+    .delete()
+    .eq('entity_id', id)
 
   return { error: null }
 }
