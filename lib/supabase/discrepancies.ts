@@ -150,6 +150,8 @@ export async function updateDiscrepancy(
     assigned_shop?: string | null
     work_order_number?: string | null
     resolution_notes?: string | null
+    latitude?: number | null
+    longitude?: number | null
   }
 ): Promise<{ data: DiscrepancyRow | null; error: string | null }> {
   const supabase = createClient()
