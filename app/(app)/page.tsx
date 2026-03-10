@@ -1479,9 +1479,9 @@ export default function HomePage() {
                       }
                     }}
                     style={{
-                      background: 'var(--color-success)',
-                      color: '#000',
-                      border: 'none',
+                      background: 'rgba(34,197,94,0.15)',
+                      color: '#22C55E',
+                      border: '1px solid rgba(34,197,94,0.4)',
                       borderRadius: 8,
                       padding: '6px 12px',
                       fontWeight: 700,
