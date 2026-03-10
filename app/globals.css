@@ -853,6 +853,12 @@ html, body {
   border: 1px solid #E2E8F0;
 }
 
+/* ── Hide Mapbox branding on all map components ── */
+.mapboxgl-ctrl-logo,
+.mapboxgl-ctrl-attrib {
+  display: none !important;
+}
+
 /* ── Realtime alert banner animation ── */
 @keyframes alertSlide {
   0% { opacity: 0; transform: translateY(-10px); }

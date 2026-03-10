@@ -85,7 +85,7 @@ export async function fetchMapImageDataUrl(lat: number, lng: number): Promise<st
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   if (!token || token === 'your-mapbox-token-here') return null
   try {
-    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${lng},${lat})/${lng},${lat},16,0/600x300@2x?access_token=${token}`
+    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${lng},${lat})/${lng},${lat},16,0/600x300@2x?access_token=${token}&logo=false&attribution=false`
     const res = await fetch(url)
     if (!res.ok) return null
     const blob = await res.blob()

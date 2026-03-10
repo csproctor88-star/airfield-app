@@ -70,6 +70,7 @@ export default function LocationPickerMap({
       zoom: 14,
       pitch: 0,
       bearing: 0,
+      attributionControl: false,
     })
 
     m.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-right')

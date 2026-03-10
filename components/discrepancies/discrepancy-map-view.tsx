@@ -403,10 +403,6 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
         .discrepancy-map-popup .mapboxgl-popup-tip {
           border-top-color: rgba(15, 23, 42, 0.95) !important;
         }
-        .mapboxgl-ctrl-logo,
-        .mapboxgl-ctrl-attrib {
-          display: none !important;
-        }
       `}</style>
     </div>
   )

@@ -739,7 +739,7 @@ export default function WaiverDetailPage() {
         const lat = w.location_lat
         const lng = w.location_lng
         const staticMapUrl = lat != null && lng != null && mapboxToken && mapboxToken !== 'your-mapbox-token-here'
-          ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+f59e0b(${lng},${lat})/${lng},${lat},15,0/600x300@2x?access_token=${mapboxToken}`
+          ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+f59e0b(${lng},${lat})/${lng},${lat},15,0/600x300@2x?access_token=${mapboxToken}&logo=false&attribution=false`
           : null
 
         if (!staticMapUrl) return null

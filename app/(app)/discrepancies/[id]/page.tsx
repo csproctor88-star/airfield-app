@@ -153,7 +153,7 @@ export default function DiscrepancyDetailPage() {
   const lat = 'latitude' in d ? (d as DiscrepancyRow).latitude : null
   const lng = 'longitude' in d ? (d as DiscrepancyRow).longitude : null
   const staticMapUrl = lat != null && lng != null && mapboxToken && mapboxToken !== 'your-mapbox-token-here'
-    ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${lng},${lat})/${lng},${lat},15,0/600x300@2x?access_token=${mapboxToken}`
+    ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${lng},${lat})/${lng},${lat},15,0/600x300@2x?access_token=${mapboxToken}&logo=false&attribution=false`
     : null
 
   const buildPdf = async () => {

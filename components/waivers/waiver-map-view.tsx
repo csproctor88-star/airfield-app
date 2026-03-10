@@ -364,10 +364,6 @@ export default function WaiverMapView({ waivers }: Props) {
         .waiver-map-popup .mapboxgl-popup-tip {
           border-top-color: rgba(15, 23, 42, 0.95) !important;
         }
-        .mapboxgl-ctrl-logo,
-        .mapboxgl-ctrl-attrib {
-          display: none !important;
-        }
       `}</style>
     </div>
   )

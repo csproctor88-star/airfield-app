@@ -206,7 +206,7 @@ export default function CheckDetailPage() {
   const checkLat = check.latitude != null ? Number(check.latitude) : null
   const checkLng = check.longitude != null ? Number(check.longitude) : null
   const staticMapUrl = checkLat != null && checkLng != null && mapboxToken && mapboxToken !== 'your-mapbox-token-here'
-    ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+22d3ee(${checkLng},${checkLat})/${checkLng},${checkLat},15,0/600x300@2x?access_token=${mapboxToken}`
+    ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+22d3ee(${checkLng},${checkLat})/${checkLng},${checkLat},15,0/600x300@2x?access_token=${mapboxToken}&logo=false&attribution=false`
     : null
 
   const typeConfig = CHECK_TYPE_CONFIG[check.check_type as keyof typeof CHECK_TYPE_CONFIG]
@@ -455,7 +455,7 @@ export default function CheckDetailPage() {
           </div>
           {((data as Record<string, unknown>).issues as { comment: string; location: { lat: number; lon: number } | null }[]).map((issue, idx) => {
             const issueMapUrl = issue.location && mapboxToken && mapboxToken !== 'your-mapbox-token-here'
-              ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${issue.location.lon},${issue.location.lat})/${issue.location.lon},${issue.location.lat},15,0/600x300@2x?access_token=${mapboxToken}`
+              ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${issue.location.lon},${issue.location.lat})/${issue.location.lon},${issue.location.lat},15,0/600x300@2x?access_token=${mapboxToken}&logo=false&attribution=false`
               : null
             return (
               <div key={idx} style={{

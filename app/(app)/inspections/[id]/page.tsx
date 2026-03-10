@@ -482,7 +482,7 @@ export default function InspectionDetailPage() {
                       {item.discrepancies.map((disc, di) => {
                         const mapToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
                         const discMapUrl = disc.location && mapToken && mapToken !== 'your-mapbox-token-here'
-                          ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${disc.location.lon},${disc.location.lat})/${disc.location.lon},${disc.location.lat},16,0/400x200@2x?access_token=${mapToken}`
+                          ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${disc.location.lon},${disc.location.lat})/${disc.location.lon},${disc.location.lat},16,0/400x200@2x?access_token=${mapToken}&logo=false&attribution=false`
                           : null
                         const discPhotosForIdx = byDisc[di] || []
                         return (
@@ -546,7 +546,7 @@ export default function InspectionDetailPage() {
                         const loc = item.location
                         const mapToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
                         const mapUrl = mapToken && mapToken !== 'your-mapbox-token-here'
-                          ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${loc.lon},${loc.lat})/${loc.lon},${loc.lat},16,0/400x200@2x?access_token=${mapToken}`
+                          ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${loc.lon},${loc.lat})/${loc.lon},${loc.lat},16,0/400x200@2x?access_token=${mapToken}&logo=false&attribution=false`
                           : null
                         return (
                           <div style={{ marginTop: 4 }}>
@@ -939,7 +939,7 @@ export default function InspectionDetailPage() {
                       {item.discrepancies.map((disc, di) => {
                         const mapToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
                         const discMapUrl = disc.location && mapToken && mapToken !== 'your-mapbox-token-here'
-                          ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${disc.location.lon},${disc.location.lat})/${disc.location.lon},${disc.location.lat},16,0/400x200@2x?access_token=${mapToken}`
+                          ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${disc.location.lon},${disc.location.lat})/${disc.location.lon},${disc.location.lat},16,0/400x200@2x?access_token=${mapToken}&logo=false&attribution=false`
                           : null
                         const discPhotosForIdx = byDisc[di] || []
                         return (
