@@ -303,7 +303,7 @@ export function SimpleDiscrepancyPanel({
               >
                 <option value="">Select type...</option>
                 {DISCREPANCY_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
+                  <option key={t.value} value={t.value}>{t.emoji} {t.label}</option>
                 ))}
               </select>
             </div>

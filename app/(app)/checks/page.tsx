@@ -317,12 +317,6 @@ export default function AirfieldChecksPage() {
     toast.success('Draft saved')
   }
 
-  const toggleArea = (area: string) => {
-    setAreas((prev) =>
-      prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]
-    )
-  }
-
   const toggleAction = (action: string) => {
     setCheckedActions((prev) =>
       prev.includes(action) ? prev.filter((a) => a !== action) : [...prev, action]
@@ -402,11 +396,6 @@ export default function AirfieldChecksPage() {
       toast.error('Select a check type')
       return
     }
-    if (areas.length === 0) {
-      toast.error('Select at least one area')
-      return
-    }
-
     setSaving(true)
 
     // Auto-save any pending remark text
@@ -891,50 +880,7 @@ export default function AirfieldChecksPage() {
         </div>
       )}
 
-      {/* Areas Checked */}
-      {checkType && (() => {
-        const displayAreas = checkType === 'rsc'
-          ? installationAreas.filter(a => a.toUpperCase().startsWith('RWY'))
-          : installationAreas
-        return (
-        <div className="card" style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-            {checkType === 'rsc' ? 'Runway Areas Checked' : 'Areas Checked'}
-          </div>
-          {displayAreas.length === 0 && (
-            <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>
-              No runway areas configured for this installation.
-            </div>
-          )}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {displayAreas.map((area) => {
-              const selected = areas.includes(area)
-              return (
-                <button
-                  key={area}
-                  type="button"
-                  onClick={() => toggleArea(area)}
-                  style={{
-                    padding: '8px 14px', borderRadius: 8, fontSize: 'var(--fs-base)', fontWeight: 600,
-                    cursor: 'pointer', fontFamily: 'inherit',
-                    border: selected ? '1.5px solid var(--color-cyan)' : '1.5px solid var(--color-border-mid)',
-                    background: selected ? 'rgba(34,211,238,0.09)' : 'var(--color-bg-elevated)',
-                    color: selected ? 'var(--color-cyan)' : 'var(--color-text-3)',
-                  }}
-                >
-                  {selected ? '✓ ' : ''}{area}
-                </button>
-              )
-            })}
-          </div>
-          {areas.length > 0 && (
-            <div style={{ marginTop: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-              {areas.length} area{areas.length !== 1 ? 's' : ''} selected
-            </div>
-          )}
-        </div>
-        )
-      })()}
+      {/* Areas auto-set: 'Entire Airfield' by default, runway areas for RSC */}
 
       {/* Airfield Diagram Button */}
       {checkType && (
@@ -1109,7 +1055,7 @@ export default function AirfieldChecksPage() {
           type="button"
           className="btn-primary"
           onClick={handleComplete}
-          disabled={saving || !checkType || areas.length === 0}
+          disabled={saving || !checkType}
           style={{
             width: '100%', opacity: saving ? 0.7 : 1,
             background: 'var(--color-success)', fontSize: 'var(--fs-xl)', fontWeight: 800,
