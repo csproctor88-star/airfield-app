@@ -281,6 +281,9 @@ export async function uploadDiscrepancyPhoto(
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
 
+  const { resizeImageForUpload } = await import('@/lib/utils')
+  file = await resizeImageForUpload(file)
+
   const ext = file.name.split('.').pop() || 'jpg'
   const storagePath = `discrepancy-photos/${discrepancyId}/${Date.now()}.${ext}`
 

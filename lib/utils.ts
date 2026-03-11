@@ -74,6 +74,58 @@ export function getSupabaseConfig(): { url: string; key: string } | null {
 }
 
 // Check if a Mapbox token is configured
+/**
+ * Resize an image File to a max dimension (default 1600px) and convert to JPEG.
+ * Returns a new File ready for upload. Skips non-image files.
+ * Typical reduction: 4-5MB photo → 150-300KB.
+ */
+export async function resizeImageForUpload(file: File, maxDimension = 1600, quality = 0.82): Promise<File> {
+  if (!file.type.startsWith('image/')) return file
+
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let { naturalWidth: w, naturalHeight: h } = img
+
+      // Skip resize if already small enough
+      if (w <= maxDimension && h <= maxDimension && (file.type === 'image/jpeg' || file.type === 'image/jpg')) {
+        resolve(file)
+        return
+      }
+
+      if (w > maxDimension || h > maxDimension) {
+        const scale = Math.min(maxDimension / w, maxDimension / h)
+        w = Math.round(w * scale)
+        h = Math.round(h * scale)
+      }
+
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { resolve(file); return }
+      ctx.drawImage(img, 0, 0, w, h)
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { resolve(file); return }
+          const ext = file.name.replace(/\.[^.]+$/, '')
+          const resized = new File([blob], `${ext}.jpg`, { type: 'image/jpeg', lastModified: Date.now() })
+          resolve(resized)
+        },
+        'image/jpeg',
+        quality,
+      )
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      resolve(file) // Return original on error
+    }
+    img.src = url
+  })
+}
+
 export function isMapboxConfigured(): boolean {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   return !!(token && token !== 'your-mapbox-token-here')

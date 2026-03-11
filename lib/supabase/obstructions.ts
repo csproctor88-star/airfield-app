@@ -128,6 +128,9 @@ export async function uploadObstructionPhoto(
   const supabase = createClient()
   if (!supabase) return { url: null, error: 'Supabase not configured' }
 
+  const { resizeImageForUpload } = await import('@/lib/utils')
+  file = await resizeImageForUpload(file)
+
   const ext = file.name.split('.').pop() || 'jpg'
   const storagePath = `obstruction-photos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
 

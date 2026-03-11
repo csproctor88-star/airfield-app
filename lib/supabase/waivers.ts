@@ -461,14 +461,20 @@ export async function uploadWaiverAttachment(input: {
     // No authenticated user
   }
 
-  const ext = input.file.name.split('.').pop() || 'bin'
+  let { file } = input
+  if (file.type.startsWith('image/')) {
+    const { resizeImageForUpload } = await import('@/lib/utils')
+    file = await resizeImageForUpload(file)
+  }
+
+  const ext = file.name.split('.').pop() || 'bin'
   const ts = Date.now()
   const storagePath = `waiver-attachments/${input.waiver_id}/${ts}.${ext}`
 
   // Upload to Supabase Storage
   const { error: uploadError } = await supabase.storage
     .from('waiver-attachments')
-    .upload(storagePath, input.file)
+    .upload(storagePath, file)
 
   if (uploadError) {
     console.error('Failed to upload waiver attachment:', uploadError.message)
@@ -478,10 +484,10 @@ export async function uploadWaiverAttachment(input: {
   const row: Record<string, unknown> = {
     waiver_id: input.waiver_id,
     file_path: storagePath,
-    file_name: input.file.name,
+    file_name: file.name,
     file_type: input.file_type,
-    file_size: input.file.size,
-    mime_type: input.file.type,
+    file_size: file.size,
+    mime_type: file.type,
     caption: input.caption || null,
   }
   if (uploaded_by) row.uploaded_by = uploaded_by
