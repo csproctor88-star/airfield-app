@@ -223,7 +223,7 @@ export async function fetchOpenDiscrepanciesData(
               const response = await fetch(urlData.publicUrl)
               if (response.ok) {
                 const blob = await response.blob()
-                dataUrl = await blobToDataUrl(blob)
+                dataUrl = await blobToResizedDataUrl(blob)
               }
             }
           } catch {
@@ -266,11 +266,35 @@ export async function fetchOpenDiscrepanciesData(
   }
 }
 
-function blobToDataUrl(blob: Blob): Promise<string> {
+/** Convert blob to a data URL, resizing large images to max 800px for PDF thumbnails. */
+function blobToResizedDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onloadend = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(blob)
+    const url = URL.createObjectURL(blob)
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const MAX = 800
+      let { naturalWidth: w, naturalHeight: h } = img
+      if (w > MAX || h > MAX) {
+        const scale = Math.min(MAX / w, MAX / h)
+        w = Math.round(w * scale)
+        h = Math.round(h * scale)
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { reject(new Error('No canvas context')); return }
+      ctx.drawImage(img, 0, 0, w, h)
+      resolve(canvas.toDataURL('image/jpeg', 0.85))
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    }
+    img.src = url
   })
 }
