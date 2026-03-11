@@ -19,6 +19,8 @@ import {
 } from '@/lib/supabase/qrc'
 import type { QrcTemplate, QrcExecution, QrcStep, QrcStepResponse } from '@/lib/supabase/types'
 import { formatZuluDate, formatZuluDateTime } from '@/lib/utils'
+import { sendPdfViaEmail } from '@/lib/email-pdf'
+import EmailPdfModal from '@/components/ui/email-pdf-modal'
 
 type Tab = 'available' | 'active' | 'history'
 
@@ -312,7 +314,7 @@ function QrcExecutionView({
   onBack: () => void
   onUpdate: () => Promise<void>
 }) {
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
   const [responses, setResponses] = useState<Record<string, QrcStepResponse>>(
     (execution.step_responses || {}) as Record<string, QrcStepResponse>
   )
@@ -326,6 +328,13 @@ function QrcExecutionView({
   const [reviewNotes, setReviewNotes] = useState(template?.review_notes || '')
   const [reviewing, setReviewing] = useState(false)
   const [reviewerName, setReviewerName] = useState<string | null>(null)
+
+  // PDF export state
+  const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
 
   const isClosed = execution.status === 'closed'
   const steps = template?.steps || []
@@ -448,6 +457,60 @@ function QrcExecutionView({
       await onUpdate()
     }
     setReviewing(false)
+  }
+
+  async function preparePdf() {
+    const { generateQrcPdf } = await import('@/lib/qrc-pdf')
+    return generateQrcPdf({
+      execution,
+      template: template || null,
+      baseName: currentInstallation?.name,
+      baseIcao: currentInstallation?.icao,
+    })
+  }
+
+  async function handleExportPdf() {
+    setGeneratingPdf(true)
+    try {
+      const { doc, filename } = await preparePdf()
+      doc.save(filename)
+    } catch (e) {
+      console.error('PDF export failed:', e)
+      toast.error('PDF export failed')
+    }
+    setGeneratingPdf(false)
+  }
+
+  async function handleEmailPdf() {
+    setGeneratingPdf(true)
+    try {
+      const result = await preparePdf()
+      setEmailPdfData(result)
+      setEmailModalOpen(true)
+    } catch (e) {
+      console.error('PDF generation failed:', e)
+      toast.error('PDF generation failed')
+    }
+    setGeneratingPdf(false)
+  }
+
+  async function handleSendEmail(email: string) {
+    if (!emailPdfData) return
+    setSendingEmail(true)
+    const result = await sendPdfViaEmail(
+      emailPdfData.doc,
+      emailPdfData.filename,
+      email,
+      `QRC-${execution.qrc_number}: ${execution.title}`,
+    )
+    if (result.success) {
+      toast.success('Email sent successfully')
+      setEmailModalOpen(false)
+      setEmailPdfData(null)
+    } else {
+      toast.error(result.error || 'Failed to send email')
+    }
+    setSendingEmail(false)
   }
 
   function renderStep(step: QrcStep, depth = 0) {
@@ -878,6 +941,48 @@ function QrcExecutionView({
           }}
         >Reopen QRC</button>
       )}
+
+      {/* Export actions — shown for closed QRCs */}
+      {isClosed && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <button
+            onClick={handleExportPdf}
+            disabled={generatingPdf}
+            style={{
+              flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
+              background: '#A78BFA14', border: '1px solid #A78BFA33',
+              color: '#A78BFA', fontSize: 'var(--fs-md)', fontWeight: 700,
+              fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
+              opacity: generatingPdf ? 0.7 : 1,
+            }}
+          >
+            {generatingPdf ? 'Generating...' : 'Export PDF'}
+          </button>
+          <button
+            onClick={handleEmailPdf}
+            disabled={generatingPdf}
+            style={{
+              padding: '12px 16px', borderRadius: 10, textAlign: 'center',
+              background: '#A78BFA14', border: '1px solid #A78BFA33',
+              color: '#A78BFA', fontSize: 'var(--fs-md)', fontWeight: 700,
+              fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
+              opacity: generatingPdf ? 0.7 : 1,
+            }}
+            title="Email PDF"
+          >
+            ✉
+          </button>
+        </div>
+      )}
+
+      <EmailPdfModal
+        open={emailModalOpen}
+        onClose={() => { setEmailModalOpen(false); setEmailPdfData(null) }}
+        onSend={handleSendEmail}
+        sending={sendingEmail}
+        filename={emailPdfData?.filename}
+        defaultEmail={defaultPdfEmail}
+      />
     </div>
   )
 }
