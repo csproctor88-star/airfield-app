@@ -173,6 +173,10 @@ export default function InfrastructureMapPage() {
   )
   const { runways, installationId, userRole } = useInstallation()
 
+  // Fullscreen
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const pageRef = useRef<HTMLDivElement>(null)
+
   // Edit mode
   const [editMode, setEditMode] = useState(false)
   const [dbFeatures, setDbFeatures] = useState<InfrastructureFeature[]>([])
@@ -184,6 +188,13 @@ export default function InfrastructureMapPage() {
   const dragMarkerRef = useRef<mapboxgl.Marker | null>(null)
   const editModeRef = useRef(false)
   const placementTypeRef = useRef<InfrastructureFeatureType>('taxiway_light')
+
+  // Free move mode
+  const [freeMoveActive, setFreeMoveActive] = useState(false)
+  const freeMoveRef = useRef(false)
+  const freeMoveMarkersRef = useRef<Map<string, mapboxgl.Marker>>(new Map())
+  const [pendingMoves, setPendingMoves] = useState<Map<string, { lng: number; lat: number }>>(new Map())
+  const [savingFreeMove, setSavingFreeMove] = useState(false)
 
   // Bulk shift mode
   const [bulkShiftOpen, setBulkShiftOpen] = useState(false)
@@ -224,6 +235,31 @@ export default function InfrastructureMapPage() {
   useEffect(() => { editModeRef.current = editMode }, [editMode])
   useEffect(() => { placementTypeRef.current = placementType }, [placementType])
   useEffect(() => { boxSelectRef.current = boxSelectActive }, [boxSelectActive])
+  useEffect(() => { freeMoveRef.current = freeMoveActive }, [freeMoveActive])
+
+  // ESC key: toggle box select, exit fullscreen, cancel free move
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (freeMoveActive && pendingMoves.size > 0) return // don't exit free move with unsaved changes
+        if (freeMoveActive) { cancelFreeMove(); return }
+        if (isFullscreen) { setIsFullscreen(false); return }
+        if (editMode) {
+          setBoxSelectActive(prev => {
+            if (prev) { setSelectedIds(new Set()); return false }
+            return true
+          })
+        }
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [editMode, isFullscreen, freeMoveActive, pendingMoves])
+
+  // Fullscreen: resize map when toggling
+  useEffect(() => {
+    setTimeout(() => map.current?.resize(), 50)
+  }, [isFullscreen])
 
   // Fetch DB features
   useEffect(() => {
@@ -402,9 +438,83 @@ export default function InfrastructureMapPage() {
     }
   }, [])
 
+  // Free move: click a feature to make it draggable, accumulate moves, bulk save
+  const addFreeMoveMarker = useCallback((id: string, lng: number, lat: number) => {
+    if (!map.current || freeMoveMarkersRef.current.has(id)) return
+
+    const el = document.createElement('div')
+    el.style.width = '18px'
+    el.style.height = '18px'
+    el.style.borderRadius = '50%'
+    el.style.background = '#F59E0B'
+    el.style.border = '2px solid #FFFFFF'
+    el.style.boxShadow = '0 0 10px rgba(245,158,11,0.5)'
+    el.style.cursor = 'grab'
+
+    const marker = new mapboxgl.Marker({ element: el, draggable: true })
+      .setLngLat([lng, lat])
+      .addTo(map.current)
+
+    marker.on('dragend', () => {
+      const pos = marker.getLngLat()
+      setPendingMoves(prev => {
+        const next = new Map(prev)
+        next.set(id, { lng: pos.lng, lat: pos.lat })
+        return next
+      })
+    })
+
+    freeMoveMarkersRef.current.set(id, marker)
+    setPendingMoves(prev => {
+      const next = new Map(prev)
+      next.set(id, { lng, lat })
+      return next
+    })
+  }, [])
+
+  const saveAllFreeMoves = useCallback(async () => {
+    if (!installationId || pendingMoves.size === 0) return
+    setSavingFreeMove(true)
+
+    const promises = Array.from(pendingMoves.entries()).map(([id, pos]) =>
+      updateInfrastructureFeature(id, { longitude: pos.lng, latitude: pos.lat })
+    )
+    const results = await Promise.all(promises)
+    const successCount = results.filter(Boolean).length
+
+    // Clean up markers
+    freeMoveMarkersRef.current.forEach(m => m.remove())
+    freeMoveMarkersRef.current.clear()
+    setPendingMoves(new Map())
+
+    const updated = await fetchInfrastructureFeatures(installationId)
+    setDbFeatures(updated)
+
+    if (successCount > 0) toast.success(`Saved ${successCount} feature${successCount > 1 ? 's' : ''}`)
+    if (successCount < pendingMoves.size) toast.error(`${pendingMoves.size - successCount} failed to save`)
+    setSavingFreeMove(false)
+  }, [installationId, pendingMoves])
+
+  const cancelFreeMove = useCallback(() => {
+    freeMoveMarkersRef.current.forEach(m => m.remove())
+    freeMoveMarkersRef.current.clear()
+    setPendingMoves(new Map())
+    setFreeMoveActive(false)
+  }, [])
+
+  // Expose free move click handler on window for popups
+  const freeMoveClickRef = useRef<((id: string, lng: number, lat: number) => void) | undefined>(undefined)
+  freeMoveClickRef.current = (id: string, lng: number, lat: number) => {
+    addFreeMoveMarker(id, lng, lat)
+    document.querySelectorAll('.mapboxgl-popup').forEach(p => p.remove())
+  }
+
   useEffect(() => {
     (window as any).__deleteInfraFeature = (id: string) => {
       deleteHandlerRef.current?.(id)
+    }
+    ;(window as any).__freeMoveFeature = (id: string, lng: number, lat: number) => {
+      freeMoveClickRef.current?.(id, lng, lat)
     }
     ;(window as any).__moveInfraFeature = (id: string, lng: number, lat: number) => {
       moveHandlerRef.current?.(id, lng, lat)
@@ -412,6 +522,7 @@ export default function InfrastructureMapPage() {
     return () => {
       delete (window as any).__deleteInfraFeature
       delete (window as any).__moveInfraFeature
+      delete (window as any).__freeMoveFeature
     }
   }, [])
 
@@ -673,7 +784,18 @@ export default function InfrastructureMapPage() {
           if (props.notes) {
             html += `<div style="margin-top:4px;color:#CBD5E1;">Notes: ${props.notes}</div>`
           }
-          if (props.id && isEditing) {
+          if (props.id && isEditing && freeMoveRef.current) {
+            html += `<div style="display:flex;gap:6px;margin-top:8px;">`
+            html += `<button onclick="window.__freeMoveFeature('${props.id}',${coords[0]},${coords[1]})" style="
+              flex:1;padding:5px 0;border:none;border-radius:5px;
+              background:#F59E0B;color:black;font-size:12px;font-weight:600;cursor:pointer;
+            ">Grab</button>`
+            html += `<button onclick="window.__deleteInfraFeature('${props.id}')" style="
+              flex:1;padding:5px 0;border:none;border-radius:5px;
+              background:#EF4444;color:white;font-size:12px;font-weight:600;cursor:pointer;
+            ">Delete</button>`
+            html += `</div>`
+          } else if (props.id && isEditing) {
             html += `<div style="display:flex;gap:6px;margin-top:8px;">`
             html += `<button onclick="window.__moveInfraFeature('${props.id}',${coords[0]},${coords[1]})" style="
               flex:1;padding:5px 0;border:none;border-radius:5px;
@@ -705,7 +827,7 @@ export default function InfrastructureMapPage() {
 
       // Click on empty map area — place feature in edit mode (skip if dragging or box selecting)
       m.on('click', (e) => {
-        if (!editModeRef.current || draggingRef.current || boxSelectRef.current) return
+        if (!editModeRef.current || draggingRef.current || boxSelectRef.current || freeMoveRef.current) return
         const layerIds = LAYERS.map(l => l.key)
         const clicked = m.queryRenderedFeatures(e.point, { layers: layerIds })
         if (clicked.length > 0) return
@@ -944,13 +1066,23 @@ export default function InfrastructureMapPage() {
   }
 
   return (
-    <div className="page-container" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 60px)' }}>
+    <div
+      ref={pageRef}
+      className={isFullscreen ? '' : 'page-container'}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: isFullscreen ? '100vh' : 'calc(100vh - 60px)',
+        ...(isFullscreen ? { position: 'fixed', inset: 0, zIndex: 9999, background: 'var(--color-bg)', padding: 0 } : {}),
+      }}
+    >
       {/* Header */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 10,
+        marginBottom: isFullscreen ? 0 : 10,
+        padding: isFullscreen ? '8px 14px' : 0,
         flexShrink: 0,
         flexWrap: 'wrap',
         gap: 8,
@@ -1123,9 +1255,85 @@ export default function InfrastructureMapPage() {
               {boxSelectActive ? `Selected (${selectedIds.size})` : 'Box Select'}
             </button>
 
+            <button
+              onClick={() => {
+                setFreeMoveActive(prev => {
+                  if (prev) { cancelFreeMove(); return false }
+                  return true
+                })
+              }}
+              style={{
+                padding: '5px 12px',
+                borderRadius: 6,
+                border: freeMoveActive ? '1px solid rgba(245,158,11,0.5)' : '1px solid rgba(148,163,184,0.2)',
+                background: freeMoveActive ? 'rgba(245,158,11,0.2)' : 'transparent',
+                color: freeMoveActive ? '#F59E0B' : '#94A3B8',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {freeMoveActive ? `Free Move (${pendingMoves.size})` : 'Free Move'}
+            </button>
+
             <div style={{ fontSize: 11, color: '#94A3B8', whiteSpace: 'nowrap' }}>
-              {saving || shifting ? 'Saving...' : 'Tap map to place'}
+              {saving || shifting ? 'Saving...' : freeMoveActive ? 'Tap features to grab' : 'Tap map to place'}
             </div>
+          </div>
+        )}
+
+        {/* Free move save bar */}
+        {editMode && freeMoveActive && pendingMoves.size > 0 && (
+          <div style={{
+            position: 'absolute',
+            top: 10,
+            right: 60,
+            zIndex: 11,
+            background: 'rgba(15, 23, 42, 0.96)',
+            border: '1px solid rgba(245, 158, 11, 0.4)',
+            borderRadius: 10,
+            padding: '8px 14px',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#F59E0B' }}>
+              {pendingMoves.size} moved
+            </div>
+            <button
+              onClick={saveAllFreeMoves}
+              disabled={savingFreeMove}
+              style={{
+                padding: '5px 14px',
+                borderRadius: 6,
+                border: 'none',
+                background: '#10B981',
+                color: 'white',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: savingFreeMove ? 'wait' : 'pointer',
+                opacity: savingFreeMove ? 0.6 : 1,
+              }}
+            >
+              {savingFreeMove ? 'Saving...' : 'Save All'}
+            </button>
+            <button
+              onClick={cancelFreeMove}
+              style={{
+                padding: '5px 14px',
+                borderRadius: 6,
+                border: '1px solid rgba(148,163,184,0.3)',
+                background: 'transparent',
+                color: '#94A3B8',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
           </div>
         )}
 
@@ -1362,30 +1570,45 @@ export default function InfrastructureMapPage() {
           </div>
         )}
 
-        {/* Legend toggle button */}
-        <button
-          onClick={() => setLegendOpen(prev => !prev)}
-          style={{
-            position: 'absolute',
-            top: 10,
-            left: 10,
-            zIndex: 10,
-            background: 'rgba(15, 23, 42, 0.9)',
-            border: '1px solid rgba(148, 163, 184, 0.2)',
-            borderRadius: 8,
-            padding: '6px 12px',
-            color: '#E2E8F0',
-            fontSize: 'var(--fs-sm)',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          <span style={{ fontSize: 14 }}>{legendOpen ? '◀' : '▶'}</span>
-          Legend
-        </button>
+        {/* Top-left controls: Legend + Fullscreen */}
+        <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 10, display: 'flex', gap: 6 }}>
+          <button
+            onClick={() => setLegendOpen(prev => !prev)}
+            style={{
+              background: 'rgba(15, 23, 42, 0.9)',
+              border: '1px solid rgba(148, 163, 184, 0.2)',
+              borderRadius: 8,
+              padding: '6px 12px',
+              color: '#E2E8F0',
+              fontSize: 'var(--fs-sm)',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <span style={{ fontSize: 14 }}>{legendOpen ? '◀' : '▶'}</span>
+            Legend
+          </button>
+          <button
+            onClick={() => setIsFullscreen(prev => !prev)}
+            style={{
+              background: 'rgba(15, 23, 42, 0.9)',
+              border: '1px solid rgba(148, 163, 184, 0.2)',
+              borderRadius: 8,
+              padding: '6px 10px',
+              color: '#E2E8F0',
+              fontSize: 16,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+          >
+            {isFullscreen ? '⊗' : '⛶'}
+          </button>
+        </div>
 
         {/* Legend panel */}
         {legendOpen && (
