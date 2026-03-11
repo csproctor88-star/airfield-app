@@ -10,6 +10,7 @@ import { createInspection, uploadInspectionPhoto, getInspectorName } from '@/lib
 import { useInstallation } from '@/lib/installation-context'
 import { fetchCurrentWeather } from '@/lib/weather'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
+import { ExpandableTextarea } from '@/components/ui/expandable-textarea'
 import { createClient } from '@/lib/supabase/client'
 
 type PhotoEntry = { file: File; url: string; name: string }
@@ -203,12 +204,13 @@ export default function JointMonthlyInspectionPage() {
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
             Comments
           </div>
-          <textarea
+          <ExpandableTextarea
             className="input-dark"
             rows={6}
             placeholder="Enter monthly joint inspection comments..."
             value={comment}
-            onChange={(e) => setComment(e.target.value)}
+            onChange={(val) => setComment(val)}
+            label="Comments"
             style={{ resize: 'vertical', fontSize: 'var(--fs-md)', width: '100%', boxSizing: 'border-box' }}
           />
         </div>

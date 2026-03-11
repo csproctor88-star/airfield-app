@@ -36,6 +36,7 @@ import { uploadInspectionPhoto } from '@/lib/supabase/inspections'
 import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
 import type { InspectionItem, SimpleDiscrepancy } from '@/lib/supabase/types'
 import { SimpleDiscrepancyPanelGroup } from '@/components/ui/simple-discrepancy-panel-group'
+import { ExpandableTextarea } from '@/components/ui/expandable-textarea'
 
 type BwcValue = null | (typeof BWC_OPTIONS)[number]
 type TabType = 'airfield' | 'lighting'
@@ -1591,13 +1592,14 @@ export default function InspectionsPage() {
               <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
                 General Notes (Optional)
               </div>
-              <textarea
+              <ExpandableTextarea
                 className="input-dark"
                 rows={3}
                 placeholder="Any additional notes..."
                 value={currentHalf?.notes || ''}
-                onChange={(e) => setNotes(e.target.value)}
-                style={{ resize: 'vertical', fontSize: 'var(--fs-md)' }}
+                onChange={(val) => setNotes(val)}
+                label="General Notes"
+                style={{ resize: 'vertical', fontSize: 'var(--fs-md)', width: '100%', boxSizing: 'border-box' }}
               />
             </div>
 

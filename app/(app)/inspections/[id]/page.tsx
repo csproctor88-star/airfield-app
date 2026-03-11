@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { DEMO_INSPECTIONS } from '@/lib/demo-data'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { fetchInspection, fetchDailyGroup, fetchInspectionPhotos, deleteInspection, updateInspectionNotes, type InspectionRow, type InspectionPhotoRow } from '@/lib/supabase/inspections'
+import { fetchInspection, fetchDailyGroup, fetchInspectionPhotos, deleteInspection, updateInspectionNotes, updateInspectionItems, uploadInspectionPhoto, deleteInspectionPhoto, type InspectionRow, type InspectionPhotoRow } from '@/lib/supabase/inspections'
 import type { InspectionItem } from '@/lib/supabase/types'
 import { useInstallation } from '@/lib/installation-context'
 import { ActionButton } from '@/components/ui/button'
@@ -20,8 +20,9 @@ import { formatZuluTime, formatZuluDate, formatZuluDateTime } from '@/lib/utils'
 export default function InspectionDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { currentInstallation, userRole, defaultPdfEmail } = useInstallation()
+  const { currentInstallation, installationId, userRole, defaultPdfEmail } = useInstallation()
   const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [inspections, setInspections] = useState<InspectionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
@@ -35,6 +36,11 @@ export default function InspectionDetailPage() {
   const [notesText, setNotesText] = useState('')
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ airfield: false, lighting: false })
   const [showFailedItems, setShowFailedItems] = useState(false)
+
+  // Edit state for completed inspections
+  const [editingDiscComment, setEditingDiscComment] = useState<string | null>(null) // "itemId-discIndex"
+  const [discCommentText, setDiscCommentText] = useState('')
+  const [uploadingPhotoFor, setUploadingPhotoFor] = useState<string | null>(null) // "inspectionId" or "itemId" or "itemId-discIndex"
 
   // Photo state
   const [photosByItem, setPhotosByItem] = useState<Record<string, InspectionPhotoRow[]>>({})
@@ -62,6 +68,11 @@ export default function InspectionDetailPage() {
       setLoading(false)
       return
     }
+    // Get current user ID for edit permissions
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) setCurrentUserId(user.id)
+    } catch { /* ignore */ }
     const data = await fetchInspection(params.id as string)
     if (!data) {
       setLoading(false)
@@ -170,6 +181,16 @@ export default function InspectionDetailPage() {
   const airfieldInsp = allInspections.find((i: { inspection_type: string }) => i.inspection_type === 'airfield')
   const lightingInsp = allInspections.find((i: { inspection_type: string }) => i.inspection_type === 'lighting')
   const primary = airfieldInsp || allInspections[0]
+
+  // canEdit: user who completed/filed the inspection, or NAMO/Base Admin/Sys Admin
+  const canEdit = !usingDemo && (
+    isAdmin ||
+    userRole === 'namo' ||
+    (currentUserId != null && (
+      primary.completed_by_id === currentUserId ||
+      primary.filed_by_id === currentUserId
+    ))
+  )
   const isSpecialType = primary.inspection_type === 'construction_meeting' || primary.inspection_type === 'joint_monthly'
   const specialLabel = primary.inspection_type === 'construction_meeting'
     ? 'Pre/Post Construction Inspection'
@@ -327,6 +348,137 @@ export default function InspectionDetailPage() {
     setSendingEmail(false)
   }
 
+  // ── Edit handlers for completed inspections ──
+
+  const handleSaveDiscComment = async (inspectionId: string, itemId: string, discIndex: number, newComment: string) => {
+    const insp = inspections.find(i => i.id === inspectionId)
+    if (!insp) return
+    const updatedItems = insp.items.map(item => {
+      if (item.id !== itemId || !item.discrepancies) return item
+      const updatedDiscs = item.discrepancies.map((d, di) =>
+        di === discIndex ? { ...d, comment: newComment } : d
+      )
+      return { ...item, discrepancies: updatedDiscs }
+    })
+    setActionLoading(true)
+    const { error } = await updateInspectionItems(inspectionId, updatedItems)
+    if (error) {
+      toast.error(error)
+    } else {
+      toast.success('Comment updated')
+      await loadData()
+    }
+    setActionLoading(false)
+    setEditingDiscComment(null)
+  }
+
+  const handleSaveLegacyNote = async (inspectionId: string, itemId: string, newNote: string) => {
+    const insp = inspections.find(i => i.id === inspectionId)
+    if (!insp) return
+    const updatedItems = insp.items.map(item =>
+      item.id === itemId ? { ...item, notes: newNote } : item
+    )
+    setActionLoading(true)
+    const { error } = await updateInspectionItems(inspectionId, updatedItems)
+    if (error) {
+      toast.error(error)
+    } else {
+      toast.success('Note updated')
+      await loadData()
+    }
+    setActionLoading(false)
+    setEditingDiscComment(null)
+  }
+
+  const handleClearLocation = async (inspectionId: string, itemId: string, discIndex?: number) => {
+    const insp = inspections.find(i => i.id === inspectionId)
+    if (!insp) return
+    const updatedItems = insp.items.map(item => {
+      if (item.id !== itemId) return item
+      if (discIndex != null && item.discrepancies) {
+        const updatedDiscs = item.discrepancies.map((d, di) =>
+          di === discIndex ? { ...d, location: null } : d
+        )
+        return { ...item, discrepancies: updatedDiscs }
+      }
+      return { ...item, location: null }
+    })
+    setActionLoading(true)
+    const { error } = await updateInspectionItems(inspectionId, updatedItems)
+    if (error) {
+      toast.error(error)
+    } else {
+      toast.success('Location removed')
+      await loadData()
+    }
+    setActionLoading(false)
+  }
+
+  const handleSetCurrentLocation = async (inspectionId: string, itemId: string, discIndex?: number) => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation not available')
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const loc = { lat: position.coords.latitude, lon: position.coords.longitude }
+        const insp = inspections.find(i => i.id === inspectionId)
+        if (!insp) return
+        const updatedItems = insp.items.map(item => {
+          if (item.id !== itemId) return item
+          if (discIndex != null && item.discrepancies) {
+            const updatedDiscs = item.discrepancies.map((d, di) =>
+              di === discIndex ? { ...d, location: loc } : d
+            )
+            return { ...item, discrepancies: updatedDiscs }
+          }
+          return { ...item, location: loc }
+        })
+        setActionLoading(true)
+        const { error } = await updateInspectionItems(inspectionId, updatedItems)
+        if (error) {
+          toast.error(error)
+        } else {
+          toast.success('Location updated')
+          await loadData()
+        }
+        setActionLoading(false)
+      },
+      () => toast.error('Could not get location'),
+      { enableHighAccuracy: true }
+    )
+  }
+
+  const handlePhotoUpload = async (inspectionId: string, file: File, itemId?: string, discIndex?: number) => {
+    setUploadingPhotoFor(discIndex != null ? `${itemId}-${discIndex}` : itemId || inspectionId)
+    const { error } = await uploadInspectionPhoto(
+      inspectionId,
+      file,
+      itemId || null,
+      null, null,
+      installationId || null,
+      discIndex ?? null,
+    )
+    if (error) {
+      toast.error(error)
+    } else {
+      toast.success('Photo added')
+      await loadData()
+    }
+    setUploadingPhotoFor(null)
+  }
+
+  const handlePhotoDelete = async (photo: InspectionPhotoRow) => {
+    if (!confirm('Delete this photo?')) return
+    const { error } = await deleteInspectionPhoto(photo.id, photo.storage_path)
+    if (error) {
+      toast.error(error)
+    } else {
+      toast.success('Photo deleted')
+      await loadData()
+    }
+  }
+
   // Group item photos by discrepancy index
   const getItemPhotosByDisc = (itemId: string) => {
     const photos = photosByItem[itemId]
@@ -350,19 +502,36 @@ export default function InspectionDetailPage() {
     return (
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
         {photos.map((photo, idx) => (
-          <div
-            key={photo.id}
-            onClick={() => openPhotoViewer(photos, idx)}
-            style={{
-              width: 56, height: 56, borderRadius: 6, overflow: 'hidden', cursor: 'pointer',
-              border: '1px solid rgba(239,68,68,0.3)',
-            }}
-          >
-            <img
-              src={resolvePhotoUrl(photo)}
-              alt={photo.file_name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-            />
+          <div key={photo.id} style={{ position: 'relative' }}>
+            <div
+              onClick={() => openPhotoViewer(photos, idx)}
+              style={{
+                width: 56, height: 56, borderRadius: 6, overflow: 'hidden', cursor: 'pointer',
+                border: '1px solid rgba(239,68,68,0.3)',
+              }}
+            >
+              <img
+                src={resolvePhotoUrl(photo)}
+                alt={photo.file_name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+            </div>
+            {canEdit && (
+              <button
+                onClick={() => handlePhotoDelete(photo)}
+                style={{
+                  position: 'absolute', top: -6, right: -6,
+                  width: 18, height: 18, borderRadius: '50%',
+                  background: '#EF4444', border: '2px solid var(--color-bg-surface)',
+                  color: '#fff', fontSize: 10, fontWeight: 700,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: 0, lineHeight: 1,
+                }}
+                title="Delete photo"
+              >
+                &times;
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -477,6 +646,7 @@ export default function InspectionDetailPage() {
                   {/* Multi-discrepancy or legacy single-note */}
                   {isFail && item.discrepancies && item.discrepancies.length > 0 ? (() => {
                     const { byDisc, unlinked } = getItemPhotosByDisc(item.id)
+                    const editKey = (di: number) => `${item.id}-${di}`
                     return (
                     <div style={{ marginTop: 4 }}>
                       {item.discrepancies.map((disc, di) => {
@@ -485,6 +655,7 @@ export default function InspectionDetailPage() {
                           ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${disc.location.lon},${disc.location.lat})/${disc.location.lon},${disc.location.lat},16,0/400x200@2x?access_token=${mapToken}&logo=false&attribution=false`
                           : null
                         const discPhotosForIdx = byDisc[di] || []
+                        const isEditingComment = editingDiscComment === editKey(di)
                         return (
                           <div key={di} style={{
                             padding: '6px 8px', marginBottom: 4,
@@ -496,9 +667,40 @@ export default function InspectionDetailPage() {
                                 Discrepancy {di + 1} of {item.discrepancies!.length}
                               </div>
                             )}
-                            {disc.comment && (
-                              <div style={{ fontSize: 'var(--fs-sm)', color: '#FBBF24', fontStyle: 'italic', lineHeight: 1.4 }}>
-                                {disc.comment}
+                            {isEditingComment ? (
+                              <div style={{ marginBottom: 4 }}>
+                                <textarea
+                                  className="input-dark"
+                                  rows={2}
+                                  style={{ resize: 'vertical', width: '100%', boxSizing: 'border-box', marginBottom: 4, fontSize: 'var(--fs-sm)' }}
+                                  value={discCommentText}
+                                  onChange={(e) => setDiscCommentText(e.target.value)}
+                                  autoFocus
+                                />
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                  <ActionButton color="#10B981" onClick={() => handleSaveDiscComment(inspection.id, item.id, di, discCommentText)} disabled={actionLoading}>
+                                    {actionLoading ? 'Saving...' : 'Save'}
+                                  </ActionButton>
+                                  <ActionButton color="#9CA3AF" onClick={() => setEditingDiscComment(null)}>Cancel</ActionButton>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+                                {disc.comment ? (
+                                  <div style={{ flex: 1, fontSize: 'var(--fs-sm)', color: '#FBBF24', fontStyle: 'italic', lineHeight: 1.4 }}>
+                                    {disc.comment}
+                                  </div>
+                                ) : canEdit ? (
+                                  <div style={{ flex: 1, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>No comment</div>
+                                ) : null}
+                                {canEdit && (
+                                  <button
+                                    onClick={() => { setDiscCommentText(disc.comment || ''); setEditingDiscComment(editKey(di)) }}
+                                    style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0, flexShrink: 0 }}
+                                  >
+                                    Edit
+                                  </button>
+                                )}
                               </div>
                             )}
                             {discMapUrl && (
@@ -506,11 +708,48 @@ export default function InspectionDetailPage() {
                                 style={{ width: '100%', maxWidth: 400, height: 140, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginTop: 4 }} />
                             )}
                             {disc.location && (
-                              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+                              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
                                 Location: {disc.location.lat.toFixed(5)}, {disc.location.lon.toFixed(5)}
+                                {canEdit && (
+                                  <>
+                                    <button onClick={() => handleSetCurrentLocation(inspection.id, item.id, di)}
+                                      style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                                      Update
+                                    </button>
+                                    <button onClick={() => handleClearLocation(inspection.id, item.id, di)}
+                                      style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                                      Remove
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             )}
+                            {!disc.location && canEdit && (
+                              <button onClick={() => handleSetCurrentLocation(inspection.id, item.id, di)}
+                                style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', padding: 0, marginTop: 2 }}>
+                                + Add Location
+                              </button>
+                            )}
                             {renderDiscPhotos(discPhotosForIdx)}
+                            {canEdit && (
+                              <label style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4,
+                                fontSize: 'var(--fs-xs)', color: '#3B82F6', cursor: 'pointer', fontWeight: 600,
+                              }}>
+                                + Add Photo
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  capture="environment"
+                                  style={{ display: 'none' }}
+                                  onChange={(e) => {
+                                    const f = e.target.files?.[0]
+                                    if (f) handlePhotoUpload(inspection.id, f, item.id, di)
+                                    e.target.value = ''
+                                  }}
+                                />
+                              </label>
+                            )}
                             {disc.log_as_discrepancy && (
                               <div style={{
                                 marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -534,14 +773,48 @@ export default function InspectionDetailPage() {
                     </div>)
                   })() : (
                     <>
-                      {item.notes && isFail && (
-                        <div style={{
-                          fontSize: 'var(--fs-sm)', color: '#FBBF24', marginTop: 4, fontStyle: 'italic',
-                          padding: '4px 8px', background: 'rgba(251,191,36,0.06)', borderRadius: 4,
-                        }}>
-                          {item.notes}
-                        </div>
-                      )}
+                      {isFail && (() => {
+                        const isEditingNote = editingDiscComment === `note-${item.id}`
+                        return isEditingNote ? (
+                          <div style={{ marginTop: 4 }}>
+                            <textarea
+                              className="input-dark"
+                              rows={2}
+                              style={{ resize: 'vertical', width: '100%', boxSizing: 'border-box', marginBottom: 4, fontSize: 'var(--fs-sm)' }}
+                              value={discCommentText}
+                              onChange={(e) => setDiscCommentText(e.target.value)}
+                              autoFocus
+                            />
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <ActionButton color="#10B981" onClick={() => handleSaveLegacyNote(inspection.id, item.id, discCommentText)} disabled={actionLoading}>
+                                {actionLoading ? 'Saving...' : 'Save'}
+                              </ActionButton>
+                              <ActionButton color="#9CA3AF" onClick={() => setEditingDiscComment(null)}>Cancel</ActionButton>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, marginTop: item.notes ? 4 : 0 }}>
+                            {item.notes ? (
+                              <div style={{
+                                flex: 1, fontSize: 'var(--fs-sm)', color: '#FBBF24', fontStyle: 'italic',
+                                padding: '4px 8px', background: 'rgba(251,191,36,0.06)', borderRadius: 4,
+                              }}>
+                                {item.notes}
+                              </div>
+                            ) : canEdit ? (
+                              <div style={{ flex: 1, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 4 }}>No comment</div>
+                            ) : null}
+                            {canEdit && (
+                              <button
+                                onClick={() => { setDiscCommentText(item.notes || ''); setEditingDiscComment(`note-${item.id}`) }}
+                                style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0, flexShrink: 0, marginTop: 4 }}
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })()}
                       {isFail && item.location && (() => {
                         const loc = item.location
                         const mapToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
@@ -554,13 +827,50 @@ export default function InspectionDetailPage() {
                               <img src={mapUrl} alt="Fail item location"
                                 style={{ width: '100%', maxWidth: 400, height: 140, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginBottom: 3 }} />
                             )}
-                            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
                               Location: {loc.lat.toFixed(5)}, {loc.lon.toFixed(5)}
+                              {canEdit && (
+                                <>
+                                  <button onClick={() => handleSetCurrentLocation(inspection.id, item.id)}
+                                    style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                                    Update
+                                  </button>
+                                  <button onClick={() => handleClearLocation(inspection.id, item.id)}
+                                    style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                                    Remove
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </div>
                         )
                       })()}
+                      {isFail && !item.location && canEdit && (
+                        <button onClick={() => handleSetCurrentLocation(inspection.id, item.id)}
+                          style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', padding: 0, marginTop: 4 }}>
+                          + Add Location
+                        </button>
+                      )}
                       {isFail && renderItemPhotos(item.id)}
+                      {isFail && canEdit && (
+                        <label style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4,
+                          fontSize: 'var(--fs-xs)', color: '#3B82F6', cursor: 'pointer', fontWeight: 600,
+                        }}>
+                          + Add Photo
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            style={{ display: 'none' }}
+                            onChange={(e) => {
+                              const f = e.target.files?.[0]
+                              if (f) handlePhotoUpload(inspection.id, f, item.id)
+                              e.target.value = ''
+                            }}
+                          />
+                        </label>
+                      )}
                     </>
                   )}
                 </div>
@@ -748,13 +1058,13 @@ export default function InspectionDetailPage() {
           )}
 
           {/* Comments */}
-          {(primary.notes || (isAdmin && editingNotes)) && (
+          {(primary.notes || (canEdit && editingNotes) || canEdit) && (
             <div className="card" style={{ marginBottom: 10, borderRadius: 12, padding: '14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                   Comments
                 </div>
-                {isAdmin && !editingNotes && (
+                {canEdit && !editingNotes && (
                   <button
                     onClick={() => { setNotesText(primary.notes || ''); setEditingNotes(true) }}
                     style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
@@ -808,29 +1118,65 @@ export default function InspectionDetailPage() {
           )}
 
           {/* General photos for special types */}
-          {generalPhotos.length > 0 && (
+          {(generalPhotos.length > 0 || canEdit) && (
             <div className="card" style={{ marginBottom: 10, borderRadius: 12, padding: '14px' }}>
               <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
                 Photos ({generalPhotos.length})
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {generalPhotos.map((photo, idx) => (
-                  <div
-                    key={photo.id}
-                    onClick={() => openPhotoViewer(generalPhotos, idx)}
-                    style={{
-                      width: 72, height: 72, borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
-                      border: '1px solid var(--color-border-mid)',
-                    }}
-                  >
-                    <img
-                      src={resolvePhotoUrl(photo)}
-                      alt={photo.file_name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                    />
+                  <div key={photo.id} style={{ position: 'relative' }}>
+                    <div
+                      onClick={() => openPhotoViewer(generalPhotos, idx)}
+                      style={{
+                        width: 72, height: 72, borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
+                        border: '1px solid var(--color-border-mid)',
+                      }}
+                    >
+                      <img
+                        src={resolvePhotoUrl(photo)}
+                        alt={photo.file_name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      />
+                    </div>
+                    {canEdit && (
+                      <button
+                        onClick={() => handlePhotoDelete(photo)}
+                        style={{
+                          position: 'absolute', top: -6, right: -6,
+                          width: 18, height: 18, borderRadius: '50%',
+                          background: '#EF4444', border: '2px solid var(--color-bg-surface)',
+                          color: '#fff', fontSize: 10, fontWeight: 700,
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          padding: 0, lineHeight: 1,
+                        }}
+                        title="Delete photo"
+                      >
+                        &times;
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
+              {canEdit && (
+                <label style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 8,
+                  fontSize: 'var(--fs-xs)', color: '#3B82F6', cursor: 'pointer', fontWeight: 600,
+                }}>
+                  + Add Photo
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      if (f) handlePhotoUpload(primary.id, f)
+                      e.target.value = ''
+                    }}
+                  />
+                </label>
+              )}
             </div>
           )}
         </>
@@ -1133,38 +1479,42 @@ export default function InspectionDetailPage() {
         </Link>
       </div>
 
-      {/* Admin Actions */}
-      {isAdmin && (
+      {/* Edit / Admin Actions */}
+      {(canEdit || isAdmin) && (
         <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12, marginTop: 8, display: 'flex', gap: 8 }}>
-          <ActionButton
-            color="#3B82F6"
-            onClick={() => { setNotesText(primary.notes || ''); setEditingNotes(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
-          >
-            Edit Notes
-          </ActionButton>
-          <ActionButton
-            color="#EF4444"
-            onClick={async () => {
-              if (usingDemo) {
-                toast.success('Inspection deleted (demo mode)')
-                router.push('/inspections?view=history')
-                return
-              }
-              if (!confirm('Delete this inspection? This cannot be undone.')) return
-              setActionLoading(true)
-              const { error } = await deleteInspection(primary.id)
-              if (error) {
-                toast.error(error)
-                setActionLoading(false)
-              } else {
-                toast.success('Inspection deleted')
-                router.push('/inspections?view=history')
-              }
-            }}
-            disabled={actionLoading}
-          >
-            Delete Record
-          </ActionButton>
+          {canEdit && (
+            <ActionButton
+              color="#3B82F6"
+              onClick={() => { setNotesText(primary.notes || ''); setEditingNotes(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+            >
+              Edit Notes
+            </ActionButton>
+          )}
+          {isAdmin && (
+            <ActionButton
+              color="#EF4444"
+              onClick={async () => {
+                if (usingDemo) {
+                  toast.success('Inspection deleted (demo mode)')
+                  router.push('/inspections?view=history')
+                  return
+                }
+                if (!confirm('Delete this inspection? This cannot be undone.')) return
+                setActionLoading(true)
+                const { error } = await deleteInspection(primary.id)
+                if (error) {
+                  toast.error(error)
+                  setActionLoading(false)
+                } else {
+                  toast.success('Inspection deleted')
+                  router.push('/inspections?view=history')
+                }
+              }}
+              disabled={actionLoading}
+            >
+              Delete Record
+            </ActionButton>
+          )}
         </div>
       )}
 

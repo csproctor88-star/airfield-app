@@ -107,19 +107,44 @@ export default function TemplateManagementPage() {
     const ok = await deleteTemplateItem(item.id)
     if (ok) {
       toast.success('Item deleted')
+      // Reload then renumber all items globally
+      const data = await fetchInspectionTemplate(installationId!, activeType)
+      await renumberAllItems(data)
       await loadTemplate()
     } else {
       toast.error('Failed to delete')
     }
   }
 
+  // Renumber item_number sequentially across ALL sections (global numbering)
+  const renumberAllItems = async (allSections: TemplateSection[]) => {
+    let globalNum = 0
+    const updates: { id: string; sort_order: number; item_number: number }[] = []
+    for (const sec of allSections) {
+      for (const item of sec.items) {
+        globalNum++
+        if (item.item_number !== globalNum) {
+          updates.push({ id: item.id, sort_order: item.sort_order, item_number: globalNum })
+        }
+      }
+    }
+    if (updates.length > 0) {
+      await reorderTemplateItems(updates)
+    }
+  }
+
   const handleAddItem = async (section: TemplateSection) => {
     if (!newItemText.trim()) return
-    const maxNum = Math.max(0, ...section.items.map(i => i.item_number))
+    // Calculate global item number: count all items in sections before this one, plus this section's count + 1
+    const sectionIndex = sections.findIndex(s => s.id === section.id)
+    let globalNum = 0
+    for (let i = 0; i <= sectionIndex; i++) {
+      globalNum += sections[i].items.length
+    }
     const maxSort = Math.max(0, ...section.items.map(i => i.sort_order))
     const result = await addTemplateItem(section.id, {
       item_key: `custom-${Date.now()}`,
-      item_number: maxNum + 1,
+      item_number: globalNum + 1,
       item_text: newItemText.trim(),
       sort_order: maxSort + 1,
     })
@@ -127,6 +152,9 @@ export default function TemplateManagementPage() {
       toast.success('Item added')
       setNewItemText('')
       setAddingSectionId(null)
+      // Reload then renumber all items globally
+      const data = await fetchInspectionTemplate(installationId!, activeType)
+      await renumberAllItems(data)
       await loadTemplate()
     } else {
       toast.error('Failed to add item')
@@ -158,6 +186,9 @@ export default function TemplateManagementPage() {
     const ok = await deleteTemplateSection(section.id)
     if (ok) {
       toast.success('Section deleted')
+      // Reload then renumber all items globally
+      const data = await fetchInspectionTemplate(installationId!, activeType)
+      await renumberAllItems(data)
       await loadTemplate()
     } else {
       toast.error('Failed to delete section')
@@ -182,15 +213,18 @@ export default function TemplateManagementPage() {
     // Swap
     ;[items[itemIndex], items[targetIndex]] = [items[targetIndex], items[itemIndex]]
 
-    // Build update payload with new sort_order and sequential item_number
-    const updates = items.map((item, i) => ({
+    // Update sort_order for this section's items
+    const sortUpdates = items.map((item, i) => ({
       id: item.id,
       sort_order: i,
-      item_number: i + 1,
+      item_number: item.item_number, // temporary, will be renumbered below
     }))
 
-    const ok = await reorderTemplateItems(updates)
+    const ok = await reorderTemplateItems(sortUpdates)
     if (ok) {
+      // Reload then renumber all items globally
+      const data = await fetchInspectionTemplate(installationId!, activeType)
+      await renumberAllItems(data)
       await loadTemplate()
     } else {
       toast.error('Failed to reorder')

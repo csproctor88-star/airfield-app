@@ -728,3 +728,47 @@ export async function updateInspectionNotes(id: string, notes: string | null): P
 
   return { error: null }
 }
+
+// ── Update items JSONB (for editing discrepancy comments, locations, etc.) ──
+
+export async function updateInspectionItems(id: string, items: InspectionItem[]): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+
+  const { data: existing } = await supabase.from('inspections').select('display_id, base_id').eq('id', id).single()
+
+  const { error } = await supabase
+    .from('inspections')
+    .update({ items: items as any, updated_at: new Date().toISOString() })
+    .eq('id', id)
+
+  if (error) {
+    console.error('Update inspection items failed:', error.message)
+    return { error: error.message }
+  }
+
+  logActivity('updated', 'inspection', id, existing?.display_id, { details: 'EDITED COMPLETED INSPECTION' }, existing?.base_id)
+
+  return { error: null }
+}
+
+// ── Delete a photo from a completed inspection ──
+
+export async function deleteInspectionPhoto(
+  photoId: string,
+  storagePath: string,
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+
+  // Delete from storage (ignore error — file may already be gone or stored as data URL)
+  if (storagePath && !storagePath.startsWith('data:')) {
+    await supabase.storage.from('photos').remove([storagePath])
+  }
+
+  // Delete the DB record
+  const { error } = await supabase.from('photos').delete().eq('id', photoId)
+  if (error) return { error: error.message }
+
+  return { error: null }
+}

@@ -1,5 +1,5 @@
 import { createClient } from './client'
-import type { InspectionSection } from '@/lib/constants'
+import { AIRFIELD_INSPECTION_SECTIONS, LIGHTING_INSPECTION_SECTIONS, type InspectionSection } from '@/lib/constants'
 
 // ── Types ──
 
@@ -92,7 +92,7 @@ export function toInspectionSections(templateSections: TemplateSection[]): Inspe
   }))
 }
 
-// ── Create default template for a new base (clone from any existing template) ──
+// ── Create default template for a new base (clone from existing or hardcoded defaults) ──
 
 export async function createDefaultTemplate(
   baseId: string,
@@ -105,22 +105,53 @@ export async function createDefaultTemplate(
   // If no source specified, find any base that has this template type
   let resolvedSourceId = sourceBaseId
   if (!resolvedSourceId) {
-      const { data: existing } = await supabase
+    const { data: existing } = await supabase
       .from('base_inspection_templates')
       .select('base_id')
       .eq('template_type', templateType)
       .neq('base_id', baseId)
       .limit(1)
       .single()
-    if (!existing) return false
-    resolvedSourceId = (existing as { base_id: string }).base_id
+    if (existing) {
+      resolvedSourceId = (existing as { base_id: string }).base_id
+    }
   }
 
-  // Fetch source template
-  const sourceSections = await fetchInspectionTemplate(resolvedSourceId, templateType)
-  if (sourceSections.length === 0) return false
+  // Try to fetch from an existing base template
+  let sourceSections: TemplateSection[] = []
+  if (resolvedSourceId) {
+    sourceSections = await fetchInspectionTemplate(resolvedSourceId, templateType)
+  }
 
-  // Create new template
+  // Fallback: build from hardcoded constants if no DB source available
+  const useHardcoded = sourceSections.length === 0
+  const hardcodedSections = templateType === 'airfield' ? AIRFIELD_INSPECTION_SECTIONS : LIGHTING_INSPECTION_SECTIONS
+
+  // Delete existing template for this base/type if present (allows "reload")
+  if (useHardcoded || sourceSections.length > 0) {
+    const { data: oldTmpl } = await supabase
+      .from('base_inspection_templates')
+      .select('id')
+      .eq('base_id', baseId)
+      .eq('template_type', templateType)
+      .single()
+    if (oldTmpl) {
+      // Cascade: delete items → sections → template
+      const { data: oldSections } = await supabase
+        .from('base_inspection_sections')
+        .select('id')
+        .eq('template_id', (oldTmpl as { id: string }).id)
+      if (oldSections) {
+        for (const sec of oldSections as { id: string }[]) {
+          await supabase.from('base_inspection_items').delete().eq('section_id', sec.id)
+        }
+        await supabase.from('base_inspection_sections').delete().eq('template_id', (oldTmpl as { id: string }).id)
+      }
+      await supabase.from('base_inspection_templates').delete().eq('id', (oldTmpl as { id: string }).id)
+    }
+  }
+
+  // Create new template row
   const { data: newTmpl, error: tmplErr } = await supabase
     .from('base_inspection_templates')
     .insert({ base_id: baseId, template_type: templateType })
@@ -130,35 +161,72 @@ export async function createDefaultTemplate(
   if (tmplErr || !newTmpl) return false
   const tmplId = (newTmpl as { id: string }).id
 
-  // Clone sections and items
-  for (const section of sourceSections) {
+  if (useHardcoded) {
+    // Seed from hardcoded constants
+    let globalItemNum = 0
+    for (let si = 0; si < hardcodedSections.length; si++) {
+      const section = hardcodedSections[si]
       const { data: newSec, error: secErr } = await supabase
-      .from('base_inspection_sections')
-      .insert({
-        template_id: tmplId,
-        section_id: section.section_id,
-        title: section.title,
-        guidance: section.guidance,
-        conditional: section.conditional,
-        sort_order: section.sort_order,
-      })
-      .select('id')
-      .single()
+        .from('base_inspection_sections')
+        .insert({
+          template_id: tmplId,
+          section_id: section.id,
+          title: section.title,
+          guidance: section.guidance || null,
+          conditional: section.conditional || null,
+          sort_order: si,
+        })
+        .select('id')
+        .single()
 
-    if (secErr || !newSec) continue
-    const secId = (newSec as { id: string }).id
+      if (secErr || !newSec) continue
+      const secId = (newSec as { id: string }).id
 
-    if (section.items.length > 0) {
-      const itemInserts = section.items.map(i => ({
-        section_id: secId,
-        item_key: i.item_key,
-        item_number: i.item_number,
-        item_text: i.item_text,
-        item_type: i.item_type,
-        sort_order: i.sort_order,
-      }))
+      if (section.items.length > 0) {
+        const itemInserts = section.items.map((item, ii) => {
+          globalItemNum++
+          return {
+            section_id: secId,
+            item_key: item.id,
+            item_number: globalItemNum,
+            item_text: item.item,
+            item_type: item.type || 'pass_fail',
+            sort_order: ii,
+          }
+        })
+        await supabase.from('base_inspection_items').insert(itemInserts)
+      }
+    }
+  } else {
+    // Clone from existing DB template
+    for (const section of sourceSections) {
+      const { data: newSec, error: secErr } = await supabase
+        .from('base_inspection_sections')
+        .insert({
+          template_id: tmplId,
+          section_id: section.section_id,
+          title: section.title,
+          guidance: section.guidance,
+          conditional: section.conditional,
+          sort_order: section.sort_order,
+        })
+        .select('id')
+        .single()
 
-          await supabase.from('base_inspection_items').insert(itemInserts)
+      if (secErr || !newSec) continue
+      const secId = (newSec as { id: string }).id
+
+      if (section.items.length > 0) {
+        const itemInserts = section.items.map(i => ({
+          section_id: secId,
+          item_key: i.item_key,
+          item_number: i.item_number,
+          item_text: i.item_text,
+          item_type: i.item_type,
+          sort_order: i.sort_order,
+        }))
+        await supabase.from('base_inspection_items').insert(itemInserts)
+      }
     }
   }
 

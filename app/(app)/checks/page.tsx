@@ -19,6 +19,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { getAirfieldDiagram } from '@/lib/airfield-diagram'
 import { SimpleDiscrepancyPanelGroup } from '@/components/ui/simple-discrepancy-panel-group'
+import { ExpandableTextarea } from '@/components/ui/expandable-textarea'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort } from '@/lib/utils'
 import type { SimpleDiscrepancy } from '@/lib/supabase/types'
 import { loadCheckDraft, saveCheckDraft, clearCheckDraft, type CheckDraft } from '@/lib/check-draft'
@@ -741,13 +742,14 @@ export default function AirfieldChecksPage() {
               </div>
               <div>
                 <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 4 }}>Species Observed</div>
-                <textarea
+                <ExpandableTextarea
                   className="input-dark"
                   rows={2}
                   placeholder="Species, count, behavior..."
                   value={bashSpecies}
-                  onChange={(e) => setBashSpecies(e.target.value)}
-                  style={{ resize: 'vertical' }}
+                  onChange={(val) => setBashSpecies(val)}
+                  label="Species Observed"
+                  style={{ resize: 'vertical', width: '100%', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
@@ -972,12 +974,13 @@ export default function AirfieldChecksPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 6, marginBottom: remarks.length > 0 ? 12 : 0 }}>
-            <textarea
+            <ExpandableTextarea
               className="input-dark"
               rows={2}
               placeholder="Add a remark..."
               value={remarkText}
-              onChange={(e) => setRemarkText(e.target.value)}
+              onChange={(val) => setRemarkText(val)}
+              label="Remarks"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()

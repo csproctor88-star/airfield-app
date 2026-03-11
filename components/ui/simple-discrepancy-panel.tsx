@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
+import { ExpandableTextarea } from '@/components/ui/expandable-textarea'
 import { X, AlertTriangle } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { DISCREPANCY_TYPES } from '@/lib/constants'
@@ -96,14 +97,15 @@ export function SimpleDiscrepancyPanel({
         <div style={{ flex: '2 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div>
             <label style={labelStyle}>Comment / Description</label>
-            <textarea
+            <ExpandableTextarea
               value={detail.comment}
-              onChange={(e) => {
+              onChange={(val) => {
                 // Only pass comment — location and photo_ids are managed by their own handlers
                 // This prevents stale render props from overwriting data
-                onChange(index, { comment: e.target.value } as SimpleDiscrepancy)
+                onChange(index, { comment: val } as SimpleDiscrepancy)
               }}
               placeholder="Describe the discrepancy..."
+              label="Comment / Description"
               rows={4}
               style={{
                 width: '100%', padding: '10px 12px', borderRadius: 6,
