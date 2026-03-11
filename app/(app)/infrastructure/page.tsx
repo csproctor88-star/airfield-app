@@ -237,13 +237,20 @@ export default function InfrastructureMapPage() {
   useEffect(() => { boxSelectRef.current = boxSelectActive }, [boxSelectActive])
   useEffect(() => { freeMoveRef.current = freeMoveActive }, [freeMoveActive])
 
-  // ESC key: toggle box select, exit fullscreen, cancel free move
+  // Keyboard shortcuts: ESC toggles box select, Space toggles fullscreen
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Ignore if typing in an input/select/textarea
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+
+      if (e.key === ' ') {
+        e.preventDefault()
+        setIsFullscreen(prev => !prev)
+      }
       if (e.key === 'Escape') {
-        if (freeMoveActive && pendingMoves.size > 0) return // don't exit free move with unsaved changes
+        if (freeMoveActive && pendingMoves.size > 0) return
         if (freeMoveActive) { cancelFreeMove(); return }
-        if (isFullscreen) { setIsFullscreen(false); return }
         if (editMode) {
           setBoxSelectActive(prev => {
             if (prev) { setSelectedIds(new Set()); return false }
@@ -254,7 +261,7 @@ export default function InfrastructureMapPage() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [editMode, isFullscreen, freeMoveActive, pendingMoves])
+  }, [editMode, freeMoveActive, pendingMoves])
 
   // Fullscreen: resize map when toggling
   useEffect(() => {
