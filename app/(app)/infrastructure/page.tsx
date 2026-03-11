@@ -73,23 +73,16 @@ function createSignIcon(outerColor: string, innerColor: string, size: number = 2
 
 function createDirectionalSignIcon(size: number = 24): ImageData {
   const [, ctx] = createCanvasIcon(size)
-  // Yellow outer rectangle
+  // Yellow rectangle background
   ctx.fillStyle = '#FBBF24'
-  ctx.fillRect(0, 2, size, size - 4)
-  // Black inner rectangle
+  ctx.fillRect(1, 3, size - 2, size - 6)
+  // Black arrow pointing right
   ctx.fillStyle = '#000000'
-  ctx.fillRect(3, 5, size - 6, size - 10)
-  // Yellow arrow inside pointing right
-  ctx.fillStyle = '#FBBF24'
   const cx = size / 2, cy = size / 2
   ctx.beginPath()
-  ctx.moveTo(cx - 5, cy - 4)
-  ctx.lineTo(cx + 1, cy - 4)
-  ctx.lineTo(cx + 1, cy - 6)
+  ctx.moveTo(cx - 6, cy - 5)
   ctx.lineTo(cx + 6, cy)
-  ctx.lineTo(cx + 1, cy + 6)
-  ctx.lineTo(cx + 1, cy + 4)
-  ctx.lineTo(cx - 5, cy + 4)
+  ctx.lineTo(cx - 6, cy + 5)
   ctx.closePath()
   ctx.fill()
   return ctx.getImageData(0, 0, size, size)
