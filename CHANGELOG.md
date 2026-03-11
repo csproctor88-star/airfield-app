@@ -8,7 +8,40 @@ All notable changes to Glidepath.
 - METAR weather API integration (aviationweather.gov)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~57 `as any` casts
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~63 `as any` casts
+- Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 10 PDF generators
+
+---
+
+## [2.17.1] — 2026-03-10
+
+### Features
+- **Photo deletion on discrepancies** — Delete photos from discrepancy detail page while editing. Cascade: removes from Supabase Storage → deletes DB record → decrements `photo_count`
+- **Photo resize on upload** — All 6 upload functions now resize images to max 1600px and convert to JPEG (0.82 quality) before uploading. Dynamic import of `resizeImageForUpload()` from `lib/utils.ts`
+- **Collapsible map legends** — Legends on discrepancy, obstruction, and waiver map views are now collapsible (default collapsed) with chevron toggle
+
+### Improvements
+- **Hide Mapbox branding** — Removed logo and attribution from all interactive maps (`attributionControl: false`) and static thumbnails (`&logo=false&attribution=false`). Global CSS rule added to `globals.css`
+- **Photo rendering in PDFs** — Replaced `blobToDataUrl` with `blobToResizedDataUrl` (max 800px, JPEG conversion) in daily ops and open discrepancy report data fetchers. Fixes gray placeholder boxes for large images (4+ MB PNGs)
+- **Personnel card display** — Airfield Status page personnel cards now match contractors page style with labeled fields (Company, Contact, Location, Work, Radio, Flag), status badge, day counter
+- **Mark Completed button** — Reverted to light green translucent background (`rgba(34,197,94,0.15)`) with green text for readability
+- **Map pin editing** — Discrepancy map supports editable pin location and user geolocation
+
+### Removals
+- **Current Status History** — Removed from Daily Ops Summary PDF (duplicate of Events Log section). Removed `runwayChanges` from data interface and `fetchRunwayChangesForDate()` function
+
+### Documentation
+- **Rollout plan** — New `docs/GLIDEPATH_ROLLOUT_PLAN.md` with 5-phase strategy (Selfridge beta → docs/video → outreach → AFWERX → Platform One)
+- **NotebookLM sources** — 8 new source documents for Google NotebookLM cinematic video overviews (1 overall + 7 capability groups)
+- **Capabilities brief** — Complete rewrite of `docs/GLIDEPATH_CAPABILITIES_BRIEF.md` (v2.17.0, user-value focused)
+- **Beta tester guide** — New `docs/GLIDEPATH_BETA_TESTER_GUIDE.md` replacing old overview
+- **Cleanup** — Removed old AFWERX proposal, NotebookLM overview, beta tester overview, legacy .docx files, old session handoffs, and component capabilities doc
+
+### Stats
+- Build: Clean (zero errors)
+- 63 `as any` casts across 20 files
+- 43 files > 400 lines (largest: inspections/page.tsx at 2,003)
+- 169 source files | 48 routes | 82 migrations
 
 ---
 

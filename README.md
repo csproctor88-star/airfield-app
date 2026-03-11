@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, ACSI (annual compliance), NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.17.0 | **Build:** Clean | **48 routes** | **158 source files** | **82 migrations** | **~60,800 lines**
+**Version:** 2.17.1 | **Build:** Clean | **48 routes** | **169 source files** | **82 migrations**
 
 ## Tech Stack
 
@@ -327,10 +327,10 @@ airfield-app/
 | Item | Priority | Notes |
 |------|----------|-------|
 | No test suite | High | No unit or integration tests |
-| 57 `as any` casts | Medium | Across ~18 files — mostly `Record<string,unknown>` row inserts and jspdf-autotable hooks. Regenerate Supabase types to eliminate |
-| 41 files > 500 lines | Low | Largest: `inspections/page.tsx` (1,913), `base-setup/page.tsx` (1,856), `regulations/page.tsx` (1,638) |
+| 63 `as any` casts | Medium | Across ~20 files — mostly `Record<string,unknown>` row inserts and jspdf-autotable hooks. Regenerate Supabase types to eliminate |
+| 43 files > 400 lines | Low | Largest: `inspections/page.tsx` (2,003), `base-setup/page.tsx` (1,856), `regulations/page.tsx` (1,638) |
 | Map init duplication | Low | 5 Mapbox components share similar init logic |
-| PDF boilerplate duplication | Low | 11 PDF generators share similar header/footer patterns |
+| PDF boilerplate duplication | Low | 10 PDF generators share similar header/footer/photo helper patterns |
 
 ## Current Status
 
@@ -342,11 +342,11 @@ See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 
 ## Reference Documents
 
-- [`docs/Glidepath_SRS_v5.0.md`](./docs/Glidepath_SRS_v5.0.md) — Software Requirements Specification
+- [`docs/GLIDEPATH_CAPABILITIES_BRIEF.md`](./docs/GLIDEPATH_CAPABILITIES_BRIEF.md) — Capabilities brief (v2.17.0)
+- [`docs/GLIDEPATH_BETA_TESTER_GUIDE.md`](./docs/GLIDEPATH_BETA_TESTER_GUIDE.md) — Beta tester onboarding guide
+- [`docs/GLIDEPATH_ROLLOUT_PLAN.md`](./docs/GLIDEPATH_ROLLOUT_PLAN.md) — 5-phase rollout strategy
 - [`docs/BASE-ONBOARDING.md`](./docs/BASE-ONBOARDING.md) — Guide for adding new installations
-- [`docs/GLIDEPATH_CAPABILITIES_BRIEF.md`](./docs/GLIDEPATH_CAPABILITIES_BRIEF.md) — Capabilities brief
-- [`docs/COMPONENT_CAPABILITIES.md`](./docs/COMPONENT_CAPABILITIES.md) — In-depth per-component capability reference
-- [`docs/GLIDEPATH_BETA_TESTER_OVERVIEW.md`](./docs/GLIDEPATH_BETA_TESTER_OVERVIEW.md) — Beta tester overview
-- [`docs/Glidepath_AFWERX_Proposal.md`](./docs/Glidepath_AFWERX_Proposal.md) — AFWERX innovation proposal
+- [`docs/Glidepath_SRS_v5.0.md`](./docs/Glidepath_SRS_v5.0.md) — Software Requirements Specification
 - [`docs/RLS_TEST_CHECKLIST.md`](./docs/RLS_TEST_CHECKLIST.md) — Row-Level Security test results
 - [`docs/Airfield_Inspection_Checklist_Template.md`](./docs/Airfield_Inspection_Checklist_Template.md) — ACSI checklist reference (DAFMAN 13-204v2)
+- `docs/NotebookLM_Source_*.md` — 8 source documents for NotebookLM cinematic video overviews
