@@ -65,9 +65,10 @@ function createCanvasIcon(size: number): [HTMLCanvasElement, CanvasRenderingCont
 function createSignIcon(outerColor: string, innerColor: string, size: number = 24): ImageData {
   const [, ctx] = createCanvasIcon(size)
   ctx.fillStyle = outerColor
-  ctx.fillRect(0, 2, size, size - 4)
+  ctx.fillRect(1, 3, size - 2, size - 6)
   ctx.fillStyle = innerColor
-  ctx.fillRect(4, 5, size - 8, size - 10)
+  const inset = 7
+  ctx.fillRect(inset, inset, size - inset * 2, size - inset * 2)
   return ctx.getImageData(0, 0, size, size)
 }
 
