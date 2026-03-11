@@ -12,6 +12,8 @@ import {
   updateInfrastructureFeature,
   deleteInfrastructureFeature,
   bulkShiftFeatures,
+  bulkShiftByIds,
+  bulkRelayerFeatures,
   type InfrastructureFeatureType,
 } from '@/lib/supabase/infrastructure-features'
 import type { InfrastructureFeature } from '@/lib/supabase/types'
@@ -189,6 +191,15 @@ export default function InfrastructureMapPage() {
   const [shiftFeet, setShiftFeet] = useState(5)
   const [shifting, setShifting] = useState(false)
 
+  // Box select mode
+  const [boxSelectActive, setBoxSelectActive] = useState(false)
+  const boxSelectRef = useRef(false)
+  const boxStartRef = useRef<{ x: number; y: number } | null>(null)
+  const boxElRef = useRef<HTMLDivElement | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [relayerName, setRelayerName] = useState('')
+  const [relayering, setRelayering] = useState(false)
+
   // Feet-to-degrees conversion at ~42.6°N
   const FT_TO_LNG = 0.00000410
   const FT_TO_LAT = 0.00000274
@@ -212,6 +223,7 @@ export default function InfrastructureMapPage() {
   // Keep refs in sync
   useEffect(() => { editModeRef.current = editMode }, [editMode])
   useEffect(() => { placementTypeRef.current = placementType }, [placementType])
+  useEffect(() => { boxSelectRef.current = boxSelectActive }, [boxSelectActive])
 
   // Fetch DB features
   useEffect(() => {
@@ -510,6 +522,42 @@ export default function InfrastructureMapPage() {
     setShifting(false)
   }, [installationId, shifting, shiftFeet, shiftLayer])
 
+  // Shift selected features by direction
+  const handleSelectionShift = useCallback(async (direction: 'N' | 'S' | 'E' | 'W') => {
+    if (!installationId || shifting || selectedIds.size === 0) return
+    const lngOffset = direction === 'E' ? shiftFeet * FT_TO_LNG
+      : direction === 'W' ? -shiftFeet * FT_TO_LNG : 0
+    const latOffset = direction === 'N' ? shiftFeet * FT_TO_LAT
+      : direction === 'S' ? -shiftFeet * FT_TO_LAT : 0
+
+    setShifting(true)
+    const count = await bulkShiftByIds(Array.from(selectedIds), lngOffset, latOffset)
+    if (count > 0) {
+      const updated = await fetchInfrastructureFeatures(installationId)
+      setDbFeatures(updated)
+      toast.success(`Shifted ${count} selected features ${shiftFeet}ft ${direction}`)
+    } else {
+      toast.error('No features shifted')
+    }
+    setShifting(false)
+  }, [installationId, shifting, shiftFeet, selectedIds])
+
+  // Re-layer selected features
+  const handleRelayer = useCallback(async () => {
+    if (!installationId || relayering || selectedIds.size === 0 || !relayerName.trim()) return
+    setRelayering(true)
+    const count = await bulkRelayerFeatures(Array.from(selectedIds), relayerName.trim())
+    if (count > 0) {
+      const updated = await fetchInfrastructureFeatures(installationId)
+      setDbFeatures(updated)
+      toast.success(`Re-layered ${count} features to "${relayerName.trim()}"`)
+      setRelayerName('')
+    } else {
+      toast.error('Failed to re-layer features')
+    }
+    setRelayering(false)
+  }, [installationId, relayering, selectedIds, relayerName])
+
   // Initialize map
   useEffect(() => {
     if (!mapContainer.current || !mapboxReady || !token) return
@@ -655,14 +703,95 @@ export default function InfrastructureMapPage() {
         m.on('mouseleave', layer.key, () => { m.getCanvas().style.cursor = '' })
       }
 
-      // Click on empty map area — place feature in edit mode (skip if dragging)
+      // Click on empty map area — place feature in edit mode (skip if dragging or box selecting)
       m.on('click', (e) => {
-        if (!editModeRef.current || draggingRef.current) return
+        if (!editModeRef.current || draggingRef.current || boxSelectRef.current) return
         const layerIds = LAYERS.map(l => l.key)
         const clicked = m.queryRenderedFeatures(e.point, { layers: layerIds })
         if (clicked.length > 0) return
 
         placeFeatureRef.current?.(e.lngLat.lng, e.lngLat.lat)
+      })
+
+      // Box select: mousedown starts the rectangle
+      m.on('mousedown', (e) => {
+        if (!boxSelectRef.current) return
+        e.preventDefault()
+        m.dragPan.disable()
+
+        const canvas = m.getCanvasContainer()
+        const rect = canvas.getBoundingClientRect()
+        const startX = e.originalEvent.clientX - rect.left
+        const startY = e.originalEvent.clientY - rect.top
+        boxStartRef.current = { x: startX, y: startY }
+
+        // Create selection rectangle element
+        const box = document.createElement('div')
+        box.style.position = 'absolute'
+        box.style.border = '2px dashed #A855F7'
+        box.style.background = 'rgba(168, 85, 247, 0.1)'
+        box.style.pointerEvents = 'none'
+        box.style.zIndex = '20'
+        canvas.appendChild(box)
+        boxElRef.current = box
+      })
+
+      m.on('mousemove', (e) => {
+        if (!boxStartRef.current || !boxElRef.current) return
+        const canvas = m.getCanvasContainer()
+        const rect = canvas.getBoundingClientRect()
+        const curX = e.originalEvent.clientX - rect.left
+        const curY = e.originalEvent.clientY - rect.top
+
+        const left = Math.min(boxStartRef.current.x, curX)
+        const top = Math.min(boxStartRef.current.y, curY)
+        const width = Math.abs(curX - boxStartRef.current.x)
+        const height = Math.abs(curY - boxStartRef.current.y)
+
+        boxElRef.current.style.left = left + 'px'
+        boxElRef.current.style.top = top + 'px'
+        boxElRef.current.style.width = width + 'px'
+        boxElRef.current.style.height = height + 'px'
+      })
+
+      m.on('mouseup', (e) => {
+        if (!boxStartRef.current || !boxElRef.current) return
+        const canvas = m.getCanvasContainer()
+        const rect = canvas.getBoundingClientRect()
+        const endX = e.originalEvent.clientX - rect.left
+        const endY = e.originalEvent.clientY - rect.top
+
+        // Clean up the visual rectangle
+        boxElRef.current.remove()
+        boxElRef.current = null
+
+        // Calculate bounds
+        const minX = Math.min(boxStartRef.current.x, endX)
+        const maxX = Math.max(boxStartRef.current.x, endX)
+        const minY = Math.min(boxStartRef.current.y, endY)
+        const maxY = Math.max(boxStartRef.current.y, endY)
+        boxStartRef.current = null
+
+        m.dragPan.enable()
+
+        // Require minimum drag distance (10px) to avoid accidental clicks
+        if (maxX - minX < 10 || maxY - minY < 10) return
+
+        // Query all features in the rectangle
+        const layerIds = LAYERS.map(l => l.key)
+        const features = m.queryRenderedFeatures(
+          [[minX, minY], [maxX, maxY]] as [mapboxgl.PointLike, mapboxgl.PointLike],
+          { layers: layerIds }
+        )
+
+        const ids = new Set<string>()
+        for (const f of features) {
+          if (f.properties?.id) ids.add(f.properties.id)
+        }
+
+        if (ids.size > 0) {
+          setSelectedIds(ids)
+        }
       })
 
       setMapLoaded(true)
@@ -700,8 +829,8 @@ export default function InfrastructureMapPage() {
   // Update cursor in edit mode
   useEffect(() => {
     if (!map.current || !mapLoaded) return
-    map.current.getCanvas().style.cursor = editMode ? 'crosshair' : ''
-  }, [editMode, mapLoaded])
+    map.current.getCanvas().style.cursor = boxSelectActive ? 'crosshair' : editMode ? 'crosshair' : ''
+  }, [editMode, boxSelectActive, mapLoaded])
 
   // Highlight selected layer during bulk shift (dim others)
   useEffect(() => {
@@ -733,6 +862,41 @@ export default function InfrastructureMapPage() {
       }
     }
   }, [bulkShiftOpen, shiftLayer, mapLoaded, dbFeatures])
+
+  // Highlight selected features with a ring overlay
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+    const m = map.current
+
+    const selectedGeoJson: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: dbFeatures
+        .filter(f => selectedIds.has(f.id))
+        .map(f => ({
+          type: 'Feature' as const,
+          geometry: { type: 'Point' as const, coordinates: [f.longitude, f.latitude] },
+          properties: { id: f.id },
+        })),
+    }
+
+    const source = m.getSource('selection-highlight') as mapboxgl.GeoJSONSource | undefined
+    if (source) {
+      source.setData(selectedGeoJson)
+    } else if (selectedIds.size > 0) {
+      m.addSource('selection-highlight', { type: 'geojson', data: selectedGeoJson })
+      m.addLayer({
+        id: 'selection-highlight-ring',
+        type: 'circle',
+        source: 'selection-highlight',
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 6, 14, 10, 16, 14, 18, 20],
+          'circle-color': 'transparent',
+          'circle-stroke-color': '#A855F7',
+          'circle-stroke-width': 2.5,
+        },
+      })
+    }
+  }, [selectedIds, dbFeatures, mapLoaded])
 
   if (!mapboxReady) {
     return (
@@ -794,7 +958,7 @@ export default function InfrastructureMapPage() {
               </button>
             )}
             <button
-              onClick={() => { setEditMode(prev => !prev); setBulkShiftOpen(false) }}
+              onClick={() => { setEditMode(prev => !prev); setBulkShiftOpen(false); setBoxSelectActive(false); setSelectedIds(new Set()) }}
               style={{
                 padding: '8px 16px',
                 borderRadius: 8,
@@ -912,6 +1076,28 @@ export default function InfrastructureMapPage() {
               Bulk Shift
             </button>
 
+            <button
+              onClick={() => {
+                setBoxSelectActive(prev => {
+                  if (prev) setSelectedIds(new Set())
+                  return !prev
+                })
+              }}
+              style={{
+                padding: '5px 12px',
+                borderRadius: 6,
+                border: boxSelectActive ? '1px solid rgba(168,85,247,0.5)' : '1px solid rgba(148,163,184,0.2)',
+                background: boxSelectActive ? 'rgba(168,85,247,0.2)' : 'transparent',
+                color: boxSelectActive ? '#A855F7' : '#94A3B8',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {boxSelectActive ? `Selected (${selectedIds.size})` : 'Box Select'}
+            </button>
+
             <div style={{ fontSize: 11, color: '#94A3B8', whiteSpace: 'nowrap' }}>
               {saving || shifting ? 'Saving...' : 'Tap map to place'}
             </div>
@@ -1011,6 +1197,136 @@ export default function InfrastructureMapPage() {
               <div />
               <button onClick={() => handleBulkShift('S')} disabled={shifting} style={dirBtnStyle}>S</button>
               <div />
+            </div>
+
+            {shifting && (
+              <div style={{ textAlign: 'center', fontSize: 11, color: '#A855F7', marginTop: 8 }}>
+                Shifting...
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Selection action panel (box select) */}
+        {editMode && boxSelectActive && selectedIds.size > 0 && !draggingId && (
+          <div style={{
+            position: 'absolute',
+            bottom: 70,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 11,
+            background: 'rgba(15, 23, 42, 0.96)',
+            border: '1px solid rgba(168, 85, 247, 0.3)',
+            borderRadius: 12,
+            padding: '14px 16px',
+            backdropFilter: 'blur(8px)',
+            minWidth: 280,
+            maxWidth: 'calc(100% - 28px)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#A855F7' }}>
+                {selectedIds.size} FEATURES SELECTED
+              </div>
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                style={{
+                  padding: '2px 8px', borderRadius: 4, border: '1px solid rgba(148,163,184,0.2)',
+                  background: 'transparent', color: '#94A3B8', fontSize: 11, cursor: 'pointer',
+                }}
+              >
+                Clear
+              </button>
+            </div>
+
+            {/* Shift controls */}
+            <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Shift selected</div>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+              {[1, 2, 5, 10, 20, 50].map(ft => (
+                <button
+                  key={ft}
+                  onClick={() => setShiftFeet(ft)}
+                  style={{
+                    flex: 1, padding: '4px 0', borderRadius: 5,
+                    border: shiftFeet === ft ? '1px solid #A855F7' : '1px solid rgba(148,163,184,0.15)',
+                    background: shiftFeet === ft ? 'rgba(168,85,247,0.2)' : 'transparent',
+                    color: shiftFeet === ft ? '#C084FC' : '#94A3B8',
+                    fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  {ft}
+                </button>
+              ))}
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr 1fr',
+              gridTemplateRows: '1fr 1fr 1fr',
+              gap: 4, width: 140, margin: '0 auto 12px',
+            }}>
+              <div />
+              <button onClick={() => handleSelectionShift('N')} disabled={shifting} style={dirBtnStyle}>N</button>
+              <div />
+              <button onClick={() => handleSelectionShift('W')} disabled={shifting} style={dirBtnStyle}>W</button>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#64748B' }}>
+                {shiftFeet}ft
+              </div>
+              <button onClick={() => handleSelectionShift('E')} disabled={shifting} style={dirBtnStyle}>E</button>
+              <div />
+              <button onClick={() => handleSelectionShift('S')} disabled={shifting} style={dirBtnStyle}>S</button>
+              <div />
+            </div>
+
+            {/* Re-layer controls */}
+            <div style={{ borderTop: '1px solid rgba(148,163,184,0.15)', paddingTop: 10 }}>
+              <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Re-layer selected</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  type="text"
+                  value={relayerName}
+                  onChange={e => setRelayerName(e.target.value)}
+                  placeholder="New layer name..."
+                  style={{
+                    flex: 1, padding: '6px 8px', borderRadius: 6,
+                    border: '1px solid rgba(148,163,184,0.2)',
+                    background: 'rgba(30, 41, 59, 0.9)', color: '#E2E8F0',
+                    fontSize: 12, outline: 'none',
+                  }}
+                />
+                <button
+                  onClick={handleRelayer}
+                  disabled={relayering || !relayerName.trim()}
+                  style={{
+                    padding: '6px 14px', borderRadius: 6,
+                    border: '1px solid rgba(168,85,247,0.3)',
+                    background: relayerName.trim() ? 'rgba(168,85,247,0.2)' : 'transparent',
+                    color: relayerName.trim() ? '#C084FC' : '#64748B',
+                    fontSize: 12, fontWeight: 600, cursor: relayerName.trim() ? 'pointer' : 'default',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {relayering ? 'Saving...' : 'Apply'}
+                </button>
+              </div>
+              {/* Quick-pick from existing layers */}
+              {uniqueLayers.length > 0 && (
+                <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
+                  {uniqueLayers.slice(0, 6).map(([layer]) => (
+                    <button
+                      key={layer}
+                      onClick={() => setRelayerName(layer)}
+                      style={{
+                        padding: '2px 8px', borderRadius: 4,
+                        border: '1px solid rgba(148,163,184,0.15)',
+                        background: relayerName === layer ? 'rgba(168,85,247,0.15)' : 'transparent',
+                        color: '#94A3B8', fontSize: 10, cursor: 'pointer',
+                      }}
+                    >
+                      {layer}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {shifting && (

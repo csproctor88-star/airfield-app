@@ -151,6 +151,65 @@ export async function bulkShiftFeatures(
   return updated
 }
 
+// ── Bulk shift by specific feature IDs ──
+
+export async function bulkShiftByIds(
+  ids: string[],
+  lngOffset: number,
+  latOffset: number,
+): Promise<number> {
+  const supabase = createClient()
+  if (!supabase || ids.length === 0) return 0
+
+  const { data: features, error: fetchError } = await supabase
+    .from('infrastructure_features')
+    .select('id, longitude, latitude')
+    .in('id', ids)
+
+  if (fetchError || !features || features.length === 0) return 0
+
+  let updated = 0
+  for (let i = 0; i < features.length; i += 200) {
+    const batch = features.slice(i, i + 200)
+    const promises = batch.map(f =>
+      supabase
+        .from('infrastructure_features')
+        .update({
+          longitude: f.longitude + lngOffset,
+          latitude: f.latitude + latOffset,
+          updated_at: new Date().toISOString(),
+        } as any)
+        .eq('id', f.id)
+    )
+    const results = await Promise.all(promises)
+    updated += results.filter(r => !r.error).length
+  }
+
+  return updated
+}
+
+// ── Bulk re-layer features by IDs ──
+
+export async function bulkRelayerFeatures(
+  ids: string[],
+  newLayer: string,
+): Promise<number> {
+  const supabase = createClient()
+  if (!supabase || ids.length === 0) return 0
+
+  let updated = 0
+  for (let i = 0; i < ids.length; i += 200) {
+    const batch = ids.slice(i, i + 200)
+    const { error } = await supabase
+      .from('infrastructure_features')
+      .update({ layer: newLayer, updated_at: new Date().toISOString() } as any)
+      .in('id', batch)
+    if (!error) updated += batch.length
+  }
+
+  return updated
+}
+
 // ── Bulk create (for initial import) ──
 
 export async function bulkCreateInfrastructureFeatures(
