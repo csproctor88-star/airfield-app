@@ -80,12 +80,14 @@ export async function updateInfrastructureFeature(
   const supabase = createClient()
   if (!supabase) return false
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('infrastructure_features')
     .update({ ...updates, updated_at: new Date().toISOString() } as any)
     .eq('id', id)
+    .select('id')
+    .single()
 
-  return !error
+  return !error && !!data
 }
 
 // ── Delete a feature ──
