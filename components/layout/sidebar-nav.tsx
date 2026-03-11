@@ -34,6 +34,7 @@ import {
   ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
+  Database,
 } from 'lucide-react'
 
 // Main navigation items
@@ -55,6 +56,7 @@ const opsItems = [
   { name: 'All Inspections', icon: ClipboardList, href: '/inspections/all' },
   { name: 'Personnel on Airfield', icon: HardHat, href: '/contractors' },
   { name: 'Airfield Discrepancies', icon: AlertTriangle, href: '/discrepancies' },
+  { name: 'Obstruction Database', icon: Database, href: '/obstructions/history' },
   { name: 'Airfield Waivers', icon: Shield, href: '/waivers' },
   { name: 'Reports & Analytics', icon: BarChart3, href: '/reports' },
 ]

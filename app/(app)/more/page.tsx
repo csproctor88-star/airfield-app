@@ -12,6 +12,8 @@ type ModuleItem = { name: string; icon: string; color: string; href: string; adm
 
 const mainItems: ModuleItem[] = [
   { name: 'Dashboard', icon: '📊', color: '#38BDF8', href: '/dashboard' },
+  { name: 'Aircraft Database', icon: '✈️', color: '#38BDF8', href: '/aircraft' },
+  { name: 'Reference Library', icon: '📚', color: '#22D3EE', href: '/regulations' },
   { name: 'NOTAMs', icon: '📡', color: '#22D3EE', href: '/notams' },
 ]
 
@@ -23,9 +25,9 @@ const amToolsItems: ModuleItem[] = [
   { name: 'All Inspections', icon: '📋', color: '#22D3EE', href: '/inspections/all' },
   { name: 'Personnel on Airfield', icon: '🚧', color: '#F59E0B', href: '/contractors' },
   { name: 'Airfield Discrepancies', icon: '⚠️', color: '#FBBF24', href: '/discrepancies' },
+  { name: 'Obstruction Database', icon: '🗺️', color: '#F97316', href: '/obstructions/history' },
   { name: 'Airfield Waivers', icon: '📄', color: '#A78BFA', href: '/waivers' },
   { name: 'Reports & Analytics', icon: '📈', color: '#22D3EE', href: '/reports' },
-  { name: 'Obstruction Database', icon: '🗺️', color: '#F97316', href: '/obstructions/history' },
 ]
 
 const moreItems: ModuleItem[] = [
