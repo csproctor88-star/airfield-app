@@ -11,6 +11,7 @@ import {
   createInfrastructureFeature,
   updateInfrastructureFeature,
   deleteInfrastructureFeature,
+  bulkShiftFeatures,
   type InfrastructureFeatureType,
 } from '@/lib/supabase/infrastructure-features'
 import type { InfrastructureFeature } from '@/lib/supabase/types'
@@ -139,6 +140,17 @@ function addMapIcons(m: mapboxgl.Map) {
   m.addImage('icon-obstruction-light', createTriangleIcon('#EF4444', s), pr)
 }
 
+const dirBtnStyle: React.CSSProperties = {
+  padding: '8px 0',
+  borderRadius: 6,
+  border: '1px solid rgba(168,85,247,0.3)',
+  background: 'rgba(168,85,247,0.1)',
+  color: '#C084FC',
+  fontSize: 13,
+  fontWeight: 700,
+  cursor: 'pointer',
+}
+
 const ICON_MAP: Record<string, string> = {
   approach_light: 'icon-approach-light',
   runway_threshold: 'icon-runway-threshold',
@@ -170,6 +182,26 @@ export default function InfrastructureMapPage() {
   const dragMarkerRef = useRef<mapboxgl.Marker | null>(null)
   const editModeRef = useRef(false)
   const placementTypeRef = useRef<InfrastructureFeatureType>('taxiway_light')
+
+  // Bulk shift mode
+  const [bulkShiftOpen, setBulkShiftOpen] = useState(false)
+  const [shiftLayer, setShiftLayer] = useState<string>('all')
+  const [shiftFeet, setShiftFeet] = useState(5)
+  const [shifting, setShifting] = useState(false)
+
+  // Feet-to-degrees conversion at ~42.6°N
+  const FT_TO_LNG = 0.00000410
+  const FT_TO_LAT = 0.00000274
+
+  // Unique layers from DB features for the layer picker
+  const uniqueLayers = useMemo(() => {
+    const layers = new Map<string, number>()
+    for (const f of dbFeatures) {
+      const key = f.layer || 'Unknown'
+      layers.set(key, (layers.get(key) || 0) + 1)
+    }
+    return Array.from(layers.entries()).sort((a, b) => b[1] - a[1])
+  }, [dbFeatures])
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const mapboxReady = isMapboxConfigured()
@@ -455,6 +487,29 @@ export default function InfrastructureMapPage() {
     )
   }, [])
 
+  // Bulk shift apply
+  const handleBulkShift = useCallback(async (direction: 'N' | 'S' | 'E' | 'W') => {
+    if (!installationId || shifting) return
+    const lngOffset = direction === 'E' ? shiftFeet * FT_TO_LNG
+      : direction === 'W' ? -shiftFeet * FT_TO_LNG : 0
+    const latOffset = direction === 'N' ? shiftFeet * FT_TO_LAT
+      : direction === 'S' ? -shiftFeet * FT_TO_LAT : 0
+
+    const filter: { layer?: string } = {}
+    if (shiftLayer !== 'all') filter.layer = shiftLayer
+
+    setShifting(true)
+    const count = await bulkShiftFeatures(installationId, lngOffset, latOffset, filter)
+    if (count > 0) {
+      const updated = await fetchInfrastructureFeatures(installationId)
+      setDbFeatures(updated)
+      toast.success(`Shifted ${count} features ${shiftFeet}ft ${direction}`)
+    } else {
+      toast.error('No features shifted')
+    }
+    setShifting(false)
+  }, [installationId, shifting, shiftFeet, shiftLayer])
+
   // Initialize map
   useEffect(() => {
     if (!mapContainer.current || !mapboxReady || !token) return
@@ -648,6 +703,37 @@ export default function InfrastructureMapPage() {
     map.current.getCanvas().style.cursor = editMode ? 'crosshair' : ''
   }, [editMode, mapLoaded])
 
+  // Highlight selected layer during bulk shift (dim others)
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+    const m = map.current
+    const highlighting = bulkShiftOpen && shiftLayer !== 'all'
+
+    for (const layer of LAYERS) {
+      if (!m.getLayer(layer.key)) continue
+      if (layer.renderType === 'circle') {
+        if (highlighting) {
+          // Check if this layer's types have any features with the selected CAD layer
+          const hasMatch = dbFeatures.some(
+            f => layer.types.includes(f.feature_type) && f.layer === shiftLayer
+          )
+          m.setPaintProperty(layer.key, 'circle-opacity', hasMatch ? 0.95 : 0.15)
+        } else {
+          m.setPaintProperty(layer.key, 'circle-opacity', 0.85)
+        }
+      } else {
+        if (highlighting) {
+          const hasMatch = dbFeatures.some(
+            f => layer.types.includes(f.feature_type) && f.layer === shiftLayer
+          )
+          m.setPaintProperty(layer.key, 'icon-opacity', hasMatch ? 1 : 0.15)
+        } else {
+          m.setPaintProperty(layer.key, 'icon-opacity', 1)
+        }
+      }
+    }
+  }, [bulkShiftOpen, shiftLayer, mapLoaded, dbFeatures])
+
   if (!mapboxReady) {
     return (
       <div className="page-container">
@@ -708,7 +794,7 @@ export default function InfrastructureMapPage() {
               </button>
             )}
             <button
-              onClick={() => setEditMode(prev => !prev)}
+              onClick={() => { setEditMode(prev => !prev); setBulkShiftOpen(false) }}
               style={{
                 padding: '8px 16px',
                 borderRadius: 8,
@@ -807,9 +893,131 @@ export default function InfrastructureMapPage() {
               {gpsLoading ? 'Getting GPS...' : 'Use My GPS'}
             </button>
 
+            <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)' }} />
+
+            <button
+              onClick={() => setBulkShiftOpen(prev => !prev)}
+              style={{
+                padding: '5px 12px',
+                borderRadius: 6,
+                border: bulkShiftOpen ? '1px solid rgba(168,85,247,0.5)' : '1px solid rgba(148,163,184,0.2)',
+                background: bulkShiftOpen ? 'rgba(168,85,247,0.2)' : 'transparent',
+                color: bulkShiftOpen ? '#A855F7' : '#94A3B8',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Bulk Shift
+            </button>
+
             <div style={{ fontSize: 11, color: '#94A3B8', whiteSpace: 'nowrap' }}>
-              {saving ? 'Saving...' : 'Tap map to place'}
+              {saving || shifting ? 'Saving...' : 'Tap map to place'}
             </div>
+          </div>
+        )}
+
+        {/* Bulk shift panel */}
+        {editMode && bulkShiftOpen && !draggingId && (
+          <div style={{
+            position: 'absolute',
+            bottom: 70,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 11,
+            background: 'rgba(15, 23, 42, 0.96)',
+            border: '1px solid rgba(168, 85, 247, 0.3)',
+            borderRadius: 12,
+            padding: '14px 16px',
+            backdropFilter: 'blur(8px)',
+            minWidth: 260,
+            maxWidth: 'calc(100% - 28px)',
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#A855F7', marginBottom: 10 }}>
+              BULK SHIFT
+            </div>
+
+            {/* Layer selector */}
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Layer</div>
+              <select
+                value={shiftLayer}
+                onChange={e => setShiftLayer(e.target.value)}
+                style={{
+                  width: '100%',
+                  background: 'rgba(30, 41, 59, 0.9)',
+                  border: '1px solid rgba(148, 163, 184, 0.2)',
+                  borderRadius: 6,
+                  padding: '6px 8px',
+                  color: '#E2E8F0',
+                  fontSize: 12,
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="all">All layers ({dbFeatures.length})</option>
+                {uniqueLayers.map(([layer, count]) => (
+                  <option key={layer} value={layer}>{layer} ({count})</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Distance */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Distance (feet)</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {[1, 2, 5, 10, 20, 50].map(ft => (
+                  <button
+                    key={ft}
+                    onClick={() => setShiftFeet(ft)}
+                    style={{
+                      flex: 1,
+                      padding: '4px 0',
+                      borderRadius: 5,
+                      border: shiftFeet === ft ? '1px solid #A855F7' : '1px solid rgba(148,163,184,0.15)',
+                      background: shiftFeet === ft ? 'rgba(168,85,247,0.2)' : 'transparent',
+                      color: shiftFeet === ft ? '#C084FC' : '#94A3B8',
+                      fontSize: 11,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {ft}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Direction pad */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr 1fr',
+              gridTemplateRows: '1fr 1fr 1fr',
+              gap: 4,
+              width: 140,
+              margin: '0 auto',
+            }}>
+              <div />
+              <button onClick={() => handleBulkShift('N')} disabled={shifting} style={dirBtnStyle}>N</button>
+              <div />
+              <button onClick={() => handleBulkShift('W')} disabled={shifting} style={dirBtnStyle}>W</button>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 10, color: '#64748B',
+              }}>
+                {shiftFeet}ft
+              </div>
+              <button onClick={() => handleBulkShift('E')} disabled={shifting} style={dirBtnStyle}>E</button>
+              <div />
+              <button onClick={() => handleBulkShift('S')} disabled={shifting} style={dirBtnStyle}>S</button>
+              <div />
+            </div>
+
+            {shifting && (
+              <div style={{ textAlign: 'center', fontSize: 11, color: '#A855F7', marginTop: 8 }}>
+                Shifting...
+              </div>
+            )}
           </div>
         )}
 

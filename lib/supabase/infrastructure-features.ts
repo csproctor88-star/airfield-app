@@ -107,6 +107,50 @@ export async function deleteInfrastructureFeature(id: string): Promise<boolean> 
   return !error
 }
 
+// ── Bulk shift features by offset (for alignment corrections) ──
+
+export async function bulkShiftFeatures(
+  baseId: string,
+  lngOffset: number,
+  latOffset: number,
+  filter?: { layer?: string; feature_type?: string }
+): Promise<number> {
+  const supabase = createClient()
+  if (!supabase) return 0
+
+  // Fetch matching features
+  let query = supabase
+    .from('infrastructure_features')
+    .select('id, longitude, latitude')
+    .eq('base_id', baseId)
+
+  if (filter?.layer) query = query.eq('layer', filter.layer)
+  if (filter?.feature_type) query = query.eq('feature_type', filter.feature_type)
+
+  const { data: features, error: fetchError } = await query
+  if (fetchError || !features || features.length === 0) return 0
+
+  // Update in batches of 200
+  let updated = 0
+  for (let i = 0; i < features.length; i += 200) {
+    const batch = features.slice(i, i + 200)
+    const promises = batch.map(f =>
+      supabase
+        .from('infrastructure_features')
+        .update({
+          longitude: f.longitude + lngOffset,
+          latitude: f.latitude + latOffset,
+          updated_at: new Date().toISOString(),
+        } as any)
+        .eq('id', f.id)
+    )
+    const results = await Promise.all(promises)
+    updated += results.filter(r => !r.error).length
+  }
+
+  return updated
+}
+
 // ── Bulk create (for initial import) ──
 
 export async function bulkCreateInfrastructureFeatures(
