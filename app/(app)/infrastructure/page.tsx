@@ -1,10 +1,18 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
 import { isMapboxConfigured } from '@/lib/utils'
+import {
+  fetchInfrastructureFeatures,
+  createInfrastructureFeature,
+  deleteInfrastructureFeature,
+  type InfrastructureFeatureType,
+} from '@/lib/supabase/infrastructure-features'
+import type { InfrastructureFeature } from '@/lib/supabase/types'
 import geojsonData from '@/lib/data/selfridge-lighting-signage.json'
 
 // ── Layer configuration ──
@@ -13,7 +21,7 @@ type LayerConfig = {
   key: string
   label: string
   color: string
-  types: string[]      // feature property "type" values
+  types: string[]
   shape: 'circle' | 'square'
 }
 
@@ -26,6 +34,15 @@ const LAYERS: LayerConfig[] = [
   { key: 'markings',          label: 'Marking Labels',      color: '#F97316',  types: ['marking_label'],           shape: 'square' },
 ]
 
+const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[] = [
+  { value: 'runway_light', label: 'Runway Light' },
+  { value: 'airfield_light', label: 'Airfield Light' },
+  { value: 'taxi_edge_light', label: 'Taxi Edge Light' },
+  { value: 'taxilight', label: 'Taxiway Light' },
+  { value: 'airfield_sign', label: 'Airfield Sign' },
+  { value: 'marking_label', label: 'Marking Label' },
+]
+
 export default function InfrastructureMapPage() {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
@@ -34,23 +51,130 @@ export default function InfrastructureMapPage() {
   const [visibleLayers, setVisibleLayers] = useState<Record<string, boolean>>(
     () => Object.fromEntries(LAYERS.map(l => [l.key, true]))
   )
-  const { runways, installationId } = useInstallation()
+  const { runways, installationId, userRole } = useInstallation()
+
+  // Edit mode
+  const [editMode, setEditMode] = useState(false)
+  const [dbFeatures, setDbFeatures] = useState<InfrastructureFeature[]>([])
+  const [placementType, setPlacementType] = useState<InfrastructureFeatureType>('taxi_edge_light')
+  const [saving, setSaving] = useState(false)
+  const [gpsLoading, setGpsLoading] = useState(false)
+  const editModeRef = useRef(false)
+  const placementTypeRef = useRef<InfrastructureFeatureType>('taxi_edge_light')
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const mapboxReady = isMapboxConfigured()
 
-  // Count features per layer
+  const isAdmin = userRole === 'sys_admin' || userRole === 'base_admin'
+    || userRole === 'airfield_manager' || userRole === 'namo'
+
+  // Keep refs in sync
+  useEffect(() => { editModeRef.current = editMode }, [editMode])
+  useEffect(() => { placementTypeRef.current = placementType }, [placementType])
+
+  // Fetch DB features
+  useEffect(() => {
+    if (!installationId) return
+    fetchInfrastructureFeatures(installationId).then(setDbFeatures)
+  }, [installationId])
+
+  // Merge static + DB features
+  const mergedGeoJson = useMemo<GeoJSON.FeatureCollection>(() => {
+    const staticFeatures = (geojsonData as GeoJSON.FeatureCollection).features.map(f => ({
+      ...f,
+      properties: { ...f.properties, source: 'static' },
+    }))
+    const dbGeoFeatures: GeoJSON.Feature[] = dbFeatures.map(f => ({
+      type: 'Feature' as const,
+      geometry: { type: 'Point' as const, coordinates: [f.longitude, f.latitude] },
+      properties: {
+        type: f.feature_type,
+        layer: f.layer || 'USER',
+        block: f.block,
+        text: f.label,
+        id: f.id,
+        source: 'db',
+        notes: f.notes,
+      },
+    }))
+    return { type: 'FeatureCollection', features: [...staticFeatures, ...dbGeoFeatures] }
+  }, [dbFeatures])
+
+  // Feature counts from merged data
   const featureCounts: Record<string, number> = {}
   for (const layer of LAYERS) {
-    featureCounts[layer.key] = (geojsonData as GeoJSON.FeatureCollection).features.filter(
+    featureCounts[layer.key] = mergedGeoJson.features.filter(
       f => layer.types.includes(f.properties?.type)
     ).length
   }
-  const totalFeatures = (geojsonData as GeoJSON.FeatureCollection).features.length
+  const totalFeatures = mergedGeoJson.features.length
 
-  // Toggle a layer
   const toggleLayer = useCallback((key: string) => {
     setVisibleLayers(prev => ({ ...prev, [key]: !prev[key] }))
+  }, [])
+
+  // Delete handler (exposed on window for popup buttons)
+  const deleteHandlerRef = useRef<((id: string) => Promise<void>) | undefined>(undefined)
+  deleteHandlerRef.current = async (id: string) => {
+    if (!installationId) return
+    const ok = await deleteInfrastructureFeature(id)
+    if (ok) {
+      const updated = await fetchInfrastructureFeatures(installationId)
+      setDbFeatures(updated)
+      toast.success('Feature deleted')
+    } else {
+      toast.error('Failed to delete feature')
+    }
+  }
+
+  useEffect(() => {
+    (window as any).__deleteInfraFeature = (id: string) => {
+      deleteHandlerRef.current?.(id)
+    }
+    return () => { delete (window as any).__deleteInfraFeature }
+  }, [])
+
+  // Place feature handler
+  const placeFeatureRef = useRef<((lng: number, lat: number) => Promise<void>) | undefined>(undefined)
+  placeFeatureRef.current = async (lng: number, lat: number) => {
+    if (!installationId || saving) return
+    setSaving(true)
+    const result = await createInfrastructureFeature({
+      baseId: installationId,
+      feature_type: placementTypeRef.current,
+      longitude: lng,
+      latitude: lat,
+    })
+    if (result) {
+      const updated = await fetchInfrastructureFeatures(installationId)
+      setDbFeatures(updated)
+      toast.success('Feature placed')
+    } else {
+      toast.error('Failed to place feature')
+    }
+    setSaving(false)
+  }
+
+  // GPS capture
+  const handleGpsCapture = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation not available')
+      return
+    }
+    setGpsLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords
+        await placeFeatureRef.current?.(longitude, latitude)
+        map.current?.flyTo({ center: [longitude, latitude], zoom: 17, duration: 1500 })
+        setGpsLoading(false)
+      },
+      (err) => {
+        setGpsLoading(false)
+        toast.error(`GPS error: ${err.message}`)
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
   }, [])
 
   // Initialize map
@@ -86,13 +210,11 @@ export default function InfrastructureMapPage() {
     m.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-right')
 
     m.on('load', () => {
-      // Add the GeoJSON source
       m.addSource('infrastructure', {
         type: 'geojson',
-        data: geojsonData as GeoJSON.FeatureCollection,
+        data: mergedGeoJson,
       })
 
-      // Add a layer for each category
       for (const layer of LAYERS) {
         const filterExpr: mapboxgl.Expression = layer.types.length === 1
           ? ['==', ['get', 'type'], layer.types[0]]
@@ -113,20 +235,34 @@ export default function InfrastructureMapPage() {
             ],
             'circle-color': layer.color,
             'circle-opacity': 0.85,
-            'circle-stroke-color': '#000000',
-            'circle-stroke-width': 0.5,
+            'circle-stroke-color': [
+              'case',
+              ['==', ['get', 'source'], 'db'], '#10B981',
+              '#000000',
+            ],
+            'circle-stroke-width': [
+              'case',
+              ['==', ['get', 'source'], 'db'], 2,
+              0.5,
+            ],
           },
         })
 
         // Click handler for popups
         m.on('click', layer.key, (e) => {
           if (!e.features || e.features.length === 0) return
+          e.originalEvent.stopPropagation()
           const feat = e.features[0]
-          const coords = (feat.geometry as GeoJSON.Point).coordinates as [number, number]
+          const coords = (feat.geometry as GeoJSON.Point).coordinates.slice() as [number, number]
           const props = feat.properties || {}
+          const isDb = props.source === 'db'
+          const isEditing = editModeRef.current
 
           let html = `<div style="font-family:system-ui;font-size:12px;color:#E2E8F0;">`
           html += `<div style="font-weight:700;font-size:13px;margin-bottom:4px;color:${layer.color}">${layer.label}</div>`
+          if (isDb) {
+            html += `<div style="font-size:10px;color:#10B981;margin-bottom:4px;">User-added feature</div>`
+          }
           html += `<div style="color:#94A3B8;font-size:11px;">Lat: ${coords[1].toFixed(6)}</div>`
           html += `<div style="color:#94A3B8;font-size:11px;">Lon: ${coords[0].toFixed(6)}</div>`
           if (props.block) {
@@ -134,6 +270,15 @@ export default function InfrastructureMapPage() {
           }
           if (props.text) {
             html += `<div style="margin-top:4px;color:#CBD5E1;">Label: ${props.text}</div>`
+          }
+          if (props.notes) {
+            html += `<div style="margin-top:4px;color:#CBD5E1;">Notes: ${props.notes}</div>`
+          }
+          if (isDb && isEditing) {
+            html += `<button onclick="window.__deleteInfraFeature('${props.id}')" style="
+              margin-top:8px;width:100%;padding:5px 0;border:none;border-radius:5px;
+              background:#EF4444;color:white;font-size:12px;font-weight:600;cursor:pointer;
+            ">Delete Feature</button>`
           }
           html += `</div>`
 
@@ -149,10 +294,20 @@ export default function InfrastructureMapPage() {
             .addTo(m)
         })
 
-        // Pointer cursor on hover
         m.on('mouseenter', layer.key, () => { m.getCanvas().style.cursor = 'pointer' })
         m.on('mouseleave', layer.key, () => { m.getCanvas().style.cursor = '' })
       }
+
+      // Click on empty map area — place feature in edit mode
+      m.on('click', (e) => {
+        if (!editModeRef.current) return
+        // Check if we clicked on an existing feature (those handlers call stopPropagation)
+        const layerIds = LAYERS.map(l => l.key)
+        const clicked = m.queryRenderedFeatures(e.point, { layers: layerIds })
+        if (clicked.length > 0) return
+
+        placeFeatureRef.current?.(e.lngLat.lng, e.lngLat.lat)
+      })
 
       setMapLoaded(true)
     })
@@ -166,7 +321,16 @@ export default function InfrastructureMapPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, installationId])
 
-  // Sync layer visibility when toggles change
+  // Update map source when merged data changes
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+    const source = map.current.getSource('infrastructure') as mapboxgl.GeoJSONSource | undefined
+    if (source) {
+      source.setData(mergedGeoJson)
+    }
+  }, [mergedGeoJson, mapLoaded])
+
+  // Sync layer visibility
   useEffect(() => {
     if (!map.current || !mapLoaded) return
     const m = map.current
@@ -176,6 +340,12 @@ export default function InfrastructureMapPage() {
       }
     }
   }, [visibleLayers, mapLoaded])
+
+  // Update cursor in edit mode
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+    map.current.getCanvas().style.cursor = editMode ? 'crosshair' : ''
+  }, [editMode, mapLoaded])
 
   if (!mapboxReady) {
     return (
@@ -206,16 +376,36 @@ export default function InfrastructureMapPage() {
         justifyContent: 'space-between',
         marginBottom: 10,
         flexShrink: 0,
+        flexWrap: 'wrap',
+        gap: 8,
       }}>
         <div>
           <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Airfield Infrastructure</div>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
-            {totalFeatures.toLocaleString()} features extracted from airfield engineering drawings
+            {totalFeatures.toLocaleString()} features
+            {dbFeatures.length > 0 && ` (${dbFeatures.length} user-added)`}
           </div>
         </div>
+        {isAdmin && (
+          <button
+            onClick={() => setEditMode(prev => !prev)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 8,
+              border: editMode ? '2px solid #10B981' : '1px solid var(--color-border)',
+              background: editMode ? 'rgba(16, 185, 129, 0.15)' : 'var(--color-bg-surface)',
+              color: editMode ? '#10B981' : 'var(--color-text-2)',
+              fontSize: 'var(--fs-sm)',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            {editMode ? 'Exit Edit Mode' : 'Edit Mode'}
+          </button>
+        )}
       </div>
 
-      {/* Map + Legend */}
+      {/* Map + Overlays */}
       <div style={{ flex: 1, position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
         <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
 
@@ -232,6 +422,73 @@ export default function InfrastructureMapPage() {
             fontSize: 'var(--fs-lg)',
           }}>
             Loading map...
+          </div>
+        )}
+
+        {/* Edit mode toolbar */}
+        {editMode && (
+          <div style={{
+            position: 'absolute',
+            bottom: 14,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 10,
+            background: 'rgba(15, 23, 42, 0.94)',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            borderRadius: 12,
+            padding: '10px 14px',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            maxWidth: 'calc(100% - 28px)',
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#10B981', whiteSpace: 'nowrap' }}>
+              EDIT MODE
+            </div>
+
+            <select
+              value={placementType}
+              onChange={e => setPlacementType(e.target.value as InfrastructureFeatureType)}
+              style={{
+                background: 'rgba(30, 41, 59, 0.9)',
+                border: '1px solid rgba(148, 163, 184, 0.2)',
+                borderRadius: 6,
+                padding: '5px 8px',
+                color: '#E2E8F0',
+                fontSize: 12,
+                cursor: 'pointer',
+              }}
+            >
+              {FEATURE_TYPE_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+
+            <button
+              onClick={handleGpsCapture}
+              disabled={gpsLoading || saving}
+              style={{
+                padding: '5px 12px',
+                borderRadius: 6,
+                border: '1px solid rgba(56, 189, 248, 0.3)',
+                background: 'rgba(56, 189, 248, 0.15)',
+                color: '#38BDF8',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: gpsLoading ? 'wait' : 'pointer',
+                opacity: gpsLoading ? 0.6 : 1,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {gpsLoading ? 'Getting GPS...' : 'Use My GPS'}
+            </button>
+
+            <div style={{ fontSize: 11, color: '#94A3B8', whiteSpace: 'nowrap' }}>
+              {saving ? 'Saving...' : 'Tap map to place'}
+            </div>
           </div>
         )}
 

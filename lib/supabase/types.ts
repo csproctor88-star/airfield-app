@@ -746,6 +746,26 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['qrc_executions']['Insert']>
         Relationships: []
       }
+      infrastructure_features: {
+        Row: {
+          id: string
+          base_id: string
+          feature_type: string
+          longitude: number
+          latitude: number
+          layer: string | null
+          block: string | null
+          label: string | null
+          notes: string | null
+          source: 'import' | 'user'
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['infrastructure_features']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['infrastructure_features']['Insert']>
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
@@ -848,6 +868,7 @@ export type RunwayStatusLog = Database['public']['Tables']['runway_status_log'][
 export type AirfieldContractor = Database['public']['Tables']['airfield_contractors']['Row']
 export type QrcTemplate = Database['public']['Tables']['qrc_templates']['Row']
 export type QrcExecution = Database['public']['Tables']['qrc_executions']['Row']
+export type InfrastructureFeature = Database['public']['Tables']['infrastructure_features']['Row']
 
 // === QRC (Quick Reaction Checklist) Types ===
 
