@@ -2,13 +2,16 @@ import { createClient } from './client'
 import type { InfrastructureFeature } from './types'
 
 export type InfrastructureFeatureType =
-  | 'runway_light'
+  | 'runway_edge_light'
   | 'airfield_light'
-  | 'taxi_edge_light'
-  | 'taxi_edge_light_elev'
-  | 'taxilight'
-  | 'airfield_sign'
-  | 'marking_label'
+  | 'taxiway_light'
+  | 'taxiway_end_light'
+  | 'approach_light'
+  | 'location_sign'
+  | 'directional_sign'
+  | 'informational_sign'
+  | 'mandatory_sign'
+  | 'obstruction_light'
 
 // ── Fetch all features for a base ──
 

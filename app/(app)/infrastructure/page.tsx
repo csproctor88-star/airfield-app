@@ -22,26 +22,101 @@ type LayerConfig = {
   label: string
   color: string
   types: string[]
-  shape: 'circle' | 'square'
+  renderType: 'circle' | 'symbol'
+  legendIcon?: 'circle' | 'rect' | 'triangle'
+  legendBorder?: string
+  legendInner?: string
 }
 
 const LAYERS: LayerConfig[] = [
-  { key: 'runway_lights',     label: 'Runway Lights',       color: '#FFFFFF',  types: ['runway_light'],            shape: 'circle' },
-  { key: 'airfield_lighting', label: 'Airfield Lighting',   color: '#38BDF8',  types: ['airfield_light'],          shape: 'circle' },
-  { key: 'taxi_edge_lights',  label: 'Taxi Edge Lights',    color: '#22D3EE',  types: ['taxi_edge_light', 'taxi_edge_light_elev'], shape: 'circle' },
-  { key: 'taxilights',        label: 'Taxiway Lights',      color: '#34D399',  types: ['taxilight'],               shape: 'circle' },
-  { key: 'signs',             label: 'Airfield Signs',      color: '#FBBF24',  types: ['airfield_sign'],           shape: 'square' },
-  { key: 'markings',          label: 'Marking Labels',      color: '#F97316',  types: ['marking_label'],           shape: 'square' },
+  { key: 'runway_edge_lights',  label: 'Runway Edge Lights',  color: '#FFFFFF',  types: ['runway_edge_light'],   renderType: 'circle', legendIcon: 'circle' },
+  { key: 'airfield_lighting',   label: 'Airfield Lighting',   color: '#38BDF8',  types: ['airfield_light'],      renderType: 'circle', legendIcon: 'circle' },
+  { key: 'taxiway_lights',      label: 'Taxiway Lights',      color: '#2563EB',  types: ['taxiway_light'],       renderType: 'circle', legendIcon: 'circle' },
+  { key: 'taxiway_end_lights',  label: 'Taxiway End Lights',  color: '#F59E0B',  types: ['taxiway_end_light'],   renderType: 'circle', legendIcon: 'circle' },
+  { key: 'approach_lights',     label: 'Approach Lights',     color: '#FBBF24',  types: ['approach_light'],      renderType: 'circle', legendIcon: 'circle' },
+  { key: 'location_signs',      label: 'Location Signs',      color: '#FBBF24',  types: ['location_sign'],       renderType: 'symbol', legendIcon: 'rect', legendBorder: '#000000', legendInner: '#FBBF24' },
+  { key: 'directional_signs',   label: 'Directional Signs',   color: '#FBBF24',  types: ['directional_sign'],    renderType: 'symbol', legendIcon: 'rect', legendBorder: '#FBBF24', legendInner: '#000000' },
+  { key: 'informational_signs', label: 'Informational Signs', color: '#FBBF24',  types: ['informational_sign'],  renderType: 'symbol', legendIcon: 'rect', legendBorder: '#FBBF24', legendInner: '#000000' },
+  { key: 'mandatory_signs',     label: 'Mandatory Signs',     color: '#EF4444',  types: ['mandatory_sign'],      renderType: 'symbol', legendIcon: 'rect', legendBorder: '#EF4444', legendInner: '#FFFFFF' },
+  { key: 'obstruction_lights',  label: 'Obstruction Lights',  color: '#EF4444',  types: ['obstruction_light'],   renderType: 'symbol', legendIcon: 'triangle' },
 ]
 
 const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[] = [
-  { value: 'runway_light', label: 'Runway Light' },
+  { value: 'runway_edge_light', label: 'Runway Edge Light' },
   { value: 'airfield_light', label: 'Airfield Light' },
-  { value: 'taxi_edge_light', label: 'Taxi Edge Light' },
-  { value: 'taxilight', label: 'Taxiway Light' },
-  { value: 'airfield_sign', label: 'Airfield Sign' },
-  { value: 'marking_label', label: 'Marking Label' },
+  { value: 'taxiway_light', label: 'Taxiway Light' },
+  { value: 'taxiway_end_light', label: 'Taxiway End Light' },
+  { value: 'approach_light', label: 'Approach Light' },
+  { value: 'location_sign', label: 'Location Sign' },
+  { value: 'directional_sign', label: 'Directional Sign' },
+  { value: 'informational_sign', label: 'Informational Sign' },
+  { value: 'mandatory_sign', label: 'Mandatory Sign' },
+  { value: 'obstruction_light', label: 'Obstruction Light' },
 ]
+
+// ── Generate map icons for signs and obstruction lights ──
+
+function createSignIcon(
+  outerColor: string,
+  innerColor: string,
+  size: number = 24,
+  arrow?: boolean
+): ImageData {
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  ctx.fillStyle = outerColor
+  ctx.fillRect(0, 2, size, size - 4)
+  ctx.fillStyle = innerColor
+  ctx.fillRect(4, 5, size - 8, size - 10)
+  if (arrow) {
+    ctx.fillStyle = outerColor === '#FBBF24' ? '#000000' : '#FFFFFF'
+    const cx = size / 2, cy = size / 2
+    ctx.beginPath()
+    ctx.moveTo(cx - 4, cy - 4)
+    ctx.lineTo(cx + 4, cy)
+    ctx.lineTo(cx - 4, cy + 4)
+    ctx.closePath()
+    ctx.fill()
+  }
+  return ctx.getImageData(0, 0, size, size)
+}
+
+function createTriangleIcon(color: string, size: number = 24): ImageData {
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  ctx.fillStyle = color
+  ctx.beginPath()
+  ctx.moveTo(size / 2, 2)
+  ctx.lineTo(size - 2, size - 2)
+  ctx.lineTo(2, size - 2)
+  ctx.closePath()
+  ctx.fill()
+  ctx.strokeStyle = '#FFFFFF'
+  ctx.lineWidth = 1.5
+  ctx.stroke()
+  return ctx.getImageData(0, 0, size, size)
+}
+
+function addMapIcons(m: mapboxgl.Map) {
+  const s = 24
+  m.addImage('icon-location-sign', createSignIcon('#000000', '#FBBF24', s), { pixelRatio: 1 })
+  m.addImage('icon-directional-sign', createSignIcon('#FBBF24', '#000000', s, true), { pixelRatio: 1 })
+  m.addImage('icon-informational-sign', createSignIcon('#FBBF24', '#000000', s), { pixelRatio: 1 })
+  m.addImage('icon-mandatory-sign', createSignIcon('#EF4444', '#FFFFFF', s), { pixelRatio: 1 })
+  m.addImage('icon-obstruction-light', createTriangleIcon('#EF4444', s), { pixelRatio: 1 })
+}
+
+const ICON_MAP: Record<string, string> = {
+  location_sign: 'icon-location-sign',
+  directional_sign: 'icon-directional-sign',
+  informational_sign: 'icon-informational-sign',
+  mandatory_sign: 'icon-mandatory-sign',
+  obstruction_light: 'icon-obstruction-light',
+}
 
 export default function InfrastructureMapPage() {
   const mapContainer = useRef<HTMLDivElement>(null)
@@ -56,14 +131,14 @@ export default function InfrastructureMapPage() {
   // Edit mode
   const [editMode, setEditMode] = useState(false)
   const [dbFeatures, setDbFeatures] = useState<InfrastructureFeature[]>([])
-  const [placementType, setPlacementType] = useState<InfrastructureFeatureType>('taxi_edge_light')
+  const [placementType, setPlacementType] = useState<InfrastructureFeatureType>('taxiway_light')
   const [saving, setSaving] = useState(false)
   const [gpsLoading, setGpsLoading] = useState(false)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const draggingRef = useRef<{ id: string; startLngLat: [number, number] } | null>(null)
   const dragMarkerRef = useRef<mapboxgl.Marker | null>(null)
   const editModeRef = useRef(false)
-  const placementTypeRef = useRef<InfrastructureFeatureType>('taxi_edge_light')
+  const placementTypeRef = useRef<InfrastructureFeatureType>('taxiway_light')
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const mapboxReady = isMapboxConfigured()
@@ -310,6 +385,8 @@ export default function InfrastructureMapPage() {
     m.touchPitch.enable()
 
     m.on('load', () => {
+      addMapIcons(m)
+
       m.addSource('infrastructure', {
         type: 'geojson',
         data: featureGeoJson,
@@ -320,25 +397,46 @@ export default function InfrastructureMapPage() {
           ? ['==', ['get', 'type'], layer.types[0]]
           : ['any', ...layer.types.map(t => ['==', ['get', 'type'], t])] as mapboxgl.Expression
 
-        m.addLayer({
-          id: layer.key,
-          type: 'circle',
-          source: 'infrastructure',
-          filter: filterExpr,
-          paint: {
-            'circle-radius': [
-              'interpolate', ['linear'], ['zoom'],
-              12, 2,
-              14, 4,
-              16, 6,
-              18, 10,
-            ],
-            'circle-color': layer.color,
-            'circle-opacity': 0.85,
-            'circle-stroke-color': '#000000',
-            'circle-stroke-width': 0.5,
-          },
-        })
+        if (layer.renderType === 'symbol') {
+          const iconName = ICON_MAP[layer.types[0]]
+          m.addLayer({
+            id: layer.key,
+            type: 'symbol',
+            source: 'infrastructure',
+            filter: filterExpr,
+            layout: {
+              'icon-image': iconName,
+              'icon-size': [
+                'interpolate', ['linear'], ['zoom'],
+                12, 0.4,
+                14, 0.7,
+                16, 1,
+                18, 1.4,
+              ],
+              'icon-allow-overlap': true,
+            },
+          })
+        } else {
+          m.addLayer({
+            id: layer.key,
+            type: 'circle',
+            source: 'infrastructure',
+            filter: filterExpr,
+            paint: {
+              'circle-radius': [
+                'interpolate', ['linear'], ['zoom'],
+                12, 2,
+                14, 4,
+                16, 6,
+                18, 10,
+              ],
+              'circle-color': layer.color,
+              'circle-opacity': 0.85,
+              'circle-stroke-color': '#000000',
+              'circle-stroke-width': 0.5,
+            },
+          })
+        }
 
         // Click handler for popups
         m.on('click', layer.key, (e) => {
@@ -714,14 +812,39 @@ export default function InfrastructureMapPage() {
                   onChange={() => toggleLayer(layer.key)}
                   style={{ display: 'none' }}
                 />
-                <span style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: layer.shape === 'circle' ? '50%' : 2,
-                  background: layer.color,
-                  border: '1px solid rgba(0,0,0,0.3)',
-                  flexShrink: 0,
-                }} />
+                {layer.legendIcon === 'triangle' ? (
+                  <svg width="12" height="12" viewBox="0 0 12 12" style={{ flexShrink: 0 }}>
+                    <polygon points="6,1 11,11 1,11" fill={layer.color} stroke="#FFF" strokeWidth="0.5" />
+                  </svg>
+                ) : layer.legendIcon === 'rect' ? (
+                  <span style={{
+                    width: 14,
+                    height: 10,
+                    borderRadius: 1,
+                    background: layer.legendBorder || layer.color,
+                    border: 'none',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    <span style={{
+                      width: 8,
+                      height: 5,
+                      background: layer.legendInner || '#000',
+                      borderRadius: 0,
+                    }} />
+                  </span>
+                ) : (
+                  <span style={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: '50%',
+                    background: layer.color,
+                    border: '1px solid rgba(0,0,0,0.3)',
+                    flexShrink: 0,
+                  }} />
+                )}
                 <span style={{ color: '#E2E8F0', fontSize: 12, flex: 1 }}>{layer.label}</span>
                 <span style={{ color: '#64748B', fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>
                   {featureCounts[layer.key]}

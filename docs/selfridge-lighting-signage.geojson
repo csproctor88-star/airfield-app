@@ -2196,7 +2196,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2210,7 +2210,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2224,7 +2224,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2238,7 +2238,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2252,7 +2252,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2266,7 +2266,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2280,7 +2280,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2294,7 +2294,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2308,7 +2308,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2322,7 +2322,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2336,7 +2336,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2350,7 +2350,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2364,7 +2364,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2378,7 +2378,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2392,7 +2392,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2406,7 +2406,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2420,7 +2420,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2434,7 +2434,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2448,7 +2448,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2462,7 +2462,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2476,7 +2476,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2490,7 +2490,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2504,7 +2504,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2518,7 +2518,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2532,7 +2532,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2546,7 +2546,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2560,7 +2560,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2574,7 +2574,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2588,7 +2588,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2602,7 +2602,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2616,7 +2616,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2630,7 +2630,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2644,7 +2644,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2658,7 +2658,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2672,7 +2672,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2686,7 +2686,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2700,7 +2700,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2714,7 +2714,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2728,7 +2728,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2742,7 +2742,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2756,7 +2756,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2770,7 +2770,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2784,7 +2784,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2798,7 +2798,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2812,7 +2812,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2826,7 +2826,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2840,7 +2840,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2854,7 +2854,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2868,7 +2868,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2882,7 +2882,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2896,7 +2896,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2910,7 +2910,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2924,7 +2924,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2938,7 +2938,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2952,7 +2952,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2966,7 +2966,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2980,7 +2980,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -2994,7 +2994,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3008,7 +3008,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3022,7 +3022,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3036,7 +3036,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3050,7 +3050,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3064,7 +3064,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3078,7 +3078,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3092,7 +3092,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3106,7 +3106,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3120,7 +3120,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3134,7 +3134,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3148,7 +3148,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3162,7 +3162,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3176,7 +3176,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3190,7 +3190,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3204,7 +3204,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3218,7 +3218,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3232,7 +3232,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3246,7 +3246,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3260,7 +3260,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3274,7 +3274,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3288,7 +3288,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3302,7 +3302,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3316,7 +3316,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3330,7 +3330,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3344,7 +3344,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3358,7 +3358,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3372,7 +3372,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3386,7 +3386,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3400,7 +3400,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3414,7 +3414,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3428,7 +3428,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3442,7 +3442,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3456,7 +3456,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3470,7 +3470,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3484,7 +3484,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3498,7 +3498,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3512,7 +3512,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3526,7 +3526,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3540,7 +3540,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3554,7 +3554,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3568,7 +3568,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3582,7 +3582,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3596,7 +3596,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3610,7 +3610,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3624,7 +3624,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3638,7 +3638,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3652,7 +3652,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3666,7 +3666,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3680,7 +3680,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3694,7 +3694,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3708,7 +3708,7 @@
       },
       "properties": {
         "layer": "Runway lights",
-        "type": "runway_light"
+        "type": "runway_edge_light"
       }
     },
     {
@@ -3722,7 +3722,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -3737,7 +3737,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -3752,7 +3752,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -3767,7 +3767,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -3782,7 +3782,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -3797,7 +3797,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -3812,7 +3812,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -3827,7 +3827,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -3842,7 +3842,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -3857,7 +3857,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -3872,7 +3872,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -3887,7 +3887,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -3902,7 +3902,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -3917,7 +3917,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -3932,7 +3932,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -3947,7 +3947,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -3962,7 +3962,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -3977,7 +3977,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -3992,7 +3992,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4007,7 +4007,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4022,7 +4022,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4037,7 +4037,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4052,7 +4052,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4067,7 +4067,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4082,7 +4082,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4097,7 +4097,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4112,7 +4112,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4127,7 +4127,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4142,7 +4142,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4157,7 +4157,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4172,7 +4172,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4187,7 +4187,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4202,7 +4202,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4217,7 +4217,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4232,7 +4232,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4247,7 +4247,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4262,7 +4262,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4277,7 +4277,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4292,7 +4292,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4307,7 +4307,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4322,7 +4322,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4337,7 +4337,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4352,7 +4352,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4367,7 +4367,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4382,7 +4382,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4397,7 +4397,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4412,7 +4412,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4427,7 +4427,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4442,7 +4442,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4457,7 +4457,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4472,7 +4472,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4487,7 +4487,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4502,7 +4502,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4517,7 +4517,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4532,7 +4532,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4547,7 +4547,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4562,7 +4562,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4577,7 +4577,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4592,7 +4592,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4607,7 +4607,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4622,7 +4622,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4637,7 +4637,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4652,7 +4652,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4667,7 +4667,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4682,7 +4682,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4697,7 +4697,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4712,7 +4712,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4727,7 +4727,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4742,7 +4742,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4757,7 +4757,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4772,7 +4772,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4787,7 +4787,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4802,7 +4802,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4817,7 +4817,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4832,7 +4832,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4847,7 +4847,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4862,7 +4862,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4877,7 +4877,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4892,7 +4892,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4907,7 +4907,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4922,7 +4922,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4937,7 +4937,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4952,7 +4952,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4967,7 +4967,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4982,7 +4982,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -4997,7 +4997,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5012,7 +5012,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5027,7 +5027,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5042,7 +5042,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5057,7 +5057,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5072,7 +5072,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5087,7 +5087,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5102,7 +5102,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5117,7 +5117,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5132,7 +5132,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5147,7 +5147,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5162,7 +5162,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5177,7 +5177,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5192,7 +5192,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5207,7 +5207,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5222,7 +5222,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5237,7 +5237,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5252,7 +5252,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5267,7 +5267,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5282,7 +5282,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5297,7 +5297,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5312,7 +5312,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5327,7 +5327,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5342,7 +5342,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5357,7 +5357,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5372,7 +5372,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5387,7 +5387,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5402,7 +5402,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5417,7 +5417,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5432,7 +5432,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5447,7 +5447,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5462,7 +5462,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5477,7 +5477,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5492,7 +5492,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5507,7 +5507,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5522,7 +5522,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5537,7 +5537,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5552,7 +5552,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5567,7 +5567,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5582,7 +5582,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5597,7 +5597,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5612,7 +5612,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5627,7 +5627,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5642,7 +5642,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5657,7 +5657,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5672,7 +5672,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5687,7 +5687,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5702,7 +5702,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5717,7 +5717,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5732,7 +5732,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5747,7 +5747,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5762,7 +5762,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5777,7 +5777,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5792,7 +5792,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5807,7 +5807,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5822,7 +5822,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5837,7 +5837,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5852,7 +5852,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5867,7 +5867,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5882,7 +5882,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5897,7 +5897,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5912,7 +5912,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5927,7 +5927,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5942,7 +5942,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5957,7 +5957,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5972,7 +5972,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -5987,7 +5987,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6002,7 +6002,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6017,7 +6017,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6032,7 +6032,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6047,7 +6047,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6062,7 +6062,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6077,7 +6077,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6092,7 +6092,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6107,7 +6107,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6122,7 +6122,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6137,7 +6137,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6152,7 +6152,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6167,7 +6167,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6182,7 +6182,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6197,7 +6197,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6212,7 +6212,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6227,7 +6227,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6242,7 +6242,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6257,7 +6257,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6272,7 +6272,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6287,7 +6287,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6302,7 +6302,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6317,7 +6317,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6332,7 +6332,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6347,7 +6347,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6362,7 +6362,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6377,7 +6377,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6392,7 +6392,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6407,7 +6407,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6422,7 +6422,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6437,7 +6437,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6452,7 +6452,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6467,7 +6467,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6482,7 +6482,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6497,7 +6497,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6512,7 +6512,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6527,7 +6527,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6542,7 +6542,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6557,7 +6557,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6572,7 +6572,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6587,7 +6587,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6602,7 +6602,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6617,7 +6617,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6632,7 +6632,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6647,7 +6647,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6662,7 +6662,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6677,7 +6677,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6692,7 +6692,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6707,7 +6707,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6722,7 +6722,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6737,7 +6737,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6752,7 +6752,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6767,7 +6767,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6782,7 +6782,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6797,7 +6797,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6812,7 +6812,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6827,7 +6827,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6842,7 +6842,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6857,7 +6857,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6872,7 +6872,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6887,7 +6887,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6902,7 +6902,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6917,7 +6917,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6932,7 +6932,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6947,7 +6947,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6962,7 +6962,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6977,7 +6977,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -6992,7 +6992,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7007,7 +7007,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7022,7 +7022,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7037,7 +7037,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7052,7 +7052,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7067,7 +7067,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7082,7 +7082,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7097,7 +7097,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7112,7 +7112,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7127,7 +7127,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7142,7 +7142,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7157,7 +7157,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7172,7 +7172,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7187,7 +7187,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7202,7 +7202,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7217,7 +7217,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7232,7 +7232,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7247,7 +7247,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7262,7 +7262,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7277,7 +7277,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7292,7 +7292,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7307,7 +7307,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7322,7 +7322,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7337,7 +7337,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7352,7 +7352,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7367,7 +7367,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7382,7 +7382,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7397,7 +7397,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7412,7 +7412,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7427,7 +7427,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7442,7 +7442,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7457,7 +7457,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7472,7 +7472,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7487,7 +7487,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7502,7 +7502,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7517,7 +7517,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7532,7 +7532,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7547,7 +7547,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7562,7 +7562,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7577,7 +7577,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7592,7 +7592,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7607,7 +7607,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7622,7 +7622,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7637,7 +7637,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7652,7 +7652,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7667,7 +7667,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7682,7 +7682,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7697,7 +7697,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7712,7 +7712,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7727,7 +7727,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7742,7 +7742,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7757,7 +7757,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7772,7 +7772,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7787,7 +7787,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7802,7 +7802,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7817,7 +7817,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7832,7 +7832,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7847,7 +7847,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7862,7 +7862,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7877,7 +7877,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7892,7 +7892,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7907,7 +7907,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7922,7 +7922,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7937,7 +7937,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7952,7 +7952,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7967,7 +7967,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7982,7 +7982,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -7997,7 +7997,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8012,7 +8012,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8027,7 +8027,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8042,7 +8042,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8057,7 +8057,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8072,7 +8072,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8087,7 +8087,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8102,7 +8102,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8117,7 +8117,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8132,7 +8132,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8147,7 +8147,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8162,7 +8162,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8177,7 +8177,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8192,7 +8192,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8207,7 +8207,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8222,7 +8222,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8237,7 +8237,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8252,7 +8252,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8267,7 +8267,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8282,7 +8282,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8297,7 +8297,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8312,7 +8312,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8327,7 +8327,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8342,7 +8342,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8357,7 +8357,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8372,7 +8372,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8387,7 +8387,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8402,7 +8402,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8417,7 +8417,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8432,7 +8432,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8447,7 +8447,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8462,7 +8462,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8477,7 +8477,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8492,7 +8492,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8507,7 +8507,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8522,7 +8522,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8537,7 +8537,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8552,7 +8552,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8567,7 +8567,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8582,7 +8582,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8597,7 +8597,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8612,7 +8612,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8627,7 +8627,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8642,7 +8642,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8657,7 +8657,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8672,7 +8672,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8687,7 +8687,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8702,7 +8702,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8717,7 +8717,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8732,7 +8732,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8747,7 +8747,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8762,7 +8762,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8777,7 +8777,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8792,7 +8792,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8807,7 +8807,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8822,7 +8822,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8837,7 +8837,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8852,7 +8852,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8867,7 +8867,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8882,7 +8882,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8897,7 +8897,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8912,7 +8912,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8927,7 +8927,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8942,7 +8942,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8957,7 +8957,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8972,7 +8972,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -8987,7 +8987,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9002,7 +9002,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9017,7 +9017,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9032,7 +9032,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9047,7 +9047,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9062,7 +9062,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9077,7 +9077,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9092,7 +9092,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9107,7 +9107,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9122,7 +9122,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9137,7 +9137,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9152,7 +9152,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9167,7 +9167,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9182,7 +9182,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9197,7 +9197,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9212,7 +9212,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9227,7 +9227,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9242,7 +9242,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9257,7 +9257,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9272,7 +9272,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9287,7 +9287,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9302,7 +9302,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9317,7 +9317,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9332,7 +9332,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9347,7 +9347,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9362,7 +9362,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9377,7 +9377,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9392,7 +9392,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9407,7 +9407,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9422,7 +9422,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9437,7 +9437,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9452,7 +9452,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9467,7 +9467,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9482,7 +9482,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9497,7 +9497,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9512,7 +9512,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9527,7 +9527,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9542,7 +9542,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9557,7 +9557,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9572,7 +9572,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9587,7 +9587,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9602,7 +9602,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9617,7 +9617,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9632,7 +9632,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9647,7 +9647,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9662,7 +9662,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9677,7 +9677,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9692,7 +9692,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9707,7 +9707,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9722,7 +9722,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9737,7 +9737,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9752,7 +9752,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9767,7 +9767,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9782,7 +9782,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9797,7 +9797,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9812,7 +9812,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9827,7 +9827,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9842,7 +9842,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9857,7 +9857,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9872,7 +9872,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9887,7 +9887,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9902,7 +9902,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9917,7 +9917,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9932,7 +9932,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9947,7 +9947,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9962,7 +9962,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9977,7 +9977,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -9992,7 +9992,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10007,7 +10007,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10022,7 +10022,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10037,7 +10037,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10052,7 +10052,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10067,7 +10067,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10082,7 +10082,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10097,7 +10097,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10112,7 +10112,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10127,7 +10127,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10142,7 +10142,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10157,7 +10157,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10172,7 +10172,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10187,7 +10187,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10202,7 +10202,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10217,7 +10217,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10232,7 +10232,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10247,7 +10247,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10262,7 +10262,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10277,7 +10277,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10292,7 +10292,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10307,7 +10307,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10322,7 +10322,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10337,7 +10337,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10352,7 +10352,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10367,7 +10367,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10382,7 +10382,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10397,7 +10397,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10412,7 +10412,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10427,7 +10427,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10442,7 +10442,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10457,7 +10457,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10472,7 +10472,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10487,7 +10487,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10502,7 +10502,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10517,7 +10517,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10532,7 +10532,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10547,7 +10547,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10562,7 +10562,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10577,7 +10577,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10592,7 +10592,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10607,7 +10607,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10622,7 +10622,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10637,7 +10637,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10652,7 +10652,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10667,7 +10667,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10682,7 +10682,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10697,7 +10697,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10712,7 +10712,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10727,7 +10727,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10742,7 +10742,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10757,7 +10757,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10772,7 +10772,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10787,7 +10787,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10802,7 +10802,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10817,7 +10817,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10832,7 +10832,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10847,7 +10847,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10862,7 +10862,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10877,7 +10877,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10892,7 +10892,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10907,7 +10907,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10922,7 +10922,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10937,7 +10937,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10952,7 +10952,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10967,7 +10967,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10982,7 +10982,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -10997,7 +10997,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11012,7 +11012,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11027,7 +11027,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11042,7 +11042,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11057,7 +11057,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11072,7 +11072,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11087,7 +11087,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11102,7 +11102,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11117,7 +11117,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11132,7 +11132,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11147,7 +11147,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11162,7 +11162,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11177,7 +11177,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11192,7 +11192,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11207,7 +11207,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11222,7 +11222,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11237,7 +11237,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11252,7 +11252,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11267,7 +11267,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11282,7 +11282,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11297,7 +11297,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11312,7 +11312,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11327,7 +11327,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11342,7 +11342,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11357,7 +11357,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11372,7 +11372,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11387,7 +11387,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11402,7 +11402,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11417,7 +11417,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11432,7 +11432,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11447,7 +11447,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11462,7 +11462,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11477,7 +11477,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11492,7 +11492,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11507,7 +11507,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11522,7 +11522,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11537,7 +11537,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11552,7 +11552,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11567,7 +11567,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11582,7 +11582,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11597,7 +11597,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11612,7 +11612,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11627,7 +11627,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11642,7 +11642,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11657,7 +11657,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11672,7 +11672,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11687,7 +11687,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11702,7 +11702,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11717,7 +11717,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11732,7 +11732,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11747,7 +11747,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11762,7 +11762,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11777,7 +11777,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11792,7 +11792,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11807,7 +11807,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11822,7 +11822,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11837,7 +11837,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11852,7 +11852,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11867,7 +11867,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11882,7 +11882,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11897,7 +11897,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11912,7 +11912,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11927,7 +11927,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11942,7 +11942,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11957,7 +11957,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11972,7 +11972,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -11987,7 +11987,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12002,7 +12002,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12017,7 +12017,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12032,7 +12032,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12047,7 +12047,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12062,7 +12062,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12077,7 +12077,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12092,7 +12092,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12107,7 +12107,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12122,7 +12122,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12137,7 +12137,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12152,7 +12152,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12167,7 +12167,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12182,7 +12182,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12197,7 +12197,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12212,7 +12212,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12227,7 +12227,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12242,7 +12242,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12257,7 +12257,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12272,7 +12272,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12287,7 +12287,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12302,7 +12302,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12317,7 +12317,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12332,7 +12332,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12347,7 +12347,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12362,7 +12362,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12377,7 +12377,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12392,7 +12392,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12407,7 +12407,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12422,7 +12422,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12437,7 +12437,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12452,7 +12452,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12467,7 +12467,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12482,7 +12482,7 @@
       },
       "properties": {
         "layer": "e-taxi-lite",
-        "type": "taxi_edge_light",
+        "type": "taxiway_light",
         "block": "L-861+BASE"
       }
     },
@@ -12497,7 +12497,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12512,7 +12512,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12527,7 +12527,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12542,7 +12542,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12557,7 +12557,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12572,7 +12572,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12587,7 +12587,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12602,7 +12602,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12617,7 +12617,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12632,7 +12632,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12647,7 +12647,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12662,7 +12662,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12677,7 +12677,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12692,7 +12692,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12707,7 +12707,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12722,7 +12722,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12737,7 +12737,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12752,7 +12752,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12767,7 +12767,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12782,7 +12782,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12797,7 +12797,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12812,7 +12812,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12827,7 +12827,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12842,7 +12842,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12857,7 +12857,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12872,7 +12872,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12887,7 +12887,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12902,7 +12902,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12917,7 +12917,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12932,7 +12932,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12947,7 +12947,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12962,7 +12962,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12977,7 +12977,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -12992,7 +12992,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13007,7 +13007,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13022,7 +13022,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13037,7 +13037,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13052,7 +13052,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13067,7 +13067,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13082,7 +13082,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13097,7 +13097,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13112,7 +13112,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13127,7 +13127,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13142,7 +13142,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13157,7 +13157,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13172,7 +13172,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13187,7 +13187,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13202,7 +13202,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13217,7 +13217,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13232,7 +13232,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13247,7 +13247,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13262,7 +13262,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LITE-TAXI EDGE-ELEV",
-        "type": "taxi_edge_light_elev",
+        "type": "taxiway_light",
         "block": "L-861+BASE1"
       }
     },
@@ -13277,7 +13277,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13291,7 +13291,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13305,7 +13305,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13319,7 +13319,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13333,7 +13333,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13347,7 +13347,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13361,7 +13361,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13375,7 +13375,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13389,7 +13389,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13403,7 +13403,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13417,7 +13417,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13431,7 +13431,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13445,7 +13445,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13459,7 +13459,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13473,7 +13473,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13487,7 +13487,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13501,7 +13501,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13515,7 +13515,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13529,7 +13529,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13543,7 +13543,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13557,7 +13557,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13571,7 +13571,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13585,7 +13585,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13599,7 +13599,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13613,7 +13613,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13627,7 +13627,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13641,7 +13641,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13655,7 +13655,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13669,7 +13669,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13683,7 +13683,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13697,7 +13697,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13711,7 +13711,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13725,7 +13725,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13739,7 +13739,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13753,7 +13753,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13767,7 +13767,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13781,7 +13781,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13795,7 +13795,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13809,7 +13809,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13823,7 +13823,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13837,7 +13837,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13851,7 +13851,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13865,7 +13865,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13879,7 +13879,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13893,7 +13893,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13907,7 +13907,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13921,7 +13921,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13935,7 +13935,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13949,7 +13949,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13963,7 +13963,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13977,7 +13977,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -13991,7 +13991,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -14005,7 +14005,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -14019,7 +14019,7 @@
       },
       "properties": {
         "layer": "TAXILIGHTS",
-        "type": "taxilight"
+        "type": "taxiway_light"
       }
     },
     {
@@ -14033,7 +14033,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14047,7 +14047,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14061,7 +14061,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14075,7 +14075,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14089,7 +14089,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14103,7 +14103,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14117,7 +14117,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14131,7 +14131,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14145,7 +14145,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14159,7 +14159,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14173,7 +14173,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14187,7 +14187,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14201,7 +14201,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14215,7 +14215,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14229,7 +14229,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14243,7 +14243,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14257,7 +14257,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14271,7 +14271,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14285,7 +14285,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14299,7 +14299,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
+        "type": "location_sign"
       }
     },
     {
@@ -14313,1267 +14313,7 @@
       },
       "properties": {
         "layer": "C-AFLD-SIGN",
-        "type": "airfield_sign"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8224999,
-          42.6078745
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "2"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8221813,
-          42.6078667
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "3"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.821906,
-          42.6078599
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "4"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8215951,
-          42.6078523
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "5"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8213029,
-          42.6078451
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "6"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8209835,
-          42.6078373
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "7"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8206813,
-          42.6078299
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "8"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8227951,
-          42.6078817
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "1"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8203802,
-          42.6078225
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "9"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.820081,
-          42.6077831
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "10"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8197804,
-          42.6077757
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "11"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8194795,
-          42.6077684
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "12"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.812274,
-          42.6074131
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "H  3"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8421684,
-          42.6174289
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "HOT"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8421715,
-          42.6174519
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "U"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8421717,
-          42.6174429
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "G"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8421715,
-          42.61746
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "N"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8425658,
-          42.617437
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "HOT"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.842569,
-          42.6174599
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "U"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.842569,
-          42.6174508
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "G"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8425689,
-          42.617468
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "N"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8223394,
-          42.607113
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "2"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8220246,
-          42.6071053
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "3"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.821753,
-          42.6070987
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "4"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.821431,
-          42.6070908
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "5"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8211572,
-          42.607084
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "6"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8226328,
-          42.6071202
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "1"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8208417,
-          42.6070763
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "7"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.820543,
-          42.607069
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "8"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8202161,
-          42.6070609
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "9"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8199273,
-          42.6070252
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "10"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8195931,
-          42.607017
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "11"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8190227,
-          42.6060556
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "C"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8227002,
-          42.605928
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "C  1"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8219598,
-          42.6059138
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "C  2"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8212227,
-          42.6059022
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "C  3"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.820478,
-          42.6058929
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "C  4"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8197501,
-          42.6058684
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "C  5"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8195503,
-          42.6062132
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "C  5"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8202852,
-          42.6062272
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "C  4"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8210331,
-          42.6062318
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "C  3"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8217642,
-          42.6062525
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "C  2"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8225017,
-          42.606271
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "C  1"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8187772,
-          42.6060538
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "I"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8189984,
-          42.6066256
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "B"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8189525,
-          42.6073673
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "A"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8174484,
-          42.6073748
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "H"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.823013,
-          42.6060542
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "C"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8229953,
-          42.6067892
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "B"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8229855,
-          42.6074525
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "A"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8412268,
-          42.601717
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "S"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8412369,
-          42.6017168
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "E"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8412471,
-          42.6017166
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "K"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8412571,
-          42.6017163
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "A"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8412672,
-          42.6017162
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "R"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8412772,
-          42.6017159
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "B"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8412912,
-          42.6017132
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "HOT"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8401215,
-          42.6264825
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "S"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8401315,
-          42.6264832
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "E"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8401417,
-          42.6264839
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "K"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8401517,
-          42.6264846
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "A"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8401617,
-          42.6264854
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "R"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8401717,
-          42.626486
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "B"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8401861,
-          42.6264846
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "HOT"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8428425,
-          42.6180325
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "N 4"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8428244,
-          42.6185565
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "N 3"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8428063,
-          42.6190804
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "N 2"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8440439,
-          42.6191033
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "N 7"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8440614,
-          42.6185794
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "N 6"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.844079,
-          42.6180555
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "N 5"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8440263,
-          42.6196274
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "N 8"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8427881,
-          42.6196044
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "N 1"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8142928,
-          42.607389
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "H  2"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8154094,
-          42.6074111
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "H  1"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8138013,
-          42.6063728
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "I  6"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8146316,
-          42.6063893
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "I  5"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8154486,
-          42.6064055
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "I  4"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8162657,
-          42.6064216
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "I  3"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8171116,
-          42.6064384
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "I  2"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8179472,
-          42.606455
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "I  1"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8137858,
-          42.6060612
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "HOT PIT"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.813786,
-          42.6060578
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "NOSE SOUTH"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8140493,
-          42.6060666
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "HOT PIT"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -82.8140495,
-          42.6060633
-        ]
-      },
-      "properties": {
-        "layer": "C-AFLD-MRKG",
-        "type": "marking_label",
-        "text": "NOSE NORTH"
+        "type": "location_sign"
       }
     }
   ]
