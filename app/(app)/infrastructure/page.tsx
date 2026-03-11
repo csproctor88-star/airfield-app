@@ -244,6 +244,8 @@ export default function InfrastructureMapPage() {
   const deleteHandlerRef = useRef<((id: string) => Promise<void>) | undefined>(undefined)
   deleteHandlerRef.current = async (id: string) => {
     if (!installationId) return
+    // Close popup immediately
+    document.querySelectorAll('.mapboxgl-popup').forEach(p => p.remove())
     const ok = await deleteInfrastructureFeature(id)
     if (ok) {
       const updated = await fetchInfrastructureFeatures(installationId)
@@ -259,8 +261,7 @@ export default function InfrastructureMapPage() {
   moveHandlerRef.current = (id: string, lng: number, lat: number) => {
     if (!map.current || !editModeRef.current) return
     // Close any open popups
-    const popups = document.querySelectorAll('.mapboxgl-popup')
-    popups.forEach(p => p.remove())
+    document.querySelectorAll('.mapboxgl-popup').forEach(p => p.remove())
 
     // Create a draggable marker at the feature's current position
     const el = document.createElement('div')
@@ -276,6 +277,40 @@ export default function InfrastructureMapPage() {
       .setLngLat([lng, lat])
       .addTo(map.current)
 
+    // Attach Save/Cancel popup to the marker
+    const popup = new mapboxgl.Popup({
+      offset: 20,
+      closeButton: false,
+      closeOnClick: false,
+      className: 'infrastructure-map-popup',
+      anchor: 'bottom',
+    })
+      .setHTML(`
+        <div style="display:flex;gap:6px;padding:2px;">
+          <button id="__drag-save" style="
+            padding:5px 14px;border:none;border-radius:6px;
+            background:#10B981;color:white;font-size:12px;font-weight:600;cursor:pointer;
+          ">Save</button>
+          <button id="__drag-cancel" style="
+            padding:5px 14px;border:none;border-radius:6px;
+            background:transparent;border:1px solid rgba(148,163,184,0.3);
+            color:#94A3B8;font-size:12px;font-weight:600;cursor:pointer;
+          ">Cancel</button>
+        </div>
+      `)
+    marker.setPopup(popup)
+    popup.addTo(map.current)
+
+    // Wire up buttons via DOM after popup renders
+    setTimeout(() => {
+      document.getElementById('__drag-save')?.addEventListener('click', () => {
+        saveDragRef.current?.()
+      })
+      document.getElementById('__drag-cancel')?.addEventListener('click', () => {
+        cancelDrag()
+      })
+    }, 0)
+
     dragMarkerRef.current = marker
     setDraggingId(id)
     draggingRef.current = { id, startLngLat: [lng, lat] }
@@ -283,8 +318,6 @@ export default function InfrastructureMapPage() {
     // Disable map drag while moving a feature
     map.current.dragPan.disable()
     map.current.touchZoomRotate.disable()
-
-    toast('Drag the marker to reposition, then tap Save', { duration: 5000 })
   }
 
   // Save drag position
@@ -312,6 +345,8 @@ export default function InfrastructureMapPage() {
 
   const cancelDrag = useCallback(() => {
     if (dragMarkerRef.current) {
+      const popup = dragMarkerRef.current.getPopup()
+      if (popup) popup.remove()
       dragMarkerRef.current.remove()
       dragMarkerRef.current = null
     }
@@ -670,8 +705,8 @@ export default function InfrastructureMapPage() {
           </div>
         )}
 
-        {/* Edit mode toolbar */}
-        {editMode && (
+        {/* Edit mode toolbar (placement only — drag Save/Cancel is on the marker popup) */}
+        {editMode && !draggingId && (
           <div style={{
             position: 'absolute',
             bottom: 14,
@@ -679,7 +714,7 @@ export default function InfrastructureMapPage() {
             transform: 'translateX(-50%)',
             zIndex: 10,
             background: 'rgba(15, 23, 42, 0.94)',
-            border: `1px solid ${draggingId ? 'rgba(59, 130, 246, 0.4)' : 'rgba(16, 185, 129, 0.3)'}`,
+            border: '1px solid rgba(16, 185, 129, 0.3)',
             borderRadius: 12,
             padding: '10px 14px',
             backdropFilter: 'blur(8px)',
@@ -690,95 +725,50 @@ export default function InfrastructureMapPage() {
             justifyContent: 'center',
             maxWidth: 'calc(100% - 28px)',
           }}>
-            {draggingId ? (
-              <>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#3B82F6', whiteSpace: 'nowrap' }}>
-                  MOVING FEATURE
-                </div>
-                <div style={{ fontSize: 11, color: '#94A3B8', whiteSpace: 'nowrap' }}>
-                  Drag the green marker to reposition
-                </div>
-                <button
-                  onClick={() => saveDragRef.current?.()}
-                  disabled={saving}
-                  style={{
-                    padding: '5px 14px',
-                    borderRadius: 6,
-                    border: 'none',
-                    background: '#10B981',
-                    color: 'white',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: saving ? 'wait' : 'pointer',
-                    opacity: saving ? 0.6 : 1,
-                  }}
-                >
-                  {saving ? 'Saving...' : 'Save Position'}
-                </button>
-                <button
-                  onClick={cancelDrag}
-                  style={{
-                    padding: '5px 14px',
-                    borderRadius: 6,
-                    border: '1px solid rgba(148, 163, 184, 0.3)',
-                    background: 'transparent',
-                    color: '#94A3B8',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#10B981', whiteSpace: 'nowrap' }}>
-                  EDIT MODE
-                </div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#10B981', whiteSpace: 'nowrap' }}>
+              EDIT MODE
+            </div>
 
-                <select
-                  value={placementType}
-                  onChange={e => setPlacementType(e.target.value as InfrastructureFeatureType)}
-                  style={{
-                    background: 'rgba(30, 41, 59, 0.9)',
-                    border: '1px solid rgba(148, 163, 184, 0.2)',
-                    borderRadius: 6,
-                    padding: '5px 8px',
-                    color: '#E2E8F0',
-                    fontSize: 12,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {FEATURE_TYPE_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
+            <select
+              value={placementType}
+              onChange={e => setPlacementType(e.target.value as InfrastructureFeatureType)}
+              style={{
+                background: 'rgba(30, 41, 59, 0.9)',
+                border: '1px solid rgba(148, 163, 184, 0.2)',
+                borderRadius: 6,
+                padding: '5px 8px',
+                color: '#E2E8F0',
+                fontSize: 12,
+                cursor: 'pointer',
+              }}
+            >
+              {FEATURE_TYPE_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
 
-                <button
-                  onClick={handleGpsCapture}
-                  disabled={gpsLoading || saving}
-                  style={{
-                    padding: '5px 12px',
-                    borderRadius: 6,
-                    border: '1px solid rgba(56, 189, 248, 0.3)',
-                    background: 'rgba(56, 189, 248, 0.15)',
-                    color: '#38BDF8',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: gpsLoading ? 'wait' : 'pointer',
-                    opacity: gpsLoading ? 0.6 : 1,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {gpsLoading ? 'Getting GPS...' : 'Use My GPS'}
-                </button>
+            <button
+              onClick={handleGpsCapture}
+              disabled={gpsLoading || saving}
+              style={{
+                padding: '5px 12px',
+                borderRadius: 6,
+                border: '1px solid rgba(56, 189, 248, 0.3)',
+                background: 'rgba(56, 189, 248, 0.15)',
+                color: '#38BDF8',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: gpsLoading ? 'wait' : 'pointer',
+                opacity: gpsLoading ? 0.6 : 1,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {gpsLoading ? 'Getting GPS...' : 'Use My GPS'}
+            </button>
 
-                <div style={{ fontSize: 11, color: '#94A3B8', whiteSpace: 'nowrap' }}>
-                  {saving ? 'Saving...' : 'Tap map to place'}
-                </div>
-              </>
-            )}
+            <div style={{ fontSize: 11, color: '#94A3B8', whiteSpace: 'nowrap' }}>
+              {saving ? 'Saving...' : 'Tap map to place'}
+            </div>
           </div>
         )}
 
