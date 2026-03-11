@@ -669,6 +669,26 @@ export default function InfrastructureMapPage() {
     setRelayering(false)
   }, [installationId, relayering, selectedIds, relayerName])
 
+  // Delete all selected features
+  const [deletingSelected, setDeletingSelected] = useState(false)
+  const handleDeleteSelected = useCallback(async () => {
+    if (!installationId || deletingSelected || selectedIds.size === 0) return
+    if (!confirm(`Delete ${selectedIds.size} selected feature${selectedIds.size > 1 ? 's' : ''}? This cannot be undone.`)) return
+    setDeletingSelected(true)
+    const promises = Array.from(selectedIds).map(id => deleteInfrastructureFeature(id))
+    const results = await Promise.all(promises)
+    const deleted = results.filter(Boolean).length
+    if (deleted > 0) {
+      const updated = await fetchInfrastructureFeatures(installationId)
+      setDbFeatures(updated)
+      setSelectedIds(new Set())
+      toast.success(`Deleted ${deleted} feature${deleted > 1 ? 's' : ''}`)
+    } else {
+      toast.error('Failed to delete features')
+    }
+    setDeletingSelected(false)
+  }, [installationId, deletingSelected, selectedIds])
+
   // Initialize map
   useEffect(() => {
     if (!mapContainer.current || !mapboxReady || !token) return
@@ -1560,6 +1580,28 @@ export default function InfrastructureMapPage() {
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Delete selected */}
+            <div style={{ borderTop: '1px solid rgba(148,163,184,0.15)', paddingTop: 10, marginTop: 10 }}>
+              <button
+                onClick={handleDeleteSelected}
+                disabled={deletingSelected}
+                style={{
+                  width: '100%',
+                  padding: '7px 0',
+                  borderRadius: 6,
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  color: '#EF4444',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: deletingSelected ? 'wait' : 'pointer',
+                  opacity: deletingSelected ? 0.6 : 1,
+                }}
+              >
+                {deletingSelected ? 'Deleting...' : `Delete ${selectedIds.size} Selected`}
+              </button>
             </div>
 
             {shifting && (
