@@ -14,7 +14,6 @@ import {
   type InfrastructureFeatureType,
 } from '@/lib/supabase/infrastructure-features'
 import type { InfrastructureFeature } from '@/lib/supabase/types'
-import geojsonData from '@/lib/data/selfridge-lighting-signage.json'
 
 // ── Layer configuration ──
 
@@ -82,13 +81,11 @@ export default function InfrastructureMapPage() {
     fetchInfrastructureFeatures(installationId).then(setDbFeatures)
   }, [installationId])
 
-  // Merge static + DB features
-  const mergedGeoJson = useMemo<GeoJSON.FeatureCollection>(() => {
-    const staticFeatures = (geojsonData as GeoJSON.FeatureCollection).features.map(f => ({
-      ...f,
-      properties: { ...f.properties, source: 'static' },
-    }))
-    const dbGeoFeatures: GeoJSON.Feature[] = dbFeatures.map(f => ({
+  const [importing, setImporting] = useState(false)
+
+  // Build GeoJSON from DB features
+  const featureGeoJson = useMemo<GeoJSON.FeatureCollection>(() => {
+    const geoFeatures: GeoJSON.Feature[] = dbFeatures.map(f => ({
       type: 'Feature' as const,
       geometry: { type: 'Point' as const, coordinates: [f.longitude, f.latitude] },
       properties: {
@@ -97,21 +94,41 @@ export default function InfrastructureMapPage() {
         block: f.block,
         text: f.label,
         id: f.id,
-        source: 'db',
+        source: f.source,
         notes: f.notes,
       },
     }))
-    return { type: 'FeatureCollection', features: [...staticFeatures, ...dbGeoFeatures] }
+    return { type: 'FeatureCollection', features: geoFeatures }
   }, [dbFeatures])
+
+  // Import static GeoJSON into DB
+  const handleImport = useCallback(async () => {
+    if (!installationId) return
+    setImporting(true)
+    try {
+      const res = await fetch(`/api/infrastructure-import?baseId=${installationId}`, { method: 'POST' })
+      const result = await res.json()
+      if (res.ok) {
+        toast.success(`Imported ${result.inserted} features`)
+        const updated = await fetchInfrastructureFeatures(installationId)
+        setDbFeatures(updated)
+      } else {
+        toast.error(result.error || 'Import failed')
+      }
+    } catch {
+      toast.error('Import failed')
+    }
+    setImporting(false)
+  }, [installationId])
 
   // Feature counts from merged data
   const featureCounts: Record<string, number> = {}
   for (const layer of LAYERS) {
-    featureCounts[layer.key] = mergedGeoJson.features.filter(
+    featureCounts[layer.key] = featureGeoJson.features.filter(
       f => layer.types.includes(f.properties?.type)
     ).length
   }
-  const totalFeatures = mergedGeoJson.features.length
+  const totalFeatures = featureGeoJson.features.length
 
   const toggleLayer = useCallback((key: string) => {
     setVisibleLayers(prev => ({ ...prev, [key]: !prev[key] }))
@@ -295,7 +312,7 @@ export default function InfrastructureMapPage() {
     m.on('load', () => {
       m.addSource('infrastructure', {
         type: 'geojson',
-        data: mergedGeoJson,
+        data: featureGeoJson,
       })
 
       for (const layer of LAYERS) {
@@ -318,16 +335,8 @@ export default function InfrastructureMapPage() {
             ],
             'circle-color': layer.color,
             'circle-opacity': 0.85,
-            'circle-stroke-color': [
-              'case',
-              ['==', ['get', 'source'], 'db'], '#10B981',
-              '#000000',
-            ],
-            'circle-stroke-width': [
-              'case',
-              ['==', ['get', 'source'], 'db'], 2,
-              0.5,
-            ],
+            'circle-stroke-color': '#000000',
+            'circle-stroke-width': 0.5,
           },
         })
 
@@ -338,13 +347,12 @@ export default function InfrastructureMapPage() {
           const feat = e.features[0]
           const coords = (feat.geometry as GeoJSON.Point).coordinates.slice() as [number, number]
           const props = feat.properties || {}
-          const isDb = props.source === 'db'
           const isEditing = editModeRef.current
 
           let html = `<div style="font-family:system-ui;font-size:12px;color:#E2E8F0;">`
           html += `<div style="font-weight:700;font-size:13px;margin-bottom:4px;color:${layer.color}">${layer.label}</div>`
-          if (isDb) {
-            html += `<div style="font-size:10px;color:#10B981;margin-bottom:4px;">User-added feature</div>`
+          if (props.source === 'user') {
+            html += `<div style="font-size:10px;color:#10B981;margin-bottom:4px;">User-added</div>`
           }
           html += `<div style="color:#94A3B8;font-size:11px;">Lat: ${coords[1].toFixed(6)}</div>`
           html += `<div style="color:#94A3B8;font-size:11px;">Lon: ${coords[0].toFixed(6)}</div>`
@@ -357,7 +365,7 @@ export default function InfrastructureMapPage() {
           if (props.notes) {
             html += `<div style="margin-top:4px;color:#CBD5E1;">Notes: ${props.notes}</div>`
           }
-          if (isDb && isEditing) {
+          if (props.id && isEditing) {
             html += `<div style="display:flex;gap:6px;margin-top:8px;">`
             html += `<button onclick="window.__moveInfraFeature('${props.id}',${coords[0]},${coords[1]})" style="
               flex:1;padding:5px 0;border:none;border-radius:5px;
@@ -414,9 +422,9 @@ export default function InfrastructureMapPage() {
     if (!map.current || !mapLoaded) return
     const source = map.current.getSource('infrastructure') as mapboxgl.GeoJSONSource | undefined
     if (source) {
-      source.setData(mergedGeoJson)
+      source.setData(featureGeoJson)
     }
-  }, [mergedGeoJson, mapLoaded])
+  }, [featureGeoJson, mapLoaded])
 
   // Sync layer visibility
   useEffect(() => {
@@ -471,25 +479,45 @@ export default function InfrastructureMapPage() {
           <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Airfield Infrastructure</div>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
             {totalFeatures.toLocaleString()} features
-            {dbFeatures.length > 0 && ` (${dbFeatures.length} user-added)`}
           </div>
         </div>
         {isAdmin && (
-          <button
-            onClick={() => setEditMode(prev => !prev)}
-            style={{
-              padding: '8px 16px',
-              borderRadius: 8,
-              border: editMode ? '2px solid #10B981' : '1px solid var(--color-border)',
-              background: editMode ? 'rgba(16, 185, 129, 0.15)' : 'var(--color-bg-surface)',
-              color: editMode ? '#10B981' : 'var(--color-text-2)',
-              fontSize: 'var(--fs-sm)',
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            {editMode ? 'Exit Edit Mode' : 'Edit Mode'}
-          </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {dbFeatures.length === 0 && (
+              <button
+                onClick={handleImport}
+                disabled={importing}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 8,
+                  border: '1px solid rgba(249, 115, 22, 0.3)',
+                  background: 'rgba(249, 115, 22, 0.15)',
+                  color: '#F97316',
+                  fontSize: 'var(--fs-sm)',
+                  fontWeight: 700,
+                  cursor: importing ? 'wait' : 'pointer',
+                  opacity: importing ? 0.6 : 1,
+                }}
+              >
+                {importing ? 'Importing...' : 'Import Base Data'}
+              </button>
+            )}
+            <button
+              onClick={() => setEditMode(prev => !prev)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 8,
+                border: editMode ? '2px solid #10B981' : '1px solid var(--color-border)',
+                background: editMode ? 'rgba(16, 185, 129, 0.15)' : 'var(--color-bg-surface)',
+                color: editMode ? '#10B981' : 'var(--color-text-2)',
+                fontSize: 'var(--fs-sm)',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              {editMode ? 'Exit Edit Mode' : 'Edit Mode'}
+            </button>
+          </div>
         )}
       </div>
 
