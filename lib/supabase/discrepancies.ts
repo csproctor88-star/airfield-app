@@ -394,6 +394,39 @@ export async function fetchDiscrepancyPhotos(discrepancyId: string): Promise<Pho
   return data as PhotoRow[]
 }
 
+export async function deleteDiscrepancyPhoto(
+  photoId: string,
+  discrepancyId: string,
+  storagePath: string,
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+
+  // Delete from storage (ignore error — file may already be gone or stored as data URL)
+  if (storagePath && !storagePath.startsWith('data:')) {
+    await supabase.storage.from('photos').remove([storagePath])
+  }
+
+  // Delete the DB record
+  const { error } = await supabase.from('photos').delete().eq('id', photoId)
+  if (error) return { error: error.message }
+
+  // Decrement photo_count
+  const { data: disc } = await supabase
+    .from('discrepancies')
+    .select('photo_count')
+    .eq('id', discrepancyId)
+    .single()
+  if (disc && (disc.photo_count || 0) > 0) {
+    await supabase
+      .from('discrepancies')
+      .update({ photo_count: (disc.photo_count || 0) - 1 })
+      .eq('id', discrepancyId)
+  }
+
+  return { error: null }
+}
+
 export type StatusUpdateRow = {
   id: string
   discrepancy_id: string

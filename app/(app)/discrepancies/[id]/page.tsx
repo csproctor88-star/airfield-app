@@ -4,7 +4,7 @@ import { useRef, useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { StatusBadge, Badge } from '@/components/ui/badge'
 import { ActionButton } from '@/components/ui/button'
-import { fetchDiscrepancy, fetchDiscrepancyPhotos, uploadDiscrepancyPhoto, fetchStatusUpdates, deleteDiscrepancy, type DiscrepancyRow, type PhotoRow, type StatusUpdateRow } from '@/lib/supabase/discrepancies'
+import { fetchDiscrepancy, fetchDiscrepancyPhotos, uploadDiscrepancyPhoto, deleteDiscrepancyPhoto, fetchStatusUpdates, deleteDiscrepancy, type DiscrepancyRow, type PhotoRow, type StatusUpdateRow } from '@/lib/supabase/discrepancies'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
@@ -37,6 +37,7 @@ export default function DiscrepancyDetailPage() {
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [emailModalOpen, setEmailModalOpen] = useState(false)
   const [sendingEmail, setSendingEmail] = useState(false)
+  const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
   const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
@@ -93,6 +94,23 @@ export default function DiscrepancyDetailPage() {
 
     setUploading(false)
     e.target.value = ''
+  }
+
+  const handleDeletePhoto = async (photo: PhotoRow) => {
+    if (!liveData) return
+    if (!confirm('Delete this photo?')) return
+    setDeletingPhotoId(photo.id)
+    const { error } = await deleteDiscrepancyPhoto(photo.id, liveData.id, photo.storage_path)
+    if (error) {
+      toast.error('Failed to delete photo')
+    } else {
+      toast.success('Photo deleted')
+      const freshPhotos = await fetchDiscrepancyPhotos(liveData.id)
+      setDbPhotos(freshPhotos)
+      const freshDisc = await fetchDiscrepancy(liveData.id)
+      if (freshDisc) setLiveData(freshDisc)
+    }
+    setDeletingPhotoId(null)
   }
 
   const handleSaved = async (_updated: DiscrepancyRow) => {
@@ -275,7 +293,7 @@ export default function DiscrepancyDetailPage() {
         </div>
       )}
 
-      {/* Photo thumbnails — tap to view full screen */}
+      {/* Photo thumbnails — tap to view full screen, X to delete */}
       {allPhotos.length > 0 && (
         <div className="photo-grid" style={{ marginBottom: 8 }}>
           {allPhotos.map((p, i) => (
@@ -285,6 +303,35 @@ export default function DiscrepancyDetailPage() {
               onClick={() => setViewerIndex(i)}
             >
               <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              {dbPhotos[i] && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDeletePhoto(dbPhotos[i]) }}
+                  disabled={deletingPhotoId === dbPhotos[i].id}
+                  style={{
+                    position: 'absolute',
+                    top: 2,
+                    right: 2,
+                    width: 18,
+                    height: 18,
+                    borderRadius: '50%',
+                    background: 'rgba(239,68,68,0.85)',
+                    color: '#fff',
+                    border: 'none',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    lineHeight: '1',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0,
+                    opacity: deletingPhotoId === dbPhotos[i].id ? 0.5 : 1,
+                  }}
+                  title="Delete photo"
+                >
+                  ×
+                </button>
+              )}
             </div>
           ))}
         </div>
