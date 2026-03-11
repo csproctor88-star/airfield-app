@@ -3,10 +3,10 @@ import type { InfrastructureFeature } from './types'
 
 export type InfrastructureFeatureType =
   | 'runway_edge_light'
-  | 'airfield_light'
   | 'taxiway_light'
   | 'taxiway_end_light'
   | 'approach_light'
+  | 'runway_threshold'
   | 'location_sign'
   | 'directional_sign'
   | 'informational_sign'

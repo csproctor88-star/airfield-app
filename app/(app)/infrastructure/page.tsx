@@ -23,19 +23,19 @@ type LayerConfig = {
   color: string
   types: string[]
   renderType: 'circle' | 'symbol'
-  legendIcon?: 'circle' | 'rect' | 'triangle'
+  legendIcon?: 'circle' | 'rect' | 'rect-arrow' | 'split-circle' | 'triangle'
   legendBorder?: string
   legendInner?: string
 }
 
 const LAYERS: LayerConfig[] = [
   { key: 'runway_edge_lights',  label: 'Runway Edge Lights',  color: '#FFFFFF',  types: ['runway_edge_light'],   renderType: 'circle', legendIcon: 'circle' },
-  { key: 'airfield_lighting',   label: 'Airfield Lighting',   color: '#38BDF8',  types: ['airfield_light'],      renderType: 'circle', legendIcon: 'circle' },
   { key: 'taxiway_lights',      label: 'Taxiway Lights',      color: '#2563EB',  types: ['taxiway_light'],       renderType: 'circle', legendIcon: 'circle' },
   { key: 'taxiway_end_lights',  label: 'Taxiway End Lights',  color: '#F59E0B',  types: ['taxiway_end_light'],   renderType: 'circle', legendIcon: 'circle' },
-  { key: 'approach_lights',     label: 'Approach Lights',     color: '#FBBF24',  types: ['approach_light'],      renderType: 'circle', legendIcon: 'circle' },
+  { key: 'approach_lights',     label: 'Approach Lights',     color: '#FBBF24',  types: ['approach_light'],      renderType: 'symbol', legendIcon: 'split-circle', legendBorder: '#FFFFFF', legendInner: '#FBBF24' },
+  { key: 'runway_thresholds',   label: 'Runway Thresholds',   color: '#22C55E',  types: ['runway_threshold'],    renderType: 'symbol', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#22C55E' },
   { key: 'location_signs',      label: 'Location Signs',      color: '#FBBF24',  types: ['location_sign'],       renderType: 'symbol', legendIcon: 'rect', legendBorder: '#000000', legendInner: '#FBBF24' },
-  { key: 'directional_signs',   label: 'Directional Signs',   color: '#FBBF24',  types: ['directional_sign'],    renderType: 'symbol', legendIcon: 'rect', legendBorder: '#FBBF24', legendInner: '#000000' },
+  { key: 'directional_signs',   label: 'Directional Signs',   color: '#FBBF24',  types: ['directional_sign'],    renderType: 'symbol', legendIcon: 'rect-arrow', legendBorder: '#FBBF24', legendInner: '#000000' },
   { key: 'informational_signs', label: 'Informational Signs', color: '#FBBF24',  types: ['informational_sign'],  renderType: 'symbol', legendIcon: 'rect', legendBorder: '#FBBF24', legendInner: '#000000' },
   { key: 'mandatory_signs',     label: 'Mandatory Signs',     color: '#EF4444',  types: ['mandatory_sign'],      renderType: 'symbol', legendIcon: 'rect', legendBorder: '#EF4444', legendInner: '#FFFFFF' },
   { key: 'obstruction_lights',  label: 'Obstruction Lights',  color: '#EF4444',  types: ['obstruction_light'],   renderType: 'symbol', legendIcon: 'triangle' },
@@ -43,10 +43,10 @@ const LAYERS: LayerConfig[] = [
 
 const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[] = [
   { value: 'runway_edge_light', label: 'Runway Edge Light' },
-  { value: 'airfield_light', label: 'Airfield Light' },
   { value: 'taxiway_light', label: 'Taxiway Light' },
   { value: 'taxiway_end_light', label: 'Taxiway End Light' },
   { value: 'approach_light', label: 'Approach Light' },
+  { value: 'runway_threshold', label: 'Runway Threshold' },
   { value: 'location_sign', label: 'Location Sign' },
   { value: 'directional_sign', label: 'Directional Sign' },
   { value: 'informational_sign', label: 'Informational Sign' },
@@ -56,38 +56,71 @@ const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[
 
 // ── Generate map icons for signs and obstruction lights ──
 
-function createSignIcon(
-  outerColor: string,
-  innerColor: string,
-  size: number = 24,
-  arrow?: boolean
-): ImageData {
-  const canvas = document.createElement('canvas')
-  canvas.width = size
-  canvas.height = size
-  const ctx = canvas.getContext('2d')!
+function createCanvasIcon(size: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
+  const c = document.createElement('canvas')
+  c.width = size; c.height = size
+  return [c, c.getContext('2d')!]
+}
+
+function createSignIcon(outerColor: string, innerColor: string, size: number = 24): ImageData {
+  const [, ctx] = createCanvasIcon(size)
   ctx.fillStyle = outerColor
   ctx.fillRect(0, 2, size, size - 4)
   ctx.fillStyle = innerColor
   ctx.fillRect(4, 5, size - 8, size - 10)
-  if (arrow) {
-    ctx.fillStyle = outerColor === '#FBBF24' ? '#000000' : '#FFFFFF'
-    const cx = size / 2, cy = size / 2
-    ctx.beginPath()
-    ctx.moveTo(cx - 4, cy - 4)
-    ctx.lineTo(cx + 4, cy)
-    ctx.lineTo(cx - 4, cy + 4)
-    ctx.closePath()
-    ctx.fill()
-  }
+  return ctx.getImageData(0, 0, size, size)
+}
+
+function createDirectionalSignIcon(size: number = 24): ImageData {
+  const [, ctx] = createCanvasIcon(size)
+  // Yellow outer rectangle
+  ctx.fillStyle = '#FBBF24'
+  ctx.fillRect(0, 2, size, size - 4)
+  // Black inner rectangle
+  ctx.fillStyle = '#000000'
+  ctx.fillRect(3, 5, size - 6, size - 10)
+  // Yellow arrow inside pointing right
+  ctx.fillStyle = '#FBBF24'
+  const cx = size / 2, cy = size / 2
+  ctx.beginPath()
+  ctx.moveTo(cx - 5, cy - 4)
+  ctx.lineTo(cx + 1, cy - 4)
+  ctx.lineTo(cx + 1, cy - 6)
+  ctx.lineTo(cx + 6, cy)
+  ctx.lineTo(cx + 1, cy + 6)
+  ctx.lineTo(cx + 1, cy + 4)
+  ctx.lineTo(cx - 5, cy + 4)
+  ctx.closePath()
+  ctx.fill()
+  return ctx.getImageData(0, 0, size, size)
+}
+
+function createSplitCircleIcon(leftColor: string, rightColor: string, size: number = 24): ImageData {
+  const [, ctx] = createCanvasIcon(size)
+  const r = size / 2 - 2, cx = size / 2, cy = size / 2
+  // Left half
+  ctx.fillStyle = leftColor
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, Math.PI * 0.5, Math.PI * 1.5)
+  ctx.closePath()
+  ctx.fill()
+  // Right half
+  ctx.fillStyle = rightColor
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, Math.PI * 1.5, Math.PI * 0.5)
+  ctx.closePath()
+  ctx.fill()
+  // Outline
+  ctx.strokeStyle = '#FFFFFF'
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, Math.PI * 2)
+  ctx.stroke()
   return ctx.getImageData(0, 0, size, size)
 }
 
 function createTriangleIcon(color: string, size: number = 24): ImageData {
-  const canvas = document.createElement('canvas')
-  canvas.width = size
-  canvas.height = size
-  const ctx = canvas.getContext('2d')!
+  const [, ctx] = createCanvasIcon(size)
   ctx.fillStyle = color
   ctx.beginPath()
   ctx.moveTo(size / 2, 2)
@@ -102,15 +135,19 @@ function createTriangleIcon(color: string, size: number = 24): ImageData {
 }
 
 function addMapIcons(m: mapboxgl.Map) {
-  const s = 24
-  m.addImage('icon-location-sign', createSignIcon('#000000', '#FBBF24', s), { pixelRatio: 1 })
-  m.addImage('icon-directional-sign', createSignIcon('#FBBF24', '#000000', s, true), { pixelRatio: 1 })
-  m.addImage('icon-informational-sign', createSignIcon('#FBBF24', '#000000', s), { pixelRatio: 1 })
-  m.addImage('icon-mandatory-sign', createSignIcon('#EF4444', '#FFFFFF', s), { pixelRatio: 1 })
-  m.addImage('icon-obstruction-light', createTriangleIcon('#EF4444', s), { pixelRatio: 1 })
+  const s = 24, pr = { pixelRatio: 1 }
+  m.addImage('icon-location-sign', createSignIcon('#000000', '#FBBF24', s), pr)
+  m.addImage('icon-directional-sign', createDirectionalSignIcon(s), pr)
+  m.addImage('icon-informational-sign', createSignIcon('#FBBF24', '#000000', s), pr)
+  m.addImage('icon-mandatory-sign', createSignIcon('#EF4444', '#FFFFFF', s), pr)
+  m.addImage('icon-approach-light', createSplitCircleIcon('#FFFFFF', '#FBBF24', s), pr)
+  m.addImage('icon-runway-threshold', createSplitCircleIcon('#EF4444', '#22C55E', s), pr)
+  m.addImage('icon-obstruction-light', createTriangleIcon('#EF4444', s), pr)
 }
 
 const ICON_MAP: Record<string, string> = {
+  approach_light: 'icon-approach-light',
+  runway_threshold: 'icon-runway-threshold',
   location_sign: 'icon-location-sign',
   directional_sign: 'icon-directional-sign',
   informational_sign: 'icon-informational-sign',
@@ -816,13 +853,41 @@ export default function InfrastructureMapPage() {
                   <svg width="12" height="12" viewBox="0 0 12 12" style={{ flexShrink: 0 }}>
                     <polygon points="6,1 11,11 1,11" fill={layer.color} stroke="#FFF" strokeWidth="0.5" />
                   </svg>
+                ) : layer.legendIcon === 'split-circle' ? (
+                  <svg width="12" height="12" viewBox="0 0 12 12" style={{ flexShrink: 0 }}>
+                    <path d="M6,1 A5,5 0 0,0 6,11 Z" fill={layer.legendBorder || '#FFF'} />
+                    <path d="M6,1 A5,5 0 0,1 6,11 Z" fill={layer.legendInner || '#FFF'} />
+                    <circle cx="6" cy="6" r="5" fill="none" stroke="#FFF" strokeWidth="0.5" />
+                  </svg>
+                ) : layer.legendIcon === 'rect-arrow' ? (
+                  <span style={{
+                    width: 14,
+                    height: 10,
+                    borderRadius: 1,
+                    background: layer.legendBorder || '#FBBF24',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                  }}>
+                    <span style={{
+                      width: 8,
+                      height: 5,
+                      background: layer.legendInner || '#000',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <span style={{ color: layer.legendBorder || '#FBBF24', fontSize: 7, lineHeight: 1, fontWeight: 900 }}>▶</span>
+                    </span>
+                  </span>
                 ) : layer.legendIcon === 'rect' ? (
                   <span style={{
                     width: 14,
                     height: 10,
                     borderRadius: 1,
                     background: layer.legendBorder || layer.color,
-                    border: 'none',
                     flexShrink: 0,
                     display: 'flex',
                     alignItems: 'center',
@@ -832,7 +897,6 @@ export default function InfrastructureMapPage() {
                       width: 8,
                       height: 5,
                       background: layer.legendInner || '#000',
-                      borderRadius: 0,
                     }} />
                   </span>
                 ) : (

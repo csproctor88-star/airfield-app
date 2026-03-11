@@ -12,7 +12,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -26,7 +26,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -40,7 +40,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -54,7 +54,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -68,7 +68,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -82,7 +82,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -96,7 +96,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -110,7 +110,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -124,7 +124,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -138,7 +138,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -152,7 +152,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -166,7 +166,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -180,7 +180,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -194,7 +194,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -208,7 +208,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -222,7 +222,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -236,7 +236,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -250,7 +250,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -264,7 +264,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -278,7 +278,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -292,7 +292,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -306,7 +306,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -320,7 +320,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -334,7 +334,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -348,7 +348,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -362,7 +362,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -376,7 +376,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -390,7 +390,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -404,7 +404,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -418,7 +418,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -432,7 +432,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -446,7 +446,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -460,7 +460,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -474,7 +474,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -488,7 +488,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -502,7 +502,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -516,7 +516,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -530,7 +530,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -544,7 +544,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -558,7 +558,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -572,7 +572,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -586,7 +586,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -600,7 +600,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -614,7 +614,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -628,7 +628,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -642,7 +642,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -656,7 +656,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -670,7 +670,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -684,7 +684,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -698,7 +698,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -712,7 +712,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -726,7 +726,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -740,7 +740,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -754,7 +754,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -768,7 +768,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -782,7 +782,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -796,7 +796,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -810,7 +810,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -824,7 +824,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -838,7 +838,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -852,7 +852,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -866,7 +866,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -880,7 +880,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -894,7 +894,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -908,7 +908,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -922,7 +922,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -936,7 +936,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -950,7 +950,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -964,7 +964,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -978,7 +978,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -992,7 +992,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1006,7 +1006,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1020,7 +1020,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1034,7 +1034,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1048,7 +1048,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1062,7 +1062,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1076,7 +1076,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1090,7 +1090,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1104,7 +1104,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1118,7 +1118,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1132,7 +1132,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1146,7 +1146,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1160,7 +1160,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1174,7 +1174,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1188,7 +1188,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1202,7 +1202,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1216,7 +1216,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1230,7 +1230,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1244,7 +1244,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1258,7 +1258,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1272,7 +1272,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1286,7 +1286,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1300,7 +1300,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1314,7 +1314,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1328,7 +1328,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1342,7 +1342,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1356,7 +1356,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1370,7 +1370,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1384,7 +1384,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1398,7 +1398,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1412,7 +1412,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1426,7 +1426,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1440,7 +1440,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1454,7 +1454,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1468,7 +1468,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1482,7 +1482,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1496,7 +1496,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1510,7 +1510,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1524,7 +1524,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1538,7 +1538,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1552,7 +1552,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1566,7 +1566,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1580,7 +1580,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1594,7 +1594,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1608,7 +1608,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1622,7 +1622,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1636,7 +1636,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1650,7 +1650,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1664,7 +1664,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1678,7 +1678,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1692,7 +1692,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1706,7 +1706,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1720,7 +1720,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1734,7 +1734,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1748,7 +1748,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1762,7 +1762,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1776,7 +1776,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1790,7 +1790,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1804,7 +1804,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1818,7 +1818,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1832,7 +1832,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1846,7 +1846,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1860,7 +1860,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1874,7 +1874,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1888,7 +1888,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1902,7 +1902,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1916,7 +1916,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1930,7 +1930,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1944,7 +1944,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1958,7 +1958,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1972,7 +1972,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -1986,7 +1986,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -2000,7 +2000,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -2014,7 +2014,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -2028,7 +2028,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -2042,7 +2042,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -2056,7 +2056,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -2070,7 +2070,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -2084,7 +2084,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -2098,7 +2098,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -2112,7 +2112,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -2126,7 +2126,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -2140,7 +2140,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -2154,7 +2154,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -2168,7 +2168,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
@@ -2182,7 +2182,7 @@
       },
       "properties": {
         "layer": "C-AFLD-LTGN",
-        "type": "airfield_light"
+        "type": "taxiway_light"
       }
     },
     {
