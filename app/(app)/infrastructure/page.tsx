@@ -713,19 +713,16 @@ export default function InfrastructureMapPage() {
         placeFeatureRef.current?.(e.lngLat.lng, e.lngLat.lat)
       })
 
-      // Box select: mousedown starts the rectangle
-      m.on('mousedown', (e) => {
+      // Box select: shared helpers for mouse + touch
+      function boxStart(clientX: number, clientY: number) {
         if (!boxSelectRef.current) return
-        e.preventDefault()
         m.dragPan.disable()
+        m.touchZoomRotate.disable()
 
         const canvas = m.getCanvasContainer()
         const rect = canvas.getBoundingClientRect()
-        const startX = e.originalEvent.clientX - rect.left
-        const startY = e.originalEvent.clientY - rect.top
-        boxStartRef.current = { x: startX, y: startY }
+        boxStartRef.current = { x: clientX - rect.left, y: clientY - rect.top }
 
-        // Create selection rectangle element
         const box = document.createElement('div')
         box.style.position = 'absolute'
         box.style.border = '2px dashed #A855F7'
@@ -734,38 +731,31 @@ export default function InfrastructureMapPage() {
         box.style.zIndex = '20'
         canvas.appendChild(box)
         boxElRef.current = box
-      })
+      }
 
-      m.on('mousemove', (e) => {
+      function boxMove(clientX: number, clientY: number) {
         if (!boxStartRef.current || !boxElRef.current) return
         const canvas = m.getCanvasContainer()
         const rect = canvas.getBoundingClientRect()
-        const curX = e.originalEvent.clientX - rect.left
-        const curY = e.originalEvent.clientY - rect.top
+        const curX = clientX - rect.left
+        const curY = clientY - rect.top
 
-        const left = Math.min(boxStartRef.current.x, curX)
-        const top = Math.min(boxStartRef.current.y, curY)
-        const width = Math.abs(curX - boxStartRef.current.x)
-        const height = Math.abs(curY - boxStartRef.current.y)
+        boxElRef.current.style.left = Math.min(boxStartRef.current.x, curX) + 'px'
+        boxElRef.current.style.top = Math.min(boxStartRef.current.y, curY) + 'px'
+        boxElRef.current.style.width = Math.abs(curX - boxStartRef.current.x) + 'px'
+        boxElRef.current.style.height = Math.abs(curY - boxStartRef.current.y) + 'px'
+      }
 
-        boxElRef.current.style.left = left + 'px'
-        boxElRef.current.style.top = top + 'px'
-        boxElRef.current.style.width = width + 'px'
-        boxElRef.current.style.height = height + 'px'
-      })
-
-      m.on('mouseup', (e) => {
+      function boxEnd(clientX: number, clientY: number) {
         if (!boxStartRef.current || !boxElRef.current) return
         const canvas = m.getCanvasContainer()
         const rect = canvas.getBoundingClientRect()
-        const endX = e.originalEvent.clientX - rect.left
-        const endY = e.originalEvent.clientY - rect.top
+        const endX = clientX - rect.left
+        const endY = clientY - rect.top
 
-        // Clean up the visual rectangle
         boxElRef.current.remove()
         boxElRef.current = null
 
-        // Calculate bounds
         const minX = Math.min(boxStartRef.current.x, endX)
         const maxX = Math.max(boxStartRef.current.x, endX)
         const minY = Math.min(boxStartRef.current.y, endY)
@@ -773,11 +763,10 @@ export default function InfrastructureMapPage() {
         boxStartRef.current = null
 
         m.dragPan.enable()
+        m.touchZoomRotate.enable()
 
-        // Require minimum drag distance (10px) to avoid accidental clicks
         if (maxX - minX < 10 || maxY - minY < 10) return
 
-        // Query all features in the rectangle
         const layerIds = LAYERS.map(l => l.key)
         const features = m.queryRenderedFeatures(
           [[minX, minY], [maxX, maxY]] as [mapboxgl.PointLike, mapboxgl.PointLike],
@@ -792,6 +781,42 @@ export default function InfrastructureMapPage() {
         if (ids.size > 0) {
           setSelectedIds(ids)
         }
+      }
+
+      // Mouse events
+      m.on('mousedown', (e) => {
+        if (!boxSelectRef.current) return
+        e.preventDefault()
+        boxStart(e.originalEvent.clientX, e.originalEvent.clientY)
+      })
+
+      m.on('mousemove', (e) => {
+        boxMove(e.originalEvent.clientX, e.originalEvent.clientY)
+      })
+
+      m.on('mouseup', (e) => {
+        boxEnd(e.originalEvent.clientX, e.originalEvent.clientY)
+      })
+
+      // Touch events (on the canvas container directly)
+      const canvasEl = m.getCanvasContainer()
+
+      canvasEl.addEventListener('touchstart', (e) => {
+        if (!boxSelectRef.current || e.touches.length !== 1) return
+        e.preventDefault()
+        boxStart(e.touches[0].clientX, e.touches[0].clientY)
+      }, { passive: false })
+
+      canvasEl.addEventListener('touchmove', (e) => {
+        if (!boxStartRef.current) return
+        e.preventDefault()
+        boxMove(e.touches[0].clientX, e.touches[0].clientY)
+      }, { passive: false })
+
+      canvasEl.addEventListener('touchend', (e) => {
+        if (!boxStartRef.current) return
+        const touch = e.changedTouches[0]
+        boxEnd(touch.clientX, touch.clientY)
       })
 
       setMapLoaded(true)
