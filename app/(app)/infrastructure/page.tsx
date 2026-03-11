@@ -385,7 +385,48 @@ export default function InfrastructureMapPage() {
     if (result) {
       const updated = await fetchInfrastructureFeatures(installationId)
       setDbFeatures(updated)
-      toast.success('Feature placed')
+
+      // Show popup at placed location with type selector
+      if (map.current) {
+        const optionsHtml = FEATURE_TYPE_OPTIONS.map(opt =>
+          `<option value="${opt.value}" ${opt.value === placementTypeRef.current ? 'selected' : ''}>${opt.label}</option>`
+        ).join('')
+
+        const popup = new mapboxgl.Popup({
+          offset: 12,
+          closeButton: true,
+          closeOnClick: true,
+          className: 'infrastructure-map-popup',
+          maxWidth: '220px',
+        })
+          .setLngLat([lng, lat])
+          .setHTML(`
+            <div style="font-family:system-ui;font-size:12px;color:#E2E8F0;">
+              <div style="font-weight:700;font-size:13px;margin-bottom:6px;color:#10B981;">Feature Placed</div>
+              <select id="__placed-type" style="
+                width:100%;background:rgba(30,41,59,0.9);border:1px solid rgba(148,163,184,0.2);
+                border-radius:6px;padding:5px 8px;color:#E2E8F0;font-size:12px;cursor:pointer;
+              ">${optionsHtml}</select>
+            </div>
+          `)
+          .addTo(map.current)
+
+        setTimeout(() => {
+          const sel = document.getElementById('__placed-type') as HTMLSelectElement | null
+          sel?.addEventListener('change', async () => {
+            const newType = sel.value as InfrastructureFeatureType
+            const ok = await updateInfrastructureFeature(result.id, { feature_type: newType })
+            if (ok) {
+              const refreshed = await fetchInfrastructureFeatures(installationId)
+              setDbFeatures(refreshed)
+              setPlacementType(newType)
+              placementTypeRef.current = newType
+              toast.success(`Changed to ${FEATURE_TYPE_OPTIONS.find(o => o.value === newType)?.label}`)
+            }
+            popup.remove()
+          })
+        }, 0)
+      }
     } else {
       toast.error('Failed to place feature')
     }
