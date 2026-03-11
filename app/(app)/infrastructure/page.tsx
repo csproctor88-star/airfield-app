@@ -9,6 +9,7 @@ import { isMapboxConfigured } from '@/lib/utils'
 import {
   fetchInfrastructureFeatures,
   createInfrastructureFeature,
+  updateInfrastructureFeature,
   deleteInfrastructureFeature,
   type InfrastructureFeatureType,
 } from '@/lib/supabase/infrastructure-features'
@@ -59,6 +60,9 @@ export default function InfrastructureMapPage() {
   const [placementType, setPlacementType] = useState<InfrastructureFeatureType>('taxi_edge_light')
   const [saving, setSaving] = useState(false)
   const [gpsLoading, setGpsLoading] = useState(false)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const draggingRef = useRef<{ id: string; startLngLat: [number, number] } | null>(null)
+  const dragMarkerRef = useRef<mapboxgl.Marker | null>(null)
   const editModeRef = useRef(false)
   const placementTypeRef = useRef<InfrastructureFeatureType>('taxi_edge_light')
 
@@ -127,11 +131,86 @@ export default function InfrastructureMapPage() {
     }
   }
 
+  // Move handler (exposed on window for popup buttons)
+  const moveHandlerRef = useRef<((id: string, lng: number, lat: number) => void) | undefined>(undefined)
+  moveHandlerRef.current = (id: string, lng: number, lat: number) => {
+    if (!map.current || !editModeRef.current) return
+    // Close any open popups
+    const popups = document.querySelectorAll('.mapboxgl-popup')
+    popups.forEach(p => p.remove())
+
+    // Create a draggable marker at the feature's current position
+    const el = document.createElement('div')
+    el.style.width = '20px'
+    el.style.height = '20px'
+    el.style.borderRadius = '50%'
+    el.style.background = '#10B981'
+    el.style.border = '3px solid #FFFFFF'
+    el.style.boxShadow = '0 0 12px rgba(16,185,129,0.6)'
+    el.style.cursor = 'grab'
+
+    const marker = new mapboxgl.Marker({ element: el, draggable: true })
+      .setLngLat([lng, lat])
+      .addTo(map.current)
+
+    dragMarkerRef.current = marker
+    setDraggingId(id)
+    draggingRef.current = { id, startLngLat: [lng, lat] }
+
+    // Disable map drag while moving a feature
+    map.current.dragPan.disable()
+    map.current.touchZoomRotate.disable()
+
+    toast('Drag the marker to reposition, then tap Save', { duration: 5000 })
+  }
+
+  // Save drag position
+  const saveDragRef = useRef<(() => Promise<void>) | undefined>(undefined)
+  saveDragRef.current = async () => {
+    if (!draggingRef.current || !dragMarkerRef.current || !installationId) return
+    const { id } = draggingRef.current
+    const lngLat = dragMarkerRef.current.getLngLat()
+
+    setSaving(true)
+    const ok = await updateInfrastructureFeature(id, {
+      longitude: lngLat.lng,
+      latitude: lngLat.lat,
+    })
+    if (ok) {
+      const updated = await fetchInfrastructureFeatures(installationId)
+      setDbFeatures(updated)
+      toast.success('Feature moved')
+    } else {
+      toast.error('Failed to move feature')
+    }
+    setSaving(false)
+    cancelDrag()
+  }
+
+  const cancelDrag = useCallback(() => {
+    if (dragMarkerRef.current) {
+      dragMarkerRef.current.remove()
+      dragMarkerRef.current = null
+    }
+    draggingRef.current = null
+    setDraggingId(null)
+    if (map.current) {
+      map.current.dragPan.enable()
+      map.current.touchZoomRotate.enable()
+    }
+  }, [])
+
   useEffect(() => {
     (window as any).__deleteInfraFeature = (id: string) => {
       deleteHandlerRef.current?.(id)
     }
-    return () => { delete (window as any).__deleteInfraFeature }
+    ;(window as any).__moveInfraFeature = (id: string, lng: number, lat: number) => {
+      moveHandlerRef.current?.(id, lng, lat)
+    }
+    return () => {
+      delete (window as any).__deleteInfraFeature
+      delete (window as any).__moveInfraFeature
+    }
   }, [])
 
   // Place feature handler
@@ -207,7 +286,11 @@ export default function InfrastructureMapPage() {
       attributionControl: false,
     })
 
-    m.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-right')
+    m.addControl(new mapboxgl.NavigationControl({ showCompass: true, visualizePitch: true }), 'top-right')
+
+    // Enable touch rotation and pitch
+    m.touchZoomRotate.enableRotation()
+    m.touchPitch.enable()
 
     m.on('load', () => {
       m.addSource('infrastructure', {
@@ -275,10 +358,16 @@ export default function InfrastructureMapPage() {
             html += `<div style="margin-top:4px;color:#CBD5E1;">Notes: ${props.notes}</div>`
           }
           if (isDb && isEditing) {
+            html += `<div style="display:flex;gap:6px;margin-top:8px;">`
+            html += `<button onclick="window.__moveInfraFeature('${props.id}',${coords[0]},${coords[1]})" style="
+              flex:1;padding:5px 0;border:none;border-radius:5px;
+              background:#3B82F6;color:white;font-size:12px;font-weight:600;cursor:pointer;
+            ">Move</button>`
             html += `<button onclick="window.__deleteInfraFeature('${props.id}')" style="
-              margin-top:8px;width:100%;padding:5px 0;border:none;border-radius:5px;
+              flex:1;padding:5px 0;border:none;border-radius:5px;
               background:#EF4444;color:white;font-size:12px;font-weight:600;cursor:pointer;
-            ">Delete Feature</button>`
+            ">Delete</button>`
+            html += `</div>`
           }
           html += `</div>`
 
@@ -298,10 +387,9 @@ export default function InfrastructureMapPage() {
         m.on('mouseleave', layer.key, () => { m.getCanvas().style.cursor = '' })
       }
 
-      // Click on empty map area — place feature in edit mode
+      // Click on empty map area — place feature in edit mode (skip if dragging)
       m.on('click', (e) => {
-        if (!editModeRef.current) return
-        // Check if we clicked on an existing feature (those handlers call stopPropagation)
+        if (!editModeRef.current || draggingRef.current) return
         const layerIds = LAYERS.map(l => l.key)
         const clicked = m.queryRenderedFeatures(e.point, { layers: layerIds })
         if (clicked.length > 0) return
@@ -434,7 +522,7 @@ export default function InfrastructureMapPage() {
             transform: 'translateX(-50%)',
             zIndex: 10,
             background: 'rgba(15, 23, 42, 0.94)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
+            border: `1px solid ${draggingId ? 'rgba(59, 130, 246, 0.4)' : 'rgba(16, 185, 129, 0.3)'}`,
             borderRadius: 12,
             padding: '10px 14px',
             backdropFilter: 'blur(8px)',
@@ -445,50 +533,95 @@ export default function InfrastructureMapPage() {
             justifyContent: 'center',
             maxWidth: 'calc(100% - 28px)',
           }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#10B981', whiteSpace: 'nowrap' }}>
-              EDIT MODE
-            </div>
+            {draggingId ? (
+              <>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#3B82F6', whiteSpace: 'nowrap' }}>
+                  MOVING FEATURE
+                </div>
+                <div style={{ fontSize: 11, color: '#94A3B8', whiteSpace: 'nowrap' }}>
+                  Drag the green marker to reposition
+                </div>
+                <button
+                  onClick={() => saveDragRef.current?.()}
+                  disabled={saving}
+                  style={{
+                    padding: '5px 14px',
+                    borderRadius: 6,
+                    border: 'none',
+                    background: '#10B981',
+                    color: 'white',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: saving ? 'wait' : 'pointer',
+                    opacity: saving ? 0.6 : 1,
+                  }}
+                >
+                  {saving ? 'Saving...' : 'Save Position'}
+                </button>
+                <button
+                  onClick={cancelDrag}
+                  style={{
+                    padding: '5px 14px',
+                    borderRadius: 6,
+                    border: '1px solid rgba(148, 163, 184, 0.3)',
+                    background: 'transparent',
+                    color: '#94A3B8',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#10B981', whiteSpace: 'nowrap' }}>
+                  EDIT MODE
+                </div>
 
-            <select
-              value={placementType}
-              onChange={e => setPlacementType(e.target.value as InfrastructureFeatureType)}
-              style={{
-                background: 'rgba(30, 41, 59, 0.9)',
-                border: '1px solid rgba(148, 163, 184, 0.2)',
-                borderRadius: 6,
-                padding: '5px 8px',
-                color: '#E2E8F0',
-                fontSize: 12,
-                cursor: 'pointer',
-              }}
-            >
-              {FEATURE_TYPE_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+                <select
+                  value={placementType}
+                  onChange={e => setPlacementType(e.target.value as InfrastructureFeatureType)}
+                  style={{
+                    background: 'rgba(30, 41, 59, 0.9)',
+                    border: '1px solid rgba(148, 163, 184, 0.2)',
+                    borderRadius: 6,
+                    padding: '5px 8px',
+                    color: '#E2E8F0',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {FEATURE_TYPE_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
 
-            <button
-              onClick={handleGpsCapture}
-              disabled={gpsLoading || saving}
-              style={{
-                padding: '5px 12px',
-                borderRadius: 6,
-                border: '1px solid rgba(56, 189, 248, 0.3)',
-                background: 'rgba(56, 189, 248, 0.15)',
-                color: '#38BDF8',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: gpsLoading ? 'wait' : 'pointer',
-                opacity: gpsLoading ? 0.6 : 1,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {gpsLoading ? 'Getting GPS...' : 'Use My GPS'}
-            </button>
+                <button
+                  onClick={handleGpsCapture}
+                  disabled={gpsLoading || saving}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: 6,
+                    border: '1px solid rgba(56, 189, 248, 0.3)',
+                    background: 'rgba(56, 189, 248, 0.15)',
+                    color: '#38BDF8',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: gpsLoading ? 'wait' : 'pointer',
+                    opacity: gpsLoading ? 0.6 : 1,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {gpsLoading ? 'Getting GPS...' : 'Use My GPS'}
+                </button>
 
-            <div style={{ fontSize: 11, color: '#94A3B8', whiteSpace: 'nowrap' }}>
-              {saving ? 'Saving...' : 'Tap map to place'}
-            </div>
+                <div style={{ fontSize: 11, color: '#94A3B8', whiteSpace: 'nowrap' }}>
+                  {saving ? 'Saving...' : 'Tap map to place'}
+                </div>
+              </>
+            )}
           </div>
         )}
 
