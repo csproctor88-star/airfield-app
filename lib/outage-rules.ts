@@ -98,6 +98,7 @@ export const SYSTEM_TYPE_LABELS: Record<string, string> = {
   hazard_rotating: 'Rotating Hazard Beacon',
   windcone: 'Wind Cone',
   signage: 'Airfield Signage',
+  stadium_light: 'Stadium Lights',
   eals: 'EALS',
 }
 
