@@ -299,6 +299,11 @@ export default function InfrastructureMapPage() {
     if (upper.includes('TWY')) return 'TAXIWAY LIGHTS'
     return 'OTHER'
   }
+  // Location tracking
+  const [trackingLocation, setTrackingLocation] = useState(false)
+  const locationMarkerRef = useRef<mapboxgl.Marker | null>(null)
+  const watchIdRef = useRef<number | null>(null)
+
   const [visibleLayers, setVisibleLayers] = useState<Record<string, boolean>>(
     () => Object.fromEntries(LAYERS.map(l => [l.key, true]))
   )
@@ -806,6 +811,68 @@ export default function InfrastructureMapPage() {
     )
   }, [])
 
+  // Location tracking — live GPS marker
+  const toggleLocationTracking = useCallback(() => {
+    if (trackingLocation) {
+      // Stop tracking
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current)
+        watchIdRef.current = null
+      }
+      locationMarkerRef.current?.remove()
+      locationMarkerRef.current = null
+      setTrackingLocation(false)
+      return
+    }
+
+    if (!navigator.geolocation) {
+      toast.error('Geolocation not available')
+      return
+    }
+
+    setTrackingLocation(true)
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords
+        const lngLat: [number, number] = [longitude, latitude]
+
+        if (!locationMarkerRef.current && map.current) {
+          // Create a pulsing blue dot marker
+          const el = document.createElement('div')
+          el.style.cssText = `
+            width: 18px; height: 18px; border-radius: 50%;
+            background: #3B82F6; border: 3px solid #FFFFFF;
+            box-shadow: 0 0 8px rgba(59,130,246,0.6), 0 0 20px rgba(59,130,246,0.3);
+          `
+          locationMarkerRef.current = new mapboxgl.Marker({ element: el })
+            .setLngLat(lngLat)
+            .addTo(map.current)
+
+          // Fly to first position
+          map.current.flyTo({ center: lngLat, zoom: 17, duration: 1500 })
+        } else {
+          locationMarkerRef.current?.setLngLat(lngLat)
+        }
+      },
+      (err) => {
+        toast.error(`GPS error: ${err.message}`)
+        setTrackingLocation(false)
+      },
+      { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
+    )
+  }, [trackingLocation])
+
+  // Clean up watch on unmount
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current)
+      }
+      locationMarkerRef.current?.remove()
+    }
+  }, [])
+
   // Bar placement handler — creates a bar of lights at clicked location
   const placeBarRef = useRef<((lng: number, lat: number) => Promise<void>) | undefined>(undefined)
   placeBarRef.current = async (lng: number, lat: number) => {
@@ -983,10 +1050,10 @@ export default function InfrastructureMapPage() {
                 : iconName,
               'icon-size': [
                 'interpolate', ['linear'], ['zoom'],
-                12, 0.5,
-                14, 0.75,
-                16, 1,
-                18, 1.3,
+                12, 0.2,
+                14, 0.4,
+                16, 0.7,
+                18, 1,
               ],
               'icon-allow-overlap': true,
               'icon-rotate': ['get', 'rotation'],
@@ -1972,6 +2039,23 @@ export default function InfrastructureMapPage() {
           >
             {isFullscreen ? '⊗' : '⛶'}
           </button>
+          <button
+            onClick={toggleLocationTracking}
+            style={{
+              background: trackingLocation ? 'rgba(59, 130, 246, 0.3)' : 'rgba(15, 23, 42, 0.9)',
+              border: trackingLocation ? '1px solid rgba(59, 130, 246, 0.5)' : '1px solid rgba(148, 163, 184, 0.2)',
+              borderRadius: 8,
+              padding: '6px 10px',
+              color: trackingLocation ? '#3B82F6' : '#E2E8F0',
+              fontSize: 14,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+            title={trackingLocation ? 'Stop tracking' : 'Find my location'}
+          >
+            ◎
+          </button>
         </div>
 
         {/* Legend panel */}
@@ -2216,11 +2300,39 @@ export default function InfrastructureMapPage() {
               marginTop: 8,
               paddingTop: 6,
               display: 'flex',
+              alignItems: 'center',
               justifyContent: 'space-between',
               fontSize: 11,
               color: '#94A3B8',
             }}>
-              <span>Total</span>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  onClick={() => {
+                    setVisibleLayers(Object.fromEntries(LAYERS.map(l => [l.key, true])))
+                    setVisibleSourceLayers({})
+                  }}
+                  style={{
+                    background: 'none', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 4,
+                    color: '#94A3B8', fontSize: 10, padding: '2px 6px', cursor: 'pointer',
+                  }}
+                >
+                  Show All
+                </button>
+                <button
+                  onClick={() => {
+                    setVisibleLayers(Object.fromEntries(LAYERS.map(l => [l.key, false])))
+                    const allOff: Record<string, boolean> = {}
+                    uniqueLayers.forEach(([n]) => { allOff[n] = false })
+                    setVisibleSourceLayers(allOff)
+                  }}
+                  style={{
+                    background: 'none', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 4,
+                    color: '#94A3B8', fontSize: 10, padding: '2px 6px', cursor: 'pointer',
+                  }}
+                >
+                  Hide All
+                </button>
+              </div>
               <span style={{ fontWeight: 700 }}>{totalFeatures.toLocaleString()}</span>
             </div>
           </div>
