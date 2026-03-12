@@ -207,6 +207,12 @@ html, body {
     margin-bottom: 8px;
   }
 
+  /* Force dark select/option on dark theme */
+  select, select option {
+    background-color: var(--color-bg-surface-solid);
+    color: var(--color-text-1);
+  }
+
   /* Dark input */
   .input-dark {
     background: var(--color-bg-inset);
