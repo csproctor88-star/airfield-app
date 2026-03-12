@@ -330,7 +330,8 @@ export default function InfrastructureMapPage() {
       const key = f.layer || 'Unknown'
       layers.set(key, (layers.get(key) || 0) + 1)
     }
-    return Array.from(layers.entries()).sort((a, b) => b[1] - a[1])
+    // Sort alphabetically so related locations group together (TWY B, TWY K, etc.)
+    return Array.from(layers.entries()).sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }))
   }, [dbFeatures])
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
@@ -1940,7 +1941,7 @@ export default function InfrastructureMapPage() {
             backdropFilter: 'blur(8px)',
           }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Layers
+              Type
             </div>
             {LAYERS.map(layer => (
               <label
@@ -2041,7 +2042,7 @@ export default function InfrastructureMapPage() {
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                 }}>
-                  Source Layers
+                  Locations
                 </div>
                 <div style={{ maxHeight: 180, overflowY: 'auto' }}>
                   {uniqueLayers.map(([layerName, count]) => {
