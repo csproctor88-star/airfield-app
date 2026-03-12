@@ -8,8 +8,80 @@ All notable changes to Glidepath.
 - METAR weather API integration (aviationweather.gov)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~63 `as any` casts
-- Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 10 PDF generators
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~58 `as any` casts
+- Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 11 PDF generators
+
+---
+
+## [2.18.0] — 2026-03-12
+
+### Features — Infrastructure Map Module
+Full interactive airfield infrastructure mapping system built on Mapbox GL JS. Enables airfield managers to digitize, manage, and visualize all lighting, signage, and miscellaneous airfield features on a satellite map.
+
+#### Core Map Capabilities
+- **Click-to-place features** — Select a feature type from dropdown, click map to place a pin at that location
+- **Drag-to-move** — Reposition features by dragging markers in edit mode
+- **Map rotation** — Touch and mouse support for rotating the map view
+- **Fullscreen mode** — Toggle fullscreen with dedicated button
+- **GPS location tracking** — Live blue dot showing user's current position (for drive-around inspections)
+- **Box select** — Shift+drag to select multiple features for bulk operations (touch support on mobile)
+
+#### Feature Types (21 types)
+- **Signs** (5): Location, Directional, Informational, Mandatory, Runway Distance Marker
+- **Taxiway Lights** (2): Taxiway Edge, Taxiway End
+- **Runway Lights** (9): Runway Edge, PAPI, Threshold, Pre-Threshold, Terminating Bar, Centerline Bar, 1000ft Bar, Sequenced Flasher, REIL
+- **Miscellaneous** (3): Obstruction Light, Windcone, Stadium Light
+- **Legacy** (2): Approach Light, Runway Threshold (retained for existing data)
+
+#### Custom Map Icons
+- **Labeled sign graphics** — Canvas-rendered airfield signs with correct colors (black/yellow location signs, yellow/black directional signs with arrow, red/white mandatory signs, white/black distance markers)
+- **Split-circle icons** — Approach lights, thresholds, PAPIs, threshold lights
+- **Triangle icon** — Obstruction lights (red)
+- **Square icon** — REIL (pink)
+- **Windcone icon** — Sideways cone with orange/white stripes
+- **Stadium light icon** — 4-dot cluster
+- **Per-feature rotation** — `icon-rotate` with `icon-rotation-alignment: 'map'` for orienting signs/lights to match real-world bearings
+
+#### Bar Placement Mode
+- **6 bar types** — Threshold Bar, Terminating Bar, Pre-Threshold Bar, 1000ft Bar, Centerline Bar, Sequenced Flasher
+- **Rotation input** — Set bar orientation before placing
+- **Bulk creation** — Single click places 3–11 lights in a line at correct spacing via `offsetPoint()` geodesic calculations
+
+#### Legend System
+- **Type groups** — Collapsible groups: Signs, Taxiway Lights, Runway Lights, Miscellaneous
+- **Location groups** — Auto-categorized: RWY 19 LIGHTS, RWY 01 LIGHTS, RWY LIGHTS/SIGNS, TAXIWAY LIGHTS, TAXIWAY SIGNS, OTHER
+- **Per-layer toggles** — Independent visibility for each type and location layer
+- **Show All / Hide All** — Bulk toggle for all layers
+- **Feature counts** — Per-layer count badges in legend
+- **All groups collapsed by default**
+
+#### Bulk Operations
+- **Bulk shift** — Offset all features in a layer by lat/lng (for alignment corrections)
+- **Bulk re-layer** — Move selected features to a different location layer
+- **Delete selected** — Remove all box-selected features
+- **Free move** — Reposition multiple selected features with bulk save
+
+#### Data Management
+- **Supabase pagination** — Fetches all features via `.range()` in batches of 1,000 (overcomes Supabase's default 1,000-row SELECT limit)
+- **Inline label editing** — Edit feature labels directly in map popups
+- **Rotation editing** — Set per-feature rotation via popup
+- **Import API** — `/api/infrastructure-import` for bulk GeoJSON import
+
+#### Database
+- **Table**: `infrastructure_features` (base_id, feature_type, longitude, latitude, layer, block, label, notes, rotation, source, created_by)
+- **16 migrations** (`2026031100` through `2026031107`): table creation, feature type expansion, rotation column, CHECK constraint updates
+- **CRUD module**: `lib/supabase/infrastructure-features.ts` with fetch (paginated), create, update, delete, bulk shift, bulk re-layer, bulk create
+
+### Bug Fixes
+- **Features disappearing** — Fixed Supabase 1,000-row default limit by implementing paginated fetch with `.range()` in `fetchInfrastructureFeatures()`
+- **Location toggle mismatch** — Unified `'Unknown'` vs `'USER'` fallback for features with no assigned layer
+- **Mapbox icon-size expression error** — Replaced invalid `case` + `zoom` nesting with single `interpolate` expression
+
+### Stats
+- Build: Clean (zero errors)
+- 58 `as any` casts across ~20 files
+- 45 files > 500 lines (largest: infrastructure/page.tsx at 2,443)
+- 190+ source files | 49 routes | 98 migrations
 
 ---
 

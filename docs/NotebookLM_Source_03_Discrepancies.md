@@ -156,7 +156,7 @@ Any PDF can be emailed directly from the app. Enter the recipient's email (or us
 Discrepancies don't exist in isolation — they connect across Glidepath:
 
 ### From Checks
-When a FOD check identifies debris, the issue becomes a discrepancy automatically. The discrepancy references the source check.
+When a FOD check identifies debris, the user can create and document the discrepancy automatically. The discrepancy references the source check.
 
 ### From Inspections
 When a daily inspection or lighting inspection marks an item as "fail" and creates a discrepancy inline, the discrepancy links back to the inspection that found it.
@@ -176,7 +176,7 @@ Every discrepancy creation, status change, and update is logged in the Events Lo
 
 ### Before Glidepath
 - Discrepancies tracked in personal spreadsheets that don't survive PCS
-- No visibility for CE — they don't know what's been submitted until someone emails
+- No accountability for CES - Once a discrepancy is submitted to iEMS or TRIRIGA, it is off into the ether. Glidepath enables oversight of CES bottlenecks
 - No aging analysis — items sit for months without anyone noticing
 - No photo evidence — "there's a crack in the pavement" with no context
 - No map view — no way to see spatial patterns in maintenance issues

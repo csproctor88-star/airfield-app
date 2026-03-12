@@ -9,11 +9,11 @@
 
 There are over 155 Air Force installations with active airfields. Every single one of them runs on paper checklists, Excel spreadsheets, and institutional knowledge that walks out the door every PCS cycle.
 
-An airfield manager's day looks like this: grab a clipboard, drive the runway, write findings on paper, come back inside, type them into a spreadsheet, email it to CE, hope someone reads it, repeat tomorrow. Discrepancies get lost. Inspections get filed in binders nobody opens. When a new airfield manager arrives, they start from scratch — no history, no context, no continuity.
+An airfield manager's day looks like this: grab a clipboard, drive the runway, write findings on paper, come back inside, submit them into iEMS or TRIRIGA, email it to CE, hope someone reads it, repeat tomorrow. Discrepancies get lost. Inspections get filed in shared drives that are mislabed, get deteleted or don't make any sense. When a new airfield manager arrives, they start from scratch — no history, no context, no continuity.
 
-The 1C7X1 Airfield Management career field is responsible for safe aircraft operations on the ground. They inspect runways, taxiways, and aprons. They track foreign object debris. They monitor lighting, signs, and markings. They evaluate obstructions. They coordinate with Civil Engineering, Safety, and Air Traffic Control. They manage waivers, respond to emergencies, and generate reports for leadership. All of this — across dozens of concurrent responsibilities — still runs on paper and tribal knowledge.
+The 1C7X1 Airfield Management career field is responsible for safe aircraft operations on the ground. They inspect runways, taxiways, and aprons. They track foreign object debris. They monitor lighting, signs, and markings. They evaluate obstructions. They coordinate with Civil Engineering, Safety, and Air Traffic Control. They manage waivers, respond to emergencies, and generate reports for leadership. All of this — across dozens of concurrent responsibilities — still runs on approximately six different Excel Spreadsheets or SharePoint sites.
 
-Nobody has built a tool that does what airfield managers actually need. Until now.
+Nobody has built a tool that does what airfield managers actually need, purposefully built for airfield managers at the forefront. Until now.
 
 ---
 
@@ -54,7 +54,7 @@ That's the difference. No paper. No spreadsheets. No lost information. No starti
 ## The Capabilities
 
 ### Real-Time Airfield Status
-The home screen is your common operating picture. Active runway with conditions, Bird Watch Condition, weather advisories (watches, warnings, and remarks), NAVAID status, and personnel on the airfield. Changes push to every connected device in real-time through Supabase Realtime subscriptions. When someone updates the runway condition, everyone sees it instantly.
+The home screen is your common operating picture. Active runway with conditions, Bird Watch Condition, weather advisories (watches, warnings, and advisories), NAVAID status, and personnel on the airfield. Changes push to every connected device in real-time through Supabase Realtime subscriptions. When someone updates the runway condition, everyone sees it instantly.
 
 ### Airfield Checks (6 Types)
 FOD checks, RSC/RCR runway condition assessments, in-flight emergency checks, ground emergency checks, heavy aircraft checks, and BASH checks. Each check type has a tailored workflow. Photos capture with GPS. Multiple issues can be flagged per check. Drafts persist across devices — start on your phone in the truck, finish on your desktop inside.
@@ -72,7 +72,7 @@ The Air Force's comprehensive airfield audit per DAFMAN 13-204v2. 10 sections, a
 Full AF Form 505 equivalent for regulatory deviations. Six waiver types (permanent, temporary, construction, event, extension, amendment). Hazard ratings, criteria sources, coordination tracking. Annual review workflow with per-year recommendations. Map view showing all active waivers on the airfield. Complete status lifecycle from draft through approval to completion or expiration.
 
 ### Obstruction Evaluations
-Interactive Mapbox map with UFC imaginary surface overlays. Place an object on the map, enter its height, and instantly see which clearance surfaces are violated. Supports Class B and Army Class B runway geometries. Photo documentation. Results saved with full evaluation details — surfaces checked, violations found, controlling surface identified.
+Interactive Mapbox map with UFC imaginary surface overlays. Place an object on the map, enter its height, and instantly see which clearance surfaces are violated. Supports Air Force Class B runway geometries. Photo documentation. Results saved with full evaluation details — surfaces checked, violations found, controlling surface identified.
 
 ### Quick Reaction Checklists (QRCs)
 Template-based emergency response workflows. In-flight emergency, ground emergency, hijack, bomb threat — each with step-by-step checklists. Secondary Crash Net forms for applicable emergencies. Status tracking from activation through completion. 1-year review tracking with overdue alerts. Full activity logging — every QRC activation, step completion, and closure is recorded.
@@ -87,7 +87,7 @@ Four report types: Daily Operations Summary (consolidated daily PDF with all che
 Complete audit trail of every operational action. Timestamped in Zulu. Operating Initials column for quick identification (tap to reveal full name and role). Manual entry capability with templates. Time-range filtering. Entity linking — tap any log entry to jump to the source record. Export to Excel.
 
 ### NOTAMs
-Auto-fetch from FAA sources. Filter by active/expired, FAA/local. Create local NOTAMs for internal distribution. Search by ICAO identifier. PDF export and email distribution.
+Auto-fetch from FAA sources. Filter by active/expired, FAA/local. Search by ICAO identifier. PDF export and email distribution.
 
 ### Regulations Library
 70+ regulatory references across 19 categories. Full-text PDF viewing in-app. Offline caching via IndexedDB. Bookmark favorites. Upload custom documents. Categories span DAFMAN, FAA, UFC, CFR, DoD, and ICAO publications.

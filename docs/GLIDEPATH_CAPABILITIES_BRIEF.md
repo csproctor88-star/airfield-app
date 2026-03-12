@@ -31,7 +31,6 @@ Over 155 Air Force installations operate active airfields. Every one of them man
 - **Excel spreadsheets** for discrepancy tracking
 - **Email chains** for coordination with CE, Safety, and ATC
 - **Binders** for waiver documentation and ACSI records
-- **Whiteboards** for personnel on airfield and status tracking
 - **Memory** for institutional knowledge that disappears every PCS
 
 There is no standardized digital tool for airfield management. Each base reinvents workflows, creates ad-hoc trackers, and loses continuity every 2–3 years when the airfield manager changes.
@@ -45,10 +44,10 @@ Glidepath replaces all of these fragmented tools with a single platform that is:
 - **Mobile-first** — designed for phone use in the field, scales to desktop
 - **Multi-installation** — one deployment serves every base with data isolation
 - **Role-aware** — 8 roles control who can see and do what
-- **Audited** — every action logged with operator identity and Zulu timestamp
+- **Audited** — every action logged with the airfield management personnel's full rank and name, EDIPI, and operating initials
 - **Exportable** — 11 PDF types, Excel reports, and email distribution
-- **Standards-compliant** — aligned with DAFMAN 13-204, UFC 3-260-01, and AF Form 505
-- **Platform One ready** — standard tech stack, containerizable, no vendor lock-in
+- **Standards-compliant** — aligned with DAFMAN 13-204 and UFC 3-260-01 for the airfield manager's most crucial tasks
+- **Platform One ready** — standard tech stack, containerizable, no vendor lock-in, ready to deploy on Platform One via Party Bus
 
 ---
 
@@ -60,21 +59,21 @@ Your common operating picture on one screen.
 - Bird Watch Condition with color-coded severity
 - Weather advisories, warnings, watches, and remarks
 - NAVAID status for all installed NAVAIDs
-- Personnel on airfield with company, contact, location, radio, work description
+- Personnel on airfield with company, contact, location, equipment tracking, work description
 - Construction/misc items tracking
-- All changes propagate in real-time and log to Events Log
+- All changes propagate in real-time and log to Events Log automatically. No more double tasks to ensure compliance with events log entries
 
 ### 4.2 Dashboard
 Operational intelligence and quick actions.
-- Quick-start buttons for all check and inspection types
+- Quick-start buttons for all checks, inspections, and functions that an airfield manager must execute on a daily basis
 - Live activity feed showing recent operations
 - User presence indicators (who's online)
 - Installation switcher for multi-base users
 
 ### 4.3 Airfield Checks (6 Types)
 Rapid field assessments with photo and GPS documentation.
-- **FOD Check** — foreign object debris identification
-- **RSC/RCR Check** — runway surface condition assessment
+- **FOD Check** — foreign object debris identification, exact location of FOD with photo upload
+- **RSC/RCR Check** — runway surface condition assessment, automatically updates to Airfield Status and Events Log once completed
 - **In-Flight Emergency Check** — post-emergency airfield inspection
 - **Ground Emergency Check** — ground incident response assessment
 - **Heavy Aircraft Check** — weight-bearing evaluation
@@ -89,7 +88,7 @@ Structured compliance evaluations.
 - **Construction Meeting Inspection** — pre/post construction assessment
 - **Joint Monthly Airfield Inspection** — multi-agency consolidated evaluation
 
-Features: default-to-pass logic (only interact with failures), inline discrepancy creation, multi-discrepancy per item, auto-save, weather integration, PDF with photos/maps/weather.
+Features: default-to-pass logic (only interact with failures), inline discrepancy creation, multi-discrepancy per item, auto-save, weather integration, PDF with photos/maps/weather. Consolidates construction oversight requirements for Airfield Managers to streamline compliance
 
 ### 4.5 ACSI (Airfield Compliance & Safety Inspection)
 Comprehensive audit per DAFMAN 13-204v2, Attachment 2.
@@ -99,6 +98,8 @@ Comprehensive audit per DAFMAN 13-204v2, Attachment 2.
 - Per-discrepancy photos and map locations
 - Draft persistence across devices
 - Full PDF export with per-item layout
+
+Features: gone are the days of unresponsible PDF or excel documents, non-uniformed reports, discombobulated data entry for discrepancies, multiple attachments that require review. the acsi checklist is an all-in-one solution to assist airfield managers in completing their acsi each year and reducing the time spent from weeks to just hours
 
 ### 4.6 Discrepancy Tracking
 Centralized maintenance and safety issue management.
@@ -138,7 +139,7 @@ Template-based emergency response.
 
 ### 4.10 Shift Checklists
 Daily task management by shift.
-- Configurable items by frequency (daily/weekly/monthly) and shift (day/mid/swing)
+- Configurable items by frequency (daily/weekly/monthly) and shift (day/swing/mid)
 - Timezone-aware reset logic (configurable per installation)
 - Completion tracking with history view
 - Accountability without micromanagement
@@ -215,7 +216,7 @@ Per-installation setup wizard.
 - Storage RLS on file uploads
 - HTTPS/TLS encryption in transit
 - Database encryption at rest
-- No PII in client-side storage
+- No PII or CUI in client-side storage
 - Full audit trail (Events Log)
 
 ### Multi-Installation
@@ -244,7 +245,6 @@ Per-installation setup wizard.
 
 ### Current: Commercial Cloud (Vercel + Supabase)
 - Fully operational for development and beta testing
-- ~$45/month per installation
 - Instant deployment of updates
 
 ### Target: Platform One Party Bus
@@ -264,8 +264,6 @@ Per-installation setup wizard.
 | Item | Cost |
 |------|------|
 | Development | $12 (domain registration) |
-| Commercial hosting (per installation) | ~$45/month |
-| Platform One hosting | Near-zero (shared infrastructure) |
 | Per-installation onboarding | $0 (zero code changes) |
 | Annual maintenance | Minimal (single codebase) |
 
@@ -273,11 +271,11 @@ Per-installation setup wizard.
 
 ## 9. What Makes Glidepath Different
 
-1. **Built by an operator, not a contractor.** Every feature solves a real problem the developer has faced across 18 years and multiple installations.
+1. **Built by an airfield manager, not a contractor.** Every feature solves a real problem the developer has faced across 18 years and multiple installations and deployments.
 
 2. **Production-ready, not a prototype.** 82 schema migrations, 48 routes, 36 tables — this is a complete application, not a proof of concept.
 
-3. **Zero cost to scale.** Adding installation #2 through #155 requires no development, no deployment changes, and no additional code.
+3. **Zero cost to scale.** Adding installation #2 through #155 requires no development, no deployment changes, and no additional code or cost.
 
 4. **Immediate impact.** Hours saved per day on checks, inspections, reporting, and coordination. Measurable from day one.
 

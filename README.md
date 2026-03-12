@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, ACSI (annual compliance), NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.17.1 | **Build:** Clean | **48 routes** | **169 source files** | **82 migrations**
+**Version:** 2.18.0 | **Build:** Clean | **49 routes** | **190+ source files** | **98 migrations**
 
 ## Tech Stack
 
@@ -54,7 +54,7 @@ RESEND_API_KEY=[resend-api-key]
 Apply the schema and migrations to a Supabase project:
 
 1. Run `supabase/schema.sql` to create the base tables and sequences
-2. Apply the 82 migrations in order from `supabase/migrations/`
+2. Apply the 98 migrations in order from `supabase/migrations/`
 
 See [docs/BASE-ONBOARDING.md](./docs/BASE-ONBOARDING.md) for adding new installations.
 
@@ -155,6 +155,9 @@ Per-shift task tracking with configurable items per base. Three shifts: Day, Swi
 - **Dashboard KPI badge** — Quick access dialog for marking items complete without leaving the dashboard
 - **Base Configuration** — Add/edit/delete/toggle items per shift, configurable daily reset time per base (`Settings > Base Configuration > Shift Checklist`)
 
+### Airfield Infrastructure (`/infrastructure`)
+Interactive Mapbox satellite map for digitizing and managing all airfield lighting, signage, and miscellaneous features. 21 feature types across 4 groups (Signs, Taxiway Lights, Runway Lights, Miscellaneous). Click-to-place pins with per-feature rotation, drag-to-move, inline label editing, and bar placement mode for approach lighting components (6 bar types with geodesic offset calculations). Custom canvas-rendered icons match real-world airfield sign colors and styles. Grouped collapsible legend with Type and Location sections, per-layer visibility toggles, Show All/Hide All, and feature count badges. Box select for bulk operations (shift, re-layer, delete, free move). GPS location tracking for drive-around use. Supabase pagination handles 1,000+ features. Import API for bulk GeoJSON data.
+
 ### QRC — Quick Reaction Checklists (`/qrc`)
 Interactive execution of 25 digitized Quick Reaction Checklists for airfield emergencies and operational events (IFE, aircraft mishap, bird strike, tornado warning, etc.).
 
@@ -201,7 +204,7 @@ airfield-app/
 │   ├── layout.tsx                        # Root layout (metadata, PWA manifest, toasts)
 │   ├── globals.css                       # Responsive CSS: themes, utility classes, breakpoints
 │   ├── login/page.tsx                    # Auth page (email/password + demo bypass)
-│   ├── api/                              # Server-side API routes (7 endpoints)
+│   ├── api/                              # Server-side API routes (9 endpoints)
 │   ├── auth/confirm/route.ts            # OTP/PKCE token exchange for email links
 │   ├── reset-password/page.tsx          # Password reset form
 │   ├── setup-account/page.tsx           # Invited user account setup
@@ -224,6 +227,7 @@ airfield-app/
 │       ├── qrc/page.tsx                   # QRC execution (available + active + history)
 │       ├── shift-checklist/page.tsx       # Shift checklist (today + history)
 │       ├── contractors/page.tsx          # Personnel on Airfield
+│       ├── infrastructure/page.tsx       # Airfield infrastructure map
 │       ├── more/page.tsx                 # Module directory
 │       └── users/page.tsx                # User Management (admin)
 ├── components/
@@ -256,7 +260,7 @@ airfield-app/
 │   └── supabase/                         # Client, server, types, CRUD modules (18 files)
 ├── supabase/
 │   ├── schema.sql                        # Full database schema
-│   ├── migrations/                       # 82 migration files
+│   ├── migrations/                       # 98 migration files
 │   └── functions/                        # Edge functions (PDF text extraction)
 ├── middleware.ts                          # Auth guard + demo mode bypass
 ├── public/                               # Static assets, PWA manifest, aircraft images
@@ -266,7 +270,7 @@ airfield-app/
 
 ## Database
 
-**36 tables** across the Supabase PostgreSQL database:
+**37 tables** across the Supabase PostgreSQL database:
 
 | Table | Purpose |
 |-------|---------|
@@ -307,6 +311,7 @@ airfield-app/
 | `base_arff_aircraft` | ARFF aircraft per base |
 | `qrc_templates` | Admin-configured QRC definitions per base (steps, SCN fields, review tracking) |
 | `qrc_executions` | QRC execution instances with JSONB step responses and SCN data |
+| `infrastructure_features` | Airfield lighting, signage, and miscellaneous features with coordinates, rotation, and layer assignment |
 
 ## Key Design Decisions
 
@@ -327,16 +332,17 @@ airfield-app/
 | Item | Priority | Notes |
 |------|----------|-------|
 | No test suite | High | No unit or integration tests |
-| 63 `as any` casts | Medium | Across ~20 files — mostly `Record<string,unknown>` row inserts and jspdf-autotable hooks. Regenerate Supabase types to eliminate |
-| 43 files > 400 lines | Low | Largest: `inspections/page.tsx` (2,003), `base-setup/page.tsx` (1,856), `regulations/page.tsx` (1,638) |
-| Map init duplication | Low | 5 Mapbox components share similar init logic |
-| PDF boilerplate duplication | Low | 10 PDF generators share similar header/footer/photo helper patterns |
+| 58 `as any` casts | Medium | Across ~20 files — mostly `Record<string,unknown>` row inserts and jspdf-autotable hooks. Regenerate Supabase types to eliminate |
+| 45 files > 500 lines | Low | Largest: `infrastructure/page.tsx` (2,443), `inspections/page.tsx` (2,005), `base-setup/page.tsx` (1,856) |
+| Map init duplication | Low | 6 Mapbox components share similar init logic |
+| PDF boilerplate duplication | Low | 11 PDF generators share similar header/footer/photo helper patterns |
+| Orphaned API route | Low | `app/api/generate-approach-lights/route.ts` — UI button removed, route still exists |
 
 ## Current Status
 
 **Build**: TypeScript compiles clean (`npm run build` passes with zero errors)
 
-**Complete modules**: Dashboard (Supabase Realtime push + installation switcher + presence tracking + KPI badges), Airfield Status (inline personnel + construction/misc), Discrepancies (COP map + individual PDF export), Airfield Checks (7 types + cross-device drafts), Daily Inspections (multi-discrepancy + per-issue photos), ACSI (annual compliance with PDF/Excel export), NOTAMs (live FAA feed + expiry alerts), Obstruction Evaluations (UFC 3-260-01 + interactive map), References (70 refs + My Documents + offline caching), Reports (4 types + Events Log + QRC details in daily ops PDF), Aircraft Database (200+ aircraft + ACN/PCN), Waivers (full lifecycle with annual review + attachment management + PDF/Excel export), QRC (25 Quick Reaction Checklists + interactive execution + dashboard dialog), Shift Checklist (per-shift tasks + timezone-aware dates + dashboard dialog), Settings (Base Setup + Templates + Shift Checklist config + QRC Templates + Default PDF Email), User Management (invite/edit/delete cascade + email privacy), Events Log (manual entries + edit/delete + activity templates + Excel export), All Inspections hub, Email PDF (all 11 export pages), More hub, Personnel on Airfield
+**Complete modules**: Dashboard (Supabase Realtime push + installation switcher + presence tracking + KPI badges), Airfield Status (inline personnel + construction/misc), Discrepancies (COP map + individual PDF export), Airfield Checks (7 types + cross-device drafts), Daily Inspections (multi-discrepancy + per-issue photos), ACSI (annual compliance with PDF/Excel export), NOTAMs (live FAA feed + expiry alerts), Obstruction Evaluations (UFC 3-260-01 + interactive map), References (70 refs + My Documents + offline caching), Reports (4 types + Events Log + QRC details in daily ops PDF), Aircraft Database (200+ aircraft + ACN/PCN), Waivers (full lifecycle with annual review + attachment management + PDF/Excel export), QRC (25 Quick Reaction Checklists + interactive execution + dashboard dialog), Shift Checklist (per-shift tasks + timezone-aware dates + dashboard dialog), Airfield Infrastructure (21 feature types + custom icons + bar placement + GPS tracking + 1,000+ feature pagination), Settings (Base Setup + Templates + Shift Checklist config + QRC Templates + Default PDF Email), User Management (invite/edit/delete cascade + email privacy), Events Log (manual entries + edit/delete + activity templates + Excel export), All Inspections hub, Email PDF (all 11 export pages), More hub, Personnel on Airfield
 
 See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 

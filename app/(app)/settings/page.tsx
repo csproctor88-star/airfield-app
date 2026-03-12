@@ -1250,7 +1250,7 @@ function AboutSectionContent() {
       <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>Version</span>
-          <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', fontWeight: 600 }}>2.17.1</span>
+          <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', fontWeight: 600 }}>2.18.0</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>Environment</span>

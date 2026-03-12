@@ -14,7 +14,7 @@ Glidepath is a complete airfield management app that replaces your paper checkli
 
 ### Access
 1. Open your web browser (Chrome, Safari, Edge, or Firefox)
-2. Navigate to your installation's Glidepath URL
+2. Navigate to https://www.glidepathops.com
 3. Log in with the email and password provided by your admin
 
 ### Add to Home Screen
@@ -72,12 +72,12 @@ This is your operational common picture.
 - Construction/misc items
 
 **What you can do:**
-- Change the active runway — tap the dropdown, select new runway
+- Change the active runway — tap current runway and toggle between active runways. When prompted, enter remarks associated with the runway change and both automatically create events log entries
 - Update BWC — tap the level selector
-- Add/complete weather advisories
-- Toggle NAVAID status (operational ↔ out of service)
+- Add/complete weather watches, warnings, and advisories
+- Toggle NAVAID status (operational ↔ out of service), add remarks describing the outages further
 - Add personnel — enter company, contact, location, work description, radio callsign
-- Mark personnel complete when they depart
+- Mark personnel complete when they depart the airfield, no more contractor logs, automatically creates events log entries
 - All changes update in real-time for every connected user and log to the Events Log
 
 ---
@@ -90,11 +90,12 @@ Quick field assessments you perform throughout the day.
 **How to run a check:**
 1. Tap "New Check" and select the type
 2. Fill in the header info (auto-populated where possible)
-3. Walk/drive the airfield — add issues as you find them
-4. For each issue: describe it, select the location, snap a photo
+3. Drive the airfield — add issues as you find them
+4. For each issue: describe it, select the location, snap a photo, if an issue should be reported as an airfield discrepancy, select the toggle to complete additional info and discrepancy is automatically added to the discrepancy database and send to the airfield manager
 5. Your check saves automatically as you go (draft persistence)
 6. When done, tap "File" to complete the check
 7. Generate a PDF and email it if needed
+8. All updates that impact BWC, RSC automatically persist to the airfield status page without manual entry after check is complete
 
 **Key features to test:**
 - Add multiple issues to a single check
@@ -117,6 +118,7 @@ Structured evaluations with pass/fail items.
 5. Multiple discrepancies can be created for a single failed item
 6. Auto-saves continuously — close the app, come back, progress is preserved
 7. File when complete — PDF generates with all items, photos, weather, and discrepancies
+8. Mark discrepancies to be logged into the airfield discrepancy database automatically while on the inspection, no more double entries into multiple forms
 
 **Key features to test:**
 - Default-to-pass flow — how fast can you complete an inspection when most items pass?
@@ -130,7 +132,7 @@ Structured evaluations with pass/fail items.
 The big compliance audit — 10 sections, ~100 items.
 
 **How to use:**
-1. Create a new ACSI inspection — set airfield name, date, fiscal year
+1. Create a new ACSI inspection — set airfield name, date, calendar year
 2. Work through items section by section
 3. Items with sub-fields (A/B/C) evaluate separately: Operable, Properly Sited, Clear of Vegetation
 4. Failed items can generate discrepancies with photos and map pins
@@ -197,7 +199,7 @@ Interactive surface analysis.
 ---
 
 ### QRC (More → AM Tools → QRC)
-Emergency response checklists.
+Airfield management response checklists.
 
 **How to use:**
 - **Available tab** — see ready-to-execute templates
@@ -218,7 +220,7 @@ Daily task tracking per shift.
 
 **How to use:**
 1. Open Shift Checklist at the start of your shift
-2. See items applicable to your shift (day/mid/swing) and today's date
+2. See items applicable to your shift (day/swing/mid) and today's date
 3. Check off items as you complete them
 4. Review completion history from previous days
 
