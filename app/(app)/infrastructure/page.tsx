@@ -856,20 +856,13 @@ export default function InfrastructureMapPage() {
               'icon-image': isSignLayer
                 ? ['coalesce', ['get', 'signIcon'], iconName] as any
                 : iconName,
-              'icon-size': isSignLayer
-                ? [
-                    'case',
-                    ['has', 'signIcon'],
-                    ['interpolate', ['linear'], ['zoom'], 12, 0.5, 14, 0.75, 16, 1, 18, 1.3],
-                    ['interpolate', ['linear'], ['zoom'], 12, 0.4, 14, 0.7, 16, 1, 18, 1.4],
-                  ] as any
-                : [
-                    'interpolate', ['linear'], ['zoom'],
-                    12, 0.4,
-                    14, 0.7,
-                    16, 1,
-                    18, 1.4,
-                  ],
+              'icon-size': [
+                'interpolate', ['linear'], ['zoom'],
+                12, 0.5,
+                14, 0.75,
+                16, 1,
+                18, 1.3,
+              ],
               'icon-allow-overlap': true,
             },
           })
