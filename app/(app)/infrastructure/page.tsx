@@ -1192,6 +1192,81 @@ export default function InfrastructureMapPage() {
     setRelayering(false)
   }, [installationId, relayering, selectedIds, relayerName])
 
+  // Assign selected features to a component
+  const [assignCompId, setAssignCompId] = useState('')
+  const [assigningSelected, setAssigningSelected] = useState(false)
+  const handleAssignSelected = useCallback(async () => {
+    if (!installationId || assigningSelected || selectedIds.size === 0) return
+    setAssigningSelected(true)
+    const supabase = (await import('@/lib/supabase/client')).createClient()
+    if (supabase) {
+      const ids = Array.from(selectedIds)
+      let updated = 0
+      for (let i = 0; i < ids.length; i += 200) {
+        const batch = ids.slice(i, i + 200)
+        const { error } = await supabase
+          .from('infrastructure_features')
+          .update({
+            system_component_id: assignCompId || null,
+            updated_at: new Date().toISOString(),
+          } as any)
+          .in('id', batch)
+        if (!error) updated += batch.length
+      }
+      if (updated > 0) {
+        // Update component total_count
+        if (assignCompId) {
+          const { count } = await supabase
+            .from('infrastructure_features')
+            .select('*', { count: 'exact', head: true })
+            .eq('system_component_id', assignCompId)
+          if (count !== null) {
+            await supabase
+              .from('lighting_system_components')
+              .update({ total_count: count } as any)
+              .eq('id', assignCompId)
+          }
+        }
+        const refreshed = await fetchInfrastructureFeatures(installationId)
+        setDbFeatures(refreshed)
+        toast.success(assignCompId
+          ? `Assigned ${updated} feature(s) to component`
+          : `Unlinked ${updated} feature(s) from components`)
+      }
+    }
+    setAssigningSelected(false)
+  }, [installationId, assigningSelected, selectedIds, assignCompId])
+
+  // Re-type selected features
+  const [retypeName, setRetypeName] = useState('')
+  const [retyping, setRetyping] = useState(false)
+  const handleRetype = useCallback(async () => {
+    if (!installationId || retyping || selectedIds.size === 0 || !retypeName) return
+    setRetyping(true)
+    const supabase = (await import('@/lib/supabase/client')).createClient()
+    if (supabase) {
+      const ids = Array.from(selectedIds)
+      let updated = 0
+      for (let i = 0; i < ids.length; i += 200) {
+        const batch = ids.slice(i, i + 200)
+        const { error } = await supabase
+          .from('infrastructure_features')
+          .update({ feature_type: retypeName, updated_at: new Date().toISOString() } as any)
+          .in('id', batch)
+        if (!error) updated += batch.length
+      }
+      if (updated > 0) {
+        const refreshed = await fetchInfrastructureFeatures(installationId)
+        setDbFeatures(refreshed)
+        toast.success(`Re-typed ${updated} feature(s) to "${retypeName.replace(/_/g, ' ')}"`)
+        setRetypeName('')
+      } else {
+        toast.error('Failed to re-type features')
+      }
+    }
+    setRetyping(false)
+  }, [installationId, retyping, selectedIds, retypeName])
+
   // Delete all selected features
   const [deletingSelected, setDeletingSelected] = useState(false)
   const handleDeleteSelected = useCallback(async () => {
@@ -2268,6 +2343,79 @@ export default function InfrastructureMapPage() {
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Assign to component */}
+            <div style={{ borderTop: '1px solid rgba(148,163,184,0.15)', paddingTop: 10, marginTop: 10 }}>
+              <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Assign to component</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <select
+                  value={assignCompId}
+                  onChange={e => setAssignCompId(e.target.value)}
+                  style={{
+                    flex: 1, padding: '6px 8px', borderRadius: 6,
+                    border: '1px solid rgba(148,163,184,0.2)',
+                    background: 'rgba(30, 41, 59, 0.9)', color: '#E2E8F0',
+                    fontSize: 11, outline: 'none', fontFamily: 'inherit',
+                  }}
+                >
+                  <option value="">— Unlink from component —</option>
+                  {allComponentsList.map(c => (
+                    <option key={c.id} value={c.id}>{c.system_name} — {c.label}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleAssignSelected}
+                  disabled={assigningSelected}
+                  style={{
+                    padding: '6px 14px', borderRadius: 6,
+                    border: '1px solid rgba(56,189,248,0.3)',
+                    background: 'rgba(56,189,248,0.2)',
+                    color: '#38BDF8',
+                    fontSize: 12, fontWeight: 600, cursor: assigningSelected ? 'wait' : 'pointer',
+                    whiteSpace: 'nowrap',
+                    opacity: assigningSelected ? 0.6 : 1,
+                  }}
+                >
+                  {assigningSelected ? 'Saving...' : 'Apply'}
+                </button>
+              </div>
+            </div>
+
+            {/* Re-type selected */}
+            <div style={{ borderTop: '1px solid rgba(148,163,184,0.15)', paddingTop: 10, marginTop: 10 }}>
+              <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Re-type selected</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <select
+                  value={retypeName}
+                  onChange={e => setRetypeName(e.target.value)}
+                  style={{
+                    flex: 1, padding: '6px 8px', borderRadius: 6,
+                    border: '1px solid rgba(148,163,184,0.2)',
+                    background: 'rgba(30, 41, 59, 0.9)', color: '#E2E8F0',
+                    fontSize: 11, outline: 'none', fontFamily: 'inherit',
+                  }}
+                >
+                  <option value="">Select type...</option>
+                  {FEATURE_TYPE_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleRetype}
+                  disabled={retyping || !retypeName}
+                  style={{
+                    padding: '6px 14px', borderRadius: 6,
+                    border: '1px solid rgba(168,85,247,0.3)',
+                    background: retypeName ? 'rgba(168,85,247,0.2)' : 'transparent',
+                    color: retypeName ? '#C084FC' : '#64748B',
+                    fontSize: 12, fontWeight: 600, cursor: retypeName ? 'pointer' : 'default',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {retyping ? 'Saving...' : 'Apply'}
+                </button>
+              </div>
             </div>
 
             {/* Delete selected */}

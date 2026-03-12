@@ -1940,11 +1940,12 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
       compId,
     )
     if (count > 0) {
-      // Update the component's total_count to match assigned features
-      await updateSystemComponent(compId, { total_count: count })
-      toast.success(`Assigned ${count} feature(s) to component`)
-      // Refresh stats and component list
+      // Count ALL features now linked to this component (not just this batch)
       const features = await fetchInfrastructureFeatures(installationId)
+      const totalLinked = features.filter(f => f.system_component_id === compId).length
+      await updateSystemComponent(compId, { total_count: totalLinked })
+      toast.success(`Assigned ${count} feature(s) — component now has ${totalLinked} total`)
+      // Refresh stats
       const assigned = features.filter(f => f.system_component_id).length
       setFeatureStats({ total: features.length, assigned })
       // Find which system this component belongs to and reload its components
@@ -1962,6 +1963,38 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
     setAssigningComp(null)
     setAssignLayer('')
     setAssignType('')
+  }
+
+  const handleUnlinkAll = async (compId: string, compLabel: string, systemId: string) => {
+    if (!installationId) return
+    if (!confirm(`Unlink all features from "${compLabel}"? Features will not be deleted.`)) return
+    setAssigning(true)
+    const supabase = createClient()
+    if (supabase) {
+      const { data: linked } = await supabase
+        .from('infrastructure_features')
+        .select('id')
+        .eq('system_component_id', compId)
+      if (linked && linked.length > 0) {
+        const ids = linked.map((f: any) => f.id)
+        for (let i = 0; i < ids.length; i += 200) {
+          const batch = ids.slice(i, i + 200)
+          await supabase
+            .from('infrastructure_features')
+            .update({ system_component_id: null, updated_at: new Date().toISOString() } as any)
+            .in('id', batch)
+        }
+        await updateSystemComponent(compId, { total_count: 0 })
+        toast.success(`Unlinked ${linked.length} feature(s) from "${compLabel}"`)
+        await loadComps(systemId)
+        const features = await fetchInfrastructureFeatures(installationId)
+        const assigned = features.filter(f => f.system_component_id).length
+        setFeatureStats({ total: features.length, assigned })
+      } else {
+        toast('No features linked to this component')
+      }
+    }
+    setAssigning(false)
   }
 
   const loadComps = async (systemId: string) => {
@@ -2116,6 +2149,14 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
                             title="Bulk assign features to this component">
                             Link
                           </button>
+                          {comp.total_count > 0 && (
+                            <button onClick={() => handleUnlinkAll(comp.id, comp.label, sys.id)}
+                              disabled={assigning}
+                              style={{ background: 'none', border: '1px solid rgba(239,68,68,0.3)', color: 'var(--color-danger)', padding: '2px 6px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', opacity: assigning ? 0.5 : 1 }}
+                              title="Unlink all features from this component">
+                              Unlink
+                            </button>
+                          )}
                           <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', minWidth: 60 }}>
                             {comp.is_zero_tolerance ? 'None' : comp.allowable_outage_pct != null ? `${comp.allowable_outage_pct}%` : comp.allowable_outage_count != null ? `${comp.allowable_outage_count} max` : '—'}
                           </span>
