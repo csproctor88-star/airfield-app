@@ -79,6 +79,9 @@ export async function createDiscrepancy(input: {
   latitude?: number | null
   longitude?: number | null
   base_id?: string | null
+  infrastructure_feature_id?: string | null
+  lighting_system_id?: string | null
+  assigned_shop?: string | null
 }): Promise<{ data: DiscrepancyRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -110,7 +113,10 @@ export async function createDiscrepancy(input: {
     work_order_number: 'Pending',
     latitude: input.latitude ?? null,
     longitude: input.longitude ?? null,
+    infrastructure_feature_id: input.infrastructure_feature_id ?? null,
+    lighting_system_id: input.lighting_system_id ?? null,
   }
+  if (input.assigned_shop) row.assigned_shop = input.assigned_shop
   if (reported_by) row.reported_by = reported_by
   if (input.base_id) row.base_id = input.base_id
 

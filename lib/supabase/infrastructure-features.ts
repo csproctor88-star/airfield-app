@@ -132,6 +132,62 @@ export async function deleteInfrastructureFeature(id: string): Promise<boolean> 
   return !error
 }
 
+// ── Update feature operational status ──
+
+export async function updateFeatureStatus(
+  id: string,
+  status: 'operational' | 'inoperative',
+): Promise<InfrastructureFeature | null> {
+  const supabase = createClient()
+  if (!supabase) return null
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { data, error } = await supabase
+    .from('infrastructure_features')
+    .update({
+      status,
+      status_changed_at: new Date().toISOString(),
+      status_changed_by: user?.id || null,
+      updated_at: new Date().toISOString(),
+    } as any)
+    .eq('id', id)
+    .select('*')
+    .single()
+
+  if (error) return null
+  return data as InfrastructureFeature
+}
+
+// ── Bulk update status for multiple features ──
+
+export async function bulkUpdateStatus(
+  ids: string[],
+  status: 'operational' | 'inoperative',
+): Promise<number> {
+  const supabase = createClient()
+  if (!supabase || ids.length === 0) return 0
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  let updated = 0
+  for (let i = 0; i < ids.length; i += 200) {
+    const batch = ids.slice(i, i + 200)
+    const { error } = await supabase
+      .from('infrastructure_features')
+      .update({
+        status,
+        status_changed_at: new Date().toISOString(),
+        status_changed_by: user?.id || null,
+        updated_at: new Date().toISOString(),
+      } as any)
+      .in('id', batch)
+    if (!error) updated += batch.length
+  }
+
+  return updated
+}
+
 // ── Bulk shift features by offset (for alignment corrections) ──
 
 export async function bulkShiftFeatures(

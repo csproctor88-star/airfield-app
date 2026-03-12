@@ -11,12 +11,15 @@ import {
   createInfrastructureFeature,
   updateInfrastructureFeature,
   deleteInfrastructureFeature,
+  updateFeatureStatus,
   bulkShiftFeatures,
   bulkShiftByIds,
   bulkRelayerFeatures,
   bulkCreateInfrastructureFeatures,
   type InfrastructureFeatureType,
 } from '@/lib/supabase/infrastructure-features'
+import { createDiscrepancy } from '@/lib/supabase/discrepancies'
+import { createOutageEvent } from '@/lib/supabase/outage-events'
 import { offsetPoint, normalizeBearing } from '@/lib/calculations/geometry'
 import type { InfrastructureFeature } from '@/lib/supabase/types'
 
@@ -525,6 +528,7 @@ export default function InfrastructureMapPage() {
           text: f.label,
           id: f.id,
           source: f.source,
+          status: f.status || 'operational',
           notes: f.notes,
           rotation: f.rotation || 0,
           signIcon: f.label && SIGN_COLORS[f.feature_type] ? `sign-label-${f.id}` : null,
@@ -773,6 +777,90 @@ export default function InfrastructureMapPage() {
     }
   }
 
+  // Report Outage handler — marks feature inoperative + auto-creates discrepancy
+  const reportOutageRef = useRef<((id: string) => Promise<void>) | undefined>(undefined)
+  reportOutageRef.current = async (id: string) => {
+    if (!installationId) return
+    document.querySelectorAll('.mapboxgl-popup').forEach(p => p.remove())
+
+    const feature = dbFeatures.find(f => f.id === id)
+    if (!feature) return
+
+    const updated = await updateFeatureStatus(id, 'inoperative')
+    if (!updated) {
+      toast.error('Failed to report outage')
+      return
+    }
+
+    // Find the layer config for display label
+    const layerCfg = LAYERS.find(l => l.types.includes(feature.feature_type))
+    const featureLabel = feature.label || layerCfg?.label || feature.feature_type
+
+    // Auto-create discrepancy
+    const { data: disc } = await createDiscrepancy({
+      title: `${featureLabel} — Inoperative`,
+      description: `Visual NAVAID marked inoperative from infrastructure map. Feature type: ${layerCfg?.label || feature.feature_type}.${feature.layer ? ` Layer: ${feature.layer}.` : ''}`,
+      location_text: feature.layer || 'Airfield',
+      type: 'lighting',
+      latitude: feature.latitude,
+      longitude: feature.longitude,
+      base_id: installationId,
+      infrastructure_feature_id: id,
+      assigned_shop: 'Airfield Management',
+    })
+
+    // Create outage event
+    await createOutageEvent({
+      base_id: installationId,
+      feature_id: id,
+      system_component_id: feature.system_component_id || undefined,
+      event_type: 'reported',
+      discrepancy_id: disc?.id || undefined,
+      notes: `${featureLabel} reported inoperative`,
+    })
+
+    const refreshed = await fetchInfrastructureFeatures(installationId)
+    setDbFeatures(refreshed)
+
+    if (disc) {
+      toast.success(`Outage reported — Discrepancy ${disc.display_id} created`)
+    } else {
+      toast.success('Outage reported')
+    }
+  }
+
+  // Mark Operational handler — restores feature status
+  const markOperationalRef = useRef<((id: string) => Promise<void>) | undefined>(undefined)
+  markOperationalRef.current = async (id: string) => {
+    if (!installationId) return
+    document.querySelectorAll('.mapboxgl-popup').forEach(p => p.remove())
+
+    const feature = dbFeatures.find(f => f.id === id)
+    if (!feature) return
+
+    const updated = await updateFeatureStatus(id, 'operational')
+    if (!updated) {
+      toast.error('Failed to mark operational')
+      return
+    }
+
+    const layerCfg = LAYERS.find(l => l.types.includes(feature.feature_type))
+    const featureLabel = feature.label || layerCfg?.label || feature.feature_type
+
+    // Create outage event
+    await createOutageEvent({
+      base_id: installationId,
+      feature_id: id,
+      system_component_id: feature.system_component_id || undefined,
+      event_type: 'resolved',
+      notes: `${featureLabel} restored to operational`,
+    })
+
+    const refreshed = await fetchInfrastructureFeatures(installationId)
+    setDbFeatures(refreshed)
+    toast.success('Feature marked operational')
+  }
+
   useEffect(() => {
     (window as any).__deleteInfraFeature = (id: string) => {
       deleteHandlerRef.current?.(id)
@@ -786,11 +874,19 @@ export default function InfrastructureMapPage() {
     ;(window as any).__saveFeatureProps = (id: string, label: string, rotation: number) => {
       savePropsRef.current?.(id, label, rotation)
     }
+    ;(window as any).__reportOutage = (id: string) => {
+      reportOutageRef.current?.(id)
+    }
+    ;(window as any).__markOperational = (id: string) => {
+      markOperationalRef.current?.(id)
+    }
     return () => {
       delete (window as any).__deleteInfraFeature
       delete (window as any).__moveInfraFeature
       delete (window as any).__freeMoveFeature
       delete (window as any).__saveFeatureProps
+      delete (window as any).__reportOutage
+      delete (window as any).__markOperational
     }
   }, [])
 
@@ -1141,10 +1237,22 @@ export default function InfrastructureMapPage() {
                 16, 6,
                 18, 10,
               ],
-              'circle-color': layer.color,
+              'circle-color': [
+                'case',
+                ['==', ['get', 'status'], 'inoperative'], '#EF4444',
+                layer.color,
+              ] as any,
               'circle-opacity': 0.85,
-              'circle-stroke-color': '#000000',
-              'circle-stroke-width': 0.5,
+              'circle-stroke-color': [
+                'case',
+                ['==', ['get', 'status'], 'inoperative'], '#FFFFFF',
+                '#000000',
+              ] as any,
+              'circle-stroke-width': [
+                'case',
+                ['==', ['get', 'status'], 'inoperative'], 1.5,
+                0.5,
+              ] as any,
             },
           })
         }
@@ -1159,7 +1267,11 @@ export default function InfrastructureMapPage() {
           const isEditing = editModeRef.current
 
           let html = `<div style="font-family:system-ui;font-size:12px;color:#E2E8F0;">`
-          html += `<div style="font-weight:700;font-size:13px;margin-bottom:4px;color:${layer.color}">${layer.label}</div>`
+          html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">`
+          html += `<div style="font-weight:700;font-size:13px;color:${layer.color}">${layer.label}</div>`
+          const isInop = props.status === 'inoperative'
+          html += `<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:${isInop ? '#EF4444' : '#10B981'};color:white;">${isInop ? 'INOP' : 'OP'}</span>`
+          html += `</div>`
           if (props.source === 'user') {
             html += `<div style="font-size:10px;color:#10B981;margin-bottom:4px;">User-added</div>`
           }
@@ -1176,6 +1288,20 @@ export default function InfrastructureMapPage() {
           }
           if (props.rotation) {
             html += `<div style="margin-top:4px;color:#CBD5E1;">Rotation: ${props.rotation}°</div>`
+          }
+          // Status toggle button (always visible, not just in edit mode)
+          if (props.id) {
+            if (isInop) {
+              html += `<button onclick="window.__markOperational('${props.id}')" style="
+                margin-top:8px;width:100%;padding:6px 0;border:none;border-radius:4px;
+                background:#10B981;color:white;font-size:11px;font-weight:600;cursor:pointer;
+              ">Mark Operational</button>`
+            } else {
+              html += `<button onclick="window.__reportOutage('${props.id}')" style="
+                margin-top:8px;width:100%;padding:6px 0;border:none;border-radius:4px;
+                background:#EF4444;color:white;font-size:11px;font-weight:600;cursor:pointer;
+              ">Report Outage</button>`
+            }
           }
           if (props.id && isEditing) {
             // Label edit field
@@ -1244,6 +1370,27 @@ export default function InfrastructureMapPage() {
         m.on('mouseenter', layer.key, () => { m.getCanvas().style.cursor = 'pointer' })
         m.on('mouseleave', layer.key, () => { m.getCanvas().style.cursor = '' })
       }
+
+      // Inoperative overlay — red pulsing ring for all inoperative features (symbols)
+      m.addLayer({
+        id: 'inoperative-overlay',
+        type: 'circle',
+        source: 'infrastructure',
+        filter: ['==', ['get', 'status'], 'inoperative'],
+        paint: {
+          'circle-radius': [
+            'interpolate', ['linear'], ['zoom'],
+            12, 4,
+            14, 7,
+            16, 10,
+            18, 14,
+          ],
+          'circle-color': 'transparent',
+          'circle-stroke-color': '#EF4444',
+          'circle-stroke-width': 2,
+          'circle-opacity': 0.9,
+        },
+      })
 
       // Click on empty map area — place feature or bar in edit mode (skip if dragging or box selecting)
       m.on('click', (e) => {
@@ -1474,7 +1621,7 @@ export default function InfrastructureMapPage() {
     return (
       <div className="page-container">
         <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>
-          Airfield Infrastructure
+          Airfield Visual NAVAIDs
         </div>
         <div style={{
           padding: 40,
@@ -1513,7 +1660,7 @@ export default function InfrastructureMapPage() {
         gap: 8,
       }}>
         <div>
-          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Airfield Infrastructure</div>
+          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Airfield Visual NAVAIDs</div>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
             {totalFeatures.toLocaleString()} features
           </div>

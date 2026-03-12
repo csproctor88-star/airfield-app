@@ -137,6 +137,8 @@ export type Database = {
           inspection_id: string | null
           resolution_notes: string | null
           resolution_date: string | null
+          infrastructure_feature_id: string | null
+          lighting_system_id: string | null
           photo_count: number
           created_at: string
           updated_at: string
@@ -759,12 +761,101 @@ export type Database = {
           notes: string | null
           rotation: number
           source: 'import' | 'user'
+          status: 'operational' | 'inoperative'
+          status_changed_at: string | null
+          status_changed_by: string | null
+          system_component_id: string | null
           created_by: string | null
           created_at: string
           updated_at: string
         }
         Insert: Omit<Database['public']['Tables']['infrastructure_features']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['infrastructure_features']['Insert']>
+        Relationships: []
+      }
+      lighting_systems: {
+        Row: {
+          id: string
+          base_id: string
+          system_type: string
+          name: string
+          runway_or_taxiway: string | null
+          is_precision: boolean
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['lighting_systems']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['lighting_systems']['Insert']>
+        Relationships: []
+      }
+      lighting_system_components: {
+        Row: {
+          id: string
+          system_id: string
+          component_type: string
+          label: string
+          total_count: number
+          allowable_outage_pct: number | null
+          allowable_outage_count: number | null
+          allowable_outage_consecutive: number | null
+          allowable_no_adjacent: boolean
+          allowable_outage_text: string | null
+          is_zero_tolerance: boolean
+          requires_notam: boolean
+          requires_ce_notification: boolean
+          requires_system_shutoff: boolean
+          requires_terps_notification: boolean
+          requires_obstruction_notam_attrs: boolean
+          q_code: string | null
+          notam_text_template: string | null
+          sort_order: number
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['lighting_system_components']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['lighting_system_components']['Insert']>
+        Relationships: []
+      }
+      outage_events: {
+        Row: {
+          id: string
+          base_id: string
+          feature_id: string
+          system_component_id: string | null
+          event_type: 'reported' | 'resolved'
+          reported_by: string | null
+          discrepancy_id: string | null
+          notes: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['outage_events']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['outage_events']['Insert']>
+        Relationships: []
+      }
+      outage_rule_templates: {
+        Row: {
+          id: string
+          system_type: string
+          component_type: string
+          label: string
+          allowable_outage_pct: number | null
+          allowable_outage_count: number | null
+          allowable_outage_consecutive: number | null
+          allowable_no_adjacent: boolean
+          allowable_outage_text: string | null
+          is_zero_tolerance: boolean
+          dafman_notes: string | null
+          requires_notam: boolean
+          requires_ce_notification: boolean
+          requires_system_shutoff: boolean
+          requires_terps_notification: boolean
+          requires_obstruction_notam_attrs: boolean
+          q_code: string | null
+          notam_text_template: string | null
+          sort_order: number
+        }
+        Insert: Omit<Database['public']['Tables']['outage_rule_templates']['Row'], 'id'>
+        Update: Partial<Database['public']['Tables']['outage_rule_templates']['Insert']>
         Relationships: []
       }
     }
@@ -870,6 +961,10 @@ export type AirfieldContractor = Database['public']['Tables']['airfield_contract
 export type QrcTemplate = Database['public']['Tables']['qrc_templates']['Row']
 export type QrcExecution = Database['public']['Tables']['qrc_executions']['Row']
 export type InfrastructureFeature = Database['public']['Tables']['infrastructure_features']['Row']
+export type LightingSystem = Database['public']['Tables']['lighting_systems']['Row']
+export type LightingSystemComponent = Database['public']['Tables']['lighting_system_components']['Row']
+export type OutageEvent = Database['public']['Tables']['outage_events']['Row']
+export type OutageRuleTemplate = Database['public']['Tables']['outage_rule_templates']['Row']
 
 // === QRC (Quick Reaction Checklist) Types ===
 

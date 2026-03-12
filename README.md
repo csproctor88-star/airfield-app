@@ -155,8 +155,8 @@ Per-shift task tracking with configurable items per base. Three shifts: Day, Swi
 - **Dashboard KPI badge** — Quick access dialog for marking items complete without leaving the dashboard
 - **Base Configuration** — Add/edit/delete/toggle items per shift, configurable daily reset time per base (`Settings > Base Configuration > Shift Checklist`)
 
-### Airfield Infrastructure (`/infrastructure`)
-Interactive Mapbox satellite map for digitizing and managing all airfield lighting, signage, and miscellaneous features. 21 feature types across 4 groups (Signs, Taxiway Lights, Runway Lights, Miscellaneous). Click-to-place pins with per-feature rotation, drag-to-move, inline label editing, and bar placement mode for approach lighting components (6 bar types with geodesic offset calculations). Custom canvas-rendered icons match real-world airfield sign colors and styles. Grouped collapsible legend with Type and Location sections, per-layer visibility toggles, Show All/Hide All, and feature count badges. Box select for bulk operations (shift, re-layer, delete, free move). GPS location tracking for drive-around use. Supabase pagination handles 1,000+ features. Import API for bulk GeoJSON data.
+### Airfield Visual NAVAIDs (`/infrastructure`)
+Interactive Mapbox satellite map for digitizing and managing all airfield lighting, signage, and miscellaneous features. 21 feature types across 4 groups (Signs, Taxiway Lights, Runway Lights, Miscellaneous). Click-to-place pins with per-feature rotation, drag-to-move, inline label editing, and bar placement mode for approach lighting components (6 bar types with geodesic offset calculations). Custom canvas-rendered icons match real-world airfield sign colors and styles. Grouped collapsible legend with Type and Location sections, per-layer visibility toggles, Show All/Hide All, and feature count badges. Box select for bulk operations (shift, re-layer, delete, free move). GPS location tracking for drive-around use. Supabase pagination handles 1,000+ features. Import API for bulk GeoJSON data. Per-feature operational status tracking with DAFMAN 13-204v2 allowable outage compliance engine. Auto-creates discrepancies when features are marked inoperative.
 
 ### QRC — Quick Reaction Checklists (`/qrc`)
 Interactive execution of 25 digitized Quick Reaction Checklists for airfield emergencies and operational events (IFE, aircraft mishap, bird strike, tornado warning, etc.).
@@ -270,7 +270,7 @@ airfield-app/
 
 ## Database
 
-**37 tables** across the Supabase PostgreSQL database:
+**41 tables** across the Supabase PostgreSQL database:
 
 | Table | Purpose |
 |-------|---------|
@@ -311,7 +311,11 @@ airfield-app/
 | `base_arff_aircraft` | ARFF aircraft per base |
 | `qrc_templates` | Admin-configured QRC definitions per base (steps, SCN fields, review tracking) |
 | `qrc_executions` | QRC execution instances with JSONB step responses and SCN data |
-| `infrastructure_features` | Airfield lighting, signage, and miscellaneous features with coordinates, rotation, and layer assignment |
+| `infrastructure_features` | Airfield lighting, signage, and miscellaneous features with coordinates, rotation, status, and layer assignment |
+| `lighting_systems` | DAFMAN-defined lighting system instances per base (ALSF-1, SALS, per-taxiway edge lights, etc.) |
+| `lighting_system_components` | Sub-components within systems with DAFMAN Table A3.1 outage thresholds and required actions |
+| `outage_events` | Structured outage history log (reported/resolved events per feature) |
+| `outage_rule_templates` | Global DAFMAN 13-204v2 Table A3.1 seed data for system setup |
 
 ## Key Design Decisions
 
@@ -342,7 +346,7 @@ airfield-app/
 
 **Build**: TypeScript compiles clean (`npm run build` passes with zero errors)
 
-**Complete modules**: Dashboard (Supabase Realtime push + installation switcher + presence tracking + KPI badges), Airfield Status (inline personnel + construction/misc), Discrepancies (COP map + individual PDF export), Airfield Checks (7 types + cross-device drafts), Daily Inspections (multi-discrepancy + per-issue photos), ACSI (annual compliance with PDF/Excel export), NOTAMs (live FAA feed + expiry alerts), Obstruction Evaluations (UFC 3-260-01 + interactive map), References (70 refs + My Documents + offline caching), Reports (4 types + Events Log + QRC details in daily ops PDF), Aircraft Database (200+ aircraft + ACN/PCN), Waivers (full lifecycle with annual review + attachment management + PDF/Excel export), QRC (25 Quick Reaction Checklists + interactive execution + dashboard dialog), Shift Checklist (per-shift tasks + timezone-aware dates + dashboard dialog), Airfield Infrastructure (21 feature types + custom icons + bar placement + GPS tracking + 1,000+ feature pagination), Settings (Base Setup + Templates + Shift Checklist config + QRC Templates + Default PDF Email), User Management (invite/edit/delete cascade + email privacy), Events Log (manual entries + edit/delete + activity templates + Excel export), All Inspections hub, Email PDF (all 11 export pages), More hub, Personnel on Airfield
+**Complete modules**: Dashboard (Supabase Realtime push + installation switcher + presence tracking + KPI badges), Airfield Status (inline personnel + construction/misc), Discrepancies (COP map + individual PDF export), Airfield Checks (7 types + cross-device drafts), Daily Inspections (multi-discrepancy + per-issue photos), ACSI (annual compliance with PDF/Excel export), NOTAMs (live FAA feed + expiry alerts), Obstruction Evaluations (UFC 3-260-01 + interactive map), References (70 refs + My Documents + offline caching), Reports (4 types + Events Log + QRC details in daily ops PDF), Aircraft Database (200+ aircraft + ACN/PCN), Waivers (full lifecycle with annual review + attachment management + PDF/Excel export), QRC (25 Quick Reaction Checklists + interactive execution + dashboard dialog), Shift Checklist (per-shift tasks + timezone-aware dates + dashboard dialog), Airfield Visual NAVAIDs (21 feature types + custom icons + bar placement + GPS tracking + outage tracking + DAFMAN compliance), Settings (Base Setup + Templates + Shift Checklist config + QRC Templates + Default PDF Email), User Management (invite/edit/delete cascade + email privacy), Events Log (manual entries + edit/delete + activity templates + Excel export), All Inspections hub, Email PDF (all 11 export pages), More hub, Personnel on Airfield
 
 See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 

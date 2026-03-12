@@ -21,23 +21,22 @@ CREATE TABLE IF NOT EXISTS infrastructure_features (
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_infrastructure_features_base_id ON infrastructure_features(base_id);
+CREATE INDEX IF NOT EXISTS idx_infrastructure_features_base_id ON infrastructure_features(base_id);
 
 -- ── RLS ──
 ALTER TABLE infrastructure_features ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "infrastructure_features_select" ON infrastructure_features
-  FOR SELECT TO authenticated
-  USING (user_has_base_access(auth.uid(), base_id));
-
-CREATE POLICY "infrastructure_features_insert" ON infrastructure_features
-  FOR INSERT TO authenticated
-  WITH CHECK (user_has_base_access(auth.uid(), base_id) AND user_is_admin(auth.uid()));
-
-CREATE POLICY "infrastructure_features_update" ON infrastructure_features
-  FOR UPDATE TO authenticated
-  USING (user_has_base_access(auth.uid(), base_id) AND user_is_admin(auth.uid()));
-
-CREATE POLICY "infrastructure_features_delete" ON infrastructure_features
-  FOR DELETE TO authenticated
-  USING (user_has_base_access(auth.uid(), base_id) AND user_is_admin(auth.uid()));
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'infrastructure_features_select' AND tablename = 'infrastructure_features') THEN
+    CREATE POLICY "infrastructure_features_select" ON infrastructure_features FOR SELECT TO authenticated USING (user_has_base_access(auth.uid(), base_id));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'infrastructure_features_insert' AND tablename = 'infrastructure_features') THEN
+    CREATE POLICY "infrastructure_features_insert" ON infrastructure_features FOR INSERT TO authenticated WITH CHECK (user_has_base_access(auth.uid(), base_id) AND user_is_admin(auth.uid()));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'infrastructure_features_update' AND tablename = 'infrastructure_features') THEN
+    CREATE POLICY "infrastructure_features_update" ON infrastructure_features FOR UPDATE TO authenticated USING (user_has_base_access(auth.uid(), base_id) AND user_is_admin(auth.uid()));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'infrastructure_features_delete' AND tablename = 'infrastructure_features') THEN
+    CREATE POLICY "infrastructure_features_delete" ON infrastructure_features FOR DELETE TO authenticated USING (user_has_base_access(auth.uid(), base_id) AND user_is_admin(auth.uid()));
+  END IF;
+END $$;
