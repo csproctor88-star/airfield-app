@@ -524,6 +524,21 @@ export default function InfrastructureMapPage() {
     document.querySelectorAll('.mapboxgl-popup').forEach(p => p.remove())
   }
 
+  // Save label handler
+  const saveLabelRef = useRef<((id: string, label: string) => Promise<void>) | undefined>(undefined)
+  saveLabelRef.current = async (id: string, label: string) => {
+    if (!installationId) return
+    const ok = await updateInfrastructureFeature(id, { label: label || undefined })
+    if (ok) {
+      const updated = await fetchInfrastructureFeatures(installationId)
+      setDbFeatures(updated)
+      document.querySelectorAll('.mapboxgl-popup').forEach(p => p.remove())
+      toast.success(label ? `Label set to "${label}"` : 'Label cleared')
+    } else {
+      toast.error('Failed to save label')
+    }
+  }
+
   useEffect(() => {
     (window as any).__deleteInfraFeature = (id: string) => {
       deleteHandlerRef.current?.(id)
@@ -534,10 +549,14 @@ export default function InfrastructureMapPage() {
     ;(window as any).__moveInfraFeature = (id: string, lng: number, lat: number) => {
       moveHandlerRef.current?.(id, lng, lat)
     }
+    ;(window as any).__saveLabelFeature = (id: string, label: string) => {
+      saveLabelRef.current?.(id, label)
+    }
     return () => {
       delete (window as any).__deleteInfraFeature
       delete (window as any).__moveInfraFeature
       delete (window as any).__freeMoveFeature
+      delete (window as any).__saveLabelFeature
     }
   }, [])
 
@@ -819,23 +838,35 @@ export default function InfrastructureMapPage() {
           if (props.notes) {
             html += `<div style="margin-top:4px;color:#CBD5E1;">Notes: ${props.notes}</div>`
           }
-          if (props.id && isEditing && freeMoveRef.current) {
-            html += `<div style="display:flex;gap:6px;margin-top:8px;">`
-            html += `<button onclick="window.__freeMoveFeature('${props.id}',${coords[0]},${coords[1]})" style="
-              flex:1;padding:5px 0;border:none;border-radius:5px;
-              background:#F59E0B;color:black;font-size:12px;font-weight:600;cursor:pointer;
-            ">Grab</button>`
-            html += `<button onclick="window.__deleteInfraFeature('${props.id}')" style="
-              flex:1;padding:5px 0;border:none;border-radius:5px;
-              background:#EF4444;color:white;font-size:12px;font-weight:600;cursor:pointer;
-            ">Delete</button>`
-            html += `</div>`
-          } else if (props.id && isEditing) {
-            html += `<div style="display:flex;gap:6px;margin-top:8px;">`
-            html += `<button onclick="window.__moveInfraFeature('${props.id}',${coords[0]},${coords[1]})" style="
-              flex:1;padding:5px 0;border:none;border-radius:5px;
-              background:#3B82F6;color:white;font-size:12px;font-weight:600;cursor:pointer;
-            ">Move</button>`
+          if (props.id && isEditing) {
+            // Label edit field
+            const escapedLabel = (props.text || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')
+            html += `<div style="margin-top:8px;">`
+            html += `<div style="display:flex;gap:4px;">`
+            html += `<input id="__label-input" type="text" value="${escapedLabel}" placeholder="Label..." style="
+              flex:1;padding:4px 6px;border-radius:4px;
+              border:1px solid rgba(148,163,184,0.2);background:rgba(30,41,59,0.9);
+              color:#E2E8F0;font-size:12px;outline:none;
+            " />`
+            html += `<button onclick="window.__saveLabelFeature('${props.id}',document.getElementById('__label-input').value)" style="
+              padding:4px 10px;border:none;border-radius:4px;
+              background:#10B981;color:white;font-size:11px;font-weight:600;cursor:pointer;
+            ">Save</button>`
+            html += `</div></div>`
+
+            // Action buttons
+            html += `<div style="display:flex;gap:6px;margin-top:6px;">`
+            if (freeMoveRef.current) {
+              html += `<button onclick="window.__freeMoveFeature('${props.id}',${coords[0]},${coords[1]})" style="
+                flex:1;padding:5px 0;border:none;border-radius:5px;
+                background:#F59E0B;color:black;font-size:12px;font-weight:600;cursor:pointer;
+              ">Grab</button>`
+            } else {
+              html += `<button onclick="window.__moveInfraFeature('${props.id}',${coords[0]},${coords[1]})" style="
+                flex:1;padding:5px 0;border:none;border-radius:5px;
+                background:#3B82F6;color:white;font-size:12px;font-weight:600;cursor:pointer;
+              ">Move</button>`
+            }
             html += `<button onclick="window.__deleteInfraFeature('${props.id}')" style="
               flex:1;padding:5px 0;border:none;border-radius:5px;
               background:#EF4444;color:white;font-size:12px;font-weight:600;cursor:pointer;
