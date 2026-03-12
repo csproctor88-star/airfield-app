@@ -21,6 +21,8 @@ export type InfrastructureFeatureType =
   | 'thousand_ft_bar_light'
   | 'sequenced_flasher'
   | 'reil'
+  | 'windcone'
+  | 'stadium_light'
 
 // ── Fetch all features for a base ──
 

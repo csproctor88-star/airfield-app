@@ -29,12 +29,12 @@ type LayerConfig = {
   types: string[]
   renderType: 'circle' | 'symbol'
   group: string
-  legendIcon?: 'circle' | 'rect' | 'rect-arrow' | 'split-circle' | 'triangle'
+  legendIcon?: 'circle' | 'rect' | 'rect-arrow' | 'split-circle' | 'triangle' | 'cone' | 'dot-cluster'
   legendBorder?: string
   legendInner?: string
 }
 
-const LAYER_GROUPS = ['Signs', 'Taxiway Lights', 'Runway Lights', 'Obstruction Lights'] as const
+const LAYER_GROUPS = ['Signs', 'Taxiway Lights', 'Runway Lights', 'Miscellaneous'] as const
 
 const LAYERS: LayerConfig[] = [
   // Signs
@@ -56,8 +56,10 @@ const LAYERS: LayerConfig[] = [
   { key: 'thousand_ft_bar_lights', label: "1000' Bar Lights",  color: '#F59E0B', types: ['thousand_ft_bar_light'], renderType: 'circle', group: 'Runway Lights', legendIcon: 'circle' },
   { key: 'sequenced_flashers',  label: 'Sequenced Flashers',  color: '#7DD3FC',  types: ['sequenced_flasher'],   renderType: 'circle', group: 'Runway Lights', legendIcon: 'circle' },
   { key: 'reil_lights',         label: 'REIL',                color: '#EC4899',  types: ['reil'],                renderType: 'symbol', group: 'Runway Lights', legendIcon: 'rect', legendBorder: '#EC4899', legendInner: '#EC4899' },
-  // Obstruction Lights
-  { key: 'obstruction_lights',  label: 'Obstruction Lights',  color: '#EF4444',  types: ['obstruction_light'],   renderType: 'symbol', group: 'Obstruction Lights', legendIcon: 'triangle' },
+  // Miscellaneous
+  { key: 'obstruction_lights',  label: 'Obstruction Lights',  color: '#EF4444',  types: ['obstruction_light'],   renderType: 'symbol', group: 'Miscellaneous', legendIcon: 'triangle' },
+  { key: 'windcones',           label: 'Windcone',            color: '#F97316',  types: ['windcone'],            renderType: 'symbol', group: 'Miscellaneous', legendIcon: 'cone' },
+  { key: 'stadium_lights',      label: 'Stadium Lights',      color: '#D4D4D8',  types: ['stadium_light'],       renderType: 'symbol', group: 'Miscellaneous', legendIcon: 'dot-cluster' },
 ]
 
 const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[] = [
@@ -80,6 +82,8 @@ const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[
   { value: 'thousand_ft_bar_light', label: "1000' Bar Light" },
   { value: 'sequenced_flasher', label: 'Sequenced Flasher' },
   { value: 'reil', label: 'REIL' },
+  { value: 'windcone', label: 'Windcone' },
+  { value: 'stadium_light', label: 'Stadium Light' },
 ]
 
 // ── Generate map icons for signs and obstruction lights ──
@@ -148,6 +152,65 @@ function createSquareIcon(color: string, size: number = 24): ImageData {
   ctx.strokeStyle = '#FFFFFF'
   ctx.lineWidth = 1.5
   ctx.strokeRect(2, 2, size - 4, size - 4)
+  return ctx.getImageData(0, 0, size, size)
+}
+
+function createWindconeIcon(size: number = 24): ImageData {
+  const [, ctx] = createCanvasIcon(size)
+  // Sideways cone pointing right — orange/white striped windsock
+  const cy = size / 2
+  ctx.beginPath()
+  ctx.moveTo(3, cy - 7)
+  ctx.lineTo(size - 4, cy - 2)
+  ctx.lineTo(size - 4, cy + 2)
+  ctx.lineTo(3, cy + 7)
+  ctx.closePath()
+  ctx.fillStyle = '#F97316'
+  ctx.fill()
+  // White stripes
+  ctx.strokeStyle = '#FFFFFF'
+  ctx.lineWidth = 1.5
+  for (let x = 7; x < size - 6; x += 5) {
+    const t = (x - 3) / (size - 7)
+    const halfH = 7 - t * 5
+    ctx.beginPath()
+    ctx.moveTo(x, cy - halfH)
+    ctx.lineTo(x, cy + halfH)
+    ctx.stroke()
+  }
+  // Outline
+  ctx.strokeStyle = '#FFFFFF'
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(3, cy - 7)
+  ctx.lineTo(size - 4, cy - 2)
+  ctx.lineTo(size - 4, cy + 2)
+  ctx.lineTo(3, cy + 7)
+  ctx.closePath()
+  ctx.stroke()
+  return ctx.getImageData(0, 0, size, size)
+}
+
+function createStadiumLightIcon(size: number = 24): ImageData {
+  const [, ctx] = createCanvasIcon(size)
+  const color = '#D4D4D8'
+  // Cluster of 4 small circles
+  const r = 3.5
+  const positions = [
+    [size / 2 - 4, size / 2 - 4],
+    [size / 2 + 4, size / 2 - 4],
+    [size / 2 - 4, size / 2 + 4],
+    [size / 2 + 4, size / 2 + 4],
+  ]
+  for (const [x, y] of positions) {
+    ctx.beginPath()
+    ctx.arc(x, y, r, 0, Math.PI * 2)
+    ctx.fillStyle = color
+    ctx.fill()
+    ctx.strokeStyle = '#FFFFFF'
+    ctx.lineWidth = 0.8
+    ctx.stroke()
+  }
   return ctx.getImageData(0, 0, size, size)
 }
 
@@ -251,6 +314,8 @@ function addMapIcons(m: mapboxgl.Map) {
   m.addImage('icon-papi', createSplitCircleIcon('#EF4444', '#FFFFFF', s), pr)
   m.addImage('icon-threshold-light', createSplitCircleIcon('#EF4444', '#22C55E', s), pr)
   m.addImage('icon-reil', createSquareIcon('#EC4899', s), pr)
+  m.addImage('icon-windcone', createWindconeIcon(s), pr)
+  m.addImage('icon-stadium-light', createStadiumLightIcon(s), pr)
 }
 
 const dirBtnStyle: React.CSSProperties = {
@@ -276,6 +341,8 @@ const ICON_MAP: Record<string, string> = {
   papi: 'icon-papi',
   threshold_light: 'icon-threshold-light',
   reil: 'icon-reil',
+  windcone: 'icon-windcone',
+  stadium_light: 'icon-stadium-light',
 }
 
 export default function InfrastructureMapPage() {
@@ -2166,6 +2233,19 @@ export default function InfrastructureMapPage() {
                             <span style={{ color: layer.legendBorder || '#FBBF24', fontSize: 7, lineHeight: 1, fontWeight: 900 }}>▶</span>
                           </span>
                         </span>
+                      ) : layer.legendIcon === 'cone' ? (
+                        <svg width="14" height="12" viewBox="0 0 14 12" style={{ flexShrink: 0 }}>
+                          <polygon points="1,10 13,6 1,2" fill="#F97316" stroke="#FFF" strokeWidth="0.5" />
+                          <line x1="4" y1="3.5" x2="4" y2="8.5" stroke="#FFF" strokeWidth="0.8" />
+                          <line x1="7" y1="4.5" x2="7" y2="7.5" stroke="#FFF" strokeWidth="0.8" />
+                        </svg>
+                      ) : layer.legendIcon === 'dot-cluster' ? (
+                        <svg width="12" height="12" viewBox="0 0 12 12" style={{ flexShrink: 0 }}>
+                          <circle cx="4" cy="4" r="2.5" fill={layer.color} stroke="#FFF" strokeWidth="0.4" />
+                          <circle cx="8" cy="4" r="2.5" fill={layer.color} stroke="#FFF" strokeWidth="0.4" />
+                          <circle cx="4" cy="8" r="2.5" fill={layer.color} stroke="#FFF" strokeWidth="0.4" />
+                          <circle cx="8" cy="8" r="2.5" fill={layer.color} stroke="#FFF" strokeWidth="0.4" />
+                        </svg>
                       ) : layer.legendIcon === 'rect' ? (
                         <span style={{
                           width: 14, height: 10, borderRadius: 1,
