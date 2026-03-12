@@ -570,8 +570,17 @@ export default function InfrastructureMapPage() {
       // Build flat list for popup dropdown
       setLightingSystemsList(systems.map(s => ({ id: s.id, name: s.name, system_type: s.system_type })))
       const sysNameMap = new Map(systems.map(s => [s.id, s.name]))
+      // Hide "overall" only for systems that have other sub-components
+      const compCountBySys = new Map<string, number>()
+      for (const c of allComponents) {
+        compCountBySys.set(c.system_id, (compCountBySys.get(c.system_id) || 0) + 1)
+      }
       setAllComponentsList(allComponents
-        .filter(c => c.component_type !== 'overall')  // "Overall" aggregates automatically — not assignable
+        .filter(c => {
+          if (c.component_type !== 'overall') return true
+          // Show "overall" if it's the only component in its system
+          return (compCountBySys.get(c.system_id) || 0) <= 1
+        })
         .map(c => ({
           id: c.id,
           system_id: c.system_id,
