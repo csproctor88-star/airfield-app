@@ -360,18 +360,6 @@ export default function InfrastructureMapPage() {
     () => Object.fromEntries(LAYER_GROUPS.map(g => [g, false]))
   )
   const [expandedLocGroups, setExpandedLocGroups] = useState<Record<string, boolean>>({})
-
-  // Group location names into categories
-  const LOCATION_GROUP_ORDER = ['RWY 19 LIGHTS', 'RWY 01 LIGHTS', 'RWY LIGHTS/SIGNS', 'TAXIWAY LIGHTS', 'TAXIWAY SIGNS', 'OTHER'] as const
-  function getLocationGroup(name: string): string {
-    const upper = name.toUpperCase()
-    if (upper.includes('19 PAPI') || upper.includes('ALSF')) return 'RWY 19 LIGHTS'
-    if (upper.includes('01 PAPI') || upper.includes('SALS')) return 'RWY 01 LIGHTS'
-    if (upper.includes('RWY') || upper.includes('RUNWAY') || upper.includes('HAMMERHEAD') || upper.includes('DISTANCE MARKER')) return 'RWY LIGHTS/SIGNS'
-    if (upper.includes('TWY') && upper.includes('SIGN')) return 'TAXIWAY SIGNS'
-    if (upper.includes('TWY')) return 'TAXIWAY LIGHTS'
-    return 'OTHER'
-  }
   // Location tracking
   const [trackingLocation, setTrackingLocation] = useState(false)
   const locationMarkerRef = useRef<mapboxgl.Marker | null>(null)
@@ -454,17 +442,42 @@ export default function InfrastructureMapPage() {
     return Array.from(layers.entries()).sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }))
   }, [dbFeatures])
 
-  // Group locations by category
-  const groupedLocations = useMemo(() => {
-    const groups: Record<string, [string, number][]> = {}
-    for (const g of LOCATION_GROUP_ORDER) groups[g] = []
-    for (const [name, count] of uniqueLayers) {
-      const group = getLocationGroup(name)
-      if (!groups[group]) groups[group] = []
-      groups[group].push([name, count])
+  // Build system-based legend grouping: systems → components with counts, plus unassigned by layer
+  const systemLegendGroups = useMemo(() => {
+    // Count features per component
+    const compCounts = new Map<string, number>()
+    let unassignedCount = 0
+    const unassignedByLayer = new Map<string, number>()
+    for (const f of dbFeatures) {
+      if (f.system_component_id) {
+        compCounts.set(f.system_component_id, (compCounts.get(f.system_component_id) || 0) + 1)
+      } else {
+        unassignedCount++
+        const layerKey = f.layer || 'USER'
+        unassignedByLayer.set(layerKey, (unassignedByLayer.get(layerKey) || 0) + 1)
+      }
     }
-    return groups
-  }, [uniqueLayers])
+
+    // Group components by system
+    const systems: { id: string; name: string; components: { id: string; label: string; count: number; type: string }[]; totalCount: number }[] = []
+    const sysMap = new Map<string, typeof systems[0]>()
+    for (const c of allComponentsList) {
+      let sys = sysMap.get(c.system_id)
+      if (!sys) {
+        sys = { id: c.system_id, name: c.system_name, components: [], totalCount: 0 }
+        sysMap.set(c.system_id, sys)
+        systems.push(sys)
+      }
+      const count = compCounts.get(c.id) || 0
+      sys.components.push({ id: c.id, label: c.label, count, type: 'component' })
+      sys.totalCount += count
+    }
+
+    const unassignedLayers = Array.from(unassignedByLayer.entries())
+      .sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }))
+
+    return { systems, unassignedCount, unassignedLayers }
+  }, [dbFeatures, allComponentsList])
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const mapboxReady = isMapboxConfigured()
@@ -557,8 +570,13 @@ export default function InfrastructureMapPage() {
     const geoFeatures: GeoJSON.Feature[] = dbFeatures
       .filter(f => {
         if (!hasFilter) return true
+        if (f.system_component_id) {
+          // Check component visibility (keyed as "comp:ID")
+          return visibleSourceLayers[`comp:${f.system_component_id}`] !== false
+        }
+        // Unassigned: check layer visibility (keyed as "layer:NAME")
         const layerName = f.layer || 'USER'
-        return visibleSourceLayers[layerName] !== false
+        return visibleSourceLayers[`layer:${layerName}`] !== false
       })
       .map(f => ({
         type: 'Feature' as const,
@@ -2651,8 +2669,8 @@ export default function InfrastructureMapPage() {
                 </div>
               )
             })}
-            {/* Locations section — grouped */}
-            {uniqueLayers.length > 0 && (
+            {/* Systems section — from Base Config */}
+            {(systemLegendGroups.systems.length > 0 || systemLegendGroups.unassignedCount > 0) && (
               <>
                 <div style={{
                   borderTop: '1px solid rgba(148, 163, 184, 0.15)',
@@ -2665,17 +2683,14 @@ export default function InfrastructureMapPage() {
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                 }}>
-                  Locations
+                  Systems
                 </div>
                 <div style={{ maxHeight: 300, overflowY: 'auto' }}>
-                  {LOCATION_GROUP_ORDER.map(groupName => {
-                    const items = groupedLocations[groupName]
-                    if (!items || items.length === 0) return null
-                    const expanded = expandedLocGroups[groupName] === true
-                    const groupTotal = items.reduce((s, [, c]) => s + c, 0)
-                    const allVisible = items.every(([n]) => visibleSourceLayers[n] !== false)
+                  {systemLegendGroups.systems.map(sys => {
+                    const expanded = expandedLocGroups[`sys:${sys.id}`] === true
+                    const allVisible = sys.components.every(c => visibleSourceLayers[`comp:${c.id}`] !== false)
                     return (
-                      <div key={groupName}>
+                      <div key={sys.id}>
                         <div
                           style={{
                             display: 'flex',
@@ -2684,7 +2699,7 @@ export default function InfrastructureMapPage() {
                             padding: '4px 0',
                             cursor: 'pointer',
                           }}
-                          onClick={() => setExpandedLocGroups(prev => ({ ...prev, [groupName]: !expanded }))}
+                          onClick={() => setExpandedLocGroups(prev => ({ ...prev, [`sys:${sys.id}`]: !expanded }))}
                         >
                           <span style={{ fontSize: 8, color: '#64748B', width: 10, textAlign: 'center' }}>
                             {expanded ? '▼' : '▶'}
@@ -2694,10 +2709,11 @@ export default function InfrastructureMapPage() {
                             fontWeight: 700,
                             color: '#94A3B8',
                             flex: 1,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.03em',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
                           }}>
-                            {groupName}
+                            {sys.name}
                           </span>
                           <span
                             style={{ fontSize: 9, color: '#64748B', cursor: 'pointer', padding: '0 2px' }}
@@ -2706,20 +2722,20 @@ export default function InfrastructureMapPage() {
                               const newVal = !allVisible
                               setVisibleSourceLayers(prev => {
                                 const next = { ...prev }
-                                items.forEach(([n]) => { next[n] = newVal })
+                                sys.components.forEach(c => { next[`comp:${c.id}`] = newVal })
                                 return next
                               })
                             }}
                             title={allVisible ? 'Hide all' : 'Show all'}
                           >
-                            {groupTotal}
+                            {sys.totalCount}
                           </span>
                         </div>
-                        {expanded && items.map(([layerName, count]) => {
-                          const isVisible = visibleSourceLayers[layerName] !== false
+                        {expanded && sys.components.map(comp => {
+                          const isVisible = visibleSourceLayers[`comp:${comp.id}`] !== false
                           return (
                             <label
-                              key={layerName}
+                              key={comp.id}
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -2733,7 +2749,7 @@ export default function InfrastructureMapPage() {
                               <input
                                 type="checkbox"
                                 checked={isVisible}
-                                onChange={() => setVisibleSourceLayers(prev => ({ ...prev, [layerName]: !isVisible }))}
+                                onChange={() => setVisibleSourceLayers(prev => ({ ...prev, [`comp:${comp.id}`]: !isVisible }))}
                                 style={{ display: 'none' }}
                               />
                               <span style={{
@@ -2742,10 +2758,10 @@ export default function InfrastructureMapPage() {
                                 border: '1px solid #64748B', flexShrink: 0,
                               }} />
                               <span style={{ color: '#CBD5E1', fontSize: 11, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {layerName}
+                                {comp.label}
                               </span>
                               <span style={{ color: '#64748B', fontSize: 10, fontVariantNumeric: 'tabular-nums' }}>
-                                {count}
+                                {comp.count}
                               </span>
                             </label>
                           )
@@ -2753,6 +2769,85 @@ export default function InfrastructureMapPage() {
                       </div>
                     )
                   })}
+                  {/* Unassigned features grouped by layer */}
+                  {systemLegendGroups.unassignedCount > 0 && (
+                    <div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          padding: '4px 0',
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => setExpandedLocGroups(prev => ({ ...prev, '__unassigned': !prev['__unassigned'] }))}
+                      >
+                        <span style={{ fontSize: 8, color: '#64748B', width: 10, textAlign: 'center' }}>
+                          {expandedLocGroups['__unassigned'] ? '▼' : '▶'}
+                        </span>
+                        <span style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: '#64748B',
+                          flex: 1,
+                          fontStyle: 'italic',
+                        }}>
+                          Unassigned
+                        </span>
+                        <span
+                          style={{ fontSize: 9, color: '#64748B', cursor: 'pointer', padding: '0 2px' }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            const allVisible = systemLegendGroups.unassignedLayers.every(([n]) => visibleSourceLayers[`layer:${n}`] !== false)
+                            const newVal = !allVisible
+                            setVisibleSourceLayers(prev => {
+                              const next = { ...prev }
+                              systemLegendGroups.unassignedLayers.forEach(([n]) => { next[`layer:${n}`] = newVal })
+                              return next
+                            })
+                          }}
+                          title="Toggle unassigned"
+                        >
+                          {systemLegendGroups.unassignedCount}
+                        </span>
+                      </div>
+                      {expandedLocGroups['__unassigned'] && systemLegendGroups.unassignedLayers.map(([layerName, count]) => {
+                        const isVisible = visibleSourceLayers[`layer:${layerName}`] !== false
+                        return (
+                          <label
+                            key={layerName}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              padding: '2px 0 2px 16px',
+                              cursor: 'pointer',
+                              opacity: isVisible ? 1 : 0.4,
+                              transition: 'opacity 0.15s',
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isVisible}
+                              onChange={() => setVisibleSourceLayers(prev => ({ ...prev, [`layer:${layerName}`]: !isVisible }))}
+                              style={{ display: 'none' }}
+                            />
+                            <span style={{
+                              width: 8, height: 8, borderRadius: 2,
+                              background: isVisible ? '#64748B' : 'transparent',
+                              border: '1px solid #64748B', flexShrink: 0,
+                            }} />
+                            <span style={{ color: '#CBD5E1', fontSize: 11, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {layerName}
+                            </span>
+                            <span style={{ color: '#64748B', fontSize: 10, fontVariantNumeric: 'tabular-nums' }}>
+                              {count}
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -2784,7 +2879,10 @@ export default function InfrastructureMapPage() {
                   onClick={() => {
                     setVisibleLayers(Object.fromEntries(LAYERS.map(l => [l.key, false])))
                     const allOff: Record<string, boolean> = {}
-                    uniqueLayers.forEach(([n]) => { allOff[n] = false })
+                    systemLegendGroups.systems.forEach(sys => {
+                      sys.components.forEach(c => { allOff[`comp:${c.id}`] = false })
+                    })
+                    systemLegendGroups.unassignedLayers.forEach(([n]) => { allOff[`layer:${n}`] = false })
                     setVisibleSourceLayers(allOff)
                   }}
                   style={{
