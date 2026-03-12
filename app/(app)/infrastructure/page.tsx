@@ -69,27 +69,26 @@ const LAYERS: LayerConfig[] = [
 ]
 
 const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[] = [
-  { value: 'runway_edge_light', label: 'Runway Edge Light' },
-  { value: 'taxiway_light', label: 'Taxiway Light' },
-  { value: 'taxiway_end_light', label: 'Taxiway End Light' },
   { value: 'approach_light', label: 'Approach Light' },
-  { value: 'runway_threshold', label: 'Runway Threshold' },
-  { value: 'location_sign', label: 'Location Sign' },
+  { value: 'centerline_bar_light', label: 'Centerline Bar Light' },
   { value: 'directional_sign', label: 'Directional Sign' },
   { value: 'informational_sign', label: 'Informational Sign' },
+  { value: 'location_sign', label: 'Location Sign' },
   { value: 'mandatory_sign', label: 'Mandatory Sign' },
   { value: 'obstruction_light', label: 'Obstruction Light' },
-  { value: 'runway_distance_marker', label: 'Runway Distance Marker' },
   { value: 'papi', label: 'PAPI' },
-  { value: 'threshold_light', label: 'Threshold Light' },
   { value: 'pre_threshold_light', label: 'Pre-Threshold Light' },
-  { value: 'terminating_bar_light', label: 'Terminating Bar Light' },
-  { value: 'centerline_bar_light', label: 'Centerline Bar Light' },
-  { value: 'thousand_ft_bar_light', label: "1000' Bar Light" },
-  { value: 'sequenced_flasher', label: 'Sequenced Flasher' },
   { value: 'reil', label: 'REIL' },
-  { value: 'windcone', label: 'Windcone' },
+  { value: 'runway_distance_marker', label: 'Runway Distance Marker' },
+  { value: 'runway_edge_light', label: 'Runway Edge Light' },
+  { value: 'runway_threshold', label: 'Runway Threshold' },
+  { value: 'sequenced_flasher', label: 'Sequenced Flasher' },
   { value: 'stadium_light', label: 'Stadium Light' },
+  { value: 'taxiway_end_light', label: 'Taxiway End Light' },
+  { value: 'taxiway_light', label: 'Taxiway Light' },
+  { value: 'terminating_bar_light', label: 'Terminating Bar Light' },
+  { value: 'thousand_ft_bar_light', label: "1000' Bar Light" },
+  { value: 'windcone', label: 'Windcone' },
 ]
 
 // ── Generate map icons for signs and obstruction lights ──
@@ -384,6 +383,26 @@ export default function InfrastructureMapPage() {
   const [allComponentsList, setAllComponentsList] = useState<{ id: string; system_id: string; label: string; system_name: string }[]>([])
   const allComponentsRef = useRef<typeof allComponentsList>([])
   allComponentsRef.current = allComponentsList
+
+  // Group components by system for dropdown optgroups (sorted alphabetically)
+  const groupedComponents = useMemo(() => {
+    const sysMap = new Map<string, { name: string; components: typeof allComponentsList }>()
+    for (const c of allComponentsList) {
+      let sys = sysMap.get(c.system_id)
+      if (!sys) {
+        sys = { name: c.system_name, components: [] }
+        sysMap.set(c.system_id, sys)
+      }
+      sys.components.push(c)
+    }
+    // Sort systems alphabetically, components alphabetically within each
+    const groups = Array.from(sysMap.values())
+      .sort((a, b) => a.name.localeCompare(b.name))
+    for (const g of groups) g.components.sort((a, b) => a.label.localeCompare(b.label))
+    return groups
+  }, [allComponentsList])
+  const groupedComponentsRef = useRef(groupedComponents)
+  groupedComponentsRef.current = groupedComponents
   const [placementType, setPlacementType] = useState<InfrastructureFeatureType>('taxiway_light')
   const [saving, setSaving] = useState(false)
   const [gpsLoading, setGpsLoading] = useState(false)
@@ -1453,14 +1472,16 @@ export default function InfrastructureMapPage() {
             if (currentComp) {
               html += `<div style="margin-top:6px;font-size:10px;color:#94A3B8;">${currentComp.system_name} &mdash; ${currentComp.label}</div>`
             }
-            const compOptions = allComponentsRef.current.map(c =>
-              `<option value="${c.id}" ${c.id === currentCompId ? 'selected' : ''}>${c.system_name} — ${c.label}</option>`
+            const compOptGroups = groupedComponentsRef.current.map(g =>
+              `<optgroup label="${g.name}">${g.components.map(c =>
+                `<option value="${c.id}" ${c.id === currentCompId ? 'selected' : ''}>${c.label}</option>`
+              ).join('')}</optgroup>`
             ).join('')
             html += `<select onchange="window.__assignComponent('${props.id}',this.value)" style="
               margin-top:4px;width:100%;padding:4px 6px;border-radius:4px;
               border:1px solid rgba(148,163,184,0.2);background:rgba(30,41,59,0.9);
               color:#E2E8F0;font-size:11px;cursor:pointer;
-            "><option value="">— Assign to component —</option>${compOptions}</select>`
+            "><option value="">— Assign to component —</option>${compOptGroups}</select>`
           }
           // Status toggle button (always visible, not just in edit mode)
           if (props.id) {
@@ -2380,8 +2401,12 @@ export default function InfrastructureMapPage() {
                   }}
                 >
                   <option value="">— Unlink from component —</option>
-                  {allComponentsList.map(c => (
-                    <option key={c.id} value={c.id}>{c.system_name} — {c.label}</option>
+                  {groupedComponents.map(g => (
+                    <optgroup key={g.name} label={g.name}>
+                      {g.components.map(c => (
+                        <option key={c.id} value={c.id}>{c.label}</option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
                 <button

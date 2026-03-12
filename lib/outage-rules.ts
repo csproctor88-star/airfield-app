@@ -97,6 +97,7 @@ export const SYSTEM_TYPE_LABELS: Record<string, string> = {
   hazard_flashing: 'Flashing Hazard Beacon',
   hazard_rotating: 'Rotating Hazard Beacon',
   windcone: 'Wind Cone',
+  runway_distance_markers: 'Runway Distance Markers',
   signage: 'Airfield Signage',
   stadium_light: 'Stadium Lights',
   eals: 'EALS',
@@ -104,6 +105,7 @@ export const SYSTEM_TYPE_LABELS: Record<string, string> = {
 
 // System types available for selection
 export const SYSTEM_TYPES = Object.keys(SYSTEM_TYPE_LABELS)
+  .sort((a, b) => SYSTEM_TYPE_LABELS[a].localeCompare(SYSTEM_TYPE_LABELS[b]))
 
 // ── DAFMAN Notes ──
 
