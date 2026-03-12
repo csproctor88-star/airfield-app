@@ -536,6 +536,37 @@ export async function fileInspection(input: {
   return { data: filed, error: null }
 }
 
+/** Reopen a completed inspection — sets status back to in_progress so it can be edited and re-filed */
+export async function reopenInspection(id: string): Promise<{ data: InspectionRow | null; error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { data: null, error: 'Supabase not configured' }
+
+  const { data, error } = await supabase
+    .from('inspections')
+    .update({
+      status: 'in_progress',
+      filed_at: null,
+      filed_by_name: null,
+      filed_by_id: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Failed to reopen inspection:', error.message)
+    return { data: null, error: error.message }
+  }
+
+  const reopened = data as InspectionRow
+  logActivity('updated', 'inspection', reopened.id, reopened.display_id, {
+    details: `INSPECTION ${reopened.display_id} REOPENED FOR EDITING`,
+  }, reopened.base_id)
+
+  return { data: reopened, error: null }
+}
+
 /** Get the current user's profile name for auto-fill */
 export async function getInspectorName(): Promise<{ name: string | null; id: string | null }> {
   const supabase = createClient()

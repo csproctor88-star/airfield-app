@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { DEMO_INSPECTIONS } from '@/lib/demo-data'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { fetchInspection, fetchDailyGroup, fetchInspectionPhotos, deleteInspection, updateInspectionNotes, updateInspectionItems, uploadInspectionPhoto, deleteInspectionPhoto, type InspectionRow, type InspectionPhotoRow } from '@/lib/supabase/inspections'
+import { fetchInspection, fetchDailyGroup, fetchInspectionPhotos, deleteInspection, reopenInspection, updateInspectionNotes, updateInspectionItems, uploadInspectionPhoto, deleteInspectionPhoto, type InspectionRow, type InspectionPhotoRow } from '@/lib/supabase/inspections'
 import type { InspectionItem } from '@/lib/supabase/types'
 import { useInstallation } from '@/lib/installation-context'
 import { ActionButton } from '@/components/ui/button'
@@ -1488,6 +1488,34 @@ export default function InspectionDetailPage() {
               onClick={() => { setNotesText(primary.notes || ''); setEditingNotes(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
             >
               Edit Notes
+            </ActionButton>
+          )}
+          {canEdit && primary.status === 'completed' && (
+            <ActionButton
+              color="#F59E0B"
+              onClick={async () => {
+                if (usingDemo) {
+                  toast.success('Inspection reopened (demo mode)')
+                  return
+                }
+                if (!confirm('Reopen this inspection for editing? It will need to be re-filed after changes are made.')) return
+                setActionLoading(true)
+                // Reopen all inspections in the daily group
+                const toReopen = inspections.filter(i => i.status === 'completed')
+                for (const insp of toReopen) {
+                  const { error } = await reopenInspection(insp.id)
+                  if (error) {
+                    toast.error(`Failed to reopen ${insp.display_id}: ${error}`)
+                    setActionLoading(false)
+                    return
+                  }
+                }
+                toast.success('Inspection reopened — go to Daily Inspections to make edits and re-file')
+                router.push('/inspections')
+              }}
+              disabled={actionLoading}
+            >
+              Reopen for Editing
             </ActionButton>
           )}
           {isAdmin && (

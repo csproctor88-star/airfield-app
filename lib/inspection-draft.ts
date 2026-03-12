@@ -122,6 +122,66 @@ export function clearDraft(baseId?: string | null): void {
   localStorage.removeItem(getDraftKey(baseId ?? undefined))
 }
 
+/** Reconstruct a draft half from completed inspection items (for reopened inspections) */
+export function itemsToDraftHalf(
+  items: InspectionItem[],
+  dbRowId: string,
+  inspectorName?: string | null,
+  inspectorId?: string | null,
+  rscCondition?: string | null,
+  rcrValue?: string | null,
+  rcrCondition?: string | null,
+  bwcValue?: string | null,
+  weatherConditions?: string | null,
+  temperatureF?: number | null,
+  notes?: string | null,
+): InspectionHalfDraft {
+  const responses: Record<string, 'pass' | 'fail' | 'na' | null> = {}
+  const comments: Record<string, string> = {}
+  const discrepancies: Record<string, SimpleDiscrepancy[]> = {}
+
+  for (const item of items) {
+    if (item.response) {
+      responses[item.id] = item.response
+    }
+    if (item.notes) {
+      comments[item.id] = item.notes
+    }
+    if (item.discrepancies && item.discrepancies.length > 0) {
+      discrepancies[item.id] = item.discrepancies
+    } else if (item.response === 'fail' && item.notes) {
+      discrepancies[item.id] = [{
+        comment: item.notes,
+        location: item.location || null,
+        photo_ids: [],
+        generated_discrepancy_id: item.generated_discrepancy_id || null,
+      }]
+    }
+  }
+
+  return {
+    responses,
+    bwcValue: bwcValue || null,
+    rscCondition: rscCondition || null,
+    rcrReported: !!rcrValue,
+    rcrValue: rcrValue || null,
+    rcrConditionType: rcrCondition || null,
+    comments,
+    enabledConditionals: {},
+    notes: notes || '',
+    inspectorName: inspectorName || null,
+    inspectorId: inspectorId || null,
+    savedAt: null,
+    weatherConditions: weatherConditions || null,
+    temperatureF: temperatureF ?? null,
+    specialComment: '',
+    selectedPersonnel: [],
+    personnelNames: {},
+    dbRowId,
+    discrepancies,
+  }
+}
+
 /** Build InspectionItem[] from a half draft and its visible sections.
  *  Extracts the duplicated items-building logic used when filing. */
 export function halfDraftToItems(

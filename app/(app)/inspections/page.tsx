@@ -27,6 +27,7 @@ import {
   clearDraft,
   createNewDraft,
   halfDraftToItems,
+  itemsToDraftHalf,
   type DailyInspectionDraft,
   type InspectionHalfDraft,
 } from '@/lib/inspection-draft'
@@ -61,8 +62,26 @@ export default function InspectionsPage() {
         fetchInspectionTemplate(installationId!, 'airfield'),
         fetchInspectionTemplate(installationId!, 'lighting'),
       ])
-      if (af.length > 0) setDbAirfieldSections(toInspectionSections(af))
-      if (lt.length > 0) setDbLightingSections(toInspectionSections(lt))
+      if (af.length > 0) {
+        const afSections = toInspectionSections(af)
+        // Ensure RSC/RCR section is always included
+        const hasRsc = afSections.some(s => s.items.some(i => i.type === 'rsc'))
+        if (!hasRsc) {
+          const rwySection = AIRFIELD_INSPECTION_SECTIONS.find(s => s.items.some(i => i.type === 'rsc'))
+          if (rwySection) afSections.push(rwySection)
+        }
+        setDbAirfieldSections(afSections)
+      }
+      if (lt.length > 0) {
+        const ltSections = toInspectionSections(lt)
+        // Ensure RSC/RCR section is always included
+        const hasRsc = ltSections.some(s => s.items.some(i => i.type === 'rsc'))
+        if (!hasRsc) {
+          const rwySection = LIGHTING_INSPECTION_SECTIONS.find(s => s.items.some(i => i.type === 'rsc'))
+          if (rwySection) ltSections.push(rwySection)
+        }
+        setDbLightingSections(ltSections)
+      }
     }
     loadTemplates()
   }, [installationId])
@@ -102,6 +121,8 @@ export default function InspectionsPage() {
   const [saving, setSaving] = useState(false)
   const [filing, setFiling] = useState(false)
   const [showLightingWarning, setShowLightingWarning] = useState(false)
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false)
+  const [showFileConfirm, setShowFileConfirm] = useState(false)
 
   // ── Photo state for fail items (keyed by itemId → discrepancy index → photos) ──
   const [itemPhotos, setItemPhotos] = useState<Record<string, { file: File; url: string; name: string }[]>>({})
@@ -202,18 +223,29 @@ export default function InspectionsPage() {
       const current = stored || createNewDraft()
 
       for (const dbRow of dbDrafts) {
-        if (!dbRow.draft_data) continue
         const tab = dbRow.inspection_type as 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
         if (!current[tab]) continue
 
-        const localTime = current[tab].savedAt ? new Date(current[tab].savedAt!).getTime() : 0
-        const dbTime = dbRow.saved_at ? new Date(dbRow.saved_at).getTime() : 0
-        if (dbTime > localTime) {
-          current[tab] = { ...(dbRow.draft_data as unknown as InspectionHalfDraft), dbRowId: dbRow.id }
+        if (dbRow.draft_data) {
+          // Normal draft — load from draft_data
+          const localTime = current[tab].savedAt ? new Date(current[tab].savedAt!).getTime() : 0
+          const dbTime = dbRow.saved_at ? new Date(dbRow.saved_at).getTime() : 0
+          if (dbTime > localTime) {
+            current[tab] = { ...(dbRow.draft_data as unknown as InspectionHalfDraft), dbRowId: dbRow.id }
+            merged = true
+          } else if (!current[tab].dbRowId && dbRow.id) {
+            current[tab].dbRowId = dbRow.id
+          }
+        } else if (dbRow.items && dbRow.items.length > 0) {
+          // Reopened inspection — reconstruct draft from completed items
+          current[tab] = itemsToDraftHalf(
+            dbRow.items, dbRow.id,
+            dbRow.inspector_name, dbRow.inspector_id || null,
+            dbRow.rsc_condition, dbRow.rcr_value, dbRow.rcr_condition,
+            dbRow.bwc_value, dbRow.weather_conditions, dbRow.temperature_f,
+            dbRow.notes,
+          )
           merged = true
-        } else if (!current[tab].dbRowId && dbRow.id) {
-          // Link the DB row ID even if local is newer
-          current[tab].dbRowId = dbRow.id
         }
       }
 
@@ -1608,7 +1640,7 @@ export default function InspectionsPage() {
           {!currentHalf?.savedAt && (
             progress >= 100 ? (
               <button
-                onClick={() => handleComplete()}
+                onClick={() => setShowCompleteConfirm(true)}
                 disabled={saving}
                 style={{
                   flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
@@ -1640,7 +1672,7 @@ export default function InspectionsPage() {
           {/* File button: appears once at least one standard tab is completed */}
           {(draft.airfield.savedAt || draft.lighting.savedAt) && (
             <button
-              onClick={() => handleFile()}
+              onClick={() => setShowFileConfirm(true)}
               disabled={filing}
               style={{
                 flex: 1, padding: '14px 0', borderRadius: 10,
@@ -1702,6 +1734,109 @@ export default function InspectionsPage() {
                     background: 'var(--color-bg)', color: 'var(--color-text-2)', fontFamily: 'inherit',
                   }}
                 >Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Complete Confirmation Dialog ── */}
+        {showCompleteConfirm && (
+          <div
+            onClick={() => setShowCompleteConfirm(false)}
+            style={{
+              position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 20, width: '100%', maxWidth: 380,
+                border: '1px solid rgba(34,211,238,0.3)',
+              }}
+            >
+              <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-cyan, #22D3EE)', marginBottom: 12 }}>Confirm Completion</div>
+              <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: 1.6, marginBottom: 16 }}>
+                Before completing this inspection, confirm:
+              </div>
+              <ul style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.7, margin: '0 0 16px 0', paddingLeft: 20 }}>
+                <li>All discrepancies have been added</li>
+                <li>Discrepancies requiring CES submission are marked as such</li>
+                <li>All applicable photos have been attached to discrepancies</li>
+                <li>Location identifiers have been added to identified discrepancies</li>
+              </ul>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => {
+                    setShowCompleteConfirm(false)
+                    handleComplete()
+                  }}
+                  style={{
+                    flex: 1, padding: '10px 12px', borderRadius: 8, fontSize: 'var(--fs-base)', fontWeight: 700,
+                    cursor: 'pointer', border: 'none',
+                    background: 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-cyan))',
+                    color: '#FFF', fontFamily: 'inherit',
+                  }}
+                >Confirm & Complete</button>
+                <button
+                  onClick={() => setShowCompleteConfirm(false)}
+                  style={{
+                    flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                    cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                    background: 'var(--color-bg)', color: 'var(--color-text-2)', fontFamily: 'inherit',
+                  }}
+                >Go Back</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── File Confirmation Dialog ── */}
+        {showFileConfirm && (
+          <div
+            onClick={() => setShowFileConfirm(false)}
+            style={{
+              position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 20, width: '100%', maxWidth: 380,
+                border: '1px solid rgba(34,197,94,0.3)',
+              }}
+            >
+              <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: '#22C55E', marginBottom: 12 }}>File Inspection</div>
+              <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: 1.6, marginBottom: 16 }}>
+                Before filing, confirm:
+              </div>
+              <ul style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.7, margin: '0 0 16px 0', paddingLeft: 20 }}>
+                <li>All discrepancies have been added</li>
+                <li>Discrepancies requiring CES submission are marked as such</li>
+                <li>All applicable photos have been attached to discrepancies</li>
+                <li>Location identifiers have been added to identified discrepancies</li>
+              </ul>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => {
+                    setShowFileConfirm(false)
+                    handleFile()
+                  }}
+                  style={{
+                    flex: 1, padding: '10px 12px', borderRadius: 8, fontSize: 'var(--fs-base)', fontWeight: 700,
+                    cursor: 'pointer', border: '1px solid rgba(34,197,94,0.4)',
+                    background: 'rgba(34,197,94,0.1)', color: '#22C55E', fontFamily: 'inherit',
+                  }}
+                >Confirm & File</button>
+                <button
+                  onClick={() => setShowFileConfirm(false)}
+                  style={{
+                    flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                    cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                    background: 'var(--color-bg)', color: 'var(--color-text-2)', fontFamily: 'inherit',
+                  }}
+                >Go Back</button>
               </div>
             </div>
           </div>
