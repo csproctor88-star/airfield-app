@@ -20,6 +20,9 @@ import {
 } from '@/lib/supabase/infrastructure-features'
 import { createDiscrepancy } from '@/lib/supabase/discrepancies'
 import { createOutageEvent } from '@/lib/supabase/outage-events'
+import { fetchLightingSystems, fetchAllComponentsForBase } from '@/lib/supabase/lighting-systems'
+import { calculateAllSystemHealth, type SystemHealth } from '@/lib/outage-rules'
+import SystemHealthPanel from '@/components/infrastructure/system-health-panel'
 import { offsetPoint, normalizeBearing } from '@/lib/calculations/geometry'
 import type { InfrastructureFeature } from '@/lib/supabase/types'
 
@@ -387,6 +390,8 @@ export default function InfrastructureMapPage() {
   // Edit mode
   const [editMode, setEditMode] = useState(false)
   const [dbFeatures, setDbFeatures] = useState<InfrastructureFeature[]>([])
+  const [systemHealths, setSystemHealths] = useState<SystemHealth[]>([])
+  const [healthLoading, setHealthLoading] = useState(true)
   const [placementType, setPlacementType] = useState<InfrastructureFeatureType>('taxiway_light')
   const [saving, setSaving] = useState(false)
   const [gpsLoading, setGpsLoading] = useState(false)
@@ -506,6 +511,27 @@ export default function InfrastructureMapPage() {
     if (!installationId) return
     fetchInfrastructureFeatures(installationId).then(setDbFeatures)
   }, [installationId])
+
+  // Load lighting systems + components and compute health
+  useEffect(() => {
+    if (!installationId) return
+    setHealthLoading(true)
+    Promise.all([
+      fetchLightingSystems(installationId),
+      fetchAllComponentsForBase(installationId),
+    ]).then(([systems, allComponents]) => {
+      // Group components by system
+      const compsBySystem = new Map<string, typeof allComponents>()
+      for (const c of allComponents) {
+        const arr = compsBySystem.get(c.system_id) || []
+        arr.push(c)
+        compsBySystem.set(c.system_id, arr)
+      }
+      const healths = calculateAllSystemHealth(systems, compsBySystem, dbFeatures)
+      setSystemHealths(healths)
+      setHealthLoading(false)
+    })
+  }, [installationId, dbFeatures])
 
   const [importing, setImporting] = useState(false)
 
@@ -1704,6 +1730,13 @@ export default function InfrastructureMapPage() {
           </div>
         )}
       </div>
+
+      {/* System Health Panel */}
+      {!editMode && (
+        <div style={{ flexShrink: 0, marginBottom: isFullscreen ? 0 : 8 }}>
+          <SystemHealthPanel healths={systemHealths} loading={healthLoading} />
+        </div>
+      )}
 
       {/* Map + Overlays */}
       <div style={{ flex: 1, position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border)' }}>

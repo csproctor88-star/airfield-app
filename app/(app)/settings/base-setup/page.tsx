@@ -17,8 +17,22 @@ import {
   type FrequencyType,
 } from '@/lib/supabase/shift-checklist'
 import { fetchNavaidStatuses, type NavaidStatus } from '@/lib/supabase/navaids'
+import {
+  fetchLightingSystems,
+  fetchLightingSystemWithComponents,
+  createLightingSystem,
+  updateLightingSystem,
+  deleteLightingSystem,
+  createSystemComponent,
+  updateSystemComponent,
+  deleteSystemComponent,
+  fetchOutageRuleTemplates,
+  cloneComponentsFromTemplates,
+} from '@/lib/supabase/lighting-systems'
+import { SYSTEM_TYPE_LABELS, SYSTEM_TYPES } from '@/lib/outage-rules'
+import type { LightingSystem, LightingSystemComponent, OutageRuleTemplate } from '@/lib/supabase/types'
 
-type SetupTab = 'runways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'templates' | 'shiftchecklist' | 'qrc'
+type SetupTab = 'runways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'templates' | 'shiftchecklist' | 'qrc' | 'lighting'
 
 export default function BaseSetupPage() {
   const { installationId, currentInstallation, runways, areas, ceShops, arffAircraft, userRole } = useInstallation()
@@ -50,6 +64,7 @@ export default function BaseSetupPage() {
     { key: 'templates', label: 'Templates' },
     { key: 'shiftchecklist', label: 'Shift Checklist' },
     { key: 'qrc', label: 'QRC Templates' },
+    { key: 'lighting', label: 'Lighting Systems' },
   ]
 
   return (
@@ -107,6 +122,7 @@ export default function BaseSetupPage() {
         {activeTab === 'templates' && <TemplatesTab installationId={installationId} />}
         {activeTab === 'shiftchecklist' && <ShiftChecklistTab installationId={installationId} currentInstallation={currentInstallation} />}
         {activeTab === 'qrc' && <QrcTemplatesTab installationId={installationId} />}
+        {activeTab === 'lighting' && <LightingSystemsTab installationId={installationId} />}
       </div>
 
       {/* Preview Dashboard Button */}
@@ -1851,6 +1867,287 @@ function EditQrcDialog({
           }}>Cancel</button>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Lighting Systems Tab — define systems + clone from DAFMAN templates
+// ═══════════════════════════════════════════════════════════════
+
+function LightingSystemsTab({ installationId }: { installationId: string | null }) {
+  const [systems, setSystems] = useState<LightingSystem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [adding, setAdding] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [expanded, setExpanded] = useState<string | null>(null)
+  const [compsMap, setCompsMap] = useState<Record<string, LightingSystemComponent[]>>({})
+  const [loadingComps, setLoadingComps] = useState<Record<string, boolean>>({})
+
+  // New system form
+  const [newSystemType, setNewSystemType] = useState('')
+  const [newName, setNewName] = useState('')
+  const [newRunwayOrTaxiway, setNewRunwayOrTaxiway] = useState('')
+  const [newIsPrecision, setNewIsPrecision] = useState(false)
+
+  // Clone from templates
+  const [cloning, setCloning] = useState<string | null>(null)
+  const [totalCounts, setTotalCounts] = useState<Record<string, string>>({})
+  const [templatesList, setTemplatesList] = useState<OutageRuleTemplate[]>([])
+
+  // Edit component
+  const [editingComp, setEditingComp] = useState<string | null>(null)
+  const [editCount, setEditCount] = useState('')
+
+  const loadSystems = useCallback(async () => {
+    if (!installationId) return
+    setLoading(true)
+    const data = await fetchLightingSystems(installationId)
+    setSystems(data)
+    setLoading(false)
+  }, [installationId])
+
+  useEffect(() => { loadSystems() }, [loadSystems])
+
+  const loadComps = async (systemId: string) => {
+    setLoadingComps((prev) => ({ ...prev, [systemId]: true }))
+    const result = await fetchLightingSystemWithComponents(systemId)
+    if (result) setCompsMap((prev) => ({ ...prev, [systemId]: result.components }))
+    setLoadingComps((prev) => ({ ...prev, [systemId]: false }))
+  }
+
+  const handleExpand = (systemId: string) => {
+    if (expanded === systemId) { setExpanded(null); return }
+    setExpanded(systemId)
+    if (!compsMap[systemId]) loadComps(systemId)
+  }
+
+  const handleAddSystem = async () => {
+    if (!installationId || !newSystemType || !newName.trim()) return
+    setSaving(true)
+    const result = await createLightingSystem({
+      base_id: installationId, system_type: newSystemType, name: newName.trim(),
+      runway_or_taxiway: newRunwayOrTaxiway.trim() || undefined, is_precision: newIsPrecision,
+    })
+    if (result) {
+      toast.success(`Created "${result.name}"`)
+      setSystems((prev) => [...prev, result])
+      setNewSystemType(''); setNewName(''); setNewRunwayOrTaxiway(''); setNewIsPrecision(false); setAdding(false)
+    } else { toast.error('Failed to create system') }
+    setSaving(false)
+  }
+
+  const handleDeleteSystem = async (sys: LightingSystem) => {
+    if (!confirm(`Delete "${sys.name}" and all its components?`)) return
+    if (await deleteLightingSystem(sys.id)) {
+      toast.success(`Deleted "${sys.name}"`)
+      setSystems((prev) => prev.filter((s) => s.id !== sys.id))
+      if (expanded === sys.id) setExpanded(null)
+    } else { toast.error('Failed to delete system') }
+  }
+
+  const handleStartClone = async (systemId: string, systemType: string) => {
+    setCloning(systemId)
+    const t = await fetchOutageRuleTemplates(systemType)
+    setTemplatesList(t)
+    const counts: Record<string, string> = {}
+    t.forEach((tmpl) => { counts[tmpl.component_type] = '0' })
+    setTotalCounts(counts)
+  }
+
+  const handleClone = async () => {
+    if (!cloning) return
+    setSaving(true)
+    const counts: Record<string, number> = {}
+    for (const [key, val] of Object.entries(totalCounts)) counts[key] = parseInt(val) || 0
+    const sys = systems.find((s) => s.id === cloning)
+    const created = await cloneComponentsFromTemplates(cloning, sys?.system_type || '', counts)
+    if (created.length > 0) {
+      toast.success(`Cloned ${created.length} component(s)`)
+      setCompsMap((prev) => ({ ...prev, [cloning]: [...(prev[cloning] || []), ...created] }))
+    } else { toast.error('No components cloned') }
+    setCloning(null); setTemplatesList([]); setTotalCounts({}); setSaving(false)
+  }
+
+  const handleDeleteComp = async (compId: string, systemId: string) => {
+    if (!confirm('Delete this component?')) return
+    if (await deleteSystemComponent(compId)) {
+      toast.success('Component deleted')
+      setCompsMap((prev) => ({ ...prev, [systemId]: (prev[systemId] || []).filter((c) => c.id !== compId) }))
+    }
+  }
+
+  const handleSaveCount = async (compId: string, systemId: string) => {
+    const count = parseInt(editCount)
+    if (isNaN(count) || count < 0) return
+    if (await updateSystemComponent(compId, { total_count: count })) {
+      toast.success('Count updated')
+      setCompsMap((prev) => ({
+        ...prev, [systemId]: (prev[systemId] || []).map((c) => c.id === compId ? { ...c, total_count: count } : c),
+      }))
+      setEditingComp(null)
+    }
+  }
+
+  useEffect(() => {
+    if (newSystemType && !newName) {
+      const label = SYSTEM_TYPE_LABELS[newSystemType] || newSystemType
+      setNewName(newRunwayOrTaxiway ? `${label} ${newRunwayOrTaxiway}` : label)
+    }
+  }, [newSystemType, newRunwayOrTaxiway])
+
+  if (loading) return <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>Loading lighting systems...</p>
+
+  return (
+    <div>
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
+        Lighting Systems
+      </h3>
+      <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12 }}>
+        Define lighting systems per DAFMAN 13-204v2. Each runway/taxiway is its own system instance.
+        Components are cloned from DAFMAN Table A3.1 templates with your installation&apos;s actual light counts.
+      </p>
+
+      {systems.length === 0 && (
+        <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 8 }}>No lighting systems configured.</p>
+      )}
+
+      {systems.map((sys) => {
+        const isExp = expanded === sys.id
+        const comps = compsMap[sys.id] || []
+        const isLoadingC = loadingComps[sys.id]
+        return (
+          <div key={sys.id} style={{ border: '1px solid var(--color-border)', borderRadius: 8, marginBottom: 8, overflow: 'hidden' }}>
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: isExp ? 'rgba(56,189,248,0.06)' : 'transparent', cursor: 'pointer' }}
+              onClick={() => handleExpand(sys.id)}
+            >
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', transform: isExp ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.15s' }}>{'\u25BC'}</span>
+              <span style={{ flex: 1, fontWeight: 600, color: 'var(--color-text-1)', fontSize: 'var(--fs-md)' }}>{sys.name}</span>
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', background: 'var(--color-bg-inset)', padding: '2px 8px', borderRadius: 4 }}>
+                {SYSTEM_TYPE_LABELS[sys.system_type] || sys.system_type}
+              </span>
+              {sys.is_precision && (
+                <span style={{ fontSize: 'var(--fs-xs)', color: '#F59E0B', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>PRECISION</span>
+              )}
+              <button onClick={(e) => { e.stopPropagation(); handleDeleteSystem(sys) }} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xl)', padding: '0 4px' }}>&times;</button>
+            </div>
+
+            {isExp && (
+              <div style={{ padding: '0 12px 12px', borderTop: '1px solid var(--color-border)' }}>
+                {isLoadingC ? (
+                  <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', padding: '8px 0' }}>Loading components...</p>
+                ) : (
+                  <>
+                    {comps.length === 0 && <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', padding: '8px 0' }}>No components. Clone from DAFMAN templates to get started.</p>}
+                    {comps.map((comp) => (
+                      <div key={comp.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-sm)' }}>
+                        <span style={{ flex: 1, color: 'var(--color-text-1)' }}>{comp.label}</span>
+                        {editingComp === comp.id ? (
+                          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                            <input type="number" value={editCount} onChange={(e) => setEditCount(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSaveCount(comp.id, sys.id)}
+                              style={{ width: 60, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)' }} autoFocus />
+                            <button onClick={() => handleSaveCount(comp.id, sys.id)} style={{ background: 'var(--color-cyan)', border: 'none', color: '#fff', padding: '2px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Save</button>
+                            <button onClick={() => setEditingComp(null)} style={{ background: 'none', border: '1px solid var(--color-border)', color: 'var(--color-text-3)', padding: '2px 6px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Cancel</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => { setEditingComp(comp.id); setEditCount(String(comp.total_count)) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-2)', fontSize: 'var(--fs-sm)', fontVariantNumeric: 'tabular-nums' }} title="Click to edit count">
+                            {comp.total_count} lights
+                          </button>
+                        )}
+                        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', minWidth: 60 }}>
+                          {comp.is_zero_tolerance ? 'None' : comp.allowable_outage_pct != null ? `${comp.allowable_outage_pct}%` : comp.allowable_outage_count != null ? `${comp.allowable_outage_count} max` : '—'}
+                        </span>
+                        <button onClick={() => handleDeleteComp(comp.id, sys.id)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-lg)', padding: '0 2px' }}>&times;</button>
+                      </div>
+                    ))}
+
+                    {cloning === sys.id ? (
+                      <div style={{ marginTop: 8, padding: 10, background: 'var(--color-bg-inset)', borderRadius: 8 }}>
+                        <div style={{ fontWeight: 600, fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', marginBottom: 8 }}>
+                          Clone from DAFMAN Table A3.1 &mdash; {SYSTEM_TYPE_LABELS[sys.system_type] || sys.system_type}
+                        </div>
+                        <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 8 }}>Enter the actual light count for each component at your installation.</p>
+                        {templatesList.map((t) => (
+                          <div key={t.component_type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 'var(--fs-sm)' }}>
+                            <span style={{ flex: 1, color: 'var(--color-text-2)' }}>{t.label}</span>
+                            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', minWidth: 50 }}>
+                              {t.is_zero_tolerance ? 'None' : t.allowable_outage_pct != null ? `${t.allowable_outage_pct}%` : `${t.allowable_outage_count} max`}
+                            </span>
+                            <input type="number" value={totalCounts[t.component_type] || ''} onChange={(e) => setTotalCounts((prev) => ({ ...prev, [t.component_type]: e.target.value }))} placeholder="Count"
+                              style={{ width: 60, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)' }} />
+                          </div>
+                        ))}
+                        {templatesList.length === 0 && <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>No templates found for this system type.</p>}
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                          <button onClick={handleClone} disabled={saving || templatesList.length === 0}
+                            style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit', opacity: saving ? 0.5 : 1 }}>
+                            {saving ? 'Cloning...' : 'Clone Components'}
+                          </button>
+                          <button onClick={() => { setCloning(null); setTemplatesList([]); setTotalCounts({}) }}
+                            style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontWeight: 600, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={() => handleStartClone(sys.id, sys.system_type)}
+                        style={{ marginTop: 8, padding: '6px 12px', borderRadius: 6, border: '1px dashed var(--color-border)', background: 'transparent', color: 'var(--color-accent)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        + Clone from DAFMAN Templates
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
+
+      {adding ? (
+        <div style={{ marginTop: 8, padding: 12, background: 'var(--color-bg-inset)', borderRadius: 8 }}>
+          <div style={{ fontWeight: 600, fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', marginBottom: 8 }}>New Lighting System</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div>
+              <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>System Type</label>
+              <select value={newSystemType} onChange={(e) => { setNewSystemType(e.target.value); setNewName('') }}
+                style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontFamily: 'inherit' }}>
+                <option value="">Select type...</option>
+                {SYSTEM_TYPES.map((t) => <option key={t} value={t}>{SYSTEM_TYPE_LABELS[t]}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>Runway/Taxiway</label>
+              <input value={newRunwayOrTaxiway} onChange={(e) => { setNewRunwayOrTaxiway(e.target.value.toUpperCase()); setNewName('') }} placeholder="e.g. RWY 01/19, TWY A"
+                style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-md)' }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>System Name</label>
+              <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. ALSF-1 RWY 19"
+                style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-md)' }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input type="checkbox" id="is-precision-new" checked={newIsPrecision} onChange={(e) => setNewIsPrecision(e.target.checked)} />
+              <label htmlFor="is-precision-new" style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>Precision approach (affects threshold light allowable: 10% vs 25%)</label>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+              <button onClick={handleAddSystem} disabled={saving || !newSystemType || !newName.trim()}
+                style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-md)', cursor: 'pointer', fontFamily: 'inherit', opacity: saving || !newSystemType || !newName.trim() ? 0.5 : 1 }}>
+                {saving ? 'Creating...' : 'Create System'}
+              </button>
+              <button onClick={() => { setAdding(false); setNewSystemType(''); setNewName(''); setNewRunwayOrTaxiway(''); setNewIsPrecision(false) }}
+                style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontWeight: 600, fontSize: 'var(--fs-md)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => setAdding(true)}
+          style={{ marginTop: 8, width: '100%', padding: '10px 16px', borderRadius: 8, border: '1px dashed var(--color-border)', background: 'transparent', color: 'var(--color-accent)', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+          + Add Lighting System
+        </button>
+      )}
     </div>
   )
 }
