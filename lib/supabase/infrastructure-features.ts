@@ -28,14 +28,27 @@ export async function fetchInfrastructureFeatures(baseId: string): Promise<Infra
   const supabase = createClient()
   if (!supabase) return []
 
-  const { data, error } = await supabase
-    .from('infrastructure_features')
-    .select('*')
-    .eq('base_id', baseId)
-    .order('created_at', { ascending: false })
+  // Supabase default limit is 1000 rows — paginate to fetch all
+  const allData: any[] = []
+  const pageSize = 1000
+  let offset = 0
 
-  if (error) return []
-  return (data ?? []) as InfrastructureFeature[]
+  while (true) {
+    const { data, error } = await supabase
+      .from('infrastructure_features')
+      .select('*')
+      .eq('base_id', baseId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + pageSize - 1)
+
+    if (error) return allData as InfrastructureFeature[]
+    if (!data || data.length === 0) break
+    allData.push(...data)
+    if (data.length < pageSize) break
+    offset += pageSize
+  }
+
+  return allData as InfrastructureFeature[]
 }
 
 // ── Create a single feature ──
