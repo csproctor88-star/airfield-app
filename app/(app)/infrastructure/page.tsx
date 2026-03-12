@@ -58,8 +58,7 @@ const LAYERS: LayerConfig[] = [
   { key: 'centerline_bar_lights', label: 'Centerline Bar Lights', color: '#FBBF24', types: ['centerline_bar_light'], renderType: 'circle', group: 'RWY 19 Lights', legendIcon: 'circle' },
   { key: 'thousand_ft_bar_lights', label: "1000' Bar Lights",  color: '#F59E0B', types: ['thousand_ft_bar_light'], renderType: 'circle', group: 'RWY 19 Lights', legendIcon: 'circle' },
   { key: 'sequenced_flashers',  label: 'Sequenced Flashers',  color: '#7DD3FC',  types: ['sequenced_flasher'],   renderType: 'circle', group: 'RWY 19 Lights', legendIcon: 'circle' },
-  // RWY 01 Lights (continued)
-  { key: 'reil_lights',         label: 'REIL',                color: '#EC4899',  types: ['reil'],                renderType: 'symbol', group: 'RWY 01 Lights', legendIcon: 'rect', legendBorder: '#EC4899', legendInner: '#EC4899' },
+  { key: 'reil_lights',         label: 'REIL',                color: '#EC4899',  types: ['reil'],                renderType: 'symbol', group: 'RWY 19 Lights', legendIcon: 'rect', legendBorder: '#EC4899', legendInner: '#EC4899' },
   // Obstruction Lights
   { key: 'obstruction_lights',  label: 'Obstruction Lights',  color: '#EF4444',  types: ['obstruction_light'],   renderType: 'symbol', group: 'Obstruction Lights', legendIcon: 'triangle' },
 ]
