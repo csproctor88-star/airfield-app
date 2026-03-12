@@ -289,6 +289,19 @@ export default function InfrastructureMapPage() {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     () => Object.fromEntries(LAYER_GROUPS.map(g => [g, true]))
   )
+  const [expandedLocGroups, setExpandedLocGroups] = useState<Record<string, boolean>>({})
+
+  // Group location names into categories
+  const LOCATION_GROUP_ORDER = ['RWY 19 LIGHTS', 'RWY 01 LIGHTS', 'RWY LIGHTS/SIGNS', 'TAXIWAY LIGHTS', 'TAXIWAY SIGNS', 'OTHER'] as const
+  function getLocationGroup(name: string): string {
+    const upper = name.toUpperCase()
+    if (upper.includes('19 PAPI') || upper.includes('ALSF')) return 'RWY 19 LIGHTS'
+    if (upper.includes('01 PAPI') || upper.includes('SALS')) return 'RWY 01 LIGHTS'
+    if (upper.includes('RWY') || upper.includes('RUNWAY') || upper.includes('HAMMERHEAD') || upper.includes('DISTANCE MARKER')) return 'RWY LIGHTS/SIGNS'
+    if (upper.includes('TWY') && upper.includes('SIGN')) return 'TAXIWAY SIGNS'
+    if (upper.includes('TWY')) return 'TAXIWAY LIGHTS'
+    return 'OTHER'
+  }
   const [visibleLayers, setVisibleLayers] = useState<Record<string, boolean>>(
     () => Object.fromEntries(LAYERS.map(l => [l.key, true]))
   )
@@ -359,6 +372,18 @@ export default function InfrastructureMapPage() {
     // Sort alphabetically so related locations group together (TWY B, TWY K, etc.)
     return Array.from(layers.entries()).sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }))
   }, [dbFeatures])
+
+  // Group locations by category
+  const groupedLocations = useMemo(() => {
+    const groups: Record<string, [string, number][]> = {}
+    for (const g of LOCATION_GROUP_ORDER) groups[g] = []
+    for (const [name, count] of uniqueLayers) {
+      const group = getLocationGroup(name)
+      if (!groups[group]) groups[group] = []
+      groups[group].push([name, count])
+    }
+    return groups
+  }, [uniqueLayers])
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const mapboxReady = isMapboxConfigured()
@@ -2083,7 +2108,7 @@ export default function InfrastructureMapPage() {
                 </div>
               )
             })}
-            {/* Source layers section */}
+            {/* Locations section — grouped */}
             {uniqueLayers.length > 0 && (
               <>
                 <div style={{
@@ -2093,49 +2118,96 @@ export default function InfrastructureMapPage() {
                   fontSize: 11,
                   fontWeight: 700,
                   color: '#94A3B8',
-                  marginBottom: 6,
+                  marginBottom: 4,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                 }}>
                   Locations
                 </div>
-                <div style={{ maxHeight: 180, overflowY: 'auto' }}>
-                  {uniqueLayers.map(([layerName, count]) => {
-                    const isVisible = visibleSourceLayers[layerName] !== false
+                <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+                  {LOCATION_GROUP_ORDER.map(groupName => {
+                    const items = groupedLocations[groupName]
+                    if (!items || items.length === 0) return null
+                    const expanded = expandedLocGroups[groupName] !== false
+                    const groupTotal = items.reduce((s, [, c]) => s + c, 0)
+                    const allVisible = items.every(([n]) => visibleSourceLayers[n] !== false)
                     return (
-                      <label
-                        key={layerName}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          padding: '2px 0',
-                          cursor: 'pointer',
-                          opacity: isVisible ? 1 : 0.4,
-                          transition: 'opacity 0.15s',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isVisible}
-                          onChange={() => setVisibleSourceLayers(prev => ({ ...prev, [layerName]: !isVisible }))}
-                          style={{ display: 'none' }}
-                        />
-                        <span style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: 2,
-                          background: isVisible ? '#64748B' : 'transparent',
-                          border: '1px solid #64748B',
-                          flexShrink: 0,
-                        }} />
-                        <span style={{ color: '#CBD5E1', fontSize: 11, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {layerName}
-                        </span>
-                        <span style={{ color: '#64748B', fontSize: 10, fontVariantNumeric: 'tabular-nums' }}>
-                          {count}
-                        </span>
-                      </label>
+                      <div key={groupName}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            padding: '4px 0',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => setExpandedLocGroups(prev => ({ ...prev, [groupName]: !expanded }))}
+                        >
+                          <span style={{ fontSize: 8, color: '#64748B', width: 10, textAlign: 'center' }}>
+                            {expanded ? '▼' : '▶'}
+                          </span>
+                          <span style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: '#94A3B8',
+                            flex: 1,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.03em',
+                          }}>
+                            {groupName}
+                          </span>
+                          <span
+                            style={{ fontSize: 9, color: '#64748B', cursor: 'pointer', padding: '0 2px' }}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              const newVal = !allVisible
+                              setVisibleSourceLayers(prev => {
+                                const next = { ...prev }
+                                items.forEach(([n]) => { next[n] = newVal })
+                                return next
+                              })
+                            }}
+                            title={allVisible ? 'Hide all' : 'Show all'}
+                          >
+                            {groupTotal}
+                          </span>
+                        </div>
+                        {expanded && items.map(([layerName, count]) => {
+                          const isVisible = visibleSourceLayers[layerName] !== false
+                          return (
+                            <label
+                              key={layerName}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '2px 0 2px 16px',
+                                cursor: 'pointer',
+                                opacity: isVisible ? 1 : 0.4,
+                                transition: 'opacity 0.15s',
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isVisible}
+                                onChange={() => setVisibleSourceLayers(prev => ({ ...prev, [layerName]: !isVisible }))}
+                                style={{ display: 'none' }}
+                              />
+                              <span style={{
+                                width: 8, height: 8, borderRadius: 2,
+                                background: isVisible ? '#64748B' : 'transparent',
+                                border: '1px solid #64748B', flexShrink: 0,
+                              }} />
+                              <span style={{ color: '#CBD5E1', fontSize: 11, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {layerName}
+                              </span>
+                              <span style={{ color: '#64748B', fontSize: 10, fontVariantNumeric: 'tabular-nums' }}>
+                                {count}
+                              </span>
+                            </label>
+                          )
+                        })}
+                      </div>
                     )
                   })}
                 </div>
