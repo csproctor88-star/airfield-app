@@ -34,7 +34,7 @@ type LayerConfig = {
   legendInner?: string
 }
 
-const LAYER_GROUPS = ['Signs', 'Taxiway Lights', 'RWY 01 Lights', 'RWY 19 Lights', 'Obstruction Lights'] as const
+const LAYER_GROUPS = ['Signs', 'Taxiway Lights', 'Runway Lights', 'Obstruction Lights'] as const
 
 const LAYERS: LayerConfig[] = [
   // Signs
@@ -45,20 +45,17 @@ const LAYERS: LayerConfig[] = [
   // Taxiway Lights
   { key: 'taxiway_lights',      label: 'Taxiway Lights',      color: '#2563EB',  types: ['taxiway_light'],       renderType: 'circle', group: 'Taxiway Lights', legendIcon: 'circle' },
   { key: 'taxiway_end_lights',  label: 'Taxiway End Lights',  color: '#F59E0B',  types: ['taxiway_end_light'],   renderType: 'circle', group: 'Taxiway Lights', legendIcon: 'circle' },
-  // RWY 01 Lights
-  { key: 'runway_edge_lights',  label: 'Runway Edge Lights',  color: '#FFFFFF',  types: ['runway_edge_light'],   renderType: 'circle', group: 'RWY 01 Lights', legendIcon: 'circle' },
-  { key: 'runway_thresholds',   label: 'Runway Thresholds',   color: '#22C55E',  types: ['runway_threshold'],    renderType: 'symbol', group: 'RWY 01 Lights', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#22C55E' },
-  { key: 'runway_distance_markers', label: 'Distance Markers', color: '#FFFFFF', types: ['runway_distance_marker'], renderType: 'symbol', group: 'RWY 01 Lights', legendIcon: 'rect', legendBorder: '#FFFFFF', legendInner: '#000000' },
-  { key: 'papi_lights',         label: 'PAPI',                color: '#EF4444',  types: ['papi'],                renderType: 'symbol', group: 'RWY 01 Lights', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#FFFFFF' },
-  // RWY 19 Lights (Approach Lighting System components)
-  { key: 'approach_lights',     label: 'Approach Lights',     color: '#FBBF24',  types: ['approach_light'],      renderType: 'symbol', group: 'RWY 19 Lights', legendIcon: 'split-circle', legendBorder: '#FFFFFF', legendInner: '#FBBF24' },
-  { key: 'threshold_lights',    label: 'Threshold Lights',    color: '#22C55E',  types: ['threshold_light'],     renderType: 'symbol', group: 'RWY 19 Lights', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#22C55E' },
-  { key: 'pre_threshold_lights', label: 'Pre-Threshold Lights', color: '#EF4444', types: ['pre_threshold_light'], renderType: 'circle', group: 'RWY 19 Lights', legendIcon: 'circle' },
-  { key: 'terminating_bar_lights', label: 'Terminating Bar',  color: '#EF4444',  types: ['terminating_bar_light'], renderType: 'circle', group: 'RWY 19 Lights', legendIcon: 'circle' },
-  { key: 'centerline_bar_lights', label: 'Centerline Bar Lights', color: '#FBBF24', types: ['centerline_bar_light'], renderType: 'circle', group: 'RWY 19 Lights', legendIcon: 'circle' },
-  { key: 'thousand_ft_bar_lights', label: "1000' Bar Lights",  color: '#F59E0B', types: ['thousand_ft_bar_light'], renderType: 'circle', group: 'RWY 19 Lights', legendIcon: 'circle' },
-  { key: 'sequenced_flashers',  label: 'Sequenced Flashers',  color: '#7DD3FC',  types: ['sequenced_flasher'],   renderType: 'circle', group: 'RWY 19 Lights', legendIcon: 'circle' },
-  { key: 'reil_lights',         label: 'REIL',                color: '#EC4899',  types: ['reil'],                renderType: 'symbol', group: 'RWY 19 Lights', legendIcon: 'rect', legendBorder: '#EC4899', legendInner: '#EC4899' },
+  // Runway Lights
+  { key: 'runway_edge_lights',  label: 'Runway Edge Lights',  color: '#FFFFFF',  types: ['runway_edge_light'],   renderType: 'circle', group: 'Runway Lights', legendIcon: 'circle' },
+  { key: 'runway_distance_markers', label: 'Distance Markers', color: '#FFFFFF', types: ['runway_distance_marker'], renderType: 'symbol', group: 'Runway Lights', legendIcon: 'rect', legendBorder: '#FFFFFF', legendInner: '#000000' },
+  { key: 'papi_lights',         label: 'PAPI',                color: '#EF4444',  types: ['papi'],                renderType: 'symbol', group: 'Runway Lights', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#FFFFFF' },
+  { key: 'threshold_lights',    label: 'Threshold Lights',    color: '#22C55E',  types: ['threshold_light'],     renderType: 'symbol', group: 'Runway Lights', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#22C55E' },
+  { key: 'pre_threshold_lights', label: 'Pre-Threshold Lights', color: '#EF4444', types: ['pre_threshold_light'], renderType: 'circle', group: 'Runway Lights', legendIcon: 'circle' },
+  { key: 'terminating_bar_lights', label: 'Terminating Bar',  color: '#EF4444',  types: ['terminating_bar_light'], renderType: 'circle', group: 'Runway Lights', legendIcon: 'circle' },
+  { key: 'centerline_bar_lights', label: 'Centerline Bar Lights', color: '#FBBF24', types: ['centerline_bar_light'], renderType: 'circle', group: 'Runway Lights', legendIcon: 'circle' },
+  { key: 'thousand_ft_bar_lights', label: "1000' Bar Lights",  color: '#F59E0B', types: ['thousand_ft_bar_light'], renderType: 'circle', group: 'Runway Lights', legendIcon: 'circle' },
+  { key: 'sequenced_flashers',  label: 'Sequenced Flashers',  color: '#7DD3FC',  types: ['sequenced_flasher'],   renderType: 'circle', group: 'Runway Lights', legendIcon: 'circle' },
+  { key: 'reil_lights',         label: 'REIL',                color: '#EC4899',  types: ['reil'],                renderType: 'symbol', group: 'Runway Lights', legendIcon: 'rect', legendBorder: '#EC4899', legendInner: '#EC4899' },
   // Obstruction Lights
   { key: 'obstruction_lights',  label: 'Obstruction Lights',  color: '#EF4444',  types: ['obstruction_light'],   renderType: 'symbol', group: 'Obstruction Lights', legendIcon: 'triangle' },
 ]
@@ -366,7 +363,7 @@ export default function InfrastructureMapPage() {
   const uniqueLayers = useMemo(() => {
     const layers = new Map<string, number>()
     for (const f of dbFeatures) {
-      const key = f.layer || 'Unknown'
+      const key = f.layer || 'USER'
       layers.set(key, (layers.get(key) || 0) + 1)
     }
     // Sort alphabetically so related locations group together (TWY B, TWY K, etc.)
