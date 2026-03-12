@@ -1940,11 +1940,21 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
       compId,
     )
     if (count > 0) {
+      // Update the component's total_count to match assigned features
+      await updateSystemComponent(compId, { total_count: count })
       toast.success(`Assigned ${count} feature(s) to component`)
-      // Refresh stats
+      // Refresh stats and component list
       const features = await fetchInfrastructureFeatures(installationId)
       const assigned = features.filter(f => f.system_component_id).length
       setFeatureStats({ total: features.length, assigned })
+      // Find which system this component belongs to and reload its components
+      for (const sys of systems) {
+        const comps = compsMap[sys.id]
+        if (comps?.some(c => c.id === compId)) {
+          await loadComps(sys.id)
+          break
+        }
+      }
     } else {
       toast.error('No matching features found')
     }
