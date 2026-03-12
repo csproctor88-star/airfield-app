@@ -14,8 +14,10 @@ import {
   bulkShiftFeatures,
   bulkShiftByIds,
   bulkRelayerFeatures,
+  bulkCreateInfrastructureFeatures,
   type InfrastructureFeatureType,
 } from '@/lib/supabase/infrastructure-features'
+import { offsetPoint, normalizeBearing } from '@/lib/calculations/geometry'
 import type { InfrastructureFeature } from '@/lib/supabase/types'
 
 // ── Layer configuration ──
@@ -44,6 +46,12 @@ const LAYERS: LayerConfig[] = [
   { key: 'obstruction_lights',  label: 'Obstruction Lights',  color: '#EF4444',  types: ['obstruction_light'],   renderType: 'symbol', legendIcon: 'triangle' },
   { key: 'runway_distance_markers', label: 'Runway Distance Markers', color: '#FFFFFF', types: ['runway_distance_marker'], renderType: 'symbol', legendIcon: 'rect', legendBorder: '#FFFFFF', legendInner: '#000000' },
   { key: 'papi_lights',         label: 'PAPI',                color: '#EF4444',  types: ['papi'],                renderType: 'symbol', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#FFFFFF' },
+  { key: 'threshold_lights',    label: 'Threshold Lights',    color: '#22C55E',  types: ['threshold_light'],     renderType: 'symbol', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#22C55E' },
+  { key: 'pre_threshold_lights', label: 'Pre-Threshold Lights', color: '#EF4444', types: ['pre_threshold_light'], renderType: 'circle', legendIcon: 'circle' },
+  { key: 'terminating_bar_lights', label: 'Terminating Bar',  color: '#EF4444',  types: ['terminating_bar_light'], renderType: 'circle', legendIcon: 'circle' },
+  { key: 'centerline_bar_lights', label: 'Centerline Bar Lights', color: '#FBBF24', types: ['centerline_bar_light'], renderType: 'circle', legendIcon: 'circle' },
+  { key: 'thousand_ft_bar_lights', label: "1000' Bar Lights",  color: '#F59E0B', types: ['thousand_ft_bar_light'], renderType: 'circle', legendIcon: 'circle' },
+  { key: 'sequenced_flashers',  label: 'Sequenced Flashers',  color: '#7DD3FC',  types: ['sequenced_flasher'],   renderType: 'circle', legendIcon: 'circle' },
 ]
 
 const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[] = [
@@ -59,6 +67,12 @@ const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[
   { value: 'obstruction_light', label: 'Obstruction Light' },
   { value: 'runway_distance_marker', label: 'Runway Distance Marker' },
   { value: 'papi', label: 'PAPI' },
+  { value: 'threshold_light', label: 'Threshold Light' },
+  { value: 'pre_threshold_light', label: 'Pre-Threshold Light' },
+  { value: 'terminating_bar_light', label: 'Terminating Bar Light' },
+  { value: 'centerline_bar_light', label: 'Centerline Bar Light' },
+  { value: 'thousand_ft_bar_light', label: "1000' Bar Light" },
+  { value: 'sequenced_flasher', label: 'Sequenced Flasher' },
 ]
 
 // ── Generate map icons for signs and obstruction lights ──
@@ -217,6 +231,7 @@ function addMapIcons(m: mapboxgl.Map) {
   m.addImage('icon-obstruction-light', createTriangleIcon('#EF4444', s), pr)
   m.addImage('icon-runway-distance-marker', createSignIcon('#FFFFFF', '#000000', s), pr)
   m.addImage('icon-papi', createSplitCircleIcon('#EF4444', '#FFFFFF', s), pr)
+  m.addImage('icon-threshold-light', createSplitCircleIcon('#EF4444', '#22C55E', s), pr)
 }
 
 const dirBtnStyle: React.CSSProperties = {
@@ -240,6 +255,7 @@ const ICON_MAP: Record<string, string> = {
   obstruction_light: 'icon-obstruction-light',
   runway_distance_marker: 'icon-runway-distance-marker',
   papi: 'icon-papi',
+  threshold_light: 'icon-threshold-light',
 }
 
 export default function InfrastructureMapPage() {
@@ -282,6 +298,18 @@ export default function InfrastructureMapPage() {
   const [shiftFeet, setShiftFeet] = useState(5)
   const [shifting, setShifting] = useState(false)
 
+  // Bar placement mode
+  type BarType = 'threshold' | 'pre_threshold' | 'terminating' | 'centerline' | 'thousand_ft'
+  const BAR_SPECS: Record<BarType, { featureType: InfrastructureFeatureType; count: number; spacing: number; label: string }> = {
+    threshold:     { featureType: 'threshold_light',       count: 31, spacing: 5, label: 'Threshold Bar (150\')' },
+    pre_threshold: { featureType: 'pre_threshold_light',   count: 5,  spacing: 5, label: 'Pre-Threshold Bar' },
+    terminating:   { featureType: 'terminating_bar_light', count: 5,  spacing: 5, label: 'Terminating Bar' },
+    centerline:    { featureType: 'centerline_bar_light',  count: 5,  spacing: 5, label: 'Centerline Bar' },
+    thousand_ft:   { featureType: 'thousand_ft_bar_light', count: 11, spacing: 5, label: "1000' Bar" },
+  }
+  const [barPlacement, setBarPlacement] = useState<{ type: BarType; rotation: number } | null>(null)
+  const barPlacementRef = useRef<{ type: BarType; rotation: number } | null>(null)
+
   // Box select mode
   const [boxSelectActive, setBoxSelectActive] = useState(false)
   const boxSelectRef = useRef(false)
@@ -316,6 +344,7 @@ export default function InfrastructureMapPage() {
   useEffect(() => { placementTypeRef.current = placementType }, [placementType])
   useEffect(() => { boxSelectRef.current = boxSelectActive }, [boxSelectActive])
   useEffect(() => { freeMoveRef.current = freeMoveActive }, [freeMoveActive])
+  useEffect(() => { barPlacementRef.current = barPlacement }, [barPlacement])
 
   // Keyboard shortcuts: ESC toggles box select, Space toggles fullscreen
   useEffect(() => {
@@ -401,27 +430,6 @@ export default function InfrastructureMapPage() {
       toast.error('Import failed')
     }
     setImporting(false)
-  }, [installationId])
-
-  // Generate approach lighting systems (SALS + ALSF-1)
-  const [generatingALS, setGeneratingALS] = useState(false)
-  const handleGenerateApproachLights = useCallback(async () => {
-    if (!installationId) return
-    setGeneratingALS(true)
-    try {
-      const res = await fetch(`/api/generate-approach-lights?baseId=${installationId}`, { method: 'POST' })
-      const result = await res.json()
-      if (res.ok) {
-        toast.success(`Generated ${result.inserted} approach lights (SALS: ${result.sals}, ALSF-1: ${result.alsf1})`)
-        const updated = await fetchInfrastructureFeatures(installationId)
-        setDbFeatures(updated)
-      } else {
-        toast.error(result.error || 'Generation failed')
-      }
-    } catch {
-      toast.error('Generation failed')
-    }
-    setGeneratingALS(false)
   }, [installationId])
 
   // Feature counts from merged data
@@ -749,6 +757,41 @@ export default function InfrastructureMapPage() {
     )
   }, [])
 
+  // Bar placement handler — creates a bar of lights at clicked location
+  const placeBarRef = useRef<((lng: number, lat: number) => Promise<void>) | undefined>(undefined)
+  placeBarRef.current = async (lng: number, lat: number) => {
+    const bp = barPlacementRef.current
+    if (!installationId || saving || !bp) return
+    setSaving(true)
+    const spec = BAR_SPECS[bp.type]
+    const center = { lat, lon: lng }
+    // Bar extends perpendicular to the rotation direction
+    const perpBearing = normalizeBearing(bp.rotation + 90)
+    const halfWidth = ((spec.count - 1) * spec.spacing) / 2
+
+    const features: { feature_type: InfrastructureFeatureType; longitude: number; latitude: number; rotation?: number }[] = []
+    for (let i = 0; i < spec.count; i++) {
+      const offset = -halfWidth + i * spec.spacing
+      if (Math.abs(offset) < 0.01) {
+        features.push({ feature_type: spec.featureType, longitude: lng, latitude: lat, rotation: bp.rotation })
+      } else {
+        const dir = offset < 0 ? normalizeBearing(perpBearing + 180) : perpBearing
+        const pt = offsetPoint(center, dir, Math.abs(offset))
+        features.push({ feature_type: spec.featureType, longitude: pt.lon, latitude: pt.lat, rotation: bp.rotation })
+      }
+    }
+
+    const inserted = await bulkCreateInfrastructureFeatures(installationId, features as any)
+    if (inserted > 0) {
+      const updated = await fetchInfrastructureFeatures(installationId)
+      setDbFeatures(updated)
+      toast.success(`Placed ${spec.label} (${inserted} lights)`)
+    } else {
+      toast.error('Failed to place bar')
+    }
+    setSaving(false)
+  }
+
   // Bulk shift apply
   const handleBulkShift = useCallback(async (direction: 'N' | 'S' | 'E' | 'W') => {
     if (!installationId || shifting) return
@@ -1019,14 +1062,18 @@ export default function InfrastructureMapPage() {
         m.on('mouseleave', layer.key, () => { m.getCanvas().style.cursor = '' })
       }
 
-      // Click on empty map area — place feature in edit mode (skip if dragging or box selecting)
+      // Click on empty map area — place feature or bar in edit mode (skip if dragging or box selecting)
       m.on('click', (e) => {
         if (!editModeRef.current || draggingRef.current || boxSelectRef.current || freeMoveRef.current) return
         const layerIds = LAYERS.map(l => l.key)
         const clicked = m.queryRenderedFeatures(e.point, { layers: layerIds })
         if (clicked.length > 0) return
 
-        placeFeatureRef.current?.(e.lngLat.lng, e.lngLat.lat)
+        if (barPlacementRef.current) {
+          placeBarRef.current?.(e.lngLat.lng, e.lngLat.lat)
+        } else {
+          placeFeatureRef.current?.(e.lngLat.lng, e.lngLat.lat)
+        }
       })
 
       // Box select: shared helpers for mouse + touch
@@ -1310,24 +1357,7 @@ export default function InfrastructureMapPage() {
               </button>
             )}
             <button
-              onClick={handleGenerateApproachLights}
-              disabled={generatingALS}
-              style={{
-                padding: '8px 16px',
-                borderRadius: 8,
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                background: 'rgba(59, 130, 246, 0.15)',
-                color: '#3B82F6',
-                fontSize: 'var(--fs-sm)',
-                fontWeight: 700,
-                cursor: generatingALS ? 'wait' : 'pointer',
-                opacity: generatingALS ? 0.6 : 1,
-              }}
-            >
-              {generatingALS ? 'Generating...' : 'Generate ALS'}
-            </button>
-            <button
-              onClick={() => { setEditMode(prev => !prev); setBulkShiftOpen(false); setBoxSelectActive(false); setSelectedIds(new Set()) }}
+              onClick={() => { setEditMode(prev => !prev); setBulkShiftOpen(false); setBoxSelectActive(false); setSelectedIds(new Set()); setBarPlacement(null) }}
               style={{
                 padding: '8px 16px',
                 borderRadius: 8,
@@ -1489,8 +1519,59 @@ export default function InfrastructureMapPage() {
               {freeMoveActive ? `Free Move (${pendingMoves.size})` : 'Free Move'}
             </button>
 
+            <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)' }} />
+
+            {/* Bar placement buttons */}
+            {(['threshold', 'pre_threshold', 'terminating', 'centerline', 'thousand_ft'] as BarType[]).map(bt => {
+              const active = barPlacement?.type === bt
+              return (
+                <button
+                  key={bt}
+                  onClick={() => setBarPlacement(active ? null : { type: bt, rotation: barPlacement?.rotation ?? 0 })}
+                  style={{
+                    padding: '5px 8px',
+                    borderRadius: 6,
+                    border: active ? '1px solid rgba(251,191,36,0.5)' : '1px solid rgba(148,163,184,0.2)',
+                    background: active ? 'rgba(251,191,36,0.2)' : 'transparent',
+                    color: active ? '#FBBF24' : '#94A3B8',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {BAR_SPECS[bt].label}
+                </button>
+              )
+            })}
+
+            {/* Bar rotation input */}
+            {barPlacement && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontSize: 10, color: '#FBBF24' }}>Rot:</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={359}
+                  value={barPlacement.rotation}
+                  onChange={e => setBarPlacement({ ...barPlacement, rotation: parseInt(e.target.value) || 0 })}
+                  style={{
+                    width: 48,
+                    padding: '3px 6px',
+                    borderRadius: 4,
+                    border: '1px solid rgba(251,191,36,0.3)',
+                    background: 'rgba(30,41,59,0.9)',
+                    color: '#FBBF24',
+                    fontSize: 12,
+                    textAlign: 'center',
+                  }}
+                />
+                <span style={{ fontSize: 10, color: '#94A3B8' }}>°</span>
+              </div>
+            )}
+
             <div style={{ fontSize: 11, color: '#94A3B8', whiteSpace: 'nowrap' }}>
-              {saving || shifting ? 'Saving...' : freeMoveActive ? 'Tap features to grab' : 'Tap map to place'}
+              {saving || shifting ? 'Saving...' : barPlacement ? `Tap map to place ${BAR_SPECS[barPlacement.type].label}` : freeMoveActive ? 'Tap features to grab' : 'Tap map to place'}
             </div>
           </div>
         )}

@@ -14,6 +14,12 @@ export type InfrastructureFeatureType =
   | 'obstruction_light'
   | 'runway_distance_marker'
   | 'papi'
+  | 'threshold_light'
+  | 'pre_threshold_light'
+  | 'terminating_bar_light'
+  | 'centerline_bar_light'
+  | 'thousand_ft_bar_light'
+  | 'sequenced_flasher'
 
 // ── Fetch all features for a base ──
 
@@ -224,6 +230,7 @@ export async function bulkCreateInfrastructureFeatures(
     layer?: string
     block?: string
     label?: string
+    rotation?: number
     source?: 'import' | 'user'
   }[]
 ): Promise<number> {
@@ -240,6 +247,7 @@ export async function bulkCreateInfrastructureFeatures(
     layer: f.layer || null,
     block: f.block || null,
     label: f.label || null,
+    rotation: f.rotation ?? 0,
     notes: null,
     source: f.source || 'import',
     created_by: user?.id || null,
