@@ -131,6 +131,77 @@ function createTriangleIcon(color: string, size: number = 24): ImageData {
   return ctx.getImageData(0, 0, size, size)
 }
 
+// Generate a labeled sign image that looks like a real airfield sign
+function createLabeledSign(
+  text: string,
+  bgColor: string,
+  textColor: string,
+  borderColor: string,
+): ImageData {
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')!
+
+  // Measure text to size the canvas
+  const fontSize = 14
+  const fontBold = `bold ${fontSize}px system-ui, sans-serif`
+  ctx.font = fontBold
+  const metrics = ctx.measureText(text)
+  const textW = Math.ceil(metrics.width)
+
+  const padX = 8, padY = 5, borderW = 2
+  const w = textW + padX * 2 + borderW * 2
+  const h = fontSize + padY * 2 + borderW * 2
+
+  canvas.width = w
+  canvas.height = h
+
+  // Border
+  ctx.fillStyle = borderColor
+  ctx.fillRect(0, 0, w, h)
+
+  // Background
+  ctx.fillStyle = bgColor
+  ctx.fillRect(borderW, borderW, w - borderW * 2, h - borderW * 2)
+
+  // Text
+  ctx.font = fontBold
+  ctx.fillStyle = textColor
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(text, w / 2, h / 2)
+
+  return ctx.getImageData(0, 0, w, h)
+}
+
+// Sign type → colors for labeled signs
+const SIGN_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  location_sign:      { bg: '#000000', text: '#FBBF24', border: '#FBBF24' },
+  mandatory_sign:     { bg: '#CC0000', text: '#FFFFFF', border: '#FFFFFF' },
+  directional_sign:   { bg: '#FBBF24', text: '#000000', border: '#000000' },
+  informational_sign: { bg: '#FBBF24', text: '#000000', border: '#000000' },
+}
+
+// Register labeled sign images with the map, returns set of registered image names
+function registerLabeledSigns(m: mapboxgl.Map, features: InfrastructureFeature[]): Set<string> {
+  const registered = new Set<string>()
+  const pr = { pixelRatio: 1 }
+
+  for (const f of features) {
+    if (!f.label || !SIGN_COLORS[f.feature_type]) continue
+    const imgName = `sign-label-${f.id}`
+    const colors = SIGN_COLORS[f.feature_type]
+
+    // Remove old image if it exists (label may have changed)
+    if (m.hasImage(imgName)) m.removeImage(imgName)
+
+    const img = createLabeledSign(f.label, colors.bg, colors.text, colors.border)
+    m.addImage(imgName, img, pr)
+    registered.add(imgName)
+  }
+
+  return registered
+}
+
 function addMapIcons(m: mapboxgl.Map) {
   const s = 24, pr = { pixelRatio: 1 }
   m.addImage('icon-location-sign', createSignIcon('#000000', '#FBBF24', s), pr)
@@ -297,6 +368,7 @@ export default function InfrastructureMapPage() {
           id: f.id,
           source: f.source,
           notes: f.notes,
+          signIcon: f.label && SIGN_COLORS[f.feature_type] ? `sign-label-${f.id}` : null,
         },
       }))
     return { type: 'FeatureCollection', features: geoFeatures }
@@ -774,20 +846,30 @@ export default function InfrastructureMapPage() {
 
         if (layer.renderType === 'symbol') {
           const iconName = ICON_MAP[layer.types[0]]
+          const isSignLayer = SIGN_COLORS[layer.types[0]] !== undefined
           m.addLayer({
             id: layer.key,
             type: 'symbol',
             source: 'infrastructure',
             filter: filterExpr,
             layout: {
-              'icon-image': iconName,
-              'icon-size': [
-                'interpolate', ['linear'], ['zoom'],
-                12, 0.4,
-                14, 0.7,
-                16, 1,
-                18, 1.4,
-              ],
+              'icon-image': isSignLayer
+                ? ['coalesce', ['get', 'signIcon'], iconName] as any
+                : iconName,
+              'icon-size': isSignLayer
+                ? [
+                    'case',
+                    ['has', 'signIcon'],
+                    ['interpolate', ['linear'], ['zoom'], 12, 0.5, 14, 0.75, 16, 1, 18, 1.3],
+                    ['interpolate', ['linear'], ['zoom'], 12, 0.4, 14, 0.7, 16, 1, 18, 1.4],
+                  ] as any
+                : [
+                    'interpolate', ['linear'], ['zoom'],
+                    12, 0.4,
+                    14, 0.7,
+                    16, 1,
+                    18, 1.4,
+                  ],
               'icon-allow-overlap': true,
             },
           })
@@ -1019,14 +1101,15 @@ export default function InfrastructureMapPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, installationId])
 
-  // Update map source when merged data changes
+  // Register labeled sign images and update map source when data changes
   useEffect(() => {
     if (!map.current || !mapLoaded) return
+    registerLabeledSigns(map.current, dbFeatures)
     const source = map.current.getSource('infrastructure') as mapboxgl.GeoJSONSource | undefined
     if (source) {
       source.setData(featureGeoJson)
     }
-  }, [featureGeoJson, mapLoaded])
+  }, [featureGeoJson, dbFeatures, mapLoaded])
 
   // Sync layer visibility
   useEffect(() => {
