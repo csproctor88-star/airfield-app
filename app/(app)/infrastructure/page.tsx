@@ -204,7 +204,8 @@ const SIGN_COLORS: Record<string, { bg: string; text: string; border: string }> 
   location_sign:      { bg: '#000000', text: '#FBBF24', border: '#FBBF24' },
   mandatory_sign:     { bg: '#CC0000', text: '#FFFFFF', border: '#FFFFFF' },
   directional_sign:   { bg: '#FBBF24', text: '#000000', border: '#000000' },
-  informational_sign: { bg: '#FBBF24', text: '#000000', border: '#000000' },
+  informational_sign:      { bg: '#FBBF24', text: '#000000', border: '#000000' },
+  runway_distance_marker:  { bg: '#FFFFFF', text: '#000000', border: '#000000' },
 }
 
 // Register labeled sign images with the map, returns set of registered image names
