@@ -66,6 +66,7 @@ const LAYERS: LayerConfig[] = [
   { key: 'obstruction_lights',  label: 'Obstruction Lights',  color: '#EF4444',  types: ['obstruction_light'],   renderType: 'symbol', group: 'Miscellaneous', legendIcon: 'triangle' },
   { key: 'windcones',           label: 'Windcone',            color: '#F97316',  types: ['windcone'],            renderType: 'symbol', group: 'Miscellaneous', legendIcon: 'cone' },
   { key: 'stadium_lights',      label: 'Stadium Lights',      color: '#D4D4D8',  types: ['stadium_light'],       renderType: 'symbol', group: 'Miscellaneous', legendIcon: 'dot-cluster' },
+  { key: 'rotating_beacons',   label: 'Rotating Beacon',     color: '#22D3EE',  types: ['rotating_beacon'],     renderType: 'symbol', group: 'Miscellaneous', legendIcon: 'circle' },
 ]
 
 const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[] = [
@@ -79,6 +80,7 @@ const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[
   { value: 'papi', label: 'PAPI' },
   { value: 'pre_threshold_light', label: 'Pre-Threshold Light' },
   { value: 'reil', label: 'REIL' },
+  { value: 'rotating_beacon', label: 'Rotating Beacon' },
   { value: 'runway_distance_marker', label: 'Runway Distance Remaining Marker' },
   { value: 'runway_edge_light', label: 'Runway Edge Light' },
   { value: 'runway_threshold', label: 'Runway Threshold' },
@@ -321,6 +323,7 @@ function addMapIcons(m: mapboxgl.Map) {
   m.addImage('icon-reil', createSquareIcon('#EC4899', s), pr)
   m.addImage('icon-windcone', createWindconeIcon(s), pr)
   m.addImage('icon-stadium-light', createStadiumLightIcon(s), pr)
+  m.addImage('icon-rotating-beacon', createSplitCircleIcon('#22D3EE', '#22C55E', s), pr)
 }
 
 const dirBtnStyle: React.CSSProperties = {
@@ -348,6 +351,7 @@ const ICON_MAP: Record<string, string> = {
   reil: 'icon-reil',
   windcone: 'icon-windcone',
   stadium_light: 'icon-stadium-light',
+  rotating_beacon: 'icon-rotating-beacon',
 }
 
 export default function InfrastructureMapPage() {

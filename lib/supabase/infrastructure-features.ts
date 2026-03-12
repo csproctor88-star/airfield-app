@@ -23,6 +23,7 @@ export type InfrastructureFeatureType =
   | 'reil'
   | 'windcone'
   | 'stadium_light'
+  | 'rotating_beacon'
 
 // ── Fetch all features for a base ──
 
