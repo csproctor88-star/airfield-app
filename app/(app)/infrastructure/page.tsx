@@ -20,7 +20,7 @@ import {
 } from '@/lib/supabase/infrastructure-features'
 import { createDiscrepancy } from '@/lib/supabase/discrepancies'
 import { createOutageEvent } from '@/lib/supabase/outage-events'
-import { fetchLightingSystems, fetchAllComponentsForBase } from '@/lib/supabase/lighting-systems'
+import { fetchLightingSystems, fetchAllComponentsForBase, fetchLightingSystemWithComponents } from '@/lib/supabase/lighting-systems'
 import { calculateAllSystemHealth, type SystemHealth } from '@/lib/outage-rules'
 import SystemHealthPanel from '@/components/infrastructure/system-health-panel'
 import { offsetPoint, normalizeBearing } from '@/lib/calculations/geometry'
@@ -392,6 +392,10 @@ export default function InfrastructureMapPage() {
   const [dbFeatures, setDbFeatures] = useState<InfrastructureFeature[]>([])
   const [systemHealths, setSystemHealths] = useState<SystemHealth[]>([])
   const [healthLoading, setHealthLoading] = useState(true)
+  const [lightingSystemsList, setLightingSystemsList] = useState<{ id: string; name: string; system_type: string }[]>([])
+  const [allComponentsList, setAllComponentsList] = useState<{ id: string; system_id: string; label: string; system_name: string }[]>([])
+  const allComponentsRef = useRef<typeof allComponentsList>([])
+  allComponentsRef.current = allComponentsList
   const [placementType, setPlacementType] = useState<InfrastructureFeatureType>('taxiway_light')
   const [saving, setSaving] = useState(false)
   const [gpsLoading, setGpsLoading] = useState(false)
@@ -530,6 +534,16 @@ export default function InfrastructureMapPage() {
       const healths = calculateAllSystemHealth(systems, compsBySystem, dbFeatures)
       setSystemHealths(healths)
       setHealthLoading(false)
+
+      // Build flat list for popup dropdown
+      setLightingSystemsList(systems.map(s => ({ id: s.id, name: s.name, system_type: s.system_type })))
+      const sysNameMap = new Map(systems.map(s => [s.id, s.name]))
+      setAllComponentsList(allComponents.map(c => ({
+        id: c.id,
+        system_id: c.system_id,
+        label: c.label,
+        system_name: sysNameMap.get(c.system_id) || '',
+      })))
     })
   }, [installationId, dbFeatures])
 
@@ -557,6 +571,7 @@ export default function InfrastructureMapPage() {
           status: f.status || 'operational',
           notes: f.notes,
           rotation: f.rotation || 0,
+          system_component_id: f.system_component_id || '',
           signIcon: f.label && SIGN_COLORS[f.feature_type] ? `sign-label-${f.id}` : null,
         },
       }))
@@ -887,6 +902,23 @@ export default function InfrastructureMapPage() {
     toast.success('Feature marked operational')
   }
 
+  // Assign component handler
+  const assignComponentRef = useRef<((featureId: string, componentId: string | null) => Promise<void>) | undefined>(undefined)
+  assignComponentRef.current = async (featureId: string, componentId: string | null) => {
+    if (!installationId) return
+    const ok = await updateInfrastructureFeature(featureId, {
+      system_component_id: componentId || null,
+    })
+    if (ok) {
+      const refreshed = await fetchInfrastructureFeatures(installationId)
+      setDbFeatures(refreshed)
+      toast.success(componentId ? 'Component assigned' : 'Component unassigned')
+    } else {
+      toast.error('Failed to assign component')
+    }
+    document.querySelectorAll('.mapboxgl-popup').forEach(p => p.remove())
+  }
+
   useEffect(() => {
     (window as any).__deleteInfraFeature = (id: string) => {
       deleteHandlerRef.current?.(id)
@@ -906,6 +938,9 @@ export default function InfrastructureMapPage() {
     ;(window as any).__markOperational = (id: string) => {
       markOperationalRef.current?.(id)
     }
+    ;(window as any).__assignComponent = (featureId: string, componentId: string) => {
+      assignComponentRef.current?.(featureId, componentId || null)
+    }
     return () => {
       delete (window as any).__deleteInfraFeature
       delete (window as any).__moveInfraFeature
@@ -913,6 +948,7 @@ export default function InfrastructureMapPage() {
       delete (window as any).__saveFeatureProps
       delete (window as any).__reportOutage
       delete (window as any).__markOperational
+      delete (window as any).__assignComponent
     }
   }, [])
 
@@ -1314,6 +1350,22 @@ export default function InfrastructureMapPage() {
           }
           if (props.rotation) {
             html += `<div style="margin-top:4px;color:#CBD5E1;">Rotation: ${props.rotation}°</div>`
+          }
+          // Component assignment (always visible)
+          if (props.id && allComponentsRef.current.length > 0) {
+            const currentCompId = props.system_component_id || ''
+            const currentComp = allComponentsRef.current.find(c => c.id === currentCompId)
+            if (currentComp) {
+              html += `<div style="margin-top:6px;font-size:10px;color:#94A3B8;">${currentComp.system_name} &mdash; ${currentComp.label}</div>`
+            }
+            const compOptions = allComponentsRef.current.map(c =>
+              `<option value="${c.id}" ${c.id === currentCompId ? 'selected' : ''}>${c.system_name} — ${c.label}</option>`
+            ).join('')
+            html += `<select onchange="window.__assignComponent('${props.id}',this.value)" style="
+              margin-top:4px;width:100%;padding:4px 6px;border-radius:4px;
+              border:1px solid rgba(148,163,184,0.2);background:rgba(30,41,59,0.9);
+              color:#E2E8F0;font-size:11px;cursor:pointer;
+            "><option value="">— Assign to component —</option>${compOptions}</select>`
           }
           // Status toggle button (always visible, not just in edit mode)
           if (props.id) {

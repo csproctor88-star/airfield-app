@@ -103,6 +103,7 @@ export async function updateInfrastructureFeature(
     label?: string
     notes?: string
     rotation?: number
+    system_component_id?: string | null
   }
 ): Promise<boolean> {
   const supabase = createClient()
@@ -336,4 +337,42 @@ export async function bulkCreateInfrastructureFeatures(
   }
 
   return inserted
+}
+
+// ── Bulk assign features to a system component ──
+
+export async function bulkAssignComponent(
+  filter: { baseId: string; layer?: string; feature_type?: string },
+  componentId: string | null,
+): Promise<number> {
+  const supabase = createClient()
+  if (!supabase) return 0
+
+  // Build query to find matching feature IDs
+  let query = supabase
+    .from('infrastructure_features')
+    .select('id')
+    .eq('base_id', filter.baseId)
+
+  if (filter.layer) query = query.eq('layer', filter.layer)
+  if (filter.feature_type) query = query.eq('feature_type', filter.feature_type)
+
+  const { data: features, error: fetchError } = await query
+  if (fetchError || !features || features.length === 0) return 0
+
+  const ids = features.map(f => f.id)
+  let updated = 0
+  for (let i = 0; i < ids.length; i += 200) {
+    const batch = ids.slice(i, i + 200)
+    const { error } = await supabase
+      .from('infrastructure_features')
+      .update({
+        system_component_id: componentId,
+        updated_at: new Date().toISOString(),
+      } as any)
+      .in('id', batch)
+    if (!error) updated += batch.length
+  }
+
+  return updated
 }

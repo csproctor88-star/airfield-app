@@ -29,8 +29,9 @@ import {
   fetchOutageRuleTemplates,
   cloneComponentsFromTemplates,
 } from '@/lib/supabase/lighting-systems'
+import { bulkAssignComponent, fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-features'
 import { SYSTEM_TYPE_LABELS, SYSTEM_TYPES } from '@/lib/outage-rules'
-import type { LightingSystem, LightingSystemComponent, OutageRuleTemplate } from '@/lib/supabase/types'
+import type { LightingSystem, LightingSystemComponent, OutageRuleTemplate, InfrastructureFeature } from '@/lib/supabase/types'
 
 type SetupTab = 'runways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'templates' | 'shiftchecklist' | 'qrc' | 'lighting'
 
@@ -1899,6 +1900,15 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
   const [editingComp, setEditingComp] = useState<string | null>(null)
   const [editCount, setEditCount] = useState('')
 
+  // Bulk assign
+  const [assigningComp, setAssigningComp] = useState<string | null>(null)
+  const [assignLayer, setAssignLayer] = useState('')
+  const [assignType, setAssignType] = useState('')
+  const [assigning, setAssigning] = useState(false)
+  const [featureLayers, setFeatureLayers] = useState<string[]>([])
+  const [featureTypes, setFeatureTypes] = useState<string[]>([])
+  const [featureStats, setFeatureStats] = useState<{ total: number; assigned: number }>({ total: 0, assigned: 0 })
+
   const loadSystems = useCallback(async () => {
     if (!installationId) return
     setLoading(true)
@@ -1908,6 +1918,41 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
   }, [installationId])
 
   useEffect(() => { loadSystems() }, [loadSystems])
+
+  // Load feature metadata for bulk assign filters
+  useEffect(() => {
+    if (!installationId) return
+    fetchInfrastructureFeatures(installationId).then((features) => {
+      const layers = Array.from(new Set(features.map(f => f.layer).filter(Boolean))) as string[]
+      const types = Array.from(new Set(features.map(f => f.feature_type)))
+      setFeatureLayers(layers.sort())
+      setFeatureTypes(types.sort())
+      const assigned = features.filter(f => f.system_component_id).length
+      setFeatureStats({ total: features.length, assigned })
+    })
+  }, [installationId])
+
+  const handleBulkAssign = async (compId: string) => {
+    if (!installationId || (!assignLayer && !assignType)) return
+    setAssigning(true)
+    const count = await bulkAssignComponent(
+      { baseId: installationId, layer: assignLayer || undefined, feature_type: assignType || undefined },
+      compId,
+    )
+    if (count > 0) {
+      toast.success(`Assigned ${count} feature(s) to component`)
+      // Refresh stats
+      const features = await fetchInfrastructureFeatures(installationId)
+      const assigned = features.filter(f => f.system_component_id).length
+      setFeatureStats({ total: features.length, assigned })
+    } else {
+      toast.error('No matching features found')
+    }
+    setAssigning(false)
+    setAssigningComp(null)
+    setAssignLayer('')
+    setAssignType('')
+  }
 
   const loadComps = async (systemId: string) => {
     setLoadingComps((prev) => ({ ...prev, [systemId]: true }))
@@ -2041,24 +2086,61 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
                   <>
                     {comps.length === 0 && <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', padding: '8px 0' }}>No components. Clone from DAFMAN templates to get started.</p>}
                     {comps.map((comp) => (
-                      <div key={comp.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-sm)' }}>
-                        <span style={{ flex: 1, color: 'var(--color-text-1)' }}>{comp.label}</span>
-                        {editingComp === comp.id ? (
-                          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                            <input type="number" value={editCount} onChange={(e) => setEditCount(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSaveCount(comp.id, sys.id)}
-                              style={{ width: 60, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)' }} autoFocus />
-                            <button onClick={() => handleSaveCount(comp.id, sys.id)} style={{ background: 'var(--color-cyan)', border: 'none', color: '#fff', padding: '2px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Save</button>
-                            <button onClick={() => setEditingComp(null)} style={{ background: 'none', border: '1px solid var(--color-border)', color: 'var(--color-text-3)', padding: '2px 6px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Cancel</button>
-                          </div>
-                        ) : (
-                          <button onClick={() => { setEditingComp(comp.id); setEditCount(String(comp.total_count)) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-2)', fontSize: 'var(--fs-sm)', fontVariantNumeric: 'tabular-nums' }} title="Click to edit count">
-                            {comp.total_count} lights
+                      <div key={comp.id}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-sm)' }}>
+                          <span style={{ flex: 1, color: 'var(--color-text-1)' }}>{comp.label}</span>
+                          {editingComp === comp.id ? (
+                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                              <input type="number" value={editCount} onChange={(e) => setEditCount(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSaveCount(comp.id, sys.id)}
+                                style={{ width: 60, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)' }} autoFocus />
+                              <button onClick={() => handleSaveCount(comp.id, sys.id)} style={{ background: 'var(--color-cyan)', border: 'none', color: '#fff', padding: '2px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Save</button>
+                              <button onClick={() => setEditingComp(null)} style={{ background: 'none', border: '1px solid var(--color-border)', color: 'var(--color-text-3)', padding: '2px 6px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Cancel</button>
+                            </div>
+                          ) : (
+                            <button onClick={() => { setEditingComp(comp.id); setEditCount(String(comp.total_count)) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-2)', fontSize: 'var(--fs-sm)', fontVariantNumeric: 'tabular-nums' }} title="Click to edit count">
+                              {comp.total_count} lights
+                            </button>
+                          )}
+                          <button onClick={() => { setAssigningComp(assigningComp === comp.id ? null : comp.id); setAssignLayer(''); setAssignType('') }}
+                            style={{ background: 'none', border: '1px solid var(--color-border)', color: assigningComp === comp.id ? 'var(--color-accent)' : 'var(--color-text-3)', padding: '2px 6px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}
+                            title="Bulk assign features to this component">
+                            Link
                           </button>
+                          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', minWidth: 60 }}>
+                            {comp.is_zero_tolerance ? 'None' : comp.allowable_outage_pct != null ? `${comp.allowable_outage_pct}%` : comp.allowable_outage_count != null ? `${comp.allowable_outage_count} max` : '—'}
+                          </span>
+                          <button onClick={() => handleDeleteComp(comp.id, sys.id)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-lg)', padding: '0 2px' }}>&times;</button>
+                        </div>
+                        {assigningComp === comp.id && (
+                          <div style={{ padding: '8px 0 8px 12px', borderBottom: '1px solid var(--color-border)', background: 'rgba(56,189,248,0.04)' }}>
+                            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', marginBottom: 6, fontWeight: 600 }}>
+                              Bulk assign features to &ldquo;{comp.label}&rdquo;
+                            </div>
+                            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                              <select value={assignLayer} onChange={(e) => setAssignLayer(e.target.value)}
+                                style={{ padding: '4px 6px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>
+                                <option value="">Any layer</option>
+                                {featureLayers.map(l => <option key={l} value={l}>{l}</option>)}
+                              </select>
+                              <select value={assignType} onChange={(e) => setAssignType(e.target.value)}
+                                style={{ padding: '4px 6px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>
+                                <option value="">Any type</option>
+                                {featureTypes.map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+                              </select>
+                              <button onClick={() => handleBulkAssign(comp.id)} disabled={assigning || (!assignLayer && !assignType)}
+                                style={{ padding: '4px 10px', borderRadius: 4, border: 'none', background: 'var(--color-cyan)', color: '#fff', fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: assigning || (!assignLayer && !assignType) ? 0.5 : 1 }}>
+                                {assigning ? 'Assigning...' : 'Assign'}
+                              </button>
+                              <button onClick={() => { setAssigningComp(null); setAssignLayer(''); setAssignType('') }}
+                                style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                                Cancel
+                              </button>
+                            </div>
+                            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
+                              {featureStats.assigned}/{featureStats.total} features currently assigned to components
+                            </div>
+                          </div>
                         )}
-                        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', minWidth: 60 }}>
-                          {comp.is_zero_tolerance ? 'None' : comp.allowable_outage_pct != null ? `${comp.allowable_outage_pct}%` : comp.allowable_outage_count != null ? `${comp.allowable_outage_count} max` : '—'}
-                        </span>
-                        <button onClick={() => handleDeleteComp(comp.id, sys.id)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-lg)', padding: '0 2px' }}>&times;</button>
                       </div>
                     ))}
 
