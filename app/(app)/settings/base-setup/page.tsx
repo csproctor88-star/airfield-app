@@ -1899,6 +1899,22 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
   const [editingComp, setEditingComp] = useState<string | null>(null)
   const [editCount, setEditCount] = useState('')
 
+  // Edit system name
+  const [editingSystemName, setEditingSystemName] = useState<string | null>(null)
+  const [editNameValue, setEditNameValue] = useState('')
+  const handleSaveSystemName = async (sysId: string) => {
+    const trimmed = editNameValue.trim()
+    if (!trimmed) return
+    const ok = await updateLightingSystem(sysId, { name: trimmed })
+    if (ok) {
+      setSystems(prev => prev.map(s => s.id === sysId ? { ...s, name: trimmed } : s))
+      toast.success('System name updated')
+    } else {
+      toast.error('Failed to update name')
+    }
+    setEditingSystemName(null)
+  }
+
   const [assigning, setAssigning] = useState(false)
 
   const loadSystems = useCallback(async () => {
@@ -2054,7 +2070,25 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
               onClick={() => handleExpand(sys.id)}
             >
               <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', transform: isExp ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.15s' }}>{'\u25BC'}</span>
-              <span style={{ flex: 1, fontWeight: 600, color: 'var(--color-text-1)', fontSize: 'var(--fs-md)' }}>{sys.name}</span>
+              {editingSystemName === sys.id ? (
+                <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+                  <input
+                    value={editNameValue}
+                    onChange={e => setEditNameValue(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSaveSystemName(sys.id); if (e.key === 'Escape') setEditingSystemName(null) }}
+                    autoFocus
+                    style={{ flex: 1, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)', color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontWeight: 600, fontFamily: 'inherit' }}
+                  />
+                  <button onClick={() => handleSaveSystemName(sys.id)} style={{ background: 'var(--color-cyan)', border: 'none', color: '#fff', padding: '3px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Save</button>
+                  <button onClick={() => setEditingSystemName(null)} style={{ background: 'none', border: '1px solid var(--color-border)', color: 'var(--color-text-3)', padding: '3px 6px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Cancel</button>
+                </div>
+              ) : (
+                <span
+                  style={{ flex: 1, fontWeight: 600, color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', cursor: 'text' }}
+                  onClick={e => { e.stopPropagation(); setEditingSystemName(sys.id); setEditNameValue(sys.name) }}
+                  title="Click to rename"
+                >{sys.name}</span>
+              )}
               <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', background: 'var(--color-bg-inset)', padding: '2px 8px', borderRadius: 4 }}>
                 {SYSTEM_TYPE_LABELS[sys.system_type] || sys.system_type}
               </span>
