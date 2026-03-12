@@ -53,7 +53,7 @@ const LAYERS: LayerConfig[] = [
   { key: 'taxiway_end_lights',  label: 'Taxiway End Lights',  color: '#F59E0B',  types: ['taxiway_end_light'],   renderType: 'circle', group: 'Taxiway Lights', legendIcon: 'circle' },
   // Runway Lights
   { key: 'runway_edge_lights',  label: 'Runway Edge Lights',  color: '#FFFFFF',  types: ['runway_edge_light'],   renderType: 'circle', group: 'Runway Lights', legendIcon: 'circle' },
-  { key: 'runway_distance_markers', label: 'Distance Markers', color: '#FFFFFF', types: ['runway_distance_marker'], renderType: 'symbol', group: 'Signs', legendIcon: 'rect', legendBorder: '#FFFFFF', legendInner: '#000000' },
+  { key: 'runway_distance_markers', label: 'Distance Remaining Markers', color: '#FFFFFF', types: ['runway_distance_marker'], renderType: 'symbol', group: 'Signs', legendIcon: 'rect', legendBorder: '#FFFFFF', legendInner: '#000000' },
   { key: 'papi_lights',         label: 'PAPI',                color: '#EF4444',  types: ['papi'],                renderType: 'symbol', group: 'Runway Lights', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#FFFFFF' },
   { key: 'threshold_lights',    label: 'Threshold Lights',    color: '#22C55E',  types: ['threshold_light'],     renderType: 'symbol', group: 'Runway Lights', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#22C55E' },
   { key: 'pre_threshold_lights', label: 'Pre-Threshold Lights', color: '#EF4444', types: ['pre_threshold_light'], renderType: 'circle', group: 'Runway Lights', legendIcon: 'circle' },
@@ -79,7 +79,7 @@ const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[
   { value: 'papi', label: 'PAPI' },
   { value: 'pre_threshold_light', label: 'Pre-Threshold Light' },
   { value: 'reil', label: 'REIL' },
-  { value: 'runway_distance_marker', label: 'Runway Distance Marker' },
+  { value: 'runway_distance_marker', label: 'Runway Distance Remaining Marker' },
   { value: 'runway_edge_light', label: 'Runway Edge Light' },
   { value: 'runway_threshold', label: 'Runway Threshold' },
   { value: 'sequenced_flasher', label: 'Sequenced Flasher' },
