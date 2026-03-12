@@ -20,6 +20,7 @@ export type InfrastructureFeatureType =
   | 'centerline_bar_light'
   | 'thousand_ft_bar_light'
   | 'sequenced_flasher'
+  | 'reil'
 
 // ── Fetch all features for a base ──
 

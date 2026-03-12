@@ -58,6 +58,8 @@ const LAYERS: LayerConfig[] = [
   { key: 'centerline_bar_lights', label: 'Centerline Bar Lights', color: '#FBBF24', types: ['centerline_bar_light'], renderType: 'circle', group: 'RWY 19 Lights', legendIcon: 'circle' },
   { key: 'thousand_ft_bar_lights', label: "1000' Bar Lights",  color: '#F59E0B', types: ['thousand_ft_bar_light'], renderType: 'circle', group: 'RWY 19 Lights', legendIcon: 'circle' },
   { key: 'sequenced_flashers',  label: 'Sequenced Flashers',  color: '#7DD3FC',  types: ['sequenced_flasher'],   renderType: 'circle', group: 'RWY 19 Lights', legendIcon: 'circle' },
+  // RWY 01 Lights (continued)
+  { key: 'reil_lights',         label: 'REIL',                color: '#EC4899',  types: ['reil'],                renderType: 'symbol', group: 'RWY 01 Lights', legendIcon: 'rect', legendBorder: '#EC4899', legendInner: '#EC4899' },
   // Obstruction Lights
   { key: 'obstruction_lights',  label: 'Obstruction Lights',  color: '#EF4444',  types: ['obstruction_light'],   renderType: 'symbol', group: 'Obstruction Lights', legendIcon: 'triangle' },
 ]
@@ -81,6 +83,7 @@ const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[
   { value: 'centerline_bar_light', label: 'Centerline Bar Light' },
   { value: 'thousand_ft_bar_light', label: "1000' Bar Light" },
   { value: 'sequenced_flasher', label: 'Sequenced Flasher' },
+  { value: 'reil', label: 'REIL' },
 ]
 
 // ── Generate map icons for signs and obstruction lights ──
@@ -139,6 +142,16 @@ function createSplitCircleIcon(leftColor: string, rightColor: string, size: numb
   ctx.beginPath()
   ctx.arc(cx, cy, r, 0, Math.PI * 2)
   ctx.stroke()
+  return ctx.getImageData(0, 0, size, size)
+}
+
+function createSquareIcon(color: string, size: number = 24): ImageData {
+  const [, ctx] = createCanvasIcon(size)
+  ctx.fillStyle = color
+  ctx.fillRect(2, 2, size - 4, size - 4)
+  ctx.strokeStyle = '#FFFFFF'
+  ctx.lineWidth = 1.5
+  ctx.strokeRect(2, 2, size - 4, size - 4)
   return ctx.getImageData(0, 0, size, size)
 }
 
@@ -241,6 +254,7 @@ function addMapIcons(m: mapboxgl.Map) {
   m.addImage('icon-runway-distance-marker', createSignIcon('#FFFFFF', '#000000', s), pr)
   m.addImage('icon-papi', createSplitCircleIcon('#EF4444', '#FFFFFF', s), pr)
   m.addImage('icon-threshold-light', createSplitCircleIcon('#EF4444', '#22C55E', s), pr)
+  m.addImage('icon-reil', createSquareIcon('#EC4899', s), pr)
 }
 
 const dirBtnStyle: React.CSSProperties = {
@@ -265,6 +279,7 @@ const ICON_MAP: Record<string, string> = {
   runway_distance_marker: 'icon-runway-distance-marker',
   papi: 'icon-papi',
   threshold_light: 'icon-threshold-light',
+  reil: 'icon-reil',
 }
 
 export default function InfrastructureMapPage() {
