@@ -78,6 +78,7 @@ export async function updateInfrastructureFeature(
     feature_type?: InfrastructureFeatureType
     label?: string
     notes?: string
+    rotation?: number
   }
 ): Promise<boolean> {
   const supabase = createClient()

@@ -757,6 +757,7 @@ export type Database = {
           block: string | null
           label: string | null
           notes: string | null
+          rotation: number
           source: 'import' | 'user'
           created_by: string | null
           created_at: string

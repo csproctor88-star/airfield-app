@@ -368,6 +368,7 @@ export default function InfrastructureMapPage() {
           id: f.id,
           source: f.source,
           notes: f.notes,
+          rotation: f.rotation || 0,
           signIcon: f.label && SIGN_COLORS[f.feature_type] ? `sign-label-${f.id}` : null,
         },
       }))
@@ -597,17 +598,20 @@ export default function InfrastructureMapPage() {
   }
 
   // Save label handler
-  const saveLabelRef = useRef<((id: string, label: string) => Promise<void>) | undefined>(undefined)
-  saveLabelRef.current = async (id: string, label: string) => {
+  const savePropsRef = useRef<((id: string, label: string, rotation: number) => Promise<void>) | undefined>(undefined)
+  savePropsRef.current = async (id: string, label: string, rotation: number) => {
     if (!installationId) return
-    const ok = await updateInfrastructureFeature(id, { label: label || undefined })
+    const ok = await updateInfrastructureFeature(id, {
+      label: label || undefined,
+      rotation: rotation || 0,
+    })
     if (ok) {
       const updated = await fetchInfrastructureFeatures(installationId)
       setDbFeatures(updated)
       document.querySelectorAll('.mapboxgl-popup').forEach(p => p.remove())
-      toast.success(label ? `Label set to "${label}"` : 'Label cleared')
+      toast.success('Feature updated')
     } else {
-      toast.error('Failed to save label')
+      toast.error('Failed to update feature')
     }
   }
 
@@ -621,14 +625,14 @@ export default function InfrastructureMapPage() {
     ;(window as any).__moveInfraFeature = (id: string, lng: number, lat: number) => {
       moveHandlerRef.current?.(id, lng, lat)
     }
-    ;(window as any).__saveLabelFeature = (id: string, label: string) => {
-      saveLabelRef.current?.(id, label)
+    ;(window as any).__saveFeatureProps = (id: string, label: string, rotation: number) => {
+      savePropsRef.current?.(id, label, rotation)
     }
     return () => {
       delete (window as any).__deleteInfraFeature
       delete (window as any).__moveInfraFeature
       delete (window as any).__freeMoveFeature
-      delete (window as any).__saveLabelFeature
+      delete (window as any).__saveFeatureProps
     }
   }, [])
 
@@ -864,6 +868,8 @@ export default function InfrastructureMapPage() {
                 18, 1.3,
               ],
               'icon-allow-overlap': true,
+              'icon-rotate': ['get', 'rotation'],
+              'icon-rotation-alignment': 'map',
             },
           })
         } else {
@@ -913,21 +919,39 @@ export default function InfrastructureMapPage() {
           if (props.notes) {
             html += `<div style="margin-top:4px;color:#CBD5E1;">Notes: ${props.notes}</div>`
           }
+          if (props.rotation) {
+            html += `<div style="margin-top:4px;color:#CBD5E1;">Rotation: ${props.rotation}°</div>`
+          }
           if (props.id && isEditing) {
             // Label edit field
             const escapedLabel = (props.text || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')
+            const currentRotation = props.rotation || 0
             html += `<div style="margin-top:8px;">`
-            html += `<div style="display:flex;gap:4px;">`
             html += `<input id="__label-input" type="text" value="${escapedLabel}" placeholder="Label..." style="
-              flex:1;padding:4px 6px;border-radius:4px;
+              width:100%;padding:4px 6px;border-radius:4px;box-sizing:border-box;
               border:1px solid rgba(148,163,184,0.2);background:rgba(30,41,59,0.9);
-              color:#E2E8F0;font-size:12px;outline:none;
+              color:#E2E8F0;font-size:12px;outline:none;margin-bottom:6px;
             " />`
-            html += `<button onclick="window.__saveLabelFeature('${props.id}',document.getElementById('__label-input').value)" style="
-              padding:4px 10px;border:none;border-radius:4px;
+            // Rotation slider with compass
+            html += `<div style="display:flex;align-items:center;gap:8px;">`
+            html += `<div style="flex-shrink:0;"><svg width="32" height="32" viewBox="0 0 32 32">`
+            html += `<circle cx="16" cy="16" r="14" fill="none" stroke="#475569" stroke-width="1"/>`
+            html += `<text x="16" y="8" text-anchor="middle" font-size="7" fill="#94A3B8">N</text>`
+            html += `<line id="__compass-needle" x1="16" y1="16" x2="16" y2="5" stroke="#EF4444" stroke-width="2" transform="rotate(${currentRotation},16,16)"/>`
+            html += `</svg></div>`
+            html += `<div style="flex:1;">`
+            html += `<div style="display:flex;justify-content:space-between;margin-bottom:2px;">`
+            html += `<span style="font-size:10px;color:#94A3B8;">Rotation</span>`
+            html += `<span id="__rotation-value" style="font-size:10px;color:#CBD5E1;">${currentRotation}°</span>`
+            html += `</div>`
+            html += `<input id="__rotation-input" type="range" min="0" max="359" value="${currentRotation}" oninput="document.getElementById('__rotation-value').textContent=this.value+'°';document.getElementById('__compass-needle').setAttribute('transform','rotate('+this.value+',16,16)');" style="width:100%;accent-color:#10B981;cursor:pointer;" />`
+            html += `</div></div>`
+            // Save button
+            html += `<button onclick="window.__saveFeatureProps('${props.id}',document.getElementById('__label-input').value,parseInt(document.getElementById('__rotation-input').value))" style="
+              margin-top:6px;width:100%;padding:5px 0;border:none;border-radius:4px;
               background:#10B981;color:white;font-size:11px;font-weight:600;cursor:pointer;
             ">Save</button>`
-            html += `</div></div>`
+            html += `</div>`
 
             // Action buttons
             html += `<div style="display:flex;gap:6px;margin-top:6px;">`
