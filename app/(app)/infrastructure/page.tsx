@@ -492,6 +492,10 @@ export default function InfrastructureMapPage() {
       sys.totalCount += count
     }
 
+    // Sort systems alphabetically, components alphabetically within each
+    systems.sort((a, b) => a.name.localeCompare(b.name))
+    for (const sys of systems) sys.components.sort((a, b) => a.label.localeCompare(b.label))
+
     const unassignedLayers = Array.from(unassignedByLayer.entries())
       .sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }))
 
