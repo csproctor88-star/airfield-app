@@ -28,30 +28,38 @@ type LayerConfig = {
   color: string
   types: string[]
   renderType: 'circle' | 'symbol'
+  group: string
   legendIcon?: 'circle' | 'rect' | 'rect-arrow' | 'split-circle' | 'triangle'
   legendBorder?: string
   legendInner?: string
 }
 
+const LAYER_GROUPS = ['Signs', 'Taxiway Lights', 'RWY 01 Lights', 'RWY 19 Lights', 'Obstruction Lights'] as const
+
 const LAYERS: LayerConfig[] = [
-  { key: 'runway_edge_lights',  label: 'Runway Edge Lights',  color: '#FFFFFF',  types: ['runway_edge_light'],   renderType: 'circle', legendIcon: 'circle' },
-  { key: 'taxiway_lights',      label: 'Taxiway Lights',      color: '#2563EB',  types: ['taxiway_light'],       renderType: 'circle', legendIcon: 'circle' },
-  { key: 'taxiway_end_lights',  label: 'Taxiway End Lights',  color: '#F59E0B',  types: ['taxiway_end_light'],   renderType: 'circle', legendIcon: 'circle' },
-  { key: 'approach_lights',     label: 'Approach Lights',     color: '#FBBF24',  types: ['approach_light'],      renderType: 'symbol', legendIcon: 'split-circle', legendBorder: '#FFFFFF', legendInner: '#FBBF24' },
-  { key: 'runway_thresholds',   label: 'Runway Thresholds',   color: '#22C55E',  types: ['runway_threshold'],    renderType: 'symbol', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#22C55E' },
-  { key: 'location_signs',      label: 'Location Signs',      color: '#FBBF24',  types: ['location_sign'],       renderType: 'symbol', legendIcon: 'rect', legendBorder: '#000000', legendInner: '#FBBF24' },
-  { key: 'directional_signs',   label: 'Directional Signs',   color: '#FBBF24',  types: ['directional_sign'],    renderType: 'symbol', legendIcon: 'rect-arrow', legendBorder: '#FBBF24', legendInner: '#000000' },
-  { key: 'informational_signs', label: 'Informational Signs', color: '#FBBF24',  types: ['informational_sign'],  renderType: 'symbol', legendIcon: 'rect', legendBorder: '#FBBF24', legendInner: '#000000' },
-  { key: 'mandatory_signs',     label: 'Mandatory Signs',     color: '#EF4444',  types: ['mandatory_sign'],      renderType: 'symbol', legendIcon: 'rect', legendBorder: '#EF4444', legendInner: '#FFFFFF' },
-  { key: 'obstruction_lights',  label: 'Obstruction Lights',  color: '#EF4444',  types: ['obstruction_light'],   renderType: 'symbol', legendIcon: 'triangle' },
-  { key: 'runway_distance_markers', label: 'Runway Distance Markers', color: '#FFFFFF', types: ['runway_distance_marker'], renderType: 'symbol', legendIcon: 'rect', legendBorder: '#FFFFFF', legendInner: '#000000' },
-  { key: 'papi_lights',         label: 'PAPI',                color: '#EF4444',  types: ['papi'],                renderType: 'symbol', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#FFFFFF' },
-  { key: 'threshold_lights',    label: 'Threshold Lights',    color: '#22C55E',  types: ['threshold_light'],     renderType: 'symbol', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#22C55E' },
-  { key: 'pre_threshold_lights', label: 'Pre-Threshold Lights', color: '#EF4444', types: ['pre_threshold_light'], renderType: 'circle', legendIcon: 'circle' },
-  { key: 'terminating_bar_lights', label: 'Terminating Bar',  color: '#EF4444',  types: ['terminating_bar_light'], renderType: 'circle', legendIcon: 'circle' },
-  { key: 'centerline_bar_lights', label: 'Centerline Bar Lights', color: '#FBBF24', types: ['centerline_bar_light'], renderType: 'circle', legendIcon: 'circle' },
-  { key: 'thousand_ft_bar_lights', label: "1000' Bar Lights",  color: '#F59E0B', types: ['thousand_ft_bar_light'], renderType: 'circle', legendIcon: 'circle' },
-  { key: 'sequenced_flashers',  label: 'Sequenced Flashers',  color: '#7DD3FC',  types: ['sequenced_flasher'],   renderType: 'circle', legendIcon: 'circle' },
+  // Signs
+  { key: 'location_signs',      label: 'Location Signs',      color: '#FBBF24',  types: ['location_sign'],       renderType: 'symbol', group: 'Signs', legendIcon: 'rect', legendBorder: '#000000', legendInner: '#FBBF24' },
+  { key: 'directional_signs',   label: 'Directional Signs',   color: '#FBBF24',  types: ['directional_sign'],    renderType: 'symbol', group: 'Signs', legendIcon: 'rect-arrow', legendBorder: '#FBBF24', legendInner: '#000000' },
+  { key: 'informational_signs', label: 'Informational Signs', color: '#FBBF24',  types: ['informational_sign'],  renderType: 'symbol', group: 'Signs', legendIcon: 'rect', legendBorder: '#FBBF24', legendInner: '#000000' },
+  { key: 'mandatory_signs',     label: 'Mandatory Signs',     color: '#EF4444',  types: ['mandatory_sign'],      renderType: 'symbol', group: 'Signs', legendIcon: 'rect', legendBorder: '#EF4444', legendInner: '#FFFFFF' },
+  // Taxiway Lights
+  { key: 'taxiway_lights',      label: 'Taxiway Lights',      color: '#2563EB',  types: ['taxiway_light'],       renderType: 'circle', group: 'Taxiway Lights', legendIcon: 'circle' },
+  { key: 'taxiway_end_lights',  label: 'Taxiway End Lights',  color: '#F59E0B',  types: ['taxiway_end_light'],   renderType: 'circle', group: 'Taxiway Lights', legendIcon: 'circle' },
+  // RWY 01 Lights
+  { key: 'runway_edge_lights',  label: 'Runway Edge Lights',  color: '#FFFFFF',  types: ['runway_edge_light'],   renderType: 'circle', group: 'RWY 01 Lights', legendIcon: 'circle' },
+  { key: 'runway_thresholds',   label: 'Runway Thresholds',   color: '#22C55E',  types: ['runway_threshold'],    renderType: 'symbol', group: 'RWY 01 Lights', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#22C55E' },
+  { key: 'runway_distance_markers', label: 'Distance Markers', color: '#FFFFFF', types: ['runway_distance_marker'], renderType: 'symbol', group: 'RWY 01 Lights', legendIcon: 'rect', legendBorder: '#FFFFFF', legendInner: '#000000' },
+  { key: 'papi_lights',         label: 'PAPI',                color: '#EF4444',  types: ['papi'],                renderType: 'symbol', group: 'RWY 01 Lights', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#FFFFFF' },
+  // RWY 19 Lights (Approach Lighting System components)
+  { key: 'approach_lights',     label: 'Approach Lights',     color: '#FBBF24',  types: ['approach_light'],      renderType: 'symbol', group: 'RWY 19 Lights', legendIcon: 'split-circle', legendBorder: '#FFFFFF', legendInner: '#FBBF24' },
+  { key: 'threshold_lights',    label: 'Threshold Lights',    color: '#22C55E',  types: ['threshold_light'],     renderType: 'symbol', group: 'RWY 19 Lights', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#22C55E' },
+  { key: 'pre_threshold_lights', label: 'Pre-Threshold Lights', color: '#EF4444', types: ['pre_threshold_light'], renderType: 'circle', group: 'RWY 19 Lights', legendIcon: 'circle' },
+  { key: 'terminating_bar_lights', label: 'Terminating Bar',  color: '#EF4444',  types: ['terminating_bar_light'], renderType: 'circle', group: 'RWY 19 Lights', legendIcon: 'circle' },
+  { key: 'centerline_bar_lights', label: 'Centerline Bar Lights', color: '#FBBF24', types: ['centerline_bar_light'], renderType: 'circle', group: 'RWY 19 Lights', legendIcon: 'circle' },
+  { key: 'thousand_ft_bar_lights', label: "1000' Bar Lights",  color: '#F59E0B', types: ['thousand_ft_bar_light'], renderType: 'circle', group: 'RWY 19 Lights', legendIcon: 'circle' },
+  { key: 'sequenced_flashers',  label: 'Sequenced Flashers',  color: '#7DD3FC',  types: ['sequenced_flasher'],   renderType: 'circle', group: 'RWY 19 Lights', legendIcon: 'circle' },
+  // Obstruction Lights
+  { key: 'obstruction_lights',  label: 'Obstruction Lights',  color: '#EF4444',  types: ['obstruction_light'],   renderType: 'symbol', group: 'Obstruction Lights', legendIcon: 'triangle' },
 ]
 
 const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[] = [
@@ -263,6 +271,9 @@ export default function InfrastructureMapPage() {
   const map = useRef<mapboxgl.Map | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [legendOpen, setLegendOpen] = useState(true)
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(LAYER_GROUPS.map(g => [g, true]))
+  )
   const [visibleLayers, setVisibleLayers] = useState<Record<string, boolean>>(
     () => Object.fromEntries(LAYERS.map(l => [l.key, true]))
   )
@@ -1940,94 +1951,123 @@ export default function InfrastructureMapPage() {
             minWidth: 200,
             backdropFilter: 'blur(8px)',
           }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Type
-            </div>
-            {LAYERS.map(layer => (
-              <label
-                key={layer.key}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '4px 0',
-                  cursor: 'pointer',
-                  opacity: visibleLayers[layer.key] ? 1 : 0.4,
-                  transition: 'opacity 0.15s',
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={visibleLayers[layer.key]}
-                  onChange={() => toggleLayer(layer.key)}
-                  style={{ display: 'none' }}
-                />
-                {layer.legendIcon === 'triangle' ? (
-                  <svg width="12" height="12" viewBox="0 0 12 12" style={{ flexShrink: 0 }}>
-                    <polygon points="6,1 11,11 1,11" fill={layer.color} stroke="#FFF" strokeWidth="0.5" />
-                  </svg>
-                ) : layer.legendIcon === 'split-circle' ? (
-                  <svg width="12" height="12" viewBox="0 0 12 12" style={{ flexShrink: 0 }}>
-                    <path d="M6,1 A5,5 0 0,0 6,11 Z" fill={layer.legendBorder || '#FFF'} />
-                    <path d="M6,1 A5,5 0 0,1 6,11 Z" fill={layer.legendInner || '#FFF'} />
-                    <circle cx="6" cy="6" r="5" fill="none" stroke="#FFF" strokeWidth="0.5" />
-                  </svg>
-                ) : layer.legendIcon === 'rect-arrow' ? (
-                  <span style={{
-                    width: 14,
-                    height: 10,
-                    borderRadius: 1,
-                    background: layer.legendBorder || '#FBBF24',
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
-                  }}>
-                    <span style={{
-                      width: 8,
-                      height: 5,
-                      background: layer.legendInner || '#000',
+            {LAYER_GROUPS.map(groupName => {
+              const groupLayers = LAYERS.filter(l => l.group === groupName)
+              const groupCount = groupLayers.reduce((sum, l) => sum + (featureCounts[l.key] || 0), 0)
+              const expanded = expandedGroups[groupName]
+              const allVisible = groupLayers.every(l => visibleLayers[l.key])
+              const noneVisible = groupLayers.every(l => !visibleLayers[l.key])
+              return (
+                <div key={groupName}>
+                  <div
+                    style={{
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                      <span style={{ color: layer.legendBorder || '#FBBF24', fontSize: 7, lineHeight: 1, fontWeight: 900 }}>▶</span>
+                      gap: 6,
+                      padding: '5px 0',
+                      cursor: 'pointer',
+                      borderTop: groupName !== LAYER_GROUPS[0] ? '1px solid rgba(148,163,184,0.1)' : undefined,
+                      marginTop: groupName !== LAYER_GROUPS[0] ? 4 : 0,
+                      paddingTop: groupName !== LAYER_GROUPS[0] ? 6 : 5,
+                    }}
+                    onClick={() => setExpandedGroups(prev => ({ ...prev, [groupName]: !prev[groupName] }))}
+                  >
+                    <span style={{ fontSize: 9, color: '#64748B', width: 10, textAlign: 'center' }}>
+                      {expanded ? '▼' : '▶'}
                     </span>
-                  </span>
-                ) : layer.legendIcon === 'rect' ? (
-                  <span style={{
-                    width: 14,
-                    height: 10,
-                    borderRadius: 1,
-                    background: layer.legendBorder || layer.color,
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                    <span style={{
-                      width: 8,
-                      height: 5,
-                      background: layer.legendInner || '#000',
-                    }} />
-                  </span>
-                ) : (
-                  <span style={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: '50%',
-                    background: layer.color,
-                    border: '1px solid rgba(0,0,0,0.3)',
-                    flexShrink: 0,
-                  }} />
-                )}
-                <span style={{ color: '#E2E8F0', fontSize: 12, flex: 1 }}>{layer.label}</span>
-                <span style={{ color: '#64748B', fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>
-                  {featureCounts[layer.key]}
-                </span>
-              </label>
-            ))}
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: noneVisible ? '#475569' : '#94A3B8',
+                        flex: 1,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                      }}
+                    >
+                      {groupName}
+                    </span>
+                    <span
+                      style={{ fontSize: 10, color: '#64748B', cursor: 'pointer', padding: '0 2px' }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const newVal = !allVisible
+                        setVisibleLayers(prev => {
+                          const next = { ...prev }
+                          groupLayers.forEach(l => { next[l.key] = newVal })
+                          return next
+                        })
+                      }}
+                      title={allVisible ? 'Hide all' : 'Show all'}
+                    >
+                      {groupCount}
+                    </span>
+                  </div>
+                  {expanded && groupLayers.map(layer => (
+                    <label
+                      key={layer.key}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '3px 0 3px 16px',
+                        cursor: 'pointer',
+                        opacity: visibleLayers[layer.key] ? 1 : 0.4,
+                        transition: 'opacity 0.15s',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={visibleLayers[layer.key]}
+                        onChange={() => toggleLayer(layer.key)}
+                        style={{ display: 'none' }}
+                      />
+                      {layer.legendIcon === 'triangle' ? (
+                        <svg width="12" height="12" viewBox="0 0 12 12" style={{ flexShrink: 0 }}>
+                          <polygon points="6,1 11,11 1,11" fill={layer.color} stroke="#FFF" strokeWidth="0.5" />
+                        </svg>
+                      ) : layer.legendIcon === 'split-circle' ? (
+                        <svg width="12" height="12" viewBox="0 0 12 12" style={{ flexShrink: 0 }}>
+                          <path d="M6,1 A5,5 0 0,0 6,11 Z" fill={layer.legendBorder || '#FFF'} />
+                          <path d="M6,1 A5,5 0 0,1 6,11 Z" fill={layer.legendInner || '#FFF'} />
+                          <circle cx="6" cy="6" r="5" fill="none" stroke="#FFF" strokeWidth="0.5" />
+                        </svg>
+                      ) : layer.legendIcon === 'rect-arrow' ? (
+                        <span style={{
+                          width: 14, height: 10, borderRadius: 1,
+                          background: layer.legendBorder || '#FBBF24', flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <span style={{
+                            width: 8, height: 5, background: layer.legendInner || '#000',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            <span style={{ color: layer.legendBorder || '#FBBF24', fontSize: 7, lineHeight: 1, fontWeight: 900 }}>▶</span>
+                          </span>
+                        </span>
+                      ) : layer.legendIcon === 'rect' ? (
+                        <span style={{
+                          width: 14, height: 10, borderRadius: 1,
+                          background: layer.legendBorder || layer.color, flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <span style={{ width: 8, height: 5, background: layer.legendInner || '#000' }} />
+                        </span>
+                      ) : (
+                        <span style={{
+                          width: 12, height: 12, borderRadius: '50%',
+                          background: layer.color, border: '1px solid rgba(0,0,0,0.3)', flexShrink: 0,
+                        }} />
+                      )}
+                      <span style={{ color: '#E2E8F0', fontSize: 12, flex: 1 }}>{layer.label}</span>
+                      <span style={{ color: '#64748B', fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>
+                        {featureCounts[layer.key]}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )
+            })}
             {/* Source layers section */}
             {uniqueLayers.length > 0 && (
               <>
