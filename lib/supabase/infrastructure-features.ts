@@ -12,6 +12,8 @@ export type InfrastructureFeatureType =
   | 'informational_sign'
   | 'mandatory_sign'
   | 'obstruction_light'
+  | 'runway_distance_marker'
+  | 'papi'
 
 // ── Fetch all features for a base ──
 

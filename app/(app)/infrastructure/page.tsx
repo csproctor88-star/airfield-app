@@ -42,6 +42,8 @@ const LAYERS: LayerConfig[] = [
   { key: 'informational_signs', label: 'Informational Signs', color: '#FBBF24',  types: ['informational_sign'],  renderType: 'symbol', legendIcon: 'rect', legendBorder: '#FBBF24', legendInner: '#000000' },
   { key: 'mandatory_signs',     label: 'Mandatory Signs',     color: '#EF4444',  types: ['mandatory_sign'],      renderType: 'symbol', legendIcon: 'rect', legendBorder: '#EF4444', legendInner: '#FFFFFF' },
   { key: 'obstruction_lights',  label: 'Obstruction Lights',  color: '#EF4444',  types: ['obstruction_light'],   renderType: 'symbol', legendIcon: 'triangle' },
+  { key: 'runway_distance_markers', label: 'Runway Distance Markers', color: '#FFFFFF', types: ['runway_distance_marker'], renderType: 'symbol', legendIcon: 'rect', legendBorder: '#FFFFFF', legendInner: '#000000' },
+  { key: 'papi_lights',         label: 'PAPI',                color: '#EF4444',  types: ['papi'],                renderType: 'symbol', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#FFFFFF' },
 ]
 
 const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[] = [
@@ -55,6 +57,8 @@ const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[
   { value: 'informational_sign', label: 'Informational Sign' },
   { value: 'mandatory_sign', label: 'Mandatory Sign' },
   { value: 'obstruction_light', label: 'Obstruction Light' },
+  { value: 'runway_distance_marker', label: 'Runway Distance Marker' },
+  { value: 'papi', label: 'PAPI' },
 ]
 
 // ── Generate map icons for signs and obstruction lights ──
@@ -211,6 +215,8 @@ function addMapIcons(m: mapboxgl.Map) {
   m.addImage('icon-approach-light', createSplitCircleIcon('#FFFFFF', '#FBBF24', s), pr)
   m.addImage('icon-runway-threshold', createSplitCircleIcon('#EF4444', '#22C55E', s), pr)
   m.addImage('icon-obstruction-light', createTriangleIcon('#EF4444', s), pr)
+  m.addImage('icon-runway-distance-marker', createSignIcon('#FFFFFF', '#000000', s), pr)
+  m.addImage('icon-papi', createSplitCircleIcon('#EF4444', '#FFFFFF', s), pr)
 }
 
 const dirBtnStyle: React.CSSProperties = {
@@ -232,6 +238,8 @@ const ICON_MAP: Record<string, string> = {
   informational_sign: 'icon-informational-sign',
   mandatory_sign: 'icon-mandatory-sign',
   obstruction_light: 'icon-obstruction-light',
+  runway_distance_marker: 'icon-runway-distance-marker',
+  papi: 'icon-papi',
 }
 
 export default function InfrastructureMapPage() {
