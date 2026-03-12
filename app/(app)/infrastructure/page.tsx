@@ -287,7 +287,7 @@ export default function InfrastructureMapPage() {
   const [mapLoaded, setMapLoaded] = useState(false)
   const [legendOpen, setLegendOpen] = useState(true)
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
-    () => Object.fromEntries(LAYER_GROUPS.map(g => [g, true]))
+    () => Object.fromEntries(LAYER_GROUPS.map(g => [g, false]))
   )
   const [expandedLocGroups, setExpandedLocGroups] = useState<Record<string, boolean>>({})
 
@@ -2128,7 +2128,7 @@ export default function InfrastructureMapPage() {
                   {LOCATION_GROUP_ORDER.map(groupName => {
                     const items = groupedLocations[groupName]
                     if (!items || items.length === 0) return null
-                    const expanded = expandedLocGroups[groupName] !== false
+                    const expanded = expandedLocGroups[groupName] === true
                     const groupTotal = items.reduce((s, [, c]) => s + c, 0)
                     const allVisible = items.every(([n]) => visibleSourceLayers[n] !== false)
                     return (
