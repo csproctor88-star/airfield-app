@@ -395,6 +395,27 @@ export default function InfrastructureMapPage() {
     setImporting(false)
   }, [installationId])
 
+  // Generate approach lighting systems (SALS + ALSF-1)
+  const [generatingALS, setGeneratingALS] = useState(false)
+  const handleGenerateApproachLights = useCallback(async () => {
+    if (!installationId) return
+    setGeneratingALS(true)
+    try {
+      const res = await fetch(`/api/generate-approach-lights?baseId=${installationId}`, { method: 'POST' })
+      const result = await res.json()
+      if (res.ok) {
+        toast.success(`Generated ${result.inserted} approach lights (SALS: ${result.sals}, ALSF-1: ${result.alsf1})`)
+        const updated = await fetchInfrastructureFeatures(installationId)
+        setDbFeatures(updated)
+      } else {
+        toast.error(result.error || 'Generation failed')
+      }
+    } catch {
+      toast.error('Generation failed')
+    }
+    setGeneratingALS(false)
+  }, [installationId])
+
   // Feature counts from merged data
   const featureCounts: Record<string, number> = {}
   for (const layer of LAYERS) {
@@ -1280,6 +1301,23 @@ export default function InfrastructureMapPage() {
                 {importing ? 'Importing...' : 'Import Base Data'}
               </button>
             )}
+            <button
+              onClick={handleGenerateApproachLights}
+              disabled={generatingALS}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 8,
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                background: 'rgba(59, 130, 246, 0.15)',
+                color: '#3B82F6',
+                fontSize: 'var(--fs-sm)',
+                fontWeight: 700,
+                cursor: generatingALS ? 'wait' : 'pointer',
+                opacity: generatingALS ? 0.6 : 1,
+              }}
+            >
+              {generatingALS ? 'Generating...' : 'Generate ALS'}
+            </button>
             <button
               onClick={() => { setEditMode(prev => !prev); setBulkShiftOpen(false); setBoxSelectActive(false); setSelectedIds(new Set()) }}
               style={{
