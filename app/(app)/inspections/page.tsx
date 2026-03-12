@@ -1759,10 +1759,10 @@ export default function InspectionsPage() {
               <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: 1.6, marginBottom: 16 }}>
                 Before completing this inspection, confirm:
               </div>
-              <ul style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.7, margin: '0 0 16px 0', paddingLeft: 20 }}>
-                <li>All discrepancies have been added</li>
-                <li>Discrepancies requiring CES submission are marked as such</li>
-                <li>All applicable photos have been attached to discrepancies</li>
+              <ul style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.8, margin: '0 0 16px 0', paddingLeft: 24, listStyleType: 'disc' }}>
+                <li style={{ marginBottom: 6 }}>All discrepancies have been added</li>
+                <li style={{ marginBottom: 6 }}>Discrepancies requiring CES submission are marked as such</li>
+                <li style={{ marginBottom: 6 }}>All applicable photos have been attached to discrepancies</li>
                 <li>Location identifiers have been added to identified discrepancies</li>
               </ul>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -1811,10 +1811,10 @@ export default function InspectionsPage() {
               <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: 1.6, marginBottom: 16 }}>
                 Before filing, confirm:
               </div>
-              <ul style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.7, margin: '0 0 16px 0', paddingLeft: 20 }}>
-                <li>All discrepancies have been added</li>
-                <li>Discrepancies requiring CES submission are marked as such</li>
-                <li>All applicable photos have been attached to discrepancies</li>
+              <ul style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.8, margin: '0 0 16px 0', paddingLeft: 24, listStyleType: 'disc' }}>
+                <li style={{ marginBottom: 6 }}>All discrepancies have been added</li>
+                <li style={{ marginBottom: 6 }}>Discrepancies requiring CES submission are marked as such</li>
+                <li style={{ marginBottom: 6 }}>All applicable photos have been attached to discrepancies</li>
                 <li>Location identifiers have been added to identified discrepancies</li>
               </ul>
               <div style={{ display: 'flex', gap: 8 }}>
