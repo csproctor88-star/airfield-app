@@ -29,7 +29,6 @@ import {
   fetchOutageRuleTemplates,
   cloneComponentsFromTemplates,
 } from '@/lib/supabase/lighting-systems'
-import { bulkAssignComponent, fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-features'
 import { SYSTEM_TYPE_LABELS, SYSTEM_TYPES } from '@/lib/outage-rules'
 import type { LightingSystem, LightingSystemComponent, OutageRuleTemplate, InfrastructureFeature } from '@/lib/supabase/types'
 
@@ -1900,14 +1899,7 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
   const [editingComp, setEditingComp] = useState<string | null>(null)
   const [editCount, setEditCount] = useState('')
 
-  // Bulk assign
-  const [assigningComp, setAssigningComp] = useState<string | null>(null)
-  const [assignLayer, setAssignLayer] = useState('')
-  const [assignType, setAssignType] = useState('')
   const [assigning, setAssigning] = useState(false)
-  const [featureLayers, setFeatureLayers] = useState<string[]>([])
-  const [featureTypes, setFeatureTypes] = useState<string[]>([])
-  const [featureStats, setFeatureStats] = useState<{ total: number; assigned: number }>({ total: 0, assigned: 0 })
 
   const loadSystems = useCallback(async () => {
     if (!installationId) return
@@ -1918,52 +1910,6 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
   }, [installationId])
 
   useEffect(() => { loadSystems() }, [loadSystems])
-
-  // Load feature metadata for bulk assign filters
-  useEffect(() => {
-    if (!installationId) return
-    fetchInfrastructureFeatures(installationId).then((features) => {
-      const layers = Array.from(new Set(features.map(f => f.layer).filter(Boolean))) as string[]
-      const types = Array.from(new Set(features.map(f => f.feature_type)))
-      setFeatureLayers(layers.sort())
-      setFeatureTypes(types.sort())
-      const assigned = features.filter(f => f.system_component_id).length
-      setFeatureStats({ total: features.length, assigned })
-    })
-  }, [installationId])
-
-  const handleBulkAssign = async (compId: string) => {
-    if (!installationId || (!assignLayer && !assignType)) return
-    setAssigning(true)
-    const count = await bulkAssignComponent(
-      { baseId: installationId, layer: assignLayer || undefined, feature_type: assignType || undefined },
-      compId,
-    )
-    if (count > 0) {
-      // Count ALL features now linked to this component (not just this batch)
-      const features = await fetchInfrastructureFeatures(installationId)
-      const totalLinked = features.filter(f => f.system_component_id === compId).length
-      await updateSystemComponent(compId, { total_count: totalLinked })
-      toast.success(`Assigned ${count} feature(s) — component now has ${totalLinked} total`)
-      // Refresh stats
-      const assigned = features.filter(f => f.system_component_id).length
-      setFeatureStats({ total: features.length, assigned })
-      // Find which system this component belongs to and reload its components
-      for (const sys of systems) {
-        const comps = compsMap[sys.id]
-        if (comps?.some(c => c.id === compId)) {
-          await loadComps(sys.id)
-          break
-        }
-      }
-    } else {
-      toast.error('No matching features found')
-    }
-    setAssigning(false)
-    setAssigningComp(null)
-    setAssignLayer('')
-    setAssignType('')
-  }
 
   const handleUnlinkAll = async (compId: string, compLabel: string, systemId: string) => {
     if (!installationId) return
@@ -1987,9 +1933,6 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
         await updateSystemComponent(compId, { total_count: 0 })
         toast.success(`Unlinked ${linked.length} feature(s) from "${compLabel}"`)
         await loadComps(systemId)
-        const features = await fetchInfrastructureFeatures(installationId)
-        const assigned = features.filter(f => f.system_component_id).length
-        setFeatureStats({ total: features.length, assigned })
       } else {
         toast('No features linked to this component')
       }
@@ -2144,11 +2087,6 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
                               {comp.total_count} lights
                             </button>
                           )}
-                          <button onClick={() => { setAssigningComp(assigningComp === comp.id ? null : comp.id); setAssignLayer(''); setAssignType('') }}
-                            style={{ background: 'none', border: '1px solid var(--color-border)', color: assigningComp === comp.id ? 'var(--color-accent)' : 'var(--color-text-3)', padding: '2px 6px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}
-                            title="Bulk assign features to this component">
-                            Link
-                          </button>
                           {comp.total_count > 0 && (
                             <button onClick={() => handleUnlinkAll(comp.id, comp.label, sys.id)}
                               disabled={assigning}
@@ -2162,36 +2100,6 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
                           </span>
                           <button onClick={() => handleDeleteComp(comp.id, sys.id)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-lg)', padding: '0 2px' }}>&times;</button>
                         </div>
-                        {assigningComp === comp.id && (
-                          <div style={{ padding: '8px 0 8px 12px', borderBottom: '1px solid var(--color-border)', background: 'rgba(56,189,248,0.04)' }}>
-                            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', marginBottom: 6, fontWeight: 600 }}>
-                              Bulk assign features to &ldquo;{comp.label}&rdquo;
-                            </div>
-                            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                              <select value={assignLayer} onChange={(e) => setAssignLayer(e.target.value)}
-                                style={{ padding: '4px 6px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>
-                                <option value="">Any layer</option>
-                                {featureLayers.map(l => <option key={l} value={l}>{l}</option>)}
-                              </select>
-                              <select value={assignType} onChange={(e) => setAssignType(e.target.value)}
-                                style={{ padding: '4px 6px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>
-                                <option value="">Any type</option>
-                                {featureTypes.map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
-                              </select>
-                              <button onClick={() => handleBulkAssign(comp.id)} disabled={assigning || (!assignLayer && !assignType)}
-                                style={{ padding: '4px 10px', borderRadius: 4, border: 'none', background: 'var(--color-cyan)', color: '#fff', fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: assigning || (!assignLayer && !assignType) ? 0.5 : 1 }}>
-                                {assigning ? 'Assigning...' : 'Assign'}
-                              </button>
-                              <button onClick={() => { setAssigningComp(null); setAssignLayer(''); setAssignType('') }}
-                                style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit' }}>
-                                Cancel
-                              </button>
-                            </div>
-                            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
-                              {featureStats.assigned}/{featureStats.total} features currently assigned to components
-                            </div>
-                          </div>
-                        )}
                       </div>
                     ))}
 
