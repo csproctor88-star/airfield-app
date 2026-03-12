@@ -171,6 +171,7 @@ export default function InfrastructureMapPage() {
   const [visibleLayers, setVisibleLayers] = useState<Record<string, boolean>>(
     () => Object.fromEntries(LAYERS.map(l => [l.key, true]))
   )
+  const [visibleSourceLayers, setVisibleSourceLayers] = useState<Record<string, boolean>>({})
   const { runways, installationId, userRole } = useInstallation()
 
   // Fullscreen
@@ -276,23 +277,30 @@ export default function InfrastructureMapPage() {
 
   const [importing, setImporting] = useState(false)
 
-  // Build GeoJSON from DB features
+  // Build GeoJSON from DB features, filtered by visible source layers
   const featureGeoJson = useMemo<GeoJSON.FeatureCollection>(() => {
-    const geoFeatures: GeoJSON.Feature[] = dbFeatures.map(f => ({
-      type: 'Feature' as const,
-      geometry: { type: 'Point' as const, coordinates: [f.longitude, f.latitude] },
-      properties: {
-        type: f.feature_type,
-        layer: f.layer || 'USER',
-        block: f.block,
-        text: f.label,
-        id: f.id,
-        source: f.source,
-        notes: f.notes,
-      },
-    }))
+    const hasFilter = Object.values(visibleSourceLayers).some(v => v === false)
+    const geoFeatures: GeoJSON.Feature[] = dbFeatures
+      .filter(f => {
+        if (!hasFilter) return true
+        const layerName = f.layer || 'USER'
+        return visibleSourceLayers[layerName] !== false
+      })
+      .map(f => ({
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: [f.longitude, f.latitude] },
+        properties: {
+          type: f.feature_type,
+          layer: f.layer || 'USER',
+          block: f.block,
+          text: f.label,
+          id: f.id,
+          source: f.source,
+          notes: f.notes,
+        },
+      }))
     return { type: 'FeatureCollection', features: geoFeatures }
-  }, [dbFeatures])
+  }, [dbFeatures, visibleSourceLayers])
 
   // Import static GeoJSON into DB
   const handleImport = useCallback(async () => {
@@ -1570,8 +1578,8 @@ export default function InfrastructureMapPage() {
               </div>
               {/* Quick-pick from existing layers */}
               {uniqueLayers.length > 0 && (
-                <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
-                  {uniqueLayers.slice(0, 6).map(([layer]) => (
+                <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap', maxHeight: 100, overflowY: 'auto' }}>
+                  {uniqueLayers.map(([layer]) => (
                     <button
                       key={layer}
                       onClick={() => setRelayerName(layer)}
@@ -1761,6 +1769,65 @@ export default function InfrastructureMapPage() {
                 </span>
               </label>
             ))}
+            {/* Source layers section */}
+            {uniqueLayers.length > 0 && (
+              <>
+                <div style={{
+                  borderTop: '1px solid rgba(148, 163, 184, 0.15)',
+                  marginTop: 8,
+                  paddingTop: 8,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: '#94A3B8',
+                  marginBottom: 6,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}>
+                  Source Layers
+                </div>
+                <div style={{ maxHeight: 180, overflowY: 'auto' }}>
+                  {uniqueLayers.map(([layerName, count]) => {
+                    const isVisible = visibleSourceLayers[layerName] !== false
+                    return (
+                      <label
+                        key={layerName}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '2px 0',
+                          cursor: 'pointer',
+                          opacity: isVisible ? 1 : 0.4,
+                          transition: 'opacity 0.15s',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isVisible}
+                          onChange={() => setVisibleSourceLayers(prev => ({ ...prev, [layerName]: !isVisible }))}
+                          style={{ display: 'none' }}
+                        />
+                        <span style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 2,
+                          background: isVisible ? '#64748B' : 'transparent',
+                          border: '1px solid #64748B',
+                          flexShrink: 0,
+                        }} />
+                        <span style={{ color: '#CBD5E1', fontSize: 11, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {layerName}
+                        </span>
+                        <span style={{ color: '#64748B', fontSize: 10, fontVariantNumeric: 'tabular-nums' }}>
+                          {count}
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+
             <div style={{
               borderTop: '1px solid rgba(148, 163, 184, 0.15)',
               marginTop: 8,
