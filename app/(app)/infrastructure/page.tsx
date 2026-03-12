@@ -538,12 +538,14 @@ export default function InfrastructureMapPage() {
       // Build flat list for popup dropdown
       setLightingSystemsList(systems.map(s => ({ id: s.id, name: s.name, system_type: s.system_type })))
       const sysNameMap = new Map(systems.map(s => [s.id, s.name]))
-      setAllComponentsList(allComponents.map(c => ({
-        id: c.id,
-        system_id: c.system_id,
-        label: c.label,
-        system_name: sysNameMap.get(c.system_id) || '',
-      })))
+      setAllComponentsList(allComponents
+        .filter(c => c.component_type !== 'overall')  // "Overall" aggregates automatically — not assignable
+        .map(c => ({
+          id: c.id,
+          system_id: c.system_id,
+          label: c.label,
+          system_name: sysNameMap.get(c.system_id) || '',
+        })))
     })
   }, [installationId, dbFeatures])
 

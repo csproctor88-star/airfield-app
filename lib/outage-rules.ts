@@ -176,10 +176,12 @@ export function detectConsecutiveViolation(
 export function calculateComponentOutage(
   component: LightingSystemComponent,
   features: InfrastructureFeature[],
+  overrideFeatures?: InfrastructureFeature[],
 ): OutageStatus {
-  const componentFeatures = features.filter((f) => f.system_component_id === component.id)
+  // overrideFeatures is used for "overall" components that aggregate all system features
+  const componentFeatures = overrideFeatures || features.filter((f) => f.system_component_id === component.id)
   const inoperativeCount = componentFeatures.filter((f) => f.status === 'inoperative').length
-  const totalCount = component.total_count || componentFeatures.length
+  const totalCount = overrideFeatures ? (component.total_count || componentFeatures.length) : (component.total_count || componentFeatures.length)
   const outagePct = totalCount > 0 ? (inoperativeCount / totalCount) * 100 : 0
 
   const hasAdjacentViolation = component.allowable_no_adjacent
@@ -250,7 +252,13 @@ export function calculateSystemHealth(
     (f) => f.system_component_id && componentIds.has(f.system_component_id),
   )
 
-  const componentStatuses = components.map((c) => calculateComponentOutage(c, allFeatures))
+  const componentStatuses = components.map((c) => {
+    if (c.component_type === 'overall') {
+      // "Overall" aggregates ALL features in the system, not just those directly assigned to it
+      return calculateComponentOutage(c, allFeatures, systemFeatures)
+    }
+    return calculateComponentOutage(c, allFeatures)
+  })
 
   const totalFeatures = systemFeatures.length
   const inoperativeFeatures = systemFeatures.filter((f) => f.status === 'inoperative').length
