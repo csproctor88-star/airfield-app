@@ -24,7 +24,6 @@ import {
   updateLightingSystem,
   deleteLightingSystem,
   createSystemComponent,
-  updateSystemComponent,
   deleteSystemComponent,
   fetchOutageRuleTemplates,
   cloneComponentsFromTemplates,
@@ -1892,12 +1891,10 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
 
   // Clone from templates
   const [cloning, setCloning] = useState<string | null>(null)
-  const [totalCounts, setTotalCounts] = useState<Record<string, string>>({})
   const [templatesList, setTemplatesList] = useState<OutageRuleTemplate[]>([])
 
-  // Edit component
-  const [editingComp, setEditingComp] = useState<string | null>(null)
-  const [editCount, setEditCount] = useState('')
+  // Live feature counts per component (from infrastructure_features)
+  const [compFeatureCounts, setCompFeatureCounts] = useState<Record<string, number>>({})
 
   // Edit system name
   const [editingSystemName, setEditingSystemName] = useState<string | null>(null)
@@ -1913,6 +1910,21 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
       toast.error('Failed to update name')
     }
     setEditingSystemName(null)
+  }
+
+  // Edit runway/taxiway
+  const [editingRunway, setEditingRunway] = useState<string | null>(null)
+  const [editRunwayValue, setEditRunwayValue] = useState('')
+  const handleSaveRunway = async (sysId: string) => {
+    const trimmed = editRunwayValue.trim().toUpperCase()
+    const ok = await updateLightingSystem(sysId, { runway_or_taxiway: trimmed || null })
+    if (ok) {
+      setSystems(prev => prev.map(s => s.id === sysId ? { ...s, runway_or_taxiway: trimmed || null } : s))
+      toast.success(trimmed ? 'Runway/Taxiway updated' : 'Runway/Taxiway cleared')
+    } else {
+      toast.error('Failed to update')
+    }
+    setEditingRunway(null)
   }
 
   const [assigning, setAssigning] = useState(false)
@@ -1946,7 +1958,6 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
             .update({ system_component_id: null, updated_at: new Date().toISOString() } as any)
             .in('id', batch)
         }
-        await updateSystemComponent(compId, { total_count: 0 })
         toast.success(`Unlinked ${linked.length} feature(s) from "${compLabel}"`)
         await loadComps(systemId)
       } else {
@@ -1959,7 +1970,29 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
   const loadComps = async (systemId: string) => {
     setLoadingComps((prev) => ({ ...prev, [systemId]: true }))
     const result = await fetchLightingSystemWithComponents(systemId)
-    if (result) setCompsMap((prev) => ({ ...prev, [systemId]: result.components }))
+    if (result) {
+      setCompsMap((prev) => ({ ...prev, [systemId]: result.components }))
+      // Fetch live feature counts for each component
+      const supabase = createClient()
+      if (supabase) {
+        const compIds = result.components.map(c => c.id)
+        if (compIds.length > 0) {
+          const { data: features } = await supabase
+            .from('infrastructure_features')
+            .select('system_component_id')
+            .in('system_component_id', compIds)
+          if (features) {
+            const counts: Record<string, number> = {}
+            for (const f of features) {
+              if (f.system_component_id) {
+                counts[f.system_component_id] = (counts[f.system_component_id] || 0) + 1
+              }
+            }
+            setCompFeatureCounts(prev => ({ ...prev, ...Object.fromEntries(compIds.map(id => [id, counts[id] || 0])) }))
+          }
+        }
+      }
+    }
     setLoadingComps((prev) => ({ ...prev, [systemId]: false }))
   }
 
@@ -1997,23 +2030,18 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
     setCloning(systemId)
     const t = await fetchOutageRuleTemplates(systemType)
     setTemplatesList(t)
-    const counts: Record<string, string> = {}
-    t.forEach((tmpl) => { counts[tmpl.component_type] = '0' })
-    setTotalCounts(counts)
   }
 
   const handleClone = async () => {
     if (!cloning) return
     setSaving(true)
-    const counts: Record<string, number> = {}
-    for (const [key, val] of Object.entries(totalCounts)) counts[key] = parseInt(val) || 0
     const sys = systems.find((s) => s.id === cloning)
-    const created = await cloneComponentsFromTemplates(cloning, sys?.system_type || '', counts)
+    const created = await cloneComponentsFromTemplates(cloning, sys?.system_type || '', {})
     if (created.length > 0) {
       toast.success(`Cloned ${created.length} component(s)`)
       setCompsMap((prev) => ({ ...prev, [cloning]: [...(prev[cloning] || []), ...created] }))
     } else { toast.error('No components cloned') }
-    setCloning(null); setTemplatesList([]); setTotalCounts({}); setSaving(false)
+    setCloning(null); setTemplatesList([]); setSaving(false)
   }
 
   const handleDeleteComp = async (compId: string, systemId: string) => {
@@ -2024,17 +2052,6 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
     }
   }
 
-  const handleSaveCount = async (compId: string, systemId: string) => {
-    const count = parseInt(editCount)
-    if (isNaN(count) || count < 0) return
-    if (await updateSystemComponent(compId, { total_count: count })) {
-      toast.success('Count updated')
-      setCompsMap((prev) => ({
-        ...prev, [systemId]: (prev[systemId] || []).map((c) => c.id === compId ? { ...c, total_count: count } : c),
-      }))
-      setEditingComp(null)
-    }
-  }
 
   useEffect(() => {
     if (newSystemType && !newName) {
@@ -2100,6 +2117,32 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
 
             {isExp && (
               <div style={{ padding: '0 12px 12px', borderTop: '1px solid var(--color-border)' }}>
+                {/* Runway/Taxiway field */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-sm)' }}>
+                  <span style={{ color: 'var(--color-text-3)', minWidth: 100 }}>Runway/Taxiway:</span>
+                  {editingRunway === sys.id ? (
+                    <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center' }}>
+                      <input
+                        value={editRunwayValue}
+                        onChange={e => setEditRunwayValue(e.target.value.toUpperCase())}
+                        onKeyDown={e => { if (e.key === 'Enter') handleSaveRunway(sys.id); if (e.key === 'Escape') setEditingRunway(null) }}
+                        placeholder="e.g. RWY 01/19, TWY A"
+                        autoFocus
+                        style={{ flex: 1, padding: '3px 8px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }}
+                      />
+                      <button onClick={() => handleSaveRunway(sys.id)} style={{ background: 'var(--color-cyan)', border: 'none', color: '#fff', padding: '3px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Save</button>
+                      <button onClick={() => setEditingRunway(null)} style={{ background: 'none', border: '1px solid var(--color-border)', color: 'var(--color-text-3)', padding: '3px 6px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Cancel</button>
+                    </div>
+                  ) : (
+                    <span
+                      style={{ flex: 1, color: sys.runway_or_taxiway ? 'var(--color-text-1)' : 'var(--color-text-3)', cursor: 'pointer' }}
+                      onClick={() => { setEditingRunway(sys.id); setEditRunwayValue(sys.runway_or_taxiway || '') }}
+                      title="Click to edit"
+                    >
+                      {sys.runway_or_taxiway || 'Not set — click to assign'}
+                    </span>
+                  )}
+                </div>
                 {isLoadingC ? (
                   <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', padding: '8px 0' }}>Loading components...</p>
                 ) : (
@@ -2109,19 +2152,10 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
                       <div key={comp.id}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-sm)' }}>
                           <span style={{ flex: 1, color: 'var(--color-text-1)' }}>{comp.label}</span>
-                          {editingComp === comp.id ? (
-                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                              <input type="number" value={editCount} onChange={(e) => setEditCount(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSaveCount(comp.id, sys.id)}
-                                style={{ width: 60, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)' }} autoFocus />
-                              <button onClick={() => handleSaveCount(comp.id, sys.id)} style={{ background: 'var(--color-cyan)', border: 'none', color: '#fff', padding: '2px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Save</button>
-                              <button onClick={() => setEditingComp(null)} style={{ background: 'none', border: '1px solid var(--color-border)', color: 'var(--color-text-3)', padding: '2px 6px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Cancel</button>
-                            </div>
-                          ) : (
-                            <button onClick={() => { setEditingComp(comp.id); setEditCount(String(comp.total_count)) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-2)', fontSize: 'var(--fs-sm)', fontVariantNumeric: 'tabular-nums' }} title="Click to edit count">
-                              {comp.total_count} lights
-                            </button>
-                          )}
-                          {comp.total_count > 0 && (
+                          <span style={{ color: 'var(--color-text-2)', fontSize: 'var(--fs-sm)', fontVariantNumeric: 'tabular-nums' }}>
+                            {compFeatureCounts[comp.id] || 0} lights
+                          </span>
+                          {(compFeatureCounts[comp.id] || 0) > 0 && (
                             <button onClick={() => handleUnlinkAll(comp.id, comp.label, sys.id)}
                               disabled={assigning}
                               style={{ background: 'none', border: '1px solid rgba(239,68,68,0.3)', color: 'var(--color-danger)', padding: '2px 6px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', opacity: assigning ? 0.5 : 1 }}
@@ -2142,15 +2176,13 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
                         <div style={{ fontWeight: 600, fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', marginBottom: 8 }}>
                           Clone from DAFMAN Table A3.1 &mdash; {SYSTEM_TYPE_LABELS[sys.system_type] || sys.system_type}
                         </div>
-                        <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 8 }}>Enter the actual light count for each component at your installation.</p>
+                        <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 8 }}>Components will be created with DAFMAN outage thresholds. Light counts auto-populate from assigned features.</p>
                         {templatesList.map((t) => (
                           <div key={t.component_type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 'var(--fs-sm)' }}>
                             <span style={{ flex: 1, color: 'var(--color-text-2)' }}>{t.label}</span>
                             <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', minWidth: 50 }}>
                               {t.is_zero_tolerance ? 'None' : t.allowable_outage_pct != null ? `${t.allowable_outage_pct}%` : `${t.allowable_outage_count} max`}
                             </span>
-                            <input type="number" value={totalCounts[t.component_type] || ''} onChange={(e) => setTotalCounts((prev) => ({ ...prev, [t.component_type]: e.target.value }))} placeholder="Count"
-                              style={{ width: 60, padding: '2px 6px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)' }} />
                           </div>
                         ))}
                         {templatesList.length === 0 && <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>No templates found for this system type.</p>}
@@ -2159,7 +2191,7 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
                             style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit', opacity: saving ? 0.5 : 1 }}>
                             {saving ? 'Cloning...' : 'Clone Components'}
                           </button>
-                          <button onClick={() => { setCloning(null); setTemplatesList([]); setTotalCounts({}) }}
+                          <button onClick={() => { setCloning(null); setTemplatesList([]) }}
                             style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontWeight: 600, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit' }}>
                             Cancel
                           </button>

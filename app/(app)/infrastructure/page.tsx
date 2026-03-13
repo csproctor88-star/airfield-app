@@ -384,7 +384,7 @@ export default function InfrastructureMapPage() {
   const [systemHealths, setSystemHealths] = useState<SystemHealth[]>([])
   const [healthLoading, setHealthLoading] = useState(true)
   const [lightingSystemsList, setLightingSystemsList] = useState<{ id: string; name: string; system_type: string }[]>([])
-  const [allComponentsList, setAllComponentsList] = useState<{ id: string; system_id: string; label: string; system_name: string }[]>([])
+  const [allComponentsList, setAllComponentsList] = useState<{ id: string; system_id: string; label: string; system_name: string; runway_or_taxiway: string | null }[]>([])
   const allComponentsRef = useRef<typeof allComponentsList>([])
   allComponentsRef.current = allComponentsList
 
@@ -482,12 +482,13 @@ export default function InfrastructureMapPage() {
     }
 
     // Group components by system
-    const systems: { id: string; name: string; components: { id: string; label: string; count: number; type: string }[]; totalCount: number }[] = []
-    const sysMap = new Map<string, typeof systems[0]>()
+    type SysEntry = { id: string; name: string; runway_or_taxiway: string | null; components: { id: string; label: string; count: number; type: string }[]; totalCount: number }
+    const systems: SysEntry[] = []
+    const sysMap = new Map<string, SysEntry>()
     for (const c of allComponentsList) {
       let sys = sysMap.get(c.system_id)
       if (!sys) {
-        sys = { id: c.system_id, name: c.system_name, components: [], totalCount: 0 }
+        sys = { id: c.system_id, name: c.system_name, runway_or_taxiway: c.runway_or_taxiway, components: [], totalCount: 0 }
         sysMap.set(c.system_id, sys)
         systems.push(sys)
       }
@@ -500,10 +501,33 @@ export default function InfrastructureMapPage() {
     systems.sort((a, b) => a.name.localeCompare(b.name))
     for (const sys of systems) sys.components.sort((a, b) => a.label.localeCompare(b.label))
 
+    // Group systems by runway_or_taxiway
+    type AreaGroup = { label: string; systems: SysEntry[]; totalCount: number }
+    const areaMap = new Map<string, AreaGroup>()
+    const areas: AreaGroup[] = []
+    for (const sys of systems) {
+      const areaKey = sys.runway_or_taxiway || '__general'
+      const areaLabel = sys.runway_or_taxiway || 'General'
+      let area = areaMap.get(areaKey)
+      if (!area) {
+        area = { label: areaLabel, systems: [], totalCount: 0 }
+        areaMap.set(areaKey, area)
+        areas.push(area)
+      }
+      area.systems.push(sys)
+      area.totalCount += sys.totalCount
+    }
+    // Sort areas alphabetically (General last)
+    areas.sort((a, b) => {
+      if (a.label === 'General') return 1
+      if (b.label === 'General') return -1
+      return a.label.localeCompare(b.label, undefined, { numeric: true })
+    })
+
     const unassignedLayers = Array.from(unassignedByLayer.entries())
       .sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }))
 
-    return { systems, unassignedCount, unassignedLayers }
+    return { areas, systems, unassignedCount, unassignedLayers }
   }, [dbFeatures, allComponentsList])
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
@@ -578,6 +602,7 @@ export default function InfrastructureMapPage() {
       // Build flat list for popup dropdown
       setLightingSystemsList(systems.map(s => ({ id: s.id, name: s.name, system_type: s.system_type })))
       const sysNameMap = new Map(systems.map(s => [s.id, s.name]))
+      const sysRunwayMap = new Map(systems.map(s => [s.id, s.runway_or_taxiway]))
       // Hide "overall" only for systems that have other sub-components
       const compCountBySys = new Map<string, number>()
       for (const c of allComponents) {
@@ -594,6 +619,7 @@ export default function InfrastructureMapPage() {
           system_id: c.system_id,
           label: c.label,
           system_name: sysNameMap.get(c.system_id) || '',
+          runway_or_taxiway: sysRunwayMap.get(c.system_id) || null,
         })))
     })
   }, [installationId, dbFeatures])
@@ -2711,8 +2737,8 @@ export default function InfrastructureMapPage() {
                 </div>
               )
             })}
-            {/* Systems section — from Base Config */}
-            {(systemLegendGroups.systems.length > 0 || systemLegendGroups.unassignedCount > 0) && (
+            {/* Systems section — grouped by runway/taxiway from Base Config */}
+            {(systemLegendGroups.areas.length > 0 || systemLegendGroups.unassignedCount > 0) && (
               <>
                 <div style={{
                   borderTop: '1px solid rgba(148, 163, 184, 0.15)',
@@ -2728,11 +2754,14 @@ export default function InfrastructureMapPage() {
                   Systems
                 </div>
                 <div style={{ maxHeight: 300, overflowY: 'auto' }}>
-                  {systemLegendGroups.systems.map(sys => {
-                    const expanded = expandedLocGroups[`sys:${sys.id}`] === true
-                    const allVisible = sys.components.every(c => visibleSourceLayers[`comp:${c.id}`] !== false)
+                  {systemLegendGroups.areas.map(area => {
+                    const areaKey = `area:${area.label}`
+                    const areaExpanded = expandedLocGroups[areaKey] === true
+                    const areaAllComps = area.systems.flatMap(s => s.components)
+                    const areaAllVisible = areaAllComps.every(c => visibleSourceLayers[`comp:${c.id}`] !== false)
                     return (
-                      <div key={sys.id}>
+                      <div key={area.label}>
+                        {/* Area header (runway/taxiway) */}
                         <div
                           style={{
                             display: 'flex',
@@ -2741,71 +2770,123 @@ export default function InfrastructureMapPage() {
                             padding: '4px 0',
                             cursor: 'pointer',
                           }}
-                          onClick={() => setExpandedLocGroups(prev => ({ ...prev, [`sys:${sys.id}`]: !expanded }))}
+                          onClick={() => setExpandedLocGroups(prev => ({ ...prev, [areaKey]: !areaExpanded }))}
                         >
                           <span style={{ fontSize: 8, color: '#64748B', width: 10, textAlign: 'center' }}>
-                            {expanded ? '▼' : '▶'}
+                            {areaExpanded ? '▼' : '▶'}
                           </span>
                           <span style={{
                             fontSize: 10,
                             fontWeight: 700,
-                            color: '#94A3B8',
+                            color: '#CBD5E1',
                             flex: 1,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.03em',
                           }}>
-                            {sys.name}
+                            {area.label}
                           </span>
                           <span
                             style={{ fontSize: 9, color: '#64748B', cursor: 'pointer', padding: '0 2px' }}
                             onClick={(e) => {
                               e.stopPropagation()
-                              const newVal = !allVisible
+                              const newVal = !areaAllVisible
                               setVisibleSourceLayers(prev => {
                                 const next = { ...prev }
-                                sys.components.forEach(c => { next[`comp:${c.id}`] = newVal })
+                                areaAllComps.forEach(c => { next[`comp:${c.id}`] = newVal })
                                 return next
                               })
                             }}
-                            title={allVisible ? 'Hide all' : 'Show all'}
+                            title={areaAllVisible ? 'Hide all' : 'Show all'}
                           >
-                            {sys.totalCount}
+                            {area.totalCount}
                           </span>
                         </div>
-                        {expanded && sys.components.map(comp => {
-                          const isVisible = visibleSourceLayers[`comp:${comp.id}`] !== false
+                        {areaExpanded && area.systems.map(sys => {
+                          const sysExpanded = expandedLocGroups[`sys:${sys.id}`] === true
+                          const sysAllVisible = sys.components.every(c => visibleSourceLayers[`comp:${c.id}`] !== false)
                           return (
-                            <label
-                              key={comp.id}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 6,
-                                padding: '2px 0 2px 16px',
-                                cursor: 'pointer',
-                                opacity: isVisible ? 1 : 0.4,
-                                transition: 'opacity 0.15s',
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isVisible}
-                                onChange={() => setVisibleSourceLayers(prev => ({ ...prev, [`comp:${comp.id}`]: !isVisible }))}
-                                style={{ display: 'none' }}
-                              />
-                              <span style={{
-                                width: 8, height: 8, borderRadius: 2,
-                                background: isVisible ? '#64748B' : 'transparent',
-                                border: '1px solid #64748B', flexShrink: 0,
-                              }} />
-                              <span style={{ color: '#CBD5E1', fontSize: 11, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {comp.label}
-                              </span>
-                              <span style={{ color: '#64748B', fontSize: 10, fontVariantNumeric: 'tabular-nums' }}>
-                                {comp.count}
-                              </span>
-                            </label>
+                            <div key={sys.id} style={{ paddingLeft: 10 }}>
+                              {/* System header */}
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 5,
+                                  padding: '3px 0',
+                                  cursor: 'pointer',
+                                }}
+                                onClick={() => setExpandedLocGroups(prev => ({ ...prev, [`sys:${sys.id}`]: !sysExpanded }))}
+                              >
+                                <span style={{ fontSize: 8, color: '#64748B', width: 10, textAlign: 'center' }}>
+                                  {sysExpanded ? '▼' : '▶'}
+                                </span>
+                                <span style={{
+                                  fontSize: 10,
+                                  fontWeight: 600,
+                                  color: '#94A3B8',
+                                  flex: 1,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}>
+                                  {sys.name}
+                                </span>
+                                <span
+                                  style={{ fontSize: 9, color: '#64748B', cursor: 'pointer', padding: '0 2px' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    const newVal = !sysAllVisible
+                                    setVisibleSourceLayers(prev => {
+                                      const next = { ...prev }
+                                      sys.components.forEach(c => { next[`comp:${c.id}`] = newVal })
+                                      return next
+                                    })
+                                  }}
+                                  title={sysAllVisible ? 'Hide all' : 'Show all'}
+                                >
+                                  {sys.totalCount}
+                                </span>
+                              </div>
+                              {/* Components under system */}
+                              {sysExpanded && sys.components.map(comp => {
+                                const isVisible = visibleSourceLayers[`comp:${comp.id}`] !== false
+                                return (
+                                  <label
+                                    key={comp.id}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 6,
+                                      padding: '2px 0 2px 16px',
+                                      cursor: 'pointer',
+                                      opacity: isVisible ? 1 : 0.4,
+                                      transition: 'opacity 0.15s',
+                                    }}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isVisible}
+                                      onChange={() => setVisibleSourceLayers(prev => ({ ...prev, [`comp:${comp.id}`]: !isVisible }))}
+                                      style={{ display: 'none' }}
+                                    />
+                                    <span style={{
+                                      width: 8, height: 8, borderRadius: 2,
+                                      background: isVisible ? '#64748B' : 'transparent',
+                                      border: '1px solid #64748B', flexShrink: 0,
+                                    }} />
+                                    <span style={{ color: '#CBD5E1', fontSize: 11, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      {comp.label}
+                                    </span>
+                                    <span style={{ color: '#64748B', fontSize: 10, fontVariantNumeric: 'tabular-nums' }}>
+                                      {comp.count}
+                                    </span>
+                                  </label>
+                                )
+                              })}
+                            </div>
                           )
                         })}
                       </div>
