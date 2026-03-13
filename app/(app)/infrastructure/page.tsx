@@ -720,11 +720,10 @@ export default function InfrastructureMapPage() {
 
       const features = coords.map(c => ({
         feature_type: kmlFeatureType,
-        longitude: c.lng,
-        latitude: c.lat,
+        longitude: Math.round(c.lng * 1e8) / 1e8,
+        latitude: Math.round(c.lat * 1e8) / 1e8,
         layer: kmlLayer || undefined,
         rotation: kmlRotation,
-        source: 'import' as const,
       }))
 
       const count = await bulkCreateInfrastructureFeatures(installationId, features)
