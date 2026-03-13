@@ -62,6 +62,7 @@ const LAYERS: LayerConfig[] = [
   { key: 'taxiway_end_lights',  label: 'Taxiway End Lights',  color: '#F59E0B',  types: ['taxiway_end_light'],   renderType: 'circle', group: 'Taxiway Lights', legendIcon: 'circle' },
   // Runway Lights
   { key: 'threshold_lights',    label: 'Threshold Lights',    color: '#22C55E',  types: ['threshold_light', 'runway_threshold'],     renderType: 'circle', group: 'Runway Lights', strokeColor: '#FFFFFF', legendIcon: 'circle', legendBorder: '#FFFFFF' },
+  { key: 'runway_end_lights',   label: 'Runway End Lights',   color: '#EF4444',  types: ['runway_end_light'],    renderType: 'circle', group: 'Runway Lights', strokeColor: '#FFFFFF', legendIcon: 'circle', legendBorder: '#FFFFFF' },
   { key: 'approach_lights',     label: 'Approach Lights',     color: '#F472B6',  types: ['approach_light'],      renderType: 'circle', group: 'Runway Lights', legendIcon: 'circle' },
   { key: 'runway_edge_lights',  label: 'Runway Edge Lights',  color: '#FFFFFF',  types: ['runway_edge_light'],   renderType: 'circle', group: 'Runway Lights', legendIcon: 'circle' },
   { key: 'runway_distance_markers', label: 'Distance Remaining Markers', color: '#FFFFFF', types: ['runway_distance_marker'], renderType: 'symbol', group: 'Signs', legendIcon: 'rect', legendBorder: '#FFFFFF', legendInner: '#000000' },
@@ -93,6 +94,7 @@ const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[
   { value: 'rotating_beacon', label: 'Rotating Beacon' },
   { value: 'runway_distance_marker', label: 'Runway Distance Remaining Marker' },
   { value: 'runway_edge_light', label: 'Runway Edge Light' },
+  { value: 'runway_end_light', label: 'Runway End Light' },
   { value: 'runway_threshold', label: 'Runway Threshold' },
   { value: 'sequenced_flasher', label: 'Sequenced Flasher' },
   { value: 'stadium_light', label: 'Stadium Light' },

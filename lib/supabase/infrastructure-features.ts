@@ -24,6 +24,7 @@ export type InfrastructureFeatureType =
   | 'windcone'
   | 'stadium_light'
   | 'rotating_beacon'
+  | 'runway_end_light'
 
 // ── Feature type label map ──
 
@@ -34,7 +35,7 @@ const FEATURE_TYPE_LABELS: Record<string, string> = {
   obstruction_light: 'Obstruction Light', papi: 'PAPI',
   pre_threshold_light: 'Pre-Threshold Light', reil: 'REIL',
   rotating_beacon: 'Rotating Beacon', runway_distance_marker: 'Distance Remaining Marker',
-  runway_edge_light: 'Runway Edge Light', runway_threshold: 'Runway Threshold',
+  runway_edge_light: 'Runway Edge Light', runway_end_light: 'Runway End Light', runway_threshold: 'Runway Threshold',
   sequenced_flasher: 'Sequenced Flasher', stadium_light: 'Stadium Light',
   taxiway_end_light: 'Taxiway End Light', taxiway_light: 'Taxiway Light',
   terminating_bar_light: 'Terminating Bar Light', thousand_ft_bar_light: "1000' Bar Light",
@@ -496,7 +497,7 @@ export const FEATURE_TYPE_ABBREV: Record<string, string> = {
   informational_sign: 'IS', location_sign: 'LS', mandatory_sign: 'MS',
   obstruction_light: 'OL', papi: 'PAPI', pre_threshold_light: 'PTL',
   reil: 'REIL', rotating_beacon: 'RB', runway_distance_marker: 'DRM',
-  runway_edge_light: 'REL', runway_threshold: 'RT', sequenced_flasher: 'SF',
+  runway_edge_light: 'REL', runway_end_light: 'RNL', runway_threshold: 'RT', sequenced_flasher: 'SF',
   stadium_light: 'SL', taxiway_end_light: 'TEL', taxiway_light: 'TL',
   terminating_bar_light: 'TBL', thousand_ft_bar_light: 'KBL',
   threshold_light: 'THL', windcone: 'WC',
