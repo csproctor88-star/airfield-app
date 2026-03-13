@@ -61,7 +61,8 @@ const LAYERS: LayerConfig[] = [
   { key: 'taxiway_lights',      label: 'Taxiway Lights',      color: '#2563EB',  types: ['taxiway_light'],       renderType: 'circle', group: 'Taxiway Lights', legendIcon: 'circle' },
   { key: 'taxiway_end_lights',  label: 'Taxiway End Lights',  color: '#F59E0B',  types: ['taxiway_end_light'],   renderType: 'circle', group: 'Taxiway Lights', legendIcon: 'circle' },
   // Runway Lights
-  { key: 'threshold_lights',    label: 'Threshold Lights',    color: '#22C55E',  types: ['threshold_light'],     renderType: 'circle', group: 'Runway Lights', strokeColor: '#FFFFFF', legendIcon: 'circle', legendBorder: '#FFFFFF' },
+  { key: 'threshold_lights',    label: 'Threshold Lights',    color: '#22C55E',  types: ['threshold_light', 'runway_threshold'],     renderType: 'circle', group: 'Runway Lights', strokeColor: '#FFFFFF', legendIcon: 'circle', legendBorder: '#FFFFFF' },
+  { key: 'approach_lights',     label: 'Approach Lights',     color: '#F472B6',  types: ['approach_light'],      renderType: 'circle', group: 'Runway Lights', legendIcon: 'circle' },
   { key: 'runway_edge_lights',  label: 'Runway Edge Lights',  color: '#FFFFFF',  types: ['runway_edge_light'],   renderType: 'circle', group: 'Runway Lights', legendIcon: 'circle' },
   { key: 'runway_distance_markers', label: 'Distance Remaining Markers', color: '#FFFFFF', types: ['runway_distance_marker'], renderType: 'symbol', group: 'Signs', legendIcon: 'rect', legendBorder: '#FFFFFF', legendInner: '#000000' },
   { key: 'papi_lights',         label: 'PAPI',                color: '#EF4444',  types: ['papi'],                renderType: 'symbol', group: 'Runway Lights', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#FFFFFF' },
