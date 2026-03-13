@@ -675,6 +675,69 @@ export default function InfrastructureMapPage() {
 
   const [importing, setImporting] = useState(false)
 
+  // KML import
+  const [kmlImportOpen, setKmlImportOpen] = useState(false)
+  const [kmlFeatureType, setKmlFeatureType] = useState<InfrastructureFeatureType>('threshold_light')
+  const [kmlRotation, setKmlRotation] = useState(0)
+  const [kmlLayer, setKmlLayer] = useState('')
+  const [kmlImporting, setKmlImporting] = useState(false)
+  const kmlFileRef = useRef<HTMLInputElement>(null)
+
+  const handleKmlImport = useCallback(async (file: File) => {
+    if (!installationId) return
+    setKmlImporting(true)
+    try {
+      const text = await file.text()
+      const parser = new DOMParser()
+      const doc = parser.parseFromString(text, 'text/xml')
+      const placemarks = doc.getElementsByTagName('Placemark')
+
+      // Extract unique coordinates
+      const seen = new Set<string>()
+      const coords: { lng: number; lat: number }[] = []
+      for (let i = 0; i < placemarks.length; i++) {
+        const coordEl = placemarks[i].getElementsByTagName('coordinates')[0]
+        if (!coordEl?.textContent) continue
+        const parts = coordEl.textContent.trim().split(',')
+        if (parts.length < 2) continue
+        const lng = parseFloat(parts[0])
+        const lat = parseFloat(parts[1])
+        if (isNaN(lng) || isNaN(lat)) continue
+        // Deduplicate to 10 decimal places
+        const key = `${lng.toFixed(10)},${lat.toFixed(10)}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        coords.push({ lng, lat })
+      }
+
+      if (coords.length === 0) {
+        toast.error('No valid coordinates found in KML')
+        setKmlImporting(false)
+        return
+      }
+
+      const features = coords.map(c => ({
+        feature_type: kmlFeatureType,
+        longitude: c.lng,
+        latitude: c.lat,
+        layer: kmlLayer || undefined,
+        rotation: kmlRotation,
+        source: 'import' as const,
+      }))
+
+      const count = await bulkCreateInfrastructureFeatures(installationId, features)
+      if (count > 0) {
+        const refreshed = await fetchInfrastructureFeatures(installationId)
+        setDbFeatures(refreshed)
+        toast.success(`Imported ${count} features from KML`)
+      }
+      setKmlImportOpen(false)
+    } catch (err) {
+      toast.error('Failed to parse KML file')
+    }
+    setKmlImporting(false)
+  }, [installationId, kmlFeatureType, kmlRotation, kmlLayer])
+
   // Build component → system health tier lookup
   const compToTier = useMemo(() => {
     const map = new Map<string, AlertTier>()
@@ -2203,6 +2266,21 @@ export default function InfrastructureMapPage() {
               </button>
             )}
             <button
+              onClick={() => setKmlImportOpen(prev => !prev)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 8,
+                border: kmlImportOpen ? '2px solid #F97316' : '1px solid rgba(249, 115, 22, 0.3)',
+                background: kmlImportOpen ? 'rgba(249, 115, 22, 0.15)' : 'var(--color-bg-surface)',
+                color: kmlImportOpen ? '#F97316' : 'var(--color-text-2)',
+                fontSize: 'var(--fs-sm)',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Import KML
+            </button>
+            <button
               onClick={() => { setEditMode(prev => !prev); setAuditMode(false); setBulkShiftOpen(false); setBoxSelectActive(false); setSelectedIds(new Set()); setBarPlacement(null) }}
               style={{
                 padding: '8px 16px',
@@ -2340,6 +2418,95 @@ export default function InfrastructureMapPage() {
             fontSize: 'var(--fs-lg)',
           }}>
             Loading map...
+          </div>
+        )}
+
+        {/* KML Import dialog */}
+        {kmlImportOpen && (
+          <div style={{
+            position: 'absolute',
+            top: 10,
+            right: auditMode ? 392 : 10,
+            zIndex: 15,
+            background: 'rgba(15, 23, 42, 0.95)',
+            border: '1px solid rgba(249, 115, 22, 0.3)',
+            borderRadius: 10,
+            padding: '12px 14px',
+            width: 260,
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#F97316' }}>Import KML</span>
+              <button onClick={() => setKmlImportOpen(false)} style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: 14, cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 10, color: '#94A3B8', marginBottom: 2 }}>Feature Type</div>
+              <select
+                value={kmlFeatureType}
+                onChange={(e) => setKmlFeatureType(e.target.value as InfrastructureFeatureType)}
+                style={{ width: '100%', padding: '4px 6px', borderRadius: 4, border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(30,41,59,0.9)', color: '#E2E8F0', fontSize: 11 }}
+              >
+                {FEATURE_TYPE_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 10, color: '#94A3B8', marginBottom: 2 }}>Layer (optional)</div>
+              <input
+                value={kmlLayer}
+                onChange={(e) => setKmlLayer(e.target.value)}
+                placeholder="e.g. RWY 01/19"
+                style={{ width: '100%', padding: '4px 6px', borderRadius: 4, border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(30,41,59,0.9)', color: '#E2E8F0', fontSize: 11, boxSizing: 'border-box', outline: 'none' }}
+              />
+            </div>
+
+            <div>
+              <div style={{ fontSize: 10, color: '#94A3B8', marginBottom: 2 }}>Rotation: {kmlRotation}°</div>
+              <input
+                type="range"
+                min={0}
+                max={359}
+                value={kmlRotation}
+                onChange={(e) => setKmlRotation(parseInt(e.target.value))}
+                style={{ width: '100%', accentColor: '#F97316' }}
+              />
+            </div>
+
+            <input
+              ref={kmlFileRef}
+              type="file"
+              accept=".kml,.kmz"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleKmlImport(file)
+                e.target.value = ''
+              }}
+            />
+
+            <button
+              onClick={() => kmlFileRef.current?.click()}
+              disabled={kmlImporting}
+              style={{
+                padding: '8px 0',
+                borderRadius: 6,
+                border: '1px solid rgba(249, 115, 22, 0.4)',
+                background: 'rgba(249, 115, 22, 0.2)',
+                color: '#F97316',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: kmlImporting ? 'wait' : 'pointer',
+                opacity: kmlImporting ? 0.6 : 1,
+              }}
+            >
+              {kmlImporting ? 'Importing...' : 'Select KML File'}
+            </button>
           </div>
         )}
 
