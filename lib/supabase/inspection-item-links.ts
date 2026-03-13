@@ -80,7 +80,10 @@ export async function setLinksForItem(
     .delete()
     .eq('item_id', itemId)
 
-  if (delErr) return false
+  if (delErr) {
+    console.error('[setLinksForItem] delete failed:', delErr.message)
+    return false
+  }
 
   // Insert new links
   if (systemIds.length === 0) return true
@@ -90,5 +93,9 @@ export async function setLinksForItem(
     .from('inspection_item_system_links')
     .insert(rows as any)
 
-  return !insErr
+  if (insErr) {
+    console.error('[setLinksForItem] insert failed:', insErr.message)
+    return false
+  }
+  return true
 }
