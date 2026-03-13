@@ -7,7 +7,7 @@ import { X, AlertTriangle } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { DISCREPANCY_TYPES } from '@/lib/constants'
 import { ZoomableImage } from '@/components/ui/zoomable-image'
-import type { SimpleDiscrepancy } from '@/lib/supabase/types'
+import type { SimpleDiscrepancy, InfrastructureFeature } from '@/lib/supabase/types'
 
 const LocationMap = dynamic(
   () => import('@/components/ui/location-picker-map'),
@@ -43,6 +43,8 @@ interface SimpleDiscrepancyPanelProps {
   linkedComponentIds?: string[]
   /** Base ID (required when linkedSystemIds is provided) */
   linkedBaseId?: string
+  /** Called when selected features change, with full feature objects for auto-populating fields */
+  onFeaturesSelected?: (index: number, features: InfrastructureFeature[]) => void
 }
 
 export function SimpleDiscrepancyPanel({
@@ -62,6 +64,7 @@ export function SimpleDiscrepancyPanel({
   linkedSystemIds,
   linkedComponentIds,
   linkedBaseId,
+  onFeaturesSelected,
 }: SimpleDiscrepancyPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -115,6 +118,11 @@ export function SimpleDiscrepancyPanel({
                     updates.discrepancy_type = 'lighting'
                   }
                   onChange(index, updates as unknown as SimpleDiscrepancy)
+                }}
+                onSelectedFeaturesChange={(features) => {
+                  if (onFeaturesSelected) {
+                    onFeaturesSelected(index, features)
+                  }
                 }}
               />
             </>

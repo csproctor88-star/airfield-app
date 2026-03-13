@@ -2,7 +2,7 @@
 
 import { SimpleDiscrepancyPanel } from './simple-discrepancy-panel'
 import { Plus, Trash2 } from 'lucide-react'
-import type { SimpleDiscrepancy } from '@/lib/supabase/types'
+import type { SimpleDiscrepancy, InfrastructureFeature } from '@/lib/supabase/types'
 
 interface SimpleDiscrepancyPanelGroupProps {
   discrepancies: SimpleDiscrepancy[]
@@ -33,6 +33,8 @@ interface SimpleDiscrepancyPanelGroupProps {
   linkedComponentIds?: string[]
   /** Base ID (required when linkedSystemIds is provided) */
   linkedBaseId?: string
+  /** Called when selected features change, with full feature objects */
+  onFeaturesSelected?: (index: number, features: InfrastructureFeature[]) => void
 }
 
 export function SimpleDiscrepancyPanelGroup({
@@ -55,6 +57,7 @@ export function SimpleDiscrepancyPanelGroup({
   linkedSystemIds,
   linkedComponentIds,
   linkedBaseId,
+  onFeaturesSelected,
 }: SimpleDiscrepancyPanelGroupProps) {
   return (
     <div style={{ marginTop: 4 }}>
@@ -125,6 +128,7 @@ export function SimpleDiscrepancyPanelGroup({
             linkedSystemIds={linkedSystemIds}
             linkedComponentIds={linkedComponentIds}
             linkedBaseId={linkedBaseId}
+            onFeaturesSelected={onFeaturesSelected}
           />
         </div>
       ))}
