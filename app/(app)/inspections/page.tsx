@@ -1182,15 +1182,11 @@ export default function InspectionsPage() {
           }
         }
 
-        console.log('[Filing] allLinkedFeatureIds:', allLinkedFeatureIds.length, allLinkedFeatureIds)
-
         if (allLinkedFeatureIds.length > 0) {
           const uniqueIds = Array.from(new Set(allLinkedFeatureIds))
-          console.log('[Filing] Calling bulkUpdateStatus for', uniqueIds.length, 'features:', uniqueIds)
 
           // Mark features as inoperative
           const marked = await bulkUpdateStatus(uniqueIds, 'inoperative')
-          console.log('[Filing] bulkUpdateStatus returned:', marked)
 
           // Create outage events
           for (const fid of uniqueIds) {
@@ -1206,8 +1202,6 @@ export default function InspectionsPage() {
 
           if (marked > 0) {
             toast.success(`${marked} feature${marked !== 1 ? 's' : ''} marked inoperative`)
-          } else if (uniqueIds.length > 0) {
-            console.warn('[Inspection filing] bulkUpdateStatus returned 0 for', uniqueIds.length, 'features')
           }
 
           // Check DAFMAN thresholds
