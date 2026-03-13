@@ -18,6 +18,7 @@ import {
   bulkCreateInfrastructureFeatures,
   bulkPrefixLabels,
   bulkUpdateLabels,
+  bulkAssignComponentByIds,
   buildFeatureDisplayName,
   type InfrastructureFeatureType,
 } from '@/lib/supabase/infrastructure-features'
@@ -416,6 +417,7 @@ export default function InfrastructureMapPage() {
 
   // Audit mode
   const [auditMode, setAuditMode] = useState(false)
+  const [auditHighlightIds, setAuditHighlightIds] = useState<string[]>([])
 
   // Group components by system for dropdown optgroups (sorted alphabetically)
   const groupedComponents = useMemo(() => {
@@ -685,6 +687,8 @@ export default function InfrastructureMapPage() {
   }, [systemHealths])
 
   // Build GeoJSON from DB features, filtered by visible source layers
+  const auditHighlightSet = useMemo(() => new Set(auditHighlightIds), [auditHighlightIds])
+
   const featureGeoJson = useMemo<GeoJSON.FeatureCollection>(() => {
     const hasFilter = Object.values(visibleSourceLayers).some(v => v === false)
     const geoFeatures: GeoJSON.Feature[] = dbFeatures
@@ -716,11 +720,12 @@ export default function InfrastructureMapPage() {
             system_component_id: f.system_component_id || '',
             signIcon: f.label && SIGN_COLORS[f.feature_type] ? `sign-label-${f.id}` : null,
             systemHealthTier: tier,
+            auditHighlight: auditHighlightSet.has(f.id) ? 1 : 0,
           },
         }
       })
     return { type: 'FeatureCollection', features: geoFeatures }
-  }, [dbFeatures, visibleSourceLayers, showOutagesOnly, compToTier])
+  }, [dbFeatures, visibleSourceLayers, showOutagesOnly, compToTier, auditHighlightSet])
 
   // Import static GeoJSON into DB
   const handleImport = useCallback(async () => {
@@ -1821,6 +1826,31 @@ export default function InfrastructureMapPage() {
         },
       })
 
+      // Audit highlight ring — cyan pulsing ring around features matched by bulk assign filters
+      m.addLayer({
+        id: 'audit-highlight-ring',
+        type: 'circle',
+        source: 'infrastructure',
+        filter: ['==', ['get', 'auditHighlight'], 1] as any,
+        paint: {
+          'circle-radius': [
+            'interpolate', ['linear'], ['zoom'],
+            12, 7,
+            14, 10,
+            16, 14,
+            18, 18,
+          ],
+          'circle-color': 'transparent',
+          'circle-stroke-color': '#22D3EE',
+          'circle-stroke-width': 2.5,
+          'circle-stroke-opacity': 0.7,
+          'circle-opacity': 0,
+        },
+        layout: {
+          visibility: 'none',
+        },
+      })
+
       // Click on empty map area — place feature or bar in edit mode (skip if dragging or box selecting)
       m.on('click', (e) => {
         if (!editModeRef.current || draggingRef.current || boxSelectRef.current || freeMoveRef.current) return
@@ -1982,6 +2012,15 @@ export default function InfrastructureMapPage() {
       m.setLayoutProperty('system-health-ring', 'visibility', colorByHealth ? 'visible' : 'none')
     }
   }, [colorByHealth, mapLoaded])
+
+  // Toggle audit highlight ring visibility
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+    const m = map.current
+    if (m.getLayer('audit-highlight-ring')) {
+      m.setLayoutProperty('audit-highlight-ring', 'visibility', auditHighlightIds.length > 0 ? 'visible' : 'none')
+    }
+  }, [auditHighlightIds, mapLoaded])
 
   // Update cursor in edit mode
   useEffect(() => {
@@ -2228,7 +2267,16 @@ export default function InfrastructureMapPage() {
               }
               return count
             }}
-            onClose={() => setAuditMode(false)}
+            onBulkAssign={async (featureIds, componentId) => {
+              const count = await bulkAssignComponentByIds(featureIds, componentId)
+              if (count > 0 && installationId) {
+                const refreshed = await fetchInfrastructureFeatures(installationId)
+                setDbFeatures(refreshed)
+              }
+              return count
+            }}
+            onHighlightFeatures={setAuditHighlightIds}
+            onClose={() => { setAuditMode(false); setAuditHighlightIds([]) }}
           />
         )}
 

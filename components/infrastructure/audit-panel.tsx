@@ -30,6 +30,8 @@ type AuditPanelProps = {
   onComponentReassign: (featureId: string, componentId: string | null) => Promise<boolean>
   onBulkPrefixApply: (featureIds: string[], prefix: string) => Promise<number>
   onBulkSequentialLabel: (features: { id: string; label: string }[]) => Promise<number>
+  onBulkAssign: (featureIds: string[], componentId: string) => Promise<number>
+  onHighlightFeatures: (featureIds: string[]) => void
   onClose: () => void
 }
 
@@ -252,6 +254,8 @@ export default function AuditPanel({
   onComponentReassign,
   onBulkPrefixApply,
   onBulkSequentialLabel,
+  onBulkAssign,
+  onHighlightFeatures,
   onClose,
 }: AuditPanelProps) {
   const [searchText, setSearchText] = useState('')
@@ -259,6 +263,11 @@ export default function AuditPanel({
   const [expandedComponents, setExpandedComponents] = useState<Record<string, boolean>>({})
   const [prefixTarget, setPrefixTarget] = useState<string | null>(null) // component ID
   const [reassigning, setReassigning] = useState<string | null>(null) // feature ID showing dropdown
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false)
+  const [baLayer, setBaLayer] = useState<string>('')
+  const [baType, setBaType] = useState<string>('')
+  const [baComponentId, setBaComponentId] = useState<string>('')
+  const [baAssigning, setBaAssigning] = useState(false)
 
   // Build feature-to-component mapping
   const { byComponent, unassigned } = useMemo(() => {
@@ -289,6 +298,35 @@ export default function AuditPanel({
   // Total counts
   const totalFiltered = Object.values(byComponent).reduce((s, arr) => s + arr.length, 0) + unassigned.length
 
+  // Unique layers and types for bulk assign filters
+  const uniqueLayers = useMemo(() =>
+    Array.from(new Set(features.map(f => f.layer).filter(Boolean) as string[])).sort(),
+    [features]
+  )
+  const uniqueTypes = useMemo(() =>
+    Array.from(new Set(features.map(f => f.feature_type))).sort(),
+    [features]
+  )
+
+  // Features matching bulk assign filters
+  const baMatchedFeatures = useMemo(() => {
+    if (!baLayer && !baType) return []
+    return features.filter(f => {
+      if (baLayer && f.layer !== baLayer) return false
+      if (baType && f.feature_type !== baType) return false
+      return true
+    })
+  }, [features, baLayer, baType])
+
+  // Highlight matched features on map when filters change
+  useEffect(() => {
+    if (bulkAssignOpen && (baLayer || baType)) {
+      onHighlightFeatures(baMatchedFeatures.map(f => f.id))
+    } else {
+      onHighlightFeatures([])
+    }
+  }, [bulkAssignOpen, baMatchedFeatures]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const toggleSystem = (name: string) =>
     setExpandedSystems(prev => ({ ...prev, [name]: !prev[name] }))
 
@@ -301,6 +339,21 @@ export default function AuditPanel({
     const count = await onBulkPrefixApply(featureIds, prefix + ' ')
     if (count > 0) toast.success(`Prefixed ${count} label${count !== 1 ? 's' : ''} with "${prefix}"`)
     setPrefixTarget(null)
+  }
+
+  const handleBulkAssign = async () => {
+    if (!baComponentId || baMatchedFeatures.length === 0) return
+    setBaAssigning(true)
+    const count = await onBulkAssign(baMatchedFeatures.map(f => f.id), baComponentId)
+    setBaAssigning(false)
+    if (count > 0) {
+      const comp = allComponents.find(c => c.id === baComponentId)
+      toast.success(`Assigned ${count} feature${count !== 1 ? 's' : ''} to ${comp?.label || 'component'}`)
+      setBaLayer('')
+      setBaType('')
+      setBaComponentId('')
+      onHighlightFeatures([])
+    }
   }
 
   const handleSequentialApply = async (componentId: string, prefix: string, startAt: number) => {
@@ -382,6 +435,150 @@ export default function AuditPanel({
             outline: 'none',
           }}
         />
+      </div>
+
+      {/* Bulk Assign Tool */}
+      <div style={{ padding: '0 12px', flexShrink: 0 }}>
+        <button
+          onClick={() => { setBulkAssignOpen(prev => !prev); if (bulkAssignOpen) onHighlightFeatures([]) }}
+          style={{
+            width: '100%',
+            padding: '6px 0',
+            borderRadius: 6,
+            border: bulkAssignOpen ? '1px solid rgba(6, 182, 212, 0.4)' : '1px solid rgba(148, 163, 184, 0.15)',
+            background: bulkAssignOpen ? 'rgba(6, 182, 212, 0.1)' : 'transparent',
+            color: bulkAssignOpen ? '#22D3EE' : '#94A3B8',
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: 'pointer',
+            marginBottom: 6,
+          }}
+        >
+          {bulkAssignOpen ? '▾ Bulk Assign' : '▸ Bulk Assign'}
+        </button>
+
+        {bulkAssignOpen && (
+          <div style={{
+            background: 'rgba(6, 182, 212, 0.05)',
+            border: '1px solid rgba(6, 182, 212, 0.15)',
+            borderRadius: 8,
+            padding: '8px 10px',
+            marginBottom: 8,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+          }}>
+            <div style={{ fontSize: 10, color: '#64748B', marginBottom: 2 }}>
+              Filter features by layer + type, then assign to a component
+            </div>
+
+            {/* Layer filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 10, color: '#94A3B8', width: 40, flexShrink: 0 }}>Layer</span>
+              <select
+                value={baLayer}
+                onChange={(e) => setBaLayer(e.target.value)}
+                style={{
+                  flex: 1,
+                  background: '#0F172A',
+                  border: '1px solid rgba(148,163,184,0.2)',
+                  borderRadius: 4,
+                  color: '#E2E8F0',
+                  fontSize: 10,
+                  padding: '4px 6px',
+                }}
+              >
+                <option value="">All layers</option>
+                {uniqueLayers.map(l => (
+                  <option key={l} value={l}>{l}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Type filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 10, color: '#94A3B8', width: 40, flexShrink: 0 }}>Type</span>
+              <select
+                value={baType}
+                onChange={(e) => setBaType(e.target.value)}
+                style={{
+                  flex: 1,
+                  background: '#0F172A',
+                  border: '1px solid rgba(148,163,184,0.2)',
+                  borderRadius: 4,
+                  color: '#E2E8F0',
+                  fontSize: 10,
+                  padding: '4px 6px',
+                }}
+              >
+                <option value="">All types</option>
+                {uniqueTypes.map(t => (
+                  <option key={t} value={t}>{formatFeatureType(t)}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Match count */}
+            {(baLayer || baType) && (
+              <div style={{ fontSize: 10, color: baMatchedFeatures.length > 0 ? '#22D3EE' : '#64748B', fontWeight: 600 }}>
+                {baMatchedFeatures.length} feature{baMatchedFeatures.length !== 1 ? 's' : ''} matched
+                {baMatchedFeatures.length > 0 && (
+                  <span style={{ fontWeight: 400, color: '#64748B' }}>
+                    {' '}({baMatchedFeatures.filter(f => f.system_component_id).length} already assigned)
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Component selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 10, color: '#94A3B8', width: 40, flexShrink: 0 }}>Assign</span>
+              <select
+                value={baComponentId}
+                onChange={(e) => setBaComponentId(e.target.value)}
+                style={{
+                  flex: 1,
+                  background: '#0F172A',
+                  border: '1px solid rgba(148,163,184,0.2)',
+                  borderRadius: 4,
+                  color: '#E2E8F0',
+                  fontSize: 10,
+                  padding: '4px 6px',
+                }}
+              >
+                <option value="">Select component...</option>
+                {groupedComponents.map(sys => (
+                  <optgroup key={sys.name} label={sys.name}>
+                    {sys.components.map(c => (
+                      <option key={c.id} value={c.id}>{c.label}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+
+            {/* Apply button */}
+            <button
+              onClick={handleBulkAssign}
+              disabled={!baComponentId || baMatchedFeatures.length === 0 || baAssigning}
+              style={{
+                padding: '6px 0',
+                borderRadius: 6,
+                border: '1px solid rgba(6, 182, 212, 0.3)',
+                background: baComponentId && baMatchedFeatures.length > 0
+                  ? 'rgba(6, 182, 212, 0.2)' : 'transparent',
+                color: baComponentId && baMatchedFeatures.length > 0
+                  ? '#22D3EE' : '#475569',
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: baComponentId && baMatchedFeatures.length > 0 ? 'pointer' : 'default',
+                opacity: baAssigning ? 0.6 : 1,
+              }}
+            >
+              {baAssigning ? 'Assigning...' : `Assign ${baMatchedFeatures.length} Feature${baMatchedFeatures.length !== 1 ? 's' : ''}`}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Scrollable body */}

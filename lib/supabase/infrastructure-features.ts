@@ -469,6 +469,31 @@ export async function bulkUpdateLabels(
   return updated
 }
 
+// ── Bulk assign features by IDs to a system component ──
+
+export async function bulkAssignComponentByIds(
+  ids: string[],
+  componentId: string | null,
+): Promise<number> {
+  const supabase = createClient()
+  if (!supabase || ids.length === 0) return 0
+
+  let updated = 0
+  for (let i = 0; i < ids.length; i += 200) {
+    const batch = ids.slice(i, i + 200)
+    const { error } = await supabase
+      .from('infrastructure_features')
+      .update({
+        system_component_id: componentId,
+        updated_at: new Date().toISOString(),
+      } as any)
+      .in('id', batch)
+    if (!error) updated += batch.length
+  }
+
+  return updated
+}
+
 // ── Bulk assign features to a system component ──
 
 export async function bulkAssignComponent(
