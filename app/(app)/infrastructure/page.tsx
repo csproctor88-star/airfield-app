@@ -789,13 +789,6 @@ export default function InfrastructureMapPage() {
           },
         }
       })
-    // Debug: log threshold features
-    const thresholdFeatures = geoFeatures.filter(f => f.properties?.type === 'threshold_light')
-    if (thresholdFeatures.length > 0) {
-      console.log('[DEBUG] threshold_light features in GeoJSON:', thresholdFeatures.length, thresholdFeatures[0]?.properties)
-    }
-    const allTypes = new Set(geoFeatures.map(f => f.properties?.type))
-    console.log('[DEBUG] All feature types in GeoJSON:', Array.from(allTypes))
     return { type: 'FeatureCollection', features: geoFeatures }
   }, [dbFeatures, visibleSourceLayers, showOutagesOnly, compToTier, auditHighlightSet])
 
@@ -1641,7 +1634,7 @@ export default function InfrastructureMapPage() {
             id: `${layer.key}-inop-ring`,
             type: 'circle',
             source: 'infrastructure',
-            filter: ['all', ...filterExpr.slice(1), ['==', ['get', 'status'], 'inoperative']] as any,
+            filter: ['all', filterExpr, ['==', ['get', 'status'], 'inoperative']] as any,
             paint: {
               'circle-radius': [
                 'interpolate', ['linear'], ['zoom'],
