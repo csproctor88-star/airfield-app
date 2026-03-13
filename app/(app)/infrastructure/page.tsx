@@ -2096,6 +2096,8 @@ export default function InfrastructureMapPage() {
     const source = map.current.getSource('infrastructure') as mapboxgl.GeoJSONSource | undefined
     if (source) {
       source.setData(featureGeoJson)
+      // Force Mapbox to re-evaluate all layer filters after data change
+      map.current.triggerRepaint()
     }
   }, [featureGeoJson, dbFeatures, mapLoaded])
 
