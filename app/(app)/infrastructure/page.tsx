@@ -538,13 +538,34 @@ export default function InfrastructureMapPage() {
     systems.sort((a, b) => a.name.localeCompare(b.name))
     for (const sys of systems) sys.components.sort((a, b) => a.label.localeCompare(b.label))
 
-    // Group systems by runway_or_taxiway
+    // Group systems by runway_or_taxiway (normalize partial runway refs into full runway)
     type AreaGroup = { label: string; systems: SysEntry[]; totalCount: number }
     const areaMap = new Map<string, AreaGroup>()
     const areas: AreaGroup[] = []
+
+    // Build a set of full runway names (contain "/") to merge partials into
+    const fullRunways = new Set<string>()
     for (const sys of systems) {
-      const areaKey = sys.runway_or_taxiway || '__general'
-      const areaLabel = sys.runway_or_taxiway || 'General'
+      const rt = sys.runway_or_taxiway?.toUpperCase() || ''
+      if (rt.startsWith('RWY') && rt.includes('/')) fullRunways.add(sys.runway_or_taxiway!)
+    }
+
+    const resolveArea = (rwy: string | null): string => {
+      if (!rwy) return 'General'
+      // Check if this is a partial runway ref (e.g. "RWY 01", "19") that matches a full runway
+      const upper = rwy.toUpperCase().replace(/^RWY\s*/, '')
+      for (const full of Array.from(fullRunways)) {
+        const fullUpper = full.toUpperCase().replace(/^RWY\s*/, '')
+        // "01" matches "01/19", "19" matches "01/19"
+        const ends = fullUpper.split('/')
+        if (ends.some(e => e.trim() === upper.trim())) return full
+      }
+      return rwy
+    }
+
+    for (const sys of systems) {
+      const areaLabel = resolveArea(sys.runway_or_taxiway)
+      const areaKey = areaLabel.toUpperCase()
       let area = areaMap.get(areaKey)
       if (!area) {
         area = { label: areaLabel, systems: [], totalCount: 0 }
