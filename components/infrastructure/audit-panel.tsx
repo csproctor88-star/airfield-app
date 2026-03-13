@@ -32,6 +32,7 @@ type AuditPanelProps = {
   onBulkSequentialLabel: (features: { id: string; label: string }[]) => Promise<number>
   onBulkAssign: (featureIds: string[], componentId: string) => Promise<number>
   onBulkFixtureIds: (updates: { id: string; block: string }[]) => Promise<number>
+  onBulkDelete: (featureIds: string[]) => Promise<number>
   onHighlightFeatures: (featureIds: string[]) => void
   onClose: () => void
 }
@@ -364,6 +365,7 @@ export default function AuditPanel({
   onBulkSequentialLabel,
   onBulkAssign,
   onBulkFixtureIds,
+  onBulkDelete,
   onHighlightFeatures,
   onClose,
 }: AuditPanelProps) {
@@ -926,6 +928,28 @@ export default function AuditPanel({
                         }}
                       >
                         #ID
+                      </button>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          if (!confirm(`Delete all ${compFeatures.length} features in ${comp.label}?`)) return
+                          const ids = compFeatures.map(f => f.id)
+                          const count = await onBulkDelete(ids)
+                          if (count > 0) toast.success(`Deleted ${count} features`)
+                        }}
+                        title="Delete all features in this component"
+                        style={{
+                          background: 'transparent',
+                          border: '1px solid transparent',
+                          borderRadius: 4,
+                          color: '#64748B',
+                          fontSize: 10,
+                          cursor: 'pointer',
+                          padding: '1px 5px',
+                          fontWeight: 600,
+                        }}
+                      >
+                        ✕
                       </button>
                     </div>
 

@@ -19,6 +19,7 @@ import {
   bulkPrefixLabels,
   bulkUpdateLabels,
   bulkUpdateFixtureIds,
+  bulkDeleteFeatures,
   bulkAssignComponentByIds,
   buildFeatureDisplayName,
   type InfrastructureFeatureType,
@@ -2395,6 +2396,14 @@ export default function InfrastructureMapPage() {
             }}
             onBulkFixtureIds={async (updates) => {
               const count = await bulkUpdateFixtureIds(updates)
+              if (count > 0 && installationId) {
+                const refreshed = await fetchInfrastructureFeatures(installationId)
+                setDbFeatures(refreshed)
+              }
+              return count
+            }}
+            onBulkDelete={async (featureIds) => {
+              const count = await bulkDeleteFeatures(featureIds)
               if (count > 0 && installationId) {
                 const refreshed = await fetchInfrastructureFeatures(installationId)
                 setDbFeatures(refreshed)

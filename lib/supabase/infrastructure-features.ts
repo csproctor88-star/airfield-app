@@ -405,6 +405,25 @@ export async function bulkCreateInfrastructureFeatures(
   return inserted
 }
 
+// ── Bulk delete features by IDs ──
+
+export async function bulkDeleteFeatures(ids: string[]): Promise<number> {
+  const supabase = createClient()
+  if (!supabase || ids.length === 0) return 0
+
+  let deleted = 0
+  for (let i = 0; i < ids.length; i += 200) {
+    const batch = ids.slice(i, i + 200)
+    const { error } = await supabase
+      .from('infrastructure_features')
+      .delete()
+      .in('id', batch)
+    if (!error) deleted += batch.length
+  }
+
+  return deleted
+}
+
 // ── Bulk prefix labels (prepend text to existing labels) ──
 
 export async function bulkPrefixLabels(
