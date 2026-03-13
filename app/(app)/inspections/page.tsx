@@ -1165,6 +1165,7 @@ export default function InspectionsPage() {
         const allLinkedFeatureIds: string[] = []
         const featureDiscMap: Record<string, { discrepancy_id?: string; comment?: string }> = {}
 
+        // Collect explicitly selected feature IDs from discrepancies
         for (const { half } of allHalves) {
           for (const [, discs] of Object.entries(half.discrepancies || {})) {
             for (const d of discs) {
@@ -1174,6 +1175,59 @@ export default function InspectionsPage() {
                   featureDiscMap[fid] = {
                     discrepancy_id: d.generated_discrepancy_id ?? undefined,
                     comment: d.comment,
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // Also auto-collect features for failed items with linked systems
+        // (even if user didn't manually select features in the picker)
+        if (lightingSaved && Object.keys(itemKeyLinks).length > 0) {
+          const failedItemsWithLinks: string[] = []
+          for (const [itemId, response] of Object.entries(lightingHalf.responses)) {
+            if (response === 'fail' && itemKeyLinks[itemId]) {
+              failedItemsWithLinks.push(itemId)
+            }
+          }
+
+          if (failedItemsWithLinks.length > 0) {
+            // Fetch all features for this base, then filter to linked systems/components
+            const allFeatures = await fetchInfrastructureFeatures(installationId)
+            const allComponents = await fetchAllComponentsForBase(installationId)
+
+            for (const itemId of failedItemsWithLinks) {
+              const links = itemKeyLinks[itemId]
+              const linkedSystemIds = new Set(systemIdsFromLinks(links))
+              const linkedCompIds = componentIdsFromLinks(links)
+              const hasCompIds = linkedCompIds.length > 0
+
+              // Determine which component IDs to match
+              let matchingComponentIds: Set<string>
+              if (hasCompIds) {
+                matchingComponentIds = new Set(linkedCompIds)
+              } else {
+                matchingComponentIds = new Set(
+                  allComponents
+                    .filter(c => linkedSystemIds.has(c.system_id))
+                    .map(c => c.id)
+                )
+              }
+
+              // Find features belonging to these components
+              const matchedFeatures = allFeatures.filter(
+                f => f.system_component_id && matchingComponentIds.has(f.system_component_id) && f.status === 'operational'
+              )
+
+              for (const f of matchedFeatures) {
+                if (!allLinkedFeatureIds.includes(f.id)) {
+                  allLinkedFeatureIds.push(f.id)
+                  // Use the first discrepancy comment for this item if available
+                  const disc = lightingHalf.discrepancies[itemId]?.[0]
+                  featureDiscMap[f.id] = {
+                    discrepancy_id: disc?.generated_discrepancy_id ?? undefined,
+                    comment: disc?.comment || `Failed item: ${itemId}`,
                   }
                 }
               }
