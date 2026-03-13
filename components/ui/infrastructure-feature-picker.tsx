@@ -16,6 +16,8 @@ type Props = {
   baseId: string
   selectedFeatureIds: string[]
   onSelectionChange: (ids: string[]) => void
+  /** Called with the full feature objects whenever the selected features change */
+  onSelectedFeaturesChange?: (features: InfrastructureFeature[]) => void
 }
 
 // ── Canvas icon helpers (simplified from infrastructure page) ──
@@ -62,6 +64,7 @@ export function InfrastructureFeaturePicker({
   baseId,
   selectedFeatureIds,
   onSelectionChange,
+  onSelectedFeaturesChange,
 }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
@@ -239,6 +242,10 @@ export function InfrastructureFeaturePicker({
         current.push(fId)
       }
       onSelectionChange(current)
+      if (onSelectedFeaturesChange) {
+        const selectedSet = new Set(current)
+        onSelectedFeaturesChange(filteredFeatures.filter(f => selectedSet.has(f.id)))
+      }
     }
 
     m.on('click', 'fp-features', handleClick)

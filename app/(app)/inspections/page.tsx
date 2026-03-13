@@ -36,11 +36,11 @@ import { DEMO_INSPECTIONS } from '@/lib/demo-data'
 import { getAirfieldDiagram } from '@/lib/airfield-diagram'
 import { uploadInspectionPhoto } from '@/lib/supabase/inspections'
 import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
-import { bulkUpdateStatus, fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-features'
+import { bulkUpdateStatus, fetchInfrastructureFeatures, buildFeatureDisplayName } from '@/lib/supabase/infrastructure-features'
 import { fetchAllComponentsForBase, fetchLightingSystems } from '@/lib/supabase/lighting-systems'
 import { createOutageEvent } from '@/lib/supabase/outage-events'
 import { calculateComponentOutage, calculateAllSystemHealth, getAlertTier } from '@/lib/outage-rules'
-import type { InspectionItem, SimpleDiscrepancy } from '@/lib/supabase/types'
+import type { InspectionItem, SimpleDiscrepancy, InfrastructureFeature } from '@/lib/supabase/types'
 import { SimpleDiscrepancyPanelGroup } from '@/components/ui/simple-discrepancy-panel-group'
 import { ExpandableTextarea } from '@/components/ui/expandable-textarea'
 
@@ -546,6 +546,52 @@ export default function InspectionsPage() {
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     )
+  }
+
+  // ── Auto-populate discrepancy fields when features are selected in the picker ──
+  const handleFeaturesSelected = (itemId: string, discIndex: number, features: InfrastructureFeature[]) => {
+    if (features.length === 0) return
+
+    // Compute centroid of selected features for the location pin
+    const avgLat = features.reduce((sum, f) => sum + f.latitude, 0) / features.length
+    const avgLon = features.reduce((sum, f) => sum + f.longitude, 0) / features.length
+
+    // Build title from feature labels/types
+    const featureNames = features.map(f => f.label || f.feature_type)
+    const uniqueNames = Array.from(new Set(featureNames))
+    const titleText = uniqueNames.length <= 3
+      ? uniqueNames.join(', ')
+      : `${uniqueNames.slice(0, 2).join(', ')} +${uniqueNames.length - 2} more`
+
+    // Build auto-generated remarks similar to the Visual NAVAIDs page
+    const featureDescriptions = features.map(f => {
+      const name = buildFeatureDisplayName(f)
+      return name
+    })
+    const remarksText = `Lighting inspection: ${featureDescriptions.join('; ')} — marked inoperative.`
+
+    // Build location text from feature layers
+    const layers = Array.from(new Set(features.map(f => f.layer).filter(Boolean)))
+    const locationText = layers.length > 0 ? layers.join(', ') : 'Airfield'
+
+    const updates: Partial<SimpleDiscrepancy> = {
+      location: { lat: avgLat, lon: avgLon },
+      discrepancy_title: `${titleText} — Inoperative`,
+      discrepancy_location_text: locationText,
+    }
+
+    // Only auto-fill comment if it's currently empty
+    updateHalf(activeTab, (h) => {
+      const arr = [...(h.discrepancies[itemId] || [])]
+      const prev = arr[discIndex] || { comment: '', location: null, photo_ids: [] }
+      const merged = { ...prev, ...updates }
+      // Only set comment if empty
+      if (!prev.comment || prev.comment.trim() === '') {
+        merged.comment = remarksText
+      }
+      arr[discIndex] = merged as SimpleDiscrepancy
+      return { ...h, discrepancies: { ...h.discrepancies, [itemId]: arr } }
+    })
   }
 
   const setNotes = (text: string) => {
@@ -1155,6 +1201,8 @@ export default function InspectionsPage() {
 
           if (marked > 0) {
             toast.success(`${marked} feature${marked !== 1 ? 's' : ''} marked inoperative`)
+          } else if (uniqueIds.length > 0) {
+            console.warn('[Inspection filing] bulkUpdateStatus returned 0 for', uniqueIds.length, 'features')
           }
 
           // Check DAFMAN thresholds
@@ -1717,6 +1765,7 @@ export default function InspectionsPage() {
                               linkedSystemIds={activeTab === 'lighting' && itemKeyLinks[item.id] ? systemIdsFromLinks(itemKeyLinks[item.id]) : undefined}
                               linkedComponentIds={activeTab === 'lighting' && itemKeyLinks[item.id] ? componentIdsFromLinks(itemKeyLinks[item.id]) : undefined}
                               linkedBaseId={activeTab === 'lighting' && itemKeyLinks[item.id] ? installationId ?? undefined : undefined}
+                              onFeaturesSelected={(idx, features) => handleFeaturesSelected(item.id, idx, features)}
                               flyToPoints={(currentHalf.discrepancies[item.id] || []).map((_, i) => discFlyTo[`${item.id}:${i}`] || null)}
                               onSaveDraft={handleSave}
                               draftSaving={saving}
