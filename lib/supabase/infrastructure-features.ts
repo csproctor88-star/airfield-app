@@ -12,6 +12,66 @@ export type InfrastructureFeatureType =
   | 'informational_sign'
   | 'mandatory_sign'
   | 'obstruction_light'
+  | 'runway_distance_marker'
+  | 'papi'
+  | 'threshold_light'
+  | 'pre_threshold_light'
+  | 'terminating_bar_light'
+  | 'centerline_bar_light'
+  | 'thousand_ft_bar_light'
+  | 'sequenced_flasher'
+  | 'reil'
+  | 'windcone'
+  | 'stadium_light'
+  | 'rotating_beacon'
+
+// ── Feature type label map ──
+
+const FEATURE_TYPE_LABELS: Record<string, string> = {
+  approach_light: 'Approach Light', centerline_bar_light: 'Centerline Bar Light',
+  directional_sign: 'Directional Sign', informational_sign: 'Informational Sign',
+  location_sign: 'Location Sign', mandatory_sign: 'Mandatory Sign',
+  obstruction_light: 'Obstruction Light', papi: 'PAPI',
+  pre_threshold_light: 'Pre-Threshold Light', reil: 'REIL',
+  rotating_beacon: 'Rotating Beacon', runway_distance_marker: 'Distance Remaining Marker',
+  runway_edge_light: 'Runway Edge Light', runway_threshold: 'Runway Threshold',
+  sequenced_flasher: 'Sequenced Flasher', stadium_light: 'Stadium Light',
+  taxiway_end_light: 'Taxiway End Light', taxiway_light: 'Taxiway Light',
+  terminating_bar_light: 'Terminating Bar Light', thousand_ft_bar_light: "1000' Bar Light",
+  threshold_light: 'Threshold Light', windcone: 'Windcone',
+}
+
+export function formatFeatureType(type: string): string {
+  return FEATURE_TYPE_LABELS[type] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+/**
+ * Build a descriptive display name for a feature using its system/component context.
+ * Example: "TWY K — 19 Mandatory Sign" or "RWY 01/19 PAPI" or "Taxiway Light"
+ *
+ * @param feature - Must have label and feature_type
+ * @param systemName - e.g. "TWY K - Airfield Signage" (the part before " - " is used as location prefix)
+ * @param componentLabel - e.g. "Taxiway K Signs" (used as fallback if no system name)
+ */
+export function buildFeatureDisplayName(
+  feature: { label: string | null; feature_type: string },
+  systemName?: string | null,
+  componentLabel?: string | null,
+): string {
+  const typeLabel = formatFeatureType(feature.feature_type)
+  const parts: string[] = []
+
+  // Extract location prefix from system name (e.g., "TWY K" from "TWY K - Airfield Signage")
+  if (systemName) {
+    const dashIdx = systemName.indexOf(' - ')
+    parts.push(dashIdx >= 0 ? systemName.substring(0, dashIdx) : systemName)
+  }
+
+  if (feature.label) parts.push(feature.label)
+  parts.push(typeLabel)
+
+  return parts.join(' ')
+}
 
 // ── Fetch all features for a base ──
 
@@ -19,14 +79,43 @@ export async function fetchInfrastructureFeatures(baseId: string): Promise<Infra
   const supabase = createClient()
   if (!supabase) return []
 
+  // Supabase default limit is 1000 rows — paginate to fetch all
+  const allData: any[] = []
+  const pageSize = 1000
+  let offset = 0
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('infrastructure_features')
+      .select('*')
+      .eq('base_id', baseId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + pageSize - 1)
+
+    if (error) return allData as InfrastructureFeature[]
+    if (!data || data.length === 0) break
+    allData.push(...data)
+    if (data.length < pageSize) break
+    offset += pageSize
+  }
+
+  return allData as InfrastructureFeature[]
+}
+
+// ── Fetch a single feature by ID ──
+
+export async function fetchInfrastructureFeature(id: string): Promise<InfrastructureFeature | null> {
+  const supabase = createClient()
+  if (!supabase) return null
+
   const { data, error } = await supabase
     .from('infrastructure_features')
     .select('*')
-    .eq('base_id', baseId)
-    .order('created_at', { ascending: false })
+    .eq('id', id)
+    .single()
 
-  if (error) return []
-  return (data ?? []) as InfrastructureFeature[]
+  if (error) return null
+  return data as InfrastructureFeature
 }
 
 // ── Create a single feature ──
@@ -78,6 +167,8 @@ export async function updateInfrastructureFeature(
     feature_type?: InfrastructureFeatureType
     label?: string
     notes?: string
+    rotation?: number
+    system_component_id?: string | null
   }
 ): Promise<boolean> {
   const supabase = createClient()
@@ -105,6 +196,62 @@ export async function deleteInfrastructureFeature(id: string): Promise<boolean> 
     .eq('id', id)
 
   return !error
+}
+
+// ── Update feature operational status ──
+
+export async function updateFeatureStatus(
+  id: string,
+  status: 'operational' | 'inoperative',
+): Promise<InfrastructureFeature | null> {
+  const supabase = createClient()
+  if (!supabase) return null
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { data, error } = await supabase
+    .from('infrastructure_features')
+    .update({
+      status,
+      status_changed_at: new Date().toISOString(),
+      status_changed_by: user?.id || null,
+      updated_at: new Date().toISOString(),
+    } as any)
+    .eq('id', id)
+    .select('*')
+    .single()
+
+  if (error) return null
+  return data as InfrastructureFeature
+}
+
+// ── Bulk update status for multiple features ──
+
+export async function bulkUpdateStatus(
+  ids: string[],
+  status: 'operational' | 'inoperative',
+): Promise<number> {
+  const supabase = createClient()
+  if (!supabase || ids.length === 0) return 0
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  let updated = 0
+  for (let i = 0; i < ids.length; i += 200) {
+    const batch = ids.slice(i, i + 200)
+    const { error } = await supabase
+      .from('infrastructure_features')
+      .update({
+        status,
+        status_changed_at: new Date().toISOString(),
+        status_changed_by: user?.id || null,
+        updated_at: new Date().toISOString(),
+      } as any)
+      .in('id', batch)
+    if (!error) updated += batch.length
+  }
+
+  return updated
 }
 
 // ── Bulk shift features by offset (for alignment corrections) ──
@@ -221,6 +368,7 @@ export async function bulkCreateInfrastructureFeatures(
     layer?: string
     block?: string
     label?: string
+    rotation?: number
     source?: 'import' | 'user'
   }[]
 ): Promise<number> {
@@ -237,6 +385,7 @@ export async function bulkCreateInfrastructureFeatures(
     layer: f.layer || null,
     block: f.block || null,
     label: f.label || null,
+    rotation: f.rotation ?? 0,
     notes: null,
     source: f.source || 'import',
     created_by: user?.id || null,
@@ -253,4 +402,42 @@ export async function bulkCreateInfrastructureFeatures(
   }
 
   return inserted
+}
+
+// ── Bulk assign features to a system component ──
+
+export async function bulkAssignComponent(
+  filter: { baseId: string; layer?: string; feature_type?: string },
+  componentId: string | null,
+): Promise<number> {
+  const supabase = createClient()
+  if (!supabase) return 0
+
+  // Build query to find matching feature IDs
+  let query = supabase
+    .from('infrastructure_features')
+    .select('id')
+    .eq('base_id', filter.baseId)
+
+  if (filter.layer) query = query.eq('layer', filter.layer)
+  if (filter.feature_type) query = query.eq('feature_type', filter.feature_type)
+
+  const { data: features, error: fetchError } = await query
+  if (fetchError || !features || features.length === 0) return 0
+
+  const ids = features.map(f => f.id)
+  let updated = 0
+  for (let i = 0; i < ids.length; i += 200) {
+    const batch = ids.slice(i, i + 200)
+    const { error } = await supabase
+      .from('infrastructure_features')
+      .update({
+        system_component_id: componentId,
+        updated_at: new Date().toISOString(),
+      } as any)
+      .in('id', batch)
+    if (!error) updated += batch.length
+  }
+
+  return updated
 }

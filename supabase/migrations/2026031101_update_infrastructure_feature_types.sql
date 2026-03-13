@@ -20,11 +20,5 @@ UPDATE infrastructure_features SET feature_type = 'location_sign'
 -- 5. Delete marking_label features
 DELETE FROM infrastructure_features WHERE feature_type = 'marking_label';
 
--- 6. Add new CHECK constraint with updated feature types
-ALTER TABLE infrastructure_features ADD CONSTRAINT infrastructure_features_feature_type_check
-  CHECK (feature_type IN (
-    'runway_edge_light', 'taxiway_light',
-    'taxiway_end_light', 'approach_light', 'runway_threshold',
-    'location_sign', 'directional_sign', 'informational_sign', 'mandatory_sign',
-    'obstruction_light'
-  ));
+-- 6. Skip re-adding narrow constraint — later migrations (2026031104-07) add broader versions
+-- The DROP above ensures the old constraint is gone; the final constraint comes from 2026031107

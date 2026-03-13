@@ -59,7 +59,7 @@ const opsItems = [
   { name: 'Airfield Discrepancies', icon: AlertTriangle, href: '/discrepancies' },
   { name: 'Obstruction Database', icon: Database, href: '/obstructions/history' },
   { name: 'Airfield Waivers', icon: Shield, href: '/waivers' },
-  { name: 'Airfield Infrastructure', icon: Lightbulb, href: '/infrastructure' },
+  { name: 'Airfield Visual NAVAIDs', icon: Lightbulb, href: '/infrastructure' },
   { name: 'Reports & Analytics', icon: BarChart3, href: '/reports' },
 ]
 

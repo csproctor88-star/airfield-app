@@ -87,6 +87,18 @@ export interface QrcExecutionForReport {
   scn_field_labels: { key: string; label: string }[]
 }
 
+export interface OutageEventForReport {
+  id: string
+  feature_label: string | null
+  feature_type: string | null
+  system_name: string | null
+  component_label: string | null
+  event_type: string
+  reporter_name: string
+  reporter_rank: string | null
+  created_at: string
+}
+
 export interface DailyReportData {
   inspections: (InspectionRow & { failed_items: InspectionItem[] })[]
   checks: CheckRow[]
@@ -95,6 +107,7 @@ export interface DailyReportData {
   obstructionEvals: ObstructionEvalForReport[]
   activityEntries: ActivityEntryForReport[]
   qrcExecutions: QrcExecutionForReport[]
+  outageEvents: OutageEventForReport[]
   /** Photos keyed by entity — e.g. "check:<id>", "discrepancy:<id>", "obstruction:<id>" */
   photos: Record<string, PhotoForDailyReport[]>
 }
@@ -116,6 +129,7 @@ export async function fetchDailyReportData(
     fetchObstructionEvalsForDate(supabase, startUTC, endUTC, baseId),
     fetchActivityForDate(supabase, startUTC, endUTC, baseId),
     fetchQrcExecutionsForDate(supabase, startUTC, endUTC, baseId),
+    fetchOutageEventsForDate(supabase, startUTC, endUTC, baseId),
   ])
 
   const checks = results[1] as CheckRow[]
@@ -123,6 +137,7 @@ export async function fetchDailyReportData(
   const obstructionEvals = results[4] as ObstructionEvalForReport[]
   const activityEntries = results[5] as ActivityEntryForReport[]
   const qrcExecutions = results[6] as QrcExecutionForReport[]
+  const outageEvents = results[7] as OutageEventForReport[]
 
   // Fetch photos for checks, discrepancies, and obstruction evaluations
   const photos = await fetchPhotosForDailyReport(
@@ -152,6 +167,7 @@ export async function fetchDailyReportData(
     obstructionEvals,
     activityEntries,
     qrcExecutions,
+    outageEvents,
     photos,
   }
 }
@@ -473,6 +489,64 @@ async function fetchQrcExecutionsForDate(supabase: any, startUTC: string, endUTC
       scn_field_labels: scnFieldLabels,
     }
   }) as QrcExecutionForReport[]
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchOutageEventsForDate(supabase: any, startUTC: string, endUTC: string, baseId?: string | null) {
+  if (!supabase) return []
+
+  let query = supabase
+    .from('outage_events')
+    .select('id, event_type, created_at, reported_by, feature_id, system_component_id, profiles:reported_by(name, rank), infrastructure_features:feature_id(label, feature_type), lighting_system_components:system_component_id(label, system_id, lighting_systems:system_id(name))')
+    .gte('created_at', startUTC)
+    .lte('created_at', endUTC)
+    .order('created_at', { ascending: true })
+
+  if (baseId) query = query.eq('base_id', baseId)
+
+  const { data, error } = await query
+
+  if (error) {
+    // Fallback without complex joins
+    let fbQuery = supabase
+      .from('outage_events')
+      .select('id, event_type, created_at, feature_id')
+      .gte('created_at', startUTC)
+      .lte('created_at', endUTC)
+      .order('created_at', { ascending: true })
+
+    if (baseId) fbQuery = fbQuery.eq('base_id', baseId)
+
+    const { data: fb } = await fbQuery
+    return ((fb ?? []) as Record<string, unknown>[]).map((r) => ({
+      id: r.id,
+      feature_label: null,
+      feature_type: null,
+      system_name: null,
+      component_label: null,
+      event_type: r.event_type,
+      reporter_name: 'Unknown',
+      reporter_rank: null,
+      created_at: r.created_at,
+    })) as OutageEventForReport[]
+  }
+
+  return (data ?? []).map((row: Record<string, unknown>) => {
+    const profile = row.profiles as { name?: string; rank?: string } | null
+    const feature = row.infrastructure_features as { label?: string; feature_type?: string } | null
+    const comp = row.lighting_system_components as { label?: string; lighting_systems?: { name?: string } | null } | null
+    return {
+      id: row.id as string,
+      feature_label: feature?.label || null,
+      feature_type: feature?.feature_type || null,
+      system_name: comp?.lighting_systems?.name || null,
+      component_label: comp?.label || null,
+      event_type: row.event_type as string,
+      reporter_name: profile?.name || 'Unknown',
+      reporter_rank: profile?.rank || null,
+      created_at: row.created_at as string,
+    }
+  }) as OutageEventForReport[]
 }
 
 // ── Photo Fetching ──

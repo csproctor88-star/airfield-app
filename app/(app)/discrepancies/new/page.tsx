@@ -8,9 +8,18 @@ import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discre
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
+import { fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-features'
+import { bulkUpdateStatus } from '@/lib/supabase/infrastructure-features'
+import { createOutageEvent } from '@/lib/supabase/outage-events'
+import type { InfrastructureFeature } from '@/lib/supabase/types'
 
 const DiscrepancyLocationMap = dynamic(
   () => import('@/components/ui/location-picker-map'),
+  { ssr: false },
+)
+
+const InfraFeaturePicker = dynamic(
+  () => import('@/components/ui/infrastructure-feature-picker').then(m => ({ default: m.InfrastructureFeaturePicker })),
   { ssr: false },
 )
 
@@ -25,6 +34,21 @@ export default function NewDiscrepancyPage() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false)
   const typeDropdownRef = useRef<HTMLDivElement>(null)
+
+  // ── Link to Visual NAVAID ──
+  const [showFeaturePicker, setShowFeaturePicker] = useState(false)
+  const [selectedFeatureIds, setSelectedFeatureIds] = useState<string[]>([])
+  const [lightingSystemIds, setLightingSystemIds] = useState<string[]>([])
+
+  // Load all lighting systems for this base (for the feature picker — needs all system IDs)
+  useEffect(() => {
+    if (!installationId) return
+    import('@/lib/supabase/lighting-systems').then(({ fetchLightingSystems }) =>
+      fetchLightingSystems(installationId!).then(systems =>
+        setLightingSystemIds(systems.map(s => s.id))
+      )
+    )
+  }, [installationId])
 
   useEffect(() => {
     if (!typeDropdownOpen) return
@@ -122,12 +146,28 @@ export default function NewDiscrepancyPage() {
       latitude: formData.latitude,
       longitude: formData.longitude,
       base_id: installationId,
+      infrastructure_feature_id: selectedFeatureIds.length > 0 ? selectedFeatureIds[0] : undefined,
     })
 
     if (error || !created) {
       toast.error(error || 'Failed to create discrepancy')
       setSaving(false)
       return
+    }
+
+    // Mark selected features as inoperative + create outage events
+    if (selectedFeatureIds.length > 0 && installationId) {
+      await bulkUpdateStatus(selectedFeatureIds, 'inoperative')
+      for (const fid of selectedFeatureIds) {
+        await createOutageEvent({
+          base_id: installationId,
+          feature_id: fid,
+          event_type: 'reported',
+          discrepancy_id: created.id,
+          notes: `From discrepancy: ${formData.title}`,
+        })
+      }
+      toast.success(`${selectedFeatureIds.length} feature${selectedFeatureIds.length !== 1 ? 's' : ''} marked inoperative`)
     }
 
     // Upload user photos
@@ -268,6 +308,51 @@ export default function NewDiscrepancyPage() {
             aspectRatio="1 / 1"
           />
         </div>
+
+        {/* Link to Visual NAVAID — toggle + feature picker */}
+        {lightingSystemIds.length > 0 && installationId && (
+          <div style={{ marginBottom: 12 }}>
+            <button
+              type="button"
+              onClick={() => setShowFeaturePicker(!showFeaturePicker)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                width: '100%', padding: '10px 12px', borderRadius: 8,
+                border: showFeaturePicker ? '2px solid #22D3EE' : '2px solid var(--color-text-4)',
+                background: showFeaturePicker ? 'rgba(34,211,238,0.08)' : 'transparent',
+                color: showFeaturePicker ? '#22D3EE' : 'var(--color-text-2)',
+              }}
+            >
+              <span style={{
+                width: 20, height: 20, borderRadius: 5, flexShrink: 0,
+                border: showFeaturePicker ? '2px solid #22D3EE' : '2px solid var(--color-text-3)',
+                background: showFeaturePicker ? '#22D3EE' : 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 14, fontWeight: 800, color: '#000',
+              }}>
+                {showFeaturePicker ? '\u2713' : ''}
+              </span>
+              Link to Visual NAVAID
+              {selectedFeatureIds.length > 0 && (
+                <span style={{ fontSize: 'var(--fs-xs)', background: 'rgba(34,211,238,0.2)', color: '#22D3EE', padding: '1px 6px', borderRadius: 4 }}>
+                  {selectedFeatureIds.length} selected
+                </span>
+              )}
+            </button>
+
+            {showFeaturePicker && (
+              <div style={{ marginTop: 8 }}>
+                <InfraFeaturePicker
+                  systemIds={lightingSystemIds}
+                  baseId={installationId}
+                  selectedFeatureIds={selectedFeatureIds}
+                  onSelectionChange={setSelectedFeatureIds}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* GPS Use My Location */}
         <button

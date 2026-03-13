@@ -75,7 +75,7 @@ DAFMAN requires annual review of all active waivers. Glidepath provides:
 ### The Problem
 When a new structure, crane, tree, or temporary object appears near an airfield, someone must evaluate whether it violates any of the imaginary surfaces defined in UFC 3-260-01. This evaluation requires understanding primary surfaces, approach/departure surfaces, transitional surfaces, and inner horizontal surfaces — each with specific dimensions based on runway classification.
 
-Traditionally this is done with paper, calculators, and sometimes GIS tools that most airfield managers don't have access to. The evaluation takes time, is error-prone, and often requires sending the question to TERPS or CE and waiting for an answer.
+Traditionally this requires coordination with CES to provide specialized GIS tools that most airfield managers don't have access to. The evaluation takes time, is error-prone, and often requires sending the question to TERPS or CE and waiting for an answer.
 
 ### Glidepath's Approach
 Glidepath provides an interactive map-based obstruction evaluation tool that gives instant results.

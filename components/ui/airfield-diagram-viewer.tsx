@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { getAirfieldDiagram } from '@/lib/airfield-diagram'
 import { useInstallation } from '@/lib/installation-context'
+import { ZoomableImage } from '@/components/ui/zoomable-image'
 
 /**
  * Button that opens a fullscreen airfield diagram overlay.
@@ -63,14 +64,13 @@ export function AirfieldDiagramButton() {
               backdropFilter: 'blur(8px)',
             }}
           >Close</button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={diagramUrl}
-            alt="Airfield Diagram"
-            onClick={(e) => e.stopPropagation()}
-            onTouchEnd={(e) => e.stopPropagation()}
-            style={{ maxWidth: '100%', maxHeight: 'calc(100vh - 100px)', objectFit: 'contain', borderRadius: 8 }}
-          />
+          <div onClick={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}>
+            <ZoomableImage
+              src={diagramUrl}
+              alt="Airfield Diagram"
+              style={{ maxHeight: 'calc(100vh - 100px)' }}
+            />
+          </div>
         </div>
       )}
     </>

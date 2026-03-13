@@ -16,13 +16,13 @@ This document covers Glidepath's real-time operational modules — the features 
 When you open Glidepath, the first thing you see is the Airfield Status page. Think of it as your airfield's vital signs on a single screen.
 
 ### Active Runway
-The current active runway is displayed prominently with its designation (e.g., "18/36"). Runway Surface Condition and Runway Condition Reading values are shown alongside. Changing the active runway is a single tap — select the new runway from the dropdown, and every connected device updates in real-time. The change is logged in the Events Log with the operator's identity and timestamp in Zulu time.
+The current active runway is displayed prominently with its designation (e.g., "18/36"). Runway Surface Condition and Runway Condition Reading values are shown alongside. Changing the active runway is a single tap — toggle the new runway from the active runway status box, and every connected device updates in real-time. The change is logged in the Events Log with the operator's identity and timestamp in Zulu time.
 
 ### Bird Watch Condition (BWC)
 The current BWC level is displayed with color-coded severity: LOW (green), MODERATE (amber), SEVERE (red), PROHIBIT (red). Changing the BWC is a single tap — select the new level and it pushes to all connected devices instantly. Every BWC change is logged.
 
 ### Weather Advisories
-Active weather advisories, warnings, and watches are displayed in a dedicated section. Airfield managers can add advisories (watches, warnings, or remarks) with free-text descriptions. Active advisories show prominently; completed advisories are archived. Adding or completing an advisory is logged in the Events Log.
+Active weather advisories, warnings, and watches are displayed in a dedicated section. Airfield managers can share critical weather information (watches, warnings, or advisories) with free-text descriptions. Active advisories show prominently; completed advisories are archived. Adding or completing an advisory is logged in the Events Log.
 
 ### NAVAID Status
 All NAVAIDs for the installation are listed with their current status (operational or out of service). Toggling a NAVAID's status is a single tap. The change pushes in real-time and is logged with Zulu timestamp.
@@ -33,7 +33,7 @@ Active contractors and personnel working on the airfield are displayed as indivi
 - **Location** on the airfield (e.g., "Taxiway Bravo," "Runway 18 threshold")
 - **Work description** (what they're doing)
 - **Radio callsign** (how to reach them)
-- **Flag indicator** (visual alert if flagged for safety)
+- **Flag indicator** (meetings vehicle identification requirements from DAFI 13-213 and UFC 3-260-01)
 - **Status badge** (active/completed)
 - **Day counter** (how many days they've been active)
 

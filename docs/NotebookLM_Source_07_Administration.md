@@ -64,6 +64,7 @@ Each installation is configured through a comprehensive setup wizard:
   - Elevation
   - Surface type
 - Runway data drives the obstruction evaluation geometry and map displays
+- All runway data can be seeded automatically with coordinate through the Gldiepath developer
 
 **Areas**
 - Define airfield areas (runways, taxiways, aprons, shelters, access roads, misc)

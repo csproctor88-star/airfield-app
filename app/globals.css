@@ -10,6 +10,7 @@
 
 :root,
 [data-theme="dark"] {
+  color-scheme: dark;
   --color-bg: #0B1120;
   --color-bg-surface: rgba(15, 23, 42, 0.92);
   --color-bg-surface-solid: #0F172A;
@@ -94,6 +95,7 @@
 }
 
 [data-theme="light"] {
+  color-scheme: light;
   --color-bg: #F8FAFC;
   --color-bg-surface: #FFFFFF;
   --color-bg-surface-solid: #FFFFFF;
@@ -203,6 +205,12 @@ html, body {
     text-transform: uppercase;
     display: block;
     margin-bottom: 8px;
+  }
+
+  /* Force dark select/option on dark theme */
+  select, select option {
+    background-color: var(--color-bg-surface-solid);
+    color: var(--color-text-1);
   }
 
   /* Dark input */

@@ -10,6 +10,9 @@ import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/
 import { toast } from 'sonner'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort } from '@/lib/utils'
 import { TemplatePicker } from '@/components/ui/template-picker'
+import { fetchLightingSystems, fetchAllComponentsForBase } from '@/lib/supabase/lighting-systems'
+import { fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-features'
+import { calculateAllSystemHealth, getAlertTier, getHealthSummary, ALERT_TIER_CONFIG, type SystemHealth, type AlertTier } from '@/lib/outage-rules'
 
 // --- Quick Actions (KPI badges) ---
 const QUICK_ACTIONS = [
@@ -127,6 +130,36 @@ export default function AMDashboardPage() {
   const [userPopover, setUserPopover] = useState<{ id: string; x: number; y: number; name: string; role: string | null; edipi: string | null } | null>(null)
   const [lastCheckType, setLastCheckType] = useState<string | null>(null)
   const [lastCheckTime, setLastCheckTime] = useState<string | null>(null)
+
+  // ── Lighting system health summary ──
+  const [lightingHealthSummary, setLightingHealthSummary] = useState<{
+    worstTier: AlertTier
+    total: number
+    exceeded: number
+    inoperative: number
+    degraded: number
+  } | null>(null)
+
+  useEffect(() => {
+    if (!installationId) return
+    async function loadHealth() {
+      const [systems, components, features] = await Promise.all([
+        fetchLightingSystems(installationId!),
+        fetchAllComponentsForBase(installationId!),
+        fetchInfrastructureFeatures(installationId!),
+      ])
+      if (systems.length === 0) return
+      const compMap = new Map<string, typeof components>()
+      for (const c of components) {
+        if (!compMap.has(c.system_id)) compMap.set(c.system_id, [])
+        compMap.get(c.system_id)!.push(c)
+      }
+      const healths = calculateAllSystemHealth(systems, compMap, features)
+      const summary = getHealthSummary(healths)
+      setLightingHealthSummary(summary)
+    }
+    loadHealth()
+  }, [installationId])
 
   // --- Load Activity Feed ---
   const loadActivity = useCallback(async () => {
@@ -368,6 +401,51 @@ export default function AMDashboardPage() {
             QRC
           </span>
         </button>
+        {/* Lighting System Health Badge */}
+        {lightingHealthSummary && lightingHealthSummary.total > 0 && (
+          <Link
+            href="/infrastructure"
+            style={{
+              background: 'var(--color-bg-surface)',
+              border: `1px solid ${ALERT_TIER_CONFIG[lightingHealthSummary.worstTier].color}40`,
+              borderRadius: 12,
+              padding: '14px 16px',
+              cursor: 'pointer',
+              textDecoration: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+            }}
+          >
+            <span style={{
+              width: 14, height: 14, borderRadius: '50%',
+              background: ALERT_TIER_CONFIG[lightingHealthSummary.worstTier].color,
+              flexShrink: 0,
+              boxShadow: lightingHealthSummary.worstTier !== 'green'
+                ? `0 0 8px ${ALERT_TIER_CONFIG[lightingHealthSummary.worstTier].color}80`
+                : 'none',
+            }} />
+            <span style={{
+              fontSize: 'var(--fs-xl)',
+              color: ALERT_TIER_CONFIG[lightingHealthSummary.worstTier].color,
+              letterSpacing: '0.04em',
+              fontWeight: 700,
+            }}>
+              Visual NAVAIDs
+            </span>
+            {(lightingHealthSummary.exceeded > 0 || lightingHealthSummary.inoperative > 0) && (
+              <span style={{
+                fontSize: 'var(--fs-xs)', fontWeight: 800,
+                background: ALERT_TIER_CONFIG[lightingHealthSummary.worstTier].bg,
+                color: ALERT_TIER_CONFIG[lightingHealthSummary.worstTier].color,
+                padding: '2px 6px', borderRadius: 4,
+              }}>
+                {lightingHealthSummary.exceeded + lightingHealthSummary.inoperative} EXCEEDED
+              </span>
+            )}
+          </Link>
+        )}
       </div>
 
       {/* ===== Contractor Form Dialog ===== */}

@@ -256,6 +256,11 @@ export function StatusUpdateModal({
 
     // Cancelled = delete from DB entirely
     if (newStatus === 'cancelled') {
+      // Mark linked infrastructure feature operational before deleting
+      if (discrepancy.infrastructure_feature_id) {
+        const { updateFeatureStatus } = await import('@/lib/supabase/infrastructure-features')
+        await updateFeatureStatus(discrepancy.infrastructure_feature_id, 'operational')
+      }
       const { deleteDiscrepancy } = await import('@/lib/supabase/discrepancies')
       const { error } = await deleteDiscrepancy(discrepancy.id)
       setSaving(false)
@@ -285,6 +290,11 @@ export function StatusUpdateModal({
 
     // Only update status if one was selected
     if (newStatus) {
+      // Mark linked infrastructure feature operational when completing
+      if (newStatus === 'completed' && discrepancy.infrastructure_feature_id) {
+        const { updateFeatureStatus } = await import('@/lib/supabase/infrastructure-features')
+        await updateFeatureStatus(discrepancy.infrastructure_feature_id, 'operational')
+      }
       const { updateDiscrepancyStatus } = await import('@/lib/supabase/discrepancies')
       const { data, error } = await updateDiscrepancyStatus(
         discrepancy.id,
@@ -436,6 +446,8 @@ export function WorkOrderModal({
 
 // ─── Photo Viewer Modal ─────────────────────────────────────────────
 
+import { ZoomableImage } from '@/components/ui/zoomable-image'
+
 export function PhotoViewerModal({
   photos, initialIndex = 0, onClose,
 }: {
@@ -466,11 +478,7 @@ export function PhotoViewerModal({
         {photo.name} — {index + 1} of {photos.length}
       </div>
 
-      <img
-        src={photo.url}
-        alt={photo.name}
-        style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: 8 }}
-      />
+      <ZoomableImage src={photo.url} alt={photo.name} />
 
       {photos.length > 1 && (
         <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>

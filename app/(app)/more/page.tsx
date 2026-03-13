@@ -27,7 +27,7 @@ const amToolsItems: ModuleItem[] = [
   { name: 'Airfield Discrepancies', icon: '⚠️', color: '#FBBF24', href: '/discrepancies' },
   { name: 'Obstruction Database', icon: '🗺️', color: '#F97316', href: '/obstructions/history' },
   { name: 'Airfield Waivers', icon: '📄', color: '#A78BFA', href: '/waivers' },
-  { name: 'Airfield Infrastructure', icon: '💡', color: '#FBBF24', href: '/infrastructure' },
+  { name: 'Airfield Visual NAVAIDs', icon: '💡', color: '#FBBF24', href: '/infrastructure' },
   { name: 'Reports & Analytics', icon: '📈', color: '#22D3EE', href: '/reports' },
 ]
 

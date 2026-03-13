@@ -8,8 +8,145 @@ All notable changes to Glidepath.
 - METAR weather API integration (aviationweather.gov)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~63 `as any` casts
-- Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 10 PDF generators
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~109 `as any` casts
+- Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 11 PDF generators
+
+---
+
+## [2.19.0] — 2026-03-13
+
+### Features — Visual NAVAID Outage Tracking (Phases 1–4)
+Complete lighting outage compliance system integrated into the infrastructure map module. Implements DAFMAN 13-204v2 Table A3.1 outage allowances with real-time health monitoring, automated discrepancy creation, and daily operations reporting.
+
+#### Phase 1: Foundation
+- **Feature status tracking** — Per-feature OP/INOP toggle from map popups with `status` column on `infrastructure_features`
+- **Outage events table** — `outage_events` with reported/resolved event types, feature + component links, reporter tracking
+- **Auto-create discrepancies** — Reporting an outage auto-generates a linked discrepancy with coordinates, feature type, and system context
+- **Bidirectional resolution** — Marking a feature operational prompts to close linked open discrepancies with user name + Zulu timestamp in resolution notes
+
+#### Phase 2: System Definitions + Outage Engine
+- **Lighting systems** — `lighting_systems` table with 23 DAFMAN system types (ALSF-1/2, SSALR, MALSR, SALS, PAPI, runway/taxiway edge, etc.)
+- **System components** — `lighting_system_components` with configurable outage thresholds (allowable percentage, count, and consecutive limits)
+- **Outage rule templates** — `outage_rule_templates` seeded from DAFMAN 13-204v2 Table A3.1 for one-click system setup
+- **Outage engine** — `lib/outage-rules.ts` (343 lines): `calculateComponentOutage()`, `calculateSystemHealth()`, `getAlertTier()`, spatial adjacency + consecutive violation detection
+- **Feature-to-component assignment** — Dropdown in map popups links features to system components; auto-updates `total_count`
+- **System Health Panel** — Collapsible panel showing per-system health with 4-tier alerts (green/yellow/red/black), per-component outage bars, DAFMAN required actions
+- **Outage alert dialogs** — Auto-triggered when reporting an outage causes a system to exceed or approach thresholds
+- **Base Configuration UI** — Lighting Systems tab in Settings for creating/editing systems, components, and outage rules
+
+#### Phase 3: Legend + Inspection Integration
+- **Three-tier SYSTEMS legend** — Location-based grouping (Runways → Taxiways → Areas → Misc) with feature counts per component
+- **System legend visibility toggles** — Hide/show features by system component in addition to type-based legend
+- **Lighting inspection links** — `inspection_item_system_links` table connects inspection template items to lighting systems for cross-module reporting
+- **Rotating Beacon feature type** — Added as 22nd feature type with circle legend icon
+- **Stadium Lights system type** — For tracking non-airfield lighting assets
+- **Sign sub-type outage rule templates** — Granular signage tracking (location/directional/mandatory/informational/distance markers)
+- **Inline system name editing** — Edit system names directly in Base Configuration
+- **Auto-populate light counts** — Component `total_count` auto-calculated from assigned features
+
+#### Phase 4: Polish + Reporting
+- **Outage history timeline** — "Recent Activity" collapsible section in System Health Panel showing last 20 events with red/green dots, Zulu timestamps, feature labels, and reporter names
+- **Daily ops report integration** — "VISUAL NAVAID OUTAGES" PDF section with Time/Feature/System/Event/User columns, color-coded Reported (red) / Resolved (green) text
+- **Discrepancy detail linked NAVAID card** — Shows feature label, OP/INOP badge, type, system chain, and link to infrastructure map when `infrastructure_feature_id` is set
+- **Map health color coding** — "Color by health" toggle renders yellow rings (approaching threshold) and red rings (exceeded) around operational features in degraded systems
+- **Rich display names** — `buildFeatureDisplayName()` generates context-rich names (e.g., "TWY K 19 Mandatory Sign") using system/component/label/type
+- **Resolution notes enrichment** — Closing linked discrepancies includes user name + Zulu timestamp
+
+### Other Features
+- **Pinch-to-zoom photo viewers** — All photo viewers (discrepancy, check, inspection, ACSI) now support pinch-to-zoom and pan gestures
+- **Inspection reopening** — Completed inspections can be reopened with confirmation dialog
+- **RSC/RCR completion guard** — Inspections require RSC/RCR fields before completion
+- **Inspection confirmation dialogs** — Bullet-pointed formatting with spacing
+
+### Bug Fixes
+- **SYSTEMS legend sort** — Sorted by airfield precedence (runways, taxiways, areas, misc) instead of alphabetical
+- **Component dropdown deduplication** — Hide "overall" component when system has sub-components; show for single-component systems
+- **Dark mode select elements** — Forced dark background on all `<select>` and `<option>` elements globally
+- **Component total_count sync** — Auto-updated after bulk feature assignment operations
+
+### Database
+- **5 new tables**: `lighting_systems`, `lighting_system_components`, `outage_events`, `outage_rule_templates`, `inspection_item_system_links`
+- **2 altered tables**: `infrastructure_features` (added `status`, `system_component_id`), `discrepancies` (added `infrastructure_feature_id`, `lighting_system_id`)
+- **15 new migrations** (`2026031200` through `2026031209`)
+- **Total migrations**: 103
+
+### Stats
+- Build: Clean (zero errors)
+- 109 `as any` casts across ~25 files (up from 58 — new Mapbox layers + Supabase joins)
+- 48 files > 500 lines (largest: infrastructure/page.tsx at 3,440)
+- 195+ source files | 49 routes | 103 migrations | 42 tables
+
+---
+
+## [2.18.0] — 2026-03-12
+
+### Features — Infrastructure Map Module
+Full interactive airfield infrastructure mapping system built on Mapbox GL JS. Enables airfield managers to digitize, manage, and visualize all lighting, signage, and miscellaneous airfield features on a satellite map.
+
+#### Core Map Capabilities
+- **Click-to-place features** — Select a feature type from dropdown, click map to place a pin at that location
+- **Drag-to-move** — Reposition features by dragging markers in edit mode
+- **Map rotation** — Touch and mouse support for rotating the map view
+- **Fullscreen mode** — Toggle fullscreen with dedicated button
+- **GPS location tracking** — Live blue dot showing user's current position (for drive-around inspections)
+- **Box select** — Shift+drag to select multiple features for bulk operations (touch support on mobile)
+
+#### Feature Types (21 types)
+- **Signs** (5): Location, Directional, Informational, Mandatory, Runway Distance Marker
+- **Taxiway Lights** (2): Taxiway Edge, Taxiway End
+- **Runway Lights** (9): Runway Edge, PAPI, Threshold, Pre-Threshold, Terminating Bar, Centerline Bar, 1000ft Bar, Sequenced Flasher, REIL
+- **Miscellaneous** (3): Obstruction Light, Windcone, Stadium Light
+- **Legacy** (2): Approach Light, Runway Threshold (retained for existing data)
+
+#### Custom Map Icons
+- **Labeled sign graphics** — Canvas-rendered airfield signs with correct colors (black/yellow location signs, yellow/black directional signs with arrow, red/white mandatory signs, white/black distance markers)
+- **Split-circle icons** — Approach lights, thresholds, PAPIs, threshold lights
+- **Triangle icon** — Obstruction lights (red)
+- **Square icon** — REIL (pink)
+- **Windcone icon** — Sideways cone with orange/white stripes
+- **Stadium light icon** — 4-dot cluster
+- **Per-feature rotation** — `icon-rotate` with `icon-rotation-alignment: 'map'` for orienting signs/lights to match real-world bearings
+
+#### Bar Placement Mode
+- **6 bar types** — Threshold Bar, Terminating Bar, Pre-Threshold Bar, 1000ft Bar, Centerline Bar, Sequenced Flasher
+- **Rotation input** — Set bar orientation before placing
+- **Bulk creation** — Single click places 3–11 lights in a line at correct spacing via `offsetPoint()` geodesic calculations
+
+#### Legend System
+- **Type groups** — Collapsible groups: Signs, Taxiway Lights, Runway Lights, Miscellaneous
+- **Location groups** — Auto-categorized: RWY 19 LIGHTS, RWY 01 LIGHTS, RWY LIGHTS/SIGNS, TAXIWAY LIGHTS, TAXIWAY SIGNS, OTHER
+- **Per-layer toggles** — Independent visibility for each type and location layer
+- **Show All / Hide All** — Bulk toggle for all layers
+- **Feature counts** — Per-layer count badges in legend
+- **All groups collapsed by default**
+
+#### Bulk Operations
+- **Bulk shift** — Offset all features in a layer by lat/lng (for alignment corrections)
+- **Bulk re-layer** — Move selected features to a different location layer
+- **Delete selected** — Remove all box-selected features
+- **Free move** — Reposition multiple selected features with bulk save
+
+#### Data Management
+- **Supabase pagination** — Fetches all features via `.range()` in batches of 1,000 (overcomes Supabase's default 1,000-row SELECT limit)
+- **Inline label editing** — Edit feature labels directly in map popups
+- **Rotation editing** — Set per-feature rotation via popup
+- **Import API** — `/api/infrastructure-import` for bulk GeoJSON import
+
+#### Database
+- **Table**: `infrastructure_features` (base_id, feature_type, longitude, latitude, layer, block, label, notes, rotation, source, created_by)
+- **16 migrations** (`2026031100` through `2026031107`): table creation, feature type expansion, rotation column, CHECK constraint updates
+- **CRUD module**: `lib/supabase/infrastructure-features.ts` with fetch (paginated), create, update, delete, bulk shift, bulk re-layer, bulk create
+
+### Bug Fixes
+- **Features disappearing** — Fixed Supabase 1,000-row default limit by implementing paginated fetch with `.range()` in `fetchInfrastructureFeatures()`
+- **Location toggle mismatch** — Unified `'Unknown'` vs `'USER'` fallback for features with no assigned layer
+- **Mapbox icon-size expression error** — Replaced invalid `case` + `zoom` nesting with single `interpolate` expression
+
+### Stats
+- Build: Clean (zero errors)
+- 58 `as any` casts across ~20 files
+- 45 files > 500 lines (largest: infrastructure/page.tsx at 2,443)
+- 190+ source files | 49 routes | 98 migrations
 
 ---
 
