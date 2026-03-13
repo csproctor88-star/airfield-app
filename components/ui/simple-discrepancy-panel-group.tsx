@@ -29,6 +29,8 @@ interface SimpleDiscrepancyPanelGroupProps {
   areaOptions?: string[]
   /** Linked lighting system IDs for this item (enables feature picker) */
   linkedSystemIds?: string[]
+  /** Linked component IDs — when set, only features from these components are shown */
+  linkedComponentIds?: string[]
   /** Base ID (required when linkedSystemIds is provided) */
   linkedBaseId?: string
 }
@@ -51,6 +53,7 @@ export function SimpleDiscrepancyPanelGroup({
   draftSaving,
   areaOptions,
   linkedSystemIds,
+  linkedComponentIds,
   linkedBaseId,
 }: SimpleDiscrepancyPanelGroupProps) {
   return (
@@ -120,6 +123,7 @@ export function SimpleDiscrepancyPanelGroup({
             draftSaving={draftSaving}
             areaOptions={areaOptions}
             linkedSystemIds={linkedSystemIds}
+            linkedComponentIds={linkedComponentIds}
             linkedBaseId={linkedBaseId}
           />
         </div>

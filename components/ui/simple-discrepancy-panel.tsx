@@ -39,6 +39,8 @@ interface SimpleDiscrepancyPanelProps {
   areaOptions?: string[]
   /** Linked lighting system IDs for this item (enables feature picker) */
   linkedSystemIds?: string[]
+  /** Linked component IDs — when set, only features from these components are shown */
+  linkedComponentIds?: string[]
   /** Base ID (required when linkedSystemIds is provided) */
   linkedBaseId?: string
 }
@@ -58,6 +60,7 @@ export function SimpleDiscrepancyPanel({
   draftSaving,
   areaOptions,
   linkedSystemIds,
+  linkedComponentIds,
   linkedBaseId,
 }: SimpleDiscrepancyPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -101,6 +104,7 @@ export function SimpleDiscrepancyPanel({
               <label style={labelStyle}>Select Inoperative Features</label>
               <FeaturePicker
                 systemIds={linkedSystemIds}
+                componentIds={linkedComponentIds}
                 baseId={linkedBaseId}
                 selectedFeatureIds={detail.linked_feature_ids || []}
                 onSelectionChange={(ids) => {

@@ -1,11 +1,18 @@
 import { createClient } from './client'
 
-// ── Fetch all system links for a template (by template ID) ──
-// Returns a map: itemId → systemId[]
+// ── Link shape: system_id + optional component_id ──
+
+export type ItemLink = {
+  system_id: string
+  component_id: string | null
+}
+
+// ── Fetch all system/component links for a template (by template ID) ──
+// Returns a map: itemId → ItemLink[]
 
 export async function fetchLinksForTemplate(
   templateId: string
-): Promise<Record<string, string[]>> {
+): Promise<Record<string, ItemLink[]>> {
   const supabase = createClient()
   if (!supabase) return {}
 
@@ -32,17 +39,29 @@ export async function fetchLinksForTemplate(
   // Fetch links for these items
   const { data: links, error: linkErr } = await supabase
     .from('inspection_item_system_links')
-    .select('item_id, system_id')
+    .select('item_id, system_id, component_id')
     .in('item_id', itemIds)
 
   if (linkErr || !links) return {}
 
-  const result: Record<string, string[]> = {}
-  for (const link of links as { item_id: string; system_id: string }[]) {
+  const result: Record<string, ItemLink[]> = {}
+  for (const link of links as { item_id: string; system_id: string; component_id: string | null }[]) {
     if (!result[link.item_id]) result[link.item_id] = []
-    result[link.item_id].push(link.system_id)
+    result[link.item_id].push({ system_id: link.system_id, component_id: link.component_id })
   }
   return result
+}
+
+// ── Convenience: extract just system IDs from links (for backward compat) ──
+
+export function systemIdsFromLinks(links: ItemLink[]): string[] {
+  return [...new Set(links.map(l => l.system_id))]
+}
+
+// ── Convenience: extract component IDs from links (null-filtered) ──
+
+export function componentIdsFromLinks(links: ItemLink[]): string[] {
+  return links.map(l => l.component_id).filter((id): id is string => id !== null)
 }
 
 // ── Fetch template ID for a base + type ──
@@ -69,7 +88,7 @@ export async function fetchTemplateId(
 
 export async function setLinksForItem(
   itemId: string,
-  systemIds: string[]
+  links: ItemLink[]
 ): Promise<boolean> {
   const supabase = createClient()
   if (!supabase) return false
@@ -86,9 +105,13 @@ export async function setLinksForItem(
   }
 
   // Insert new links
-  if (systemIds.length === 0) return true
+  if (links.length === 0) return true
 
-  const rows = systemIds.map(sid => ({ item_id: itemId, system_id: sid }))
+  const rows = links.map(l => ({
+    item_id: itemId,
+    system_id: l.system_id,
+    component_id: l.component_id,
+  }))
   const { error: insErr } = await supabase
     .from('inspection_item_system_links')
     .insert(rows as any)

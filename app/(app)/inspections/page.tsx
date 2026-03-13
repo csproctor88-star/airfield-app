@@ -21,7 +21,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort } from '@/lib/utils'
 import { fetchCurrentWeather } from '@/lib/weather'
 import { fetchInspectionTemplate, toInspectionSections } from '@/lib/supabase/inspection-templates'
-import { fetchLinksForTemplate, fetchTemplateId } from '@/lib/supabase/inspection-item-links'
+import { fetchLinksForTemplate, fetchTemplateId, systemIdsFromLinks, componentIdsFromLinks, type ItemLink } from '@/lib/supabase/inspection-item-links'
 import {
   loadDraft,
   saveDraftToStorage,
@@ -60,12 +60,12 @@ export default function InspectionsPage() {
   const [dbAirfieldSections, setDbAirfieldSections] = useState<InspectionSection[] | null>(null)
   const [dbLightingSections, setDbLightingSections] = useState<InspectionSection[] | null>(null)
 
-  // ── Item → system links (for lighting inspections w/ infrastructure feature picker) ──
-  // Maps DB item ID → lighting system IDs. Keyed by template item IDs (from base_inspection_items).
-  // The inspection form uses item_key (from constants) as identifiers, so we also build a key-based map.
-  const [itemSystemLinks, setItemSystemLinks] = useState<Record<string, string[]>>({})
-  // Map from item_key → system IDs (for use in the inspection form which keys by item_key)
-  const [itemKeySystemLinks, setItemKeySystemLinks] = useState<Record<string, string[]>>({})
+  // ── Item → system/component links (for lighting inspections w/ infrastructure feature picker) ──
+  // Maps DB item ID → ItemLink[]. Keyed by template item IDs (from base_inspection_items).
+  // The inspection form uses item_key (from constants) as identifiers, so we also build key-based maps.
+  const [itemSystemLinks, setItemSystemLinks] = useState<Record<string, ItemLink[]>>({})
+  // Map from item_key → ItemLink[] (for use in the inspection form which keys by item_key)
+  const [itemKeyLinks, setItemKeyLinks] = useState<Record<string, ItemLink[]>>({})
 
   useEffect(() => {
     if (!installationId) return
@@ -99,8 +99,8 @@ export default function InspectionsPage() {
         if (tmplId) {
           const links = await fetchLinksForTemplate(tmplId)
           setItemSystemLinks(links)
-          // Build item_key → system IDs map
-          const keyMap: Record<string, string[]> = {}
+          // Build item_key → ItemLink[] map
+          const keyMap: Record<string, ItemLink[]> = {}
           for (const sec of lt) {
             for (const item of sec.items) {
               if (links[item.id] && links[item.id].length > 0) {
@@ -108,7 +108,7 @@ export default function InspectionsPage() {
               }
             }
           }
-          setItemKeySystemLinks(keyMap)
+          setItemKeyLinks(keyMap)
         }
       }
     }
@@ -1714,8 +1714,9 @@ export default function InspectionsPage() {
                               onPointSelected={(idx, lat, lng) => handleDiscPointSelected(item.id, idx, lat, lng)}
                               onCaptureGps={(idx) => handleDiscCaptureGps(item.id, idx)}
                               gpsLoadingIndex={discGpsLoading?.startsWith(`${item.id}:`) ? parseInt(discGpsLoading.split(':')[1]) : null}
-                              linkedSystemIds={activeTab === 'lighting' ? itemKeySystemLinks[item.id] : undefined}
-                              linkedBaseId={activeTab === 'lighting' && itemKeySystemLinks[item.id] ? installationId ?? undefined : undefined}
+                              linkedSystemIds={activeTab === 'lighting' && itemKeyLinks[item.id] ? systemIdsFromLinks(itemKeyLinks[item.id]) : undefined}
+                              linkedComponentIds={activeTab === 'lighting' && itemKeyLinks[item.id] ? componentIdsFromLinks(itemKeyLinks[item.id]) : undefined}
+                              linkedBaseId={activeTab === 'lighting' && itemKeyLinks[item.id] ? installationId ?? undefined : undefined}
                               flyToPoints={(currentHalf.discrepancies[item.id] || []).map((_, i) => discFlyTo[`${item.id}:${i}`] || null)}
                               onSaveDraft={handleSave}
                               draftSaving={saving}
