@@ -25,6 +25,54 @@ export type InfrastructureFeatureType =
   | 'stadium_light'
   | 'rotating_beacon'
 
+// ── Feature type label map ──
+
+const FEATURE_TYPE_LABELS: Record<string, string> = {
+  approach_light: 'Approach Light', centerline_bar_light: 'Centerline Bar Light',
+  directional_sign: 'Directional Sign', informational_sign: 'Informational Sign',
+  location_sign: 'Location Sign', mandatory_sign: 'Mandatory Sign',
+  obstruction_light: 'Obstruction Light', papi: 'PAPI',
+  pre_threshold_light: 'Pre-Threshold Light', reil: 'REIL',
+  rotating_beacon: 'Rotating Beacon', runway_distance_marker: 'Distance Remaining Marker',
+  runway_edge_light: 'Runway Edge Light', runway_threshold: 'Runway Threshold',
+  sequenced_flasher: 'Sequenced Flasher', stadium_light: 'Stadium Light',
+  taxiway_end_light: 'Taxiway End Light', taxiway_light: 'Taxiway Light',
+  terminating_bar_light: 'Terminating Bar Light', thousand_ft_bar_light: "1000' Bar Light",
+  threshold_light: 'Threshold Light', windcone: 'Windcone',
+}
+
+export function formatFeatureType(type: string): string {
+  return FEATURE_TYPE_LABELS[type] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+/**
+ * Build a descriptive display name for a feature using its system/component context.
+ * Example: "TWY K — 19 Mandatory Sign" or "RWY 01/19 PAPI" or "Taxiway Light"
+ *
+ * @param feature - Must have label and feature_type
+ * @param systemName - e.g. "TWY K - Airfield Signage" (the part before " - " is used as location prefix)
+ * @param componentLabel - e.g. "Taxiway K Signs" (used as fallback if no system name)
+ */
+export function buildFeatureDisplayName(
+  feature: { label: string | null; feature_type: string },
+  systemName?: string | null,
+  componentLabel?: string | null,
+): string {
+  const typeLabel = formatFeatureType(feature.feature_type)
+  const parts: string[] = []
+
+  // Extract location prefix from system name (e.g., "TWY K" from "TWY K - Airfield Signage")
+  if (systemName) {
+    const dashIdx = systemName.indexOf(' - ')
+    parts.push(dashIdx >= 0 ? systemName.substring(0, dashIdx) : systemName)
+  }
+
+  if (feature.label) parts.push(feature.label)
+  parts.push(typeLabel)
+
+  return parts.join(' ')
+}
+
 // ── Fetch all features for a base ──
 
 export async function fetchInfrastructureFeatures(baseId: string): Promise<InfrastructureFeature[]> {

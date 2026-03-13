@@ -5,7 +5,7 @@ import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
-import { isMapboxConfigured } from '@/lib/utils'
+import { isMapboxConfigured, formatZuluDateTime } from '@/lib/utils'
 import {
   fetchInfrastructureFeatures,
   createInfrastructureFeature,
@@ -16,6 +16,7 @@ import {
   bulkShiftByIds,
   bulkRelayerFeatures,
   bulkCreateInfrastructureFeatures,
+  buildFeatureDisplayName,
   type InfrastructureFeatureType,
 } from '@/lib/supabase/infrastructure-features'
 import { createDiscrepancy } from '@/lib/supabase/discrepancies'
@@ -970,14 +971,17 @@ export default function InfrastructureMapPage() {
       return
     }
 
-    // Find the layer config for display label
+    // Build rich display name from system/component context
     const layerCfg = LAYERS.find(l => l.types.includes(feature.feature_type))
-    const featureLabel = feature.label || layerCfg?.label || feature.feature_type
+    const comp = feature.system_component_id
+      ? allComponentsRef.current.find(c => c.id === feature.system_component_id)
+      : null
+    const featureDisplayName = buildFeatureDisplayName(feature, comp?.system_name, comp?.label)
 
     // Auto-create discrepancy
     const { data: disc } = await createDiscrepancy({
-      title: `${featureLabel} — Inoperative`,
-      description: `Visual NAVAID marked inoperative from infrastructure map. Feature type: ${layerCfg?.label || feature.feature_type}.${feature.layer ? ` Layer: ${feature.layer}.` : ''}`,
+      title: `${featureDisplayName} — Inoperative`,
+      description: `Visual NAVAID marked inoperative from infrastructure map. Feature type: ${layerCfg?.label || feature.feature_type}.${comp ? ` System: ${comp.system_name}.` : ''}${feature.layer ? ` Layer: ${feature.layer}.` : ''}`,
       location_text: feature.layer || 'Airfield',
       type: 'lighting',
       latitude: feature.latitude,
@@ -994,7 +998,7 @@ export default function InfrastructureMapPage() {
       system_component_id: feature.system_component_id || undefined,
       event_type: 'reported',
       discrepancy_id: disc?.id || undefined,
-      notes: `${featureLabel} reported inoperative`,
+      notes: `${featureDisplayName} reported inoperative`,
     })
 
     const refreshed = await fetchInfrastructureFeatures(installationId)
@@ -1051,8 +1055,10 @@ export default function InfrastructureMapPage() {
       return
     }
 
-    const layerCfg = LAYERS.find(l => l.types.includes(feature.feature_type))
-    const featureLabel = feature.label || layerCfg?.label || feature.feature_type
+    const comp = feature.system_component_id
+      ? allComponentsRef.current.find(c => c.id === feature.system_component_id)
+      : null
+    const featureDisplayName = buildFeatureDisplayName(feature, comp?.system_name, comp?.label)
 
     // Create outage event
     await createOutageEvent({
@@ -1060,7 +1066,7 @@ export default function InfrastructureMapPage() {
       feature_id: id,
       system_component_id: feature.system_component_id || undefined,
       event_type: 'resolved',
-      notes: `${featureLabel} restored to operational`,
+      notes: `${featureDisplayName} restored to operational`,
     })
 
     const refreshed = await fetchInfrastructureFeatures(installationId)
@@ -1079,12 +1085,22 @@ export default function InfrastructureMapPage() {
       if (linkedDiscs && linkedDiscs.length > 0) {
         const discList = linkedDiscs.map((d: any) => d.display_id).join(', ')
         if (confirm(`Close linked discrepanc${linkedDiscs.length > 1 ? 'ies' : 'y'} ${discList}?`)) {
+          // Get current user name for resolution notes
+          let resolvedByName = 'Unknown'
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { data: profile } = await supabase.from('profiles').select('name, rank').eq('id', user.id).single()
+            if (profile) {
+              resolvedByName = profile.rank ? `${profile.rank} ${profile.name}` : (profile.name || 'Unknown')
+            }
+          }
+          const resolvedAt = formatZuluDateTime(new Date())
           for (const d of linkedDiscs) {
             await supabase
               .from('discrepancies')
               .update({
                 status: 'completed',
-                resolution_notes: 'Resolved — feature marked operational from Visual NAVAIDs map',
+                resolution_notes: `Resolved — feature marked operational from Visual NAVAIDs map by ${resolvedByName} at ${resolvedAt}`,
                 resolution_date: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               } as any)

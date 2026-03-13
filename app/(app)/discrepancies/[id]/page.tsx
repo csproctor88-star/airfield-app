@@ -10,7 +10,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
 import { CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS, DISCREPANCY_TYPES } from '@/lib/constants'
 
-import { fetchInfrastructureFeature } from '@/lib/supabase/infrastructure-features'
+import { fetchInfrastructureFeature, buildFeatureDisplayName, formatFeatureType } from '@/lib/supabase/infrastructure-features'
 import type { InfrastructureFeature } from '@/lib/supabase/types'
 import { EditDiscrepancyModal, StatusUpdateModal, WorkOrderModal, PhotoViewerModal } from '@/components/discrepancies/modals'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
@@ -328,7 +328,7 @@ export default function DiscrepancyDetailPage() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
             <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>
-              {linkedFeature.label || linkedFeature.feature_type.replace(/_/g, ' ')}
+              {buildFeatureDisplayName(linkedFeature, linkedSystemInfo?.systemName, linkedSystemInfo?.componentLabel)}
             </span>
             <span style={{
               fontSize: 'var(--fs-xs)',
@@ -342,11 +342,14 @@ export default function DiscrepancyDetailPage() {
             </span>
           </div>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginBottom: 2 }}>
-            Type: {linkedFeature.feature_type.replace(/_/g, ' ')}
+            Type: {formatFeatureType(linkedFeature.feature_type)}
           </div>
           {linkedSystemInfo && (
             <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginBottom: 2 }}>
-              System: {linkedSystemInfo.systemName}{linkedSystemInfo.componentLabel ? ` \u2192 ${linkedSystemInfo.componentLabel}` : ''}
+              System: {linkedSystemInfo.systemName}
+              {linkedSystemInfo.componentLabel && linkedSystemInfo.componentLabel !== linkedSystemInfo.systemName
+                ? ` \u2192 ${linkedSystemInfo.componentLabel}`
+                : ''}
             </div>
           )}
           <Link
