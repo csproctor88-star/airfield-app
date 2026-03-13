@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { toast } from 'sonner'
-import { formatFeatureType } from '@/lib/supabase/infrastructure-features'
+import { formatFeatureType, FEATURE_TYPE_ABBREV } from '@/lib/supabase/infrastructure-features'
 import type { InfrastructureFeature } from '@/lib/supabase/types'
 
 // ── Types ──
@@ -31,6 +31,7 @@ type AuditPanelProps = {
   onBulkPrefixApply: (featureIds: string[], prefix: string) => Promise<number>
   onBulkSequentialLabel: (features: { id: string; label: string }[]) => Promise<number>
   onBulkAssign: (featureIds: string[], componentId: string) => Promise<number>
+  onBulkFixtureIds: (updates: { id: string; block: string }[]) => Promise<number>
   onHighlightFeatures: (featureIds: string[]) => void
   onClose: () => void
 }
@@ -242,6 +243,111 @@ function PrefixForm({
   )
 }
 
+// ── Fixture ID generator form ──
+
+function FixtureIdForm({
+  comp,
+  features,
+  onGenerate,
+  onCancel,
+}: {
+  comp: ComponentInfo
+  features: InfrastructureFeature[]
+  onGenerate: (customPrefix?: string) => void
+  onCancel: () => void
+}) {
+  // Derive default prefix from system name
+  const defaultPrefix = (() => {
+    const sysName = comp.system_name
+    const dashIdx = sysName.indexOf(' - ')
+    const locationPart = dashIdx >= 0 ? sysName.substring(0, dashIdx) : sysName
+    return locationPart.replace(/\s+/g, '')
+  })()
+
+  const [customPrefix, setCustomPrefix] = useState(defaultPrefix)
+  const inputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => { inputRef.current?.select() }, [])
+
+  // Build preview
+  const byType: Record<string, number> = {}
+  for (const f of features) {
+    byType[f.feature_type] = (byType[f.feature_type] || 0) + 1
+  }
+  const previewLines = Object.entries(byType).map(([type, count]) => {
+    const abbrev = FEATURE_TYPE_ABBREV[type] || type.substring(0, 3).toUpperCase()
+    return `${customPrefix}-${abbrev}-001 ... ${customPrefix}-${abbrev}-${String(count).padStart(3, '0')}`
+  })
+
+  return (
+    <div
+      style={{ padding: '6px 0 4px 24px' }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+        <input
+          ref={inputRef}
+          value={customPrefix}
+          onChange={(e) => setCustomPrefix(e.target.value)}
+          placeholder="Prefix..."
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && customPrefix.trim()) onGenerate(customPrefix.trim())
+            if (e.key === 'Escape') onCancel()
+          }}
+          style={{
+            flex: 1,
+            background: 'rgba(15, 23, 42, 0.8)',
+            border: '1px solid rgba(168, 85, 247, 0.4)',
+            borderRadius: 4,
+            padding: '3px 6px',
+            color: '#E2E8F0',
+            fontSize: 11,
+            outline: 'none',
+          }}
+        />
+        <button
+          onClick={() => customPrefix.trim() && onGenerate(customPrefix.trim())}
+          disabled={!customPrefix.trim()}
+          style={{
+            padding: '3px 8px',
+            borderRadius: 4,
+            border: '1px solid rgba(168, 85, 247, 0.3)',
+            background: customPrefix.trim() ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
+            color: customPrefix.trim() ? '#C084FC' : '#475569',
+            fontSize: 10,
+            fontWeight: 600,
+            cursor: customPrefix.trim() ? 'pointer' : 'default',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Generate
+        </button>
+        <button
+          onClick={onCancel}
+          style={{
+            padding: '3px 6px',
+            borderRadius: 4,
+            border: '1px solid rgba(148,163,184,0.2)',
+            background: 'transparent',
+            color: '#64748B',
+            fontSize: 10,
+            cursor: 'pointer',
+          }}
+        >
+          ✕
+        </button>
+      </div>
+      {customPrefix.trim() && previewLines.length > 0 && (
+        <div style={{ marginTop: 4 }}>
+          <div style={{ fontSize: 9, color: '#64748B', marginBottom: 2 }}>Preview:</div>
+          {previewLines.map((line, i) => (
+            <div key={i} style={{ fontSize: 9, color: '#94A3B8', paddingLeft: 2 }}>{line}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main Component ──
 
 export default function AuditPanel({
@@ -255,6 +361,7 @@ export default function AuditPanel({
   onBulkPrefixApply,
   onBulkSequentialLabel,
   onBulkAssign,
+  onBulkFixtureIds,
   onHighlightFeatures,
   onClose,
 }: AuditPanelProps) {
@@ -263,6 +370,8 @@ export default function AuditPanel({
   const [expandedComponents, setExpandedComponents] = useState<Record<string, boolean>>({})
   const [prefixTarget, setPrefixTarget] = useState<string | null>(null) // component ID
   const [reassigning, setReassigning] = useState<string | null>(null) // feature ID showing dropdown
+  const [fixtureIdTarget, setFixtureIdTarget] = useState<string | null>(null) // component ID
+  const [generatingAllIds, setGeneratingAllIds] = useState(false)
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false)
   const [baLayer, setBaLayer] = useState<string>('')
   const [baType, setBaType] = useState<string>('')
@@ -369,6 +478,90 @@ export default function AuditPanel({
     setPrefixTarget(null)
   }
 
+  const handleGenerateAllFixtureIds = async () => {
+    setGeneratingAllIds(true)
+    const updates: { id: string; block: string }[] = []
+
+    // Process each component
+    for (const comp of allComponents) {
+      const compFeatures = (byComponent[comp.id] || [])
+        .sort((a, b) => (a.label || '').localeCompare(b.label || ''))
+      if (compFeatures.length === 0) continue
+
+      // Build prefix from system name
+      const dashIdx = comp.system_name.indexOf(' - ')
+      const sysPrefix = (dashIdx >= 0 ? comp.system_name.substring(0, dashIdx) : comp.system_name).replace(/\s+/g, '')
+
+      // Group by type within component
+      const byType: Record<string, InfrastructureFeature[]> = {}
+      for (const f of compFeatures) {
+        if (!byType[f.feature_type]) byType[f.feature_type] = []
+        byType[f.feature_type].push(f)
+      }
+
+      for (const [type, feats] of Object.entries(byType)) {
+        const abbrev = FEATURE_TYPE_ABBREV[type] || type.substring(0, 3).toUpperCase()
+        feats.forEach((f, i) => {
+          const num = String(i + 1).padStart(3, '0')
+          updates.push({ id: f.id, block: `${sysPrefix}-${abbrev}-${num}` })
+        })
+      }
+    }
+
+    // Also handle unassigned features — use layer as prefix
+    for (const f of unassigned) {
+      const layerPrefix = (f.layer || 'UNK').replace(/\s+/g, '')
+      const abbrev = FEATURE_TYPE_ABBREV[f.feature_type] || f.feature_type.substring(0, 3).toUpperCase()
+      // Count position among same layer+type unassigned features
+      const sameGroup = unassigned.filter(u => u.layer === f.layer && u.feature_type === f.feature_type)
+        .sort((a, b) => (a.label || '').localeCompare(b.label || ''))
+      const idx = sameGroup.indexOf(f) + 1
+      updates.push({ id: f.id, block: `${layerPrefix}-${abbrev}-${String(idx).padStart(3, '0')}` })
+    }
+
+    if (updates.length > 0) {
+      const count = await onBulkFixtureIds(updates)
+      if (count > 0) toast.success(`Generated ${count} Fixture ID${count !== 1 ? 's' : ''}`)
+    }
+    setGeneratingAllIds(false)
+  }
+
+  const handleGenerateFixtureIds = async (componentId: string, customPrefix?: string) => {
+    const comp = allComponents.find(c => c.id === componentId)
+    if (!comp) return
+    const compFeatures = (byComponent[componentId] || [])
+      .sort((a, b) => (a.label || '').localeCompare(b.label || ''))
+    if (compFeatures.length === 0) return
+
+    // Build prefix from system name: "TWY K - Airfield Signage" → "TWYK"
+    const sysPrefix = customPrefix || (() => {
+      const sysName = comp.system_name
+      const dashIdx = sysName.indexOf(' - ')
+      const locationPart = dashIdx >= 0 ? sysName.substring(0, dashIdx) : sysName
+      return locationPart.replace(/\s+/g, '')
+    })()
+
+    // Group by type and number within each type
+    const byType: Record<string, InfrastructureFeature[]> = {}
+    for (const f of compFeatures) {
+      if (!byType[f.feature_type]) byType[f.feature_type] = []
+      byType[f.feature_type].push(f)
+    }
+
+    const updates: { id: string; block: string }[] = []
+    for (const [type, feats] of Object.entries(byType)) {
+      const abbrev = FEATURE_TYPE_ABBREV[type] || type.substring(0, 3).toUpperCase()
+      feats.forEach((f, i) => {
+        const num = String(i + 1).padStart(3, '0')
+        updates.push({ id: f.id, block: `${sysPrefix}-${abbrev}-${num}` })
+      })
+    }
+
+    const count = await onBulkFixtureIds(updates)
+    if (count > 0) toast.success(`Generated ${count} Fixture ID${count !== 1 ? 's' : ''}`)
+    setFixtureIdTarget(null)
+  }
+
   return (
     <div
       style={{
@@ -435,6 +628,28 @@ export default function AuditPanel({
             outline: 'none',
           }}
         />
+      </div>
+
+      {/* Generate All Fixture IDs */}
+      <div style={{ padding: '0 12px 6px', flexShrink: 0 }}>
+        <button
+          onClick={handleGenerateAllFixtureIds}
+          disabled={generatingAllIds || features.length === 0}
+          style={{
+            width: '100%',
+            padding: '6px 0',
+            borderRadius: 6,
+            border: '1px solid rgba(168, 85, 247, 0.3)',
+            background: 'rgba(168, 85, 247, 0.1)',
+            color: '#C084FC',
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: features.length > 0 ? 'pointer' : 'default',
+            opacity: generatingAllIds ? 0.6 : 1,
+          }}
+        >
+          {generatingAllIds ? 'Generating...' : `Generate All Fixture IDs (${features.length})`}
+        </button>
       </div>
 
       {/* Bulk Assign Tool */}
@@ -691,6 +906,25 @@ export default function AuditPanel({
                       >
                         Aa+
                       </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setFixtureIdTarget(fixtureIdTarget === comp.id ? null : comp.id)
+                        }}
+                        title="Generate Fixture IDs"
+                        style={{
+                          background: fixtureIdTarget === comp.id ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
+                          border: fixtureIdTarget === comp.id ? '1px solid rgba(168, 85, 247, 0.3)' : '1px solid transparent',
+                          borderRadius: 4,
+                          color: fixtureIdTarget === comp.id ? '#C084FC' : '#64748B',
+                          fontSize: 10,
+                          cursor: 'pointer',
+                          padding: '1px 5px',
+                          fontWeight: 600,
+                        }}
+                      >
+                        #ID
+                      </button>
                     </div>
 
                     {/* Prefix form */}
@@ -700,6 +934,16 @@ export default function AuditPanel({
                         onApplySequential={(prefix, startAt) => handleSequentialApply(comp.id, prefix, startAt)}
                         featureCount={(byComponent[comp.id] || []).length}
                         onCancel={() => setPrefixTarget(null)}
+                      />
+                    )}
+
+                    {/* Fixture ID generator */}
+                    {fixtureIdTarget === comp.id && (
+                      <FixtureIdForm
+                        comp={comp}
+                        features={compFeatures}
+                        onGenerate={(customPrefix) => handleGenerateFixtureIds(comp.id, customPrefix)}
+                        onCancel={() => setFixtureIdTarget(null)}
                       />
                     )}
 
@@ -743,6 +987,12 @@ export default function AuditPanel({
                               onSave={(newLabel) => onLabelUpdate(f.id, newLabel)}
                             />
                           </span>
+                          {/* Fixture ID */}
+                          {f.block && (
+                            <span style={{ fontSize: 8, color: '#64748B', fontFamily: 'monospace', flexShrink: 0 }}>
+                              {f.block}
+                            </span>
+                          )}
                           {/* Reassign button */}
                           {reassigning === f.id ? (
                             <select

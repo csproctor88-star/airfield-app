@@ -18,6 +18,7 @@ import {
   bulkCreateInfrastructureFeatures,
   bulkPrefixLabels,
   bulkUpdateLabels,
+  bulkUpdateFixtureIds,
   bulkAssignComponentByIds,
   buildFeatureDisplayName,
   type InfrastructureFeatureType,
@@ -950,8 +951,8 @@ export default function InfrastructureMapPage() {
   }
 
   // Save label handler
-  const savePropsRef = useRef<((id: string, label: string, rotation: number, featureType?: string, componentId?: string) => Promise<void>) | undefined>(undefined)
-  savePropsRef.current = async (id: string, label: string, rotation: number, featureType?: string, componentId?: string) => {
+  const savePropsRef = useRef<((id: string, label: string, rotation: number, featureType?: string, componentId?: string, block?: string) => Promise<void>) | undefined>(undefined)
+  savePropsRef.current = async (id: string, label: string, rotation: number, featureType?: string, componentId?: string, block?: string) => {
     if (!installationId) return
     const updates: Parameters<typeof updateInfrastructureFeature>[1] = {
       label: label || undefined,
@@ -959,6 +960,7 @@ export default function InfrastructureMapPage() {
     }
     if (featureType) updates.feature_type = featureType as InfrastructureFeatureType
     if (componentId !== undefined) updates.system_component_id = componentId || null
+    if (block !== undefined) updates.block = block || undefined
     const ok = await updateInfrastructureFeature(id, updates)
     if (ok) {
       const updated = await fetchInfrastructureFeatures(installationId)
@@ -1153,8 +1155,8 @@ export default function InfrastructureMapPage() {
     ;(window as any).__moveInfraFeature = (id: string, lng: number, lat: number) => {
       moveHandlerRef.current?.(id, lng, lat)
     }
-    ;(window as any).__saveFeatureProps = (id: string, label: string, rotation: number, featureType?: string, componentId?: string) => {
-      savePropsRef.current?.(id, label, rotation, featureType, componentId)
+    ;(window as any).__saveFeatureProps = (id: string, label: string, rotation: number, featureType?: string, componentId?: string, block?: string) => {
+      savePropsRef.current?.(id, label, rotation, featureType, componentId, block)
     }
     ;(window as any).__reportOutage = (id: string) => {
       reportOutageRef.current?.(id)
@@ -1657,7 +1659,7 @@ export default function InfrastructureMapPage() {
           html += `<div style="color:#94A3B8;font-size:11px;">Lat: ${coords[1].toFixed(6)}</div>`
           html += `<div style="color:#94A3B8;font-size:11px;">Lon: ${coords[0].toFixed(6)}</div>`
           if (props.block) {
-            html += `<div style="margin-top:4px;color:#CBD5E1;">Fixture: ${props.block}</div>`
+            html += `<div style="margin-top:4px;color:#CBD5E1;">Fixture ID: ${props.block}</div>`
           }
           if (props.text) {
             html += `<div style="margin-top:4px;color:#CBD5E1;">Label: ${props.text}</div>`
@@ -1731,6 +1733,16 @@ export default function InfrastructureMapPage() {
               color:#E2E8F0;font-size:12px;outline:none;
             " />`
             html += `</div>`
+            // Fixture ID
+            const escapedBlock = (props.block || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')
+            html += `<div style="margin-bottom:6px;">`
+            html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">Fixture ID</div>`
+            html += `<input id="__block-input" type="text" value="${escapedBlock}" placeholder="e.g. TWYK-TL-001" style="
+              width:100%;padding:4px 6px;border-radius:4px;box-sizing:border-box;
+              border:1px solid rgba(148,163,184,0.2);background:rgba(30,41,59,0.9);
+              color:#E2E8F0;font-size:12px;outline:none;
+            " />`
+            html += `</div>`
             // Rotation slider with compass
             html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">`
             html += `<div style="flex-shrink:0;"><svg width="32" height="32" viewBox="0 0 32 32">`
@@ -1746,7 +1758,7 @@ export default function InfrastructureMapPage() {
             html += `<input id="__rotation-input" type="range" min="0" max="359" value="${currentRotation}" oninput="document.getElementById('__rotation-value').textContent=this.value+'°';document.getElementById('__compass-needle').setAttribute('transform','rotate('+this.value+',16,16)');" style="width:100%;accent-color:#10B981;cursor:pointer;" />`
             html += `</div></div>`
             // Save button
-            html += `<button onclick="window.__saveFeatureProps('${props.id}',document.getElementById('__label-input').value,parseInt(document.getElementById('__rotation-input').value),document.getElementById('__type-input').value,document.getElementById('__comp-input').value)" style="
+            html += `<button onclick="window.__saveFeatureProps('${props.id}',document.getElementById('__label-input').value,parseInt(document.getElementById('__rotation-input').value),document.getElementById('__type-input').value,document.getElementById('__comp-input').value,document.getElementById('__block-input').value)" style="
               width:100%;padding:5px 0;border:none;border-radius:4px;
               background:#10B981;color:white;font-size:11px;font-weight:600;cursor:pointer;
             ">Save</button>`
@@ -2293,6 +2305,14 @@ export default function InfrastructureMapPage() {
             }}
             onBulkAssign={async (featureIds, componentId) => {
               const count = await bulkAssignComponentByIds(featureIds, componentId)
+              if (count > 0 && installationId) {
+                const refreshed = await fetchInfrastructureFeatures(installationId)
+                setDbFeatures(refreshed)
+              }
+              return count
+            }}
+            onBulkFixtureIds={async (updates) => {
+              const count = await bulkUpdateFixtureIds(updates)
               if (count > 0 && installationId) {
                 const refreshed = await fetchInfrastructureFeatures(installationId)
                 setDbFeatures(refreshed)

@@ -166,6 +166,7 @@ export async function updateInfrastructureFeature(
     latitude?: number
     feature_type?: InfrastructureFeatureType
     label?: string
+    block?: string
     notes?: string
     rotation?: number
     system_component_id?: string | null
@@ -443,6 +444,43 @@ export async function bulkPrefixLabels(
   }
 
   return updated
+}
+
+// ── Bulk update fixture IDs (block field) by ID ──
+
+export async function bulkUpdateFixtureIds(
+  updates: { id: string; block: string }[],
+): Promise<number> {
+  const supabase = createClient()
+  if (!supabase || updates.length === 0) return 0
+
+  let updated = 0
+  for (let i = 0; i < updates.length; i += 200) {
+    const batch = updates.slice(i, i + 200)
+    const promises = batch.map(u =>
+      supabase
+        .from('infrastructure_features')
+        .update({ block: u.block, updated_at: new Date().toISOString() } as any)
+        .eq('id', u.id)
+    )
+    const results = await Promise.all(promises)
+    updated += results.filter(r => !r.error).length
+  }
+
+  return updated
+}
+
+// ── Feature type abbreviations for Fixture ID generation ──
+
+export const FEATURE_TYPE_ABBREV: Record<string, string> = {
+  approach_light: 'AL', centerline_bar_light: 'CBL', directional_sign: 'DS',
+  informational_sign: 'IS', location_sign: 'LS', mandatory_sign: 'MS',
+  obstruction_light: 'OL', papi: 'PAPI', pre_threshold_light: 'PTL',
+  reil: 'REIL', rotating_beacon: 'RB', runway_distance_marker: 'DRM',
+  runway_edge_light: 'REL', runway_threshold: 'RT', sequenced_flasher: 'SF',
+  stadium_light: 'SL', taxiway_end_light: 'TEL', taxiway_light: 'TL',
+  terminating_bar_light: 'TBL', thousand_ft_bar_light: 'KBL',
+  threshold_light: 'THL', windcone: 'WC',
 }
 
 // ── Bulk update labels by ID ──
