@@ -950,13 +950,16 @@ export default function InfrastructureMapPage() {
   }
 
   // Save label handler
-  const savePropsRef = useRef<((id: string, label: string, rotation: number) => Promise<void>) | undefined>(undefined)
-  savePropsRef.current = async (id: string, label: string, rotation: number) => {
+  const savePropsRef = useRef<((id: string, label: string, rotation: number, featureType?: string, componentId?: string) => Promise<void>) | undefined>(undefined)
+  savePropsRef.current = async (id: string, label: string, rotation: number, featureType?: string, componentId?: string) => {
     if (!installationId) return
-    const ok = await updateInfrastructureFeature(id, {
+    const updates: Parameters<typeof updateInfrastructureFeature>[1] = {
       label: label || undefined,
       rotation: rotation || 0,
-    })
+    }
+    if (featureType) updates.feature_type = featureType as InfrastructureFeatureType
+    if (componentId !== undefined) updates.system_component_id = componentId || null
+    const ok = await updateInfrastructureFeature(id, updates)
     if (ok) {
       const updated = await fetchInfrastructureFeatures(installationId)
       setDbFeatures(updated)
@@ -1150,8 +1153,8 @@ export default function InfrastructureMapPage() {
     ;(window as any).__moveInfraFeature = (id: string, lng: number, lat: number) => {
       moveHandlerRef.current?.(id, lng, lat)
     }
-    ;(window as any).__saveFeatureProps = (id: string, label: string, rotation: number) => {
-      savePropsRef.current?.(id, label, rotation)
+    ;(window as any).__saveFeatureProps = (id: string, label: string, rotation: number, featureType?: string, componentId?: string) => {
+      savePropsRef.current?.(id, label, rotation, featureType, componentId)
     }
     ;(window as any).__reportOutage = (id: string) => {
       reportOutageRef.current?.(id)
@@ -1665,25 +1668,15 @@ export default function InfrastructureMapPage() {
           if (props.rotation) {
             html += `<div style="margin-top:4px;color:#CBD5E1;">Rotation: ${props.rotation}°</div>`
           }
-          // Component assignment (always visible)
-          if (props.id && allComponentsRef.current.length > 0) {
+          // System/component info (read-only in normal mode)
+          if (props.id && allComponentsRef.current.length > 0 && !isEditing) {
             const currentCompId = props.system_component_id || ''
             const currentComp = allComponentsRef.current.find(c => c.id === currentCompId)
             if (currentComp) {
               html += `<div style="margin-top:6px;font-size:10px;color:#94A3B8;">${currentComp.system_name} &mdash; ${currentComp.label}</div>`
             }
-            const compOptGroups = groupedComponentsRef.current.map(g =>
-              `<optgroup label="${g.name}">${g.components.map(c =>
-                `<option value="${c.id}" ${c.id === currentCompId ? 'selected' : ''}>${c.label}</option>`
-              ).join('')}</optgroup>`
-            ).join('')
-            html += `<select onchange="window.__assignComponent('${props.id}',this.value)" style="
-              margin-top:4px;width:100%;padding:4px 6px;border-radius:4px;
-              border:1px solid rgba(148,163,184,0.2);background:rgba(30,41,59,0.9);
-              color:#E2E8F0;font-size:11px;cursor:pointer;
-            "><option value="">— Assign to component —</option>${compOptGroups}</select>`
           }
-          // Status toggle button (always visible, not just in edit mode)
+          // Status toggle button (always visible)
           if (props.id) {
             if (isInop) {
               html += `<button onclick="window.__markOperational('${props.id}')" style="
@@ -1697,18 +1690,49 @@ export default function InfrastructureMapPage() {
               ">Report Outage</button>`
             }
           }
+          // ── Edit mode: full editable form ──
           if (props.id && isEditing) {
-            // Label edit field
             const escapedLabel = (props.text || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')
             const currentRotation = props.rotation || 0
-            html += `<div style="margin-top:8px;">`
+            const currentCompId = props.system_component_id || ''
+            html += `<div style="margin-top:8px;border-top:1px solid rgba(148,163,184,0.15);padding-top:8px;">`
+            // Feature type dropdown
+            const typeOptionsHtml = FEATURE_TYPE_OPTIONS.map(opt =>
+              `<option value="${opt.value}" ${opt.value === props.type ? 'selected' : ''}>${opt.label}</option>`
+            ).join('')
+            html += `<div style="margin-bottom:6px;">`
+            html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">Feature Type</div>`
+            html += `<select id="__type-input" style="
+              width:100%;padding:4px 6px;border-radius:4px;
+              border:1px solid rgba(148,163,184,0.2);background:rgba(30,41,59,0.9);
+              color:#E2E8F0;font-size:11px;cursor:pointer;
+            ">${typeOptionsHtml}</select>`
+            html += `</div>`
+            // Component dropdown
+            const compOptGroups = groupedComponentsRef.current.map(g =>
+              `<optgroup label="${g.name}">${g.components.map(c =>
+                `<option value="${c.id}" ${c.id === currentCompId ? 'selected' : ''}>${c.label}</option>`
+              ).join('')}</optgroup>`
+            ).join('')
+            html += `<div style="margin-bottom:6px;">`
+            html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">System / Component</div>`
+            html += `<select id="__comp-input" style="
+              width:100%;padding:4px 6px;border-radius:4px;
+              border:1px solid rgba(148,163,184,0.2);background:rgba(30,41,59,0.9);
+              color:#E2E8F0;font-size:11px;cursor:pointer;
+            "><option value="">— None —</option>${compOptGroups}</select>`
+            html += `</div>`
+            // Label
+            html += `<div style="margin-bottom:6px;">`
+            html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">Label</div>`
             html += `<input id="__label-input" type="text" value="${escapedLabel}" placeholder="Label..." style="
               width:100%;padding:4px 6px;border-radius:4px;box-sizing:border-box;
               border:1px solid rgba(148,163,184,0.2);background:rgba(30,41,59,0.9);
-              color:#E2E8F0;font-size:12px;outline:none;margin-bottom:6px;
+              color:#E2E8F0;font-size:12px;outline:none;
             " />`
+            html += `</div>`
             // Rotation slider with compass
-            html += `<div style="display:flex;align-items:center;gap:8px;">`
+            html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">`
             html += `<div style="flex-shrink:0;"><svg width="32" height="32" viewBox="0 0 32 32">`
             html += `<circle cx="16" cy="16" r="14" fill="none" stroke="#475569" stroke-width="1"/>`
             html += `<text x="16" y="8" text-anchor="middle" font-size="7" fill="#94A3B8">N</text>`
@@ -1722,8 +1746,8 @@ export default function InfrastructureMapPage() {
             html += `<input id="__rotation-input" type="range" min="0" max="359" value="${currentRotation}" oninput="document.getElementById('__rotation-value').textContent=this.value+'°';document.getElementById('__compass-needle').setAttribute('transform','rotate('+this.value+',16,16)');" style="width:100%;accent-color:#10B981;cursor:pointer;" />`
             html += `</div></div>`
             // Save button
-            html += `<button onclick="window.__saveFeatureProps('${props.id}',document.getElementById('__label-input').value,parseInt(document.getElementById('__rotation-input').value))" style="
-              margin-top:6px;width:100%;padding:5px 0;border:none;border-radius:4px;
+            html += `<button onclick="window.__saveFeatureProps('${props.id}',document.getElementById('__label-input').value,parseInt(document.getElementById('__rotation-input').value),document.getElementById('__type-input').value,document.getElementById('__comp-input').value)" style="
+              width:100%;padding:5px 0;border:none;border-radius:4px;
               background:#10B981;color:white;font-size:11px;font-weight:600;cursor:pointer;
             ">Save</button>`
             html += `</div>`
