@@ -55,7 +55,7 @@ export async function fetchLinksForTemplate(
 // ── Convenience: extract just system IDs from links (for backward compat) ──
 
 export function systemIdsFromLinks(links: ItemLink[]): string[] {
-  return [...new Set(links.map(l => l.system_id))]
+  return Array.from(new Set(links.map(l => l.system_id)))
 }
 
 // ── Convenience: extract component IDs from links (null-filtered) ──
