@@ -8,8 +8,73 @@ All notable changes to Glidepath.
 - METAR weather API integration (aviationweather.gov)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~58 `as any` casts
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~109 `as any` casts
 - Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 11 PDF generators
+
+---
+
+## [2.19.0] — 2026-03-13
+
+### Features — Visual NAVAID Outage Tracking (Phases 1–4)
+Complete lighting outage compliance system integrated into the infrastructure map module. Implements DAFMAN 13-204v2 Table A3.1 outage allowances with real-time health monitoring, automated discrepancy creation, and daily operations reporting.
+
+#### Phase 1: Foundation
+- **Feature status tracking** — Per-feature OP/INOP toggle from map popups with `status` column on `infrastructure_features`
+- **Outage events table** — `outage_events` with reported/resolved event types, feature + component links, reporter tracking
+- **Auto-create discrepancies** — Reporting an outage auto-generates a linked discrepancy with coordinates, feature type, and system context
+- **Bidirectional resolution** — Marking a feature operational prompts to close linked open discrepancies with user name + Zulu timestamp in resolution notes
+
+#### Phase 2: System Definitions + Outage Engine
+- **Lighting systems** — `lighting_systems` table with 23 DAFMAN system types (ALSF-1/2, SSALR, MALSR, SALS, PAPI, runway/taxiway edge, etc.)
+- **System components** — `lighting_system_components` with configurable outage thresholds (allowable percentage, count, and consecutive limits)
+- **Outage rule templates** — `outage_rule_templates` seeded from DAFMAN 13-204v2 Table A3.1 for one-click system setup
+- **Outage engine** — `lib/outage-rules.ts` (343 lines): `calculateComponentOutage()`, `calculateSystemHealth()`, `getAlertTier()`, spatial adjacency + consecutive violation detection
+- **Feature-to-component assignment** — Dropdown in map popups links features to system components; auto-updates `total_count`
+- **System Health Panel** — Collapsible panel showing per-system health with 4-tier alerts (green/yellow/red/black), per-component outage bars, DAFMAN required actions
+- **Outage alert dialogs** — Auto-triggered when reporting an outage causes a system to exceed or approach thresholds
+- **Base Configuration UI** — Lighting Systems tab in Settings for creating/editing systems, components, and outage rules
+
+#### Phase 3: Legend + Inspection Integration
+- **Three-tier SYSTEMS legend** — Location-based grouping (Runways → Taxiways → Areas → Misc) with feature counts per component
+- **System legend visibility toggles** — Hide/show features by system component in addition to type-based legend
+- **Lighting inspection links** — `inspection_item_system_links` table connects inspection template items to lighting systems for cross-module reporting
+- **Rotating Beacon feature type** — Added as 22nd feature type with circle legend icon
+- **Stadium Lights system type** — For tracking non-airfield lighting assets
+- **Sign sub-type outage rule templates** — Granular signage tracking (location/directional/mandatory/informational/distance markers)
+- **Inline system name editing** — Edit system names directly in Base Configuration
+- **Auto-populate light counts** — Component `total_count` auto-calculated from assigned features
+
+#### Phase 4: Polish + Reporting
+- **Outage history timeline** — "Recent Activity" collapsible section in System Health Panel showing last 20 events with red/green dots, Zulu timestamps, feature labels, and reporter names
+- **Daily ops report integration** — "VISUAL NAVAID OUTAGES" PDF section with Time/Feature/System/Event/User columns, color-coded Reported (red) / Resolved (green) text
+- **Discrepancy detail linked NAVAID card** — Shows feature label, OP/INOP badge, type, system chain, and link to infrastructure map when `infrastructure_feature_id` is set
+- **Map health color coding** — "Color by health" toggle renders yellow rings (approaching threshold) and red rings (exceeded) around operational features in degraded systems
+- **Rich display names** — `buildFeatureDisplayName()` generates context-rich names (e.g., "TWY K 19 Mandatory Sign") using system/component/label/type
+- **Resolution notes enrichment** — Closing linked discrepancies includes user name + Zulu timestamp
+
+### Other Features
+- **Pinch-to-zoom photo viewers** — All photo viewers (discrepancy, check, inspection, ACSI) now support pinch-to-zoom and pan gestures
+- **Inspection reopening** — Completed inspections can be reopened with confirmation dialog
+- **RSC/RCR completion guard** — Inspections require RSC/RCR fields before completion
+- **Inspection confirmation dialogs** — Bullet-pointed formatting with spacing
+
+### Bug Fixes
+- **SYSTEMS legend sort** — Sorted by airfield precedence (runways, taxiways, areas, misc) instead of alphabetical
+- **Component dropdown deduplication** — Hide "overall" component when system has sub-components; show for single-component systems
+- **Dark mode select elements** — Forced dark background on all `<select>` and `<option>` elements globally
+- **Component total_count sync** — Auto-updated after bulk feature assignment operations
+
+### Database
+- **5 new tables**: `lighting_systems`, `lighting_system_components`, `outage_events`, `outage_rule_templates`, `inspection_item_system_links`
+- **2 altered tables**: `infrastructure_features` (added `status`, `system_component_id`), `discrepancies` (added `infrastructure_feature_id`, `lighting_system_id`)
+- **15 new migrations** (`2026031200` through `2026031209`)
+- **Total migrations**: 103
+
+### Stats
+- Build: Clean (zero errors)
+- 109 `as any` casts across ~25 files (up from 58 — new Mapbox layers + Supabase joins)
+- 48 files > 500 lines (largest: infrastructure/page.tsx at 3,440)
+- 195+ source files | 49 routes | 103 migrations | 42 tables
 
 ---
 
