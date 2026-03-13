@@ -11,6 +11,8 @@ import type { InfrastructureFeature } from '@/lib/supabase/types'
 
 type Props = {
   systemIds: string[]
+  /** When provided, only show features from these specific components (instead of all components in the system) */
+  componentIds?: string[]
   baseId: string
   selectedFeatureIds: string[]
   onSelectionChange: (ids: string[]) => void
@@ -56,6 +58,7 @@ function createSelectedIcon(size: number = 28): ImageData {
 
 export function InfrastructureFeaturePicker({
   systemIds,
+  componentIds,
   baseId,
   selectedFeatureIds,
   onSelectionChange,
@@ -90,13 +93,19 @@ export function InfrastructureFeaturePicker({
 
       if (cancelled) return
 
-      // Find component IDs that belong to the specified systems
-      const systemIdSet = new Set(systemIds)
-      const matchingComponentIds = new Set(
-        components
-          .filter(c => systemIdSet.has(c.system_id))
-          .map(c => c.id)
-      )
+      // If specific component IDs are provided, use those directly;
+      // otherwise fall back to all components in the specified systems
+      let matchingComponentIds: Set<string>
+      if (componentIds && componentIds.length > 0) {
+        matchingComponentIds = new Set(componentIds)
+      } else {
+        const systemIdSet = new Set(systemIds)
+        matchingComponentIds = new Set(
+          components
+            .filter(c => systemIdSet.has(c.system_id))
+            .map(c => c.id)
+        )
+      }
 
       // Filter features to those assigned to matching components
       const filtered = features.filter(
@@ -107,7 +116,7 @@ export function InfrastructureFeaturePicker({
     }
     load()
     return () => { cancelled = true }
-  }, [baseId, systemIds])
+  }, [baseId, systemIds, componentIds])
 
   // ── Initialize map ──
   useEffect(() => {
