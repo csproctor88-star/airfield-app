@@ -42,6 +42,7 @@ type LayerConfig = {
   types: string[]
   renderType: 'circle' | 'symbol'
   group: string
+  strokeColor?: string
   legendIcon?: 'circle' | 'rect' | 'rect-arrow' | 'split-circle' | 'triangle' | 'cone' | 'dot-cluster'
   legendBorder?: string
   legendInner?: string
@@ -62,7 +63,7 @@ const LAYERS: LayerConfig[] = [
   { key: 'runway_edge_lights',  label: 'Runway Edge Lights',  color: '#FFFFFF',  types: ['runway_edge_light'],   renderType: 'circle', group: 'Runway Lights', legendIcon: 'circle' },
   { key: 'runway_distance_markers', label: 'Distance Remaining Markers', color: '#FFFFFF', types: ['runway_distance_marker'], renderType: 'symbol', group: 'Signs', legendIcon: 'rect', legendBorder: '#FFFFFF', legendInner: '#000000' },
   { key: 'papi_lights',         label: 'PAPI',                color: '#EF4444',  types: ['papi'],                renderType: 'symbol', group: 'Runway Lights', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#FFFFFF' },
-  { key: 'threshold_lights',    label: 'Threshold Lights',    color: '#22C55E',  types: ['threshold_light'],     renderType: 'symbol', group: 'Runway Lights', legendIcon: 'split-circle', legendBorder: '#EF4444', legendInner: '#22C55E' },
+  { key: 'threshold_lights',    label: 'Threshold Lights',    color: '#22C55E',  types: ['threshold_light'],     renderType: 'circle', group: 'Runway Lights', strokeColor: '#FFFFFF', legendIcon: 'circle', legendBorder: '#FFFFFF' },
   { key: 'pre_threshold_lights', label: 'Pre-Threshold Lights', color: '#EF4444', types: ['pre_threshold_light'], renderType: 'circle', group: 'Runway Lights', legendIcon: 'circle' },
   { key: 'terminating_bar_lights', label: 'Terminating Bar',  color: '#EF4444',  types: ['terminating_bar_light'], renderType: 'circle', group: 'Runway Lights', legendIcon: 'circle' },
   { key: 'centerline_bar_lights', label: 'Centerline Bar Lights', color: '#FBBF24', types: ['centerline_bar_light'], renderType: 'circle', group: 'Runway Lights', legendIcon: 'circle' },
@@ -326,7 +327,7 @@ function addMapIcons(m: mapboxgl.Map) {
   m.addImage('icon-obstruction-light', createTriangleIcon('#EF4444', s), pr)
   m.addImage('icon-runway-distance-marker', createSignIcon('#FFFFFF', '#000000', s), pr)
   m.addImage('icon-papi', createSplitCircleIcon('#EF4444', '#FFFFFF', s), pr)
-  m.addImage('icon-threshold-light', createSplitCircleIcon('#EF4444', '#22C55E', s), pr)
+  // threshold_light now renders as circle layer, no icon needed
   m.addImage('icon-reil', createSquareIcon('#EC4899', s), pr)
   m.addImage('icon-windcone', createWindconeIcon(s), pr)
   m.addImage('icon-stadium-light', createStadiumLightIcon(s), pr)
@@ -354,7 +355,7 @@ const ICON_MAP: Record<string, string> = {
   obstruction_light: 'icon-obstruction-light',
   runway_distance_marker: 'icon-runway-distance-marker',
   papi: 'icon-papi',
-  threshold_light: 'icon-threshold-light',
+  // threshold_light uses circle renderType, no icon needed
   reil: 'icon-reil',
   windcone: 'icon-windcone',
   stadium_light: 'icon-stadium-light',
@@ -1690,12 +1691,12 @@ export default function InfrastructureMapPage() {
               'circle-stroke-color': [
                 'case',
                 ['==', ['get', 'status'], 'inoperative'], '#FFFFFF',
-                '#000000',
+                layer.strokeColor || '#000000',
               ] as any,
               'circle-stroke-width': [
                 'case',
                 ['==', ['get', 'status'], 'inoperative'], 1.5,
-                0.5,
+                layer.strokeColor ? 1.5 : 0.5,
               ] as any,
             },
           })
