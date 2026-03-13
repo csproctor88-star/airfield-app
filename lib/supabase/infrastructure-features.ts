@@ -404,6 +404,71 @@ export async function bulkCreateInfrastructureFeatures(
   return inserted
 }
 
+// ── Bulk prefix labels (prepend text to existing labels) ──
+
+export async function bulkPrefixLabels(
+  ids: string[],
+  prefix: string,
+): Promise<number> {
+  const supabase = createClient()
+  if (!supabase || ids.length === 0 || !prefix) return 0
+
+  // Fetch current labels
+  const { data: features, error: fetchError } = await supabase
+    .from('infrastructure_features')
+    .select('id, label')
+    .in('id', ids)
+
+  if (fetchError || !features) return 0
+
+  let updated = 0
+  const toUpdate = features.filter(f => {
+    const current = f.label || ''
+    return !current.startsWith(prefix) // Skip if already prefixed
+  })
+
+  for (let i = 0; i < toUpdate.length; i += 200) {
+    const batch = toUpdate.slice(i, i + 200)
+    const promises = batch.map(f =>
+      supabase
+        .from('infrastructure_features')
+        .update({
+          label: `${prefix}${f.label || ''}`.trim(),
+          updated_at: new Date().toISOString(),
+        } as any)
+        .eq('id', f.id)
+    )
+    const results = await Promise.all(promises)
+    updated += results.filter(r => !r.error).length
+  }
+
+  return updated
+}
+
+// ── Bulk update labels by ID ──
+
+export async function bulkUpdateLabels(
+  updates: { id: string; label: string }[],
+): Promise<number> {
+  const supabase = createClient()
+  if (!supabase || updates.length === 0) return 0
+
+  let updated = 0
+  for (let i = 0; i < updates.length; i += 200) {
+    const batch = updates.slice(i, i + 200)
+    const promises = batch.map(u =>
+      supabase
+        .from('infrastructure_features')
+        .update({ label: u.label, updated_at: new Date().toISOString() } as any)
+        .eq('id', u.id)
+    )
+    const results = await Promise.all(promises)
+    updated += results.filter(r => !r.error).length
+  }
+
+  return updated
+}
+
 // ── Bulk assign features to a system component ──
 
 export async function bulkAssignComponent(

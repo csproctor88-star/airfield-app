@@ -16,6 +16,7 @@ import {
   bulkShiftByIds,
   bulkRelayerFeatures,
   bulkCreateInfrastructureFeatures,
+  bulkPrefixLabels,
   buildFeatureDisplayName,
   type InfrastructureFeatureType,
 } from '@/lib/supabase/infrastructure-features'
@@ -25,6 +26,7 @@ import { fetchLightingSystems, fetchAllComponentsForBase, fetchLightingSystemWit
 import { calculateAllSystemHealth, calculateComponentOutage, getAlertTier, type SystemHealth, type OutageStatus, type AlertTier } from '@/lib/outage-rules'
 import { createClient } from '@/lib/supabase/client'
 import SystemHealthPanel from '@/components/infrastructure/system-health-panel'
+import AuditPanel from '@/components/infrastructure/audit-panel'
 import { offsetPoint, normalizeBearing } from '@/lib/calculations/geometry'
 import type { InfrastructureFeature } from '@/lib/supabase/types'
 
@@ -410,6 +412,9 @@ export default function InfrastructureMapPage() {
 
   // Color by health toggle
   const [colorByHealth, setColorByHealth] = useState(false)
+
+  // Audit mode
+  const [auditMode, setAuditMode] = useState(false)
 
   // Group components by system for dropdown optgroups (sorted alphabetically)
   const groupedComponents = useMemo(() => {
@@ -2119,7 +2124,7 @@ export default function InfrastructureMapPage() {
               </button>
             )}
             <button
-              onClick={() => { setEditMode(prev => !prev); setBulkShiftOpen(false); setBoxSelectActive(false); setSelectedIds(new Set()); setBarPlacement(null) }}
+              onClick={() => { setEditMode(prev => !prev); setAuditMode(false); setBulkShiftOpen(false); setBoxSelectActive(false); setSelectedIds(new Set()); setBarPlacement(null) }}
               style={{
                 padding: '8px 16px',
                 borderRadius: 8,
@@ -2133,12 +2138,27 @@ export default function InfrastructureMapPage() {
             >
               {editMode ? 'Exit Edit Mode' : 'Edit Mode'}
             </button>
+            <button
+              onClick={() => { setAuditMode(prev => !prev); if (!auditMode) { setEditMode(false); setBulkShiftOpen(false); setBoxSelectActive(false); setSelectedIds(new Set()); setBarPlacement(null) } }}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 8,
+                border: auditMode ? '2px solid #22D3EE' : '1px solid var(--color-border)',
+                background: auditMode ? 'rgba(6, 182, 212, 0.15)' : 'var(--color-bg-surface)',
+                color: auditMode ? '#22D3EE' : 'var(--color-text-2)',
+                fontSize: 'var(--fs-sm)',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              {auditMode ? 'Exit Audit' : 'Audit Mode'}
+            </button>
           </div>
         )}
       </div>
 
       {/* System Health Panel */}
-      {!editMode && (
+      {!editMode && !auditMode && (
         <div style={{ flexShrink: 0, marginBottom: isFullscreen ? 0 : 8 }}>
           <SystemHealthPanel healths={systemHealths} loading={healthLoading} outageEvents={outageEvents} />
         </div>
@@ -2147,6 +2167,61 @@ export default function InfrastructureMapPage() {
       {/* Map + Overlays */}
       <div style={{ flex: 1, position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
         <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+
+        {/* Audit panel */}
+        {auditMode && (
+          <AuditPanel
+            features={dbFeatures}
+            allComponents={allComponentsList}
+            groupedComponents={groupedComponents}
+            onFeatureClick={(f) => {
+              if (!map.current) return
+              map.current.flyTo({ center: [f.longitude, f.latitude], zoom: 19, duration: 1200 })
+            }}
+            onComponentGroupClick={(_compId, featureIds) => {
+              if (!map.current || featureIds.length === 0) return
+              const matched = dbFeatures.filter(f => featureIds.includes(f.id))
+              if (matched.length === 0) return
+              if (matched.length === 1) {
+                map.current.flyTo({ center: [matched[0].longitude, matched[0].latitude], zoom: 18, duration: 1200 })
+                return
+              }
+              const lngs = matched.map(f => f.longitude)
+              const lats = matched.map(f => f.latitude)
+              const bounds = new mapboxgl.LngLatBounds(
+                [Math.min(...lngs), Math.min(...lats)],
+                [Math.max(...lngs), Math.max(...lats)],
+              )
+              map.current.fitBounds(bounds, { padding: 60, duration: 1200 })
+            }}
+            onLabelUpdate={async (featureId, newLabel) => {
+              const ok = await updateInfrastructureFeature(featureId, { label: newLabel })
+              if (ok && installationId) {
+                const refreshed = await fetchInfrastructureFeatures(installationId)
+                setDbFeatures(refreshed)
+              }
+              return ok
+            }}
+            onComponentReassign={async (featureId, componentId) => {
+              const ok = await updateInfrastructureFeature(featureId, { system_component_id: componentId })
+              if (ok && installationId) {
+                const refreshed = await fetchInfrastructureFeatures(installationId)
+                setDbFeatures(refreshed)
+                toast.success('Component reassigned')
+              }
+              return ok
+            }}
+            onBulkPrefixApply={async (featureIds, prefix) => {
+              const count = await bulkPrefixLabels(featureIds, prefix)
+              if (count > 0 && installationId) {
+                const refreshed = await fetchInfrastructureFeatures(installationId)
+                setDbFeatures(refreshed)
+              }
+              return count
+            }}
+            onClose={() => setAuditMode(false)}
+          />
+        )}
 
         {/* Loading overlay */}
         {!mapLoaded && (
