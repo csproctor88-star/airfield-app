@@ -45,7 +45,7 @@ export async function fetchLinksForTemplate(
   if (linkErr || !links) return {}
 
   const result: Record<string, ItemLink[]> = {}
-  for (const link of links as { item_id: string; system_id: string; component_id: string | null }[]) {
+  for (const link of links as unknown as { item_id: string; system_id: string; component_id: string | null }[]) {
     if (!result[link.item_id]) result[link.item_id] = []
     result[link.item_id].push({ system_id: link.system_id, component_id: link.component_id })
   }
