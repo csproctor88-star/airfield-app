@@ -517,10 +517,22 @@ export default function InfrastructureMapPage() {
       area.systems.push(sys)
       area.totalCount += sys.totalCount
     }
-    // Sort areas alphabetically (General last)
+    // Sort areas by airfield precedence: runways first, then taxiways, then named areas, misc/general last
+    const areaOrder = (label: string): number => {
+      const u = label.toUpperCase()
+      if (u.startsWith('RWY')) {
+        // Full runway (e.g. "RWY 01/19") before single-end (e.g. "RWY 01")
+        if (u.includes('/')) return 100
+        return 200
+      }
+      if (u.startsWith('TWY')) return 300
+      if (u === 'GENERAL' || u === 'MISCELLANEOUS') return 900
+      return 500 // named areas (ramps, hammerheads, etc.)
+    }
     areas.sort((a, b) => {
-      if (a.label === 'General') return 1
-      if (b.label === 'General') return -1
+      const oa = areaOrder(a.label)
+      const ob = areaOrder(b.label)
+      if (oa !== ob) return oa - ob
       return a.label.localeCompare(b.label, undefined, { numeric: true })
     })
 
