@@ -29,6 +29,7 @@ type AuditPanelProps = {
   onLabelUpdate: (featureId: string, newLabel: string) => Promise<boolean>
   onComponentReassign: (featureId: string, componentId: string | null) => Promise<boolean>
   onBulkPrefixApply: (featureIds: string[], prefix: string) => Promise<number>
+  onBulkSequentialLabel: (features: { id: string; label: string }[]) => Promise<number>
   onClose: () => void
 }
 
@@ -114,76 +115,127 @@ function EditableLabel({
 
 function PrefixForm({
   onApply,
+  onApplySequential,
+  featureCount,
   onCancel,
 }: {
   onApply: (prefix: string) => void
+  onApplySequential: (prefix: string, startAt: number) => void
+  featureCount: number
   onCancel: () => void
 }) {
   const [prefix, setPrefix] = useState('')
+  const [sequential, setSequential] = useState(false)
+  const [startAt, setStartAt] = useState(1)
   const inputRef = useRef<HTMLInputElement>(null)
   useEffect(() => { inputRef.current?.focus() }, [])
 
+  const handleApply = () => {
+    if (!prefix.trim()) return
+    if (sequential) {
+      onApplySequential(prefix.trim(), startAt)
+    } else {
+      onApply(prefix.trim())
+    }
+  }
+
   return (
     <div
-      style={{
-        display: 'flex',
-        gap: 4,
-        padding: '6px 0 4px 24px',
-        alignItems: 'center',
-      }}
+      style={{ padding: '6px 0 4px 24px' }}
       onClick={(e) => e.stopPropagation()}
     >
-      <input
-        ref={inputRef}
-        value={prefix}
-        onChange={(e) => setPrefix(e.target.value)}
-        placeholder="Prefix text..."
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && prefix.trim()) onApply(prefix.trim())
-          if (e.key === 'Escape') onCancel()
-        }}
-        style={{
-          flex: 1,
-          background: 'rgba(15, 23, 42, 0.8)',
-          border: '1px solid rgba(6, 182, 212, 0.4)',
-          borderRadius: 4,
-          padding: '3px 6px',
-          color: '#E2E8F0',
-          fontSize: 11,
-          outline: 'none',
-        }}
-      />
-      <button
-        onClick={() => prefix.trim() && onApply(prefix.trim())}
-        disabled={!prefix.trim()}
-        style={{
-          padding: '3px 8px',
-          borderRadius: 4,
-          border: '1px solid rgba(6, 182, 212, 0.3)',
-          background: prefix.trim() ? 'rgba(6, 182, 212, 0.2)' : 'transparent',
-          color: prefix.trim() ? '#22D3EE' : '#475569',
-          fontSize: 10,
-          fontWeight: 600,
-          cursor: prefix.trim() ? 'pointer' : 'default',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        Apply
-      </button>
-      <button
-        onClick={onCancel}
-        style={{
-          padding: '3px 6px',
-          borderRadius: 4,
-          border: '1px solid rgba(148,163,184,0.2)',
-          background: 'transparent',
-          color: '#64748B',
-          fontSize: 10,
-          cursor: 'pointer',
-        }}
-      >
-        ✕
-      </button>
+      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+        <input
+          ref={inputRef}
+          value={prefix}
+          onChange={(e) => setPrefix(e.target.value)}
+          placeholder="Prefix text..."
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && prefix.trim()) handleApply()
+            if (e.key === 'Escape') onCancel()
+          }}
+          style={{
+            flex: 1,
+            background: 'rgba(15, 23, 42, 0.8)',
+            border: '1px solid rgba(6, 182, 212, 0.4)',
+            borderRadius: 4,
+            padding: '3px 6px',
+            color: '#E2E8F0',
+            fontSize: 11,
+            outline: 'none',
+          }}
+        />
+        <button
+          onClick={handleApply}
+          disabled={!prefix.trim()}
+          style={{
+            padding: '3px 8px',
+            borderRadius: 4,
+            border: '1px solid rgba(6, 182, 212, 0.3)',
+            background: prefix.trim() ? 'rgba(6, 182, 212, 0.2)' : 'transparent',
+            color: prefix.trim() ? '#22D3EE' : '#475569',
+            fontSize: 10,
+            fontWeight: 600,
+            cursor: prefix.trim() ? 'pointer' : 'default',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Apply
+        </button>
+        <button
+          onClick={onCancel}
+          style={{
+            padding: '3px 6px',
+            borderRadius: 4,
+            border: '1px solid rgba(148,163,184,0.2)',
+            background: 'transparent',
+            color: '#64748B',
+            fontSize: 10,
+            cursor: 'pointer',
+          }}
+        >
+          ✕
+        </button>
+      </div>
+      {/* Sequential numbering option */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 10, color: '#94A3B8' }}>
+          <input
+            type="checkbox"
+            checked={sequential}
+            onChange={() => setSequential(prev => !prev)}
+            style={{ accentColor: '#22D3EE' }}
+          />
+          Append sequential #
+        </label>
+        {sequential && (
+          <>
+            <span style={{ fontSize: 10, color: '#64748B' }}>start at</span>
+            <input
+              type="number"
+              min={1}
+              value={startAt}
+              onChange={(e) => setStartAt(Math.max(1, parseInt(e.target.value) || 1))}
+              style={{
+                width: 40,
+                background: 'rgba(15, 23, 42, 0.8)',
+                border: '1px solid rgba(148,163,184,0.2)',
+                borderRadius: 4,
+                padding: '2px 4px',
+                color: '#E2E8F0',
+                fontSize: 10,
+                textAlign: 'center',
+                outline: 'none',
+              }}
+            />
+          </>
+        )}
+      </div>
+      {sequential && prefix.trim() && (
+        <div style={{ fontSize: 9, color: '#64748B', marginTop: 2, paddingLeft: 2 }}>
+          Preview: &quot;{prefix.trim()} {startAt}&quot; ... &quot;{prefix.trim()} {startAt + featureCount - 1}&quot;
+        </div>
+      )}
     </div>
   )
 }
@@ -199,6 +251,7 @@ export default function AuditPanel({
   onLabelUpdate,
   onComponentReassign,
   onBulkPrefixApply,
+  onBulkSequentialLabel,
   onClose,
 }: AuditPanelProps) {
   const [searchText, setSearchText] = useState('')
@@ -247,6 +300,19 @@ export default function AuditPanel({
     if (featureIds.length === 0) return
     const count = await onBulkPrefixApply(featureIds, prefix + ' ')
     if (count > 0) toast.success(`Prefixed ${count} label${count !== 1 ? 's' : ''} with "${prefix}"`)
+    setPrefixTarget(null)
+  }
+
+  const handleSequentialApply = async (componentId: string, prefix: string, startAt: number) => {
+    const compFeatures = (byComponent[componentId] || [])
+      .sort((a, b) => (a.label || '').localeCompare(b.label || ''))
+    if (compFeatures.length === 0) return
+    const updates = compFeatures.map((f, i) => ({
+      id: f.id,
+      label: `${prefix} ${startAt + i}`,
+    }))
+    const count = await onBulkSequentialLabel(updates)
+    if (count > 0) toast.success(`Labeled ${count} feature${count !== 1 ? 's' : ''} sequentially`)
     setPrefixTarget(null)
   }
 
@@ -434,6 +500,8 @@ export default function AuditPanel({
                     {prefixTarget === comp.id && (
                       <PrefixForm
                         onApply={(prefix) => handlePrefixApply(comp.id, prefix)}
+                        onApplySequential={(prefix, startAt) => handleSequentialApply(comp.id, prefix, startAt)}
+                        featureCount={(byComponent[comp.id] || []).length}
                         onCancel={() => setPrefixTarget(null)}
                       />
                     )}

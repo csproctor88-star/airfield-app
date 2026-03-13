@@ -17,6 +17,7 @@ import {
   bulkRelayerFeatures,
   bulkCreateInfrastructureFeatures,
   bulkPrefixLabels,
+  bulkUpdateLabels,
   buildFeatureDisplayName,
   type InfrastructureFeatureType,
 } from '@/lib/supabase/infrastructure-features'
@@ -2213,6 +2214,14 @@ export default function InfrastructureMapPage() {
             }}
             onBulkPrefixApply={async (featureIds, prefix) => {
               const count = await bulkPrefixLabels(featureIds, prefix)
+              if (count > 0 && installationId) {
+                const refreshed = await fetchInfrastructureFeatures(installationId)
+                setDbFeatures(refreshed)
+              }
+              return count
+            }}
+            onBulkSequentialLabel={async (updates) => {
+              const count = await bulkUpdateLabels(updates)
               if (count > 0 && installationId) {
                 const refreshed = await fetchInfrastructureFeatures(installationId)
                 setDbFeatures(refreshed)
