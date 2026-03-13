@@ -1661,8 +1661,8 @@ export default function InfrastructureMapPage() {
           if (props.block) {
             html += `<div style="margin-top:4px;color:#CBD5E1;">Fixture ID: ${props.block}</div>`
           }
-          if (props.text) {
-            html += `<div style="margin-top:4px;color:#CBD5E1;">Label: ${props.text}</div>`
+          if (props.text && ['location_sign','directional_sign','informational_sign','mandatory_sign'].includes(props.type)) {
+            html += `<div style="margin-top:4px;color:#CBD5E1;">Sign Text: ${props.text}</div>`
           }
           if (props.notes) {
             html += `<div style="margin-top:4px;color:#CBD5E1;">Notes: ${props.notes}</div>`
@@ -1724,15 +1724,18 @@ export default function InfrastructureMapPage() {
               color:#E2E8F0;font-size:11px;cursor:pointer;
             "><option value="">— None —</option>${compOptGroups}</select>`
             html += `</div>`
-            // Label
-            html += `<div style="margin-bottom:6px;">`
-            html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">Label</div>`
-            html += `<input id="__label-input" type="text" value="${escapedLabel}" placeholder="Label..." style="
-              width:100%;padding:4px 6px;border-radius:4px;box-sizing:border-box;
-              border:1px solid rgba(148,163,184,0.2);background:rgba(30,41,59,0.9);
-              color:#E2E8F0;font-size:12px;outline:none;
-            " />`
-            html += `</div>`
+            // Label (signs only — shows sign face text)
+            const isSign = ['location_sign','directional_sign','informational_sign','mandatory_sign'].includes(props.type)
+            if (isSign) {
+              html += `<div style="margin-bottom:6px;">`
+              html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">Sign Text</div>`
+              html += `<input id="__label-input" type="text" value="${escapedLabel}" placeholder="Sign text..." style="
+                width:100%;padding:4px 6px;border-radius:4px;box-sizing:border-box;
+                border:1px solid rgba(148,163,184,0.2);background:rgba(30,41,59,0.9);
+                color:#E2E8F0;font-size:12px;outline:none;
+              " />`
+              html += `</div>`
+            }
             // Fixture ID
             const escapedBlock = (props.block || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')
             html += `<div style="margin-bottom:6px;">`
@@ -1758,7 +1761,7 @@ export default function InfrastructureMapPage() {
             html += `<input id="__rotation-input" type="range" min="0" max="359" value="${currentRotation}" oninput="document.getElementById('__rotation-value').textContent=this.value+'°';document.getElementById('__compass-needle').setAttribute('transform','rotate('+this.value+',16,16)');" style="width:100%;accent-color:#10B981;cursor:pointer;" />`
             html += `</div></div>`
             // Save button
-            html += `<button onclick="window.__saveFeatureProps('${props.id}',document.getElementById('__label-input').value,parseInt(document.getElementById('__rotation-input').value),document.getElementById('__type-input').value,document.getElementById('__comp-input').value,document.getElementById('__block-input').value)" style="
+            html += `<button onclick="window.__saveFeatureProps('${props.id}',(document.getElementById('__label-input')||{value:''}).value,parseInt(document.getElementById('__rotation-input').value),document.getElementById('__type-input').value,document.getElementById('__comp-input').value,document.getElementById('__block-input').value)" style="
               width:100%;padding:5px 0;border:none;border-radius:4px;
               background:#10B981;color:white;font-size:11px;font-weight:600;cursor:pointer;
             ">Save</button>`

@@ -48,6 +48,8 @@ const TYPE_COLORS: Record<string, string> = {
   windcone: '#FB923C', stadium_light: '#E2E8F0', rotating_beacon: '#22D3EE',
 }
 
+const SIGN_TYPES = new Set(['location_sign', 'directional_sign', 'informational_sign', 'mandatory_sign'])
+
 // ── Inline-editable label ──
 
 function EditableLabel({
@@ -949,7 +951,7 @@ export default function AuditPanel({
 
                     {/* Feature rows */}
                     {compExpanded && compFeatures
-                      .sort((a, b) => (a.label || '').localeCompare(b.label || ''))
+                      .sort((a, b) => (a.block || a.label || '').localeCompare(b.block || b.label || ''))
                       .map(f => (
                         <div
                           key={f.id}
@@ -980,19 +982,19 @@ export default function AuditPanel({
                           <span style={{ fontSize: 10, color: '#64748B', minWidth: 50, flexShrink: 0 }}>
                             {formatFeatureType(f.feature_type).split(' ').slice(-1)[0]}
                           </span>
-                          {/* Editable label */}
-                          <span style={{ flex: 1, minWidth: 0 }}>
-                            <EditableLabel
-                              value={f.label || ''}
-                              onSave={(newLabel) => onLabelUpdate(f.id, newLabel)}
-                            />
-                          </span>
-                          {/* Fixture ID */}
-                          {f.block && (
-                            <span style={{ fontSize: 8, color: '#64748B', fontFamily: 'monospace', flexShrink: 0 }}>
-                              {f.block}
+                          {/* Sign text (editable, signs only) */}
+                          {SIGN_TYPES.has(f.feature_type) && (
+                            <span style={{ minWidth: 0 }}>
+                              <EditableLabel
+                                value={f.label || ''}
+                                onSave={(newLabel) => onLabelUpdate(f.id, newLabel)}
+                              />
                             </span>
                           )}
+                          {/* Fixture ID */}
+                          <span style={{ flex: 1, fontSize: 9, color: '#64748B', fontFamily: 'monospace', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {f.block || <span style={{ color: '#475569', fontStyle: 'italic' }}>no ID</span>}
+                          </span>
                           {/* Reassign button */}
                           {reassigning === f.id ? (
                             <select
@@ -1102,7 +1104,7 @@ export default function AuditPanel({
                       </div>
 
                       {expandedComponents[`unassigned:${layer}`] !== false && layerFeatures
-                        .sort((a, b) => (a.label || '').localeCompare(b.label || ''))
+                        .sort((a, b) => (a.block || a.label || '').localeCompare(b.block || b.label || ''))
                         .map(f => (
                           <div
                             key={f.id}
@@ -1131,11 +1133,18 @@ export default function AuditPanel({
                             <span style={{ fontSize: 10, color: '#64748B', minWidth: 70, flexShrink: 0 }}>
                               {formatFeatureType(f.feature_type)}
                             </span>
-                            <span style={{ flex: 1, minWidth: 0 }}>
-                              <EditableLabel
-                                value={f.label || ''}
-                                onSave={(newLabel) => onLabelUpdate(f.id, newLabel)}
-                              />
+                            {/* Sign text (editable, signs only) */}
+                            {SIGN_TYPES.has(f.feature_type) && (
+                              <span style={{ minWidth: 0 }}>
+                                <EditableLabel
+                                  value={f.label || ''}
+                                  onSave={(newLabel) => onLabelUpdate(f.id, newLabel)}
+                                />
+                              </span>
+                            )}
+                            {/* Fixture ID */}
+                            <span style={{ flex: 1, fontSize: 9, color: '#64748B', fontFamily: 'monospace', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {f.block || <span style={{ color: '#475569', fontStyle: 'italic' }}>no ID</span>}
                             </span>
                             {/* Assign to component */}
                             {reassigning === f.id ? (
