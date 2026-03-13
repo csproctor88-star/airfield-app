@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import type { SystemHealth, OutageStatus, AlertTier } from '@/lib/outage-rules'
 import { getAlertTier, ALERT_TIER_CONFIG, DAFMAN_NOTES } from '@/lib/outage-rules'
+import type { EnrichedOutageEvent } from '@/lib/supabase/outage-events'
+import { formatZuluDateTime } from '@/lib/utils'
 
 // ── Status badge colors ──
 
@@ -289,12 +291,15 @@ export default function SystemHealthPanel({
   healths,
   loading,
   compact,
+  outageEvents,
 }: {
   healths: SystemHealth[]
   loading?: boolean
   compact?: boolean
+  outageEvents?: EnrichedOutageEvent[]
 }) {
   const [collapsed, setCollapsed] = useState(true)
+  const [activityExpanded, setActivityExpanded] = useState(false)
 
   if (loading) {
     return (
@@ -423,6 +428,85 @@ export default function SystemHealthPanel({
           {healths.map((h) => (
             <SystemRow key={h.systemId} health={h} />
           ))}
+        </div>
+      )}
+
+      {/* Recent Activity */}
+      {!collapsed && outageEvents && outageEvents.length > 0 && (
+        <div style={{ borderTop: '1px solid var(--color-border)' }}>
+          <button
+            onClick={() => setActivityExpanded(!activityExpanded)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 16px',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              textAlign: 'left',
+            }}
+          >
+            <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-2)', flex: 1 }}>
+              Recent Activity ({outageEvents.length})
+            </span>
+            <span
+              style={{
+                fontSize: 'var(--fs-xs)',
+                color: 'var(--color-text-3)',
+                transform: activityExpanded ? 'rotate(180deg)' : 'rotate(0)',
+                transition: 'transform 0.15s',
+              }}
+            >
+              {'\u25BC'}
+            </span>
+          </button>
+          {activityExpanded && (
+            <div style={{ padding: '0 12px 10px' }}>
+              {outageEvents.map((evt) => {
+                const isResolved = evt.event_type === 'resolved'
+                const label = evt.feature_label || evt.feature_type || 'Unknown feature'
+                const name = evt.reporter_rank ? `${evt.reporter_rank} ${evt.reporter_name}` : evt.reporter_name
+                return (
+                  <div
+                    key={evt.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 8,
+                      padding: '4px 0',
+                      fontSize: 'var(--fs-xs)',
+                      borderBottom: '1px solid rgba(148,163,184,0.08)',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: '50%',
+                        background: isResolved ? '#22C55E' : '#EF4444',
+                        flexShrink: 0,
+                        marginTop: 4,
+                      }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: 'var(--color-text-2)', fontWeight: 600 }}>
+                        {label}
+                        <span style={{ fontWeight: 400, color: isResolved ? '#22C55E' : '#EF4444', marginLeft: 6 }}>
+                          {isResolved ? 'Resolved' : 'Reported'}
+                        </span>
+                      </div>
+                      <div style={{ color: 'var(--color-text-3)' }}>
+                        {formatZuluDateTime(new Date(evt.created_at))} &mdash; {name}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

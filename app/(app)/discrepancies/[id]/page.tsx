@@ -10,6 +10,8 @@ import { useInstallation } from '@/lib/installation-context'
 import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
 import { CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS, DISCREPANCY_TYPES } from '@/lib/constants'
 
+import { fetchInfrastructureFeature } from '@/lib/supabase/infrastructure-features'
+import type { InfrastructureFeature } from '@/lib/supabase/types'
 import { EditDiscrepancyModal, StatusUpdateModal, WorkOrderModal, PhotoViewerModal } from '@/components/discrepancies/modals'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
@@ -40,6 +42,8 @@ export default function DiscrepancyDetailPage() {
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
+  const [linkedFeature, setLinkedFeature] = useState<InfrastructureFeature | null>(null)
+  const [linkedSystemInfo, setLinkedSystemInfo] = useState<{ systemName: string; componentLabel: string } | null>(null)
   const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
 
   const loadData = useCallback(async () => {
@@ -58,6 +62,29 @@ export default function DiscrepancyDetailPage() {
       setDbPhotos(photos)
       const updates = await fetchStatusUpdates(data.id)
       setStatusUpdates(updates)
+
+      // Fetch linked infrastructure feature
+      if (data.infrastructure_feature_id) {
+        const feat = await fetchInfrastructureFeature(data.infrastructure_feature_id)
+        setLinkedFeature(feat)
+        if (feat?.system_component_id) {
+          const supabaseClient = createClient()
+          if (supabaseClient) {
+            const { data: comp } = await supabaseClient
+              .from('lighting_system_components')
+              .select('label, system_id, lighting_systems:system_id(name)')
+              .eq('id', feat.system_component_id)
+              .single() as { data: any }
+            if (comp) {
+              const sys = comp.lighting_systems as { name?: string } | null
+              setLinkedSystemInfo({
+                systemName: sys?.name || '',
+                componentLabel: comp.label || '',
+              })
+            }
+          }
+        }
+      }
     }
 
     setLoading(false)
@@ -290,6 +317,44 @@ export default function DiscrepancyDetailPage() {
           <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-sm)', color: '#34D399', fontFamily: 'monospace', fontWeight: 600 }}>
             {lat!.toFixed(5)}, {lng!.toFixed(5)}
           </div>
+        </div>
+      )}
+
+      {/* Linked Visual NAVAID */}
+      {linkedFeature && (
+        <div className="card" style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+            Linked Visual NAVAID
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+              {linkedFeature.label || linkedFeature.feature_type.replace(/_/g, ' ')}
+            </span>
+            <span style={{
+              fontSize: 'var(--fs-xs)',
+              fontWeight: 700,
+              padding: '1px 6px',
+              borderRadius: 4,
+              background: linkedFeature.status === 'inoperative' ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)',
+              color: linkedFeature.status === 'inoperative' ? '#EF4444' : '#22C55E',
+            }}>
+              {linkedFeature.status === 'inoperative' ? 'INOP' : 'OP'}
+            </span>
+          </div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginBottom: 2 }}>
+            Type: {linkedFeature.feature_type.replace(/_/g, ' ')}
+          </div>
+          {linkedSystemInfo && (
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginBottom: 2 }}>
+              System: {linkedSystemInfo.systemName}{linkedSystemInfo.componentLabel ? ` \u2192 ${linkedSystemInfo.componentLabel}` : ''}
+            </div>
+          )}
+          <Link
+            href="/infrastructure"
+            style={{ display: 'inline-block', marginTop: 6, fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontWeight: 600, textDecoration: 'none' }}
+          >
+            View on Infrastructure Map &rarr;
+          </Link>
         </div>
       )}
 

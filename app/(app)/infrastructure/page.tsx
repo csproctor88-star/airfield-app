@@ -19,9 +19,9 @@ import {
   type InfrastructureFeatureType,
 } from '@/lib/supabase/infrastructure-features'
 import { createDiscrepancy } from '@/lib/supabase/discrepancies'
-import { createOutageEvent } from '@/lib/supabase/outage-events'
+import { createOutageEvent, fetchOutageEventsForBase, type EnrichedOutageEvent } from '@/lib/supabase/outage-events'
 import { fetchLightingSystems, fetchAllComponentsForBase, fetchLightingSystemWithComponents } from '@/lib/supabase/lighting-systems'
-import { calculateAllSystemHealth, calculateComponentOutage, type SystemHealth, type OutageStatus } from '@/lib/outage-rules'
+import { calculateAllSystemHealth, calculateComponentOutage, getAlertTier, type SystemHealth, type OutageStatus, type AlertTier } from '@/lib/outage-rules'
 import { createClient } from '@/lib/supabase/client'
 import SystemHealthPanel from '@/components/infrastructure/system-health-panel'
 import { offsetPoint, normalizeBearing } from '@/lib/calculations/geometry'
@@ -404,6 +404,12 @@ export default function InfrastructureMapPage() {
   // Show outages only filter
   const [showOutagesOnly, setShowOutagesOnly] = useState(false)
 
+  // Outage events for timeline
+  const [outageEvents, setOutageEvents] = useState<EnrichedOutageEvent[]>([])
+
+  // Color by health toggle
+  const [colorByHealth, setColorByHealth] = useState(false)
+
   // Group components by system for dropdown optgroups (sorted alphabetically)
   const groupedComponents = useMemo(() => {
     const sysMap = new Map<string, { name: string; components: typeof allComponentsList }>()
@@ -606,6 +612,7 @@ export default function InfrastructureMapPage() {
   useEffect(() => {
     if (!installationId) return
     fetchInfrastructureFeatures(installationId).then(setDbFeatures)
+    fetchOutageEventsForBase(installationId, 20).then(setOutageEvents)
   }, [installationId])
 
   // Load lighting systems + components and compute health
@@ -658,6 +665,18 @@ export default function InfrastructureMapPage() {
 
   const [importing, setImporting] = useState(false)
 
+  // Build component → system health tier lookup
+  const compToTier = useMemo(() => {
+    const map = new Map<string, AlertTier>()
+    for (const health of systemHealths) {
+      const tier = getAlertTier(health)
+      for (const comp of health.components) {
+        map.set(comp.componentId, tier)
+      }
+    }
+    return map
+  }, [systemHealths])
+
   // Build GeoJSON from DB features, filtered by visible source layers
   const featureGeoJson = useMemo<GeoJSON.FeatureCollection>(() => {
     const hasFilter = Object.values(visibleSourceLayers).some(v => v === false)
@@ -672,25 +691,29 @@ export default function InfrastructureMapPage() {
         const layerName = f.layer || 'USER'
         return visibleSourceLayers[`layer:${layerName}`] !== false
       })
-      .map(f => ({
-        type: 'Feature' as const,
-        geometry: { type: 'Point' as const, coordinates: [f.longitude, f.latitude] },
-        properties: {
-          type: f.feature_type,
-          layer: f.layer || 'USER',
-          block: f.block,
-          text: f.label,
-          id: f.id,
-          source: f.source,
-          status: f.status || 'operational',
-          notes: f.notes,
-          rotation: f.rotation || 0,
-          system_component_id: f.system_component_id || '',
-          signIcon: f.label && SIGN_COLORS[f.feature_type] ? `sign-label-${f.id}` : null,
-        },
-      }))
+      .map(f => {
+        const tier = f.system_component_id ? (compToTier.get(f.system_component_id) || null) : null
+        return {
+          type: 'Feature' as const,
+          geometry: { type: 'Point' as const, coordinates: [f.longitude, f.latitude] },
+          properties: {
+            type: f.feature_type,
+            layer: f.layer || 'USER',
+            block: f.block,
+            text: f.label,
+            id: f.id,
+            source: f.source,
+            status: f.status || 'operational',
+            notes: f.notes,
+            rotation: f.rotation || 0,
+            system_component_id: f.system_component_id || '',
+            signIcon: f.label && SIGN_COLORS[f.feature_type] ? `sign-label-${f.id}` : null,
+            systemHealthTier: tier,
+          },
+        }
+      })
     return { type: 'FeatureCollection', features: geoFeatures }
-  }, [dbFeatures, visibleSourceLayers, showOutagesOnly])
+  }, [dbFeatures, visibleSourceLayers, showOutagesOnly, compToTier])
 
   // Import static GeoJSON into DB
   const handleImport = useCallback(async () => {
@@ -976,6 +999,7 @@ export default function InfrastructureMapPage() {
 
     const refreshed = await fetchInfrastructureFeatures(installationId)
     setDbFeatures(refreshed)
+    fetchOutageEventsForBase(installationId, 20).then(setOutageEvents)
 
     if (disc) {
       toast.success(`Outage reported — Discrepancy ${disc.display_id} created`)
@@ -1041,6 +1065,7 @@ export default function InfrastructureMapPage() {
 
     const refreshed = await fetchInfrastructureFeatures(installationId)
     setDbFeatures(refreshed)
+    fetchOutageEventsForBase(installationId, 20).then(setOutageEvents)
     toast.success('Feature marked operational')
 
     // Check for linked open discrepancies and prompt to close
@@ -1734,6 +1759,46 @@ export default function InfrastructureMapPage() {
         },
       })
 
+      // System health ring — colored ring around operational features based on system health tier
+      m.addLayer({
+        id: 'system-health-ring',
+        type: 'circle',
+        source: 'infrastructure',
+        filter: ['all',
+          ['!=', ['get', 'status'], 'inoperative'],
+          ['any',
+            ['==', ['get', 'systemHealthTier'], 'yellow'],
+            ['==', ['get', 'systemHealthTier'], 'red'],
+            ['==', ['get', 'systemHealthTier'], 'black'],
+          ],
+        ] as any,
+        paint: {
+          'circle-radius': [
+            'interpolate', ['linear'], ['zoom'],
+            12, 5,
+            14, 8,
+            16, 12,
+            18, 16,
+          ],
+          'circle-color': 'transparent',
+          'circle-stroke-color': [
+            'case',
+            ['==', ['get', 'systemHealthTier'], 'yellow'], '#F59E0B',
+            '#EF4444',
+          ] as any,
+          'circle-stroke-width': 2,
+          'circle-stroke-opacity': [
+            'case',
+            ['==', ['get', 'systemHealthTier'], 'yellow'], 0.4,
+            0.5,
+          ] as any,
+          'circle-opacity': 0,
+        },
+        layout: {
+          visibility: 'none',
+        },
+      })
+
       // Click on empty map area — place feature or bar in edit mode (skip if dragging or box selecting)
       m.on('click', (e) => {
         if (!editModeRef.current || draggingRef.current || boxSelectRef.current || freeMoveRef.current) return
@@ -1886,6 +1951,15 @@ export default function InfrastructureMapPage() {
       }
     }
   }, [visibleLayers, mapLoaded])
+
+  // Sync health ring layer visibility
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+    const m = map.current
+    if (m.getLayer('system-health-ring')) {
+      m.setLayoutProperty('system-health-ring', 'visibility', colorByHealth ? 'visible' : 'none')
+    }
+  }, [colorByHealth, mapLoaded])
 
   // Update cursor in edit mode
   useEffect(() => {
@@ -2050,7 +2124,7 @@ export default function InfrastructureMapPage() {
       {/* System Health Panel */}
       {!editMode && (
         <div style={{ flexShrink: 0, marginBottom: isFullscreen ? 0 : 8 }}>
-          <SystemHealthPanel healths={systemHealths} loading={healthLoading} />
+          <SystemHealthPanel healths={systemHealths} loading={healthLoading} outageEvents={outageEvents} />
         </div>
       )}
 
@@ -2719,8 +2793,7 @@ export default function InfrastructureMapPage() {
                 alignItems: 'center',
                 gap: 8,
                 padding: '4px 0 6px',
-                marginBottom: 4,
-                borderBottom: '1px solid rgba(148, 163, 184, 0.15)',
+                marginBottom: 0,
                 cursor: 'pointer',
                 fontSize: 11,
                 color: showOutagesOnly ? '#EF4444' : '#94A3B8',
@@ -2733,6 +2806,29 @@ export default function InfrastructureMapPage() {
                   style={{ accentColor: '#EF4444' }}
                 />
                 Show outages only ({dbFeatures.filter(f => f.status === 'inoperative').length})
+              </label>
+            )}
+            {/* Color by health toggle */}
+            {systemHealths.length > 0 && (
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '4px 0 6px',
+                marginBottom: 4,
+                borderBottom: '1px solid rgba(148, 163, 184, 0.15)',
+                cursor: 'pointer',
+                fontSize: 11,
+                color: colorByHealth ? '#F59E0B' : '#94A3B8',
+                fontWeight: colorByHealth ? 700 : 400,
+              }}>
+                <input
+                  type="checkbox"
+                  checked={colorByHealth}
+                  onChange={() => setColorByHealth(prev => !prev)}
+                  style={{ accentColor: '#F59E0B' }}
+                />
+                Color by health
               </label>
             )}
             {LAYER_GROUPS.map(groupName => {

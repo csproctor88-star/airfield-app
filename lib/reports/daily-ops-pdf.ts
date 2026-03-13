@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import type { DailyReportData, PhotoForDailyReport, ActivityEntryForReport, QrcExecutionForReport } from './daily-ops-data'
+import type { DailyReportData, PhotoForDailyReport, ActivityEntryForReport, QrcExecutionForReport, OutageEventForReport } from './daily-ops-data'
 import { formatDiscrepancyType } from './open-discrepancies-data'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime } from '@/lib/utils'
 
@@ -109,6 +109,7 @@ function filterDataForDate(data: DailyReportData, dateStr: string): DailyReportD
     obstructionEvals: data.obstructionEvals.filter((e) => inRange(e.created_at)),
     activityEntries: data.activityEntries.filter((a) => inRange(a.created_at)),
     qrcExecutions: data.qrcExecutions.filter((q) => inRange(q.opened_at) || (q.closed_at && inRange(q.closed_at))),
+    outageEvents: data.outageEvents.filter((o) => inRange(o.created_at)),
     photos: data.photos,
   }
 }
@@ -222,6 +223,9 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
         y += 3
       }
     }
+
+    // 1.5. VISUAL NAVAID OUTAGES
+    renderOutageSection(dayData.outageEvents)
 
     // 2. COMPLETED CHECKS
     sectionHeader('COMPLETED CHECKS')
@@ -387,6 +391,48 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
 
     // 7. EVENTS LOG
     renderEventsLogSection(dayData.activityEntries)
+  }
+
+  // ── Visual NAVAID Outages section ──
+  function renderOutageSection(events: OutageEventForReport[]) {
+    sectionHeader(`VISUAL NAVAID OUTAGES (${events.length})`)
+
+    if (events.length === 0) {
+      emptyState('No Visual NAVAID outage events.')
+      return
+    }
+
+    const tableBody = events.map((e) => {
+      const name = e.reporter_rank ? `${e.reporter_rank} ${e.reporter_name}` : e.reporter_name
+      const featureLabel = e.feature_label || e.feature_type || 'Unknown'
+      const system = e.system_name || '—'
+      const eventLabel = e.event_type === 'resolved' ? 'Resolved' : 'Reported'
+      return [fmtTime(e.created_at), featureLabel, system, eventLabel, name]
+    })
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [['Time', 'Feature', 'System', 'Event', 'User']],
+      body: tableBody,
+      styles: { fontSize: 8, cellPadding: 2, textColor: [0, 0, 0] },
+      headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      columnStyles: { 0: { cellWidth: 18 }, 3: { cellWidth: 20 } },
+      didParseCell: (hookData) => {
+        if (hookData.section === 'body' && hookData.column.index === 3) {
+          const val = hookData.cell.raw as string
+          if (val === 'Reported') {
+            hookData.cell.styles.textColor = [220, 38, 38]
+            hookData.cell.styles.fontStyle = 'bold'
+          } else if (val === 'Resolved') {
+            hookData.cell.styles.textColor = [34, 197, 94]
+            hookData.cell.styles.fontStyle = 'bold'
+          }
+        }
+      },
+    })
+    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4
   }
 
   // ── QRC Executions section ──

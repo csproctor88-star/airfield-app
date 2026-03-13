@@ -54,6 +54,22 @@ export async function fetchInfrastructureFeatures(baseId: string): Promise<Infra
   return allData as InfrastructureFeature[]
 }
 
+// ── Fetch a single feature by ID ──
+
+export async function fetchInfrastructureFeature(id: string): Promise<InfrastructureFeature | null> {
+  const supabase = createClient()
+  if (!supabase) return null
+
+  const { data, error } = await supabase
+    .from('infrastructure_features')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) return null
+  return data as InfrastructureFeature
+}
+
 // ── Create a single feature ──
 
 export async function createInfrastructureFeature(input: {

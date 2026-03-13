@@ -1,6 +1,37 @@
 import { createClient } from './client'
 import type { OutageEvent } from './types'
 
+// ── Enriched outage event for timeline display ──
+
+export type EnrichedOutageEvent = OutageEvent & {
+  reporter_name: string
+  reporter_rank: string | null
+  feature_label: string | null
+  feature_type: string | null
+}
+
+export async function fetchOutageEventsForBase(baseId: string, limit = 20): Promise<EnrichedOutageEvent[]> {
+  const supabase = createClient()
+  if (!supabase) return []
+
+  const { data, error } = await supabase
+    .from('outage_events')
+    .select('*, profiles:reported_by(name, rank), infrastructure_features:feature_id(label, feature_type)')
+    .eq('base_id', baseId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) return []
+
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    ...(row as OutageEvent),
+    reporter_name: (row.profiles as { name?: string } | null)?.name || 'Unknown',
+    reporter_rank: (row.profiles as { rank?: string } | null)?.rank || null,
+    feature_label: (row.infrastructure_features as { label?: string } | null)?.label || null,
+    feature_type: (row.infrastructure_features as { feature_type?: string } | null)?.feature_type || null,
+  })) as EnrichedOutageEvent[]
+}
+
 // ── Create an outage event ──
 
 export async function createOutageEvent(input: {
