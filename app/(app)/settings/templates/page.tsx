@@ -18,6 +18,10 @@ import {
   type TemplateSection,
   type TemplateItem,
 } from '@/lib/supabase/inspection-templates'
+import { fetchLightingSystems } from '@/lib/supabase/lighting-systems'
+import { fetchLinksForTemplate, setLinksForItem, fetchTemplateId } from '@/lib/supabase/inspection-item-links'
+import type { LightingSystem } from '@/lib/supabase/types'
+import { Link2 } from 'lucide-react'
 
 type TemplateType = 'airfield' | 'lighting'
 
@@ -35,6 +39,12 @@ export default function TemplateManagementPage() {
   const [newItemText, setNewItemText] = useState('')
   const [addingSection, setAddingSection] = useState(false)
   const [newSectionTitle, setNewSectionTitle] = useState('')
+
+  // ── System linking state (lighting templates only) ──
+  const [lightingSystems, setLightingSystems] = useState<LightingSystem[]>([])
+  const [itemLinks, setItemLinks] = useState<Record<string, string[]>>({})
+  const [linkingItemId, setLinkingItemId] = useState<string | null>(null)
+  const [linkDraft, setLinkDraft] = useState<string[]>([])
 
   const canEdit = userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo'
 
@@ -60,6 +70,27 @@ export default function TemplateManagementPage() {
     isInitialLoad.current = true
     loadTemplate()
   }, [loadTemplate])
+
+  // Load lighting systems + item links when on lighting tab
+  useEffect(() => {
+    if (!installationId || activeType !== 'lighting') {
+      setLightingSystems([])
+      setItemLinks({})
+      return
+    }
+    async function loadLinks() {
+      const [systems, tmplId] = await Promise.all([
+        fetchLightingSystems(installationId!),
+        fetchTemplateId(installationId!, 'lighting'),
+      ])
+      setLightingSystems(systems)
+      if (tmplId) {
+        const links = await fetchLinksForTemplate(tmplId)
+        setItemLinks(links)
+      }
+    }
+    loadLinks()
+  }, [installationId, activeType, sections]) // re-fetch when sections change (template reload)
 
   const toggleSection = (id: string) => {
     setExpandedSections(prev => {
@@ -202,6 +233,32 @@ export default function TemplateManagementPage() {
       toast.success('Section title updated')
       await loadTemplate()
     }
+  }
+
+  // ── System linking ──
+  const handleOpenLinking = (item: TemplateItem) => {
+    setLinkingItemId(item.id)
+    setLinkDraft(itemLinks[item.id] || [])
+  }
+
+  const handleSaveLinks = async () => {
+    if (!linkingItemId) return
+    const ok = await setLinksForItem(linkingItemId, linkDraft)
+    if (ok) {
+      setItemLinks(prev => ({ ...prev, [linkingItemId]: linkDraft }))
+      toast.success(`Linked ${linkDraft.length} system${linkDraft.length !== 1 ? 's' : ''}`)
+    } else {
+      toast.error('Failed to save links')
+    }
+    setLinkingItemId(null)
+  }
+
+  const handleToggleLinkSystem = (systemId: string) => {
+    setLinkDraft(prev =>
+      prev.includes(systemId)
+        ? prev.filter(id => id !== systemId)
+        : [...prev, systemId]
+    )
   }
 
   // ── Reorder items within a section ──
@@ -519,6 +576,33 @@ export default function TemplateManagementPage() {
                         {({ pass_fail: 'P/F', bwc: 'BWC', rsc: 'RSC', rcr: 'RCR' } as Record<string, string>)[item.item_type] || 'P/F'}
                       </button>
 
+                      {/* System link button — lighting templates, pass_fail items only */}
+                      {activeType === 'lighting' && item.item_type === 'pass_fail' && lightingSystems.length > 0 && (
+                        <button
+                          onClick={() => handleOpenLinking(item)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 3,
+                            fontSize: 'var(--fs-xs)',
+                            padding: '2px 6px',
+                            borderRadius: 4,
+                            border: '1px solid',
+                            borderColor: (itemLinks[item.id]?.length ?? 0) > 0 ? '#22D3EE' : 'var(--color-border)',
+                            background: (itemLinks[item.id]?.length ?? 0) > 0 ? 'rgba(34,211,238,0.12)' : 'var(--color-bg-inset)',
+                            color: (itemLinks[item.id]?.length ?? 0) > 0 ? '#22D3EE' : 'var(--color-text-3)',
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                          }}
+                          title="Link to lighting systems"
+                        >
+                          <Link2 size={11} />
+                          {(itemLinks[item.id]?.length ?? 0) > 0
+                            ? `${itemLinks[item.id].length} sys`
+                            : ''}
+                        </button>
+                      )}
+
                       <button
                         onClick={() => handleDeleteItem(item)}
                         style={{
@@ -680,6 +764,107 @@ export default function TemplateManagementPage() {
               + Add Section
             </button>
           )}
+        </div>
+      )}
+
+      {/* ── System Linking Modal ── */}
+      {linkingItemId && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.7)', padding: 16,
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setLinkingItemId(null) }}
+        >
+          <div style={{
+            background: 'var(--color-bg-elevated)',
+            borderRadius: 12,
+            border: '1px solid var(--color-border)',
+            padding: 20,
+            maxWidth: 420,
+            width: '100%',
+            maxHeight: '70vh',
+            overflow: 'auto',
+          }}>
+            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
+              Link Lighting Systems
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12 }}>
+              When this item fails, the inspector will pick exact features from the linked systems.
+            </div>
+
+            {lightingSystems.length === 0 ? (
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', padding: 16, textAlign: 'center' }}>
+                No lighting systems configured. Set them up in Visual NAVAIDs first.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {lightingSystems.map(sys => {
+                  const checked = linkDraft.includes(sys.id)
+                  return (
+                    <button
+                      key={sys.id}
+                      type="button"
+                      onClick={() => handleToggleLinkSystem(sys.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '8px 10px', borderRadius: 6, cursor: 'pointer',
+                        border: checked ? '1.5px solid #22D3EE' : '1px solid var(--color-border)',
+                        background: checked ? 'rgba(34,211,238,0.08)' : 'var(--color-bg-inset)',
+                        color: 'var(--color-text-1)',
+                        fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+                        textAlign: 'left', width: '100%',
+                      }}
+                    >
+                      <span style={{
+                        width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                        border: checked ? '2px solid #22D3EE' : '2px solid var(--color-text-3)',
+                        background: checked ? '#22D3EE' : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 12, fontWeight: 800, color: '#000',
+                      }}>
+                        {checked ? '\u2713' : ''}
+                      </span>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{sys.name}</div>
+                        {sys.runway_or_taxiway && (
+                          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                            {sys.runway_or_taxiway}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+              <button
+                onClick={handleSaveLinks}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: 8, border: 'none',
+                  background: 'var(--color-primary)', color: '#fff',
+                  fontSize: 'var(--fs-base)', fontWeight: 700, cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                Save ({linkDraft.length} system{linkDraft.length !== 1 ? 's' : ''})
+              </button>
+              <button
+                onClick={() => setLinkingItemId(null)}
+                style={{
+                  padding: '10px 16px', borderRadius: 8,
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+                  color: 'var(--color-text-2)', fontSize: 'var(--fs-base)',
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

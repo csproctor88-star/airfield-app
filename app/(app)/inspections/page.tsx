@@ -21,6 +21,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort } from '@/lib/utils'
 import { fetchCurrentWeather } from '@/lib/weather'
 import { fetchInspectionTemplate, toInspectionSections } from '@/lib/supabase/inspection-templates'
+import { fetchLinksForTemplate, fetchTemplateId } from '@/lib/supabase/inspection-item-links'
 import {
   loadDraft,
   saveDraftToStorage,
@@ -35,6 +36,10 @@ import { DEMO_INSPECTIONS } from '@/lib/demo-data'
 import { getAirfieldDiagram } from '@/lib/airfield-diagram'
 import { uploadInspectionPhoto } from '@/lib/supabase/inspections'
 import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
+import { bulkUpdateStatus, fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-features'
+import { fetchAllComponentsForBase, fetchLightingSystems } from '@/lib/supabase/lighting-systems'
+import { createOutageEvent } from '@/lib/supabase/outage-events'
+import { calculateComponentOutage, calculateAllSystemHealth, getAlertTier } from '@/lib/outage-rules'
 import type { InspectionItem, SimpleDiscrepancy } from '@/lib/supabase/types'
 import { SimpleDiscrepancyPanelGroup } from '@/components/ui/simple-discrepancy-panel-group'
 import { ExpandableTextarea } from '@/components/ui/expandable-textarea'
@@ -54,6 +59,13 @@ export default function InspectionsPage() {
   // ── DB-driven templates (fall back to constants if not in DB) ──
   const [dbAirfieldSections, setDbAirfieldSections] = useState<InspectionSection[] | null>(null)
   const [dbLightingSections, setDbLightingSections] = useState<InspectionSection[] | null>(null)
+
+  // ── Item → system links (for lighting inspections w/ infrastructure feature picker) ──
+  // Maps DB item ID → lighting system IDs. Keyed by template item IDs (from base_inspection_items).
+  // The inspection form uses item_key (from constants) as identifiers, so we also build a key-based map.
+  const [itemSystemLinks, setItemSystemLinks] = useState<Record<string, string[]>>({})
+  // Map from item_key → system IDs (for use in the inspection form which keys by item_key)
+  const [itemKeySystemLinks, setItemKeySystemLinks] = useState<Record<string, string[]>>({})
 
   useEffect(() => {
     if (!installationId) return
@@ -81,6 +93,23 @@ export default function InspectionsPage() {
           if (rwySection) ltSections.push(rwySection)
         }
         setDbLightingSections(ltSections)
+
+        // Load system links for lighting template
+        const tmplId = await fetchTemplateId(installationId!, 'lighting')
+        if (tmplId) {
+          const links = await fetchLinksForTemplate(tmplId)
+          setItemSystemLinks(links)
+          // Build item_key → system IDs map
+          const keyMap: Record<string, string[]> = {}
+          for (const sec of lt) {
+            for (const item of sec.items) {
+              if (links[item.id] && links[item.id].length > 0) {
+                keyMap[item.item_key] = links[item.id]
+              }
+            }
+          }
+          setItemKeySystemLinks(keyMap)
+        }
       }
     }
     loadTemplates()
@@ -1048,8 +1077,9 @@ export default function InspectionsPage() {
             const d = discs[discIdx]
             if (!d.log_as_discrepancy) continue
 
+            const hasLinkedFeatures = d.linked_feature_ids && d.linked_feature_ids.length > 0
             const discTitle = d.discrepancy_title || d.comment.slice(0, 100) || 'Untitled'
-            const discType = d.discrepancy_type || 'other'
+            const discType = hasLinkedFeatures ? 'lighting' : (d.discrepancy_type || 'other')
             const discLocation = d.discrepancy_location_text || d.location_text || 'Unknown'
 
             const { data: disc, error: discErr } = await createDiscrepancy({
@@ -1057,16 +1087,19 @@ export default function InspectionsPage() {
               description: d.comment,
               location_text: discLocation,
               type: discType,
-    
               latitude: d.location?.lat ?? null,
               longitude: d.location?.lon ?? null,
               base_id: installationId,
+              infrastructure_feature_id: hasLinkedFeatures ? d.linked_feature_ids![0] : undefined,
             })
 
             if (discErr || !disc) {
               toast.error(`Failed to create discrepancy: ${discErr}`)
               continue
             }
+
+            // Store generated ID so outage events can reference it
+            d.generated_discrepancy_id = disc.id
 
             // Upload photos to the new discrepancy record
             const photos = discPhotos[itemId]?.[discIdx] || []
@@ -1079,6 +1112,82 @@ export default function InspectionsPage() {
       }
       if (discCreated > 0) {
         toast.success(`${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'} logged`)
+      }
+
+      // ── Auto-mark infrastructure features as inoperative (from linked lighting systems) ──
+      if (installationId) {
+        const allLinkedFeatureIds: string[] = []
+        const featureDiscMap: Record<string, { discrepancy_id?: string; comment?: string }> = {}
+
+        for (const { half } of allHalves) {
+          for (const [, discs] of Object.entries(half.discrepancies || {})) {
+            for (const d of discs) {
+              if (d.linked_feature_ids && d.linked_feature_ids.length > 0) {
+                allLinkedFeatureIds.push(...d.linked_feature_ids)
+                for (const fid of d.linked_feature_ids) {
+                  featureDiscMap[fid] = {
+                    discrepancy_id: d.generated_discrepancy_id ?? undefined,
+                    comment: d.comment,
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        if (allLinkedFeatureIds.length > 0) {
+          const uniqueIds = Array.from(new Set(allLinkedFeatureIds))
+
+          // Mark features as inoperative
+          const marked = await bulkUpdateStatus(uniqueIds, 'inoperative')
+
+          // Create outage events
+          for (const fid of uniqueIds) {
+            const info = featureDiscMap[fid]
+            await createOutageEvent({
+              base_id: installationId,
+              feature_id: fid,
+              event_type: 'reported',
+              discrepancy_id: info?.discrepancy_id || null,
+              notes: info?.comment ? `From lighting inspection: ${info.comment.slice(0, 200)}` : 'Reported via lighting inspection',
+            })
+          }
+
+          if (marked > 0) {
+            toast.success(`${marked} feature${marked !== 1 ? 's' : ''} marked inoperative`)
+          }
+
+          // Check DAFMAN thresholds
+          try {
+            const [systems, components, features] = await Promise.all([
+              fetchLightingSystems(installationId),
+              fetchAllComponentsForBase(installationId),
+              fetchInfrastructureFeatures(installationId),
+            ])
+            const compMap = new Map<string, typeof components>()
+            for (const c of components) {
+              if (!compMap.has(c.system_id)) compMap.set(c.system_id, [])
+              compMap.get(c.system_id)!.push(c)
+            }
+            const healths = calculateAllSystemHealth(systems, compMap, features)
+            for (const h of healths) {
+              const tier = getAlertTier(h)
+              if (tier === 'red' || tier === 'black') {
+                toast.warning(`${h.systemName}: DAFMAN threshold exceeded`, {
+                  description: h.exceededComponents.map(c => c.componentLabel).join(', '),
+                  duration: 8000,
+                })
+              } else if (tier === 'yellow') {
+                toast.warning(`${h.systemName}: Approaching DAFMAN limit`, {
+                  description: h.approachingComponents.map(c => c.componentLabel).join(', '),
+                  duration: 6000,
+                })
+              }
+            }
+          } catch {
+            // Non-critical — don't block filing
+          }
+        }
       }
 
       // Clean up object URLs
@@ -1605,6 +1714,8 @@ export default function InspectionsPage() {
                               onPointSelected={(idx, lat, lng) => handleDiscPointSelected(item.id, idx, lat, lng)}
                               onCaptureGps={(idx) => handleDiscCaptureGps(item.id, idx)}
                               gpsLoadingIndex={discGpsLoading?.startsWith(`${item.id}:`) ? parseInt(discGpsLoading.split(':')[1]) : null}
+                              linkedSystemIds={activeTab === 'lighting' ? itemKeySystemLinks[item.id] : undefined}
+                              linkedBaseId={activeTab === 'lighting' && itemKeySystemLinks[item.id] ? installationId ?? undefined : undefined}
                               flyToPoints={(currentHalf.discrepancies[item.id] || []).map((_, i) => discFlyTo[`${item.id}:${i}`] || null)}
                               onSaveDraft={handleSave}
                               draftSaving={saving}

@@ -13,6 +13,11 @@ const LocationMap = dynamic(
   { ssr: false },
 )
 
+const FeaturePicker = dynamic(
+  () => import('@/components/ui/infrastructure-feature-picker').then(m => ({ default: m.InfrastructureFeaturePicker })),
+  { ssr: false },
+)
+
 interface SimpleDiscrepancyPanelProps {
   detail: SimpleDiscrepancy
   index: number
@@ -31,6 +36,10 @@ interface SimpleDiscrepancyPanelProps {
   draftSaving?: boolean
   /** Available areas for the discrepancy location dropdown */
   areaOptions?: string[]
+  /** Linked lighting system IDs for this item (enables feature picker) */
+  linkedSystemIds?: string[]
+  /** Base ID (required when linkedSystemIds is provided) */
+  linkedBaseId?: string
 }
 
 export function SimpleDiscrepancyPanel({
@@ -47,6 +56,8 @@ export function SimpleDiscrepancyPanel({
   onSaveDraft,
   draftSaving,
   areaOptions,
+  linkedSystemIds,
+  linkedBaseId,
 }: SimpleDiscrepancyPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -84,13 +95,35 @@ export function SimpleDiscrepancyPanel({
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         {/* Left column: Map — takes ~60% */}
         <div style={{ flex: '3 1 0', minWidth: 0 }}>
-          <label style={labelStyle}>Pin Location on Map</label>
-          <LocationMap
-            onPointSelected={(lat, lng) => onPointSelected(index, lat, lng)}
-            selectedLat={detail.location?.lat ?? null}
-            selectedLng={detail.location?.lon ?? null}
-            flyToPoint={flyToPoint}
-          />
+          {linkedSystemIds && linkedSystemIds.length > 0 && linkedBaseId ? (
+            <>
+              <label style={labelStyle}>Select Inoperative Features</label>
+              <FeaturePicker
+                systemIds={linkedSystemIds}
+                baseId={linkedBaseId}
+                selectedFeatureIds={detail.linked_feature_ids || []}
+                onSelectionChange={(ids) => {
+                  // Auto-set discrepancy fields when features are selected
+                  const updates: Partial<SimpleDiscrepancy> = { linked_feature_ids: ids }
+                  if (ids.length > 0) {
+                    updates.log_as_discrepancy = true
+                    updates.discrepancy_type = 'lighting'
+                  }
+                  onChange(index, updates as unknown as SimpleDiscrepancy)
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <label style={labelStyle}>Pin Location on Map</label>
+              <LocationMap
+                onPointSelected={(lat, lng) => onPointSelected(index, lat, lng)}
+                selectedLat={detail.location?.lat ?? null}
+                selectedLng={detail.location?.lon ?? null}
+                flyToPoint={flyToPoint}
+              />
+            </>
+          )}
         </div>
 
         {/* Right column: Comment + Buttons — takes ~40% */}

@@ -256,6 +256,11 @@ export function StatusUpdateModal({
 
     // Cancelled = delete from DB entirely
     if (newStatus === 'cancelled') {
+      // Mark linked infrastructure feature operational before deleting
+      if (discrepancy.infrastructure_feature_id) {
+        const { updateFeatureStatus } = await import('@/lib/supabase/infrastructure-features')
+        await updateFeatureStatus(discrepancy.infrastructure_feature_id, 'operational')
+      }
       const { deleteDiscrepancy } = await import('@/lib/supabase/discrepancies')
       const { error } = await deleteDiscrepancy(discrepancy.id)
       setSaving(false)
@@ -285,6 +290,11 @@ export function StatusUpdateModal({
 
     // Only update status if one was selected
     if (newStatus) {
+      // Mark linked infrastructure feature operational when completing
+      if (newStatus === 'completed' && discrepancy.infrastructure_feature_id) {
+        const { updateFeatureStatus } = await import('@/lib/supabase/infrastructure-features')
+        await updateFeatureStatus(discrepancy.infrastructure_feature_id, 'operational')
+      }
       const { updateDiscrepancyStatus } = await import('@/lib/supabase/discrepancies')
       const { data, error } = await updateDiscrepancyStatus(
         discrepancy.id,

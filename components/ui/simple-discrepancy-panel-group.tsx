@@ -27,6 +27,10 @@ interface SimpleDiscrepancyPanelGroupProps {
   draftSaving?: boolean
   /** Available areas for the discrepancy location dropdown */
   areaOptions?: string[]
+  /** Linked lighting system IDs for this item (enables feature picker) */
+  linkedSystemIds?: string[]
+  /** Base ID (required when linkedSystemIds is provided) */
+  linkedBaseId?: string
 }
 
 export function SimpleDiscrepancyPanelGroup({
@@ -46,6 +50,8 @@ export function SimpleDiscrepancyPanelGroup({
   onSaveDraft,
   draftSaving,
   areaOptions,
+  linkedSystemIds,
+  linkedBaseId,
 }: SimpleDiscrepancyPanelGroupProps) {
   return (
     <div style={{ marginTop: 4 }}>
@@ -113,6 +119,8 @@ export function SimpleDiscrepancyPanelGroup({
             onSaveDraft={onSaveDraft}
             draftSaving={draftSaving}
             areaOptions={areaOptions}
+            linkedSystemIds={linkedSystemIds}
+            linkedBaseId={linkedBaseId}
           />
         </div>
       ))}

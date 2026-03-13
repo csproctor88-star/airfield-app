@@ -832,6 +832,17 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['outage_events']['Insert']>
         Relationships: []
       }
+      inspection_item_system_links: {
+        Row: {
+          id: string
+          item_id: string
+          system_id: string
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['inspection_item_system_links']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['inspection_item_system_links']['Insert']>
+        Relationships: []
+      }
       outage_rule_templates: {
         Row: {
           id: string
@@ -912,6 +923,8 @@ export type SimpleDiscrepancy = {
   discrepancy_type?: string
   /** ID of the created discrepancy (set after submission) */
   generated_discrepancy_id?: string | null
+  /** Infrastructure feature IDs selected via feature picker (linked lighting systems) */
+  linked_feature_ids?: string[]
 }
 
 export type InspectionItem = {
@@ -965,6 +978,7 @@ export type LightingSystem = Database['public']['Tables']['lighting_systems']['R
 export type LightingSystemComponent = Database['public']['Tables']['lighting_system_components']['Row']
 export type OutageEvent = Database['public']['Tables']['outage_events']['Row']
 export type OutageRuleTemplate = Database['public']['Tables']['outage_rule_templates']['Row']
+export type InspectionItemSystemLink = Database['public']['Tables']['inspection_item_system_links']['Row']
 
 // === QRC (Quick Reaction Checklist) Types ===
 

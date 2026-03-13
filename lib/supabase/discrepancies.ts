@@ -23,6 +23,8 @@ export type DiscrepancyRow = {
   inspection_id: string | null
   resolution_notes: string | null
   resolution_date: string | null
+  infrastructure_feature_id: string | null
+  lighting_system_id: string | null
   photo_count: number
   created_at: string
   updated_at: string

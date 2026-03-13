@@ -21,7 +21,8 @@ import {
 import { createDiscrepancy } from '@/lib/supabase/discrepancies'
 import { createOutageEvent } from '@/lib/supabase/outage-events'
 import { fetchLightingSystems, fetchAllComponentsForBase, fetchLightingSystemWithComponents } from '@/lib/supabase/lighting-systems'
-import { calculateAllSystemHealth, type SystemHealth } from '@/lib/outage-rules'
+import { calculateAllSystemHealth, calculateComponentOutage, type SystemHealth, type OutageStatus } from '@/lib/outage-rules'
+import { createClient } from '@/lib/supabase/client'
 import SystemHealthPanel from '@/components/infrastructure/system-health-panel'
 import { offsetPoint, normalizeBearing } from '@/lib/calculations/geometry'
 import type { InfrastructureFeature } from '@/lib/supabase/types'
@@ -388,6 +389,21 @@ export default function InfrastructureMapPage() {
   const allComponentsRef = useRef<typeof allComponentsList>([])
   allComponentsRef.current = allComponentsList
 
+  // Outage alert dialog state
+  const [outageAlert, setOutageAlert] = useState<{
+    exceeded: OutageStatus[]
+    approaching: OutageStatus[]
+    systemName: string
+    discrepancyId: string | null
+  } | null>(null)
+
+  // Cached full component data for outage recalculation
+  const fullComponentsRef = useRef<any[]>([])
+  const lightingSystemsRef = useRef<any[]>([])
+
+  // Show outages only filter
+  const [showOutagesOnly, setShowOutagesOnly] = useState(false)
+
   // Group components by system for dropdown optgroups (sorted alphabetically)
   const groupedComponents = useMemo(() => {
     const sysMap = new Map<string, { name: string; components: typeof allComponentsList }>()
@@ -611,6 +627,10 @@ export default function InfrastructureMapPage() {
       setSystemHealths(healths)
       setHealthLoading(false)
 
+      // Cache full component data for outage recalculation in handlers
+      fullComponentsRef.current = allComponents
+      lightingSystemsRef.current = systems
+
       // Build flat list for popup dropdown
       setLightingSystemsList(systems.map(s => ({ id: s.id, name: s.name, system_type: s.system_type })))
       const sysNameMap = new Map(systems.map(s => [s.id, s.name]))
@@ -643,12 +663,12 @@ export default function InfrastructureMapPage() {
     const hasFilter = Object.values(visibleSourceLayers).some(v => v === false)
     const geoFeatures: GeoJSON.Feature[] = dbFeatures
       .filter(f => {
+        // Show outages only filter
+        if (showOutagesOnly && f.status !== 'inoperative') return false
         if (!hasFilter) return true
         if (f.system_component_id) {
-          // Check component visibility (keyed as "comp:ID")
           return visibleSourceLayers[`comp:${f.system_component_id}`] !== false
         }
-        // Unassigned: check layer visibility (keyed as "layer:NAME")
         const layerName = f.layer || 'USER'
         return visibleSourceLayers[`layer:${layerName}`] !== false
       })
@@ -670,7 +690,7 @@ export default function InfrastructureMapPage() {
         },
       }))
     return { type: 'FeatureCollection', features: geoFeatures }
-  }, [dbFeatures, visibleSourceLayers])
+  }, [dbFeatures, visibleSourceLayers, showOutagesOnly])
 
   // Import static GeoJSON into DB
   const handleImport = useCallback(async () => {
@@ -962,6 +982,34 @@ export default function InfrastructureMapPage() {
     } else {
       toast.success('Outage reported')
     }
+
+    // Recalculate outage status for the feature's component and show alert if exceeded/approaching
+    if (feature.system_component_id) {
+      const comp = fullComponentsRef.current.find((c: any) => c.id === feature.system_component_id)
+      if (comp) {
+        const systemName = lightingSystemsRef.current.find((s: any) => s.id === comp.system_id)?.name || ''
+        // Get all features for this component from the refreshed data
+        const compFeatures = refreshed.filter(f => f.system_component_id === feature.system_component_id)
+        const outage = calculateComponentOutage(comp, refreshed)
+
+        // Also check the overall component for this system
+        const overallComp = fullComponentsRef.current.find((c: any) => c.system_id === comp.system_id && c.component_type === 'overall')
+        const systemCompIds = new Set(fullComponentsRef.current.filter((c: any) => c.system_id === comp.system_id).map((c: any) => c.id))
+        const systemFeatures = refreshed.filter(f => f.system_component_id && systemCompIds.has(f.system_component_id))
+        const overallOutage = overallComp ? calculateComponentOutage(overallComp, refreshed, systemFeatures) : null
+
+        const exceeded: OutageStatus[] = []
+        const approaching: OutageStatus[] = []
+        if (outage.isExceeded) exceeded.push(outage)
+        else if (outage.isApproaching) approaching.push(outage)
+        if (overallOutage?.isExceeded) exceeded.push(overallOutage)
+        else if (overallOutage?.isApproaching) approaching.push(overallOutage)
+
+        if (exceeded.length > 0 || approaching.length > 0) {
+          setOutageAlert({ exceeded, approaching, systemName, discrepancyId: disc?.display_id || null })
+        }
+      }
+    }
   }
 
   // Mark Operational handler — restores feature status
@@ -994,6 +1042,33 @@ export default function InfrastructureMapPage() {
     const refreshed = await fetchInfrastructureFeatures(installationId)
     setDbFeatures(refreshed)
     toast.success('Feature marked operational')
+
+    // Check for linked open discrepancies and prompt to close
+    const supabase = createClient()
+    if (supabase) {
+      const { data: linkedDiscs } = await supabase
+        .from('discrepancies')
+        .select('id, display_id, title, status')
+        .eq('infrastructure_feature_id', id)
+        .eq('status', 'open')
+      if (linkedDiscs && linkedDiscs.length > 0) {
+        const discList = linkedDiscs.map((d: any) => d.display_id).join(', ')
+        if (confirm(`Close linked discrepanc${linkedDiscs.length > 1 ? 'ies' : 'y'} ${discList}?`)) {
+          for (const d of linkedDiscs) {
+            await supabase
+              .from('discrepancies')
+              .update({
+                status: 'completed',
+                resolution_notes: 'Resolved — feature marked operational from Visual NAVAIDs map',
+                resolution_date: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              } as any)
+              .eq('id', d.id)
+          }
+          toast.success(`Closed ${linkedDiscs.length} linked discrepanc${linkedDiscs.length > 1 ? 'ies' : 'y'}`)
+        }
+      }
+    }
   }
 
   // Assign component handler
@@ -1433,6 +1508,24 @@ export default function InfrastructureMapPage() {
         if (layer.renderType === 'symbol') {
           const iconName = ICON_MAP[layer.types[0]]
           const isSignLayer = SIGN_COLORS[layer.types[0]] !== undefined
+          // Red circle underlay for inoperative symbol features
+          m.addLayer({
+            id: `${layer.key}-inop-ring`,
+            type: 'circle',
+            source: 'infrastructure',
+            filter: ['all', ...filterExpr.slice(1), ['==', ['get', 'status'], 'inoperative']] as any,
+            paint: {
+              'circle-radius': [
+                'interpolate', ['linear'], ['zoom'],
+                12, 4, 14, 7, 16, 11, 18, 16,
+              ],
+              'circle-color': '#EF4444',
+              'circle-opacity': 0.35,
+              'circle-stroke-color': '#EF4444',
+              'circle-stroke-width': 2,
+              'circle-stroke-opacity': 0.9,
+            },
+          })
           m.addLayer({
             id: layer.key,
             type: 'symbol',
@@ -2619,6 +2712,29 @@ export default function InfrastructureMapPage() {
             minWidth: 200,
             backdropFilter: 'blur(8px)',
           }}>
+            {/* Show outages only toggle */}
+            {dbFeatures.some(f => f.status === 'inoperative') && (
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '4px 0 6px',
+                marginBottom: 4,
+                borderBottom: '1px solid rgba(148, 163, 184, 0.15)',
+                cursor: 'pointer',
+                fontSize: 11,
+                color: showOutagesOnly ? '#EF4444' : '#94A3B8',
+                fontWeight: showOutagesOnly ? 700 : 400,
+              }}>
+                <input
+                  type="checkbox"
+                  checked={showOutagesOnly}
+                  onChange={() => setShowOutagesOnly(prev => !prev)}
+                  style={{ accentColor: '#EF4444' }}
+                />
+                Show outages only ({dbFeatures.filter(f => f.status === 'inoperative').length})
+              </label>
+            )}
             {LAYER_GROUPS.map(groupName => {
               const groupLayers = LAYERS.filter(l => l.group === groupName)
               const groupCount = groupLayers.reduce((sum, l) => sum + (featureCounts[l.key] || 0), 0)
@@ -3053,6 +3169,160 @@ export default function InfrastructureMapPage() {
           border-top-color: rgba(15, 23, 42, 0.95) !important;
         }
       `}</style>
+
+      {/* Outage Alert Dialog */}
+      {outageAlert && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0,0,0,0.6)',
+          }}
+          onClick={() => setOutageAlert(null)}
+        >
+          <div
+            style={{
+              background: 'var(--color-bg-surface-solid, #1E293B)',
+              border: '1px solid rgba(239,68,68,0.4)',
+              borderRadius: 12,
+              padding: '20px 24px',
+              maxWidth: 480,
+              width: '90%',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {outageAlert.exceeded.length > 0 && (
+              <>
+                <div style={{ color: '#EF4444', fontWeight: 700, fontSize: 16, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 20 }}>{'\u26D4'}</span> OUTAGE EXCEEDS ALLOWABLE LIMIT
+                </div>
+                {outageAlert.exceeded.map((cs, i) => (
+                  <div key={i} style={{ marginBottom: 16, padding: '12px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8 }}>
+                    <div style={{ color: 'var(--color-text-1, #E2E8F0)', fontWeight: 600, marginBottom: 4 }}>
+                      {outageAlert.systemName} &mdash; {cs.componentLabel}
+                    </div>
+                    <div style={{ color: 'var(--color-text-2, #CBD5E1)', fontSize: 14, marginBottom: 4 }}>
+                      {cs.inoperativeCount}/{cs.totalCount} out ({cs.outagePct}%)
+                      {cs.allowableOutageText && (
+                        <span style={{ color: 'var(--color-text-3, #94A3B8)' }}> &mdash; Allowable: {cs.allowableOutageText}</span>
+                      )}
+                    </div>
+                    {cs.hasAdjacentViolation && (
+                      <div style={{ color: '#EF4444', fontSize: 13, marginTop: 2 }}>Adjacent lamp violation detected</div>
+                    )}
+                    {cs.hasConsecutiveViolation && (
+                      <div style={{ color: '#EF4444', fontSize: 13, marginTop: 2 }}>Consecutive lamp violation ({cs.allowableConsecutive} max)</div>
+                    )}
+                    <div style={{ marginTop: 10, fontWeight: 600, fontSize: 13, color: 'var(--color-text-1, #E2E8F0)' }}>
+                      REQUIRED ACTIONS:
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--color-text-2, #CBD5E1)', marginTop: 4 }}>
+                      {cs.requiredActions.notam && (
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 4 }}>
+                          <span>{'\u2610'}</span>
+                          <span>
+                            Issue NOTAM{cs.qCode ? ` (${cs.qCode})` : ''}
+                            {cs.notamTemplate && (
+                              <span style={{ display: 'block', fontSize: 12, color: 'var(--color-text-3, #94A3B8)', marginTop: 2 }}>
+                                {cs.notamTemplate}
+                                <button
+                                  onClick={() => { navigator.clipboard.writeText(cs.notamTemplate || ''); toast.success('NOTAM text copied') }}
+                                  style={{ marginLeft: 8, background: 'none', border: '1px solid rgba(148,163,184,0.3)', color: 'var(--color-text-2, #CBD5E1)', padding: '1px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 11, fontFamily: 'inherit' }}
+                                >
+                                  Copy
+                                </button>
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      )}
+                      {cs.requiredActions.notifyCE && (
+                        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                          <span>{'\u2610'}</span>
+                          <span>Notify CE Electrical / Airfield Lighting</span>
+                        </div>
+                      )}
+                      {cs.requiredActions.notifyTerps && (
+                        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                          <span>{'\u2610'}</span>
+                          <span>Notify TERPs &mdash; may impact instrument procedures</span>
+                        </div>
+                      )}
+                      {cs.requiredActions.obstructionNotamAttrs && (
+                        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                          <span>{'\u2610'}</span>
+                          <span>NOTAM must include obstruction attributes (FAAO JO 7930.2)</span>
+                        </div>
+                      )}
+                    </div>
+                    {cs.requiredActions.systemShutoff && (
+                      <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(239,68,68,0.12)', borderRadius: 6, color: '#EF4444', fontWeight: 600, fontSize: 13 }}>
+                        SYSTEM SHUTOFF MAY BE REQUIRED
+                        <div style={{ fontWeight: 400, fontSize: 12, marginTop: 2 }}>
+                          Waiver: Installation Commander (&le;24hr) / MAJCOM/A3 (&gt;24hr)
+                        </div>
+                        <div style={{ fontWeight: 400, fontSize: 12 }}>Civil aircraft operations PROHIBITED</div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
+            {outageAlert.approaching.length > 0 && (
+              <>
+                <div style={{ color: '#F59E0B', fontWeight: 700, fontSize: 15, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 18 }}>{'\u26A0'}</span> APPROACHING OUTAGE LIMIT
+                </div>
+                {outageAlert.approaching.map((cs, i) => (
+                  <div key={i} style={{ marginBottom: 8, padding: '10px 14px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8 }}>
+                    <div style={{ color: 'var(--color-text-1, #E2E8F0)', fontWeight: 600, marginBottom: 2 }}>
+                      {outageAlert.systemName} &mdash; {cs.componentLabel}
+                    </div>
+                    <div style={{ color: '#F59E0B', fontSize: 13 }}>
+                      {cs.inoperativeCount}/{cs.totalCount} out ({cs.outagePct}%) &mdash;{' '}
+                      {cs.allowablePct != null
+                        ? `${Math.round(cs.allowablePct - cs.outagePct)}% remaining`
+                        : cs.allowableCount != null
+                        ? `${cs.allowableCount - cs.inoperativeCount} more allowed`
+                        : 'Monitor closely'}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+            {outageAlert.discrepancyId && (
+              <div style={{ marginTop: 8, fontSize: 13, color: 'var(--color-text-3, #94A3B8)' }}>
+                Discrepancy <strong style={{ color: 'var(--color-text-1, #E2E8F0)' }}>{outageAlert.discrepancyId}</strong> auto-created &mdash; assigned to Airfield Management
+              </div>
+            )}
+            <button
+              onClick={() => setOutageAlert(null)}
+              style={{
+                marginTop: 16,
+                width: '100%',
+                padding: '10px 0',
+                border: 'none',
+                borderRadius: 6,
+                background: 'var(--color-bg-inset, #334155)',
+                color: 'var(--color-text-1, #E2E8F0)',
+                fontWeight: 600,
+                fontSize: 14,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              Acknowledged
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
