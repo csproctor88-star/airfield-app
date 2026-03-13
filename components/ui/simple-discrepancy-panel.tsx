@@ -6,6 +6,7 @@ import { ExpandableTextarea } from '@/components/ui/expandable-textarea'
 import { X, AlertTriangle } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { DISCREPANCY_TYPES } from '@/lib/constants'
+import { ZoomableImage } from '@/components/ui/zoomable-image'
 import type { SimpleDiscrepancy } from '@/lib/supabase/types'
 
 const LocationMap = dynamic(
@@ -366,10 +367,9 @@ export function SimpleDiscrepancyPanel({
           <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 8 }}>
             {localPhotos[viewerIndex].name} — {viewerIndex + 1} of {localPhotos.length}
           </div>
-          <img
+          <ZoomableImage
             src={localPhotos[viewerIndex].url}
             alt={localPhotos[viewerIndex].name}
-            style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: 8 }}
           />
           {localPhotos.length > 1 && (
             <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>

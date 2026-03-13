@@ -446,6 +446,8 @@ export function WorkOrderModal({
 
 // ─── Photo Viewer Modal ─────────────────────────────────────────────
 
+import { ZoomableImage } from '@/components/ui/zoomable-image'
+
 export function PhotoViewerModal({
   photos, initialIndex = 0, onClose,
 }: {
@@ -476,11 +478,7 @@ export function PhotoViewerModal({
         {photo.name} — {index + 1} of {photos.length}
       </div>
 
-      <img
-        src={photo.url}
-        alt={photo.name}
-        style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: 8 }}
-      />
+      <ZoomableImage src={photo.url} alt={photo.name} />
 
       {photos.length > 1 && (
         <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>
