@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { FileText, AlertTriangle, TrendingUp, Clock } from 'lucide-react'
+import { FileText, AlertTriangle, TrendingUp, Clock, Lightbulb } from 'lucide-react'
 
 const REPORT_CARDS = [
   {
@@ -31,6 +31,13 @@ const REPORT_CARDS = [
     href: '/reports/aging',
     icon: Clock,
     color: '#EF4444',
+  },
+  {
+    title: 'Airfield Lighting Report',
+    description: 'Overview of airfield lighting system health — feature counts, outage status, and DAFMAN compliance by system.',
+    href: '/reports/lighting',
+    icon: Lightbulb,
+    color: '#22C55E',
   },
 ]
 
