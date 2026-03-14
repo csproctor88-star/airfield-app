@@ -59,6 +59,7 @@ export default function RootLayout({
           <Toaster
             position="top-center"
             richColors
+            visibleToasts={2}
             toastOptions={{
               style: {
                 background: 'var(--color-toast-bg)',

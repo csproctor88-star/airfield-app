@@ -1176,7 +1176,7 @@ export default function InfrastructureMapPage() {
     const refreshed = await fetchInfrastructureFeatures(installationId)
     setDbFeatures(refreshed)
     fetchOutageEventsForBase(installationId, 20).then(setOutageEvents)
-    toast.success('Feature marked operational')
+    let closedDiscs = 0
 
     // Check for linked open discrepancies and prompt to close
     const supabase = createClient()
@@ -1210,10 +1210,14 @@ export default function InfrastructureMapPage() {
               } as any)
               .eq('id', d.id)
           }
-          toast.success(`Closed ${linkedDiscs.length} linked discrepanc${linkedDiscs.length > 1 ? 'ies' : 'y'}`)
+          closedDiscs = linkedDiscs.length
         }
       }
     }
+
+    const opParts = ['Feature marked operational']
+    if (closedDiscs > 0) opParts.push(`${closedDiscs} discrepanc${closedDiscs > 1 ? 'ies' : 'y'} closed`)
+    toast.success(opParts.join(' — '))
   }
 
   // Assign component handler

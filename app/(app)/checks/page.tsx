@@ -487,10 +487,6 @@ export default function AirfieldChecksPage() {
       }
       discCreated++
     }
-    if (discCreated > 0) {
-      toast.success(`${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'} logged`)
-    }
-
     // Clean up draft (DB + localStorage)
     if (draftDbRowId) {
       await deleteCheckDraft(draftDbRowId)
@@ -499,7 +495,10 @@ export default function AirfieldChecksPage() {
     }
     clearCheckDraft(installationId)
     setSaving(false)
-    toast.success(`Check ${created.display_id} completed`)
+    const summary = discCreated > 0
+      ? `Check ${created.display_id} filed — ${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'} logged`
+      : `Check ${created.display_id} completed`
+    toast.success(summary)
     router.push(`/checks/${created.id}`)
   }
 

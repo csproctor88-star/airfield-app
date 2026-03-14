@@ -841,16 +841,13 @@ export default function InspectionsPage() {
     // Persist the cleared flags back into the draft
     if (discCreated > 0) {
       updateHalf(targetTab, (h) => ({ ...h, discrepancies: { ...completedHalf.discrepancies } }))
-      toast.success(`${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'} logged`)
     }
 
     const tabLabels: Record<TabType, string> = { airfield: 'Airfield', lighting: 'Lighting' }
     setSaving(false)
-    toast.success(`${tabLabels[targetTab]} inspection completed`, {
-      description: weather
-        ? `${weather.conditions}, ${weather.temperature_f}°F`
-        : 'Weather data unavailable',
-    })
+    const parts = [`${tabLabels[targetTab]} inspection completed`]
+    if (discCreated > 0) parts.push(`${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'} logged`)
+    toast.success(parts.join(' — '))
 
     await loadHistory()
 
@@ -1156,9 +1153,7 @@ export default function InspectionsPage() {
           }
         }
       }
-      if (discCreated > 0) {
-        toast.success(`${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'} logged`)
-      }
+      let featuresMarkedInop = 0
 
       // ── Auto-mark infrastructure features as inoperative (from linked lighting systems) ──
       if (installationId) {
@@ -1201,7 +1196,7 @@ export default function InspectionsPage() {
           }
 
           if (marked > 0) {
-            toast.success(`${marked} feature${marked !== 1 ? 's' : ''} marked inoperative`)
+            featuresMarkedInop = marked
           }
 
           // Check DAFMAN thresholds
@@ -1246,9 +1241,10 @@ export default function InspectionsPage() {
 
       clearDraft(installationId)
       setDraft(null)
-      toast.success(`Inspection${filed !== 1 ? 's' : ''} filed`, {
-        description: `${filed} record${filed !== 1 ? 's' : ''} saved to history`,
-      })
+      const fileParts = [`Inspection${filed !== 1 ? 's' : ''} filed`]
+      if (discCreated > 0) fileParts.push(`${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'}`)
+      if (featuresMarkedInop > 0) fileParts.push(`${featuresMarkedInop} feature${featuresMarkedInop !== 1 ? 's' : ''} marked inop`)
+      toast.success(fileParts.join(' — '))
       if (filedId) {
         router.push(`/inspections/${filedId}`)
         return
