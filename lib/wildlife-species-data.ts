@@ -1063,7 +1063,6 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
   { common_name: 'Wedge-tailed Shearwater', scientific_name: 'Ardenna pacifica', group: 'bird', size_category: 'medium', mean_mass_g: 400, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
   { common_name: 'Common Myna', scientific_name: 'Acridotheres tristis', group: 'bird', size_category: 'medium', mean_mass_g: 120, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
   { common_name: 'Pacific Golden-Plover', scientific_name: 'Pluvialis fulva', group: 'bird', size_category: 'medium', mean_mass_g: 145, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
-  { common_name: 'Willow Ptarmigan', scientific_name: 'Lagopus lagopus', group: 'bird', size_category: 'medium', mean_mass_g: 550, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
   { common_name: 'Rock Ptarmigan', scientific_name: 'Lagopus muta', group: 'bird', size_category: 'medium', mean_mass_g: 450, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
   { common_name: "Steller's Sea-Eagle", scientific_name: 'Haliaeetus pelagicus', group: 'bird', size_category: 'large', mean_mass_g: 6200, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
 
@@ -1100,7 +1099,6 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
   { common_name: 'Rock Squirrel', scientific_name: 'Otospermophilus variegatus', group: 'mammal', size_category: 'medium', mean_mass_g: 700, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
   { common_name: "Richardson's Ground Squirrel", scientific_name: 'Urocitellus richardsonii', group: 'mammal', size_category: 'small', mean_mass_g: 300, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
   { common_name: 'California Ground Squirrel', scientific_name: 'Otospermophilus beecheyi', group: 'mammal', size_category: 'medium', mean_mass_g: 600, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
-  { common_name: 'Kangaroo Rat (spp.)', scientific_name: 'Dipodomys spp.', group: 'mammal', size_category: 'small', mean_mass_g: 45, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
   { common_name: 'White-tailed Prairie Dog', scientific_name: 'Cynomys leucurus', group: 'mammal', size_category: 'medium', mean_mass_g: 800, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
   { common_name: "Gunnison's Prairie Dog", scientific_name: 'Cynomys gunnisoni', group: 'mammal', size_category: 'medium', mean_mass_g: 700, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
   { common_name: 'Long-tailed Weasel', scientific_name: 'Mustela frenata', group: 'mammal', size_category: 'small', mean_mass_g: 200, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },

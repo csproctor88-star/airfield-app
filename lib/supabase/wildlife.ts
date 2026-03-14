@@ -225,6 +225,46 @@ export async function fetchSighting(id: string): Promise<WildlifeSightingRow | n
   return data as WildlifeSightingRow
 }
 
+export async function updateSighting(
+  id: string,
+  input: {
+    species_common?: string
+    species_scientific?: string | null
+    species_group?: string
+    size_category?: string | null
+    count_observed?: number
+    behavior?: string | null
+    latitude?: number | null
+    longitude?: number | null
+    location_text?: string | null
+    airfield_zone?: string | null
+    time_of_day?: string | null
+    sky_condition?: string | null
+    precipitation?: string | null
+    action_taken?: string | null
+    dispersal_method?: string | null
+    dispersal_effective?: boolean | null
+    notes?: string | null
+  },
+): Promise<{ data: WildlifeSightingRow | null; error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { data: null, error: 'Supabase not configured' }
+
+  const { data, error } = await supabase
+    .from('wildlife_sightings')
+    .update(input as any)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Failed to update sighting:', error.message)
+    return { data: null, error: error.message }
+  }
+
+  return { data: data as WildlifeSightingRow, error: null }
+}
+
 export async function deleteSighting(id: string): Promise<{ error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
@@ -406,6 +446,60 @@ export async function fetchStrike(id: string): Promise<WildlifeStrikeRow | null>
   }
 
   return data as WildlifeStrikeRow
+}
+
+export async function updateStrike(
+  id: string,
+  input: {
+    species_common?: string | null
+    species_scientific?: string | null
+    species_group?: string | null
+    size_category?: string | null
+    number_struck?: number
+    number_seen?: number | null
+    latitude?: number | null
+    longitude?: number | null
+    location_text?: string | null
+    time_of_day?: string | null
+    sky_condition?: string | null
+    precipitation?: string | null
+    aircraft_type?: string | null
+    aircraft_registration?: string | null
+    engine_type?: string | null
+    phase_of_flight?: string | null
+    altitude_agl?: number | null
+    speed_ias?: number | null
+    pilot_warned?: boolean | null
+    parts_struck?: string[]
+    parts_damaged?: string[]
+    damage_level?: string | null
+    engine_ingested?: boolean
+    flight_effect?: string | null
+    repair_cost?: number | null
+    other_cost?: number | null
+    hours_out_of_service?: number | null
+    remains_collected?: boolean
+    remains_sent_to_lab?: boolean
+    lab_identification?: string | null
+    notes?: string | null
+  },
+): Promise<{ data: WildlifeStrikeRow | null; error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { data: null, error: 'Supabase not configured' }
+
+  const { data, error } = await supabase
+    .from('wildlife_strikes')
+    .update(input as any)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Failed to update strike:', error.message)
+    return { data: null, error: error.message }
+  }
+
+  return { data: data as WildlifeStrikeRow, error: null }
 }
 
 export async function deleteStrike(id: string): Promise<{ error: string | null }> {

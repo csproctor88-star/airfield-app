@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
-import { createSighting } from '@/lib/supabase/wildlife'
-import { type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
+import { createSighting, updateSighting, type WildlifeSightingRow } from '@/lib/supabase/wildlife'
+import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import {
   WILDLIFE_BEHAVIORS,
   WILDLIFE_ACTIONS,
@@ -27,31 +27,36 @@ type Props = {
   baseId?: string | null
   onClose: () => void
   onSaved: () => void
+  initialData?: WildlifeSightingRow | null
 }
 
-export function SightingForm({ currentUser, baseId, onClose, onSaved }: Props) {
+export function SightingForm({ currentUser, baseId, onClose, onSaved, initialData }: Props) {
   const { areas: installationAreas } = useInstallation()
+  const isEdit = !!initialData
 
   const [userId, setUserId] = useState<string | null>(null)
-  const [selectedSpecies, setSelectedSpecies] = useState<WildlifeSpecies | null>(null)
+  const [selectedSpecies, setSelectedSpecies] = useState<WildlifeSpecies | null>(() => {
+    if (initialData) return WILDLIFE_SPECIES.find(s => s.common_name === initialData.species_common) ?? null
+    return null
+  })
   const [showPicker, setShowPicker] = useState(false)
-  const [countObserved, setCountObserved] = useState(1)
-  const [behavior, setBehavior] = useState('')
-  const [locationText, setLocationText] = useState('')
-  const [airfieldZone, setAirfieldZone] = useState('')
-  const [timeOfDay, setTimeOfDay] = useState('')
-  const [skyCondition, setSkyCondition] = useState('')
-  const [precipitation, setPrecipitation] = useState('')
-  const [actionTaken, setActionTaken] = useState('none')
-  const [dispersalMethod, setDispersalMethod] = useState('')
-  const [dispersalEffective, setDispersalEffective] = useState<boolean | null>(null)
-  const [notes, setNotes] = useState('')
+  const [countObserved, setCountObserved] = useState(initialData?.count_observed ?? 1)
+  const [behavior, setBehavior] = useState(initialData?.behavior ?? '')
+  const [locationText, setLocationText] = useState(initialData?.location_text ?? '')
+  const [airfieldZone, setAirfieldZone] = useState(initialData?.airfield_zone ?? '')
+  const [timeOfDay, setTimeOfDay] = useState(initialData?.time_of_day ?? '')
+  const [skyCondition, setSkyCondition] = useState(initialData?.sky_condition ?? '')
+  const [precipitation, setPrecipitation] = useState(initialData?.precipitation ?? '')
+  const [actionTaken, setActionTaken] = useState(initialData?.action_taken ?? 'none')
+  const [dispersalMethod, setDispersalMethod] = useState(initialData?.dispersal_method ?? '')
+  const [dispersalEffective, setDispersalEffective] = useState<boolean | null>(initialData?.dispersal_effective ?? null)
+  const [notes, setNotes] = useState(initialData?.notes ?? '')
   const [saving, setSaving] = useState(false)
-  const [latitude, setLatitude] = useState<number | null>(null)
-  const [longitude, setLongitude] = useState<number | null>(null)
+  const [latitude, setLatitude] = useState<number | null>(initialData?.latitude ?? null)
+  const [longitude, setLongitude] = useState<number | null>(initialData?.longitude ?? null)
   const [gpsLoading, setGpsLoading] = useState(false)
   const [flyToPoint, setFlyToPoint] = useState<{ lat: number; lng: number } | null>(null)
-  const [showMap, setShowMap] = useState(false)
+  const [showMap, setShowMap] = useState(true)
 
   // Get current user ID
   useEffect(() => {
@@ -62,14 +67,15 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved }: Props) {
     })
   }, [])
 
-  // Auto-detect time of day
+  // Auto-detect time of day (skip when editing)
   useEffect(() => {
+    if (isEdit) return
     const hour = new Date().getHours()
     if (hour >= 5 && hour < 7) setTimeOfDay('dawn')
     else if (hour >= 7 && hour < 17) setTimeOfDay('day')
     else if (hour >= 17 && hour < 19) setTimeOfDay('dusk')
     else setTimeOfDay('night')
-  }, [])
+  }, [isEdit])
 
   const handlePointSelected = useCallback((lat: number, lng: number) => {
     setLatitude(lat)
@@ -117,6 +123,34 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved }: Props) {
     if (!selectedSpecies) { toast.error('Select a species'); return }
 
     setSaving(true)
+
+    if (isEdit && initialData) {
+      const { error } = await updateSighting(initialData.id, {
+        species_common: selectedSpecies.common_name,
+        species_scientific: selectedSpecies.scientific_name,
+        species_group: selectedSpecies.group,
+        size_category: selectedSpecies.size_category,
+        count_observed: countObserved,
+        behavior: behavior || null,
+        latitude,
+        longitude,
+        location_text: locationText || null,
+        airfield_zone: airfieldZone || null,
+        time_of_day: timeOfDay || null,
+        sky_condition: skyCondition || null,
+        precipitation: precipitation || null,
+        action_taken: actionTaken,
+        dispersal_method: actionTaken !== 'none' ? dispersalMethod || null : null,
+        dispersal_effective: actionTaken !== 'none' ? dispersalEffective : null,
+        notes: notes || null,
+      })
+      setSaving(false)
+      if (error) { toast.error(error); return }
+      toast.success('Sighting updated')
+      onSaved()
+      return
+    }
+
     const { error } = await createSighting({
       species_common: selectedSpecies.common_name,
       species_scientific: selectedSpecies.scientific_name,
@@ -180,7 +214,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved }: Props) {
           padding: 20,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>Log Wildlife Sighting</div>
+            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>{isEdit ? 'Edit Sighting' : 'Log Wildlife Sighting'}</div>
             <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: 'var(--color-text-3)' }}>×</button>
           </div>
 
@@ -411,7 +445,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved }: Props) {
               color: '#fff', fontWeight: 800, fontSize: 'var(--fs-md)', cursor: 'pointer',
             }}
           >
-            {saving ? 'Saving...' : 'Log Sighting'}
+            {saving ? 'Saving...' : isEdit ? 'Update Sighting' : 'Log Sighting'}
           </button>
         </div>
       </div>

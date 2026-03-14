@@ -6,6 +6,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
 import {
   fetchSightings, fetchStrikes, deleteSighting, deleteStrike,
+  fetchSighting, fetchStrike,
   type WildlifeSightingRow, type WildlifeStrikeRow,
 } from '@/lib/supabase/wildlife'
 import { formatZuluDateTime } from '@/lib/utils'
@@ -27,6 +28,8 @@ export default function WildlifePage() {
   const [tab, setTab] = useState<Tab>('log')
   const [showSightingForm, setShowSightingForm] = useState(false)
   const [showStrikeForm, setShowStrikeForm] = useState(false)
+  const [editingSighting, setEditingSighting] = useState<WildlifeSightingRow | null>(null)
+  const [editingStrike, setEditingStrike] = useState<WildlifeStrikeRow | null>(null)
   const [sightings, setSightings] = useState<WildlifeSightingRow[]>([])
   const [strikes, setStrikes] = useState<WildlifeStrikeRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -86,6 +89,18 @@ export default function WildlifePage() {
     if (error) { toast.error(error); return }
     toast.success('Strike report deleted')
     loadData()
+  }
+
+  async function handleEditSighting(id: string) {
+    const row = await fetchSighting(id)
+    if (!row) { toast.error('Could not load sighting'); return }
+    setEditingSighting(row)
+  }
+
+  async function handleEditStrike(id: string) {
+    const row = await fetchStrike(id)
+    if (!row) { toast.error('Could not load strike report'); return }
+    setEditingStrike(row)
   }
 
   // Merge sightings and strikes into a unified timeline
@@ -198,6 +213,28 @@ export default function WildlifePage() {
           baseId={installationId}
           onClose={() => setShowStrikeForm(false)}
           onSaved={() => { setShowStrikeForm(false); loadData() }}
+        />
+      )}
+
+      {/* Edit Sighting Modal */}
+      {editingSighting && (
+        <SightingForm
+          currentUser={currentUser}
+          baseId={installationId}
+          initialData={editingSighting}
+          onClose={() => setEditingSighting(null)}
+          onSaved={() => { setEditingSighting(null); loadData() }}
+        />
+      )}
+
+      {/* Edit Strike Modal */}
+      {editingStrike && (
+        <StrikeForm
+          currentUser={currentUser}
+          baseId={installationId}
+          initialData={editingStrike}
+          onClose={() => setEditingStrike(null)}
+          onSaved={() => { setEditingStrike(null); loadData() }}
         />
       )}
 
@@ -325,18 +362,32 @@ export default function WildlifePage() {
                       )}
                     </div>
 
-                    {/* Delete */}
-                    <button
-                      onClick={() => isSighting ? handleDeleteSighting(entry.id) : handleDeleteStrike(entry.id)}
-                      title="Delete"
-                      style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: 'var(--color-text-4)', fontSize: 16, padding: 4,
-                        flexShrink: 0,
-                      }}
-                    >
-                      ×
-                    </button>
+                    {/* Edit + Delete */}
+                    <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                      <button
+                        onClick={() => isSighting ? handleEditSighting(entry.id) : handleEditStrike(entry.id)}
+                        title="Edit"
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          color: 'var(--color-text-4)', fontSize: 14, padding: 4,
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => isSighting ? handleDeleteSighting(entry.id) : handleDeleteStrike(entry.id)}
+                        title="Delete"
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          color: 'var(--color-text-4)', fontSize: 16, padding: 4,
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
                   </div>
                 )
               })}

@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """
-Download USFWS wildlife species images for offline use.
+Download wildlife species images for offline use.
+
+Sources (in priority order):
+  1. USFWS Digital Media Library (public domain, U.S. Government work)
+  2. Wikimedia Commons API (CC-licensed, proper API — not page scraping)
+  3. iNaturalist API (CC-licensed, no API key needed)
 
 Follows the same pattern as scrape_aircraft_images.py:
   - Downloads images to /public/wildlife_images/{group}/
@@ -9,8 +14,6 @@ Follows the same pattern as scrape_aircraft_images.py:
 
 Usage:
     python scripts/scrape_wildlife_images.py
-
-All images are public domain (U.S. Government work — USFWS).
 """
 
 import json
@@ -20,13 +23,16 @@ import sys
 import time
 import urllib.request
 import urllib.error
+import urllib.parse
 from pathlib import Path
 
 # ── Config ──────────────────────────────────────────────────────────
 
 IIIF_BASE = "https://digitalmedia.fws.gov/digital/iiif/natdiglib"
-# Fallback: Wikimedia Commons search for species without USFWS IDs
-WIKI_API = "https://en.wikipedia.org/w/api.php"
+COMMONS_API = "https://commons.wikimedia.org/w/api.php"
+INAT_API = "https://api.inaturalist.org/v1"
+
+USER_AGENT = "GlidepathApp/1.0 (wildlife-image-downloader; airfield-safety-app)"
 
 PUBLIC_DIR = Path(__file__).resolve().parent.parent / "public"
 IMAGE_DIR = PUBLIC_DIR / "wildlife_images"
@@ -279,7 +285,6 @@ SPECIES = [
     ("Wedge-tailed Shearwater", "Ardenna pacifica", "bird", None),
     ("Common Myna", "Acridotheres tristis", "bird", None),
     ("Pacific Golden-Plover", "Pluvialis fulva", "bird", None),
-    ("Willow Ptarmigan", "Lagopus lagopus", "bird", None),
     ("Rock Ptarmigan", "Lagopus muta", "bird", None),
     ("Steller's Sea-Eagle", "Haliaeetus pelagicus", "bird", None),
     # Additional Mammals — Large
@@ -310,7 +315,6 @@ SPECIES = [
     ("Rock Squirrel", "Otospermophilus variegatus", "mammal", None),
     ("Richardson's Ground Squirrel", "Urocitellus richardsonii", "mammal", None),
     ("California Ground Squirrel", "Otospermophilus beecheyi", "mammal", None),
-    ("Kangaroo Rat (spp.)", "Dipodomys spp.", "mammal", None),
     ("White-tailed Prairie Dog", "Cynomys leucurus", "mammal", None),
     ("Gunnison's Prairie Dog", "Cynomys gunnisoni", "mammal", None),
     ("Long-tailed Weasel", "Mustela frenata", "mammal", None),
@@ -345,72 +349,151 @@ def safe_filename(name: str) -> str:
     return re.sub(r'[^a-z0-9_]', '', name.lower().replace(' ', '_').replace('-', '_').replace("'", ''))
 
 
+def download_image(url: str, dest: Path, timeout: int = 30) -> bool:
+    """Download an image URL to dest. Returns True on success."""
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            content_type = resp.headers.get("Content-Type", "")
+            data = resp.read()
+            # Reject HTML error pages
+            if "text/html" in content_type or data[:20].lower().startswith((b"<!doctype", b"<html")):
+                return False
+            if len(data) < 500:
+                return False
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(data)
+            return True
+    except Exception:
+        return False
+
+
 def download_usfws(natdiglib_id: int, dest: Path) -> str | None:
     """Download image from USFWS IIIF endpoint. Returns source URL or None."""
     url = f"{IIIF_BASE}/{natdiglib_id}/full/800,/0/default.jpg"
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "GlidepathApp/1.0 (wildlife-image-downloader)"})
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            content_type = resp.headers.get("Content-Type", "")
-            data = resp.read()
-            # Reject HTML error pages and tiny responses
-            if "text/html" in content_type or data[:20].lower().startswith((b"<!doctype", b"<html")):
-                print(f"    ! USFWS returned HTML, not an image")
-                return None
-            if len(data) < 1000:
-                print(f"    ! Suspiciously small response ({len(data)} bytes), skipping")
-                return None
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes(data)
-            return url
-    except (urllib.error.URLError, urllib.error.HTTPError, OSError) as e:
-        print(f"    ! USFWS download failed: {e}")
+    if download_image(url, dest):
+        return url
+    print(f"    ! USFWS download failed")
+    return None
+
+
+def download_commons_image(scientific_name: str, common_name: str, dest: Path) -> tuple[str, str] | None:
+    """
+    Search Wikimedia Commons API for species image.
+    Uses the proper API endpoint (not Wikipedia page scraping).
+    Returns (source_url, page_url) or None.
+    """
+    # Try scientific name first, then common name
+    for search_term in [scientific_name, common_name]:
+        params = urllib.parse.urlencode({
+            "action": "query",
+            "generator": "search",
+            "gsrnamespace": "6",  # File namespace
+            "gsrsearch": f"{search_term} animal",
+            "gsrlimit": "5",
+            "prop": "imageinfo",
+            "iiprop": "url|size|mime",
+            "iiurlwidth": "800",
+            "format": "json",
+        })
+        url = f"{COMMONS_API}?{params}"
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = json.loads(resp.read())
+
+            pages = data.get("query", {}).get("pages", {})
+            if not pages:
+                continue
+
+            # Find best image: prefer JPEG, reasonable size
+            best = None
+            for page_id, page in pages.items():
+                info_list = page.get("imageinfo", [])
+                if not info_list:
+                    continue
+                info = info_list[0]
+                mime = info.get("mime", "")
+                if "image" not in mime:
+                    continue
+                # Prefer the resized thumb URL if available
+                thumb_url = info.get("thumburl") or info.get("url")
+                page_url = info.get("descriptionurl", "")
+                if thumb_url:
+                    best = (thumb_url, page_url)
+                    break  # take first good result
+
+            if best:
+                thumb_url, page_url = best
+                if download_image(thumb_url, dest):
+                    return (thumb_url, page_url)
+
+        except Exception as e:
+            print(f"    ! Commons API error: {e}")
+            continue
+
+    return None
+
+
+def download_inaturalist_image(scientific_name: str, dest: Path) -> tuple[str, str] | None:
+    """
+    Search iNaturalist API for species photo.
+    Returns (photo_url, taxa_page_url) or None.
+    """
+    # Skip generic "spp." entries
+    if "spp." in scientific_name:
         return None
 
-
-def download_wikipedia_image(scientific_name: str, dest: Path) -> tuple[str, str] | None:
-    """Fallback: fetch thumbnail from Wikipedia article. Returns (source_url, page_url) or None."""
-    # Search for the Wikipedia article
     params = urllib.parse.urlencode({
-        "action": "query",
-        "titles": scientific_name,
-        "prop": "pageimages",
-        "pithumbsize": 800,
-        "format": "json",
-        "redirects": 1,
+        "q": scientific_name,
+        "per_page": "3",
+        "is_active": "true",
     })
-    url = f"{WIKI_API}?{params}"
+    url = f"{INAT_API}/taxa?{params}"
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "GlidepathApp/1.0 (wildlife-image-downloader)"})
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read())
 
-        pages = data.get("query", {}).get("pages", {})
-        for page_id, page in pages.items():
-            if page_id == "-1":
-                continue
-            thumb = page.get("thumbnail", {}).get("source")
-            if not thumb:
-                continue
-            # Download the thumbnail
-            req2 = urllib.request.Request(thumb, headers={"User-Agent": "GlidepathApp/1.0"})
-            with urllib.request.urlopen(req2, timeout=30) as resp2:
-                img_data = resp2.read()
-                if len(img_data) < 500:
+        results = data.get("results", [])
+        for taxon in results:
+            # Match on scientific name (case-insensitive)
+            taxon_name = taxon.get("name", "")
+            if taxon_name.lower() != scientific_name.lower():
+                # Also check if our name is a subspecies match
+                if not scientific_name.lower().startswith(taxon_name.lower()):
                     continue
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                dest.write_bytes(img_data)
-                page_url = f"https://en.wikipedia.org/wiki/{urllib.parse.quote(scientific_name.replace(' ', '_'))}"
-                return (thumb, page_url)
+
+            photo = taxon.get("default_photo")
+            if not photo:
+                continue
+
+            # Use medium_url (500px) or original
+            photo_url = photo.get("medium_url") or photo.get("url")
+            if not photo_url:
+                continue
+
+            # Upgrade to larger size: replace "medium" with "large" in URL (iNat convention)
+            photo_url_large = photo_url.replace("/medium.", "/large.").replace("square.", "large.")
+
+            taxa_url = f"https://www.inaturalist.org/taxa/{taxon.get('id', '')}"
+
+            if download_image(photo_url_large, dest):
+                return (photo_url_large, taxa_url)
+            # Fallback to medium if large fails
+            if download_image(photo_url, dest):
+                return (photo_url, taxa_url)
+
     except Exception as e:
-        print(f"    ✗ Wikipedia fallback failed: {e}")
+        print(f"    ! iNaturalist API error: {e}")
+
     return None
 
 
 def main():
     print("=" * 60)
     print("Wildlife Species Image Downloader")
-    print("Downloads USFWS public-domain photos for offline use")
+    print("Sources: USFWS > Wikimedia Commons > iNaturalist")
     print("=" * 60)
     print()
 
@@ -438,28 +521,37 @@ def main():
         if common_name in existing and dest.exists():
             manifest[common_name] = existing[common_name]
             skipped += 1
-            print(f"  ⏭ {common_name} (already downloaded)")
+            print(f"  [skip] {common_name} (already downloaded)")
             continue
 
-        print(f"  ↓ {common_name} ({scientific_name})...")
+        print(f"  >> {common_name} ({scientific_name})...")
 
         source_url = None
-        source_page = "https://digitalmedia.fws.gov/digital/collection/natdiglib"
-        license_info = "Public Domain (U.S. Government Work)"
+        source_page = ""
+        license_info = ""
 
-        # Try USFWS first
+        # 1. Try USFWS first
         if natdiglib_id is not None:
             source_url = download_usfws(natdiglib_id, dest)
             if source_url:
                 source_page = f"https://digitalmedia.fws.gov/digital/collection/natdiglib/id/{natdiglib_id}"
+                license_info = "Public Domain (U.S. Government Work)"
 
-        # Fallback to Wikipedia
+        # 2. Fallback: Wikimedia Commons API
         if source_url is None:
-            print(f"    → Trying Wikipedia fallback...")
-            result = download_wikipedia_image(scientific_name, dest)
+            print(f"    -> Trying Wikimedia Commons...")
+            result = download_commons_image(scientific_name, common_name, dest)
             if result:
                 source_url, source_page = result
-                license_info = "CC BY-SA (Wikipedia)"
+                license_info = "CC BY-SA (Wikimedia Commons)"
+
+        # 3. Fallback: iNaturalist
+        if source_url is None:
+            print(f"    -> Trying iNaturalist...")
+            result = download_inaturalist_image(scientific_name, dest)
+            if result:
+                source_url, source_page = result
+                license_info = "CC (iNaturalist)"
 
         if source_url and dest.exists():
             manifest[common_name] = {
@@ -470,14 +562,14 @@ def main():
                 "group": group,
             }
             size_kb = dest.stat().st_size / 1024
-            print(f"    ✓ Saved ({size_kb:.0f} KB)")
+            print(f"    OK ({size_kb:.0f} KB) [{license_info}]")
             success += 1
         else:
-            print(f"    ✗ No image available")
+            print(f"    FAIL - no image available")
             failed += 1
 
-        # Be polite to servers — Wikipedia rate-limits aggressively
-        time.sleep(5)
+        # Be polite — 1.5s between requests
+        time.sleep(1.5)
 
     # Write manifest
     MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -485,12 +577,12 @@ def main():
 
     print()
     print("=" * 60)
-    print(f"Done! {success} downloaded, {skipped} skipped, {failed} failed")
+    print(f"Done! {success} new, {skipped} skipped, {failed} failed")
+    print(f"Total in manifest: {len(manifest)}")
     print(f"Images: {IMAGE_DIR}")
     print(f"Manifest: {MANIFEST_PATH}")
     print("=" * 60)
 
 
 if __name__ == "__main__":
-    import urllib.parse
     main()

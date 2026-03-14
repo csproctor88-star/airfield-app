@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
-import { createStrike } from '@/lib/supabase/wildlife'
-import { type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
+import { createStrike, updateStrike, type WildlifeStrikeRow } from '@/lib/supabase/wildlife'
+import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import { createClient } from '@/lib/supabase/client'
 import { SpeciesPicker } from './species-picker'
 
@@ -28,41 +28,46 @@ type Props = {
   baseId?: string | null
   onClose: () => void
   onSaved: () => void
+  initialData?: WildlifeStrikeRow | null
 }
 
-export function StrikeForm({ currentUser, baseId, onClose, onSaved }: Props) {
+export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData }: Props) {
+  const isEdit = !!initialData
   const [userId, setUserId] = useState<string | null>(null)
-  const [selectedSpecies, setSelectedSpecies] = useState<WildlifeSpecies | null>(null)
+  const [selectedSpecies, setSelectedSpecies] = useState<WildlifeSpecies | null>(() => {
+    if (initialData?.species_common) return WILDLIFE_SPECIES.find(s => s.common_name === initialData.species_common) ?? null
+    return null
+  })
   const [showPicker, setShowPicker] = useState(false)
-  const [numberStruck, setNumberStruck] = useState(1)
-  const [numberSeen, setNumberSeen] = useState<number | null>(null)
-  const [locationText, setLocationText] = useState('')
-  const [timeOfDay, setTimeOfDay] = useState('')
-  const [skyCondition, setSkyCondition] = useState('')
-  const [precipitation, setPrecipitation] = useState('')
-  const [aircraftType, setAircraftType] = useState('')
-  const [aircraftRegistration, setAircraftRegistration] = useState('')
-  const [engineType, setEngineType] = useState('')
-  const [phaseOfFlight, setPhaseOfFlight] = useState('')
-  const [altitudeAgl, setAltitudeAgl] = useState<number | null>(null)
-  const [speedIas, setSpeedIas] = useState<number | null>(null)
-  const [pilotWarned, setPilotWarned] = useState<boolean | null>(null)
-  const [partsStruck, setPartsStruck] = useState<string[]>([])
-  const [partsDamaged, setPartsDamaged] = useState<string[]>([])
-  const [damageLevel, setDamageLevel] = useState('none')
-  const [engineIngested, setEngineIngested] = useState(false)
-  const [flightEffect, setFlightEffect] = useState('none')
-  const [repairCost, setRepairCost] = useState<number | null>(null)
-  const [hoursOutOfService, setHoursOutOfService] = useState<number | null>(null)
-  const [remainsCollected, setRemainsCollected] = useState(false)
-  const [remainsSentToLab, setRemainsSentToLab] = useState(false)
-  const [notes, setNotes] = useState('')
+  const [numberStruck, setNumberStruck] = useState(initialData?.number_struck ?? 1)
+  const [numberSeen, setNumberSeen] = useState<number | null>(initialData?.number_seen ?? null)
+  const [locationText, setLocationText] = useState(initialData?.location_text ?? '')
+  const [timeOfDay, setTimeOfDay] = useState(initialData?.time_of_day ?? '')
+  const [skyCondition, setSkyCondition] = useState(initialData?.sky_condition ?? '')
+  const [precipitation, setPrecipitation] = useState(initialData?.precipitation ?? '')
+  const [aircraftType, setAircraftType] = useState(initialData?.aircraft_type ?? '')
+  const [aircraftRegistration, setAircraftRegistration] = useState(initialData?.aircraft_registration ?? '')
+  const [engineType, setEngineType] = useState(initialData?.engine_type ?? '')
+  const [phaseOfFlight, setPhaseOfFlight] = useState(initialData?.phase_of_flight ?? '')
+  const [altitudeAgl, setAltitudeAgl] = useState<number | null>(initialData?.altitude_agl ?? null)
+  const [speedIas, setSpeedIas] = useState<number | null>(initialData?.speed_ias ?? null)
+  const [pilotWarned, setPilotWarned] = useState<boolean | null>(initialData?.pilot_warned ?? null)
+  const [partsStruck, setPartsStruck] = useState<string[]>(initialData?.parts_struck ?? [])
+  const [partsDamaged, setPartsDamaged] = useState<string[]>(initialData?.parts_damaged ?? [])
+  const [damageLevel, setDamageLevel] = useState(initialData?.damage_level ?? 'none')
+  const [engineIngested, setEngineIngested] = useState(initialData?.engine_ingested ?? false)
+  const [flightEffect, setFlightEffect] = useState(initialData?.flight_effect ?? 'none')
+  const [repairCost, setRepairCost] = useState<number | null>(initialData?.repair_cost ?? null)
+  const [hoursOutOfService, setHoursOutOfService] = useState<number | null>(initialData?.hours_out_of_service ?? null)
+  const [remainsCollected, setRemainsCollected] = useState(initialData?.remains_collected ?? false)
+  const [remainsSentToLab, setRemainsSentToLab] = useState(initialData?.remains_sent_to_lab ?? false)
+  const [notes, setNotes] = useState(initialData?.notes ?? '')
   const [saving, setSaving] = useState(false)
-  const [latitude, setLatitude] = useState<number | null>(null)
-  const [longitude, setLongitude] = useState<number | null>(null)
+  const [latitude, setLatitude] = useState<number | null>(initialData?.latitude ?? null)
+  const [longitude, setLongitude] = useState<number | null>(initialData?.longitude ?? null)
   const [gpsLoading, setGpsLoading] = useState(false)
   const [flyToPoint, setFlyToPoint] = useState<{ lat: number; lng: number } | null>(null)
-  const [showMap, setShowMap] = useState(false)
+  const [showMap, setShowMap] = useState(true)
 
   useEffect(() => {
     const supabase = createClient()
@@ -73,12 +78,13 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved }: Props) {
   }, [])
 
   useEffect(() => {
+    if (isEdit) return
     const hour = new Date().getHours()
     if (hour >= 5 && hour < 7) setTimeOfDay('dawn')
     else if (hour >= 7 && hour < 17) setTimeOfDay('day')
     else if (hour >= 17 && hour < 19) setTimeOfDay('dusk')
     else setTimeOfDay('night')
-  }, [])
+  }, [isEdit])
 
   const handlePointSelected = useCallback((lat: number, lng: number) => {
     setLatitude(lat)
@@ -132,6 +138,45 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved }: Props) {
 
   async function handleSubmit() {
     setSaving(true)
+
+    if (isEdit && initialData) {
+      const { error } = await updateStrike(initialData.id, {
+        species_common: selectedSpecies?.common_name ?? null,
+        species_scientific: selectedSpecies?.scientific_name ?? null,
+        species_group: selectedSpecies?.group ?? null,
+        size_category: selectedSpecies?.size_category ?? null,
+        number_struck: numberStruck,
+        number_seen: numberSeen,
+        latitude, longitude,
+        location_text: locationText || null,
+        time_of_day: timeOfDay || null,
+        sky_condition: skyCondition || null,
+        precipitation: precipitation || null,
+        aircraft_type: aircraftType || null,
+        aircraft_registration: aircraftRegistration || null,
+        engine_type: engineType || null,
+        phase_of_flight: phaseOfFlight || null,
+        altitude_agl: altitudeAgl,
+        speed_ias: speedIas,
+        pilot_warned: pilotWarned,
+        parts_struck: partsStruck,
+        parts_damaged: partsDamaged,
+        damage_level: damageLevel,
+        engine_ingested: engineIngested,
+        flight_effect: flightEffect,
+        repair_cost: repairCost,
+        hours_out_of_service: hoursOutOfService,
+        remains_collected: remainsCollected,
+        remains_sent_to_lab: remainsSentToLab,
+        notes: notes || null,
+      })
+      setSaving(false)
+      if (error) { toast.error(error); return }
+      toast.success('Strike report updated')
+      onSaved()
+      return
+    }
+
     const { error } = await createStrike({
       species_common: selectedSpecies?.common_name ?? null,
       species_scientific: selectedSpecies?.scientific_name ?? null,
@@ -203,7 +248,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved }: Props) {
         padding: 20,
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: '#EF4444' }}>Report Wildlife Strike</div>
+          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: '#EF4444' }}>{isEdit ? 'Edit Strike Report' : 'Report Wildlife Strike'}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: 'var(--color-text-3)' }}>×</button>
         </div>
 
@@ -523,7 +568,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved }: Props) {
             color: '#fff', fontWeight: 800, fontSize: 'var(--fs-md)', cursor: 'pointer',
           }}
         >
-          {saving ? 'Saving...' : 'Report Strike'}
+          {saving ? 'Saving...' : isEdit ? 'Update Strike' : 'Report Strike'}
         </button>
       </div>
     </div>
