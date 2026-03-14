@@ -606,8 +606,6 @@ export async function fetchHeatmapData(
     let query = supabase
       .from('wildlife_sightings')
       .select('latitude, longitude, count_observed, species_common')
-      .not('latitude', 'is', null)
-      .not('longitude', 'is', null)
 
     if (baseId) query = query.eq('base_id', baseId)
     if (startDate) query = query.gte('observed_at', startDate)
@@ -616,11 +614,12 @@ export async function fetchHeatmapData(
     const { data } = await query
     if (data) {
       for (const d of data) {
+        if (d.latitude == null || d.longitude == null) continue
         points.push({
-          lat: d.latitude as number,
-          lng: d.longitude as number,
-          weight: d.count_observed as number,
-          species: d.species_common as string,
+          lat: d.latitude,
+          lng: d.longitude,
+          weight: d.count_observed ?? 1,
+          species: d.species_common ?? 'Unknown',
           type: 'sighting',
         })
       }
@@ -631,8 +630,6 @@ export async function fetchHeatmapData(
     let query = supabase
       .from('wildlife_strikes')
       .select('latitude, longitude, number_struck, species_common')
-      .not('latitude', 'is', null)
-      .not('longitude', 'is', null)
 
     if (baseId) query = query.eq('base_id', baseId)
     if (startDate) query = query.gte('strike_date', startDate)
@@ -641,11 +638,12 @@ export async function fetchHeatmapData(
     const { data } = await query
     if (data) {
       for (const d of data) {
+        if (d.latitude == null || d.longitude == null) continue
         points.push({
-          lat: d.latitude as number,
-          lng: d.longitude as number,
-          weight: ((d.number_struck as number) || 1) * 3, // weight strikes higher
-          species: (d.species_common as string) || 'Unknown',
+          lat: d.latitude,
+          lng: d.longitude,
+          weight: ((d.number_struck ?? 1) as number) * 3, // weight strikes higher
+          species: d.species_common ?? 'Unknown',
           type: 'strike',
         })
       }
