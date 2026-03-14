@@ -3,7 +3,7 @@
 import { useState, useCallback, type ReactNode } from 'react'
 import dynamic from 'next/dynamic'
 import type { DiscrepancyRow } from '@/lib/supabase/discrepancies'
-import { DISCREPANCY_TYPES, ALLOWED_TRANSITIONS, STATUS_CONFIG, CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS } from '@/lib/constants'
+import { DISCREPANCY_TYPES, ALLOWED_TRANSITIONS, STATUS_CONFIG, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import { useInstallation } from '@/lib/installation-context'
 
 const LocationPickerMap = dynamic(
@@ -65,6 +65,7 @@ export function EditDiscrepancyModal({
   onClose: () => void
   onSaved: (updated: DiscrepancyRow) => void
 }) {
+  const { areas: installationAreas } = useInstallation()
   const [saving, setSaving] = useState(false)
   const [gpsLoading, setGpsLoading] = useState(false)
   const [form, setForm] = useState({
@@ -153,7 +154,7 @@ export function EditDiscrepancyModal({
         <select className="input-dark" value={form.location_text}
           onChange={(e) => setForm(p => ({ ...p, location_text: e.target.value }))}>
           <option value="">Select location...</option>
-          {LOCATION_OPTIONS.map(l => <option key={l.value} value={l.value}>{l.emoji} {l.label}</option>)}
+          {installationAreas.map(a => <option key={a} value={a}>{a}</option>)}
         </select>
       </div>
 
