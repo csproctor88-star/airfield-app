@@ -859,7 +859,7 @@ export default function HomePage() {
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '0 0 auto' }}>
-            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Airfield Status</div>
+            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Runway Status</div>
             {rwyEntries.map((rwy) => {
               const c = getColors(rwy.status)
               return (
