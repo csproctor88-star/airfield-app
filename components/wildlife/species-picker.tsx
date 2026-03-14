@@ -70,12 +70,33 @@ export function SpeciesPicker({ onSelect, onClose }: Props) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 250, display: 'flex',
-      alignItems: 'flex-end', justifyContent: 'center',
+      alignItems: 'center', justifyContent: 'center',
       background: 'rgba(0,0,0,0.6)',
     }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      {/* Responsive inline style tag for grid columns */}
+      <style>{`
+        .species-grid {
+          display: grid;
+          gap: 8px;
+          grid-template-columns: repeat(3, 1fr);
+          align-content: start;
+        }
+        @media (min-width: 600px) {
+          .species-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+        @media (min-width: 800px) {
+          .species-grid { grid-template-columns: repeat(5, 1fr); }
+        }
+        @media (min-width: 1000px) {
+          .species-grid { grid-template-columns: repeat(6, 1fr); }
+        }
+        .species-card:hover {
+          border-color: var(--color-cyan) !important;
+        }
+      `}</style>
       <div style={{
-        width: '100%', maxWidth: 560, height: '92vh',
-        background: 'var(--color-bg)', borderRadius: '16px 16px 0 0',
+        width: '96vw', maxWidth: 960, height: '90vh', maxHeight: 800,
+        background: 'var(--color-bg)', borderRadius: 16,
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
         {/* Header */}
@@ -85,71 +106,82 @@ export function SpeciesPicker({ onSelect, onClose }: Props) {
             <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: 'var(--color-text-3)' }}>×</button>
           </div>
 
-          {/* Search */}
-          <input
-            ref={searchRef}
-            type="text"
-            placeholder="Search by name or scientific name..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{
-              width: '100%', padding: '10px 12px', borderRadius: 8,
-              border: '1px solid var(--color-border)',
-              background: 'var(--color-bg-surface)', color: 'var(--color-text)',
-              fontSize: 'var(--fs-base)', marginBottom: 10,
-            }}
-          />
+          {/* Search + Group tabs row */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+            <input
+              ref={searchRef}
+              type="text"
+              placeholder="Search by name or scientific name..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{
+                flex: '1 1 200px', minWidth: 0, padding: '10px 12px', borderRadius: 8,
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-bg-surface)', color: 'var(--color-text)',
+                fontSize: 'var(--fs-base)',
+              }}
+            />
+            <div style={{ display: 'flex', gap: 4, overflowX: 'auto', flexShrink: 0 }}>
+              {GROUPS.map(g => (
+                <button
+                  key={g.key}
+                  onClick={() => setActiveGroup(g.key)}
+                  style={{
+                    padding: '6px 12px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                    fontSize: 'var(--fs-sm)', fontWeight: 700, whiteSpace: 'nowrap',
+                    background: activeGroup === g.key ? 'var(--color-cyan)' : 'var(--color-bg-surface)',
+                    color: activeGroup === g.key ? '#000' : 'var(--color-text-2)',
+                  }}
+                >
+                  {g.label} ({groupCounts[g.key] || 0})
+                </button>
+              ))}
+            </div>
+          </div>
 
-          {/* Group tabs */}
-          <div style={{ display: 'flex', gap: 4, marginBottom: 12, overflowX: 'auto' }}>
-            {GROUPS.map(g => (
-              <button
-                key={g.key}
-                onClick={() => setActiveGroup(g.key)}
-                style={{
-                  padding: '6px 12px', borderRadius: 20, border: 'none', cursor: 'pointer',
-                  fontSize: 'var(--fs-sm)', fontWeight: 700, whiteSpace: 'nowrap',
-                  background: activeGroup === g.key ? 'var(--color-cyan)' : 'var(--color-bg-surface)',
-                  color: activeGroup === g.key ? '#000' : 'var(--color-text-2)',
-                }}
-              >
-                {g.label} ({groupCounts[g.key] || 0})
-              </button>
-            ))}
+          {/* Results count + legend */}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            paddingBottom: 8, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)',
+          }}>
+            <span>{filtered.length} species {search && `matching "${search}"`}</span>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444', display: 'inline-block' }} /> Critical
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#F97316', display: 'inline-block' }} /> High
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#FBBF24', display: 'inline-block' }} /> Med
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} /> Low
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Results count */}
-        <div style={{
-          padding: '0 16px 8px', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', flexShrink: 0,
-        }}>
-          {filtered.length} species {search && `matching "${search}"`}
-          {' '} — sorted by strike risk
-        </div>
-
         {/* Species grid */}
-        <div style={{
+        <div className="species-grid" style={{
           flex: 1, overflowY: 'auto', padding: '0 12px 16px',
-          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8,
-          alignContent: 'start',
         }}>
           {filtered.map(sp => (
             <button
               key={sp.common_name}
+              className="species-card"
               onClick={() => onSelect(sp)}
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
-                padding: 8, borderRadius: 10, border: '1px solid var(--color-border)',
+                padding: 6, borderRadius: 10, border: '1px solid var(--color-border)',
                 background: 'var(--color-bg-surface)', cursor: 'pointer',
                 textAlign: 'center', color: 'var(--color-text)',
                 transition: 'border-color 0.15s',
               }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--color-cyan)')}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--color-border)')}
             >
               <div style={{
-                width: '100%', aspectRatio: '1', borderRadius: 8, overflow: 'hidden',
-                background: 'var(--color-bg)', marginBottom: 6, position: 'relative',
+                width: '100%', aspectRatio: '4/3', borderRadius: 8, overflow: 'hidden',
+                background: 'var(--color-bg)', marginBottom: 4, position: 'relative',
               }}>
                 <img
                   src={resolveWildlifeImage(sp)!}
@@ -159,7 +191,6 @@ export function SpeciesPicker({ onSelect, onClose }: Props) {
                   onError={e => {
                     const img = e.target as HTMLImageElement
                     img.style.display = 'none'
-                    // Show fallback icon
                     const parent = img.parentElement
                     if (parent && !parent.querySelector('.fallback-icon')) {
                       const div = document.createElement('div')
@@ -172,7 +203,7 @@ export function SpeciesPicker({ onSelect, onClose }: Props) {
                 />
                 {/* Risk indicator dot */}
                 <div style={{
-                  position: 'absolute', top: 4, right: 4, width: 10, height: 10,
+                  position: 'absolute', top: 3, right: 3, width: 10, height: 10,
                   borderRadius: '50%', background: riskColor(sp.strike_risk),
                   border: '1.5px solid var(--color-bg-surface)',
                 }} />
@@ -181,12 +212,12 @@ export function SpeciesPicker({ onSelect, onClose }: Props) {
                 fontWeight: 700, fontSize: 'var(--fs-xs)', lineHeight: 1.2,
                 overflow: 'hidden', textOverflow: 'ellipsis',
                 display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                minHeight: '2.4em',
+                minHeight: '2.4em', width: '100%',
               }}>
                 {sp.common_name}
               </div>
               <div style={{
-                fontSize: '10px', color: 'var(--color-text-4)', fontStyle: 'italic',
+                fontSize: '9px', color: 'var(--color-text-4)', fontStyle: 'italic',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 width: '100%',
               }}>
@@ -196,7 +227,7 @@ export function SpeciesPicker({ onSelect, onClose }: Props) {
           ))}
           {filtered.length === 0 && (
             <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 40, color: 'var(--color-text-3)' }}>
-              No species found matching "{search}"
+              No species found matching &quot;{search}&quot;
             </div>
           )}
         </div>
