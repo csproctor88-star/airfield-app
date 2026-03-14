@@ -151,6 +151,14 @@
     "path": "/aircraft_silhouettes/b_52.svg",
     "source_shape": "B52.svg"
   },
+  "C-12": {
+    "base_name": "C-12",
+    "display_name": "C-12 C/D Huron",
+    "category": "military",
+    "filename": "c_12.svg",
+    "path": "/aircraft_silhouettes/c_12.svg",
+    "source_shape": "B350.svg"
+  },
   "C-130": {
     "base_name": "C-130",
     "display_name": "C-130E/H Hercules",
@@ -223,6 +231,14 @@
     "path": "/aircraft_silhouettes/c_37.svg",
     "source_shape": "GL5T.svg"
   },
+  "C-38": {
+    "base_name": "C-38",
+    "display_name": "C-38A Courier",
+    "category": "military",
+    "filename": "c_38.svg",
+    "path": "/aircraft_silhouettes/c_38.svg",
+    "source_shape": "FA7X.svg"
+  },
   "C-40": {
     "base_name": "C-40",
     "display_name": "C-40A Clipper",
@@ -270,6 +286,14 @@
     "filename": "dc_10.svg",
     "path": "/aircraft_silhouettes/dc_10.svg",
     "source_shape": "DC10.svg"
+  },
+  "DC-8": {
+    "base_name": "DC-8",
+    "display_name": "DC-8-43",
+    "category": "commercial",
+    "filename": "dc_8.svg",
+    "path": "/aircraft_silhouettes/dc_8.svg",
+    "source_shape": "DC87.svg"
   },
   "DC-9": {
     "base_name": "DC-9",
@@ -527,6 +551,14 @@
     "path": "/aircraft_silhouettes/oc_135.svg",
     "source_shape": "R135.svg"
   },
+  "RC-12": {
+    "base_name": "RC-12",
+    "display_name": "RC-12N",
+    "category": "military",
+    "filename": "rc_12.svg",
+    "path": "/aircraft_silhouettes/rc_12.svg",
+    "source_shape": "B350.svg"
+  },
   "RC-135": {
     "base_name": "RC-135",
     "display_name": "RC-135S Cobra Ball",
@@ -655,44 +687,12 @@
     "path": "/aircraft_silhouettes/wc_135.svg",
     "source_shape": "R135.svg"
   },
-  "C-12": {
-    "base_name": "C-12",
-    "display_name": "C-12 C/D Huron",
-    "category": "military",
-    "filename": "c_12.svg",
-    "path": "/aircraft_silhouettes/c_12.svg",
-    "source_shape": "B350.svg"
-  },
-  "RC-12": {
-    "base_name": "RC-12",
-    "display_name": "RC-12N",
-    "category": "military",
-    "filename": "rc_12.svg",
-    "path": "/aircraft_silhouettes/rc_12.svg",
-    "source_shape": "B350.svg"
-  },
-  "C-38": {
-    "base_name": "C-38",
-    "display_name": "C-38A Courier",
-    "category": "military",
-    "filename": "c_38.svg",
-    "path": "/aircraft_silhouettes/c_38.svg",
-    "source_shape": "FA7X.svg"
-  },
-  "DC-8": {
-    "base_name": "DC-8",
-    "display_name": "DC-8-43",
-    "category": "commercial",
-    "filename": "dc_8.svg",
-    "path": "/aircraft_silhouettes/dc_8.svg",
-    "source_shape": "DC87.svg"
-  },
   "B-2": {
     "base_name": "B-2",
     "display_name": "B-2A Spirit",
     "category": "military",
     "filename": "b_2.svg",
     "path": "/aircraft_silhouettes/b_2.svg",
-    "source_shape": "Wikimedia Commons B-2_Sprit_template.svg"
+    "source_shape": "Wikimedia Commons"
   }
 }

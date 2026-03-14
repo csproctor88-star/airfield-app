@@ -210,48 +210,59 @@ def save_manifest(manifest):
         json.dump(manifest, f, indent=2, ensure_ascii=False)
 
 
-def convert_to_filled_silhouette(svg_content):
+def convert_to_filled_silhouette(svg_content, title=""):
     """
-    Convert an outline SVG to a solid black filled silhouette.
+    Convert an Inkscape outline SVG to a clean, minimal solid black silhouette.
 
-    Strategy:
-    1. Change all stroke-only paths to filled black paths
-    2. Remove accent/detail layers (keep only outline layer)
-    3. Set fill to black, remove stroke
+    Extracts path data from the first (outline) layer only, strips all
+    Inkscape/Sodipodi metadata, and outputs a GitHub-compatible SVG.
     """
-    lines = svg_content.split('\n')
-    result = []
-    in_accent_layer = False
-    accent_depth = 0
+    # Extract viewBox from original
+    vb_match = re.search(r'viewBox="([^"]+)"', svg_content)
+    viewbox = vb_match.group(1) if vb_match else "0 0 80 80"
 
-    for line in lines:
-        # Skip accent/detail layers — we only want the main outline
-        if 'inkscape:label="Accent"' in line or 'inkscape:label="Detail"' in line:
-            in_accent_layer = True
-            accent_depth = 1
-            continue
-        if in_accent_layer:
-            accent_depth += line.count('<g') - line.count('</g')
-            if accent_depth <= 0:
-                in_accent_layer = False
-            continue
+    # Extract path `d` attributes from the outline layer only.
+    # Stop collecting at the Accent/Detail layer.
+    paths = []
+    in_accent = False
+    for match in re.finditer(r'inkscape:label="([^"]*)"', svg_content):
+        pass  # just scanning
 
-        # Convert outline paths to filled black
-        if 'style="' in line and 'stroke' in line:
-            # Replace fill:none with fill:black, remove stroke properties
-            line = re.sub(r'fill:\s*none', 'fill:#000000', line)
-            line = re.sub(r'stroke:[^;]+;?', '', line)
-            line = re.sub(r'stroke-width:[^;]+;?', '', line)
-            line = re.sub(r'stroke-linecap:[^;]+;?', '', line)
-            line = re.sub(r'stroke-linejoin:[^;]+;?', '', line)
-            line = re.sub(r'stroke-opacity:[^;]+;?', '', line)
-            # Clean up double semicolons and trailing semicolons
-            line = re.sub(r';{2,}', ';', line)
-            line = re.sub(r';\s*"', '"', line)
+    # Split by layers — only take paths before accent/detail layer
+    # Find the accent layer start position
+    accent_pos = len(svg_content)
+    for label in ['inkscape:label="Accent"', 'inkscape:label="Detail"']:
+        pos = svg_content.find(label)
+        if pos != -1 and pos < accent_pos:
+            accent_pos = pos
 
-        result.append(line)
+    # Extract all path `d` values before the accent layer
+    outline_section = svg_content[:accent_pos]
+    for m in re.finditer(r'\bd="([^"]+)"', outline_section):
+        d_value = m.group(1).strip()
+        if len(d_value) > 20:  # Skip tiny/empty paths
+            paths.append(d_value)
 
-    return '\n'.join(result)
+    if not paths:
+        # Fallback: grab all paths from the whole file
+        for m in re.finditer(r'\bd="([^"]+)"', svg_content):
+            d_value = m.group(1).strip()
+            if len(d_value) > 20:
+                paths.append(d_value)
+
+    # Build clean SVG
+    path_elements = "\n".join(
+        f'  <path d="{d}" fill="#000000"/>'
+        for d in paths
+    )
+
+    title_el = f"\n  <title>{title}</title>" if title else ""
+
+    return f'''<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="{viewbox}">{title_el}
+{path_elements}
+</svg>
+'''
 
 
 def main():
@@ -314,7 +325,7 @@ def main():
             svg_content = f.read()
 
         # Convert to solid black fill
-        filled_svg = convert_to_filled_silhouette(svg_content)
+        filled_svg = convert_to_filled_silhouette(svg_content, title=info["display_name"])
 
         # Write output
         with open(output_path, 'w', encoding='utf-8') as f:
