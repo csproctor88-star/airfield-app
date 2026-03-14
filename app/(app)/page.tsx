@@ -833,8 +833,9 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* ===== Runway Status ===== */}
-      <span className="section-label">Runway Status</span>
+      {/* ===== Runway & ARFF Status ===== */}
+      <span className="section-label">Runway & ARFF Status</span>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'stretch' }}>
       {(() => {
         // Build runway entries from installation runways
         const rwyEntries = runways.map(r => {
@@ -857,13 +858,7 @@ export default function HomePage() {
           selectBorder: s === 'closed' ? 'rgba(239,68,68,0.4)' : s === 'suspended' ? 'rgba(251,191,36,0.4)' : 'rgba(52,211,153,0.4)',
         })
 
-        return (
-          <div className="runway-status-row" style={{
-            display: 'flex',
-            gap: 8,
-            marginBottom: 12,
-            flexWrap: 'wrap',
-          }}>
+        return (<>
             {rwyEntries.map((rwy) => {
               const c = getColors(rwy.status)
               return (
@@ -871,7 +866,7 @@ export default function HomePage() {
                   padding: 'var(--rwy-card-padding)',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--rwy-card-gap)',
                   background: c.bg, border: `1px solid ${c.border}`,
-                  flex: '1 1 0', minWidth: 120,
+                  flex: '0 1 auto', minWidth: 100,
                 }}>
                   <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>Active RWY</div>
                   <button
@@ -1007,26 +1002,14 @@ export default function HomePage() {
               {bwcValue || '—'}
             </div>
           </div>
-          </div>
+          </>
         )
       })()}
-
-      {/* ===== ARFF + NAVAID Status (side by side on desktop) ===== */}
-      <div className="arff-navaid-row" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 12, marginBottom: 12 }}>
-      <div>
-      <span className="section-label">ARFF Status</span>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: arffAircraft.length > 0
-          ? `repeat(${Math.min(arffAircraft.length + 1, 4)}, minmax(80px, 1fr))`
-          : '1fr',
-        gap: 6,
+      {/* ARFF CAT card */}
+      <div className="card" style={{
+        padding: '10px 12px', flex: '0 0 auto',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
       }}>
-        {/* ARFF CAT card */}
-        <div className="card" style={{
-          padding: '14px 12px',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-        }}>
           <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>ARFF CAT</div>
           <select
             value={arffCat ?? ''}
@@ -1080,13 +1063,13 @@ export default function HomePage() {
               className="card"
               onClick={() => setArffDialog({ aircraft, selectedStatus: readiness, notes: '' })}
               style={{
-                padding: '14px 12px',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                padding: '10px 12px', flex: '0 0 auto',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                 cursor: 'pointer',
                 background: c.bg, border: `1px solid ${c.border}`,
               }}
             >
-              <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>{aircraft}</div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600 }}>{aircraft}</div>
               <div style={{
                 fontSize: 'var(--fs-md)', fontWeight: 700, color: c.color,
                 textTransform: 'uppercase', letterSpacing: '0.04em',
@@ -1196,9 +1179,6 @@ export default function HomePage() {
         </div>
       )}
 
-      </div>
-
-      <div>
       {/* ===== NAVAID Status ===== */}
       <span className="section-label">NAVAID Status</span>
       {navaids.length === 0 ? (
@@ -1310,8 +1290,6 @@ export default function HomePage() {
           </>
         )
       })()}
-      </div>{/* end NAVAID wrapper */}
-      </div>{/* end arff-navaid-row */}
 
       {/* ===== Personnel / Construction / Misc (inline row on desktop) ===== */}
       <div className="bottom-info-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
