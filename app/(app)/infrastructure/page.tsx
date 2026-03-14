@@ -888,6 +888,16 @@ export default function InfrastructureMapPage() {
       if (count > 0) {
         const refreshed = await fetchInfrastructureFeatures(installationId)
         setDbFeatures(refreshed)
+        // Force Mapbox to re-render all layers after import
+        if (map.current) {
+          const m = map.current
+          for (const layer of LAYERS) {
+            if (m.getLayer(layer.key)) {
+              m.setLayoutProperty(layer.key, 'visibility', 'none')
+              m.setLayoutProperty(layer.key, 'visibility', 'visible')
+            }
+          }
+        }
         toast.success(`Imported ${count} features from ${ext.toUpperCase()}`)
       }
       setKmlImportOpen(false)
