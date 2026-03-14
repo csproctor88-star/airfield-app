@@ -805,6 +805,53 @@ export default function InfrastructureMapPage() {
             layer: props.layer || undefined,
           })
         }
+      } else if (ext === 'dxf') {
+        // ── DXF parsing (extract POINT and INSERT entities) ──
+        const lines = text.split(/\r?\n/)
+        let i = 0
+        let currentLayer = '0'
+        let inEntities = false
+
+        while (i < lines.length) {
+          const code = lines[i]?.trim()
+          const value = lines[i + 1]?.trim()
+
+          // Track ENTITIES section
+          if (code === '2' && value === 'ENTITIES') inEntities = true
+          if (code === '0' && value === 'ENDSEC') inEntities = false
+
+          // Parse POINT and INSERT entities
+          if (inEntities && code === '0' && (value === 'POINT' || value === 'INSERT')) {
+            let x: number | null = null
+            let y: number | null = null
+            let layer = '0'
+            let blockName = ''
+            let j = i + 2
+
+            while (j < lines.length) {
+              const gc = lines[j]?.trim()
+              const gv = lines[j + 1]?.trim()
+              if (gc === '0') break // Next entity
+              if (gc === '8') layer = gv || '0'
+              if (gc === '10') x = parseFloat(gv)
+              if (gc === '20') y = parseFloat(gv)
+              if (gc === '2') blockName = gv || ''
+              j += 2
+            }
+
+            if (x != null && y != null && !isNaN(x) && !isNaN(y)) {
+              // DXF coordinates may be in survey feet or other projections
+              // Assume WGS84 lat/lng if values are in valid ranges
+              const isLatLng = Math.abs(y) <= 90 && Math.abs(x) <= 180
+              if (isLatLng) {
+                dedup({ lng: x, lat: y, layer, label: blockName || undefined })
+              }
+            }
+            i = j
+            continue
+          }
+          i += 2
+        }
       } else {
         // ── KML parsing (default) ──
         const parser = new DOMParser()
@@ -2577,7 +2624,7 @@ export default function InfrastructureMapPage() {
             </div>
 
             <div style={{ fontSize: 9, color: '#64748B' }}>
-              Accepts KML, CSV, or GeoJSON files. Per-row values override defaults below.
+              Accepts KML, CSV, GeoJSON, or DXF files. Per-row values override defaults below.
             </div>
 
             <div>
@@ -2618,7 +2665,7 @@ export default function InfrastructureMapPage() {
             <input
               ref={kmlFileRef}
               type="file"
-              accept=".kml,.kmz,.csv,.geojson,.json"
+              accept=".kml,.kmz,.csv,.geojson,.json,.dxf"
               style={{ display: 'none' }}
               onChange={(e) => {
                 const file = e.target.files?.[0]
