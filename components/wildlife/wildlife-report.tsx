@@ -10,7 +10,7 @@ type Props = {
 }
 
 export function WildlifeReport({ baseId }: Props) {
-  const { installationName, installationIcao } = useInstallation()
+  const { currentInstallation } = useInstallation()
   const [generating, setGenerating] = useState(false)
   const [reportMonth, setReportMonth] = useState(() => {
     const now = new Date()
@@ -26,8 +26,8 @@ export function WildlifeReport({ baseId }: Props) {
 
       await generateWildlifeReportPdf({
         baseId,
-        baseName: installationName || 'Unknown Base',
-        icao: installationIcao || '',
+        baseName: currentInstallation?.name || 'Unknown Base',
+        icao: currentInstallation?.icao || '',
         startDate,
         endDate,
         reportMonth: reportMonth,
