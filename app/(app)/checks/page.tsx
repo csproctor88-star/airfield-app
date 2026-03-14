@@ -898,6 +898,62 @@ export default function AirfieldChecksPage() {
         </button>
       )}
 
+      {/* Remarks Section */}
+      {checkType && (
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+            Remarks
+          </div>
+
+          <div style={{ display: 'flex', gap: 6, marginBottom: remarks.length > 0 ? 10 : 0 }}>
+            <ExpandableTextarea
+              className="input-dark"
+              rows={3}
+              placeholder="Add a remark..."
+              value={remarkText}
+              onChange={(val) => setRemarkText(val)}
+              label="Remarks"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  addRemark()
+                }
+              }}
+              style={{ resize: 'vertical', flex: 1 }}
+            />
+            <button
+              type="button"
+              onClick={addRemark}
+              disabled={!remarkText.trim()}
+              style={{
+                padding: '0 14px', borderRadius: 8, border: 'none',
+                background: remarkText.trim() ? 'var(--color-cyan)' : 'var(--color-bg-elevated)',
+                color: remarkText.trim() ? 'var(--color-bg-surface-solid)' : 'var(--color-text-4)',
+                fontSize: 'var(--fs-base)', fontWeight: 700, cursor: remarkText.trim() ? 'pointer' : 'default',
+                fontFamily: 'inherit', alignSelf: 'flex-end', height: 36,
+              }}
+            >
+              Save
+            </button>
+          </div>
+
+          {remarks.length > 0 && (
+            <div style={{ borderTop: '1px solid var(--color-bg-elevated)', paddingTop: 8 }}>
+              {remarks.map((remark) => (
+                <div key={remark.id} style={{ borderLeft: '2px solid var(--color-text-4)', paddingLeft: 10, marginBottom: 8 }}>
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 2 }}>
+                    <span style={{ fontWeight: 600, color: 'var(--color-accent)' }}>{remark.user_name}</span>
+                    {' — '}
+                    {formatZuluDateTime(new Date(remark.created_at))}
+                  </div>
+                  <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.4 }}>{remark.comment}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Issue Found Toggle */}
       {checkType && (
         <button
@@ -965,61 +1021,6 @@ export default function AirfieldChecksPage() {
         </div>
       )}
 
-      {/* Remarks Section */}
-      {checkType && (
-        <div className="card" style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-            Remarks
-          </div>
-
-          <div style={{ display: 'flex', gap: 6, marginBottom: remarks.length > 0 ? 12 : 0 }}>
-            <ExpandableTextarea
-              className="input-dark"
-              rows={2}
-              placeholder="Add a remark..."
-              value={remarkText}
-              onChange={(val) => setRemarkText(val)}
-              label="Remarks"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  addRemark()
-                }
-              }}
-              style={{ resize: 'vertical', flex: 1 }}
-            />
-            <button
-              type="button"
-              onClick={addRemark}
-              disabled={!remarkText.trim()}
-              style={{
-                padding: '0 14px', borderRadius: 8, border: 'none',
-                background: remarkText.trim() ? 'var(--color-cyan)' : 'var(--color-bg-elevated)',
-                color: remarkText.trim() ? 'var(--color-bg-surface-solid)' : 'var(--color-text-4)',
-                fontSize: 'var(--fs-base)', fontWeight: 700, cursor: remarkText.trim() ? 'pointer' : 'default',
-                fontFamily: 'inherit', alignSelf: 'flex-end', height: 36,
-              }}
-            >
-              Save
-            </button>
-          </div>
-
-          {remarks.length > 0 && (
-            <div style={{ borderTop: '1px solid var(--color-bg-elevated)', paddingTop: 10 }}>
-              {remarks.map((remark) => (
-                <div key={remark.id} style={{ borderLeft: '2px solid var(--color-text-4)', paddingLeft: 10, marginBottom: 10 }}>
-                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 2 }}>
-                    <span style={{ fontWeight: 600, color: 'var(--color-accent)' }}>{remark.user_name}</span>
-                    {' — '}
-                    {formatZuluDateTime(new Date(remark.created_at))}
-                  </div>
-                  <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.4 }}>{remark.comment}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Photos section removed — photos now inside issue panels */}
 
