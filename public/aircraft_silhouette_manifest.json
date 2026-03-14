@@ -1,0 +1,698 @@
+{
+  "707": {
+    "base_name": "707",
+    "display_name": "707-120B",
+    "category": "commercial",
+    "filename": "707.svg",
+    "path": "/aircraft_silhouettes/707.svg",
+    "source_shape": "B703.svg"
+  },
+  "717": {
+    "base_name": "717",
+    "display_name": "717-200",
+    "category": "commercial",
+    "filename": "717.svg",
+    "path": "/aircraft_silhouettes/717.svg",
+    "source_shape": "B712.svg"
+  },
+  "720": {
+    "base_name": "720",
+    "display_name": "720",
+    "category": "commercial",
+    "filename": "720.svg",
+    "path": "/aircraft_silhouettes/720.svg",
+    "source_shape": "B703.svg"
+  },
+  "727": {
+    "base_name": "727",
+    "display_name": "727-100/-100C",
+    "category": "commercial",
+    "filename": "727.svg",
+    "path": "/aircraft_silhouettes/727.svg",
+    "source_shape": "B722.svg"
+  },
+  "737": {
+    "base_name": "737",
+    "display_name": "737-100",
+    "category": "commercial",
+    "filename": "737.svg",
+    "path": "/aircraft_silhouettes/737.svg",
+    "source_shape": "B737.svg"
+  },
+  "747": {
+    "base_name": "747",
+    "display_name": "747-8/-8F",
+    "category": "commercial",
+    "filename": "747.svg",
+    "path": "/aircraft_silhouettes/747.svg",
+    "source_shape": "B748.svg"
+  },
+  "757": {
+    "base_name": "757",
+    "display_name": "757-200/-200PF",
+    "category": "commercial",
+    "filename": "757.svg",
+    "path": "/aircraft_silhouettes/757.svg",
+    "source_shape": "B752.svg"
+  },
+  "767": {
+    "base_name": "767",
+    "display_name": "767-200",
+    "category": "commercial",
+    "filename": "767.svg",
+    "path": "/aircraft_silhouettes/767.svg",
+    "source_shape": "B762.svg"
+  },
+  "777": {
+    "base_name": "777",
+    "display_name": "777-200",
+    "category": "commercial",
+    "filename": "777.svg",
+    "path": "/aircraft_silhouettes/777.svg",
+    "source_shape": "B772.svg"
+  },
+  "A330": {
+    "base_name": "A330",
+    "display_name": "A330-200",
+    "category": "commercial",
+    "filename": "a330.svg",
+    "path": "/aircraft_silhouettes/a330.svg",
+    "source_shape": "A332.svg"
+  },
+  "A340": {
+    "base_name": "A340",
+    "display_name": "A340-200",
+    "category": "commercial",
+    "filename": "a340.svg",
+    "path": "/aircraft_silhouettes/a340.svg",
+    "source_shape": "A342.svg"
+  },
+  "A380": {
+    "base_name": "A380",
+    "display_name": "A380-841, -861",
+    "category": "commercial",
+    "filename": "a380.svg",
+    "path": "/aircraft_silhouettes/a380.svg",
+    "source_shape": "A388.svg"
+  },
+  "AC-130": {
+    "base_name": "AC-130",
+    "display_name": "AC-130H Spectre Gunship",
+    "category": "military",
+    "filename": "ac_130.svg",
+    "path": "/aircraft_silhouettes/ac_130.svg",
+    "source_shape": "C130.svg"
+  },
+  "AH-64": {
+    "base_name": "AH-64",
+    "display_name": "AH-64 Apache Longbow",
+    "category": "military",
+    "filename": "ah_64.svg",
+    "path": "/aircraft_silhouettes/ah_64.svg",
+    "source_shape": "H64.svg"
+  },
+  "AN-124": {
+    "base_name": "AN-124",
+    "display_name": "AN-124 Ruslan",
+    "category": "military",
+    "filename": "an_124.svg",
+    "path": "/aircraft_silhouettes/an_124.svg",
+    "source_shape": "A124.svg"
+  },
+  "AO/A-10-A Thunderbolt II": {
+    "base_name": "AO/A-10-A Thunderbolt II",
+    "display_name": "AO/A-10-A Thunderbolt II",
+    "category": "military",
+    "filename": "ao_a_10_a_thunderbolt_ii.svg",
+    "path": "/aircraft_silhouettes/ao_a_10_a_thunderbolt_ii.svg",
+    "source_shape": "A10.svg"
+  },
+  "AT-38": {
+    "base_name": "AT-38",
+    "display_name": "AT-38B Talon",
+    "category": "military",
+    "filename": "at_38.svg",
+    "path": "/aircraft_silhouettes/at_38.svg",
+    "source_shape": "T38.svg"
+  },
+  "B-1": {
+    "base_name": "B-1",
+    "display_name": "B-1B Lancer",
+    "category": "military",
+    "filename": "b_1.svg",
+    "path": "/aircraft_silhouettes/b_1.svg",
+    "source_shape": "B1 slow.svg"
+  },
+  "B-52": {
+    "base_name": "B-52",
+    "display_name": "B-52H Stratofortress",
+    "category": "military",
+    "filename": "b_52.svg",
+    "path": "/aircraft_silhouettes/b_52.svg",
+    "source_shape": "B52.svg"
+  },
+  "C-130": {
+    "base_name": "C-130",
+    "display_name": "C-130E/H Hercules",
+    "category": "military",
+    "filename": "c_130.svg",
+    "path": "/aircraft_silhouettes/c_130.svg",
+    "source_shape": "C130.svg"
+  },
+  "C-17": {
+    "base_name": "C-17",
+    "display_name": "C-17A Globemaster III",
+    "category": "military",
+    "filename": "c_17.svg",
+    "path": "/aircraft_silhouettes/c_17.svg",
+    "source_shape": "C17.svg"
+  },
+  "C-2": {
+    "base_name": "C-2",
+    "display_name": "C-2A Greyhound",
+    "category": "military",
+    "filename": "c_2.svg",
+    "path": "/aircraft_silhouettes/c_2.svg",
+    "source_shape": "C2.svg"
+  },
+  "C-20": {
+    "base_name": "C-20",
+    "display_name": "C-20A/B/C/D Gulfstream III",
+    "category": "military",
+    "filename": "c_20.svg",
+    "path": "/aircraft_silhouettes/c_20.svg",
+    "source_shape": "GL5T.svg"
+  },
+  "C-21": {
+    "base_name": "C-21",
+    "display_name": "C-21A",
+    "category": "military",
+    "filename": "c_21.svg",
+    "path": "/aircraft_silhouettes/c_21.svg",
+    "source_shape": "LJ35.svg"
+  },
+  "C-22": {
+    "base_name": "C-22",
+    "display_name": "C-22B",
+    "category": "military",
+    "filename": "c_22.svg",
+    "path": "/aircraft_silhouettes/c_22.svg",
+    "source_shape": "B722.svg"
+  },
+  "C-295": {
+    "base_name": "C-295",
+    "display_name": "C-295 CASA",
+    "category": "military",
+    "filename": "c_295.svg",
+    "path": "/aircraft_silhouettes/c_295.svg",
+    "source_shape": "C295.svg"
+  },
+  "C-32": {
+    "base_name": "C-32",
+    "display_name": "C-32A/B",
+    "category": "military",
+    "filename": "c_32.svg",
+    "path": "/aircraft_silhouettes/c_32.svg",
+    "source_shape": "B752.svg"
+  },
+  "C-37": {
+    "base_name": "C-37",
+    "display_name": "C-37A Gulfstream V",
+    "category": "military",
+    "filename": "c_37.svg",
+    "path": "/aircraft_silhouettes/c_37.svg",
+    "source_shape": "GL5T.svg"
+  },
+  "C-40": {
+    "base_name": "C-40",
+    "display_name": "C-40A Clipper",
+    "category": "military",
+    "filename": "c_40.svg",
+    "path": "/aircraft_silhouettes/c_40.svg",
+    "source_shape": "B737.svg"
+  },
+  "C-5": {
+    "base_name": "C-5",
+    "display_name": "C-5A/B/C Galaxy",
+    "category": "military",
+    "filename": "c_5.svg",
+    "path": "/aircraft_silhouettes/c_5.svg",
+    "source_shape": "C5M.svg"
+  },
+  "C-9": {
+    "base_name": "C-9",
+    "display_name": "C-9A/C Nightingale",
+    "category": "military",
+    "filename": "c_9.svg",
+    "path": "/aircraft_silhouettes/c_9.svg",
+    "source_shape": "DC87.svg"
+  },
+  "CH-47": {
+    "base_name": "CH-47",
+    "display_name": "CH-47D/F Chinook",
+    "category": "military",
+    "filename": "ch_47.svg",
+    "path": "/aircraft_silhouettes/ch_47.svg",
+    "source_shape": "H47.svg"
+  },
+  "CN-235": {
+    "base_name": "CN-235",
+    "display_name": "CN-235 CASA, Ver 1 (Civ)",
+    "category": "military",
+    "filename": "cn_235.svg",
+    "path": "/aircraft_silhouettes/cn_235.svg",
+    "source_shape": "CN35.svg"
+  },
+  "DC-10": {
+    "base_name": "DC-10",
+    "display_name": "DC-10-10, -10CF",
+    "category": "commercial",
+    "filename": "dc_10.svg",
+    "path": "/aircraft_silhouettes/dc_10.svg",
+    "source_shape": "DC10.svg"
+  },
+  "DC-9": {
+    "base_name": "DC-9",
+    "display_name": "DC-9-15, -15F",
+    "category": "commercial",
+    "filename": "dc_9.svg",
+    "path": "/aircraft_silhouettes/dc_9.svg",
+    "source_shape": "DC87.svg"
+  },
+  "E-3": {
+    "base_name": "E-3",
+    "display_name": "E-3B/C Sentry (AWACS)",
+    "category": "military",
+    "filename": "e_3.svg",
+    "path": "/aircraft_silhouettes/e_3.svg",
+    "source_shape": "E737.svg"
+  },
+  "E-4": {
+    "base_name": "E-4",
+    "display_name": "E-4B National Airborne Operations Center",
+    "category": "military",
+    "filename": "e_4.svg",
+    "path": "/aircraft_silhouettes/e_4.svg",
+    "source_shape": "B742.svg"
+  },
+  "E-8": {
+    "base_name": "E-8",
+    "display_name": "E-8C Joint STARS",
+    "category": "military",
+    "filename": "e_8.svg",
+    "path": "/aircraft_silhouettes/e_8.svg",
+    "source_shape": "E8.svg"
+  },
+  "EC-130": {
+    "base_name": "EC-130",
+    "display_name": "EC-130E Commando Solo",
+    "category": "military",
+    "filename": "ec_130.svg",
+    "path": "/aircraft_silhouettes/ec_130.svg",
+    "source_shape": "C130.svg"
+  },
+  "EC-135": {
+    "base_name": "EC-135",
+    "display_name": "EC-135Y",
+    "category": "military",
+    "filename": "ec_135.svg",
+    "path": "/aircraft_silhouettes/ec_135.svg",
+    "source_shape": "R135.svg"
+  },
+  "F-15": {
+    "base_name": "F-15",
+    "display_name": "F-15A Eagle",
+    "category": "military",
+    "filename": "f_15.svg",
+    "path": "/aircraft_silhouettes/f_15.svg",
+    "source_shape": "F15.svg"
+  },
+  "F-16": {
+    "base_name": "F-16",
+    "display_name": "F-16A Fighting Falcon",
+    "category": "military",
+    "filename": "f_16.svg",
+    "path": "/aircraft_silhouettes/f_16.svg",
+    "source_shape": "F16.svg"
+  },
+  "F-22": {
+    "base_name": "F-22",
+    "display_name": "F-22 Raptor",
+    "category": "military",
+    "filename": "f_22.svg",
+    "path": "/aircraft_silhouettes/f_22.svg",
+    "source_shape": "F22.svg"
+  },
+  "F-35": {
+    "base_name": "F-35",
+    "display_name": "F-35A Joint Strike Fighter CTOL",
+    "category": "military",
+    "filename": "f_35.svg",
+    "path": "/aircraft_silhouettes/f_35.svg",
+    "source_shape": "F35.svg"
+  },
+  "F-5": {
+    "base_name": "F-5",
+    "display_name": "F-5E/F Tiger II",
+    "category": "military",
+    "filename": "f_5.svg",
+    "path": "/aircraft_silhouettes/f_5.svg",
+    "source_shape": "F5.svg"
+  },
+  "F/A-18F Super Hornet": {
+    "base_name": "F/A-18F Super Hornet",
+    "display_name": "F/A-18F Super Hornet",
+    "category": "military",
+    "filename": "f_a_18f_super_hornet.svg",
+    "path": "/aircraft_silhouettes/f_a_18f_super_hornet.svg",
+    "source_shape": "F18S.svg"
+  },
+  "HC-130": {
+    "base_name": "HC-130",
+    "display_name": "HC-130P/N Combat Tanker/Combat Shadow",
+    "category": "military",
+    "filename": "hc_130.svg",
+    "path": "/aircraft_silhouettes/hc_130.svg",
+    "source_shape": "C130.svg"
+  },
+  "HH-60": {
+    "base_name": "HH-60",
+    "display_name": "HH-60G Pave Hawk",
+    "category": "military",
+    "filename": "hh_60.svg",
+    "path": "/aircraft_silhouettes/hh_60.svg",
+    "source_shape": "H60.svg"
+  },
+  "IL-76": {
+    "base_name": "IL-76",
+    "display_name": "IL-76MD Candid B",
+    "category": "military",
+    "filename": "il_76.svg",
+    "path": "/aircraft_silhouettes/il_76.svg",
+    "source_shape": "IL76.svg"
+  },
+  "KC-10": {
+    "base_name": "KC-10",
+    "display_name": "KC-10A Extender",
+    "category": "military",
+    "filename": "kc_10.svg",
+    "path": "/aircraft_silhouettes/kc_10.svg",
+    "source_shape": "DC10.svg"
+  },
+  "KC-135": {
+    "base_name": "KC-135",
+    "display_name": "KC-135E Stratotanker",
+    "category": "military",
+    "filename": "kc_135.svg",
+    "path": "/aircraft_silhouettes/kc_135.svg",
+    "source_shape": "K35E.svg"
+  },
+  "KC-46": {
+    "base_name": "KC-46",
+    "display_name": "KC-46 Pegasus",
+    "category": "military",
+    "filename": "kc_46.svg",
+    "path": "/aircraft_silhouettes/kc_46.svg",
+    "source_shape": "KC46.svg"
+  },
+  "LC-130": {
+    "base_name": "LC-130",
+    "display_name": "LC-130H Hercules",
+    "category": "military",
+    "filename": "lc_130.svg",
+    "path": "/aircraft_silhouettes/lc_130.svg",
+    "source_shape": "C130.svg"
+  },
+  "MC-130": {
+    "base_name": "MC-130",
+    "display_name": "MC-130E Combat Talon I",
+    "category": "military",
+    "filename": "mc_130.svg",
+    "path": "/aircraft_silhouettes/mc_130.svg",
+    "source_shape": "C130.svg"
+  },
+  "MD 81": {
+    "base_name": "MD 81",
+    "display_name": "MD 81",
+    "category": "commercial",
+    "filename": "md_81.svg",
+    "path": "/aircraft_silhouettes/md_81.svg",
+    "source_shape": "DC87.svg"
+  },
+  "MD 90-30": {
+    "base_name": "MD 90-30",
+    "display_name": "MD 90-30",
+    "category": "commercial",
+    "filename": "md_90_30.svg",
+    "path": "/aircraft_silhouettes/md_90_30.svg",
+    "source_shape": "DC87.svg"
+  },
+  "MD 90-30ER": {
+    "base_name": "MD 90-30ER",
+    "display_name": "MD 90-30ER",
+    "category": "commercial",
+    "filename": "md_90_30er.svg",
+    "path": "/aircraft_silhouettes/md_90_30er.svg",
+    "source_shape": "DC87.svg"
+  },
+  "MD-10": {
+    "base_name": "MD-10",
+    "display_name": "MD-10-10F",
+    "category": "commercial",
+    "filename": "md_10.svg",
+    "path": "/aircraft_silhouettes/md_10.svg",
+    "source_shape": "DC10.svg"
+  },
+  "MD-11": {
+    "base_name": "MD-11",
+    "display_name": "MD-11, -Combi, -Freighter",
+    "category": "commercial",
+    "filename": "md_11.svg",
+    "path": "/aircraft_silhouettes/md_11.svg",
+    "source_shape": "MD11.svg"
+  },
+  "MD-82": {
+    "base_name": "MD-82",
+    "display_name": "MD-82, -88",
+    "category": "commercial",
+    "filename": "md_82.svg",
+    "path": "/aircraft_silhouettes/md_82.svg",
+    "source_shape": "DC87.svg"
+  },
+  "MD-83": {
+    "base_name": "MD-83",
+    "display_name": "MD-83",
+    "category": "commercial",
+    "filename": "md_83.svg",
+    "path": "/aircraft_silhouettes/md_83.svg",
+    "source_shape": "DC87.svg"
+  },
+  "MD-87": {
+    "base_name": "MD-87",
+    "display_name": "MD-87",
+    "category": "commercial",
+    "filename": "md_87.svg",
+    "path": "/aircraft_silhouettes/md_87.svg",
+    "source_shape": "DC87.svg"
+  },
+  "MH-47": {
+    "base_name": "MH-47",
+    "display_name": "MH-47E Chinook",
+    "category": "military",
+    "filename": "mh_47.svg",
+    "path": "/aircraft_silhouettes/mh_47.svg",
+    "source_shape": "H47.svg"
+  },
+  "MH-60": {
+    "base_name": "MH-60",
+    "display_name": "MH-60K/L/R/S Black Hawk",
+    "category": "military",
+    "filename": "mh_60.svg",
+    "path": "/aircraft_silhouettes/mh_60.svg",
+    "source_shape": "H60.svg"
+  },
+  "MV-22": {
+    "base_name": "MV-22",
+    "display_name": "MV-22 Osprey VSTOL",
+    "category": "military",
+    "filename": "mv_22.svg",
+    "path": "/aircraft_silhouettes/mv_22.svg",
+    "source_shape": "V22 slow.svg"
+  },
+  "OC-135": {
+    "base_name": "OC-135",
+    "display_name": "OC-135B Open Skies",
+    "category": "military",
+    "filename": "oc_135.svg",
+    "path": "/aircraft_silhouettes/oc_135.svg",
+    "source_shape": "R135.svg"
+  },
+  "RC-135": {
+    "base_name": "RC-135",
+    "display_name": "RC-135S Cobra Ball",
+    "category": "military",
+    "filename": "rc_135.svg",
+    "path": "/aircraft_silhouettes/rc_135.svg",
+    "source_shape": "R135.svg"
+  },
+  "RQ-4": {
+    "base_name": "RQ-4",
+    "display_name": "RQ-4A Global Hawk Blk 10",
+    "category": "military",
+    "filename": "rq_4.svg",
+    "path": "/aircraft_silhouettes/rq_4.svg",
+    "source_shape": "Q4.svg"
+  },
+  "T-1": {
+    "base_name": "T-1",
+    "display_name": "T-1A Jayhawk",
+    "category": "military",
+    "filename": "t_1.svg",
+    "path": "/aircraft_silhouettes/t_1.svg",
+    "source_shape": "LJ35.svg"
+  },
+  "T-38": {
+    "base_name": "T-38",
+    "display_name": "T-38A/C Talon",
+    "category": "military",
+    "filename": "t_38.svg",
+    "path": "/aircraft_silhouettes/t_38.svg",
+    "source_shape": "T38.svg"
+  },
+  "T-43": {
+    "base_name": "T-43",
+    "display_name": "T-43A",
+    "category": "military",
+    "filename": "t_43.svg",
+    "path": "/aircraft_silhouettes/t_43.svg",
+    "source_shape": "B737.svg"
+  },
+  "T-45": {
+    "base_name": "T-45",
+    "display_name": "T-45A Goshawk",
+    "category": "military",
+    "filename": "t_45.svg",
+    "path": "/aircraft_silhouettes/t_45.svg",
+    "source_shape": "HAWK.svg"
+  },
+  "T-6": {
+    "base_name": "T-6",
+    "display_name": "T-6A Texan II",
+    "category": "military",
+    "filename": "t_6.svg",
+    "path": "/aircraft_silhouettes/t_6.svg",
+    "source_shape": "PC9.svg"
+  },
+  "Tornado GR MK1": {
+    "base_name": "Tornado GR MK1",
+    "display_name": "Tornado GR MK1",
+    "category": "military",
+    "filename": "tornado_gr_mk1.svg",
+    "path": "/aircraft_silhouettes/tornado_gr_mk1.svg",
+    "source_shape": "TOR slow.svg"
+  },
+  "U-2": {
+    "base_name": "U-2",
+    "display_name": "U-2S Dragon Lady",
+    "category": "military",
+    "filename": "u_2.svg",
+    "path": "/aircraft_silhouettes/u_2.svg",
+    "source_shape": "U2.svg"
+  },
+  "U-28": {
+    "base_name": "U-28",
+    "display_name": "U-28A",
+    "category": "military",
+    "filename": "u_28.svg",
+    "path": "/aircraft_silhouettes/u_28.svg",
+    "source_shape": "PC12.svg"
+  },
+  "UH-1": {
+    "base_name": "UH-1",
+    "display_name": "UH-1H Iroquois",
+    "category": "military",
+    "filename": "uh_1.svg",
+    "path": "/aircraft_silhouettes/uh_1.svg",
+    "source_shape": "UH1.svg"
+  },
+  "UH-72": {
+    "base_name": "UH-72",
+    "display_name": "UH-72A Lakota",
+    "category": "military",
+    "filename": "uh_72.svg",
+    "path": "/aircraft_silhouettes/uh_72.svg",
+    "source_shape": "EC45.svg"
+  },
+  "VC-25": {
+    "base_name": "VC-25",
+    "display_name": "VC-25A Air Force One",
+    "category": "military",
+    "filename": "vc_25.svg",
+    "path": "/aircraft_silhouettes/vc_25.svg",
+    "source_shape": "B742.svg"
+  },
+  "VH-3": {
+    "base_name": "VH-3",
+    "display_name": "VH-3D Sea King",
+    "category": "military",
+    "filename": "vh_3.svg",
+    "path": "/aircraft_silhouettes/vh_3.svg",
+    "source_shape": "S61.svg"
+  },
+  "WC-130": {
+    "base_name": "WC-130",
+    "display_name": "WC-130H Hercules",
+    "category": "military",
+    "filename": "wc_130.svg",
+    "path": "/aircraft_silhouettes/wc_130.svg",
+    "source_shape": "C130.svg"
+  },
+  "WC-135": {
+    "base_name": "WC-135",
+    "display_name": "WC-135C Constant Phoenix",
+    "category": "military",
+    "filename": "wc_135.svg",
+    "path": "/aircraft_silhouettes/wc_135.svg",
+    "source_shape": "R135.svg"
+  },
+  "C-12": {
+    "base_name": "C-12",
+    "display_name": "C-12 C/D Huron",
+    "category": "military",
+    "filename": "c_12.svg",
+    "path": "/aircraft_silhouettes/c_12.svg",
+    "source_shape": "B350.svg"
+  },
+  "RC-12": {
+    "base_name": "RC-12",
+    "display_name": "RC-12N",
+    "category": "military",
+    "filename": "rc_12.svg",
+    "path": "/aircraft_silhouettes/rc_12.svg",
+    "source_shape": "B350.svg"
+  },
+  "C-38": {
+    "base_name": "C-38",
+    "display_name": "C-38A Courier",
+    "category": "military",
+    "filename": "c_38.svg",
+    "path": "/aircraft_silhouettes/c_38.svg",
+    "source_shape": "FA7X.svg"
+  },
+  "DC-8": {
+    "base_name": "DC-8",
+    "display_name": "DC-8-43",
+    "category": "commercial",
+    "filename": "dc_8.svg",
+    "path": "/aircraft_silhouettes/dc_8.svg",
+    "source_shape": "DC87.svg"
+  },
+  "B-2": {
+    "base_name": "B-2",
+    "display_name": "B-2A Spirit",
+    "category": "military",
+    "filename": "b_2.svg",
+    "path": "/aircraft_silhouettes/b_2.svg",
+    "source_shape": "Wikimedia Commons B-2_Sprit_template.svg"
+  }
+}
