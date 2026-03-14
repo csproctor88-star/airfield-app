@@ -704,9 +704,9 @@ export default function InfrastructureMapPage() {
 
   // KML import
   const [kmlImportOpen, setKmlImportOpen] = useState(false)
-  const [kmlFeatureType, setKmlFeatureType] = useState<InfrastructureFeatureType>('threshold_light')
+  const [kmlFeatureType, setKmlFeatureType] = useState<InfrastructureFeatureType>('taxiway_light')
   const [kmlRotation, setKmlRotation] = useState(0)
-  const [kmlLayer, setKmlLayer] = useState('')
+  const [kmlLayer, setKmlLayer] = useState('Initial Import')
   const [kmlImporting, setKmlImporting] = useState(false)
   const kmlFileRef = useRef<HTMLInputElement>(null)
 
