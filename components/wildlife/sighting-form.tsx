@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
 import { createSighting } from '@/lib/supabase/wildlife'
 import { type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
@@ -15,6 +16,11 @@ import {
 import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
 import { SpeciesPicker } from './species-picker'
+
+const LocationPickerMap = dynamic(
+  () => import('@/components/ui/location-picker-map'),
+  { ssr: false },
+)
 
 type Props = {
   currentUser: string
@@ -43,6 +49,9 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved }: Props) {
   const [saving, setSaving] = useState(false)
   const [latitude, setLatitude] = useState<number | null>(null)
   const [longitude, setLongitude] = useState<number | null>(null)
+  const [gpsLoading, setGpsLoading] = useState(false)
+  const [flyToPoint, setFlyToPoint] = useState<{ lat: number; lng: number } | null>(null)
+  const [showMap, setShowMap] = useState(false)
 
   // Get current user ID
   useEffect(() => {
@@ -62,14 +71,46 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved }: Props) {
     else setTimeOfDay('night')
   }, [])
 
-  // Auto GPS
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => { setLatitude(pos.coords.latitude); setLongitude(pos.coords.longitude) },
-        () => { /* GPS not available */ },
-      )
+  const handlePointSelected = useCallback((lat: number, lng: number) => {
+    setLatitude(lat)
+    setLongitude(lng)
+    toast.success(`Location: ${lat.toFixed(5)}, ${lng.toFixed(5)}`)
+  }, [])
+
+  const captureLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser')
+      return
     }
+    setGpsLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords
+        setLatitude(lat)
+        setLongitude(lng)
+        setFlyToPoint({ lat, lng })
+        setShowMap(true)
+        setGpsLoading(false)
+        toast.success(`GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`)
+      },
+      (err) => {
+        setGpsLoading(false)
+        switch (err.code) {
+          case err.PERMISSION_DENIED:
+            toast.error('Location access denied. Enable in browser settings.')
+            break
+          case err.POSITION_UNAVAILABLE:
+            toast.error('Location unavailable. Try again outside.')
+            break
+          case err.TIMEOUT:
+            toast.error('Location request timed out. Try again.')
+            break
+          default:
+            toast.error('Could not get location')
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    )
   }, [])
 
   async function handleSubmit() {
@@ -212,23 +253,85 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved }: Props) {
             </div>
           </div>
 
-          {/* Location */}
-          <div style={{ marginBottom: 14 }}>
-            <label style={labelStyle}>Location</label>
-            <input
-              type="text" placeholder="e.g. RWY 01 threshold, TWY A midpoint"
-              value={locationText} onChange={e => setLocationText(e.target.value)}
-              style={selectStyle}
-            />
+          {/* Location text + Zone */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+            <div>
+              <label style={labelStyle}>Location</label>
+              <input
+                type="text" placeholder="e.g. RWY 01, TWY A"
+                value={locationText} onChange={e => setLocationText(e.target.value)}
+                style={selectStyle}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Airfield Zone</label>
+              <select value={airfieldZone} onChange={e => setAirfieldZone(e.target.value)} style={selectStyle}>
+                <option value="">— Select —</option>
+                {(installationAreas || []).map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
           </div>
 
-          {/* Zone */}
+          {/* GPS + Map Location */}
           <div style={{ marginBottom: 14 }}>
-            <label style={labelStyle}>Airfield Zone</label>
-            <select value={airfieldZone} onChange={e => setAirfieldZone(e.target.value)} style={selectStyle}>
-              <option value="">— Select —</option>
-              {(installationAreas || []).map(a => <option key={a} value={a}>{a}</option>)}
-            </select>
+            <label style={labelStyle}>Pin Location</label>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <button
+                type="button"
+                onClick={captureLocation}
+                disabled={gpsLoading}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  padding: '8px 12px', borderRadius: 6,
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
+                  color: latitude ? '#10B981' : 'var(--color-text-2)',
+                  fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: gpsLoading ? 'wait' : 'pointer',
+                  opacity: gpsLoading ? 0.6 : 1,
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />
+                  <line x1="12" y1="2" x2="12" y2="6" /><line x1="12" y1="18" x2="12" y2="22" />
+                  <line x1="2" y1="12" x2="6" y2="12" /><line x1="18" y1="12" x2="22" y2="12" />
+                </svg>
+                {gpsLoading ? 'Getting Location...' : latitude ? 'Update GPS' : 'Use My Location'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowMap(!showMap)}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  padding: '8px 12px', borderRadius: 6,
+                  border: '1px solid var(--color-border)',
+                  background: showMap ? 'var(--color-cyan)' : 'var(--color-bg-surface)',
+                  color: showMap ? '#000' : 'var(--color-text-2)',
+                  fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+                  <line x1="8" y1="2" x2="8" y2="18" /><line x1="16" y1="6" x2="16" y2="22" />
+                </svg>
+                {showMap ? 'Hide Map' : 'Pin on Map'}
+              </button>
+            </div>
+            {latitude != null && longitude != null && !showMap && (
+              <div style={{ fontSize: 'var(--fs-xs)', color: '#10B981', fontFamily: 'monospace' }}>
+                {latitude.toFixed(5)}, {longitude.toFixed(5)}
+              </div>
+            )}
+            {showMap && (
+              <LocationPickerMap
+                onPointSelected={handlePointSelected}
+                selectedLat={latitude}
+                selectedLng={longitude}
+                flyToPoint={flyToPoint}
+                markerColor="#10B981"
+                promptText="Tap map to mark sighting location"
+                aspectRatio="16 / 9"
+                maxHeight="240px"
+              />
+            )}
           </div>
 
           {/* Conditions */}
@@ -285,13 +388,6 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved }: Props) {
                   <option value="no">No</option>
                 </select>
               </div>
-            </div>
-          )}
-
-          {/* GPS indicator */}
-          {latitude && longitude && (
-            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 10 }}>
-              GPS: {latitude.toFixed(5)}, {longitude.toFixed(5)}
             </div>
           )}
 
