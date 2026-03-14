@@ -26,7 +26,7 @@ type Props = {
   currentUser: string
   baseId?: string | null
   onClose: () => void
-  onSaved: () => void
+  onSaved: (displayId?: string) => void
   initialData?: WildlifeSightingRow | null
   checkId?: string | null
   required?: boolean
@@ -154,7 +154,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
       return
     }
 
-    const { error } = await createSighting({
+    const { data: created, error } = await createSighting({
       species_common: selectedSpecies.common_name,
       species_scientific: selectedSpecies.scientific_name,
       species_group: selectedSpecies.group,
@@ -181,7 +181,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
     setSaving(false)
     if (error) { toast.error(error); return }
     toast.success('Wildlife sighting logged')
-    onSaved()
+    onSaved(created?.display_id)
   }
 
   const selectStyle: React.CSSProperties = {

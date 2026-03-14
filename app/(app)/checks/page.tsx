@@ -51,6 +51,7 @@ export default function AirfieldChecksPage() {
   // ── Inline BASH wildlife form state ──
   const [bashFormType, setBashFormType] = useState<'sighting' | 'strike'>('sighting')
   const [bashFormSaved, setBashFormSaved] = useState(false)
+  const [bashWildlifeDisplayId, setBashWildlifeDisplayId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!installationId) return
@@ -370,7 +371,13 @@ export default function AirfieldChecksPage() {
         return rscData
       }
       case 'bash':
-        return { ...base, condition_code: bashCondition, species_observed: bashSpecies }
+        return {
+          ...base,
+          condition_code: bashCondition,
+          species_observed: bashSpecies,
+          wildlife_form_type: bashFormSaved ? bashFormType : undefined,
+          wildlife_display_id: bashWildlifeDisplayId || undefined,
+        }
       case 'ife':
         return {
           ...base,
@@ -529,6 +536,7 @@ export default function AirfieldChecksPage() {
     setSelectedLng(null)
     setIssueFound(false)
     setBashFormSaved(false)
+    setBashWildlifeDisplayId(null)
     issuePhotos.flat().forEach((p) => URL.revokeObjectURL(p.url))
     setIssues([])
     setIssuePhotos([])
@@ -987,6 +995,7 @@ export default function AirfieldChecksPage() {
               setSelectedLat(null)
               setSelectedLng(null)
               setBashFormSaved(false)
+              setBashWildlifeDisplayId(null)
             }
           }}
           style={{
@@ -1076,8 +1085,9 @@ export default function AirfieldChecksPage() {
                   baseId={installationId}
                   inline
                   onClose={() => {}}
-                  onSaved={() => {
+                  onSaved={(displayId) => {
                     setBashFormSaved(true)
+                    setBashWildlifeDisplayId(displayId || null)
                     toast.success('Wildlife sighting logged')
                   }}
                 />
@@ -1087,8 +1097,9 @@ export default function AirfieldChecksPage() {
                   baseId={installationId}
                   inline
                   onClose={() => {}}
-                  onSaved={() => {
+                  onSaved={(displayId) => {
                     setBashFormSaved(true)
+                    setBashWildlifeDisplayId(displayId || null)
                     toast.success('Wildlife strike reported')
                   }}
                 />

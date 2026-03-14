@@ -27,7 +27,7 @@ type Props = {
   currentUser: string
   baseId?: string | null
   onClose: () => void
-  onSaved: () => void
+  onSaved: (displayId?: string) => void
   initialData?: WildlifeStrikeRow | null
   checkId?: string | null
   inline?: boolean
@@ -179,7 +179,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
       return
     }
 
-    const { error } = await createStrike({
+    const { data: created, error } = await createStrike({
       species_common: selectedSpecies?.common_name ?? null,
       species_scientific: selectedSpecies?.scientific_name ?? null,
       species_group: selectedSpecies?.group ?? null,
@@ -216,7 +216,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
     setSaving(false)
     if (error) { toast.error(error); return }
     toast.success('Wildlife strike reported')
-    onSaved()
+    onSaved(created?.display_id)
   }
 
   const selectStyle: React.CSSProperties = {
