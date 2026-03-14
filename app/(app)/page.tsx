@@ -858,7 +858,8 @@ export default function HomePage() {
           selectBorder: s === 'closed' ? 'rgba(239,68,68,0.4)' : s === 'suspended' ? 'rgba(251,191,36,0.4)' : 'rgba(52,211,153,0.4)',
         })
 
-        return (<>
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '0 0 auto' }}>
             {rwyEntries.map((rwy) => {
               const c = getColors(rwy.status)
               return (
@@ -1002,7 +1003,7 @@ export default function HomePage() {
               {bwcValue || '—'}
             </div>
           </div>
-          </>
+          </div>
         )
       })()}
 
