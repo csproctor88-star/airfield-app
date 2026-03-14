@@ -402,50 +402,6 @@ export default function AMDashboardPage() {
           </span>
         </button>
         {/* Lighting System Health Badge */}
-        {lightingHealthSummary && lightingHealthSummary.total > 0 && (
-          <Link
-            href="/infrastructure"
-            style={{
-              background: 'var(--color-bg-surface)',
-              border: `1px solid ${ALERT_TIER_CONFIG[lightingHealthSummary.worstTier].color}40`,
-              borderRadius: 12,
-              padding: '14px 16px',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
-            }}
-          >
-            <span style={{
-              width: 14, height: 14, borderRadius: '50%',
-              background: ALERT_TIER_CONFIG[lightingHealthSummary.worstTier].color,
-              flexShrink: 0,
-              boxShadow: lightingHealthSummary.worstTier !== 'green'
-                ? `0 0 8px ${ALERT_TIER_CONFIG[lightingHealthSummary.worstTier].color}80`
-                : 'none',
-            }} />
-            <span style={{
-              fontSize: 'var(--fs-xl)',
-              color: ALERT_TIER_CONFIG[lightingHealthSummary.worstTier].color,
-              letterSpacing: '0.04em',
-              fontWeight: 700,
-            }}>
-              Visual NAVAIDs
-            </span>
-            {(lightingHealthSummary.exceeded > 0 || lightingHealthSummary.inoperative > 0) && (
-              <span style={{
-                fontSize: 'var(--fs-xs)', fontWeight: 800,
-                background: ALERT_TIER_CONFIG[lightingHealthSummary.worstTier].bg,
-                color: ALERT_TIER_CONFIG[lightingHealthSummary.worstTier].color,
-                padding: '2px 6px', borderRadius: 4,
-              }}>
-                {lightingHealthSummary.exceeded + lightingHealthSummary.inoperative} EXCEEDED
-              </span>
-            )}
-          </Link>
-        )}
       </div>
 
       {/* ===== Contractor Form Dialog ===== */}
