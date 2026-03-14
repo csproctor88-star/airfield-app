@@ -370,7 +370,7 @@ export default function InfrastructureMapPage() {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
-  const [legendOpen, setLegendOpen] = useState(true)
+  const [legendOpen, setLegendOpen] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     () => Object.fromEntries(LAYER_GROUPS.map(g => [g, false]))
   )
