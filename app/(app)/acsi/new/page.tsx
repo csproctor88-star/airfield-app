@@ -495,6 +495,15 @@ export default function AcsiFormPage() {
               itemIds={allItemIds}
               expanded={expandedSections[section.id] || false}
               onToggle={() => toggleSection(section.id)}
+              onMarkAllPass={() => {
+                updateDraft(prev => {
+                  const responses = { ...prev.responses }
+                  for (const id of allItemIds) {
+                    if (!responses[id]) responses[id] = 'pass'
+                  }
+                  return { ...prev, responses }
+                })
+              }}
             >
               {section.items.map((item, idx) => {
                 const showSubsection = item.subsection && item.subsection !== lastSubsection

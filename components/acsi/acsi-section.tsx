@@ -14,6 +14,7 @@ interface AcsiSectionProps {
   itemIds: string[]
   expanded: boolean
   onToggle: () => void
+  onMarkAllPass?: () => void
   children: React.ReactNode
 }
 
@@ -28,6 +29,7 @@ export function AcsiSection({
   itemIds,
   expanded,
   onToggle,
+  onMarkAllPass,
   children,
 }: AcsiSectionProps) {
   const answered = itemIds.filter(id => responses[id] != null).length
@@ -106,6 +108,23 @@ export function AcsiSection({
               lineHeight: 1.5,
             }}>
               {preamble}
+            </div>
+          )}
+          {onMarkAllPass && passCount < totalItems && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+              <button
+                onClick={(e) => { e.stopPropagation(); onMarkAllPass() }}
+                style={{
+                  padding: '4px 12px', borderRadius: 6,
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  color: '#10B981',
+                  fontSize: 'var(--fs-xs)', fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Mark All Y
+              </button>
             </div>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
