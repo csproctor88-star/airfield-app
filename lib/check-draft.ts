@@ -22,7 +22,6 @@ export interface CheckDraft {
   rcrValue: string
   rcrConditionType: string
   bashCondition: string
-  bashSpecies: string
   aircraftType: string
   callsign: string
   emergencyNature: string
@@ -46,7 +45,6 @@ export function createEmptyCheckDraft(): CheckDraft {
     rcrValue: '',
     rcrConditionType: '',
     bashCondition: '',
-    bashSpecies: '',
     aircraftType: '',
     callsign: '',
     emergencyNature: '',

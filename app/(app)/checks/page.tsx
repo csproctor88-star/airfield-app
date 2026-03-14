@@ -98,7 +98,6 @@ export default function AirfieldChecksPage() {
     setRcrValue((saved as any).rcrValue ?? (saved as any).rcrTouchdown ?? '')
     setRcrConditionType(saved.rcrConditionType)
     setBashCondition(saved.bashCondition)
-    setBashSpecies(saved.bashSpecies)
     setAircraftType(saved.aircraftType)
     setCallsign(saved.callsign)
     setEmergencyNature(saved.emergencyNature)
@@ -278,7 +277,6 @@ export default function AirfieldChecksPage() {
   const [rcrValue, setRcrValue] = useState('')
   const [rcrConditionType, setRcrConditionType] = useState('')
   const [bashCondition, setBashCondition] = useState('')
-  const [bashSpecies, setBashSpecies] = useState('')
   const [aircraftType, setAircraftType] = useState('')
   const [callsign, setCallsign] = useState('')
   const [emergencyNature, setEmergencyNature] = useState('')
@@ -295,7 +293,7 @@ export default function AirfieldChecksPage() {
     setDraftSaving(true)
     const draft: CheckDraft = {
       checkType, areas, issueFound, issues, remarks, remarkText,
-      rscCondition, reportRcr, rcrValue, rcrConditionType, bashCondition, bashSpecies,
+      rscCondition, reportRcr, rcrValue, rcrConditionType, bashCondition,
       aircraftType, callsign, emergencyNature, checkedActions, notifiedAgencies,
       heavyAircraftType, savedAt: '', dbRowId: draftDbRowId,
     }
@@ -374,7 +372,6 @@ export default function AirfieldChecksPage() {
         return {
           ...base,
           condition_code: bashCondition,
-          species_observed: bashSpecies,
           wildlife_form_type: bashFormSaved ? bashFormType : undefined,
           wildlife_display_id: bashWildlifeDisplayId || undefined,
         }
@@ -525,7 +522,6 @@ export default function AirfieldChecksPage() {
     setRcrValue('')
     setRcrConditionType('')
     setBashCondition('')
-    setBashSpecies('')
     setAircraftType('')
     setCallsign('')
     setEmergencyNature('')
@@ -759,16 +755,54 @@ export default function AirfieldChecksPage() {
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 4 }}>Species Observed</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+                  Remarks
+                </div>
                 <ExpandableTextarea
                   className="input-dark"
-                  rows={2}
-                  placeholder="Species, count, behavior..."
-                  value={bashSpecies}
-                  onChange={(val) => setBashSpecies(val)}
-                  label="Species Observed"
-                  style={{ resize: 'vertical', width: '100%', boxSizing: 'border-box' }}
+                  rows={6}
+                  placeholder="Add a remark..."
+                  value={remarkText}
+                  onChange={(val) => setRemarkText(val)}
+                  label="Remarks"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      addRemark()
+                    }
+                  }}
+                  style={{ resize: 'vertical', width: '100%', minHeight: 120, boxSizing: 'border-box' }}
                 />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+                  <button
+                    type="button"
+                    onClick={addRemark}
+                    disabled={!remarkText.trim()}
+                    style={{
+                      padding: '8px 20px', borderRadius: 8, border: 'none',
+                      background: remarkText.trim() ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-elevated)',
+                      color: remarkText.trim() ? 'var(--color-cyan-btn-text)' : 'var(--color-text-4)',
+                      fontSize: 'var(--fs-base)', fontWeight: 700, cursor: remarkText.trim() ? 'pointer' : 'default',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    Save Remark
+                  </button>
+                </div>
+                {remarks.length > 0 && (
+                  <div style={{ borderTop: '1px solid var(--color-bg-elevated)', paddingTop: 8, marginTop: 8 }}>
+                    {remarks.map((remark) => (
+                      <div key={remark.id} style={{ borderLeft: '2px solid var(--color-text-4)', paddingLeft: 10, marginBottom: 8 }}>
+                        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 2 }}>
+                          <span style={{ fontWeight: 600, color: 'var(--color-accent)' }}>{remark.user_name}</span>
+                          {' — '}
+                          {formatZuluDateTime(new Date(remark.created_at))}
+                        </div>
+                        <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.4 }}>{remark.comment}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -917,8 +951,8 @@ export default function AirfieldChecksPage() {
         </button>
       )}
 
-      {/* Remarks Section */}
-      {checkType && (
+      {/* Remarks Section (skip for BASH — remarks are inline in BASH card) */}
+      {checkType && checkType !== 'bash' && (
         <div style={{ marginBottom: 8, maxWidth: 720, width: '100%', marginLeft: 'auto', marginRight: 'auto' }}>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
             Remarks
