@@ -833,8 +833,8 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* ===== Runway Status ===== */}
-      <span className="section-label">Runway Status</span>
+      {/* ===== Runway & NAVAID Status ===== */}
+      <span className="section-label">Runway & NAVAID Status</span>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'stretch' }}>
       {(() => {
         // Build runway entries from installation runways
@@ -1005,7 +1005,6 @@ export default function HomePage() {
           </>
         )
       })()}
-      </div>
 
       {/* ARFF Aircraft Readiness Dialog */}
       {arffDialog && (
@@ -1105,13 +1104,11 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* ===== NAVAID & ARFF Status ===== */}
-      <span className="section-label">NAVAID & ARFF Status</span>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'stretch' }}>
+      {/* NAVAID cards (continuation of runway row) */}
           {navaids.length === 0 ? (
-            <div className="card" style={{ padding: 12 }}>
+            <div className="card" style={{ padding: 12, flex: '1 1 0', minWidth: 160 }}>
               <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', textAlign: 'center' }}>
-                Loading NAVAID statuses...
+                Loading NAVAIDs...
               </div>
             </div>
           ) : (() => {
@@ -1202,10 +1199,15 @@ export default function HomePage() {
                 )}
             </>)
           })()}
+      </div>{/* end runway + navaid row */}
+
+      {/* ===== ARFF Status ===== */}
+      <span className="section-label">ARFF Status</span>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
           {/* ARFF CAT card */}
           <div className="card" style={{
-            padding: '14px 16px', flex: '1 1 0', minWidth: 120,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+            padding: '10px 14px', flex: '1 1 0', minWidth: 80,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
           }}>
             <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>ARFF CAT</div>
             <select
@@ -1260,15 +1262,15 @@ export default function HomePage() {
                 className="card"
                 onClick={() => setArffDialog({ aircraft, selectedStatus: readiness, notes: '' })}
                 style={{
-                  padding: '14px 16px', flex: '1 1 0', minWidth: 120,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  padding: '10px 14px', flex: '1 1 0', minWidth: 80,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
                   cursor: 'pointer',
                   background: c.bg, border: `1px solid ${c.border}`,
                 }}
               >
-                <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>{aircraft}</div>
+                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600 }}>{aircraft}</div>
                 <div style={{
-                  fontSize: 'var(--fs-xl)', fontWeight: 700, color: c.color,
+                  fontSize: 'var(--fs-md)', fontWeight: 700, color: c.color,
                   textTransform: 'uppercase', letterSpacing: '0.04em',
                 }}>
                   {readiness}
