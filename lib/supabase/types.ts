@@ -869,6 +869,108 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['outage_rule_templates']['Insert']>
         Relationships: []
       }
+      wildlife_sightings: {
+        Row: {
+          id: string
+          base_id: string | null
+          display_id: string
+          species_common: string
+          species_scientific: string | null
+          species_group: string
+          size_category: string | null
+          count_observed: number
+          behavior: string | null
+          latitude: number | null
+          longitude: number | null
+          location_text: string | null
+          airfield_zone: string | null
+          observed_at: string
+          time_of_day: string | null
+          sky_condition: string | null
+          precipitation: string | null
+          action_taken: string | null
+          dispersal_method: string | null
+          dispersal_effective: boolean | null
+          observed_by: string
+          observed_by_id: string | null
+          check_id: string | null
+          inspection_id: string | null
+          discrepancy_id: string | null
+          photo_count: number | null
+          notes: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: Omit<Database['public']['Tables']['wildlife_sightings']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['wildlife_sightings']['Insert']>
+        Relationships: []
+      }
+      wildlife_strikes: {
+        Row: {
+          id: string
+          base_id: string | null
+          display_id: string
+          species_common: string | null
+          species_scientific: string | null
+          species_group: string | null
+          size_category: string | null
+          number_struck: number | null
+          number_seen: number | null
+          latitude: number | null
+          longitude: number | null
+          location_text: string | null
+          strike_date: string
+          time_of_day: string | null
+          sky_condition: string | null
+          precipitation: string | null
+          aircraft_type: string | null
+          aircraft_registration: string | null
+          engine_type: string | null
+          phase_of_flight: string | null
+          altitude_agl: number | null
+          speed_ias: number | null
+          pilot_warned: boolean | null
+          parts_struck: string[] | null
+          parts_damaged: string[] | null
+          damage_level: string | null
+          engine_ingested: boolean | null
+          engines_ingested: number[] | null
+          flight_effect: string | null
+          repair_cost: number | null
+          other_cost: number | null
+          hours_out_of_service: number | null
+          remains_collected: boolean | null
+          remains_sent_to_lab: boolean | null
+          lab_identification: string | null
+          reported_by: string
+          reported_by_id: string | null
+          discrepancy_id: string | null
+          sighting_id: string | null
+          photo_count: number | null
+          notes: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: Omit<Database['public']['Tables']['wildlife_strikes']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['wildlife_strikes']['Insert']>
+        Relationships: []
+      }
+      bwc_history: {
+        Row: {
+          id: string
+          base_id: string | null
+          bwc_value: string
+          set_at: string
+          set_by: string | null
+          source: string | null
+          source_id: string | null
+          notes: string | null
+          created_at: string | null
+        }
+        Insert: Omit<Database['public']['Tables']['bwc_history']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['bwc_history']['Insert']>
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
