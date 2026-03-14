@@ -215,6 +215,44 @@ export async function fetchEntityDetails(entries: ActivityEntry[]): Promise<Map<
     } catch { /* deleted entities */ }
   }
 
+  // Wildlife sightings
+  if (groups['wildlife_sighting']?.length) {
+    try {
+      const { data } = await supabase
+        .from('wildlife_sightings')
+        .select('id, species_common, count_observed, action_taken, location_text')
+        .in('id', groups['wildlife_sighting'])
+      if (data) {
+        for (const r of data as { id: string; species_common?: string; count_observed?: number; action_taken?: string; location_text?: string }[]) {
+          result.set(r.id, {
+            title: r.species_common || 'Unknown species',
+            description: `${r.count_observed ?? 1}x observed${r.location_text ? ` at ${r.location_text}` : ''}`,
+            extra: r.action_taken && r.action_taken !== 'none' ? `Action: ${r.action_taken}` : undefined,
+          })
+        }
+      }
+    } catch { /* deleted entities */ }
+  }
+
+  // Wildlife strikes
+  if (groups['wildlife_strike']?.length) {
+    try {
+      const { data } = await supabase
+        .from('wildlife_strikes')
+        .select('id, species_common, aircraft_type, damage_level, location_text')
+        .in('id', groups['wildlife_strike'])
+      if (data) {
+        for (const r of data as { id: string; species_common?: string; aircraft_type?: string; damage_level?: string; location_text?: string }[]) {
+          result.set(r.id, {
+            title: r.species_common || 'Unknown species',
+            description: `${r.aircraft_type || 'Unknown aircraft'}${r.location_text ? ` at ${r.location_text}` : ''}`,
+            extra: r.damage_level ? `Damage: ${r.damage_level}` : undefined,
+          })
+        }
+      }
+    } catch { /* deleted entities */ }
+  }
+
   // Waiver reviews
   if (groups['waiver_review']?.length) {
     try {

@@ -22,6 +22,8 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     airfield_status: 'Runway',
     contractor: 'Personnel on Airfield',
     qrc: 'QRC',
+    wildlife_sighting: 'Wildlife Sighting',
+    wildlife_strike: 'Wildlife Strike',
     manual: 'Manual Entry',
   }
   const entity = typeLabel[entityType] || entityType
@@ -58,6 +60,8 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
     case 'inspection': return `/inspections/${entityId}`
     case 'obstruction_evaluation': return `/obstructions`
     case 'qrc': return `/qrc?exec=${entityId}`
+    case 'wildlife_sighting': return `/wildlife`
+    case 'wildlife_strike': return `/wildlife`
     default: return null
   }
 }
