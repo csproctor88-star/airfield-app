@@ -30,9 +30,10 @@ type Props = {
   initialData?: WildlifeSightingRow | null
   checkId?: string | null
   required?: boolean
+  inline?: boolean
 }
 
-export function SightingForm({ currentUser, baseId, onClose, onSaved, initialData, checkId, required }: Props) {
+export function SightingForm({ currentUser, baseId, onClose, onSaved, initialData, checkId, required, inline }: Props) {
   const { areas: installationAreas } = useInstallation()
   const isEdit = !!initialData
 
@@ -204,19 +205,9 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
     }
   }
 
-  return (
+  const formContent = (
     <>
-      <div style={{
-        position: 'fixed', inset: 0, zIndex: 200, display: 'flex',
-        alignItems: 'flex-end', justifyContent: 'center',
-        background: 'rgba(0,0,0,0.5)',
-      }} onClick={e => { if (e.target === e.currentTarget && !required) onClose() }}>
-        <div style={{
-          width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto',
-          background: 'var(--color-bg)', borderRadius: '16px 16px 0 0',
-          padding: 20,
-        }}>
-          {required && (
+          {required && !inline && (
             <div style={{
               padding: '8px 12px', marginBottom: 12, borderRadius: 8,
               background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
@@ -225,12 +216,14 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
               BASH issue found — log the wildlife sighting before continuing.
             </div>
           )}
+          {!inline && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>{isEdit ? 'Edit Sighting' : required ? 'Log BASH Sighting' : 'Log Wildlife Sighting'}</div>
             {!required && (
               <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: 'var(--color-text-3)' }}>×</button>
             )}
           </div>
+          )}
 
           {/* Species selector — tap to open full picker */}
           <div style={{ marginBottom: 14 }}>
@@ -461,6 +454,38 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
           >
             {saving ? 'Saving...' : isEdit ? 'Update Sighting' : 'Log Sighting'}
           </button>
+    </>
+  )
+
+  if (inline) {
+    return (
+      <>
+        <div style={{ padding: 0 }}>
+          {formContent}
+        </div>
+        {showPicker && (
+          <SpeciesPicker
+            onSelect={sp => { setSelectedSpecies(sp); setShowPicker(false) }}
+            onClose={() => setShowPicker(false)}
+          />
+        )}
+      </>
+    )
+  }
+
+  return (
+    <>
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 200, display: 'flex',
+        alignItems: 'flex-end', justifyContent: 'center',
+        background: 'rgba(0,0,0,0.5)',
+      }} onClick={e => { if (e.target === e.currentTarget && !required) onClose() }}>
+        <div style={{
+          width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto',
+          background: 'var(--color-bg)', borderRadius: '16px 16px 0 0',
+          padding: 20,
+        }}>
+          {formContent}
         </div>
       </div>
 

@@ -29,9 +29,11 @@ type Props = {
   onClose: () => void
   onSaved: () => void
   initialData?: WildlifeStrikeRow | null
+  checkId?: string | null
+  inline?: boolean
 }
 
-export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData }: Props) {
+export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData, checkId, inline }: Props) {
   const isEdit = !!initialData
   const [userId, setUserId] = useState<string | null>(null)
   const [selectedSpecies, setSelectedSpecies] = useState<WildlifeSpecies | null>(() => {
@@ -235,22 +237,14 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData 
     borderBottom: '1px solid var(--color-border)',
   }
 
-  return (
+  const formContent = (
     <>
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200, display: 'flex',
-      alignItems: 'flex-end', justifyContent: 'center',
-      background: 'rgba(0,0,0,0.5)',
-    }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div style={{
-        width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto',
-        background: 'var(--color-bg)', borderRadius: '16px 16px 0 0',
-        padding: 20,
-      }}>
+        {!inline && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: '#EF4444' }}>{isEdit ? 'Edit Strike Report' : 'Report Wildlife Strike'}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: 'var(--color-text-3)' }}>×</button>
         </div>
+        )}
 
         {/* Species */}
         <div style={{ marginBottom: 14 }}>
@@ -570,6 +564,38 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData 
         >
           {saving ? 'Saving...' : isEdit ? 'Update Strike' : 'Report Strike'}
         </button>
+    </>
+  )
+
+  if (inline) {
+    return (
+      <>
+        <div style={{ padding: 0 }}>
+          {formContent}
+        </div>
+        {showPicker && (
+          <SpeciesPicker
+            onSelect={sp => { setSelectedSpecies(sp); setShowPicker(false) }}
+            onClose={() => setShowPicker(false)}
+          />
+        )}
+      </>
+    )
+  }
+
+  return (
+    <>
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 200, display: 'flex',
+      alignItems: 'flex-end', justifyContent: 'center',
+      background: 'rgba(0,0,0,0.5)',
+    }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={{
+        width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto',
+        background: 'var(--color-bg)', borderRadius: '16px 16px 0 0',
+        padding: 20,
+      }}>
+        {formContent}
       </div>
     </div>
     {showPicker && (

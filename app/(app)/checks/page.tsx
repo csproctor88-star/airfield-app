@@ -24,6 +24,7 @@ import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort
 import type { SimpleDiscrepancy } from '@/lib/supabase/types'
 import { loadCheckDraft, saveCheckDraft, clearCheckDraft, type CheckDraft } from '@/lib/check-draft'
 import { SightingForm } from '@/components/wildlife/sighting-form'
+import { StrikeForm } from '@/components/wildlife/strike-form'
 
 type LocalComment = {
   id: string
@@ -47,10 +48,9 @@ export default function AirfieldChecksPage() {
   // ── Airfield diagram state ──
   const [diagramUrl, setDiagramUrl] = useState<string | null>(null)
   const [showDiagram, setShowDiagram] = useState(false)
-  // ── Post-BASH-check wildlife sighting prompt ──
-  const [showBashSighting, setShowBashSighting] = useState(false)
-  const [bashCheckId, setBashCheckId] = useState<string | null>(null)
-  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null)
+  // ── Inline BASH wildlife form state ──
+  const [bashFormType, setBashFormType] = useState<'sighting' | 'strike'>('sighting')
+  const [bashFormSaved, setBashFormSaved] = useState(false)
 
   useEffect(() => {
     if (!installationId) return
@@ -401,6 +401,10 @@ export default function AirfieldChecksPage() {
       toast.error('Select a check type')
       return
     }
+    if (checkType === 'bash' && issueFound && !bashFormSaved) {
+      toast.error('Complete the wildlife sighting or strike form before submitting')
+      return
+    }
     setSaving(true)
 
     // Auto-save any pending remark text
@@ -505,14 +509,6 @@ export default function AirfieldChecksPage() {
       : `Check ${created.display_id} completed`
     toast.success(summary)
 
-    // For BASH checks with issues found, prompt to log a wildlife sighting
-    if (checkType === 'bash' && issueFound) {
-      setBashCheckId(created.id)
-      setPendingRedirect(`/checks/${created.id}`)
-      setShowBashSighting(true)
-      return
-    }
-
     router.push(`/checks/${created.id}`)
   }
 
@@ -532,6 +528,7 @@ export default function AirfieldChecksPage() {
     setSelectedLat(null)
     setSelectedLng(null)
     setIssueFound(false)
+    setBashFormSaved(false)
     issuePhotos.flat().forEach((p) => URL.revokeObjectURL(p.url))
     setIssues([])
     setIssuePhotos([])
@@ -989,6 +986,7 @@ export default function AirfieldChecksPage() {
               setIssueFlyTo([])
               setSelectedLat(null)
               setSelectedLng(null)
+              setBashFormSaved(false)
             }
           }}
           style={{
@@ -1013,8 +1011,93 @@ export default function AirfieldChecksPage() {
         </button>
       )}
 
-      {/* Issue Details — multi-issue panels */}
-      {checkType && issueFound && issues.length > 0 && (
+      {/* Issue Details — BASH uses inline wildlife forms, others use discrepancy panels */}
+      {checkType === 'bash' && issueFound && (
+        <div className="card" style={{ marginBottom: 8, padding: 16 }}>
+          {bashFormSaved ? (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
+              borderRadius: 8, background: 'rgba(16,185,129,0.08)',
+              border: '1px solid rgba(16,185,129,0.3)',
+            }}>
+              <span style={{ fontSize: 20 }}>✓</span>
+              <div>
+                <div style={{ fontWeight: 700, color: '#10B981' }}>
+                  Wildlife {bashFormType === 'sighting' ? 'sighting' : 'strike'} logged
+                </div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                  You can now complete the check.
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Form type selector */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                <button
+                  type="button"
+                  onClick={() => setBashFormType('sighting')}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: 8, fontWeight: 700,
+                    fontSize: 'var(--fs-md)', fontFamily: 'inherit', cursor: 'pointer',
+                    border: bashFormType === 'sighting' ? '2px solid #10B981' : '2px solid var(--color-text-4)',
+                    background: bashFormType === 'sighting' ? 'rgba(16,185,129,0.08)' : 'var(--color-bg-surface)',
+                    color: bashFormType === 'sighting' ? '#10B981' : 'var(--color-text-2)',
+                  }}
+                >
+                  Wildlife Sighting
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBashFormType('strike')}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: 8, fontWeight: 700,
+                    fontSize: 'var(--fs-md)', fontFamily: 'inherit', cursor: 'pointer',
+                    border: bashFormType === 'strike' ? '2px solid #EF4444' : '2px solid var(--color-text-4)',
+                    background: bashFormType === 'strike' ? 'rgba(239,68,68,0.08)' : 'var(--color-bg-surface)',
+                    color: bashFormType === 'strike' ? '#EF4444' : 'var(--color-text-2)',
+                  }}
+                >
+                  Wildlife Strike
+                </button>
+              </div>
+
+              <div style={{
+                padding: '8px 12px', marginBottom: 12, borderRadius: 8,
+                background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                fontSize: 'var(--fs-sm)', color: '#EF4444', fontWeight: 600,
+              }}>
+                Complete the {bashFormType} form below before submitting the check.
+              </div>
+
+              {bashFormType === 'sighting' ? (
+                <SightingForm
+                  currentUser={currentUser}
+                  baseId={installationId}
+                  inline
+                  onClose={() => {}}
+                  onSaved={() => {
+                    setBashFormSaved(true)
+                    toast.success('Wildlife sighting logged')
+                  }}
+                />
+              ) : (
+                <StrikeForm
+                  currentUser={currentUser}
+                  baseId={installationId}
+                  inline
+                  onClose={() => {}}
+                  onSaved={() => {
+                    setBashFormSaved(true)
+                    toast.success('Wildlife strike reported')
+                  }}
+                />
+              )}
+            </>
+          )}
+        </div>
+      )}
+      {checkType && checkType !== 'bash' && issueFound && issues.length > 0 && (
         <div className="card" style={{ marginBottom: 8 }}>
           <SimpleDiscrepancyPanelGroup
             discrepancies={issues}
@@ -1089,24 +1172,6 @@ export default function AirfieldChecksPage() {
         </div>
       )}
 
-      {/* ── Post-BASH-Check Wildlife Sighting Form ── */}
-      {showBashSighting && (
-        <SightingForm
-          currentUser={currentUser}
-          baseId={installationId}
-          checkId={bashCheckId}
-          required
-          onClose={() => {
-            setShowBashSighting(false)
-            if (pendingRedirect) router.push(pendingRedirect)
-          }}
-          onSaved={() => {
-            setShowBashSighting(false)
-            toast.success('Wildlife sighting logged from BASH check')
-            if (pendingRedirect) router.push(pendingRedirect)
-          }}
-        />
-      )}
 
       {/* ── Airfield Diagram Fullscreen Overlay ── */}
       {showDiagram && diagramUrl && (
