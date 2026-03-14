@@ -1050,7 +1050,7 @@ export default function AirfieldChecksPage() {
           }}>
             {issueFound ? '✓' : ''}
           </span>
-          Issue Found
+          {checkType === 'bash' ? 'Report Sighting and/or Strike' : 'Issue Found'}
         </button>
       )}
 
