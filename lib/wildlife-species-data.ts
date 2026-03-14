@@ -42,15 +42,20 @@ function getWildlifeImageManifest(): Record<string, ManifestEntry> {
 
 /**
  * Resolve the best available image URL for a species.
- * Prefers local /wildlife_images/ path when the manifest exists (offline mode).
- * Falls back to the remote USFWS URL.
+ * 1. Manifest entry (if loaded via setWildlifeImageManifest)
+ * 2. Deterministic local path: /wildlife_images/{group}/{safe_name}.jpg
+ *    (relies on img onError handler to hide if file doesn't exist)
+ * 3. Remote USFWS URL (image_url field) as last resort
  */
 export function resolveWildlifeImage(species: WildlifeSpecies): string | null {
+  // Check manifest first
   const entry = getWildlifeImageManifest()[species.common_name]
   if (entry?.filename) {
     return `/wildlife_images/${entry.filename}`
   }
-  return species.image_url
+  // Deterministic local path (matches scraper filename convention)
+  const safeName = species.common_name.toLowerCase().replace(/[' ()-]/g, '_').replace(/[^a-z0-9_]/g, '').replace(/_+/g, '_')
+  return `/wildlife_images/${species.group}/${safeName}.jpg`
 }
 
 /**

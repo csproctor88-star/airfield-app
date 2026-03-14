@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { createStrike } from '@/lib/supabase/wildlife'
-import { WILDLIFE_SPECIES, type WildlifeSpecies } from '@/lib/wildlife-species-data'
+import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import { createClient } from '@/lib/supabase/client'
 import {
   FLIGHT_PHASES,
@@ -83,9 +83,10 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved }: Props) {
   const filteredSpecies = speciesSearch.length > 0
     ? WILDLIFE_SPECIES.filter(s =>
         s.common_name.toLowerCase().includes(speciesSearch.toLowerCase()) ||
-        s.scientific_name.toLowerCase().includes(speciesSearch.toLowerCase()),
-      ).slice(0, 10)
-    : WILDLIFE_SPECIES.slice(0, 10)
+        s.scientific_name.toLowerCase().includes(speciesSearch.toLowerCase()) ||
+        s.group.toLowerCase().includes(speciesSearch.toLowerCase()),
+      ).slice(0, 25)
+    : WILDLIFE_SPECIES.slice(0, 25)
 
   function togglePart(part: string, list: string[], setter: (v: string[]) => void) {
     setter(list.includes(part) ? list.filter(p => p !== part) : [...list, part])
@@ -198,8 +199,8 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved }: Props) {
                     textAlign: 'left', color: 'var(--color-text)',
                   }}
                 >
-                  {sp.image_url && (
-                    <img src={sp.image_url} alt={sp.common_name}
+                  {resolveWildlifeImage(sp) && (
+                    <img src={resolveWildlifeImage(sp)!} alt={sp.common_name}
                       style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}
                       onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
                     />
@@ -214,8 +215,8 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved }: Props) {
           )}
           {selectedSpecies && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-              {selectedSpecies.image_url && (
-                <img src={selectedSpecies.image_url} alt="" style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover' }}
+              {resolveWildlifeImage(selectedSpecies) && (
+                <img src={resolveWildlifeImage(selectedSpecies)!} alt="" style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover' }}
                   onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
               )}
               <span style={{ fontStyle: 'italic' }}>{selectedSpecies.scientific_name}</span>

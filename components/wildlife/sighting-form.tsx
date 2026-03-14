@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { createSighting } from '@/lib/supabase/wildlife'
-import { WILDLIFE_SPECIES, type WildlifeSpecies } from '@/lib/wildlife-species-data'
+import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import {
   WILDLIFE_BEHAVIORS,
   WILDLIFE_ACTIONS,
@@ -75,9 +75,10 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved }: Props) {
   const filteredSpecies = speciesSearch.length > 0
     ? WILDLIFE_SPECIES.filter(s =>
         s.common_name.toLowerCase().includes(speciesSearch.toLowerCase()) ||
-        s.scientific_name.toLowerCase().includes(speciesSearch.toLowerCase()),
-      ).slice(0, 10)
-    : WILDLIFE_SPECIES.slice(0, 10)
+        s.scientific_name.toLowerCase().includes(speciesSearch.toLowerCase()) ||
+        s.group.toLowerCase().includes(speciesSearch.toLowerCase()),
+      ).slice(0, 25)
+    : WILDLIFE_SPECIES.slice(0, 25)
 
   async function handleSubmit() {
     if (!selectedSpecies) { toast.error('Select a species'); return }
@@ -172,9 +173,9 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved }: Props) {
                     textAlign: 'left', color: 'var(--color-text)',
                   }}
                 >
-                  {sp.image_url && (
+                  {resolveWildlifeImage(sp) && (
                     <img
-                      src={sp.image_url}
+                      src={resolveWildlifeImage(sp)!}
                       alt={sp.common_name}
                       style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}
                       onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
@@ -192,14 +193,14 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved }: Props) {
           )}
 
           {/* Selected species photo card */}
-          {selectedSpecies && selectedSpecies.image_url && (
+          {selectedSpecies && resolveWildlifeImage(selectedSpecies) && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: 10, marginTop: 8,
               padding: 8, borderRadius: 8, background: 'var(--color-bg-surface)',
               border: '1px solid var(--color-border)',
             }}>
               <img
-                src={selectedSpecies.image_url}
+                src={resolveWildlifeImage(selectedSpecies)!}
                 alt={selectedSpecies.common_name}
                 style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover' }}
                 onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
