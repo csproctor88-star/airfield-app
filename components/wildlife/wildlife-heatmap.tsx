@@ -3,12 +3,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { fetchHeatmapData } from '@/lib/supabase/wildlife'
 import { isMapboxConfigured } from '@/lib/utils'
+import { useInstallation } from '@/lib/installation-context'
 
 type Props = {
   baseId?: string | null
 }
 
 export function WildlifeHeatmap({ baseId }: Props) {
+  const { runways } = useInstallation()
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapRef = useRef<any>(null)
   const [filterDays, setFilterDays] = useState(30)
@@ -113,10 +115,18 @@ export function WildlifeHeatmap({ baseId }: Props) {
     const mapboxgl = require('mapbox-gl')
     mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
+    const rwy = runways?.[0]
+    const centerLat = rwy
+      ? ((rwy.end1_latitude ?? 0) + (rwy.end2_latitude ?? 0)) / 2
+      : 39.8
+    const centerLng = rwy
+      ? ((rwy.end1_longitude ?? 0) + (rwy.end2_longitude ?? 0)) / 2
+      : -98.5
+
     const map = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-v9',
-      center: [-98.5, 39.8], // Center of US — will be overridden by data
+      center: [centerLng, centerLat],
       zoom: 14,
     })
 

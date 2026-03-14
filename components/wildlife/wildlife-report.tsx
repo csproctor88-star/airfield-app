@@ -24,7 +24,7 @@ export function WildlifeReport({ baseId }: Props) {
       const startDate = new Date(year, month - 1, 1).toISOString()
       const endDate = new Date(year, month, 0, 23, 59, 59).toISOString()
 
-      await generateWildlifeReportPdf({
+      const { doc, filename } = await generateWildlifeReportPdf({
         baseId,
         baseName: currentInstallation?.name || 'Unknown Base',
         icao: currentInstallation?.icao || '',
@@ -32,7 +32,7 @@ export function WildlifeReport({ baseId }: Props) {
         endDate,
         reportMonth: reportMonth,
       })
-
+      doc.save(filename)
       toast.success('Report generated')
     } catch (err) {
       console.error('Report generation failed:', err)

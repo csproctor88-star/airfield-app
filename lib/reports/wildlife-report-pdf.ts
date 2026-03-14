@@ -17,7 +17,7 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ]
 
-export async function generateWildlifeReportPdf(options: Options) {
+export async function generateWildlifeReportPdf(options: Options): Promise<{ doc: jsPDF; filename: string }> {
   const { baseId, baseName, icao, startDate, endDate, reportMonth } = options
 
   // Fetch data
@@ -210,7 +210,6 @@ export async function generateWildlifeReportPdf(options: Options) {
     )
   }
 
-  // Save
   const filename = `BASH_Monthly_${baseName.replace(/\s+/g, '_')}_${reportMonth}.pdf`
-  doc.save(filename)
+  return { doc, filename }
 }

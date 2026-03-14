@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { createStrike } from '@/lib/supabase/wildlife'
 import { WILDLIFE_SPECIES, type WildlifeSpecies } from '@/lib/wildlife-species-data'
+import { createClient } from '@/lib/supabase/client'
 import {
   FLIGHT_PHASES,
   DAMAGE_LEVELS,
@@ -23,6 +24,7 @@ type Props = {
 }
 
 export function StrikeForm({ currentUser, baseId, onClose, onSaved }: Props) {
+  const [userId, setUserId] = useState<string | null>(null)
   const [speciesSearch, setSpeciesSearch] = useState('')
   const [selectedSpecies, setSelectedSpecies] = useState<WildlifeSpecies | null>(null)
   const [showSpeciesList, setShowSpeciesList] = useState(false)
@@ -52,6 +54,14 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved }: Props) {
   const [saving, setSaving] = useState(false)
   const [latitude, setLatitude] = useState<number | null>(null)
   const [longitude, setLongitude] = useState<number | null>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) return
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setUserId(user.id)
+    })
+  }, [])
 
   useEffect(() => {
     const hour = new Date().getHours()
@@ -116,6 +126,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved }: Props) {
       remains_collected: remainsCollected,
       remains_sent_to_lab: remainsSentToLab,
       reported_by: currentUser,
+      reported_by_id: userId,
       notes: notes || null,
       base_id: baseId,
     })

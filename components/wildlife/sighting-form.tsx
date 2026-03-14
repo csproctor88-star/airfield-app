@@ -13,6 +13,7 @@ import {
   TIME_OF_DAY_OPTIONS,
 } from '@/lib/constants'
 import { useInstallation } from '@/lib/installation-context'
+import { createClient } from '@/lib/supabase/client'
 
 type Props = {
   currentUser: string
@@ -24,6 +25,7 @@ type Props = {
 export function SightingForm({ currentUser, baseId, onClose, onSaved }: Props) {
   const { areas: installationAreas } = useInstallation()
 
+  const [userId, setUserId] = useState<string | null>(null)
   const [speciesSearch, setSpeciesSearch] = useState('')
   const [selectedSpecies, setSelectedSpecies] = useState<WildlifeSpecies | null>(null)
   const [showSpeciesList, setShowSpeciesList] = useState(false)
@@ -41,6 +43,15 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved }: Props) {
   const [saving, setSaving] = useState(false)
   const [latitude, setLatitude] = useState<number | null>(null)
   const [longitude, setLongitude] = useState<number | null>(null)
+
+  // Get current user ID
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) return
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setUserId(user.id)
+    })
+  }, [])
 
   // Auto-detect time of day
   useEffect(() => {
@@ -90,6 +101,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved }: Props) {
       dispersal_method: actionTaken !== 'none' ? dispersalMethod || null : null,
       dispersal_effective: actionTaken !== 'none' ? dispersalEffective : null,
       observed_by: currentUser,
+      observed_by_id: userId,
       notes: notes || null,
       base_id: baseId,
     })

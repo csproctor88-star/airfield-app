@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import { fetchAirfieldStatus, updateAirfieldStatus, type AirfieldStatus, type AdvisoryItem, type RunwayStatuses } from '@/lib/supabase/airfield-status'
+import { logBwcChange } from '@/lib/supabase/wildlife'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 
@@ -288,6 +289,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setBwcUpdatedAtLocal(now)
     markLocalUpdate()
     await updateAirfieldStatus({ bwc_value: val, bwc_updated_at: now }, installationId)
+    if (val) {
+      logBwcChange(installationId, val, 'dashboard', null, null, null)
+    }
   }, [installationId])
 
   // Construction remarks
