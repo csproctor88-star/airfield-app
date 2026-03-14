@@ -834,7 +834,6 @@ export default function HomePage() {
       )}
 
       {/* ===== Runway & NAVAID Status ===== */}
-      <span className="section-label">Airfield Status</span>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12, alignItems: 'start' }}>
       {(() => {
         // Build runway entries from installation runways
@@ -859,13 +858,14 @@ export default function HomePage() {
         })
 
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '0 0 auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '0 0 auto' }}>
+            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Airfield Status</div>
             {rwyEntries.map((rwy) => {
               const c = getColors(rwy.status)
               return (
                 <div key={rwy.label} className="card" style={{
-                  padding: 'var(--rwy-card-padding)',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--rwy-card-gap)',
+                  padding: '10px 12px',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                   background: c.bg, border: `1px solid ${c.border}`,
                   flex: '0 1 auto', minWidth: 100,
                 }}>
@@ -968,7 +968,7 @@ export default function HomePage() {
           {/* RSC / RCR card */}
           {rcrValue ? (
             <div className="card" style={{
-              flex: '0 1 140px', minWidth: 100, padding: '14px 12px',
+              flex: '0 1 140px', minWidth: 100, padding: '8px 10px',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               border: '1px solid rgba(34,211,238,0.25)', textAlign: 'center',
             }}>
@@ -981,7 +981,7 @@ export default function HomePage() {
           ) : (
             <div className="card" onClick={() => { setRscDraftValue(rscCondition); setRscDraftNotes(''); setRscDialogOpen(true) }}
               style={{
-                flex: '0 1 140px', minWidth: 100, padding: '14px 12px',
+                flex: '0 1 140px', minWidth: 100, padding: '8px 10px',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', textAlign: 'center',
               }}>
@@ -994,7 +994,7 @@ export default function HomePage() {
           {/* BWC card */}
           <div className="card" onClick={() => { setBwcDraftValue(bwcValue); setBwcDraftNotes(''); setBwcDialogOpen(true) }}
             style={{
-              flex: '0 1 140px', minWidth: 100, padding: '14px 12px',
+              flex: '0 1 140px', minWidth: 100, padding: '8px 10px',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', textAlign: 'center',
             }}>
@@ -1106,7 +1106,8 @@ export default function HomePage() {
       )}
 
       {/* NAVAID cards — stacked vertically */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 0', minWidth: 160 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 0', minWidth: 160 }}>
+        <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>NAVAID Status</div>
           {navaids.length === 0 ? (
             <div className="card" style={{ padding: 12 }}>
               <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', textAlign: 'center' }}>
@@ -1188,13 +1189,13 @@ export default function HomePage() {
             )
             return (<>
                 {endGroups.filter(group => group.items.length > 0).map(group => (
-                  <div key={group.designator} className="card" style={{ padding: '10px 14px 4px' }}>
+                  <div key={group.designator} className="card" style={{ padding: '8px 12px 4px' }}>
                     <div style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY {group.designator}</div>
                     {group.items.map(renderNavaidItem)}
                   </div>
                 ))}
                 {otherNavaids.length > 0 && (
-                  <div className="card" style={{ padding: '10px 14px 4px' }}>
+                  <div className="card" style={{ padding: '8px 12px 4px' }}>
                     <div style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>OTHER</div>
                     {otherNavaids.map(renderNavaidItem)}
                   </div>
@@ -1204,13 +1205,14 @@ export default function HomePage() {
       </div>{/* end NAVAID column */}
 
       {/* ARFF Status — stacked vertically */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '0 0 auto' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ARFF Status</div>
           {/* ARFF CAT card */}
           <div className="card" style={{
-            padding: '10px 14px', flex: '1 1 0', minWidth: 80,
+            padding: '8px 12px',
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
           }}>
-            <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>ARFF CAT</div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600 }}>CAT</div>
             <select
               value={arffCat ?? ''}
               onChange={(e) => {
@@ -1263,7 +1265,7 @@ export default function HomePage() {
                 className="card"
                 onClick={() => setArffDialog({ aircraft, selectedStatus: readiness, notes: '' })}
                 style={{
-                  padding: '10px 14px', flex: '1 1 0', minWidth: 80,
+                  padding: '8px 12px',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
                   cursor: 'pointer',
                   background: c.bg, border: `1px solid ${c.border}`,
