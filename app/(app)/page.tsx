@@ -1105,11 +1105,9 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* ===== NAVAID Status + ARFF Status (side by side) ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, marginBottom: 12, alignItems: 'start' }}>
-        {/* Left column: NAVAID Status */}
-        <div>
-          <span className="section-label">NAVAID Status</span>
+      {/* ===== NAVAID & ARFF Status ===== */}
+      <span className="section-label">NAVAID & ARFF Status</span>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'stretch' }}>
           {navaids.length === 0 ? (
             <div className="card" style={{ padding: 12 }}>
               <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', textAlign: 'center' }}>
@@ -1189,31 +1187,24 @@ export default function HomePage() {
                 )}
               </div>
             )
-            return (
-              <div className="navaid-grid">
+            return (<>
                 {endGroups.filter(group => group.items.length > 0).map(group => (
-                  <div key={group.designator} className="card" style={{ padding: '10px 14px 4px' }}>
+                  <div key={group.designator} className="card" style={{ padding: '10px 14px 4px', flex: '1 1 0', minWidth: 160 }}>
                     <div style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY {group.designator}</div>
                     {group.items.map(renderNavaidItem)}
                   </div>
                 ))}
                 {otherNavaids.length > 0 && (
-                  <div className="card" style={{ padding: '10px 14px 4px' }}>
+                  <div className="card" style={{ padding: '10px 14px 4px', flex: '1 1 0', minWidth: 160 }}>
                     <div style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>OTHER</div>
                     {otherNavaids.map(renderNavaidItem)}
                   </div>
                 )}
-              </div>
-            )
+            </>)
           })()}
-        </div>
-
-        {/* Right column: ARFF Status */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span className="section-label">ARFF Status</span>
           {/* ARFF CAT card */}
           <div className="card" style={{
-            padding: '14px 16px',
+            padding: '14px 16px', flex: '1 1 0', minWidth: 120,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
           }}>
             <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>ARFF CAT</div>
@@ -1269,7 +1260,7 @@ export default function HomePage() {
                 className="card"
                 onClick={() => setArffDialog({ aircraft, selectedStatus: readiness, notes: '' })}
                 style={{
-                  padding: '14px 16px',
+                  padding: '14px 16px', flex: '1 1 0', minWidth: 120,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
                   cursor: 'pointer',
                   background: c.bg, border: `1px solid ${c.border}`,
@@ -1285,7 +1276,6 @@ export default function HomePage() {
               </div>
             )
           })}
-        </div>
       </div>
 
       {/* ===== Personnel / Construction / Misc (inline row on desktop) ===== */}
