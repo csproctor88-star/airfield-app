@@ -1,0 +1,366 @@
+{
+  "Canada Goose": {
+    "filename": "bird/canada_goose.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/Canada_goose_on_Seedskadee_NWR_%2827826185489%29.jpg/960px-Canada_goose_on_Seedskadee_NWR_%2827826185489%29.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Branta_canadensis",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Snow Goose": {
+    "filename": "bird/snow_goose.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Snow_goose_in_Central_Park_%2833138%29.jpg/960px-Snow_goose_in_Central_Park_%2833138%29.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Anser_caerulescens",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Turkey Vulture": {
+    "filename": "bird/turkey_vulture.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Turkey_vulture_%28Cathartes_aura%29_Orange_Walk.jpg/960px-Turkey_vulture_%28Cathartes_aura%29_Orange_Walk.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Cathartes_aura",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Black Vulture": {
+    "filename": "bird/black_vulture.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Black_vulture_%28Coragyps_atratus_brasiliensis%29_Peten.jpg/960px-Black_vulture_%28Coragyps_atratus_brasiliensis%29_Peten.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Coragyps_atratus",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Red-tailed Hawk": {
+    "filename": "bird/red_tailed_hawk.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Red-tailed_Hawk_%2845812546121%29.jpg/960px-Red-tailed_Hawk_%2845812546121%29.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Buteo_jamaicensis",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Great Blue Heron": {
+    "filename": "bird/great_blue_heron.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/GreatBlueHeronInARiver.jpg/960px-GreatBlueHeronInARiver.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Ardea_herodias",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Great Horned Owl": {
+    "filename": "bird/great_horned_owl.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Bubo_virginianus_06.jpg/960px-Bubo_virginianus_06.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Bubo_virginianus",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Bald Eagle": {
+    "filename": "bird/bald_eagle.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Bald_eagle_about_to_fly_in_Alaska_%282016%29.jpg/960px-Bald_eagle_about_to_fly_in_Alaska_%282016%29.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Haliaeetus_leucocephalus",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Osprey": {
+    "filename": "bird/osprey.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Osprey_Perched_Snag_Heislerville.jpg/960px-Osprey_Perched_Snag_Heislerville.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Pandion_haliaetus",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Sandhill Crane": {
+    "filename": "bird/sandhill_crane.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Sandhill_Crane_JG.jpg/960px-Sandhill_Crane_JG.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Antigone_canadensis",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Great Egret": {
+    "filename": "bird/great_egret.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Great_Egret_%28Ardea_alba%29_in_Breeding_Plumage%2C_Cape_May_County%2C_New_Jersey%2C_USA_%28cropped%29.png/960px-Great_Egret_%28Ardea_alba%29_in_Breeding_Plumage%2C_Cape_May_County%2C_New_Jersey%2C_USA_%28cropped%29.png",
+    "source_page": "https://en.wikipedia.org/wiki/Ardea_alba",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Wild Turkey": {
+    "filename": "bird/wild_turkey.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Gall-dindi.jpg/960px-Gall-dindi.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Meleagris_gallopavo",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Double-crested Cormorant": {
+    "filename": "bird/double_crested_cormorant.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Phalacrocorax-auritus-007.jpg/960px-Phalacrocorax-auritus-007.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Nannopterum_auritum",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Brown Pelican": {
+    "filename": "bird/brown_pelican.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Brown_pelican_in_flight_%28Bodega_Bay%29.jpg/960px-Brown_pelican_in_flight_%28Bodega_Bay%29.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Pelecanus_occidentalis",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "American White Pelican": {
+    "filename": "bird/american_white_pelican.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/American_White_Pelican.jpg/960px-American_White_Pelican.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Pelecanus_erythrorhynchos",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Snowy Owl": {
+    "filename": "bird/snowy_owl.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/SnowyOwlAmericanBlackDuck.jpg/960px-SnowyOwlAmericanBlackDuck.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Bubo_scandiacus",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Mallard": {
+    "filename": "bird/mallard.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Anas_platyrhynchos_male_female_quadrat.jpg/960px-Anas_platyrhynchos_male_female_quadrat.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Anas_platyrhynchos",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Herring Gull": {
+    "filename": "bird/herring_gull.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/European_herring_gull_vocalizing_%2800170%29.jpg/960px-European_herring_gull_vocalizing_%2800170%29.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Larus_argentatus",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Ring-billed Gull": {
+    "filename": "bird/ring_billed_gull.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Larus-delawarensis-021.jpg/960px-Larus-delawarensis-021.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Larus_delawarensis",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Rock Pigeon": {
+    "filename": "bird/rock_pigeon.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Columba_livia_%28Rock_Dove%2C_wild%29%2C_Duncansby_Head%2C_Caithness%2C_Scotland_1.jpg/960px-Columba_livia_%28Rock_Dove%2C_wild%29%2C_Duncansby_Head%2C_Caithness%2C_Scotland_1.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Columba_livia",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Mourning Dove": {
+    "filename": "bird/mourning_dove.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Av_Mourning_Dove_JG.jpg/960px-Av_Mourning_Dove_JG.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Zenaida_macroura",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "American Crow": {
+    "filename": "bird/american_crow.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Corvus-brachyrhynchos-001.jpg/960px-Corvus-brachyrhynchos-001.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Corvus_brachyrhynchos",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "American Kestrel": {
+    "filename": "bird/american_kestrel.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/American_kestrel_%28Falco_sparverius_cinnamominus%29_male_Leona_Amarga.jpg/960px-American_kestrel_%28Falco_sparverius_cinnamominus%29_male_Leona_Amarga.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Falco_sparverius",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Barn Owl": {
+    "filename": "bird/barn_owl.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/Barn_Owl%2C_Lancashire.jpg/960px-Barn_Owl%2C_Lancashire.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Tyto_alba",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Killdeer": {
+    "filename": "bird/killdeer.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Killdeer_Heislerville.png/960px-Killdeer_Heislerville.png",
+    "source_page": "https://en.wikipedia.org/wiki/Charadrius_vociferus",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Common Nighthawk": {
+    "filename": "bird/common_nighthawk.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Common_Nighthawk_%2814428313550%29.jpg/960px-Common_Nighthawk_%2814428313550%29.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Chordeiles_minor",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Peregrine Falcon": {
+    "filename": "bird/peregrine_falcon.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Falco_peregrinus_m_Humber_Bay_Park_Toronto.jpg/960px-Falco_peregrinus_m_Humber_Bay_Park_Toronto.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Falco_peregrinus",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Short-eared Owl": {
+    "filename": "bird/short_eared_owl.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Short_Eared_Owl_on_the_Ground.jpg/960px-Short_Eared_Owl_on_the_Ground.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Asio_flammeus",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Blue Jay": {
+    "filename": "bird/blue_jay.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/Blue_jay_in_PP_%2830960%29.jpg/960px-Blue_jay_in_PP_%2830960%29.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Cyanocitta_cristata",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Northern Flicker": {
+    "filename": "bird/northern_flicker.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Northern_yellow-shafted_flicker_male_%2833737%29_%28cropped%29.jpg/960px-Northern_yellow-shafted_flicker_male_%2833737%29_%28cropped%29.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Colaptes_auratus",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Common Grackle": {
+    "filename": "bird/common_grackle.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Common_grackle_in_PP_%2836732%29.jpg/960px-Common_grackle_in_PP_%2836732%29.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Quiscalus_quiscula",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Eastern Meadowlark": {
+    "filename": "bird/eastern_meadowlark.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Eastern_meadowlark_%28Sturnella_magna_mexicana%29_Orange_Walk.jpg/960px-Eastern_meadowlark_%28Sturnella_magna_mexicana%29_Orange_Walk.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Sturnella_magna",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Black-crowned Night-Heron": {
+    "filename": "bird/black_crowned_night_heron.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Nycticorax_nycticorax_457953189.jpg/960px-Nycticorax_nycticorax_457953189.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Nycticorax_nycticorax",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Loggerhead Shrike": {
+    "filename": "bird/loggerhead_shrike.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Shrike_Loggerhead_JG.jpg/960px-Shrike_Loggerhead_JG.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Lanius_ludovicianus",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "House Sparrow": {
+    "filename": "bird/house_sparrow.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/House_sparrow_male_in_Prospect_Park_%2853532%29.jpg/960px-House_sparrow_male_in_Prospect_Park_%2853532%29.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Passer_domesticus",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Purple Martin": {
+    "filename": "bird/purple_martin.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/PurpleMartin_cajay.jpg/500px-PurpleMartin_cajay.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Progne_subis",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "American Goldfinch": {
+    "filename": "bird/american_goldfinch.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Carduelis_tristis_-Michigan%2C_USA_-male-8.jpg/960px-Carduelis_tristis_-Michigan%2C_USA_-male-8.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Spinus_tristis",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Cedar Waxwing": {
+    "filename": "bird/cedar_waxwing.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Cedar_Waxwing_-_Bombycilla_cedrorum%2C_George_Washington%27s_Birthplace_National_Monument%2C_Colonial_Beach%2C_Virginia_%2839997434862%29.jpg/960px-Cedar_Waxwing_-_Bombycilla_cedrorum%2C_George_Washington%27s_Birthplace_National_Monument%2C_Colonial_Beach%2C_Virginia_%2839997434862%29.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Bombycilla_cedrorum",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Northern Pintail": {
+    "filename": "bird/northern_pintail.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Northern_Pintails_%28Male_%26_Female%29_I_IMG_0911.jpg/500px-Northern_Pintails_%28Male_%26_Female%29_I_IMG_0911.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Anas_acuta",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Green-winged Teal": {
+    "filename": "bird/green_winged_teal.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Eurasian_teal_%28Anas_crecca%29_Photograph_by_Shantanu_Kuveskar.jpg/500px-Eurasian_teal_%28Anas_crecca%29_Photograph_by_Shantanu_Kuveskar.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Anas_crecca",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Ring-necked Pheasant": {
+    "filename": "bird/ring_necked_pheasant.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Pheasant_%28Phasianus_colchicus%29_%E2%99%82_%2851028701818%29.jpg/960px-Pheasant_%28Phasianus_colchicus%29_%E2%99%82_%2851028701818%29.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Phasianus_colchicus",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Northern Bobwhite": {
+    "filename": "bird/northern_bobwhite.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Virginiawachtel_2007-06-16_065.jpg/960px-Virginiawachtel_2007-06-16_065.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Colinus_virginianus",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "White-tailed Deer": {
+    "filename": "mammal/white_tailed_deer.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/White-tailed_deer.jpg/960px-White-tailed_deer.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Odocoileus_virginianus",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "mammal"
+  },
+  "Coyote": {
+    "filename": "mammal/coyote.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/2009-Coyote-Yosemite.jpg/500px-2009-Coyote-Yosemite.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Canis_latrans",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "mammal"
+  },
+  "Red Fox": {
+    "filename": "mammal/red_fox.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/Portrait_of_a_red_fox_in_Rautas_fj%C3%A4llurskog_%28cropped%29.jpg/960px-Portrait_of_a_red_fox_in_Rautas_fj%C3%A4llurskog_%28cropped%29.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Vulpes_vulpes",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "mammal"
+  },
+  "Pronghorn": {
+    "filename": "mammal/pronghorn.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Antilocapra_americana.jpg/500px-Antilocapra_americana.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Antilocapra_americana",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "mammal"
+  },
+  "Raccoon": {
+    "filename": "mammal/raccoon.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Raccoon_in_Central_Park_%2835264%29.jpg/960px-Raccoon_in_Central_Park_%2835264%29.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Procyon_lotor",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "mammal"
+  },
+  "Virginia Opossum": {
+    "filename": "mammal/virginia_opossum.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Opossum_2.jpg/960px-Opossum_2.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Didelphis_virginiana",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "mammal"
+  },
+  "Thirteen-lined Ground Squirrel": {
+    "filename": "mammal/thirteen_lined_ground_squirrel.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/en/thumb/0/05/Thirteen-lined_ground_squirrel.jpg/500px-Thirteen-lined_ground_squirrel.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Ictidomys_tridecemlineatus",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "mammal"
+  },
+  "American Alligator": {
+    "filename": "reptile/american_alligator.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/American_Alligator.jpg/960px-American_Alligator.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Alligator_mississippiensis",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "reptile"
+  },
+  "Eastern Box Turtle": {
+    "filename": "reptile/eastern_box_turtle.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/Florida_Box_Turtle_Digon3.jpg/960px-Florida_Box_Turtle_Digon3.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Terrapene_carolina",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "reptile"
+  },
+  "Hoary Bat": {
+    "filename": "bat/hoary_bat.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Hoary_bat_Lasiurus_cinereus_%28cropped%29.jpg/500px-Hoary_bat_Lasiurus_cinereus_%28cropped%29.jpg",
+    "source_page": "https://en.wikipedia.org/wiki/Lasiurus_cinereus",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bat"
+  }
+}

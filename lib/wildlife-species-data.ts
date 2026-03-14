@@ -1,5 +1,5 @@
 // Wildlife Species Reference Database
-// ~80 common airfield hazard species curated from FAA National Wildlife Strike Database
+// ~254 airfield hazard species curated from FAA National Wildlife Strike Database
 // Photo URLs sourced from USFWS National Digital Library (public domain)
 // Primary: IIIF endpoint at digitalmedia.fws.gov (CONTENTdm natdiglib collection)
 // Fallback: fws.gov/media pages (Drupal CMS)
@@ -907,4 +907,225 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     image_url: `${IIIF}/4838/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
+
+  // ══════════════════════════════════════════════════════════════
+  // ADDITIONAL SPECIES — Comprehensive BASH coverage
+  // FAA Wildlife Strike Database top species + regional coverage
+  // ══════════════════════════════════════════════════════════════
+
+  // ── Swans ──
+  { common_name: 'Mute Swan', scientific_name: 'Cygnus olor', group: 'bird', size_category: 'large', mean_mass_g: 10000, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Tundra Swan', scientific_name: 'Cygnus columbianus', group: 'bird', size_category: 'large', mean_mass_g: 6500, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Trumpeter Swan', scientific_name: 'Cygnus buccinator', group: 'bird', size_category: 'large', mean_mass_g: 10500, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+
+  // ── Additional Geese ──
+  { common_name: 'Greater White-fronted Goose', scientific_name: 'Anser albifrons', group: 'bird', size_category: 'large', mean_mass_g: 2700, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Cackling Goose', scientific_name: 'Branta hutchinsii', group: 'bird', size_category: 'large', mean_mass_g: 1800, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: "Ross's Goose", scientific_name: 'Anser rossii', group: 'bird', size_category: 'large', mean_mass_g: 1400, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Hawaiian Goose (Nene)', scientific_name: 'Branta sandvicensis', group: 'bird', size_category: 'large', mean_mass_g: 2200, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+
+  // ── Additional Raptors ──
+  { common_name: 'Golden Eagle', scientific_name: 'Aquila chrysaetos', group: 'bird', size_category: 'large', mean_mass_g: 4000, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Ferruginous Hawk', scientific_name: 'Buteo regalis', group: 'bird', size_category: 'large', mean_mass_g: 1500, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Rough-legged Hawk', scientific_name: 'Buteo lagopus', group: 'bird', size_category: 'large', mean_mass_g: 1000, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: "Swainson's Hawk", scientific_name: 'Buteo swainsoni', group: 'bird', size_category: 'large', mean_mass_g: 900, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Broad-winged Hawk', scientific_name: 'Buteo platypterus', group: 'bird', size_category: 'large', mean_mass_g: 450, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: "Harris's Hawk", scientific_name: 'Parabuteo unicinctus', group: 'bird', size_category: 'large', mean_mass_g: 900, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'White-tailed Hawk', scientific_name: 'Geranoaetus albicaudatus', group: 'bird', size_category: 'large', mean_mass_g: 1000, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Sharp-shinned Hawk', scientific_name: 'Accipiter striatus', group: 'bird', size_category: 'medium', mean_mass_g: 150, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Crested Caracara', scientific_name: 'Caracara plancus', group: 'bird', size_category: 'large', mean_mass_g: 1050, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Merlin', scientific_name: 'Falco columbarius', group: 'bird', size_category: 'medium', mean_mass_g: 200, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Prairie Falcon', scientific_name: 'Falco mexicanus', group: 'bird', size_category: 'large', mean_mass_g: 720, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+
+  // ── Additional Owls ──
+  { common_name: 'Barred Owl', scientific_name: 'Strix varia', group: 'bird', size_category: 'large', mean_mass_g: 750, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Burrowing Owl', scientific_name: 'Athene cunicularia', group: 'bird', size_category: 'medium', mean_mass_g: 150, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Eastern Screech-Owl', scientific_name: 'Megascops asio', group: 'bird', size_category: 'small', mean_mass_g: 170, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Long-eared Owl', scientific_name: 'Asio otus', group: 'bird', size_category: 'medium', mean_mass_g: 280, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Great Gray Owl', scientific_name: 'Strix nebulosa', group: 'bird', size_category: 'large', mean_mass_g: 1100, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+
+  // ── Additional Herons, Egrets, Wading Birds ──
+  { common_name: 'Snowy Egret', scientific_name: 'Egretta thula', group: 'bird', size_category: 'medium', mean_mass_g: 370, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Little Blue Heron', scientific_name: 'Egretta caerulea', group: 'bird', size_category: 'medium', mean_mass_g: 350, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Tricolored Heron', scientific_name: 'Egretta tricolor', group: 'bird', size_category: 'medium', mean_mass_g: 350, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Yellow-crowned Night-Heron', scientific_name: 'Nyctanassa violacea', group: 'bird', size_category: 'medium', mean_mass_g: 700, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'White Ibis', scientific_name: 'Eudocimus albus', group: 'bird', size_category: 'medium', mean_mass_g: 900, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Glossy Ibis', scientific_name: 'Plegadis falcinellus', group: 'bird', size_category: 'medium', mean_mass_g: 600, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'White-faced Ibis', scientific_name: 'Plegadis chihi', group: 'bird', size_category: 'medium', mean_mass_g: 550, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Roseate Spoonbill', scientific_name: 'Platalea ajaja', group: 'bird', size_category: 'large', mean_mass_g: 1400, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Wood Stork', scientific_name: 'Mycteria americana', group: 'bird', size_category: 'large', mean_mass_g: 2600, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Anhinga', scientific_name: 'Anhinga anhinga', group: 'bird', size_category: 'large', mean_mass_g: 1200, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+
+  // ── Other Large/Medium Water Birds ──
+  { common_name: 'American Coot', scientific_name: 'Fulica americana', group: 'bird', size_category: 'medium', mean_mass_g: 650, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Common Loon', scientific_name: 'Gavia immer', group: 'bird', size_category: 'large', mean_mass_g: 4100, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Whooping Crane', scientific_name: 'Grus americana', group: 'bird', size_category: 'large', mean_mass_g: 7000, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+
+  // ── Additional Waterfowl (Ducks) ──
+  { common_name: 'Gadwall', scientific_name: 'Mareca strepera', group: 'bird', size_category: 'medium', mean_mass_g: 900, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'American Wigeon', scientific_name: 'Mareca americana', group: 'bird', size_category: 'medium', mean_mass_g: 770, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Northern Shoveler', scientific_name: 'Spatula clypeata', group: 'bird', size_category: 'medium', mean_mass_g: 620, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Canvasback', scientific_name: 'Aythya valisineria', group: 'bird', size_category: 'large', mean_mass_g: 1200, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Redhead', scientific_name: 'Aythya americana', group: 'bird', size_category: 'medium', mean_mass_g: 950, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Ring-necked Duck', scientific_name: 'Aythya collaris', group: 'bird', size_category: 'medium', mean_mass_g: 700, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Lesser Scaup', scientific_name: 'Aythya affinis', group: 'bird', size_category: 'medium', mean_mass_g: 800, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Greater Scaup', scientific_name: 'Aythya marila', group: 'bird', size_category: 'medium', mean_mass_g: 1000, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Bufflehead', scientific_name: 'Bucephala albeola', group: 'bird', size_category: 'medium', mean_mass_g: 400, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Common Goldeneye', scientific_name: 'Bucephala clangula', group: 'bird', size_category: 'medium', mean_mass_g: 900, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Hooded Merganser', scientific_name: 'Lophodytes cucullatus', group: 'bird', size_category: 'medium', mean_mass_g: 680, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Common Merganser', scientific_name: 'Mergus merganser', group: 'bird', size_category: 'large', mean_mass_g: 1500, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Red-breasted Merganser', scientific_name: 'Mergus serrator', group: 'bird', size_category: 'medium', mean_mass_g: 1000, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Ruddy Duck', scientific_name: 'Oxyura jamaicensis', group: 'bird', size_category: 'medium', mean_mass_g: 540, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+
+  // ── Additional Gulls and Terns ──
+  { common_name: 'California Gull', scientific_name: 'Larus californicus', group: 'bird', size_category: 'medium', mean_mass_g: 600, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Western Gull', scientific_name: 'Larus occidentalis', group: 'bird', size_category: 'large', mean_mass_g: 1000, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Glaucous-winged Gull', scientific_name: 'Larus glaucescens', group: 'bird', size_category: 'large', mean_mass_g: 1000, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Glaucous Gull', scientific_name: 'Larus hyperboreus', group: 'bird', size_category: 'large', mean_mass_g: 1500, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Iceland Gull', scientific_name: 'Larus glaucoides', group: 'bird', size_category: 'medium', mean_mass_g: 850, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Lesser Black-backed Gull', scientific_name: 'Larus fuscus', group: 'bird', size_category: 'large', mean_mass_g: 800, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: "Franklin's Gull", scientific_name: 'Leucophaeus pipixcan', group: 'bird', size_category: 'medium', mean_mass_g: 280, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Royal Tern', scientific_name: 'Thalasseus maximus', group: 'bird', size_category: 'medium', mean_mass_g: 450, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Caspian Tern', scientific_name: 'Hydroprogne caspia', group: 'bird', size_category: 'medium', mean_mass_g: 660, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Common Tern', scientific_name: 'Sterna hirundo', group: 'bird', size_category: 'medium', mean_mass_g: 120, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Least Tern', scientific_name: 'Sternula antillarum', group: 'bird', size_category: 'small', mean_mass_g: 45, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: "Forster's Tern", scientific_name: 'Sterna forsteri', group: 'bird', size_category: 'medium', mean_mass_g: 170, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Black Skimmer', scientific_name: 'Rynchops niger', group: 'bird', size_category: 'medium', mean_mass_g: 300, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+
+  // ── Additional Shorebirds ──
+  { common_name: 'Willet', scientific_name: 'Tringa semipalmata', group: 'bird', size_category: 'medium', mean_mass_g: 250, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Greater Yellowlegs', scientific_name: 'Tringa melanoleuca', group: 'bird', size_category: 'medium', mean_mass_g: 170, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Lesser Yellowlegs', scientific_name: 'Tringa flavipes', group: 'bird', size_category: 'medium', mean_mass_g: 80, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Spotted Sandpiper', scientific_name: 'Actitis macularius', group: 'bird', size_category: 'small', mean_mass_g: 40, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Least Sandpiper', scientific_name: 'Calidris minutilla', group: 'bird', size_category: 'small', mean_mass_g: 22, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Dunlin', scientific_name: 'Calidris alpina', group: 'bird', size_category: 'small', mean_mass_g: 55, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Long-billed Curlew', scientific_name: 'Numenius americanus', group: 'bird', size_category: 'large', mean_mass_g: 600, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Marbled Godwit', scientific_name: 'Limosa fedoa', group: 'bird', size_category: 'medium', mean_mass_g: 370, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'American Avocet', scientific_name: 'Recurvirostra americana', group: 'bird', size_category: 'medium', mean_mass_g: 310, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Black-necked Stilt', scientific_name: 'Himantopus mexicanus', group: 'bird', size_category: 'medium', mean_mass_g: 180, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Black-bellied Plover', scientific_name: 'Pluvialis squatarola', group: 'bird', size_category: 'medium', mean_mass_g: 230, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'American Golden-Plover', scientific_name: 'Pluvialis dominica', group: 'bird', size_category: 'medium', mean_mass_g: 145, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Piping Plover', scientific_name: 'Charadrius melodus', group: 'bird', size_category: 'small', mean_mass_g: 55, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+
+  // ── Corvids and Other Medium Birds ──
+  { common_name: 'Fish Crow', scientific_name: 'Corvus ossifragus', group: 'bird', size_category: 'medium', mean_mass_g: 280, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Common Raven', scientific_name: 'Corvus corax', group: 'bird', size_category: 'large', mean_mass_g: 1100, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Black-billed Magpie', scientific_name: 'Pica hudsonia', group: 'bird', size_category: 'medium', mean_mass_g: 180, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: "Brewer's Blackbird", scientific_name: 'Euphagus cyanocephalus', group: 'bird', size_category: 'medium', mean_mass_g: 63, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Western Meadowlark', scientific_name: 'Sturnella neglecta', group: 'bird', size_category: 'medium', mean_mass_g: 100, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Yellow-headed Blackbird', scientific_name: 'Xanthocephalus xanthocephalus', group: 'bird', size_category: 'medium', mean_mass_g: 65, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Rusty Blackbird', scientific_name: 'Euphagus carolinus', group: 'bird', size_category: 'medium', mean_mass_g: 60, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Western Kingbird', scientific_name: 'Tyrannus verticalis', group: 'bird', size_category: 'medium', mean_mass_g: 40, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Eastern Kingbird', scientific_name: 'Tyrannus tyrannus', group: 'bird', size_category: 'medium', mean_mass_g: 40, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: "Say's Phoebe", scientific_name: 'Sayornis saya', group: 'bird', size_category: 'small', mean_mass_g: 21, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Eastern Phoebe', scientific_name: 'Sayornis phoebe', group: 'bird', size_category: 'small', mean_mass_g: 20, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Belted Kingfisher', scientific_name: 'Megaceryle alcyon', group: 'bird', size_category: 'medium', mean_mass_g: 150, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Red-bellied Woodpecker', scientific_name: 'Melanerpes carolinus', group: 'bird', size_category: 'medium', mean_mass_g: 70, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Downy Woodpecker', scientific_name: 'Dryobates pubescens', group: 'bird', size_category: 'small', mean_mass_g: 27, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Red-headed Woodpecker', scientific_name: 'Melanerpes erythrocephalus', group: 'bird', size_category: 'medium', mean_mass_g: 70, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+
+  // ── Small Songbirds and Passerines ──
+  { common_name: 'Western Bluebird', scientific_name: 'Sialia mexicana', group: 'bird', size_category: 'small', mean_mass_g: 28, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Mountain Bluebird', scientific_name: 'Sialia currucoides', group: 'bird', size_category: 'small', mean_mass_g: 30, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Vesper Sparrow', scientific_name: 'Pooecetes gramineus', group: 'bird', size_category: 'small', mean_mass_g: 25, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Grasshopper Sparrow', scientific_name: 'Ammodramus savannarum', group: 'bird', size_category: 'small', mean_mass_g: 17, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Lark Sparrow', scientific_name: 'Chondestes grammacus', group: 'bird', size_category: 'small', mean_mass_g: 29, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'White-crowned Sparrow', scientific_name: 'Zonotrichia leucophrys', group: 'bird', size_category: 'small', mean_mass_g: 29, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Dark-eyed Junco', scientific_name: 'Junco hyemalis', group: 'bird', size_category: 'small', mean_mass_g: 20, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Dickcissel', scientific_name: 'Spiza americana', group: 'bird', size_category: 'small', mean_mass_g: 27, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Bobolink', scientific_name: 'Dolichonyx oryzivorus', group: 'bird', size_category: 'small', mean_mass_g: 38, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'American Pipit', scientific_name: 'Anthus rubescens', group: 'bird', size_category: 'small', mean_mass_g: 21, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Bank Swallow', scientific_name: 'Riparia riparia', group: 'bird', size_category: 'small', mean_mass_g: 13, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Northern Rough-winged Swallow', scientific_name: 'Stelgidopteryx serripennis', group: 'bird', size_category: 'small', mean_mass_g: 16, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Ruby-throated Hummingbird', scientific_name: 'Archilochus colubris', group: 'bird', size_category: 'small', mean_mass_g: 3, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Snow Bunting', scientific_name: 'Plectrophenax nivalis', group: 'bird', size_category: 'small', mean_mass_g: 35, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Lapland Longspur', scientific_name: 'Calcarius lapponicus', group: 'bird', size_category: 'small', mean_mass_g: 27, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+
+  // ── Additional Gamebirds ──
+  { common_name: 'Greater Sage-Grouse', scientific_name: 'Centrocercus urophasianus', group: 'bird', size_category: 'large', mean_mass_g: 2500, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Greater Prairie-Chicken', scientific_name: 'Tympanuchus cupido', group: 'bird', size_category: 'large', mean_mass_g: 1000, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'California Quail', scientific_name: 'Callipepla californica', group: 'bird', size_category: 'medium', mean_mass_g: 175, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: "Gambel's Quail", scientific_name: 'Callipepla gambelii', group: 'bird', size_category: 'medium', mean_mass_g: 165, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Scaled Quail', scientific_name: 'Callipepla squamata', group: 'bird', size_category: 'medium', mean_mass_g: 185, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Chukar', scientific_name: 'Alectoris chukar', group: 'bird', size_category: 'medium', mean_mass_g: 500, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Gray Partridge', scientific_name: 'Perdix perdix', group: 'bird', size_category: 'medium', mean_mass_g: 400, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Greater Roadrunner', scientific_name: 'Geococcyx californianus', group: 'bird', size_category: 'medium', mean_mass_g: 340, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+
+  // ── Alaska / Hawaii / Overseas Specialties ──
+  { common_name: 'Laysan Albatross', scientific_name: 'Phoebastria immutabilis', group: 'bird', size_category: 'large', mean_mass_g: 3200, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Black-footed Albatross', scientific_name: 'Phoebastria nigripes', group: 'bird', size_category: 'large', mean_mass_g: 3100, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Short-tailed Albatross', scientific_name: 'Phoebastria albatrus', group: 'bird', size_category: 'large', mean_mass_g: 4500, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Wedge-tailed Shearwater', scientific_name: 'Ardenna pacifica', group: 'bird', size_category: 'medium', mean_mass_g: 400, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Common Myna', scientific_name: 'Acridotheres tristis', group: 'bird', size_category: 'medium', mean_mass_g: 120, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Pacific Golden-Plover', scientific_name: 'Pluvialis fulva', group: 'bird', size_category: 'medium', mean_mass_g: 145, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Willow Ptarmigan', scientific_name: 'Lagopus lagopus', group: 'bird', size_category: 'medium', mean_mass_g: 550, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Rock Ptarmigan', scientific_name: 'Lagopus muta', group: 'bird', size_category: 'medium', mean_mass_g: 450, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: "Steller's Sea-Eagle", scientific_name: 'Haliaeetus pelagicus', group: 'bird', size_category: 'large', mean_mass_g: 6200, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+
+  // ══════════════════════════════════════════════════
+  // MAMMALS — Additional
+  // ══════════════════════════════════════════════════
+
+  // ── Large Mammals ──
+  { common_name: 'Elk', scientific_name: 'Cervus canadensis', group: 'mammal', size_category: 'large', mean_mass_g: 300000, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Moose', scientific_name: 'Alces alces', group: 'mammal', size_category: 'large', mean_mass_g: 450000, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'American Black Bear', scientific_name: 'Ursus americanus', group: 'mammal', size_category: 'large', mean_mass_g: 120000, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Bobcat', scientific_name: 'Lynx rufus', group: 'mammal', size_category: 'large', mean_mass_g: 9000, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Feral Dog', scientific_name: 'Canis lupus familiaris', group: 'mammal', size_category: 'large', mean_mass_g: 20000, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Feral Cat', scientific_name: 'Felis catus', group: 'mammal', size_category: 'medium', mean_mass_g: 4000, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Javelina (Collared Peccary)', scientific_name: 'Pecari tajacu', group: 'mammal', size_category: 'large', mean_mass_g: 22000, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'American Bison', scientific_name: 'Bison bison', group: 'mammal', size_category: 'large', mean_mass_g: 700000, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Caribou', scientific_name: 'Rangifer tarandus', group: 'mammal', size_category: 'large', mean_mass_g: 150000, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Mountain Lion', scientific_name: 'Puma concolor', group: 'mammal', size_category: 'large', mean_mass_g: 60000, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Kit Fox', scientific_name: 'Vulpes macrotis', group: 'mammal', size_category: 'medium', mean_mass_g: 2000, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Swift Fox', scientific_name: 'Vulpes velox', group: 'mammal', size_category: 'medium', mean_mass_g: 2300, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Arctic Fox', scientific_name: 'Vulpes lagopus', group: 'mammal', size_category: 'medium', mean_mass_g: 3500, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'American Badger', scientific_name: 'Taxidea taxus', group: 'mammal', size_category: 'medium', mean_mass_g: 8000, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+
+  // ── Small/Medium Mammals ──
+  { common_name: 'Desert Cottontail', scientific_name: 'Sylvilagus audubonii', group: 'mammal', size_category: 'medium', mean_mass_g: 1000, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Black-tailed Jackrabbit', scientific_name: 'Lepus californicus', group: 'mammal', size_category: 'medium', mean_mass_g: 2500, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'White-tailed Jackrabbit', scientific_name: 'Lepus townsendii', group: 'mammal', size_category: 'medium', mean_mass_g: 3200, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Snowshoe Hare', scientific_name: 'Lepus americanus', group: 'mammal', size_category: 'medium', mean_mass_g: 1500, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Nutria (Coypu)', scientific_name: 'Myocastor coypus', group: 'mammal', size_category: 'medium', mean_mass_g: 6000, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Muskrat', scientific_name: 'Ondatra zibethicus', group: 'mammal', size_category: 'medium', mean_mass_g: 1100, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'American Beaver', scientific_name: 'Castor canadensis', group: 'mammal', size_category: 'large', mean_mass_g: 20000, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Fox Squirrel', scientific_name: 'Sciurus niger', group: 'mammal', size_category: 'medium', mean_mass_g: 800, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Eastern Gray Squirrel', scientific_name: 'Sciurus carolinensis', group: 'mammal', size_category: 'medium', mean_mass_g: 500, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Rock Squirrel', scientific_name: 'Otospermophilus variegatus', group: 'mammal', size_category: 'medium', mean_mass_g: 700, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: "Richardson's Ground Squirrel", scientific_name: 'Urocitellus richardsonii', group: 'mammal', size_category: 'small', mean_mass_g: 300, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'California Ground Squirrel', scientific_name: 'Otospermophilus beecheyi', group: 'mammal', size_category: 'medium', mean_mass_g: 600, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Kangaroo Rat (spp.)', scientific_name: 'Dipodomys spp.', group: 'mammal', size_category: 'small', mean_mass_g: 45, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'White-tailed Prairie Dog', scientific_name: 'Cynomys leucurus', group: 'mammal', size_category: 'medium', mean_mass_g: 800, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: "Gunnison's Prairie Dog", scientific_name: 'Cynomys gunnisoni', group: 'mammal', size_category: 'medium', mean_mass_g: 700, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Long-tailed Weasel', scientific_name: 'Mustela frenata', group: 'mammal', size_category: 'small', mean_mass_g: 200, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Small Indian Mongoose', scientific_name: 'Urva auropunctata', group: 'mammal', size_category: 'medium', mean_mass_g: 600, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+
+  // ══════════════════════════════════════════════════
+  // REPTILES — Additional
+  // ══════════════════════════════════════════════════
+  { common_name: 'Gopher Tortoise', scientific_name: 'Gopherus polyphemus', group: 'reptile', size_category: 'medium', mean_mass_g: 5000, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Desert Tortoise', scientific_name: 'Gopherus agassizii', group: 'reptile', size_category: 'medium', mean_mass_g: 4000, strike_risk: 'high', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Eastern Diamondback Rattlesnake', scientific_name: 'Crotalus adamanteus', group: 'reptile', size_category: 'medium', mean_mass_g: 2300, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Western Diamondback Rattlesnake', scientific_name: 'Crotalus atrox', group: 'reptile', size_category: 'medium', mean_mass_g: 1800, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Cottonmouth', scientific_name: 'Agkistrodon piscivorus', group: 'reptile', size_category: 'medium', mean_mass_g: 600, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Black Racer', scientific_name: 'Coluber constrictor', group: 'reptile', size_category: 'medium', mean_mass_g: 350, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Gopher Snake', scientific_name: 'Pituophis catenifer', group: 'reptile', size_category: 'medium', mean_mass_g: 500, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Green Iguana', scientific_name: 'Iguana iguana', group: 'reptile', size_category: 'medium', mean_mass_g: 4000, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'American Crocodile', scientific_name: 'Crocodylus acutus', group: 'reptile', size_category: 'large', mean_mass_g: 200000, strike_risk: 'critical', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Red-eared Slider', scientific_name: 'Trachemys scripta elegans', group: 'reptile', size_category: 'medium', mean_mass_g: 300, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Painted Turtle', scientific_name: 'Chrysemys picta', group: 'reptile', size_category: 'medium', mean_mass_g: 350, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+
+  // ══════════════════════════════════════════════════
+  // BATS — Additional
+  // ══════════════════════════════════════════════════
+  { common_name: 'Silver-haired Bat', scientific_name: 'Lasionycteris noctivagans', group: 'bat', size_category: 'small', mean_mass_g: 11, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Tri-colored Bat', scientific_name: 'Perimyotis subflavus', group: 'bat', size_category: 'small', mean_mass_g: 6, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Evening Bat', scientific_name: 'Nycticeius humeralis', group: 'bat', size_category: 'small', mean_mass_g: 10, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Indiana Bat', scientific_name: 'Myotis sodalis', group: 'bat', size_category: 'small', mean_mass_g: 7, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Northern Long-eared Bat', scientific_name: 'Myotis septentrionalis', group: 'bat', size_category: 'small', mean_mass_g: 8, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Pallid Bat', scientific_name: 'Antrozous pallidus', group: 'bat', size_category: 'small', mean_mass_g: 20, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Cave Myotis', scientific_name: 'Myotis velifer', group: 'bat', size_category: 'small', mean_mass_g: 12, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Western Small-footed Myotis', scientific_name: 'Myotis ciliolabrum', group: 'bat', size_category: 'small', mean_mass_g: 5, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: "Townsend's Big-eared Bat", scientific_name: 'Corynorhinus townsendii', group: 'bat', size_category: 'small', mean_mass_g: 10, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
 ]
