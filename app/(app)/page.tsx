@@ -1012,8 +1012,8 @@ export default function HomePage() {
       })()}
 
       {/* ===== ARFF + NAVAID Status (side by side on desktop) ===== */}
-      <div className="arff-navaid-row" style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-      <div style={{ flex: '0 0 auto' }}>
+      <div className="arff-navaid-row" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 12, marginBottom: 12 }}>
+      <div>
       <span className="section-label">ARFF Status</span>
       <div style={{
         display: 'grid',
@@ -1198,7 +1198,7 @@ export default function HomePage() {
 
       </div>
 
-      <div style={{ flex: '1 1 0', minWidth: 200 }}>
+      <div>
       {/* ===== NAVAID Status ===== */}
       <span className="section-label">NAVAID Status</span>
       {navaids.length === 0 ? (
@@ -1314,9 +1314,9 @@ export default function HomePage() {
       </div>{/* end arff-navaid-row */}
 
       {/* ===== Personnel / Construction / Misc (inline row on desktop) ===== */}
-      <div className="bottom-info-row" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <div className="bottom-info-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
 
-      <div style={{ flex: '1 1 0', minWidth: 200 }}>
+      <div>
       {/* ===== Personnel on Airfield ===== */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <span className="section-label" style={{ marginBottom: 0 }}>Personnel on Airfield</span>
@@ -1514,9 +1514,9 @@ export default function HomePage() {
         </div>
       )}
 
-      </div>{/* end Personnel wrapper */}
+      </div>
 
-      <div style={{ flex: '1 1 0', minWidth: 200 }}>
+      <div>
       {/* ===== Construction / Closures ===== */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <span className="section-label" style={{ marginBottom: 0 }}>Construction / Closures</span>
@@ -1535,9 +1535,9 @@ export default function HomePage() {
         )}
       </div>
 
-      </div>{/* end Construction wrapper */}
+      </div>
 
-      <div style={{ flex: '1 1 0', minWidth: 200 }}>
+      <div>
       {/* ===== Miscellaneous Info ===== */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <span className="section-label" style={{ marginBottom: 0 }}>Miscellaneous Info</span>
@@ -1556,7 +1556,7 @@ export default function HomePage() {
         )}
       </div>
 
-      </div>{/* end Misc wrapper */}
+      </div>
       </div>{/* end bottom-info-row */}
 
       {/* Construction/Closures edit dialog */}
