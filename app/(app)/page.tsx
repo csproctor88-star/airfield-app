@@ -1137,7 +1137,7 @@ export default function HomePage() {
             const renderNavaidItem = (n: NavaidStatus) => (
               <div key={n.id} style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 'var(--fs-base)', fontWeight: 500, color: 'var(--color-text-2)' }}>
+                  <span style={{ fontSize: 'var(--fs-base)', fontWeight: 500, color: 'var(--color-text-2)', flex: 1 }}>
                     {getNavaidDisplayName(n.navaid_name)}
                   </span>
                   <button
