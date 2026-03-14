@@ -1354,7 +1354,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
     if (step.type === 'conditional') {
       return (
         <div key={step.id} style={{
-          padding: '6px 10px', marginBottom: 4, fontSize: 'var(--fs-sm)',
+          padding: '8px 10px', marginBottom: 4, fontSize: 'var(--fs-base)',
           fontWeight: 600, color: 'var(--color-warning)', fontStyle: 'italic',
         }}>{step.id}. {step.label}</div>
       )
@@ -1367,7 +1367,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
         background: checked ? 'rgba(34,197,94,0.04)' : 'transparent',
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: 'var(--color-text-3)', minWidth: 24, paddingTop: 2 }}>{step.id}.</span>
+          <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--color-text-3)', minWidth: 28, paddingTop: 2 }}>{step.id}.</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             {/* Checkbox / checkbox_with_note */}
             {(step.type === 'checkbox' || step.type === 'checkbox_with_note') && (
@@ -1377,13 +1377,13 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                   cursor: 'pointer', padding: 0, fontFamily: 'inherit', textAlign: 'left', width: '100%',
                 }}>
                   <span style={{
-                    width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                    width: 22, height: 22, borderRadius: 5, flexShrink: 0,
                     border: checked ? 'none' : '2px solid var(--color-border-mid)',
                     background: checked ? '#22C55E' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{checked && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>&#10003;</span>}</span>
+                  }}>{checked && <span style={{ color: '#fff', fontSize: 12, fontWeight: 800 }}>&#10003;</span>}</span>
                   <span style={{
-                    fontSize: 'var(--fs-sm)', fontWeight: 600,
+                    fontSize: 'var(--fs-base)', fontWeight: 600,
                     color: checked ? 'var(--color-text-3)' : 'var(--color-text-1)',
                     textDecoration: checked ? 'line-through' : 'none',
                   }}>{step.label}</span>
@@ -1399,21 +1399,21 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
             {/* Notify agencies */}
             {step.type === 'notify_agencies' && (
               <div>
-                <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>{step.label}</div>
+                <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>{step.label}</div>
                 {(step.agencies || []).map(agency => {
                   const agencyChecked = (resp.agencies_checked || []).includes(agency)
                   return (
                     <button key={agency} onClick={() => handleAgencyToggle(step.id, agency)} style={{
-                      display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none',
-                      cursor: 'pointer', padding: '2px 0', fontFamily: 'inherit', textAlign: 'left', width: '100%',
+                      display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none',
+                      cursor: 'pointer', padding: '3px 0', fontFamily: 'inherit', textAlign: 'left', width: '100%',
                     }}>
                       <span style={{
-                        width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                        width: 18, height: 18, borderRadius: 3, flexShrink: 0,
                         border: agencyChecked ? 'none' : '2px solid var(--color-border-mid)',
                         background: agencyChecked ? '#22C55E' : 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>{agencyChecked && <span style={{ color: '#fff', fontSize: 8, fontWeight: 800 }}>&#10003;</span>}</span>
-                      <span style={{ fontSize: 'var(--fs-xs)', color: agencyChecked ? 'var(--color-text-3)' : 'var(--color-text-1)', textDecoration: agencyChecked ? 'line-through' : 'none' }}>{agency}</span>
+                      }}>{agencyChecked && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>&#10003;</span>}</span>
+                      <span style={{ fontSize: 'var(--fs-sm)', color: agencyChecked ? 'var(--color-text-3)' : 'var(--color-text-1)', textDecoration: agencyChecked ? 'line-through' : 'none' }}>{agency}</span>
                     </button>
                   )
                 })}
@@ -1423,25 +1423,25 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
             {/* Fill field */}
             {step.type === 'fill_field' && (
               <div>
-                <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 3 }}>{step.label}</div>
+                <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>{step.label}</div>
                 <input className="input-dark" placeholder={step.field_label || 'Enter value'}
                   value={resp.value || ''} onChange={e => handleFieldChange(step.id, e.target.value)}
-                  style={{ width: '100%', fontSize: 'var(--fs-xs)' }} />
+                  style={{ width: '100%', fontSize: 'var(--fs-sm)' }} />
               </div>
             )}
 
             {/* Time field */}
             {step.type === 'time_field' && (
               <div>
-                <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 3 }}>{step.label}</div>
+                <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>{step.label}</div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <input className="input-dark" placeholder={step.field_label || 'HHmm'}
                     value={resp.value || ''} onChange={e => handleFieldChange(step.id, e.target.value)}
-                    style={{ width: 90, fontSize: 'var(--fs-xs)', textAlign: 'center' }} />
+                    style={{ width: 100, fontSize: 'var(--fs-sm)', textAlign: 'center' }} />
                   <button onClick={() => handleFieldChange(step.id, zuluNow())} style={{
                     background: 'rgba(34,211,238,0.1)', border: '1px solid var(--color-cyan)',
-                    borderRadius: 6, padding: '3px 8px', color: 'var(--color-cyan)',
-                    fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                    borderRadius: 6, padding: '4px 10px', color: 'var(--color-cyan)',
+                    fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                   }}>Now (Z)</button>
                 </div>
               </div>
@@ -1486,8 +1486,8 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {activeExec && (
                   <span style={{
-                    fontSize: 'var(--fs-sm)', fontWeight: 800, color: '#0F172A',
-                    background: '#67E8F9', padding: '2px 8px', borderRadius: 6,
+                    fontSize: 'var(--fs-base)', fontWeight: 800, color: '#0F172A',
+                    background: '#67E8F9', padding: '3px 10px', borderRadius: 6,
                   }}>QRC-{activeExec.qrc_number}</span>
                 )}
                 <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
@@ -1534,23 +1534,23 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                   padding: 14, borderRadius: 10, marginBottom: 12,
                   background: 'var(--color-bg-surface)', border: '1px solid rgba(34,211,238,0.2)',
                 }}>
-                  <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-cyan)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-cyan)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Secondary Crash Net (SCN) Form
                   </div>
                   {((activeTemplate.scn_fields as { fields?: { key: string; label: string; type: string }[] }).fields || []).map(
                     (field: { key: string; label: string; type: string }) => (
-                      <div key={field.key} style={{ marginBottom: 6 }}>
-                        <label style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', display: 'block', marginBottom: 1 }}>
+                      <div key={field.key} style={{ marginBottom: 8 }}>
+                        <label style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>
                           {field.label}
                         </label>
                         {field.type === 'textarea' ? (
                           <textarea className="input-dark" value={(scnData[field.key] as string) || ''}
                             onChange={e => handleScnField(field.key, e.target.value)} rows={2}
-                            style={{ width: '100%', fontSize: 'var(--fs-xs)', resize: 'vertical' }} />
+                            style={{ width: '100%', fontSize: 'var(--fs-sm)', resize: 'vertical' }} />
                         ) : (
                           <input className="input-dark" value={(scnData[field.key] as string) || ''}
                             onChange={e => handleScnField(field.key, e.target.value)}
-                            style={{ width: '100%', fontSize: 'var(--fs-xs)' }} />
+                            style={{ width: '100%', fontSize: 'var(--fs-sm)' }} />
                         )}
                       </div>
                     )
@@ -1574,8 +1574,8 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                       borderRadius: 8, padding: '8px 12px', cursor: 'pointer', fontFamily: 'inherit',
                       textAlign: 'left', marginBottom: 4,
                     }}>
-                      <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#0F172A', background: '#67E8F9', padding: '1px 6px', borderRadius: 4 }}>QRC-{ex.qrc_number}</span>
-                      <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', flex: 1 }}>{ex.title}</span>
+                      <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: '#0F172A', background: '#67E8F9', padding: '2px 8px', borderRadius: 5 }}>QRC-{ex.qrc_number}</span>
+                      <span style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', flex: 1 }}>{ex.title}</span>
                     </button>
                   ))}
                 </div>
@@ -1589,10 +1589,10 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                       borderRadius: 8, padding: '8px 10px', cursor: 'pointer',
                       fontFamily: 'inherit', textAlign: 'left',
                     }}>
-                    <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#0F172A', background: '#67E8F9', padding: '1px 5px', borderRadius: 4 }}>
+                    <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: '#0F172A', background: '#67E8F9', padding: '2px 8px', borderRadius: 5 }}>
                       {tmpl.qrc_number}
                     </span>
-                    <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-1)', marginTop: 4, lineHeight: 1.3 }}>
+                    <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', marginTop: 4, lineHeight: 1.3 }}>
                       {tmpl.title}
                     </div>
                   </button>

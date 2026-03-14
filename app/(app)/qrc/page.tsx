@@ -165,14 +165,14 @@ export default function QrcPage() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                   <span style={{
-                    fontSize: 'var(--fs-sm)', fontWeight: 800,
+                    fontSize: 'var(--fs-base)', fontWeight: 800,
                     color: '#1E293B', background: '#F97316',
-                    padding: '2px 8px', borderRadius: 6, minWidth: 44, textAlign: 'center',
+                    padding: '3px 10px', borderRadius: 6, minWidth: 48, textAlign: 'center',
                   }}>
                     QRC-{tmpl.qrc_number}
                   </span>
                 </div>
-                <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)', lineHeight: 1.3 }}>
+                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', lineHeight: 1.3 }}>
                   {tmpl.title}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
@@ -231,12 +231,12 @@ export default function QrcPage() {
                   }}
                 >
                   <span style={{
-                    fontSize: 'var(--fs-sm)', fontWeight: 800,
+                    fontSize: 'var(--fs-base)', fontWeight: 800,
                     color: '#1E293B', background: '#F97316',
-                    padding: '2px 8px', borderRadius: 6,
+                    padding: '3px 10px', borderRadius: 6,
                   }}>QRC-{ex.qrc_number}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)' }}>{ex.title}</div>
+                    <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>{ex.title}</div>
                     <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
                       Opened {new Date(ex.opened_at).toISOString().slice(11, 16)}Z
                       {ex.open_initials && ` by ${ex.open_initials}`}
@@ -274,12 +274,12 @@ export default function QrcPage() {
                 }}
               >
                 <span style={{
-                  fontSize: 'var(--fs-sm)', fontWeight: 800,
+                  fontSize: 'var(--fs-base)', fontWeight: 800,
                   color: '#fff', background: ex.status === 'open' ? '#D97706' : '#16A34A',
-                  padding: '2px 8px', borderRadius: 6,
+                  padding: '3px 10px', borderRadius: 6,
                 }}>QRC-{ex.qrc_number}</span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)' }}>{ex.title}</div>
+                  <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>{ex.title}</div>
                   <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
                     {formatZuluDateTime(new Date(ex.opened_at))}
                     {ex.closed_at && ` — Closed ${formatZuluDateTime(new Date(ex.closed_at))}`}
@@ -526,8 +526,8 @@ function QrcExecutionView({
         }}>
           {/* Step number */}
           <span style={{
-            fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--color-text-3)',
-            minWidth: 28, flexShrink: 0, paddingTop: 2,
+            fontSize: 'var(--fs-base)', fontWeight: 800, color: 'var(--color-text-3)',
+            minWidth: 30, flexShrink: 0, paddingTop: 2,
           }}>{step.id}.</span>
 
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -544,15 +544,15 @@ function QrcExecutionView({
                   }}
                 >
                   <span style={{
-                    width: 20, height: 20, borderRadius: 5, flexShrink: 0,
+                    width: 24, height: 24, borderRadius: 5, flexShrink: 0,
                     border: checked ? 'none' : '2px solid var(--color-border-mid)',
                     background: checked ? '#22C55E' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    {checked && <span style={{ color: '#fff', fontSize: 11, fontWeight: 800 }}>&#10003;</span>}
+                    {checked && <span style={{ color: '#fff', fontSize: 14, fontWeight: 800 }}>&#10003;</span>}
                   </span>
                   <span style={{
-                    fontSize: 'var(--fs-base)', fontWeight: 600,
+                    fontSize: 'var(--fs-md)', fontWeight: 600,
                     color: checked ? 'var(--color-text-3)' : 'var(--color-text-1)',
                     textDecoration: checked ? 'line-through' : 'none',
                   }}>{step.label}</span>
@@ -568,10 +568,10 @@ function QrcExecutionView({
             {/* Notify agencies */}
             {step.type === 'notify_agencies' && (
               <div>
-                <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 6 }}>
+                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 6 }}>
                   {step.label}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginLeft: 4 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginLeft: 4 }}>
                   {(step.agencies || []).map(agency => {
                     const agencyChecked = (resp.agencies_checked || []).includes(agency)
                     return (
@@ -582,19 +582,19 @@ function QrcExecutionView({
                         style={{
                           display: 'flex', alignItems: 'center', gap: 8,
                           background: 'none', border: 'none', cursor: isClosed ? 'default' : 'pointer',
-                          padding: '2px 0', fontFamily: 'inherit', textAlign: 'left',
+                          padding: '3px 0', fontFamily: 'inherit', textAlign: 'left',
                         }}
                       >
                         <span style={{
-                          width: 16, height: 16, borderRadius: 3, flexShrink: 0,
+                          width: 20, height: 20, borderRadius: 4, flexShrink: 0,
                           border: agencyChecked ? 'none' : '2px solid var(--color-border-mid)',
                           background: agencyChecked ? '#22C55E' : 'transparent',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>
-                          {agencyChecked && <span style={{ color: '#fff', fontSize: 9, fontWeight: 800 }}>&#10003;</span>}
+                          {agencyChecked && <span style={{ color: '#fff', fontSize: 11, fontWeight: 800 }}>&#10003;</span>}
                         </span>
                         <span style={{
-                          fontSize: 'var(--fs-sm)',
+                          fontSize: 'var(--fs-base)',
                           color: agencyChecked ? 'var(--color-text-3)' : 'var(--color-text-1)',
                           textDecoration: agencyChecked ? 'line-through' : 'none',
                         }}>{agency}</span>
@@ -608,7 +608,7 @@ function QrcExecutionView({
             {/* Fill field */}
             {step.type === 'fill_field' && (
               <div>
-                <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>
+                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>
                   {step.label}
                 </div>
                 <input
@@ -617,7 +617,7 @@ function QrcExecutionView({
                   value={resp.value || ''}
                   onChange={e => handleFieldChange(step.id, e.target.value)}
                   disabled={isClosed}
-                  style={{ width: '100%', fontSize: 'var(--fs-sm)' }}
+                  style={{ width: '100%', fontSize: 'var(--fs-base)' }}
                 />
               </div>
             )}
@@ -625,25 +625,25 @@ function QrcExecutionView({
             {/* Time field */}
             {step.type === 'time_field' && (
               <div>
-                <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>
+                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>
                   {step.label}
                 </div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <input
                     className="input-dark"
                     placeholder={step.field_label || 'HHmm'}
                     value={resp.value || ''}
                     onChange={e => handleFieldChange(step.id, e.target.value)}
                     disabled={isClosed}
-                    style={{ width: 100, fontSize: 'var(--fs-sm)', textAlign: 'center' }}
+                    style={{ width: 110, fontSize: 'var(--fs-base)', textAlign: 'center' }}
                   />
                   {!isClosed && (
                     <button
                       onClick={() => handleFieldChange(step.id, zuluNow())}
                       style={{
                         background: 'rgba(34,211,238,0.1)', border: '1px solid var(--color-cyan)',
-                        borderRadius: 6, padding: '4px 10px', color: 'var(--color-cyan)',
-                        fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                        borderRadius: 6, padding: '5px 12px', color: 'var(--color-cyan)',
+                        fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                       }}
                     >Now (Z)</button>
                   )}
@@ -654,7 +654,7 @@ function QrcExecutionView({
             {/* Conditional */}
             {step.type === 'conditional' && (
               <div style={{
-                fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-warning)',
+                fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-warning)',
                 fontStyle: 'italic',
               }}>
                 {step.label}
@@ -688,9 +688,9 @@ function QrcExecutionView({
           }}>&larr; Back</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{
-              fontSize: 'var(--fs-md)', fontWeight: 800,
+              fontSize: 'var(--fs-lg)', fontWeight: 800,
               color: '#fff', background: isClosed ? '#16A34A' : '#D97706',
-              padding: '3px 10px', borderRadius: 6,
+              padding: '4px 12px', borderRadius: 6,
             }}>QRC-{execution.qrc_number}</span>
             <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
               {execution.title}
@@ -753,13 +753,13 @@ function QrcExecutionView({
           padding: 16, borderRadius: 10, marginBottom: 16,
           background: 'var(--color-bg-surface)', border: '1px solid rgba(34,211,238,0.2)',
         }}>
-          <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-cyan)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-cyan)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             Secondary Crash Net (SCN) Form
           </div>
           {((template.scn_fields as { fields?: { key: string; label: string; type: string }[] }).fields || []).map(
             (field: { key: string; label: string; type: string }) => (
-              <div key={field.key} style={{ marginBottom: 8 }}>
-                <label style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>
+              <div key={field.key} style={{ marginBottom: 10 }}>
+                <label style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', display: 'block', marginBottom: 3 }}>
                   {field.label}
                 </label>
                 {field.type === 'textarea' ? (
@@ -769,7 +769,7 @@ function QrcExecutionView({
                     onChange={e => handleScnField(field.key, e.target.value)}
                     disabled={isClosed}
                     rows={2}
-                    style={{ width: '100%', fontSize: 'var(--fs-sm)', resize: 'vertical' }}
+                    style={{ width: '100%', fontSize: 'var(--fs-base)', resize: 'vertical' }}
                   />
                 ) : (
                   <input
@@ -777,7 +777,7 @@ function QrcExecutionView({
                     value={(scnData[field.key] as string) || ''}
                     onChange={e => handleScnField(field.key, e.target.value)}
                     disabled={isClosed}
-                    style={{ width: '100%', fontSize: 'var(--fs-sm)' }}
+                    style={{ width: '100%', fontSize: 'var(--fs-base)' }}
                   />
                 )}
               </div>
