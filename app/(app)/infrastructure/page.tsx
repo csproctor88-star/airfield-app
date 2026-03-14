@@ -21,6 +21,7 @@ import {
   bulkUpdateFixtureIds,
   bulkDeleteFeatures,
   bulkAssignComponentByIds,
+  bulkUpdateFeatureType,
   buildFeatureDisplayName,
   type InfrastructureFeatureType,
 } from '@/lib/supabase/infrastructure-features'
@@ -709,56 +710,142 @@ export default function InfrastructureMapPage() {
   const [kmlImporting, setKmlImporting] = useState(false)
   const kmlFileRef = useRef<HTMLInputElement>(null)
 
-  const handleKmlImport = useCallback(async (file: File) => {
+  const handleFileImport = useCallback(async (file: File) => {
     if (!installationId) return
     setKmlImporting(true)
     try {
       const text = await file.text()
-      const parser = new DOMParser()
-      const doc = parser.parseFromString(text, 'text/xml')
-      const placemarks = doc.getElementsByTagName('Placemark')
+      const ext = file.name.split('.').pop()?.toLowerCase() || ''
 
-      // Extract unique coordinates
+      // Extract unique coordinates with optional per-feature overrides
       const seen = new Set<string>()
-      const coords: { lng: number; lat: number }[] = []
-      for (let i = 0; i < placemarks.length; i++) {
-        const coordEl = placemarks[i].getElementsByTagName('coordinates')[0]
-        if (!coordEl?.textContent) continue
-        const parts = coordEl.textContent.trim().split(',')
-        if (parts.length < 2) continue
-        const lng = parseFloat(parts[0])
-        const lat = parseFloat(parts[1])
-        if (isNaN(lng) || isNaN(lat)) continue
-        // Deduplicate to 10 decimal places
-        const key = `${lng.toFixed(10)},${lat.toFixed(10)}`
-        if (seen.has(key)) continue
+      const parsed: { lng: number; lat: number; label?: string; feature_type?: string; rotation?: number; layer?: string }[] = []
+
+      const dedup = (entry: typeof parsed[0]) => {
+        const key = `${entry.lng.toFixed(10)},${entry.lat.toFixed(10)}`
+        if (seen.has(key)) return
         seen.add(key)
-        coords.push({ lng, lat })
+        parsed.push(entry)
       }
 
-      if (coords.length === 0) {
-        toast.error('No valid coordinates found in KML')
+      if (ext === 'csv') {
+        // ── CSV parsing ──
+        const lines = text.split(/\r?\n/).filter(l => l.trim())
+        if (lines.length < 2) {
+          toast.error('CSV file must have a header row and at least one data row')
+          setKmlImporting(false)
+          return
+        }
+        // Parse header — handle quoted values
+        const parseRow = (line: string): string[] => {
+          const result: string[] = []
+          let current = ''
+          let inQuotes = false
+          for (let i = 0; i < line.length; i++) {
+            const ch = line[i]
+            if (ch === '"') {
+              inQuotes = !inQuotes
+            } else if (ch === ',' && !inQuotes) {
+              result.push(current.trim())
+              current = ''
+            } else {
+              current += ch
+            }
+          }
+          result.push(current.trim())
+          return result
+        }
+
+        const headers = parseRow(lines[0]).map(h => h.toLowerCase().replace(/['"]/g, ''))
+        const latIdx = headers.findIndex(h => h === 'latitude' || h === 'lat')
+        const lngIdx = headers.findIndex(h => h === 'longitude' || h === 'lng' || h === 'lon')
+        if (latIdx === -1 || lngIdx === -1) {
+          toast.error('CSV must have latitude/lat and longitude/lng/lon columns')
+          setKmlImporting(false)
+          return
+        }
+        const labelIdx = headers.indexOf('label')
+        const typeIdx = headers.indexOf('feature_type')
+        const rotIdx = headers.indexOf('rotation')
+        const layerIdx = headers.indexOf('layer')
+
+        for (let i = 1; i < lines.length; i++) {
+          const vals = parseRow(lines[i])
+          const lat = parseFloat(vals[latIdx])
+          const lng = parseFloat(vals[lngIdx])
+          if (isNaN(lat) || isNaN(lng)) continue
+          dedup({
+            lng, lat,
+            label: labelIdx >= 0 ? vals[labelIdx] || undefined : undefined,
+            feature_type: typeIdx >= 0 ? vals[typeIdx] || undefined : undefined,
+            rotation: rotIdx >= 0 ? parseFloat(vals[rotIdx]) || undefined : undefined,
+            layer: layerIdx >= 0 ? vals[layerIdx] || undefined : undefined,
+          })
+        }
+      } else if (ext === 'geojson' || ext === 'json') {
+        // ── GeoJSON parsing ──
+        const geojson = JSON.parse(text)
+        const geoFeatures = geojson.type === 'FeatureCollection'
+          ? geojson.features || []
+          : geojson.type === 'Feature' ? [geojson] : []
+
+        for (const gf of geoFeatures) {
+          if (gf.geometry?.type !== 'Point') continue
+          const coords = gf.geometry.coordinates
+          if (!Array.isArray(coords) || coords.length < 2) continue
+          const lng = parseFloat(coords[0])
+          const lat = parseFloat(coords[1])
+          if (isNaN(lng) || isNaN(lat)) continue
+          const props = gf.properties || {}
+          dedup({
+            lng, lat,
+            label: props.label || undefined,
+            feature_type: props.feature_type || undefined,
+            rotation: props.rotation != null ? parseFloat(props.rotation) || undefined : undefined,
+            layer: props.layer || undefined,
+          })
+        }
+      } else {
+        // ── KML parsing (default) ──
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(text, 'text/xml')
+        const placemarks = doc.getElementsByTagName('Placemark')
+        for (let i = 0; i < placemarks.length; i++) {
+          const coordEl = placemarks[i].getElementsByTagName('coordinates')[0]
+          if (!coordEl?.textContent) continue
+          const parts = coordEl.textContent.trim().split(',')
+          if (parts.length < 2) continue
+          const lng = parseFloat(parts[0])
+          const lat = parseFloat(parts[1])
+          if (isNaN(lng) || isNaN(lat)) continue
+          dedup({ lng, lat })
+        }
+      }
+
+      if (parsed.length === 0) {
+        toast.error(`No valid coordinates found in ${ext.toUpperCase()} file`)
         setKmlImporting(false)
         return
       }
 
-      const features = coords.map(c => ({
-        feature_type: kmlFeatureType,
+      const features = parsed.map(c => ({
+        feature_type: (c.feature_type || kmlFeatureType) as InfrastructureFeatureType,
         longitude: Math.round(c.lng * 1e8) / 1e8,
         latitude: Math.round(c.lat * 1e8) / 1e8,
-        layer: kmlLayer || undefined,
-        rotation: kmlRotation,
+        layer: c.layer || kmlLayer || undefined,
+        label: c.label,
+        rotation: c.rotation ?? kmlRotation,
       }))
 
       const count = await bulkCreateInfrastructureFeatures(installationId, features)
       if (count > 0) {
         const refreshed = await fetchInfrastructureFeatures(installationId)
         setDbFeatures(refreshed)
-        toast.success(`Imported ${count} features from KML`)
+        toast.success(`Imported ${count} features from ${ext.toUpperCase()}`)
       }
       setKmlImportOpen(false)
     } catch (err) {
-      toast.error('Failed to parse KML file')
+      toast.error('Failed to parse import file')
     }
     setKmlImporting(false)
   }, [installationId, kmlFeatureType, kmlRotation, kmlLayer])
@@ -2308,7 +2395,7 @@ export default function InfrastructureMapPage() {
                 cursor: 'pointer',
               }}
             >
-              Import KML
+              Import Features
             </button>
             <button
               onClick={() => { setEditMode(prev => !prev); setAuditMode(false); setBulkShiftOpen(false); setBoxSelectActive(false); setSelectedIds(new Set()); setBarPlacement(null) }}
@@ -2438,6 +2525,14 @@ export default function InfrastructureMapPage() {
               }
               return count
             }}
+            onBulkTypeChange={async (featureIds, newType) => {
+              const count = await bulkUpdateFeatureType(featureIds, newType)
+              if (count > 0 && installationId) {
+                const refreshed = await fetchInfrastructureFeatures(installationId)
+                setDbFeatures(refreshed)
+              }
+              return count
+            }}
             onHighlightFeatures={setAuditHighlightIds}
             onClose={() => { setAuditMode(false); setAuditHighlightIds([]) }}
           />
@@ -2477,12 +2572,16 @@ export default function InfrastructureMapPage() {
             gap: 8,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#F97316' }}>Import KML</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#F97316' }}>Import Features</span>
               <button onClick={() => setKmlImportOpen(false)} style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: 14, cursor: 'pointer' }}>✕</button>
             </div>
 
+            <div style={{ fontSize: 9, color: '#64748B' }}>
+              Accepts KML, CSV, or GeoJSON files. Per-row values override defaults below.
+            </div>
+
             <div>
-              <div style={{ fontSize: 10, color: '#94A3B8', marginBottom: 2 }}>Feature Type</div>
+              <div style={{ fontSize: 10, color: '#94A3B8', marginBottom: 2 }}>Default Feature Type</div>
               <select
                 value={kmlFeatureType}
                 onChange={(e) => setKmlFeatureType(e.target.value as InfrastructureFeatureType)}
@@ -2519,11 +2618,11 @@ export default function InfrastructureMapPage() {
             <input
               ref={kmlFileRef}
               type="file"
-              accept=".kml,.kmz"
+              accept=".kml,.kmz,.csv,.geojson,.json"
               style={{ display: 'none' }}
               onChange={(e) => {
                 const file = e.target.files?.[0]
-                if (file) handleKmlImport(file)
+                if (file) handleFileImport(file)
                 e.target.value = ''
               }}
             />
@@ -2543,7 +2642,7 @@ export default function InfrastructureMapPage() {
                 opacity: kmlImporting ? 0.6 : 1,
               }}
             >
-              {kmlImporting ? 'Importing...' : 'Select KML File'}
+              {kmlImporting ? 'Importing...' : 'Select File'}
             </button>
           </div>
         )}

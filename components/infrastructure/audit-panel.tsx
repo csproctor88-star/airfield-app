@@ -33,6 +33,7 @@ type AuditPanelProps = {
   onBulkAssign: (featureIds: string[], componentId: string) => Promise<number>
   onBulkFixtureIds: (updates: { id: string; block: string }[]) => Promise<number>
   onBulkDelete: (featureIds: string[]) => Promise<number>
+  onBulkTypeChange: (featureIds: string[], newType: string) => Promise<number>
   onHighlightFeatures: (featureIds: string[]) => void
   onClose: () => void
 }
@@ -366,6 +367,7 @@ export default function AuditPanel({
   onBulkAssign,
   onBulkFixtureIds,
   onBulkDelete,
+  onBulkTypeChange,
   onHighlightFeatures,
   onClose,
 }: AuditPanelProps) {
@@ -381,6 +383,11 @@ export default function AuditPanel({
   const [baType, setBaType] = useState<string>('')
   const [baComponentId, setBaComponentId] = useState<string>('')
   const [baAssigning, setBaAssigning] = useState(false)
+  const [bulkRetypeOpen, setBulkRetypeOpen] = useState(false)
+  const [brLayer, setBrLayer] = useState<string>('')
+  const [brCurrentType, setBrCurrentType] = useState<string>('')
+  const [brNewType, setBrNewType] = useState<string>('')
+  const [brRetyping, setBrRetyping] = useState(false)
 
   // Build feature-to-component mapping
   const { byComponent, unassigned } = useMemo(() => {
@@ -439,6 +446,39 @@ export default function AuditPanel({
       onHighlightFeatures([])
     }
   }, [bulkAssignOpen, baMatchedFeatures]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Features matching bulk re-type filters
+  const brMatchedFeatures = useMemo(() => {
+    if (!brLayer && !brCurrentType) return []
+    return features.filter(f => {
+      if (brLayer && f.layer !== brLayer) return false
+      if (brCurrentType && f.feature_type !== brCurrentType) return false
+      return true
+    })
+  }, [features, brLayer, brCurrentType])
+
+  // Highlight matched features on map when re-type filters change
+  useEffect(() => {
+    if (bulkRetypeOpen && (brLayer || brCurrentType)) {
+      onHighlightFeatures(brMatchedFeatures.map(f => f.id))
+    } else if (bulkRetypeOpen) {
+      onHighlightFeatures([])
+    }
+  }, [bulkRetypeOpen, brMatchedFeatures]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleBulkRetype = async () => {
+    if (!brNewType || brMatchedFeatures.length === 0) return
+    setBrRetyping(true)
+    const count = await onBulkTypeChange(brMatchedFeatures.map(f => f.id), brNewType)
+    setBrRetyping(false)
+    if (count > 0) {
+      toast.success(`Re-typed ${count} feature${count !== 1 ? 's' : ''} to ${formatFeatureType(brNewType)}`)
+      setBrLayer('')
+      setBrCurrentType('')
+      setBrNewType('')
+      onHighlightFeatures([])
+    }
+  }
 
   const toggleSystem = (name: string) =>
     setExpandedSystems(prev => ({ ...prev, [name]: !prev[name] }))
@@ -795,6 +835,139 @@ export default function AuditPanel({
               }}
             >
               {baAssigning ? 'Assigning...' : `Assign ${baMatchedFeatures.length} Feature${baMatchedFeatures.length !== 1 ? 's' : ''}`}
+            </button>
+          </div>
+        )}
+
+        {/* Bulk Re-Type Tool */}
+        <button
+          onClick={() => { setBulkRetypeOpen(prev => !prev); if (bulkRetypeOpen) onHighlightFeatures([]) }}
+          style={{
+            width: '100%',
+            padding: '6px 0',
+            borderRadius: 6,
+            border: bulkRetypeOpen ? '1px solid rgba(249, 115, 22, 0.4)' : '1px solid rgba(148, 163, 184, 0.15)',
+            background: bulkRetypeOpen ? 'rgba(249, 115, 22, 0.1)' : 'transparent',
+            color: bulkRetypeOpen ? '#F97316' : '#94A3B8',
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: 'pointer',
+            marginBottom: 6,
+          }}
+        >
+          {bulkRetypeOpen ? '▾ Bulk Re-Type' : '▸ Bulk Re-Type'}
+        </button>
+
+        {bulkRetypeOpen && (
+          <div style={{
+            background: 'rgba(249, 115, 22, 0.05)',
+            border: '1px solid rgba(249, 115, 22, 0.15)',
+            borderRadius: 8,
+            padding: '8px 10px',
+            marginBottom: 8,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+          }}>
+            <div style={{ fontSize: 10, color: '#64748B', marginBottom: 2 }}>
+              Filter features by layer + current type, then change to a new type
+            </div>
+
+            {/* Layer filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 10, color: '#94A3B8', width: 40, flexShrink: 0 }}>Layer</span>
+              <select
+                value={brLayer}
+                onChange={(e) => setBrLayer(e.target.value)}
+                style={{
+                  flex: 1,
+                  background: '#0F172A',
+                  border: '1px solid rgba(148,163,184,0.2)',
+                  borderRadius: 4,
+                  color: '#E2E8F0',
+                  fontSize: 10,
+                  padding: '4px 6px',
+                }}
+              >
+                <option value="">All layers</option>
+                {uniqueLayers.map(l => (
+                  <option key={l} value={l}>{l}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Current Type filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 10, color: '#94A3B8', width: 40, flexShrink: 0 }}>From</span>
+              <select
+                value={brCurrentType}
+                onChange={(e) => setBrCurrentType(e.target.value)}
+                style={{
+                  flex: 1,
+                  background: '#0F172A',
+                  border: '1px solid rgba(148,163,184,0.2)',
+                  borderRadius: 4,
+                  color: '#E2E8F0',
+                  fontSize: 10,
+                  padding: '4px 6px',
+                }}
+              >
+                <option value="">All types</option>
+                {uniqueTypes.map(t => (
+                  <option key={t} value={t}>{formatFeatureType(t)}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Match count */}
+            {(brLayer || brCurrentType) && (
+              <div style={{ fontSize: 10, color: brMatchedFeatures.length > 0 ? '#F97316' : '#64748B', fontWeight: 600 }}>
+                {brMatchedFeatures.length} feature{brMatchedFeatures.length !== 1 ? 's' : ''} matched
+              </div>
+            )}
+
+            {/* New Type selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 10, color: '#94A3B8', width: 40, flexShrink: 0 }}>To</span>
+              <select
+                value={brNewType}
+                onChange={(e) => setBrNewType(e.target.value)}
+                style={{
+                  flex: 1,
+                  background: '#0F172A',
+                  border: '1px solid rgba(148,163,184,0.2)',
+                  borderRadius: 4,
+                  color: '#E2E8F0',
+                  fontSize: 10,
+                  padding: '4px 6px',
+                }}
+              >
+                <option value="">Select new type...</option>
+                {uniqueTypes.map(t => (
+                  <option key={t} value={t}>{formatFeatureType(t)}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Apply button */}
+            <button
+              onClick={handleBulkRetype}
+              disabled={!brNewType || brMatchedFeatures.length === 0 || brRetyping}
+              style={{
+                padding: '6px 0',
+                borderRadius: 6,
+                border: '1px solid rgba(249, 115, 22, 0.3)',
+                background: brNewType && brMatchedFeatures.length > 0
+                  ? 'rgba(249, 115, 22, 0.2)' : 'transparent',
+                color: brNewType && brMatchedFeatures.length > 0
+                  ? '#F97316' : '#475569',
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: brNewType && brMatchedFeatures.length > 0 ? 'pointer' : 'default',
+                opacity: brRetyping ? 0.6 : 1,
+              }}
+            >
+              {brRetyping ? 'Re-typing...' : `Re-Type ${brMatchedFeatures.length} Feature${brMatchedFeatures.length !== 1 ? 's' : ''}`}
             </button>
           </div>
         )}

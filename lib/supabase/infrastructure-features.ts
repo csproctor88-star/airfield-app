@@ -552,6 +552,31 @@ export async function bulkAssignComponentByIds(
   return updated
 }
 
+// ── Bulk update feature_type for multiple features ──
+
+export async function bulkUpdateFeatureType(
+  ids: string[],
+  featureType: string,
+): Promise<number> {
+  const supabase = createClient()
+  if (!supabase || ids.length === 0) return 0
+
+  let updated = 0
+  for (let i = 0; i < ids.length; i += 200) {
+    const batch = ids.slice(i, i + 200)
+    const { error } = await supabase
+      .from('infrastructure_features')
+      .update({
+        feature_type: featureType,
+        updated_at: new Date().toISOString(),
+      } as any)
+      .in('id', batch)
+    if (!error) updated += batch.length
+  }
+
+  return updated
+}
+
 // ── Bulk assign features to a system component ──
 
 export async function bulkAssignComponent(
