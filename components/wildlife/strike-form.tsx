@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { createStrike } from '@/lib/supabase/wildlife'
-import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
+import { type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import { createClient } from '@/lib/supabase/client'
+import { SpeciesPicker } from './species-picker'
 import {
   FLIGHT_PHASES,
   DAMAGE_LEVELS,
@@ -25,9 +26,8 @@ type Props = {
 
 export function StrikeForm({ currentUser, baseId, onClose, onSaved }: Props) {
   const [userId, setUserId] = useState<string | null>(null)
-  const [speciesSearch, setSpeciesSearch] = useState('')
   const [selectedSpecies, setSelectedSpecies] = useState<WildlifeSpecies | null>(null)
-  const [showSpeciesList, setShowSpeciesList] = useState(false)
+  const [showPicker, setShowPicker] = useState(false)
   const [numberStruck, setNumberStruck] = useState(1)
   const [numberSeen, setNumberSeen] = useState<number | null>(null)
   const [locationText, setLocationText] = useState('')
@@ -79,14 +79,6 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved }: Props) {
       )
     }
   }, [])
-
-  const filteredSpecies = speciesSearch.length > 0
-    ? WILDLIFE_SPECIES.filter(s =>
-        s.common_name.toLowerCase().includes(speciesSearch.toLowerCase()) ||
-        s.scientific_name.toLowerCase().includes(speciesSearch.toLowerCase()) ||
-        s.group.toLowerCase().includes(speciesSearch.toLowerCase()),
-      ).slice(0, 25)
-    : WILDLIFE_SPECIES.slice(0, 25)
 
   function togglePart(part: string, list: string[], setter: (v: string[]) => void) {
     setter(list.includes(part) ? list.filter(p => p !== part) : [...list, part])
@@ -157,6 +149,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved }: Props) {
   }
 
   return (
+    <>
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200, display: 'flex',
       alignItems: 'flex-end', justifyContent: 'center',
@@ -175,54 +168,40 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved }: Props) {
         {/* Species */}
         <div style={{ marginBottom: 14 }}>
           <label style={labelStyle}>Species</label>
-          <input
-            type="text"
-            placeholder="Search species (or leave blank if unknown)..."
-            value={selectedSpecies ? selectedSpecies.common_name : speciesSearch}
-            onChange={e => { setSpeciesSearch(e.target.value); setSelectedSpecies(null); setShowSpeciesList(true) }}
-            onFocus={() => setShowSpeciesList(true)}
-            style={selectStyle}
-          />
-          {showSpeciesList && !selectedSpecies && speciesSearch.length > 0 && (
+          {selectedSpecies ? (
             <div style={{
-              border: '1px solid var(--color-border)', borderRadius: 6,
-              maxHeight: 180, overflowY: 'auto', background: 'var(--color-bg-surface)', marginTop: 4,
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: 8, borderRadius: 8, background: 'var(--color-bg-surface)',
+              border: '1px solid var(--color-border)',
             }}>
-              {filteredSpecies.map(sp => (
-                <button
-                  key={sp.common_name}
-                  onClick={() => { setSelectedSpecies(sp); setShowSpeciesList(false); setSpeciesSearch('') }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    width: '100%', padding: '8px 10px', background: 'none', border: 'none',
-                    borderBottom: '1px solid var(--color-border)', cursor: 'pointer',
-                    textAlign: 'left', color: 'var(--color-text)',
-                  }}
-                >
-                  {resolveWildlifeImage(sp) && (
-                    <img src={resolveWildlifeImage(sp)!} alt={sp.common_name}
-                      style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                    />
-                  )}
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 'var(--fs-base)' }}>{sp.common_name}</div>
-                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>{sp.scientific_name}</div>
-                  </div>
-                </button>
-              ))}
+              <img
+                src={resolveWildlifeImage(selectedSpecies)!}
+                alt={selectedSpecies.common_name}
+                style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }}
+                onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+              />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700 }}>{selectedSpecies.common_name}</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>
+                  {selectedSpecies.scientific_name} · {selectedSpecies.group}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedSpecies(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-3)', fontSize: 18, padding: 4 }}
+              >×</button>
             </div>
-          )}
-          {selectedSpecies && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-              {resolveWildlifeImage(selectedSpecies) && (
-                <img src={resolveWildlifeImage(selectedSpecies)!} alt="" style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover' }}
-                  onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-              )}
-              <span style={{ fontStyle: 'italic' }}>{selectedSpecies.scientific_name}</span>
-              <button onClick={() => { setSelectedSpecies(null); setSpeciesSearch('') }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-3)' }}>×</button>
-            </div>
+          ) : (
+            <button
+              onClick={() => setShowPicker(true)}
+              style={{
+                ...selectStyle, cursor: 'pointer', textAlign: 'left',
+                color: 'var(--color-text-3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}
+            >
+              <span>Tap to select species (or leave blank)...</span>
+              <span style={{ fontSize: 'var(--fs-sm)' }}>Browse</span>
+            </button>
           )}
         </div>
 
@@ -451,5 +430,12 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved }: Props) {
         </button>
       </div>
     </div>
+    {showPicker && (
+      <SpeciesPicker
+        onSelect={sp => { setSelectedSpecies(sp); setShowPicker(false) }}
+        onClose={() => setShowPicker(false)}
+      />
+    )}
+    </>
   )
 }

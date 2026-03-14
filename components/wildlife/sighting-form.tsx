@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { createSighting } from '@/lib/supabase/wildlife'
-import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
+import { type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import {
   WILDLIFE_BEHAVIORS,
   WILDLIFE_ACTIONS,
@@ -14,6 +14,7 @@ import {
 } from '@/lib/constants'
 import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
+import { SpeciesPicker } from './species-picker'
 
 type Props = {
   currentUser: string
@@ -26,9 +27,8 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved }: Props) {
   const { areas: installationAreas } = useInstallation()
 
   const [userId, setUserId] = useState<string | null>(null)
-  const [speciesSearch, setSpeciesSearch] = useState('')
   const [selectedSpecies, setSelectedSpecies] = useState<WildlifeSpecies | null>(null)
-  const [showSpeciesList, setShowSpeciesList] = useState(false)
+  const [showPicker, setShowPicker] = useState(false)
   const [countObserved, setCountObserved] = useState(1)
   const [behavior, setBehavior] = useState('')
   const [locationText, setLocationText] = useState('')
@@ -71,14 +71,6 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved }: Props) {
       )
     }
   }, [])
-
-  const filteredSpecies = speciesSearch.length > 0
-    ? WILDLIFE_SPECIES.filter(s =>
-        s.common_name.toLowerCase().includes(speciesSearch.toLowerCase()) ||
-        s.scientific_name.toLowerCase().includes(speciesSearch.toLowerCase()) ||
-        s.group.toLowerCase().includes(speciesSearch.toLowerCase()),
-      ).slice(0, 25)
-    : WILDLIFE_SPECIES.slice(0, 25)
 
   async function handleSubmit() {
     if (!selectedSpecies) { toast.error('Select a species'); return }
@@ -125,228 +117,215 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved }: Props) {
     marginBottom: 4, display: 'block',
   }
 
+  const riskColor = (risk: string) => {
+    switch (risk) {
+      case 'critical': return '#EF4444'
+      case 'high': return '#F97316'
+      case 'medium': return '#FBBF24'
+      default: return '#10B981'
+    }
+  }
+
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200, display: 'flex',
-      alignItems: 'flex-end', justifyContent: 'center',
-      background: 'rgba(0,0,0,0.5)',
-    }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    <>
       <div style={{
-        width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto',
-        background: 'var(--color-bg)', borderRadius: '16px 16px 0 0',
-        padding: 20,
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>Log Wildlife Sighting</div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: 'var(--color-text-3)' }}>×</button>
-        </div>
+        position: 'fixed', inset: 0, zIndex: 200, display: 'flex',
+        alignItems: 'flex-end', justifyContent: 'center',
+        background: 'rgba(0,0,0,0.5)',
+      }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+        <div style={{
+          width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto',
+          background: 'var(--color-bg)', borderRadius: '16px 16px 0 0',
+          padding: 20,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>Log Wildlife Sighting</div>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: 'var(--color-text-3)' }}>×</button>
+          </div>
 
-        {/* Species selector with photo preview */}
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Species *</label>
-          <input
-            type="text"
-            placeholder="Search species..."
-            value={selectedSpecies ? selectedSpecies.common_name : speciesSearch}
-            onChange={e => {
-              setSpeciesSearch(e.target.value)
-              setSelectedSpecies(null)
-              setShowSpeciesList(true)
-            }}
-            onFocus={() => setShowSpeciesList(true)}
-            style={selectStyle}
-          />
-          {showSpeciesList && !selectedSpecies && (
-            <div style={{
-              border: '1px solid var(--color-border)', borderRadius: 6,
-              maxHeight: 220, overflowY: 'auto', background: 'var(--color-bg-surface)',
-              marginTop: 4,
-            }}>
-              {filteredSpecies.map(sp => (
-                <button
-                  key={sp.common_name}
-                  onClick={() => { setSelectedSpecies(sp); setShowSpeciesList(false); setSpeciesSearch('') }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    width: '100%', padding: '8px 10px', background: 'none', border: 'none',
-                    borderBottom: '1px solid var(--color-border)', cursor: 'pointer',
-                    textAlign: 'left', color: 'var(--color-text)',
-                  }}
-                >
-                  {resolveWildlifeImage(sp) && (
-                    <img
-                      src={resolveWildlifeImage(sp)!}
-                      alt={sp.common_name}
-                      style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                    />
-                  )}
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 'var(--fs-base)' }}>{sp.common_name}</div>
-                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>
-                      {sp.scientific_name} · {sp.group} · {sp.size_category}
-                    </div>
+          {/* Species selector — tap to open full picker */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Species *</label>
+            {selectedSpecies ? (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: 8, borderRadius: 8, background: 'var(--color-bg-surface)',
+                border: '1px solid var(--color-border)',
+              }}>
+                <img
+                  src={resolveWildlifeImage(selectedSpecies)!}
+                  alt={selectedSpecies.common_name}
+                  style={{ width: 52, height: 52, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }}
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700 }}>{selectedSpecies.common_name}</div>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>
+                    {selectedSpecies.scientific_name}
                   </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Selected species photo card */}
-          {selectedSpecies && resolveWildlifeImage(selectedSpecies) && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 10, marginTop: 8,
-              padding: 8, borderRadius: 8, background: 'var(--color-bg-surface)',
-              border: '1px solid var(--color-border)',
-            }}>
-              <img
-                src={resolveWildlifeImage(selectedSpecies)!}
-                alt={selectedSpecies.common_name}
-                style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover' }}
-                onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-              />
-              <div>
-                <div style={{ fontWeight: 700 }}>{selectedSpecies.common_name}</div>
-                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>
-                  {selectedSpecies.scientific_name}
+                  <div style={{ fontSize: 'var(--fs-xs)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ color: 'var(--color-text-3)' }}>{selectedSpecies.group} · {selectedSpecies.size_category}</span>
+                    <span style={{
+                      display: 'inline-block', padding: '1px 6px', borderRadius: 4,
+                      fontSize: '10px', fontWeight: 700, color: '#fff',
+                      background: riskColor(selectedSpecies.strike_risk),
+                    }}>
+                      {selectedSpecies.strike_risk}
+                    </span>
+                  </div>
                 </div>
-                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-                  {selectedSpecies.group} · {selectedSpecies.size_category} · Risk: {selectedSpecies.strike_risk}
-                </div>
+                <button
+                  onClick={() => setSelectedSpecies(null)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-3)', fontSize: 18, padding: 4 }}
+                >×</button>
               </div>
+            ) : (
               <button
-                onClick={() => { setSelectedSpecies(null); setSpeciesSearch('') }}
-                style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-3)' }}
-              >×</button>
-            </div>
-          )}
-        </div>
+                onClick={() => setShowPicker(true)}
+                style={{
+                  ...selectStyle, cursor: 'pointer', textAlign: 'left',
+                  color: 'var(--color-text-3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}
+              >
+                <span>Tap to select species...</span>
+                <span style={{ fontSize: 'var(--fs-sm)' }}>Browse All</span>
+              </button>
+            )}
+          </div>
 
-        {/* Count + Behavior */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
-          <div>
-            <label style={labelStyle}>Count *</label>
+          {/* Count + Behavior */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+            <div>
+              <label style={labelStyle}>Count *</label>
+              <input
+                type="number" min={1} value={countObserved}
+                onChange={e => setCountObserved(Math.max(1, parseInt(e.target.value) || 1))}
+                style={selectStyle}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Behavior</label>
+              <select value={behavior} onChange={e => setBehavior(e.target.value)} style={selectStyle}>
+                <option value="">— Select —</option>
+                {WILDLIFE_BEHAVIORS.map(b => <option key={b} value={b}>{b.charAt(0).toUpperCase() + b.slice(1)}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Location */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Location</label>
             <input
-              type="number" min={1} value={countObserved}
-              onChange={e => setCountObserved(Math.max(1, parseInt(e.target.value) || 1))}
+              type="text" placeholder="e.g. RWY 01 threshold, TWY A midpoint"
+              value={locationText} onChange={e => setLocationText(e.target.value)}
               style={selectStyle}
             />
           </div>
-          <div>
-            <label style={labelStyle}>Behavior</label>
-            <select value={behavior} onChange={e => setBehavior(e.target.value)} style={selectStyle}>
+
+          {/* Zone */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Airfield Zone</label>
+            <select value={airfieldZone} onChange={e => setAirfieldZone(e.target.value)} style={selectStyle}>
               <option value="">— Select —</option>
-              {WILDLIFE_BEHAVIORS.map(b => <option key={b} value={b}>{b.charAt(0).toUpperCase() + b.slice(1)}</option>)}
+              {(installationAreas || []).map(a => <option key={a} value={a}>{a}</option>)}
             </select>
           </div>
-        </div>
 
-        {/* Location */}
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Location</label>
-          <input
-            type="text" placeholder="e.g. RWY 01 threshold, TWY A midpoint"
-            value={locationText} onChange={e => setLocationText(e.target.value)}
-            style={selectStyle}
-          />
-        </div>
-
-        {/* Zone */}
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Airfield Zone</label>
-          <select value={airfieldZone} onChange={e => setAirfieldZone(e.target.value)} style={selectStyle}>
-            <option value="">— Select —</option>
-            {(installationAreas || []).map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
-        </div>
-
-        {/* Conditions */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
-          <div>
-            <label style={labelStyle}>Time of Day</label>
-            <select value={timeOfDay} onChange={e => setTimeOfDay(e.target.value)} style={selectStyle}>
-              <option value="">—</option>
-              {TIME_OF_DAY_OPTIONS.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={labelStyle}>Sky</label>
-            <select value={skyCondition} onChange={e => setSkyCondition(e.target.value)} style={selectStyle}>
-              <option value="">—</option>
-              {SKY_CONDITIONS.map(s => <option key={s} value={s}>{s.replace('_', ' ').charAt(0).toUpperCase() + s.replace('_', ' ').slice(1)}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={labelStyle}>Precip</label>
-            <select value={precipitation} onChange={e => setPrecipitation(e.target.value)} style={selectStyle}>
-              <option value="">—</option>
-              {PRECIPITATION_OPTIONS.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
-            </select>
-          </div>
-        </div>
-
-        {/* Action taken */}
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Action Taken</label>
-          <select value={actionTaken} onChange={e => setActionTaken(e.target.value)} style={selectStyle}>
-            {WILDLIFE_ACTIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
-          </select>
-        </div>
-
-        {actionTaken !== 'none' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+          {/* Conditions */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
             <div>
-              <label style={labelStyle}>Method</label>
-              <select value={dispersalMethod} onChange={e => setDispersalMethod(e.target.value)} style={selectStyle}>
-                <option value="">— Select —</option>
-                {DISPERSAL_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Effective?</label>
-              <select
-                value={dispersalEffective === null ? '' : dispersalEffective ? 'yes' : 'no'}
-                onChange={e => setDispersalEffective(e.target.value === 'yes' ? true : e.target.value === 'no' ? false : null)}
-                style={selectStyle}
-              >
+              <label style={labelStyle}>Time of Day</label>
+              <select value={timeOfDay} onChange={e => setTimeOfDay(e.target.value)} style={selectStyle}>
                 <option value="">—</option>
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
+                {TIME_OF_DAY_OPTIONS.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Sky</label>
+              <select value={skyCondition} onChange={e => setSkyCondition(e.target.value)} style={selectStyle}>
+                <option value="">—</option>
+                {SKY_CONDITIONS.map(s => <option key={s} value={s}>{s.replace('_', ' ').charAt(0).toUpperCase() + s.replace('_', ' ').slice(1)}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Precip</label>
+              <select value={precipitation} onChange={e => setPrecipitation(e.target.value)} style={selectStyle}>
+                <option value="">—</option>
+                {PRECIPITATION_OPTIONS.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
               </select>
             </div>
           </div>
-        )}
 
-        {/* GPS indicator */}
-        {latitude && longitude && (
-          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 10 }}>
-            GPS: {latitude.toFixed(5)}, {longitude.toFixed(5)}
+          {/* Action taken */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Action Taken</label>
+            <select value={actionTaken} onChange={e => setActionTaken(e.target.value)} style={selectStyle}>
+              {WILDLIFE_ACTIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+            </select>
           </div>
-        )}
 
-        {/* Notes */}
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Notes</label>
-          <textarea
-            value={notes} onChange={e => setNotes(e.target.value)}
-            rows={2} placeholder="Additional observations..."
-            style={{ ...selectStyle, resize: 'vertical' }}
-          />
+          {actionTaken !== 'none' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+              <div>
+                <label style={labelStyle}>Method</label>
+                <select value={dispersalMethod} onChange={e => setDispersalMethod(e.target.value)} style={selectStyle}>
+                  <option value="">— Select —</option>
+                  {DISPERSAL_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Effective?</label>
+                <select
+                  value={dispersalEffective === null ? '' : dispersalEffective ? 'yes' : 'no'}
+                  onChange={e => setDispersalEffective(e.target.value === 'yes' ? true : e.target.value === 'no' ? false : null)}
+                  style={selectStyle}
+                >
+                  <option value="">—</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* GPS indicator */}
+          {latitude && longitude && (
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 10 }}>
+              GPS: {latitude.toFixed(5)}, {longitude.toFixed(5)}
+            </div>
+          )}
+
+          {/* Notes */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Notes</label>
+            <textarea
+              value={notes} onChange={e => setNotes(e.target.value)}
+              rows={2} placeholder="Additional observations..."
+              style={{ ...selectStyle, resize: 'vertical' }}
+            />
+          </div>
+
+          {/* Submit */}
+          <button
+            onClick={handleSubmit}
+            disabled={saving || !selectedSpecies}
+            style={{
+              width: '100%', padding: '12px', borderRadius: 8, border: 'none',
+              background: saving || !selectedSpecies ? 'var(--color-text-4)' : '#10B981',
+              color: '#fff', fontWeight: 800, fontSize: 'var(--fs-md)', cursor: 'pointer',
+            }}
+          >
+            {saving ? 'Saving...' : 'Log Sighting'}
+          </button>
         </div>
-
-        {/* Submit */}
-        <button
-          onClick={handleSubmit}
-          disabled={saving || !selectedSpecies}
-          style={{
-            width: '100%', padding: '12px', borderRadius: 8, border: 'none',
-            background: saving || !selectedSpecies ? 'var(--color-text-4)' : '#10B981',
-            color: '#fff', fontWeight: 800, fontSize: 'var(--fs-md)', cursor: 'pointer',
-          }}
-        >
-          {saving ? 'Saving...' : 'Log Sighting'}
-        </button>
       </div>
-    </div>
+
+      {showPicker && (
+        <SpeciesPicker
+          onSelect={sp => { setSelectedSpecies(sp); setShowPicker(false) }}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
+    </>
   )
 }
