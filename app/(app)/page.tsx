@@ -835,7 +835,7 @@ export default function HomePage() {
 
       {/* ===== Runway & NAVAID Status ===== */}
       <span className="section-label">Airfield Status</span>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'stretch' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12, alignItems: 'start' }}>
       {(() => {
         // Build runway entries from installation runways
         const rwyEntries = runways.map(r => {
