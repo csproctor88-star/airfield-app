@@ -8,8 +8,82 @@ All notable changes to Glidepath.
 - METAR weather API integration (aviationweather.gov)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~109 `as any` casts
-- Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 11 PDF generators
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~119 `as any` casts
+- Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 12 PDF generators
+
+---
+
+## [2.20.0] — 2026-03-14
+
+### Features — Infrastructure Audit Mode & Import Tools
+Comprehensive audit workflow for infrastructure feature verification, multi-format import pipeline, fixture ID system, and airfield lighting report.
+
+#### Audit Mode
+- **Audit panel** — New `components/infrastructure/audit-panel.tsx` (1,413 lines) with feature verification workflow: filter by component, view assigned/unassigned features, bulk label editing with sequential numbering
+- **Bulk assign tool** — Filter-based component assignment for rapidly populating system components from placed features
+- **Bulk delete per component** — Remove all features assigned to a specific component from the audit panel
+- **Feature popup enhancements** — Fixture ID displayed prominently, feature type/system/component fields editable inline, deduplicated system info, coordinates removed from popup
+
+#### Import Pipeline
+- **KML import** — Import features from Google Earth KML files with automatic coordinate extraction and feature placement
+- **CSV/GeoJSON import** — Bulk import from CSV (lat/lng columns) and GeoJSON (Point geometries) with type mapping
+- **DXF import** — AutoCAD DXF file parsing for importing CAD-drawn airfield layouts
+- **Default import layer** — All imported features default to "Initial Import" layer for review before reassignment
+- **Post-import repaint** — Force Mapbox layer re-render after bulk import to ensure all features appear immediately
+
+#### Fixture ID System
+- **Fixture IDs** — Unique identifiers for all infrastructure features, displayed in popups and audit panel
+- **Label cleanup** — Removed label field from non-sign features; sign text retained for sign-type features only
+
+#### Airfield Lighting Report
+- **New report type** — `app/(app)/reports/lighting/page.tsx` (241 lines) with summary cards, per-system health status, feature breakdowns by type and layer, recent outage timeline
+- **Report data module** — `lib/reports/lighting-report-data.ts` (80 lines) aggregates system health, feature counts, and outage events
+- **PDF generator** — `lib/reports/lighting-report-pdf.ts` (233 lines) with system health table, feature inventory, outage log, and DAFMAN compliance summary
+- **Reports hub integration** — Added lighting report card to `/reports` page
+
+### Features — Dashboard & Status Overhaul
+- **Airfield Status layout redesign** — Multiple iterations culminating in three-column layout (RWY | NAVAID | ARFF) with column titles, stacked vertically side by side
+- **ARFF integration** — ARFF aircraft cards merged into the main status view alongside runway and NAVAID panels
+- **RSC/BWC vertical stacking** — Active Runway, RSC, and BWC stacked vertically in the runway column
+- **NAVAID layout** — Flex alignment fixes to keep G/Y/R toggle buttons vertically aligned
+- **Dashboard cleanup** — Removed Visual NAVAIDs KPI badge from dashboard
+
+### Features — System Health Panel Redesign
+- **Category summary cards** — Replaced per-component outage bars with high-level category summary cards showing system-level health status
+- **Simplified lighting status** — Hidden counts when all operational; show system-level status only
+- **Legend collapse** — Legend defaults to collapsed on page load
+
+### Features — Other Improvements
+- **ACSI "Mark All Y" button** — Added to each ACSI section header for quickly marking all items as compliant
+- **ACSI PDF page numbers** — Page numbers now appear on every page of ACSI PDF export
+- **Discrepancy compact rows** — Replaced discrepancy cards with compact table rows; added inline edit/delete actions
+- **Discrepancy area dropdown** — Uses installation-configured areas instead of hardcoded list
+- **Runway End Light feature type** — Added to infrastructure map with dedicated layer rendering
+- **Rotating Beacon in DB** — Added `rotating_beacon` to feature_type CHECK constraint
+
+### Bug Fixes
+- **Mapbox layer rendering** — Fixed broken filter on symbol layer `inop-ring` that caused all symbol layers to fail
+- **Threshold lights rendering** — Changed from symbol to circle renderType with white border for reliable rendering
+- **Mapbox repaint** — Force repaint after source data update to prevent stale renders
+- **Runway legend grouping** — Merge partial runway refs (e.g., "19" and "01") into full runway entry
+- **KML import precision** — Round coordinates to 8 decimal places, remove `source=import` flag
+- **Location picker map** — Added minHeight 220px for mobile usability
+- **Check form layout** — Moved Remarks above Issue Found toggle, extended edge-to-edge, larger default size
+- **QRC number badge** — Fixed to dark gray text on orange background
+- **Discrepancy report badges** — Removed interactive `kpi-badge` class from summary badges
+- **Toast notifications** — Consolidated duplicate toasts and capped visible toasts to 2
+- **Missing layers** — Added `runway_threshold` and `approach_light` to LAYERS array
+- **Threshold lights layer order** — Moved earlier in layer order to render before symbol layers
+
+### Database
+- **1 new migration** (`2026031302`) — Added `runway_end_light` and `rotating_beacon` to `infrastructure_features.feature_type` CHECK constraint
+- **Total migrations**: 106
+
+### Stats
+- Build: Clean (zero errors)
+- 119 `as any` casts across 28 files (up from 109)
+- 49 files > 500 lines (largest: infrastructure/page.tsx at 3,980)
+- 245 source files | 50 routes | 106 migrations | 42 tables
 
 ---
 

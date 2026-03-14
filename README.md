@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, ACSI (annual compliance), NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.19.0 | **Build:** Clean | **49 routes** | **195+ source files** | **103 migrations**
+**Version:** 2.20.0 | **Build:** Clean | **50 routes** | **245 source files** | **106 migrations**
 
 ## Tech Stack
 
@@ -54,7 +54,7 @@ RESEND_API_KEY=[resend-api-key]
 Apply the schema and migrations to a Supabase project:
 
 1. Run `supabase/schema.sql` to create the base tables and sequences
-2. Apply the 103 migrations in order from `supabase/migrations/`
+2. Apply the 106 migrations in order from `supabase/migrations/`
 
 See [docs/BASE-ONBOARDING.md](./docs/BASE-ONBOARDING.md) for adding new installations.
 
@@ -115,11 +115,12 @@ Airfield Compliance and Safety Inspection per DAFMAN 13-204v2, Para 5.4.3. Annua
 Navigation hub accessible from the More menu. Styled cards for each inspection type (Daily Airfield, ACSI, Pre/Post Construction, Joint Monthly) with "Start" and "History" action buttons.
 
 ### Reports (`/reports`)
-Four report types with PDF export and email delivery:
+Five report types with PDF export and email delivery:
 - **Daily Operations Summary** — all activity for a date/range (inspections, Visual NAVAID outages, checks, status changes, discrepancies, obstructions, QRC executions, events log)
 - **Open Discrepancies** — current snapshot with area and type breakdowns
 - **Discrepancy Trends** — opened vs. closed over 30d/90d/6m/1y with top areas/types
 - **Aging Discrepancies** — open items grouped by age tiers with severity and shop breakdowns
+- **Airfield Lighting Report** — system health status, feature inventory by type/layer, DAFMAN compliance summary, recent outage timeline
 
 ### Obstruction Evaluations (`/obstructions`)
 UFC 3-260-01 Class B imaginary surface analysis with multi-runway support:
@@ -162,7 +163,13 @@ Interactive Mapbox satellite map for digitizing and managing all airfield lighti
 
 **Outage Tracking** — DAFMAN 13-204v2 Table A3.1 compliance engine with 23 lighting system types, configurable outage thresholds per component (percentage, count, consecutive), spatial adjacency violation detection, and 4-tier health alerts (green/yellow/red/black). System Health Panel with per-system/per-component outage bars, DAFMAN-prescribed required actions, and outage history timeline. Auto-creates discrepancies when features are marked inoperative; bidirectional resolution closes linked discrepancies with user attribution. Map health rings visualize system degradation on operational features. Daily ops report includes "VISUAL NAVAID OUTAGES" section.
 
-**Bulk Operations** — Box select for shift, re-layer, delete, free move, component assignment, and type change. GPS tracking for drive-around use. Supabase pagination handles 1,000+ features. Import API for bulk GeoJSON data.
+**Audit Mode** — Feature verification workflow with audit panel (1,413 lines): filter by component, bulk label editing with sequential numbering, bulk assign/delete per component, fixture ID display. Designed for systematic field verification of digitized features.
+
+**Import Pipeline** — Multi-format feature import: KML (Google Earth), CSV (lat/lng columns), GeoJSON (Point geometries), and DXF (AutoCAD). All imports default to "Initial Import" layer for review. Post-import Mapbox repaint ensures immediate visibility.
+
+**Fixture ID System** — Unique identifiers for all infrastructure features, displayed prominently in popups and audit panels for field cross-referencing.
+
+**Bulk Operations** — Box select for shift, re-layer, delete, free move, component assignment, and type change. GPS tracking for drive-around use. Supabase pagination handles 1,000+ features.
 
 ### QRC — Quick Reaction Checklists (`/qrc`)
 Interactive execution of 25 digitized Quick Reaction Checklists for airfield emergencies and operational events (IFE, aircraft mishap, bird strike, tornado warning, etc.).
@@ -226,7 +233,7 @@ airfield-app/
 │       ├── regulations/page.tsx          # Reference library + My Documents
 │       ├── library/page.tsx              # Admin PDF library management
 │       ├── aircraft/page.tsx             # Aircraft database with ACN/PCN
-│       ├── reports/                      # Hub + 4 report pages
+│       ├── reports/                      # Hub + 5 report pages (incl. lighting report)
 │       ├── settings/                     # Hub + base-setup + templates
 │       ├── waivers/                      # List, create, detail, edit, annual review
 │       ├── activity/page.tsx             # Audit trail with date filtering
@@ -243,7 +250,7 @@ airfield-app/
 │   ├── discrepancies/                    # Cards, location map, map view (COP), modals
 │   ├── obstructions/                     # Airfield map with surface overlays, map view
 │   ├── waivers/                          # Waiver map view, location picker
-│   ├── infrastructure/                   # System health panel with outage timeline
+│   ├── infrastructure/                   # System health panel, audit panel (1,413 lines)
 │   ├── ui/                               # Badge, button, email-pdf-modal, photo-picker
 │   ├── RegulationPDFViewer.tsx          # In-app PDF viewer with zoom/touch
 │   ├── login-activity-dialog.tsx         # Login notification with activity table
@@ -344,10 +351,10 @@ airfield-app/
 | Item | Priority | Notes |
 |------|----------|-------|
 | No test suite | High | No unit or integration tests |
-| 109 `as any` casts | Medium | Across ~25 files — Mapbox layer expressions (31), Supabase row inserts (57), jsPDF hooks (11), misc (10). Regenerate Supabase types to eliminate ~50% |
-| 48 files > 500 lines | Low | Largest: `infrastructure/page.tsx` (3,440), `base-setup/page.tsx` (2,260), `inspections/page.tsx` (2,251) |
+| 119 `as any` casts | Medium | Across 28 files — Mapbox layer expressions (28), Supabase row inserts (62), jsPDF hooks (11), misc (18). Regenerate Supabase types to eliminate ~50% |
+| 49 files > 500 lines | Low | Largest: `infrastructure/page.tsx` (3,980), `base-setup/page.tsx` (2,260), `inspections/page.tsx` (2,296) |
 | Map init duplication | Low | 6 Mapbox components share similar init logic |
-| PDF boilerplate duplication | Low | 11 PDF generators share similar header/footer/photo helper patterns |
+| PDF boilerplate duplication | Low | 12 PDF generators share similar header/footer/photo helper patterns |
 
 ## Current Status
 
