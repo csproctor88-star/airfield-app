@@ -163,6 +163,7 @@ export default function LocationPickerMap({
           width: '100%',
           aspectRatio,
           maxHeight,
+          minHeight: 220,
           borderRadius: 10,
           overflow: 'hidden',
           border: '1px solid var(--color-border-mid)',
