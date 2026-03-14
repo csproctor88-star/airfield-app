@@ -28,9 +28,11 @@ type Props = {
   onClose: () => void
   onSaved: () => void
   initialData?: WildlifeSightingRow | null
+  checkId?: string | null
+  required?: boolean
 }
 
-export function SightingForm({ currentUser, baseId, onClose, onSaved, initialData }: Props) {
+export function SightingForm({ currentUser, baseId, onClose, onSaved, initialData, checkId, required }: Props) {
   const { areas: installationAreas } = useInstallation()
   const isEdit = !!initialData
 
@@ -170,6 +172,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
       dispersal_effective: actionTaken !== 'none' ? dispersalEffective : null,
       observed_by: currentUser,
       observed_by_id: userId,
+      check_id: checkId ?? undefined,
       notes: notes || null,
       base_id: baseId,
     })
@@ -207,15 +210,26 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
         position: 'fixed', inset: 0, zIndex: 200, display: 'flex',
         alignItems: 'flex-end', justifyContent: 'center',
         background: 'rgba(0,0,0,0.5)',
-      }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      }} onClick={e => { if (e.target === e.currentTarget && !required) onClose() }}>
         <div style={{
           width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto',
           background: 'var(--color-bg)', borderRadius: '16px 16px 0 0',
           padding: 20,
         }}>
+          {required && (
+            <div style={{
+              padding: '8px 12px', marginBottom: 12, borderRadius: 8,
+              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+              fontSize: 'var(--fs-sm)', color: '#EF4444', fontWeight: 600,
+            }}>
+              BASH issue found — log the wildlife sighting before continuing.
+            </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>{isEdit ? 'Edit Sighting' : 'Log Wildlife Sighting'}</div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: 'var(--color-text-3)' }}>×</button>
+            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>{isEdit ? 'Edit Sighting' : required ? 'Log BASH Sighting' : 'Log Wildlife Sighting'}</div>
+            {!required && (
+              <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: 'var(--color-text-3)' }}>×</button>
+            )}
           </div>
 
           {/* Species selector — tap to open full picker */}

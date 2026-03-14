@@ -23,6 +23,7 @@ import { ExpandableTextarea } from '@/components/ui/expandable-textarea'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort } from '@/lib/utils'
 import type { SimpleDiscrepancy } from '@/lib/supabase/types'
 import { loadCheckDraft, saveCheckDraft, clearCheckDraft, type CheckDraft } from '@/lib/check-draft'
+import { SightingForm } from '@/components/wildlife/sighting-form'
 
 type LocalComment = {
   id: string
@@ -46,6 +47,10 @@ export default function AirfieldChecksPage() {
   // ── Airfield diagram state ──
   const [diagramUrl, setDiagramUrl] = useState<string | null>(null)
   const [showDiagram, setShowDiagram] = useState(false)
+  // ── Post-BASH-check wildlife sighting prompt ──
+  const [showBashSighting, setShowBashSighting] = useState(false)
+  const [bashCheckId, setBashCheckId] = useState<string | null>(null)
+  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null)
 
   useEffect(() => {
     if (!installationId) return
@@ -499,6 +504,15 @@ export default function AirfieldChecksPage() {
       ? `Check ${created.display_id} filed — ${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'} logged`
       : `Check ${created.display_id} completed`
     toast.success(summary)
+
+    // For BASH checks with issues found, prompt to log a wildlife sighting
+    if (checkType === 'bash' && issueFound) {
+      setBashCheckId(created.id)
+      setPendingRedirect(`/checks/${created.id}`)
+      setShowBashSighting(true)
+      return
+    }
+
     router.push(`/checks/${created.id}`)
   }
 
@@ -900,15 +914,15 @@ export default function AirfieldChecksPage() {
 
       {/* Remarks Section */}
       {checkType && (
-        <div style={{ marginBottom: 8 }}>
+        <div style={{ marginBottom: 8, maxWidth: 720, width: '100%', marginLeft: 'auto', marginRight: 'auto' }}>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
             Remarks
           </div>
 
-          <div style={{ display: 'flex', gap: 6, marginBottom: remarks.length > 0 ? 10 : 0 }}>
+          <div style={{ marginBottom: remarks.length > 0 ? 10 : 0 }}>
             <ExpandableTextarea
               className="input-dark"
-              rows={3}
+              rows={6}
               placeholder="Add a remark..."
               value={remarkText}
               onChange={(val) => setRemarkText(val)}
@@ -919,22 +933,24 @@ export default function AirfieldChecksPage() {
                   addRemark()
                 }
               }}
-              style={{ resize: 'vertical', flex: 1 }}
+              style={{ resize: 'vertical', width: '100%', minHeight: 120, boxSizing: 'border-box' }}
             />
-            <button
-              type="button"
-              onClick={addRemark}
-              disabled={!remarkText.trim()}
-              style={{
-                padding: '0 14px', borderRadius: 8, border: 'none',
-                background: remarkText.trim() ? 'var(--color-cyan)' : 'var(--color-bg-elevated)',
-                color: remarkText.trim() ? 'var(--color-bg-surface-solid)' : 'var(--color-text-4)',
-                fontSize: 'var(--fs-base)', fontWeight: 700, cursor: remarkText.trim() ? 'pointer' : 'default',
-                fontFamily: 'inherit', alignSelf: 'flex-end', height: 36,
-              }}
-            >
-              Save
-            </button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+              <button
+                type="button"
+                onClick={addRemark}
+                disabled={!remarkText.trim()}
+                style={{
+                  padding: '8px 20px', borderRadius: 8, border: 'none',
+                  background: remarkText.trim() ? 'var(--color-cyan)' : 'var(--color-bg-elevated)',
+                  color: remarkText.trim() ? 'var(--color-bg-surface-solid)' : 'var(--color-text-4)',
+                  fontSize: 'var(--fs-base)', fontWeight: 700, cursor: remarkText.trim() ? 'pointer' : 'default',
+                  fontFamily: 'inherit',
+                }}
+              >
+                Save Remark
+              </button>
+            </div>
           </div>
 
           {remarks.length > 0 && (
@@ -1071,6 +1087,25 @@ export default function AirfieldChecksPage() {
         <div style={{ textAlign: 'center', marginTop: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
           Will be recorded as completed by <span style={{ color: 'var(--color-accent)', fontWeight: 600 }}>{currentUser}</span>
         </div>
+      )}
+
+      {/* ── Post-BASH-Check Wildlife Sighting Form ── */}
+      {showBashSighting && (
+        <SightingForm
+          currentUser={currentUser}
+          baseId={installationId}
+          checkId={bashCheckId}
+          required
+          onClose={() => {
+            setShowBashSighting(false)
+            if (pendingRedirect) router.push(pendingRedirect)
+          }}
+          onSaved={() => {
+            setShowBashSighting(false)
+            toast.success('Wildlife sighting logged from BASH check')
+            if (pendingRedirect) router.push(pendingRedirect)
+          }}
+        />
       )}
 
       {/* ── Airfield Diagram Fullscreen Overlay ── */}
