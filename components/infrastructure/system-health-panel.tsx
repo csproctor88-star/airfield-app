@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import type { SystemHealth, OutageStatus, AlertTier } from '@/lib/outage-rules'
+import type { SystemHealth, AlertTier } from '@/lib/outage-rules'
 import { getAlertTier, ALERT_TIER_CONFIG } from '@/lib/outage-rules'
 import type { EnrichedOutageEvent } from '@/lib/supabase/outage-events'
 import { formatZuluDateTime } from '@/lib/utils'
@@ -59,52 +59,6 @@ const TIER_COLORS: Record<AlertTier, string> = {
   black: '#EF4444',
 }
 
-// ── Component row (for expanded detail) ──
-
-function ComponentRow({ cs }: { cs: OutageStatus }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '3px 0 3px 12px',
-        fontSize: 'var(--fs-xs)',
-        color: cs.isExceeded ? '#EF4444' : cs.isApproaching ? '#F59E0B' : 'var(--color-text-2)',
-      }}
-    >
-      <span style={{ width: 5, height: 5, borderRadius: '50%', background: cs.isExceeded ? '#EF4444' : cs.isApproaching ? '#F59E0B' : cs.inoperativeCount === 0 ? '#22C55E' : '#94A3B8', flexShrink: 0 }} />
-      <span style={{ flex: 1 }}>{cs.componentLabel}</span>
-      <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--color-text-3)' }}>
-        {cs.inoperativeCount}/{cs.totalCount}
-      </span>
-    </div>
-  )
-}
-
-// ── Exceeded alert (compact) ──
-
-function ExceededAlert({ cs }: { cs: OutageStatus }) {
-  return (
-    <div
-      style={{
-        margin: '2px 0 4px 12px',
-        padding: '4px 8px',
-        background: 'rgba(239,68,68,0.08)',
-        border: '1px solid rgba(239,68,68,0.2)',
-        borderRadius: 6,
-        fontSize: 'var(--fs-xs)',
-        color: '#EF4444',
-      }}
-    >
-      <span style={{ fontWeight: 700 }}>EXCEEDED</span> — {cs.componentLabel}: {cs.inoperativeCount}/{cs.totalCount} ({cs.outagePct}%)
-      {cs.allowableOutageText && <span style={{ color: 'var(--color-text-3)' }}> max: {cs.allowableOutageText}</span>}
-      {cs.requiredActions.notam && <div style={{ marginTop: 2 }}>NOTAM required{cs.qCode ? ` (${cs.qCode})` : ''}</div>}
-      {cs.requiredActions.systemShutoff && <div style={{ marginTop: 2, fontWeight: 700 }}>SYSTEM SHUTOFF MAY BE REQUIRED</div>}
-    </div>
-  )
-}
-
 // ── Category card ──
 
 function CategoryCard({ category }: { category: CategorySummary }) {
@@ -152,48 +106,29 @@ function CategoryCard({ category }: { category: CategorySummary }) {
         <span style={{ fontWeight: 700, fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)' }}>
           {category.label}
         </span>
-        {/* Inop count */}
-        <span style={{ fontSize: 'var(--fs-xs)', color: hasIssues ? tierColor : 'var(--color-text-3)', fontVariantNumeric: 'tabular-nums' }}>
-          {category.inopFeatures}/{category.totalFeatures} inop
-        </span>
-        {/* Exceeded/approaching badges */}
-        {(category.exceededCount > 0 || category.approachingCount > 0) && (
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
-            {category.exceededCount > 0 && (
-              <span style={{ fontSize: 9, fontWeight: 700, color: '#EF4444', background: 'rgba(239,68,68,0.12)', padding: '1px 6px', borderRadius: 3 }}>
-                {category.exceededCount} EXCEEDED
-              </span>
-            )}
-            {category.approachingCount > 0 && (
-              <span style={{ fontSize: 9, fontWeight: 700, color: '#F59E0B', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 3 }}>
-                {category.approachingCount} WARN
-              </span>
-            )}
-          </div>
+        {/* Only show count when there are issues */}
+        {hasIssues && (
+          <span style={{ fontSize: 'var(--fs-xs)', color: tierColor, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+            {category.inopFeatures} inop
+          </span>
         )}
       </button>
 
-      {/* Expanded detail */}
+      {/* Expanded detail — system-level only */}
       {expanded && category.systems.length > 0 && (
         <div style={{ borderTop: '1px solid var(--color-border)', padding: '6px 8px 8px' }}>
           {category.systems.map(sys => {
             const tier = getAlertTier(sys)
             const sysColor = TIER_COLORS[tier]
             return (
-              <div key={sys.systemId} style={{ marginBottom: 4 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', fontSize: 'var(--fs-xs)' }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: sysColor, flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontWeight: 600, color: 'var(--color-text-1)' }}>{sys.systemName}</span>
-                  <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--color-text-3)' }}>
-                    {sys.inoperativeFeatures}/{sys.totalFeatures}
+              <div key={sys.systemId} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', fontSize: 'var(--fs-xs)' }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: sysColor, flexShrink: 0 }} />
+                <span style={{ flex: 1, fontWeight: 600, color: 'var(--color-text-1)' }}>{sys.systemName}</span>
+                {sys.inoperativeFeatures > 0 && (
+                  <span style={{ fontVariantNumeric: 'tabular-nums', color: sysColor, fontWeight: 600 }}>
+                    {sys.inoperativeFeatures} inop
                   </span>
-                </div>
-                {sys.components.map(cs => (
-                  <div key={cs.componentId}>
-                    <ComponentRow cs={cs} />
-                    {cs.isExceeded && <ExceededAlert cs={cs} />}
-                  </div>
-                ))}
+                )}
               </div>
             )
           })}
@@ -289,9 +224,11 @@ export default function SystemHealthPanel({
         <span style={{ fontWeight: 700, fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', flex: 1 }}>
           LIGHTING STATUS
         </span>
-        <span style={{ fontSize: 'var(--fs-xs)', color: totalInop > 0 ? '#EF4444' : 'var(--color-text-3)', fontVariantNumeric: 'tabular-nums' }}>
-          {totalInop}/{totalFeatures} inop
-        </span>
+        {totalInop > 0 && (
+          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EF4444', background: 'rgba(239,68,68,0.12)', padding: '2px 8px', borderRadius: 4 }}>
+            {totalInop} INOP
+          </span>
+        )}
       </div>
 
       {/* Category cards */}
