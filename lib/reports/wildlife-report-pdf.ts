@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { fetchWildlifeAnalytics, fetchStrikes, fetchBwcHistory } from '@/lib/supabase/wildlife'
+import { fetchWildlifeAnalytics, fetchStrikes, fetchBwcHistory, fetchHeatmapData } from '@/lib/supabase/wildlife'
 import { formatZuluDateTime } from '@/lib/utils'
 
 interface Options {
@@ -10,6 +10,8 @@ interface Options {
   startDate: string
   endDate: string
   reportMonth: string
+  centerLat?: number
+  centerLng?: number
 }
 
 const MONTH_NAMES = [
@@ -17,14 +19,57 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ]
 
+async function fetchHeatmapImageDataUrl(
+  points: { lat: number; lng: number; weight: number; type: string }[],
+  centerLat: number,
+  centerLng: number,
+): Promise<string | null> {
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+  if (!token || token === 'your-mapbox-token-here') return null
+  if (points.length === 0) return null
+
+  try {
+    // Build GeoJSON overlay with colored circles — limit to 100 points for URL length
+    const sorted = [...points].sort((a, b) => b.weight - a.weight).slice(0, 100)
+
+    const geojson = {
+      type: 'FeatureCollection',
+      features: sorted.map(p => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
+        properties: {
+          'marker-color': p.type === 'strike' ? '#EF4444' : '#10B981',
+          'marker-size': p.weight >= 5 ? 'medium' : 'small',
+        },
+      })),
+    }
+
+    const encoded = encodeURIComponent(JSON.stringify(geojson))
+    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/geojson(${encoded})/${centerLng},${centerLat},13,0/800x500@2x?access_token=${token}&logo=false&attribution=false`
+
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const blob = await res.blob()
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return null
+  }
+}
+
 export async function generateWildlifeReportPdf(options: Options): Promise<{ doc: jsPDF; filename: string }> {
-  const { baseId, baseName, icao, startDate, endDate, reportMonth } = options
+  const { baseId, baseName, icao, startDate, endDate, reportMonth, centerLat, centerLng } = options
 
   // Fetch data
-  const [analytics, strikes, bwcHistory] = await Promise.all([
+  const [analytics, strikes, bwcHistory, heatmapPoints] = await Promise.all([
     fetchWildlifeAnalytics(baseId, startDate, endDate),
     fetchStrikes(baseId, { startDate, endDate }).then(r => r.data),
     fetchBwcHistory(baseId, startDate, endDate),
+    fetchHeatmapData(baseId, startDate, endDate, 'all'),
   ])
 
   const [yearStr, monthStr] = reportMonth.split('-')
@@ -190,6 +235,70 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
     })
 
     y = (doc as any).lastAutoTable.finalY + 18
+  }
+
+  // ── Wildlife Hazard Depiction Map ──
+  if (heatmapPoints.length > 0 && centerLat && centerLng) {
+    doc.addPage()
+    y = margin
+
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Wildlife Hazard Depiction Map', margin, y)
+    y += 14
+
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.text(
+      `${monthName} ${yearStr} — ${heatmapPoints.length} data point${heatmapPoints.length !== 1 ? 's' : ''} plotted`,
+      margin, y,
+    )
+    y += 12
+
+    const sightingCount = heatmapPoints.filter(p => p.type === 'sighting').length
+    const strikeCount = heatmapPoints.filter(p => p.type === 'strike').length
+
+    const mapDataUrl = await fetchHeatmapImageDataUrl(heatmapPoints, centerLat, centerLng)
+    if (mapDataUrl) {
+      try {
+        const imgWidth = pageWidth - margin * 2
+        const imgHeight = imgWidth * (500 / 800) // maintain 800x500 aspect ratio
+        doc.addImage(mapDataUrl, 'PNG', margin, y, imgWidth, imgHeight)
+        y += imgHeight + 8
+      } catch {
+        doc.setFontSize(8)
+        doc.text('(Map image could not be rendered)', margin, y)
+        y += 12
+      }
+    } else {
+      doc.setFontSize(8)
+      doc.text('(Mapbox not configured or no geo-tagged data available)', margin, y)
+      y += 12
+    }
+
+    // Legend
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Legend:', margin, y)
+    y += 10
+
+    // Green dot — sightings
+    doc.setFillColor(16, 185, 129)
+    doc.circle(margin + 5, y - 3, 4, 'F')
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Sightings (${sightingCount})`, margin + 14, y)
+
+    // Red dot — strikes
+    doc.setFillColor(239, 68, 68)
+    doc.circle(margin + 120, y - 3, 4, 'F')
+    doc.text(`Strikes (${strikeCount})`, margin + 129, y)
+    y += 14
+
+    doc.setFontSize(7)
+    doc.setTextColor(120)
+    doc.text('IAW DAFI 91-212 — Wildlife hazard depiction showing concentration of activity for the report period.', margin, y)
+    doc.setTextColor(0)
+    y += 18
   }
 
   // ── Footer ──

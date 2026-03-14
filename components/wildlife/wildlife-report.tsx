@@ -10,7 +10,7 @@ type Props = {
 }
 
 export function WildlifeReport({ baseId }: Props) {
-  const { currentInstallation } = useInstallation()
+  const { currentInstallation, runways } = useInstallation()
   const [generating, setGenerating] = useState(false)
   const [reportMonth, setReportMonth] = useState(() => {
     const now = new Date()
@@ -24,6 +24,10 @@ export function WildlifeReport({ baseId }: Props) {
       const startDate = new Date(year, month - 1, 1).toISOString()
       const endDate = new Date(year, month, 0, 23, 59, 59).toISOString()
 
+      const rwy = runways?.[0]
+      const cLat = rwy ? ((rwy.end1_latitude ?? 0) + (rwy.end2_latitude ?? 0)) / 2 : undefined
+      const cLng = rwy ? ((rwy.end1_longitude ?? 0) + (rwy.end2_longitude ?? 0)) / 2 : undefined
+
       const { doc, filename } = await generateWildlifeReportPdf({
         baseId,
         baseName: currentInstallation?.name || 'Unknown Base',
@@ -31,6 +35,8 @@ export function WildlifeReport({ baseId }: Props) {
         startDate,
         endDate,
         reportMonth: reportMonth,
+        centerLat: cLat,
+        centerLng: cLng,
       })
       doc.save(filename)
       toast.success('Report generated')
