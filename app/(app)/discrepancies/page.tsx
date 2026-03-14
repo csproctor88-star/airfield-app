@@ -2,14 +2,15 @@
 
 import { useState, useEffect, lazy, Suspense } from 'react'
 import Link from 'next/link'
-import { DiscrepancyCard } from '@/components/discrepancies/discrepancy-card'
-import { fetchDiscrepancies, type DiscrepancyRow } from '@/lib/supabase/discrepancies'
+import { fetchDiscrepancies, deleteDiscrepancy, type DiscrepancyRow } from '@/lib/supabase/discrepancies'
+import { StatusBadge } from '@/components/ui/badge'
 import { DEMO_DISCREPANCIES } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import { fetchMapImageDataUrl, formatZuluDate, formatZuluDateTime } from '@/lib/utils'
-import { Map, List } from 'lucide-react'
+import { EditDiscrepancyModal } from '@/components/discrepancies/modals'
+import { Map, List, Pencil, Trash2 } from 'lucide-react'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { toast } from 'sonner'
@@ -44,6 +45,7 @@ export default function DiscrepanciesPage() {
   const [viewMode, setViewMode] = useState<'list' | 'map'>('map')
   const [typeFilter, setTypeFilter] = useState<string | null>(null)
   const [discrepancyPhotoMap, setDiscrepancyPhotoMap] = useState<Record<string, string>>({})
+  const [editingDiscrepancy, setEditingDiscrepancy] = useState<DiscrepancyRow | null>(null)
   const [emailModalOpen, setEmailModalOpen] = useState(false)
   const [sendingEmail, setSendingEmail] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -97,6 +99,22 @@ export default function DiscrepanciesPage() {
     }
     load()
   }, [installationId])
+
+  const handleDeleteDiscrepancy = async (id: string) => {
+    if (!confirm('Delete this discrepancy?')) return
+    const ok = await deleteDiscrepancy(id)
+    if (ok) {
+      setDiscrepancies(prev => prev.filter(d => d.id !== id))
+      toast.success('Discrepancy deleted')
+    } else {
+      toast.error('Failed to delete')
+    }
+  }
+
+  const handleEditSaved = (updated: DiscrepancyRow) => {
+    setDiscrepancies(prev => prev.map(d => d.id === updated.id ? updated : d))
+    setEditingDiscrepancy(null)
+  }
 
   // Compute days_open for live data
   const daysOpen = (createdAt: string) => {
@@ -751,38 +769,64 @@ export default function DiscrepanciesPage() {
               All Discrepancies ({filtered.length})
             </div>
           )}
-          <div className="card-list">
-            {usingDemo
-              ? demoFiltered.map((d) => (
-                  <DiscrepancyCard
-                    key={d.id}
-                    id={d.id}
-                    displayId={d.display_id}
-                    title={d.title}
-
-                    status={d.status}
-                    locationText={d.location_text}
-                    assignedShop={d.assigned_shop}
-                    daysOpen={d.days_open}
-                    photoCount={d.photo_count}
-                    workOrderNumber={d.work_order_number}
-                  />
-                ))
-              : (liveFiltered as DiscrepancyRow[]).map((d) => (
-                  <DiscrepancyCard
-                    key={d.id}
-                    id={d.id}
-                    displayId={d.display_id}
-                    title={d.title}
-
-                    status={d.status}
-                    locationText={d.location_text}
-                    assignedShop={d.assigned_shop}
-                    daysOpen={daysOpen(d.created_at)}
-                    photoCount={d.photo_count}
-                    workOrderNumber={d.work_order_number}
-                  />
-                ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {filtered.map((d) => {
+              const days = usingDemo ? (d as typeof DEMO_DISCREPANCIES[number]).days_open : daysOpen(d.created_at)
+              return (
+                <div
+                  key={d.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '8px 10px',
+                    background: 'var(--color-bg-surface)',
+                    borderRadius: 8,
+                    border: '1px solid var(--color-border)',
+                    fontSize: 'var(--fs-sm)',
+                  }}
+                >
+                  <Link
+                    href={`/discrepancies/${d.id}`}
+                    style={{
+                      flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8,
+                      textDecoration: 'none', color: 'inherit',
+                    }}
+                  >
+                    <span style={{ fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace', flexShrink: 0, minWidth: 60 }}>
+                      {d.work_order_number || 'Pending'}
+                    </span>
+                    <span style={{ fontWeight: 600, color: 'var(--color-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                      {d.title}
+                    </span>
+                    <StatusBadge status={d.status} />
+                    <span style={{ color: 'var(--color-text-3)', flexShrink: 0 }}>{d.location_text}</span>
+                    <span style={{ color: 'var(--color-text-3)', flexShrink: 0 }}>{d.assigned_shop || 'Unassigned'}</span>
+                    <span style={{ color: days > 30 ? 'var(--color-danger)' : 'var(--color-text-3)', fontWeight: days > 30 ? 700 : 400, flexShrink: 0 }}>
+                      {days}d
+                    </span>
+                  </Link>
+                  {!usingDemo && (
+                    <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                      <button
+                        onClick={(e) => { e.preventDefault(); setEditingDiscrepancy(d as DiscrepancyRow) }}
+                        title="Edit"
+                        style={{ background: 'transparent', border: 'none', color: 'var(--color-text-3)', cursor: 'pointer', padding: 4 }}
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.preventDefault(); handleDeleteDiscrepancy(d.id) }}
+                        title="Delete"
+                        style={{ background: 'transparent', border: 'none', color: 'var(--color-text-3)', cursor: 'pointer', padding: 4 }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
 
           {filtered.length === 0 && (
@@ -791,6 +835,14 @@ export default function DiscrepanciesPage() {
             </div>
           )}
         </>
+      )}
+
+      {editingDiscrepancy && (
+        <EditDiscrepancyModal
+          discrepancy={editingDiscrepancy}
+          onClose={() => setEditingDiscrepancy(null)}
+          onSaved={handleEditSaved}
+        />
       )}
 
       <EmailPdfModal
