@@ -971,8 +971,8 @@ export default function HomePage() {
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               border: '1px solid rgba(34,211,238,0.25)', textAlign: 'center',
             }}>
-              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontWeight: 600, marginBottom: 4 }}>RCR</div>
-              <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-accent)' }}>{rcrValue}</div>
+              <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-cyan)', fontWeight: 600 }}>RCR</div>
+              <div style={{ fontSize: 'var(--rwy-btn-font)', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-accent)' }}>{rcrValue}</div>
               {rcrCondition && (
                 <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', fontWeight: 600, marginTop: 2 }}>{RCR_CONDITION_TYPES.find(c => c.value === rcrCondition)?.label || rcrCondition}</div>
               )}
@@ -984,8 +984,8 @@ export default function HomePage() {
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', textAlign: 'center',
               }}>
-              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4 }}>RSC</div>
-              <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-accent)' }}>
+              <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>RSC</div>
+              <div style={{ fontSize: 'var(--rwy-btn-font)', fontWeight: 700, color: 'var(--color-accent)' }}>
                 {rscCondition || '—'}
               </div>
             </div>
@@ -997,8 +997,8 @@ export default function HomePage() {
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', textAlign: 'center',
             }}>
-            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4 }}>BWC</div>
-            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: bwcValue === 'SEV' || bwcValue === 'PROHIB' ? 'var(--color-danger)' : bwcValue === 'MOD' ? 'var(--color-warning)' : 'var(--color-success)' }}>
+            <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>BWC</div>
+            <div style={{ fontSize: 'var(--rwy-btn-font)', fontWeight: 700, color: bwcValue === 'SEV' || bwcValue === 'PROHIB' ? 'var(--color-danger)' : bwcValue === 'MOD' ? 'var(--color-warning)' : 'var(--color-success)' }}>
               {bwcValue || '—'}
             </div>
           </div>
@@ -1008,7 +1008,7 @@ export default function HomePage() {
       {/* ARFF CAT card */}
       <div className="card" style={{
         padding: '10px 12px', flex: '0 0 auto',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
       }}>
           <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>ARFF CAT</div>
           <select
@@ -1064,7 +1064,7 @@ export default function HomePage() {
               onClick={() => setArffDialog({ aircraft, selectedStatus: readiness, notes: '' })}
               style={{
                 padding: '10px 12px', flex: '0 0 auto',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
                 cursor: 'pointer',
                 background: c.bg, border: `1px solid ${c.border}`,
               }}
