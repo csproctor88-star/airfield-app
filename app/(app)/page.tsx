@@ -833,8 +833,8 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* ===== Runway & ARFF Status ===== */}
-      <span className="section-label">Runway & ARFF Status</span>
+      {/* ===== Runway Status ===== */}
+      <span className="section-label">Runway Status</span>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'stretch' }}>
       {(() => {
         // Build runway entries from installation runways
@@ -1005,80 +1005,6 @@ export default function HomePage() {
           </>
         )
       })()}
-      {/* ARFF CAT card */}
-      <div className="card" style={{
-        padding: '10px 12px', flex: '0 0 auto',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
-      }}>
-          <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>ARFF CAT</div>
-          <select
-            value={arffCat ?? ''}
-            onChange={(e) => {
-              const val = e.target.value ? parseInt(e.target.value) : null
-              const current = arffCat
-              if (val === current) return
-              setConfirmDialog({
-                title: 'Change ARFF Category',
-                message: `Change ARFF Category from ${current ?? 'None'} to ${val ?? 'None'}?`,
-                color: 'var(--color-accent)',
-                notes: '',
-                onConfirm: (remarks) => {
-                  setArffCat(val)
-                  if (installationId) {
-                    logActivity('updated', 'arff_status', installationId, `ARFF CAT ${val ?? 'None'}`, { details: `REPORTS ARFF CAT CHANGED TO ${val ?? 'NONE'}${remarks ? `. ${remarks.toUpperCase()}` : ''}` }, installationId)
-                  }
-                },
-              })
-              // Reset select to current value — changes after confirm
-              e.target.value = String(current ?? '')
-            }}
-            style={{
-              padding: '8px 12px', borderRadius: 6, fontSize: 'var(--fs-2xl)', fontWeight: 800,
-              cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', outline: 'none',
-              color: 'var(--color-accent)', background: 'var(--color-bg-inset)',
-              border: '2px solid rgba(56,189,248,0.3)',
-              minWidth: 70,
-            }}
-          >
-            <option value="">—</option>
-            {[6, 7, 8, 9, 10].map(n => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Aircraft readiness cards */}
-        {arffAircraft.map(aircraft => {
-          const readiness = (arffStatuses[aircraft] ?? 'optimum') as 'inadequate' | 'critical' | 'reduced' | 'optimum'
-          const ARFF_COLORS: Record<string, { color: string; bg: string; border: string }> = {
-            optimum: { color: 'var(--color-success)', bg: 'rgba(52,211,153,0.08)', border: 'rgba(52,211,153,0.2)' },
-            reduced: { color: 'var(--color-warning)', bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.2)' },
-            critical: { color: '#f97316', bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.2)' },
-            inadequate: { color: 'var(--color-danger)', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.2)' },
-          }
-          const c = ARFF_COLORS[readiness]
-          return (
-            <div
-              key={aircraft}
-              className="card"
-              onClick={() => setArffDialog({ aircraft, selectedStatus: readiness, notes: '' })}
-              style={{
-                padding: '10px 12px', flex: '0 0 auto',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
-                cursor: 'pointer',
-                background: c.bg, border: `1px solid ${c.border}`,
-              }}
-            >
-              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600 }}>{aircraft}</div>
-              <div style={{
-                fontSize: 'var(--fs-md)', fontWeight: 700, color: c.color,
-                textTransform: 'uppercase', letterSpacing: '0.04em',
-              }}>
-                {readiness}
-              </div>
-            </div>
-          )
-        })}
       </div>
 
       {/* ARFF Aircraft Readiness Dialog */}
@@ -1179,80 +1105,57 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* ===== NAVAID Status ===== */}
-      <span className="section-label">NAVAID Status</span>
-      {navaids.length === 0 ? (
-        <div className="card" style={{ marginBottom: 16, padding: 12 }}>
-          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', textAlign: 'center' }}>
-            Loading NAVAID statuses...
-          </div>
-        </div>
-      ) : (() => {
-        const allEndDesignators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
-        const endGroups = allEndDesignators.map(des => ({
-          designator: des,
-          items: navaids
-            .filter(n => n.navaid_name === des || n.navaid_name.startsWith(des + ' '))
-            .sort((a, b) => (a.navaid_name.includes('ILS') ? -1 : b.navaid_name.includes('ILS') ? 1 : 0)),
-        }))
-        const otherNavaids = navaids
-          .filter(n => !allEndDesignators.some(des => n.navaid_name === des || n.navaid_name.startsWith(des + ' ')))
-          .sort((a, b) => a.navaid_name.localeCompare(b.navaid_name))
-        const getNavaidDisplayName = (name: string) => {
-          for (const des of allEndDesignators) {
-            if (name.startsWith(des + ' ')) return name.slice(des.length).trim()
-          }
-          return name
-        }
-        const NAVAID_LABELS: Record<string, string> = { green: 'G', yellow: 'Y', red: 'R' }
-        const renderNavaidItem = (n: NavaidStatus) => (
-          <div key={n.id} style={{ marginBottom: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: 'var(--fs-base)', fontWeight: 500, color: 'var(--color-text-2)', flex: 1 }}>
-                {getNavaidDisplayName(n.navaid_name)}
-              </span>
-              <button
-                onClick={() => {
-                  setNavaidDialog({ navaid: n, selectedStatus: n.status as 'green' | 'yellow' | 'red', notes: navaidNotes[n.id] || '' })
-                }}
-                style={{
-                  width: 36, height: 28, borderRadius: 6,
-                  border: `2px solid ${STATUS_COLORS[n.status]}`,
-                  background: `${STATUS_HEX[n.status]}20`,
-                  cursor: 'pointer', fontSize: 'var(--fs-base)', fontWeight: 700,
-                  color: STATUS_COLORS[n.status], textTransform: 'uppercase', padding: 0,
-                }}
-              >
-                {NAVAID_LABELS[n.status] || 'G'}
-              </button>
+      {/* ===== NAVAID Status + ARFF Status (side by side) ===== */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, marginBottom: 12, alignItems: 'start' }}>
+        {/* Left column: NAVAID Status */}
+        <div>
+          <span className="section-label">NAVAID Status</span>
+          {navaids.length === 0 ? (
+            <div className="card" style={{ padding: 12 }}>
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', textAlign: 'center' }}>
+                Loading NAVAID statuses...
+              </div>
             </div>
-          </div>
-        )
-        const allFlagged = navaids.filter(n => n.status === 'yellow' || n.status === 'red')
-        return (
-          <>
-          <div className="navaid-grid" style={{ marginBottom: allFlagged.length > 0 ? 8 : 0 }}>
-            {endGroups.filter(group => group.items.length > 0).map(group => (
-              <div key={group.designator} className="card" style={{ padding: '10px 14px 4px' }}>
-                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY {group.designator}</div>
-                {group.items.map(renderNavaidItem)}
-              </div>
-            ))}
-            {otherNavaids.length > 0 && (
-              <div className="card" style={{ padding: '10px 14px 4px' }}>
-                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>OTHER</div>
-                {otherNavaids.map(renderNavaidItem)}
-              </div>
-            )}
-          </div>
-          {allFlagged.length > 0 && (
-            <div className="card" style={{ padding: '10px 14px', marginBottom: 16 }}>
-              <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-warning)', marginBottom: 6, letterSpacing: '0.04em' }}>NAVAID NOTES</div>
-              {allFlagged.map(n => (
-                <div key={n.id} style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: STATUS_COLORS[n.status], marginBottom: 2 }}>
-                    {n.navaid_name}
-                  </div>
+          ) : (() => {
+            const allEndDesignators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
+            const endGroups = allEndDesignators.map(des => ({
+              designator: des,
+              items: navaids
+                .filter(n => n.navaid_name === des || n.navaid_name.startsWith(des + ' '))
+                .sort((a, b) => (a.navaid_name.includes('ILS') ? -1 : b.navaid_name.includes('ILS') ? 1 : 0)),
+            }))
+            const otherNavaids = navaids
+              .filter(n => !allEndDesignators.some(des => n.navaid_name === des || n.navaid_name.startsWith(des + ' ')))
+              .sort((a, b) => a.navaid_name.localeCompare(b.navaid_name))
+            const getNavaidDisplayName = (name: string) => {
+              for (const des of allEndDesignators) {
+                if (name.startsWith(des + ' ')) return name.slice(des.length).trim()
+              }
+              return name
+            }
+            const NAVAID_LABELS: Record<string, string> = { green: 'G', yellow: 'Y', red: 'R' }
+            const renderNavaidItem = (n: NavaidStatus) => (
+              <div key={n.id} style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontSize: 'var(--fs-base)', fontWeight: 500, color: 'var(--color-text-2)', flex: 1 }}>
+                    {getNavaidDisplayName(n.navaid_name)}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setNavaidDialog({ navaid: n, selectedStatus: n.status as 'green' | 'yellow' | 'red', notes: navaidNotes[n.id] || '' })
+                    }}
+                    style={{
+                      width: 36, height: 28, borderRadius: 6,
+                      border: `2px solid ${STATUS_COLORS[n.status]}`,
+                      background: `${STATUS_HEX[n.status]}20`,
+                      cursor: 'pointer', fontSize: 'var(--fs-base)', fontWeight: 700,
+                      color: STATUS_COLORS[n.status], textTransform: 'uppercase', padding: 0,
+                    }}
+                  >
+                    {NAVAID_LABELS[n.status] || 'G'}
+                  </button>
+                </div>
+                {(n.status === 'yellow' || n.status === 'red') && (
                   <textarea
                     placeholder="Add note..."
                     value={navaidNotes[n.id] || ''}
@@ -1283,13 +1186,107 @@ export default function HomePage() {
                       target.style.height = target.scrollHeight + 'px'
                     }}
                   />
-                </div>
+                )}
+              </div>
+            )
+            return (
+              <div className="navaid-grid">
+                {endGroups.filter(group => group.items.length > 0).map(group => (
+                  <div key={group.designator} className="card" style={{ padding: '10px 14px 4px' }}>
+                    <div style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY {group.designator}</div>
+                    {group.items.map(renderNavaidItem)}
+                  </div>
+                ))}
+                {otherNavaids.length > 0 && (
+                  <div className="card" style={{ padding: '10px 14px 4px' }}>
+                    <div style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>OTHER</div>
+                    {otherNavaids.map(renderNavaidItem)}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+        </div>
+
+        {/* Right column: ARFF Status */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <span className="section-label">ARFF Status</span>
+          {/* ARFF CAT card */}
+          <div className="card" style={{
+            padding: '14px 16px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+          }}>
+            <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>ARFF CAT</div>
+            <select
+              value={arffCat ?? ''}
+              onChange={(e) => {
+                const val = e.target.value ? parseInt(e.target.value) : null
+                const current = arffCat
+                if (val === current) return
+                setConfirmDialog({
+                  title: 'Change ARFF Category',
+                  message: `Change ARFF Category from ${current ?? 'None'} to ${val ?? 'None'}?`,
+                  color: 'var(--color-accent)',
+                  notes: '',
+                  onConfirm: (remarks) => {
+                    setArffCat(val)
+                    if (installationId) {
+                      logActivity('updated', 'arff_status', installationId, `ARFF CAT ${val ?? 'None'}`, { details: `REPORTS ARFF CAT CHANGED TO ${val ?? 'NONE'}${remarks ? `. ${remarks.toUpperCase()}` : ''}` }, installationId)
+                    }
+                  },
+                })
+                // Reset select to current value — changes after confirm
+                e.target.value = String(current ?? '')
+              }}
+              style={{
+                padding: '8px 12px', borderRadius: 6, fontSize: 'var(--fs-2xl)', fontWeight: 800,
+                cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', outline: 'none',
+                color: 'var(--color-accent)', background: 'var(--color-bg-inset)',
+                border: '2px solid rgba(56,189,248,0.3)',
+                minWidth: 70,
+              }}
+            >
+              <option value="">—</option>
+              {[6, 7, 8, 9, 10].map(n => (
+                <option key={n} value={n}>{n}</option>
               ))}
-            </div>
-          )}
-          </>
-        )
-      })()}
+            </select>
+          </div>
+
+          {/* Aircraft readiness cards */}
+          {arffAircraft.map(aircraft => {
+            const readiness = (arffStatuses[aircraft] ?? 'optimum') as 'inadequate' | 'critical' | 'reduced' | 'optimum'
+            const ARFF_COLORS: Record<string, { color: string; bg: string; border: string }> = {
+              optimum: { color: 'var(--color-success)', bg: 'rgba(52,211,153,0.08)', border: 'rgba(52,211,153,0.2)' },
+              reduced: { color: 'var(--color-warning)', bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.2)' },
+              critical: { color: '#f97316', bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.2)' },
+              inadequate: { color: 'var(--color-danger)', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.2)' },
+            }
+            const c = ARFF_COLORS[readiness]
+            return (
+              <div
+                key={aircraft}
+                className="card"
+                onClick={() => setArffDialog({ aircraft, selectedStatus: readiness, notes: '' })}
+                style={{
+                  padding: '14px 16px',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  cursor: 'pointer',
+                  background: c.bg, border: `1px solid ${c.border}`,
+                }}
+              >
+                <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>{aircraft}</div>
+                <div style={{
+                  fontSize: 'var(--fs-xl)', fontWeight: 700, color: c.color,
+                  textTransform: 'uppercase', letterSpacing: '0.04em',
+                }}>
+                  {readiness}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
 
       {/* ===== Personnel / Construction / Misc (inline row on desktop) ===== */}
       <div className="bottom-info-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
