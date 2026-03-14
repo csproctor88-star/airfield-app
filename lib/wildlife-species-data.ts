@@ -1,7 +1,9 @@
 // Wildlife Species Reference Database
 // ~80 common airfield hazard species curated from FAA National Wildlife Strike Database
 // Photo URLs sourced from USFWS National Digital Library (public domain)
-// URL pattern: https://digitalmedia.fws.gov/digital/api/singleitem/image/natdiglib/{ID}/default.jpg
+// Primary: IIIF endpoint at digitalmedia.fws.gov (CONTENTdm natdiglib collection)
+// Fallback: fws.gov/media pages (Drupal CMS)
+// All images are public domain (U.S. Government work)
 
 export type WildlifeSpecies = {
   common_name: string
@@ -14,8 +16,9 @@ export type WildlifeSpecies = {
   image_credit: string
 }
 
-// USFWS NCTC Image Library base URL
-const USFWS = 'https://digitalmedia.fws.gov/digital/api/singleitem/image/natdiglib'
+// USFWS NCTC Image Library — IIIF endpoint (800px wide thumbnails)
+const IIIF = 'https://digitalmedia.fws.gov/digital/iiif/natdiglib'
+// Generates URL: {IIIF}/{ID}/full/800,/0/default.jpg
 
 export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
   // ══════════════════════════════════════════════════
@@ -26,7 +29,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Branta canadensis',
     group: 'bird', size_category: 'large', mean_mass_g: 3600,
     strike_risk: 'critical',
-    image_url: `${USFWS}/9222/default.jpg`,
+    image_url: `${IIIF}/1489/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -34,7 +37,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Anser caerulescens',
     group: 'bird', size_category: 'large', mean_mass_g: 2700,
     strike_risk: 'critical',
-    image_url: `${USFWS}/4058/default.jpg`,
+    image_url: `${IIIF}/15275/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -42,7 +45,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Cathartes aura',
     group: 'bird', size_category: 'large', mean_mass_g: 1800,
     strike_risk: 'critical',
-    image_url: `${USFWS}/7756/default.jpg`,
+    image_url: `${IIIF}/1611/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -50,7 +53,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Coragyps atratus',
     group: 'bird', size_category: 'large', mean_mass_g: 2000,
     strike_risk: 'critical',
-    image_url: `${USFWS}/7747/default.jpg`,
+    image_url: `${IIIF}/7747/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -58,7 +61,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Buteo jamaicensis',
     group: 'bird', size_category: 'large', mean_mass_g: 1100,
     strike_risk: 'high',
-    image_url: `${USFWS}/7519/default.jpg`,
+    image_url: `${IIIF}/18455/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -66,7 +69,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Ardea herodias',
     group: 'bird', size_category: 'large', mean_mass_g: 2400,
     strike_risk: 'high',
-    image_url: `${USFWS}/6891/default.jpg`,
+    image_url: `${IIIF}/6891/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -74,7 +77,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Bubo virginianus',
     group: 'bird', size_category: 'large', mean_mass_g: 1400,
     strike_risk: 'high',
-    image_url: `${USFWS}/8058/default.jpg`,
+    image_url: `${IIIF}/8058/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -82,7 +85,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Haliaeetus leucocephalus',
     group: 'bird', size_category: 'large', mean_mass_g: 4300,
     strike_risk: 'critical',
-    image_url: `${USFWS}/6773/default.jpg`,
+    image_url: `${IIIF}/6773/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -90,7 +93,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Pandion haliaetus',
     group: 'bird', size_category: 'large', mean_mass_g: 1600,
     strike_risk: 'high',
-    image_url: `${USFWS}/8094/default.jpg`,
+    image_url: `${IIIF}/8094/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -98,7 +101,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Antigone canadensis',
     group: 'bird', size_category: 'large', mean_mass_g: 4500,
     strike_risk: 'critical',
-    image_url: `${USFWS}/5590/default.jpg`,
+    image_url: `${IIIF}/5590/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -106,7 +109,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Ardea alba',
     group: 'bird', size_category: 'large', mean_mass_g: 1000,
     strike_risk: 'high',
-    image_url: `${USFWS}/6879/default.jpg`,
+    image_url: `${IIIF}/6879/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -114,7 +117,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Meleagris gallopavo',
     group: 'bird', size_category: 'large', mean_mass_g: 5800,
     strike_risk: 'critical',
-    image_url: `${USFWS}/8756/default.jpg`,
+    image_url: `${IIIF}/8756/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -122,7 +125,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Nannopterum auritum',
     group: 'bird', size_category: 'large', mean_mass_g: 1800,
     strike_risk: 'high',
-    image_url: `${USFWS}/7289/default.jpg`,
+    image_url: `${IIIF}/7289/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -130,7 +133,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Pelecanus occidentalis',
     group: 'bird', size_category: 'large', mean_mass_g: 3500,
     strike_risk: 'critical',
-    image_url: `${USFWS}/3771/default.jpg`,
+    image_url: `${IIIF}/3771/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -138,7 +141,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Pelecanus erythrorhynchos',
     group: 'bird', size_category: 'large', mean_mass_g: 7000,
     strike_risk: 'critical',
-    image_url: `${USFWS}/8136/default.jpg`,
+    image_url: `${IIIF}/8136/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -146,7 +149,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Buteo lineatus',
     group: 'bird', size_category: 'large', mean_mass_g: 600,
     strike_risk: 'high',
-    image_url: `${USFWS}/7515/default.jpg`,
+    image_url: `${IIIF}/7515/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -154,7 +157,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Accipiter cooperii',
     group: 'bird', size_category: 'large', mean_mass_g: 440,
     strike_risk: 'high',
-    image_url: `${USFWS}/7494/default.jpg`,
+    image_url: `${IIIF}/7494/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -162,7 +165,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Circus hudsonius',
     group: 'bird', size_category: 'large', mean_mass_g: 400,
     strike_risk: 'high',
-    image_url: `${USFWS}/7501/default.jpg`,
+    image_url: `${IIIF}/7501/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -170,7 +173,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Bubo scandiacus',
     group: 'bird', size_category: 'large', mean_mass_g: 2000,
     strike_risk: 'critical',
-    image_url: `${USFWS}/8072/default.jpg`,
+    image_url: `${IIIF}/8072/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
 
@@ -182,7 +185,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Anas platyrhynchos',
     group: 'bird', size_category: 'medium', mean_mass_g: 1100,
     strike_risk: 'high',
-    image_url: `${USFWS}/9090/default.jpg`,
+    image_url: `${IIIF}/9090/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -190,7 +193,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Larus argentatus',
     group: 'bird', size_category: 'medium', mean_mass_g: 1000,
     strike_risk: 'high',
-    image_url: `${USFWS}/6800/default.jpg`,
+    image_url: `${IIIF}/6800/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -198,7 +201,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Larus delawarensis',
     group: 'bird', size_category: 'medium', mean_mass_g: 500,
     strike_risk: 'high',
-    image_url: `${USFWS}/6804/default.jpg`,
+    image_url: `${IIIF}/6804/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -206,7 +209,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Leucophaeus atricilla',
     group: 'bird', size_category: 'medium', mean_mass_g: 330,
     strike_risk: 'high',
-    image_url: `${USFWS}/6796/default.jpg`,
+    image_url: `${IIIF}/6796/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -214,7 +217,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Columba livia',
     group: 'bird', size_category: 'medium', mean_mass_g: 350,
     strike_risk: 'high',
-    image_url: `${USFWS}/7361/default.jpg`,
+    image_url: `${IIIF}/17706/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -222,7 +225,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Zenaida macroura',
     group: 'bird', size_category: 'medium', mean_mass_g: 120,
     strike_risk: 'medium',
-    image_url: `${USFWS}/7372/default.jpg`,
+    image_url: `${IIIF}/7372/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -230,7 +233,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Corvus brachyrhynchos',
     group: 'bird', size_category: 'medium', mean_mass_g: 450,
     strike_risk: 'medium',
-    image_url: `${USFWS}/7330/default.jpg`,
+    image_url: `${IIIF}/7330/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -238,7 +241,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Falco sparverius',
     group: 'bird', size_category: 'medium', mean_mass_g: 120,
     strike_risk: 'medium',
-    image_url: `${USFWS}/7468/default.jpg`,
+    image_url: `${IIIF}/776/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -246,7 +249,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Tyto alba',
     group: 'bird', size_category: 'medium', mean_mass_g: 460,
     strike_risk: 'medium',
-    image_url: `${USFWS}/8038/default.jpg`,
+    image_url: `${IIIF}/8038/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -254,7 +257,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Charadrius vociferus',
     group: 'bird', size_category: 'medium', mean_mass_g: 95,
     strike_risk: 'medium',
-    image_url: `${USFWS}/4371/default.jpg`,
+    image_url: `${IIIF}/12311/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -262,7 +265,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Chordeiles minor',
     group: 'bird', size_category: 'medium', mean_mass_g: 65,
     strike_risk: 'medium',
-    image_url: `${USFWS}/7938/default.jpg`,
+    image_url: `${IIIF}/7938/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -270,7 +273,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Falco peregrinus',
     group: 'bird', size_category: 'medium', mean_mass_g: 800,
     strike_risk: 'high',
-    image_url: `${USFWS}/7474/default.jpg`,
+    image_url: `${IIIF}/7474/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -278,7 +281,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Asio flammeus',
     group: 'bird', size_category: 'medium', mean_mass_g: 350,
     strike_risk: 'medium',
-    image_url: `${USFWS}/8066/default.jpg`,
+    image_url: `${IIIF}/8066/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -286,7 +289,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Turdus migratorius',
     group: 'bird', size_category: 'medium', mean_mass_g: 77,
     strike_risk: 'medium',
-    image_url: `${USFWS}/7691/default.jpg`,
+    image_url: `${IIIF}/7691/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -294,7 +297,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Mimus polyglottos',
     group: 'bird', size_category: 'medium', mean_mass_g: 48,
     strike_risk: 'low',
-    image_url: `${USFWS}/7680/default.jpg`,
+    image_url: `${IIIF}/7680/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -302,7 +305,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Cyanocitta cristata',
     group: 'bird', size_category: 'medium', mean_mass_g: 90,
     strike_risk: 'low',
-    image_url: `${USFWS}/7326/default.jpg`,
+    image_url: `${IIIF}/7326/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -310,7 +313,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Colaptes auratus',
     group: 'bird', size_category: 'medium', mean_mass_g: 130,
     strike_risk: 'medium',
-    image_url: `${USFWS}/8000/default.jpg`,
+    image_url: `${IIIF}/8000/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -318,7 +321,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Agelaius phoeniceus',
     group: 'bird', size_category: 'medium', mean_mass_g: 65,
     strike_risk: 'medium',
-    image_url: `${USFWS}/7205/default.jpg`,
+    image_url: `${IIIF}/7205/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -326,7 +329,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Quiscalus quiscula',
     group: 'bird', size_category: 'medium', mean_mass_g: 115,
     strike_risk: 'medium',
-    image_url: `${USFWS}/7215/default.jpg`,
+    image_url: `${IIIF}/7215/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -334,7 +337,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Sturnella magna',
     group: 'bird', size_category: 'medium', mean_mass_g: 95,
     strike_risk: 'medium',
-    image_url: `${USFWS}/7218/default.jpg`,
+    image_url: `${IIIF}/7218/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -342,7 +345,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Molothrus ater',
     group: 'bird', size_category: 'medium', mean_mass_g: 44,
     strike_risk: 'low',
-    image_url: `${USFWS}/7210/default.jpg`,
+    image_url: `${IIIF}/7210/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -350,7 +353,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Quiscalus mexicanus',
     group: 'bird', size_category: 'medium', mean_mass_g: 200,
     strike_risk: 'medium',
-    image_url: `${USFWS}/7217/default.jpg`,
+    image_url: `${IIIF}/7217/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -358,7 +361,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Bubulcus ibis',
     group: 'bird', size_category: 'medium', mean_mass_g: 350,
     strike_risk: 'medium',
-    image_url: `${USFWS}/6876/default.jpg`,
+    image_url: `${IIIF}/6876/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -366,7 +369,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Butorides virescens',
     group: 'bird', size_category: 'medium', mean_mass_g: 210,
     strike_risk: 'medium',
-    image_url: `${USFWS}/6895/default.jpg`,
+    image_url: `${IIIF}/6895/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -374,7 +377,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Nycticorax nycticorax',
     group: 'bird', size_category: 'medium', mean_mass_g: 800,
     strike_risk: 'medium',
-    image_url: `${USFWS}/6903/default.jpg`,
+    image_url: `${IIIF}/6903/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -382,7 +385,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Chaetura pelagica',
     group: 'bird', size_category: 'medium', mean_mass_g: 23,
     strike_risk: 'low',
-    image_url: `${USFWS}/7928/default.jpg`,
+    image_url: `${IIIF}/7928/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -390,7 +393,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Tyrannus forficatus',
     group: 'bird', size_category: 'medium', mean_mass_g: 43,
     strike_risk: 'low',
-    image_url: `${USFWS}/7633/default.jpg`,
+    image_url: `${IIIF}/7633/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -398,7 +401,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Lanius ludovicianus',
     group: 'bird', size_category: 'medium', mean_mass_g: 48,
     strike_risk: 'low',
-    image_url: `${USFWS}/7670/default.jpg`,
+    image_url: `${IIIF}/7670/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -406,7 +409,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Ictinia mississippiensis',
     group: 'bird', size_category: 'medium', mean_mass_g: 290,
     strike_risk: 'medium',
-    image_url: `${USFWS}/7507/default.jpg`,
+    image_url: `${IIIF}/7507/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -414,7 +417,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Bartramia longicauda',
     group: 'bird', size_category: 'medium', mean_mass_g: 170,
     strike_risk: 'medium',
-    image_url: `${USFWS}/4358/default.jpg`,
+    image_url: `${IIIF}/4358/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -422,7 +425,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Streptopelia decaocto',
     group: 'bird', size_category: 'medium', mean_mass_g: 200,
     strike_risk: 'medium',
-    image_url: `${USFWS}/7369/default.jpg`,
+    image_url: `${IIIF}/7369/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -438,7 +441,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Larus marinus',
     group: 'bird', size_category: 'large', mean_mass_g: 1700,
     strike_risk: 'high',
-    image_url: `${USFWS}/6808/default.jpg`,
+    image_url: `${IIIF}/6808/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -446,7 +449,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Chroicocephalus philadelphia',
     group: 'bird', size_category: 'medium', mean_mass_g: 200,
     strike_risk: 'medium',
-    image_url: `${USFWS}/6792/default.jpg`,
+    image_url: `${IIIF}/6792/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
 
@@ -458,7 +461,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Sturnus vulgaris',
     group: 'bird', size_category: 'small', mean_mass_g: 80,
     strike_risk: 'high', // Flocking behavior increases risk
-    image_url: `${USFWS}/7700/default.jpg`,
+    image_url: `${IIIF}/7700/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -466,7 +469,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Eremophila alpestris',
     group: 'bird', size_category: 'small', mean_mass_g: 32,
     strike_risk: 'medium', // Common on airfields
-    image_url: `${USFWS}/7649/default.jpg`,
+    image_url: `${IIIF}/7649/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -474,7 +477,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Hirundo rustica',
     group: 'bird', size_category: 'small', mean_mass_g: 19,
     strike_risk: 'medium',
-    image_url: `${USFWS}/7584/default.jpg`,
+    image_url: `${IIIF}/7584/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -482,7 +485,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Passer domesticus',
     group: 'bird', size_category: 'small', mean_mass_g: 28,
     strike_risk: 'low',
-    image_url: `${USFWS}/7697/default.jpg`,
+    image_url: `${IIIF}/7697/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -490,7 +493,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Melospiza melodia',
     group: 'bird', size_category: 'small', mean_mass_g: 22,
     strike_risk: 'low',
-    image_url: `${USFWS}/7254/default.jpg`,
+    image_url: `${IIIF}/7254/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -498,7 +501,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Passerculus sandwichensis',
     group: 'bird', size_category: 'small', mean_mass_g: 20,
     strike_risk: 'low',
-    image_url: `${USFWS}/7248/default.jpg`,
+    image_url: `${IIIF}/7248/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -506,7 +509,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Petrochelidon pyrrhonota',
     group: 'bird', size_category: 'small', mean_mass_g: 22,
     strike_risk: 'medium',
-    image_url: `${USFWS}/7590/default.jpg`,
+    image_url: `${IIIF}/7590/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -514,7 +517,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Tachycineta bicolor',
     group: 'bird', size_category: 'small', mean_mass_g: 20,
     strike_risk: 'medium',
-    image_url: `${USFWS}/7598/default.jpg`,
+    image_url: `${IIIF}/7598/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -522,7 +525,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Sialia sialis',
     group: 'bird', size_category: 'small', mean_mass_g: 30,
     strike_risk: 'low',
-    image_url: `${USFWS}/7684/default.jpg`,
+    image_url: `${IIIF}/7684/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -530,7 +533,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Progne subis',
     group: 'bird', size_category: 'small', mean_mass_g: 56,
     strike_risk: 'medium',
-    image_url: `${USFWS}/7594/default.jpg`,
+    image_url: `${IIIF}/7594/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -538,7 +541,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Spinus tristis',
     group: 'bird', size_category: 'small', mean_mass_g: 13,
     strike_risk: 'low',
-    image_url: `${USFWS}/7232/default.jpg`,
+    image_url: `${IIIF}/7232/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -546,7 +549,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Haemorhous mexicanus',
     group: 'bird', size_category: 'small', mean_mass_g: 22,
     strike_risk: 'low',
-    image_url: `${USFWS}/7226/default.jpg`,
+    image_url: `${IIIF}/7226/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -554,7 +557,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Bombycilla cedrorum',
     group: 'bird', size_category: 'small', mean_mass_g: 32,
     strike_risk: 'medium', // Flocking behavior
-    image_url: `${USFWS}/7711/default.jpg`,
+    image_url: `${IIIF}/7711/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
 
@@ -566,7 +569,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Anas rubripes',
     group: 'bird', size_category: 'large', mean_mass_g: 1200,
     strike_risk: 'high',
-    image_url: `${USFWS}/9082/default.jpg`,
+    image_url: `${IIIF}/9082/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -574,7 +577,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Anas acuta',
     group: 'bird', size_category: 'medium', mean_mass_g: 900,
     strike_risk: 'high',
-    image_url: `${USFWS}/9104/default.jpg`,
+    image_url: `${IIIF}/9104/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -582,7 +585,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Anas crecca',
     group: 'bird', size_category: 'medium', mean_mass_g: 350,
     strike_risk: 'medium',
-    image_url: `${USFWS}/9118/default.jpg`,
+    image_url: `${IIIF}/9118/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -590,7 +593,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Spatula discors',
     group: 'bird', size_category: 'medium', mean_mass_g: 400,
     strike_risk: 'medium',
-    image_url: `${USFWS}/9114/default.jpg`,
+    image_url: `${IIIF}/9114/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -598,7 +601,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Aix sponsa',
     group: 'bird', size_category: 'medium', mean_mass_g: 680,
     strike_risk: 'medium',
-    image_url: `${USFWS}/9072/default.jpg`,
+    image_url: `${IIIF}/9072/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
 
@@ -610,7 +613,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Scolopax minor',
     group: 'bird', size_category: 'medium', mean_mass_g: 170,
     strike_risk: 'medium',
-    image_url: `${USFWS}/4345/default.jpg`,
+    image_url: `${IIIF}/4345/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -618,7 +621,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Gallinago delicata',
     group: 'bird', size_category: 'medium', mean_mass_g: 105,
     strike_risk: 'medium',
-    image_url: `${USFWS}/4389/default.jpg`,
+    image_url: `${IIIF}/4389/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -626,7 +629,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Charadrius semipalmatus',
     group: 'bird', size_category: 'small', mean_mass_g: 47,
     strike_risk: 'low',
-    image_url: `${USFWS}/4367/default.jpg`,
+    image_url: `${IIIF}/4367/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
 
@@ -638,7 +641,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Phasianus colchicus',
     group: 'bird', size_category: 'large', mean_mass_g: 1100,
     strike_risk: 'high',
-    image_url: `${USFWS}/8747/default.jpg`,
+    image_url: `${IIIF}/8747/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -646,7 +649,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Colinus virginianus',
     group: 'bird', size_category: 'medium', mean_mass_g: 175,
     strike_risk: 'medium',
-    image_url: `${USFWS}/8741/default.jpg`,
+    image_url: `${IIIF}/8741/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
 
@@ -658,7 +661,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Odocoileus virginianus',
     group: 'mammal', size_category: 'large', mean_mass_g: 68000,
     strike_risk: 'critical',
-    image_url: `${USFWS}/5005/default.jpg`,
+    image_url: `${IIIF}/17496/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -666,7 +669,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Odocoileus hemionus',
     group: 'mammal', size_category: 'large', mean_mass_g: 70000,
     strike_risk: 'critical',
-    image_url: `${USFWS}/5010/default.jpg`,
+    image_url: `${IIIF}/5010/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -674,7 +677,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Canis latrans',
     group: 'mammal', size_category: 'large', mean_mass_g: 14000,
     strike_risk: 'critical',
-    image_url: `${USFWS}/4905/default.jpg`,
+    image_url: `${IIIF}/11774/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -682,7 +685,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Vulpes vulpes',
     group: 'mammal', size_category: 'large', mean_mass_g: 5000,
     strike_risk: 'high',
-    image_url: `${USFWS}/4915/default.jpg`,
+    image_url: `${IIIF}/4915/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -690,7 +693,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Urocyon cinereoargenteus',
     group: 'mammal', size_category: 'large', mean_mass_g: 4000,
     strike_risk: 'high',
-    image_url: `${USFWS}/4911/default.jpg`,
+    image_url: `${IIIF}/4911/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -698,7 +701,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Sus scrofa',
     group: 'mammal', size_category: 'large', mean_mass_g: 80000,
     strike_risk: 'critical',
-    image_url: `${USFWS}/5031/default.jpg`,
+    image_url: `${IIIF}/5031/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -706,7 +709,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Antilocapra americana',
     group: 'mammal', size_category: 'large', mean_mass_g: 55000,
     strike_risk: 'critical',
-    image_url: `${USFWS}/4998/default.jpg`,
+    image_url: `${IIIF}/4998/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
 
@@ -718,7 +721,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Sylvilagus floridanus',
     group: 'mammal', size_category: 'medium', mean_mass_g: 1200,
     strike_risk: 'medium',
-    image_url: `${USFWS}/4975/default.jpg`,
+    image_url: `${IIIF}/12317/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -726,7 +729,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Mephitis mephitis',
     group: 'mammal', size_category: 'medium', mean_mass_g: 3200,
     strike_risk: 'medium',
-    image_url: `${USFWS}/4960/default.jpg`,
+    image_url: `${IIIF}/4960/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -734,7 +737,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Procyon lotor',
     group: 'mammal', size_category: 'medium', mean_mass_g: 6000,
     strike_risk: 'high',
-    image_url: `${USFWS}/4946/default.jpg`,
+    image_url: `${IIIF}/4946/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -742,7 +745,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Didelphis virginiana',
     group: 'mammal', size_category: 'medium', mean_mass_g: 3000,
     strike_risk: 'medium',
-    image_url: `${USFWS}/4865/default.jpg`,
+    image_url: `${IIIF}/4865/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -750,7 +753,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Dasypus novemcinctus',
     group: 'mammal', size_category: 'medium', mean_mass_g: 5500,
     strike_risk: 'medium',
-    image_url: `${USFWS}/4860/default.jpg`,
+    image_url: `${IIIF}/4860/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -758,7 +761,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Marmota monax',
     group: 'mammal', size_category: 'medium', mean_mass_g: 3600,
     strike_risk: 'medium',
-    image_url: `${USFWS}/4932/default.jpg`,
+    image_url: `${IIIF}/4932/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -766,7 +769,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Ictidomys tridecemlineatus',
     group: 'mammal', size_category: 'small', mean_mass_g: 170,
     strike_risk: 'low',
-    image_url: `${USFWS}/4928/default.jpg`,
+    image_url: `${IIIF}/4928/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -774,7 +777,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Cynomys ludovicianus',
     group: 'mammal', size_category: 'medium', mean_mass_g: 900,
     strike_risk: 'medium',
-    image_url: `${USFWS}/4920/default.jpg`,
+    image_url: `${IIIF}/4920/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
 
@@ -786,7 +789,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Alligator mississippiensis',
     group: 'reptile', size_category: 'large', mean_mass_g: 200000,
     strike_risk: 'critical',
-    image_url: `${USFWS}/4777/default.jpg`,
+    image_url: `${IIIF}/4777/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -794,7 +797,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Chelydra serpentina',
     group: 'reptile', size_category: 'large', mean_mass_g: 10000,
     strike_risk: 'high',
-    image_url: `${USFWS}/4800/default.jpg`,
+    image_url: `${IIIF}/4800/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -802,7 +805,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Terrapene carolina',
     group: 'reptile', size_category: 'medium', mean_mass_g: 400,
     strike_risk: 'medium',
-    image_url: `${USFWS}/4815/default.jpg`,
+    image_url: `${IIIF}/4815/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -822,7 +825,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Tadarida brasiliensis',
     group: 'bat', size_category: 'small', mean_mass_g: 12,
     strike_risk: 'medium', // Large colonies near airfields
-    image_url: `${USFWS}/4841/default.jpg`,
+    image_url: `${IIIF}/4841/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -830,7 +833,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Eptesicus fuscus',
     group: 'bat', size_category: 'small', mean_mass_g: 16,
     strike_risk: 'low',
-    image_url: `${USFWS}/4835/default.jpg`,
+    image_url: `${IIIF}/4835/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -838,7 +841,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Myotis lucifugus',
     group: 'bat', size_category: 'small', mean_mass_g: 8,
     strike_risk: 'low',
-    image_url: `${USFWS}/4845/default.jpg`,
+    image_url: `${IIIF}/4845/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -846,7 +849,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Lasiurus cinereus',
     group: 'bat', size_category: 'small', mean_mass_g: 26,
     strike_risk: 'low',
-    image_url: `${USFWS}/4849/default.jpg`,
+    image_url: `${IIIF}/4849/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
   {
@@ -854,7 +857,7 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
     scientific_name: 'Lasiurus borealis',
     group: 'bat', size_category: 'small', mean_mass_g: 10,
     strike_risk: 'low',
-    image_url: `${USFWS}/4838/default.jpg`,
+    image_url: `${IIIF}/4838/full/800,/0/default.jpg`,
     image_credit: 'USFWS',
   },
 ]
