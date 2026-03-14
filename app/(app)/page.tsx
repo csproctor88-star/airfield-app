@@ -833,9 +833,8 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* ===== Current Status ===== */}
-      <span className="section-label">Current Status</span>
-      {/* Active RWY cards — one per runway, side-by-side for multi-runway bases */}
+      {/* ===== Runway Status ===== */}
+      <span className="section-label">Runway Status</span>
       {(() => {
         // Build runway entries from installation runways
         const rwyEntries = runways.map(r => {
@@ -859,11 +858,11 @@ export default function HomePage() {
         })
 
         return (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: rwyEntries.length > 1 ? `repeat(${rwyEntries.length}, 1fr)` : '1fr',
+          <div className="runway-status-row" style={{
+            display: 'flex',
             gap: 8,
-            marginBottom: 8,
+            marginBottom: 12,
+            flexWrap: 'wrap',
           }}>
             {rwyEntries.map((rwy) => {
               const c = getColors(rwy.status)
@@ -872,6 +871,7 @@ export default function HomePage() {
                   padding: 'var(--rwy-card-padding)',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--rwy-card-gap)',
                   background: c.bg, border: `1px solid ${c.border}`,
+                  flex: '1 1 0', minWidth: 120,
                 }}>
                   <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>Active RWY</div>
                   <button
@@ -969,55 +969,58 @@ export default function HomePage() {
                 </div>
               )
             })}
-          </div>
-        )
-      })()}
-      <div className="card" style={{ marginBottom: 12, padding: '14px 12px' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 12 }}>
+          {/* RSC / RCR card */}
           {rcrValue ? (
-            /* RWY RCR card — display-only, set from checks */
-            <div
-              style={{ flex: '0 1 200px', padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid rgba(34,211,238,0.25)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}
-            >
-              <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-cyan)', fontWeight: 600, marginBottom: 6 }}>RWY RCR</div>
-              <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-accent)' }}>{rcrValue}</div>
+            <div className="card" style={{
+              flex: '0 1 140px', minWidth: 100, padding: '14px 12px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              border: '1px solid rgba(34,211,238,0.25)', textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontWeight: 600, marginBottom: 4 }}>RCR</div>
+              <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-accent)' }}>{rcrValue}</div>
               {rcrCondition && (
-                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', fontWeight: 600, marginTop: 4 }}>{RCR_CONDITION_TYPES.find(c => c.value === rcrCondition)?.label || rcrCondition}</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', fontWeight: 600, marginTop: 2 }}>{RCR_CONDITION_TYPES.find(c => c.value === rcrCondition)?.label || rcrCondition}</div>
               )}
             </div>
           ) : (
-            /* Standard RSC card — clickable */
-            <div
-              onClick={() => { setRscDraftValue(rscCondition); setRscDraftNotes(''); setRscDialogOpen(true) }}
-              style={{ flex: '0 1 200px', padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textAlign: 'center' }}
-            >
-              <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6 }}>RSC</div>
-              <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: 'var(--color-accent)' }}>
-                {rscCondition || 'No Data'}
+            <div className="card" onClick={() => { setRscDraftValue(rscCondition); setRscDraftNotes(''); setRscDialogOpen(true) }}
+              style={{
+                flex: '0 1 140px', minWidth: 100, padding: '14px 12px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', textAlign: 'center',
+              }}>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4 }}>RSC</div>
+              <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-accent)' }}>
+                {rscCondition || '—'}
               </div>
             </div>
           )}
-          <div
-            onClick={() => { setBwcDraftValue(bwcValue); setBwcDraftNotes(''); setBwcDialogOpen(true) }}
-            style={{ flex: '0 1 200px', padding: 14, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textAlign: 'center' }}
-          >
-            <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 6 }}>BWC</div>
-            <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: bwcValue === 'SEV' || bwcValue === 'PROHIB' ? 'var(--color-danger)' : bwcValue === 'MOD' ? 'var(--color-warning)' : 'var(--color-success)' }}>
-              {bwcValue || 'No Data'}
+          {/* BWC card */}
+          <div className="card" onClick={() => { setBwcDraftValue(bwcValue); setBwcDraftNotes(''); setBwcDialogOpen(true) }}
+            style={{
+              flex: '0 1 140px', minWidth: 100, padding: '14px 12px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', textAlign: 'center',
+            }}>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4 }}>BWC</div>
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: bwcValue === 'SEV' || bwcValue === 'PROHIB' ? 'var(--color-danger)' : bwcValue === 'MOD' ? 'var(--color-warning)' : 'var(--color-success)' }}>
+              {bwcValue || '—'}
             </div>
           </div>
-        </div>
-      </div>
+          </div>
+        )
+      })()}
 
-      {/* ===== ARFF Status ===== */}
+      {/* ===== ARFF + NAVAID Status (side by side on desktop) ===== */}
+      <div className="arff-navaid-row" style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+      <div style={{ flex: '0 0 auto' }}>
       <span className="section-label">ARFF Status</span>
       <div style={{
         display: 'grid',
         gridTemplateColumns: arffAircraft.length > 0
-          ? `repeat(${Math.min(arffAircraft.length + 1, 4)}, 1fr)`
+          ? `repeat(${Math.min(arffAircraft.length + 1, 4)}, minmax(80px, 1fr))`
           : '1fr',
-        gap: 8,
-        marginBottom: 16,
+        gap: 6,
       }}>
         {/* ARFF CAT card */}
         <div className="card" style={{
@@ -1193,6 +1196,9 @@ export default function HomePage() {
         </div>
       )}
 
+      </div>
+
+      <div style={{ flex: '1 1 0', minWidth: 200 }}>
       {/* ===== NAVAID Status ===== */}
       <span className="section-label">NAVAID Status</span>
       {navaids.length === 0 ? (
@@ -1221,8 +1227,8 @@ export default function HomePage() {
         const NAVAID_LABELS: Record<string, string> = { green: 'G', yellow: 'Y', red: 'R' }
         const renderNavaidItem = (n: NavaidStatus) => (
           <div key={n.id} style={{ marginBottom: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 'var(--fs-base)', fontWeight: 500, color: 'var(--color-text-2)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 'var(--fs-base)', fontWeight: 500, color: 'var(--color-text-2)', flex: 1 }}>
                 {getNavaidDisplayName(n.navaid_name)}
               </span>
               <button
@@ -1245,7 +1251,7 @@ export default function HomePage() {
         const allFlagged = navaids.filter(n => n.status === 'yellow' || n.status === 'red')
         return (
           <>
-          <div className="navaid-grid" style={{ marginBottom: allFlagged.length > 0 ? 8 : 16 }}>
+          <div className="navaid-grid" style={{ marginBottom: allFlagged.length > 0 ? 8 : 0 }}>
             {endGroups.filter(group => group.items.length > 0).map(group => (
               <div key={group.designator} className="card" style={{ padding: '10px 14px 4px' }}>
                 <div style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY {group.designator}</div>
@@ -1304,7 +1310,13 @@ export default function HomePage() {
           </>
         )
       })()}
+      </div>{/* end NAVAID wrapper */}
+      </div>{/* end arff-navaid-row */}
 
+      {/* ===== Personnel / Construction / Misc (inline row on desktop) ===== */}
+      <div className="bottom-info-row" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+
+      <div style={{ flex: '1 1 0', minWidth: 200 }}>
       {/* ===== Personnel on Airfield ===== */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <span className="section-label" style={{ marginBottom: 0 }}>Personnel on Airfield</span>
@@ -1502,6 +1514,9 @@ export default function HomePage() {
         </div>
       )}
 
+      </div>{/* end Personnel wrapper */}
+
+      <div style={{ flex: '1 1 0', minWidth: 200 }}>
       {/* ===== Construction / Closures ===== */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <span className="section-label" style={{ marginBottom: 0 }}>Construction / Closures</span>
@@ -1520,6 +1535,9 @@ export default function HomePage() {
         )}
       </div>
 
+      </div>{/* end Construction wrapper */}
+
+      <div style={{ flex: '1 1 0', minWidth: 200 }}>
       {/* ===== Miscellaneous Info ===== */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <span className="section-label" style={{ marginBottom: 0 }}>Miscellaneous Info</span>
@@ -1537,6 +1555,9 @@ export default function HomePage() {
           <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>None</div>
         )}
       </div>
+
+      </div>{/* end Misc wrapper */}
+      </div>{/* end bottom-info-row */}
 
       {/* Construction/Closures edit dialog */}
       {editingConstruction && (
