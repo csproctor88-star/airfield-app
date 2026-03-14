@@ -36,6 +36,7 @@ import {
   PanelLeftOpen,
   Database,
   Lightbulb,
+  Bird,
 } from 'lucide-react'
 
 // Main navigation items
@@ -56,6 +57,7 @@ const opsItems = [
   { name: 'Airfield Checks', icon: ClipboardCheck, href: '/checks' },
   { name: 'All Inspections', icon: ClipboardList, href: '/inspections/all' },
   { name: 'Personnel on Airfield', icon: HardHat, href: '/contractors' },
+  { name: 'Wildlife / BASH', icon: Bird, href: '/wildlife' },
   { name: 'Airfield Discrepancies', icon: AlertTriangle, href: '/discrepancies' },
   { name: 'Obstruction Database', icon: Database, href: '/obstructions/history' },
   { name: 'Airfield Waivers', icon: Shield, href: '/waivers' },

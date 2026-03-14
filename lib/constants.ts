@@ -320,6 +320,78 @@ export const RCR_CONDITION_TYPES = [
 
 export const BASH_CONDITION_CODES = ['LOW', 'MODERATE', 'SEVERE', 'PROHIBITED'] as const
 
+// === Wildlife / BASH Module Constants ===
+
+export const SPECIES_GROUPS = ['bird', 'mammal', 'reptile', 'bat'] as const
+
+export const SIZE_CATEGORIES = [
+  { value: 'small', label: 'Small (<100g)', description: 'Sparrows, starlings, swallows' },
+  { value: 'medium', label: 'Medium (100g–1kg)', description: 'Pigeons, doves, gulls, crows' },
+  { value: 'large', label: 'Large (>1kg)', description: 'Geese, vultures, deer, raptors' },
+] as const
+
+export const WILDLIFE_BEHAVIORS = [
+  'feeding', 'flying', 'roosting', 'nesting', 'transiting', 'loafing',
+] as const
+
+export const DISPERSAL_METHODS = [
+  { value: 'pyrotechnics', label: 'Pyrotechnics' },
+  { value: 'vehicle_hazing', label: 'Vehicle Hazing' },
+  { value: 'shotgun', label: 'Shotgun' },
+  { value: 'laser', label: 'Laser' },
+  { value: 'bioacoustics', label: 'Bioacoustics' },
+  { value: 'propane_cannon', label: 'Propane Cannon' },
+  { value: 'other', label: 'Other' },
+] as const
+
+export const WILDLIFE_ACTIONS = [
+  { value: 'none', label: 'None / Observed Only' },
+  { value: 'hazed', label: 'Hazed' },
+  { value: 'dispersed', label: 'Dispersed' },
+  { value: 'depredated', label: 'Depredated' },
+  { value: 'relocated', label: 'Relocated' },
+] as const
+
+export const FLIGHT_PHASES = [
+  { value: 'taxi', label: 'Taxi' },
+  { value: 'takeoff_run', label: 'Takeoff Run' },
+  { value: 'climb', label: 'Climb' },
+  { value: 'en_route', label: 'En Route' },
+  { value: 'approach', label: 'Approach' },
+  { value: 'landing_roll', label: 'Landing Roll' },
+] as const
+
+export const DAMAGE_LEVELS = [
+  { value: 'none', label: 'None', color: '#10B981' },
+  { value: 'minor', label: 'Minor', color: '#F59E0B' },
+  { value: 'substantial', label: 'Substantial', color: '#F97316' },
+  { value: 'destroyed', label: 'Destroyed', color: '#EF4444' },
+] as const
+
+export const AIRCRAFT_PARTS_STRIKE = [
+  'radome', 'windshield', 'nose', 'engine_1', 'engine_2', 'engine_3', 'engine_4',
+  'wing_leading_edge', 'fuselage', 'landing_gear', 'tail', 'lights', 'pitot_static', 'other',
+] as const
+
+export const FLIGHT_EFFECTS = [
+  { value: 'none', label: 'None' },
+  { value: 'aborted_takeoff', label: 'Aborted Takeoff' },
+  { value: 'precautionary_landing', label: 'Precautionary Landing' },
+  { value: 'engine_shutdown', label: 'Engine Shutdown' },
+  { value: 'other', label: 'Other' },
+] as const
+
+export const SKY_CONDITIONS = ['clear', 'some_cloud', 'overcast'] as const
+export const PRECIPITATION_OPTIONS = ['none', 'fog', 'rain', 'snow'] as const
+export const TIME_OF_DAY_OPTIONS = ['dawn', 'day', 'dusk', 'night'] as const
+
+export const ENGINE_TYPES = [
+  { value: 'piston', label: 'Piston' },
+  { value: 'turboprop', label: 'Turboprop' },
+  { value: 'turbofan', label: 'Turbofan' },
+  { value: 'turbojet', label: 'Turbojet' },
+] as const
+
 // === NOTAM Types ===
 
 export const NOTAM_TYPES = [

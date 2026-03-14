@@ -162,6 +162,10 @@ export async function createCheck(input: {
       const bwcMap: Record<string, string> = { LOW: 'LOW', MODERATE: 'MOD', SEVERE: 'SEV', PROHIBITED: 'PROHIB' }
       const normalized = bwcMap[conditionRaw] || conditionRaw
       await updateAirfieldStatus({ bwc_value: normalized, bwc_updated_at: nowIso }, input.base_id)
+
+      // Log BWC change to history for wildlife analytics
+      const { logBwcChange } = await import('./wildlife')
+      await logBwcChange(input.base_id, normalized, 'bash_check', created.id, input.completed_by)
     }
   }
 

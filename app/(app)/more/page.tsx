@@ -24,6 +24,7 @@ const amToolsItems: ModuleItem[] = [
   { name: 'Airfield Checks', icon: '✅', color: '#22D3EE', href: '/checks' },
   { name: 'All Inspections', icon: '📋', color: '#22D3EE', href: '/inspections/all' },
   { name: 'Personnel on Airfield', icon: '🚧', color: '#F59E0B', href: '/contractors' },
+  { name: 'Wildlife / BASH', icon: '🦅', color: '#10B981', href: '/wildlife' },
   { name: 'Airfield Discrepancies', icon: '⚠️', color: '#FBBF24', href: '/discrepancies' },
   { name: 'Obstruction Database', icon: '🗺️', color: '#F97316', href: '/obstructions/history' },
   { name: 'Airfield Waivers', icon: '📄', color: '#A78BFA', href: '/waivers' },
