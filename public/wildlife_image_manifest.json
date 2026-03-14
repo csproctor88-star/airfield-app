@@ -362,5 +362,236 @@
     "source_page": "https://en.wikipedia.org/wiki/Lasiurus_cinereus",
     "license": "CC BY-SA (Wikipedia)",
     "group": "bat"
+  },
+  "American Coot": {
+    "filename": "bird/american_coot.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/American_Coot",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "American Robin": {
+    "filename": "bird/american_robin.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/American_Robin",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Anhinga": {
+    "filename": "bird/anhinga.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Anhinga",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Barred Owl": {
+    "filename": "bird/barred_owl.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Barred_Owl",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Broad Winged Hawk": {
+    "filename": "bird/broad_winged_hawk.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Broad_Winged_Hawk",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Brown Headed Cowbird": {
+    "filename": "bird/brown_headed_cowbird.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Brown_Headed_Cowbird",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Burrowing Owl": {
+    "filename": "bird/burrowing_owl.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Burrowing_Owl",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Cackling Goose": {
+    "filename": "bird/cackling_goose.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Cackling_Goose",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Cattle Egret": {
+    "filename": "bird/cattle_egret.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Cattle_Egret",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Common Loon": {
+    "filename": "bird/common_loon.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Common_Loon",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Cooper's Hawk": {
+    "filename": "bird/coopers_hawk.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Cooper's_Hawk",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Eastern Screech Owl": {
+    "filename": "bird/eastern_screech_owl.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Eastern_Screech_Owl",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Ferruginous Hawk": {
+    "filename": "bird/ferruginous_hawk.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Ferruginous_Hawk",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Gadwall": {
+    "filename": "bird/gadwall.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Gadwall",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Golden Eagle": {
+    "filename": "bird/golden_eagle.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Golden_Eagle",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Great Gray Owl": {
+    "filename": "bird/great_gray_owl.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Great_Gray_Owl",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Great Tailed Grackle": {
+    "filename": "bird/great_tailed_grackle.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Great_Tailed_Grackle",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Harris's Hawk": {
+    "filename": "bird/harriss_hawk.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Harris's_Hawk",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Laughing Gull": {
+    "filename": "bird/laughing_gull.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Laughing_Gull",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Long Eared Owl": {
+    "filename": "bird/long_eared_owl.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Long_Eared_Owl",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Merlin": {
+    "filename": "bird/merlin.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Merlin",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Mute Swan": {
+    "filename": "bird/mute_swan.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Mute_Swan",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Northern Harrier": {
+    "filename": "bird/northern_harrier.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Northern_Harrier",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Northern Mockingbird": {
+    "filename": "bird/northern_mockingbird.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Northern_Mockingbird",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Prairie Falcon": {
+    "filename": "bird/prairie_falcon.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Prairie_Falcon",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Red Shouldered Hawk": {
+    "filename": "bird/red_shouldered_hawk.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Red_Shouldered_Hawk",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Red Winged Blackbird": {
+    "filename": "bird/red_winged_blackbird.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Red_Winged_Blackbird",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Ross's Goose": {
+    "filename": "bird/rosss_goose.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Ross's_Goose",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Tundra Swan": {
+    "filename": "bird/tundra_swan.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Tundra_Swan",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "White Tailed Hawk": {
+    "filename": "bird/white_tailed_hawk.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/White_Tailed_Hawk",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Whooping Crane": {
+    "filename": "bird/whooping_crane.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Whooping_Crane",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "bird"
+  },
+  "Black Tailed Prairie Dog": {
+    "filename": "mammal/black_tailed_prairie_dog.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Black_Tailed_Prairie_Dog",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "mammal"
+  },
+  "Woodchuck": {
+    "filename": "mammal/woodchuck.jpg",
+    "source_url": "Wikipedia (fallback)",
+    "source_page": "https://en.wikipedia.org/wiki/Woodchuck",
+    "license": "CC BY-SA (Wikipedia)",
+    "group": "mammal"
   }
 }
