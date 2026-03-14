@@ -947,8 +947,8 @@ export default function AirfieldChecksPage() {
                 disabled={!remarkText.trim()}
                 style={{
                   padding: '8px 20px', borderRadius: 8, border: 'none',
-                  background: remarkText.trim() ? 'var(--color-cyan)' : 'var(--color-bg-elevated)',
-                  color: remarkText.trim() ? 'var(--color-bg-surface-solid)' : 'var(--color-text-4)',
+                  background: remarkText.trim() ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-elevated)',
+                  color: remarkText.trim() ? 'var(--color-cyan-btn-text)' : 'var(--color-text-4)',
                   fontSize: 'var(--fs-base)', fontWeight: 700, cursor: remarkText.trim() ? 'pointer' : 'default',
                   fontFamily: 'inherit',
                 }}

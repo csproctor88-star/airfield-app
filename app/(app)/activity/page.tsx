@@ -454,8 +454,8 @@ export default function ActivityPage() {
             disabled={!manualText.trim() || submitting}
             style={{
               padding: '0 20px', borderRadius: 8, border: 'none', alignSelf: 'flex-end', height: 40,
-              background: manualText.trim() ? 'var(--color-cyan)' : 'var(--color-bg-elevated)',
-              color: manualText.trim() ? 'var(--color-bg-surface-solid)' : 'var(--color-text-4)',
+              background: manualText.trim() ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-elevated)',
+              color: manualText.trim() ? 'var(--color-cyan-btn-text)' : 'var(--color-text-4)',
               fontSize: 'var(--fs-md)', fontWeight: 700, cursor: manualText.trim() ? 'pointer' : 'default',
               fontFamily: 'inherit', whiteSpace: 'nowrap',
             }}
@@ -500,8 +500,8 @@ export default function ActivityPage() {
             style={{
               flex: 1, padding: '8px 0', border: 'none', fontSize: 'var(--fs-base)', fontWeight: 600,
               cursor: 'pointer', fontFamily: 'inherit',
-              background: period === p.value ? 'var(--color-cyan)' : 'transparent',
-              color: period === p.value ? '#0F172A' : 'var(--color-text-2)',
+              background: period === p.value ? 'var(--color-cyan-btn-bg)' : 'transparent',
+              color: period === p.value ? 'var(--color-cyan-btn-text)' : 'var(--color-text-2)',
             }}
           >
             {p.label}

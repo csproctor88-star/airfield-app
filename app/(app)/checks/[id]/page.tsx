@@ -416,8 +416,8 @@ export default function CheckDetailPage() {
             disabled={!remarkText.trim() || savingRemark}
             style={{
               padding: '0 14px', borderRadius: 8, border: 'none',
-              background: remarkText.trim() ? 'var(--color-cyan)' : 'var(--color-bg-elevated)',
-              color: remarkText.trim() ? 'var(--color-bg-surface-solid)' : 'var(--color-text-4)',
+              background: remarkText.trim() ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-elevated)',
+              color: remarkText.trim() ? 'var(--color-cyan-btn-text)' : 'var(--color-text-4)',
               fontSize: 'var(--fs-base)', fontWeight: 700, cursor: remarkText.trim() ? 'pointer' : 'default',
               fontFamily: 'inherit', alignSelf: 'flex-end', height: 36,
             }}

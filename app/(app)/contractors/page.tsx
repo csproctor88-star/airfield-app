@@ -205,8 +205,8 @@ export default function ContractorsPage() {
         <button
           onClick={() => { setShowForm(prev => !prev); if (showForm) resetForm() }}
           style={{
-            background: showForm ? 'var(--color-border)' : 'var(--color-cyan)',
-            color: showForm ? 'var(--color-text-1)' : '#000',
+            background: showForm ? 'var(--color-border)' : 'var(--color-cyan-btn-bg)',
+            color: showForm ? 'var(--color-text-1)' : 'var(--color-cyan-btn-text)',
             border: 'none',
             borderRadius: 8,
             padding: '8px 16px',
@@ -270,8 +270,8 @@ export default function ContractorsPage() {
               onClick={handleCreate}
               disabled={saving}
               style={{
-                background: 'var(--color-cyan)',
-                color: '#000',
+                background: 'var(--color-cyan-btn-bg)',
+                color: 'var(--color-cyan-btn-text)',
                 border: 'none',
                 borderRadius: 8,
                 padding: '8px 20px',
@@ -295,8 +295,8 @@ export default function ContractorsPage() {
             key={tab}
             onClick={() => setFilter(tab)}
             style={{
-              background: filter === tab ? 'var(--color-cyan)' : 'var(--color-bg-surface)',
-              color: filter === tab ? '#000' : 'var(--color-text-2)',
+              background: filter === tab ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-surface)',
+              color: filter === tab ? 'var(--color-cyan-btn-text)' : 'var(--color-text-2)',
               border: '1px solid var(--color-border)',
               borderRadius: 8,
               padding: '6px 14px',
@@ -385,7 +385,7 @@ export default function ContractorsPage() {
                       <button
                         onClick={() => handleSaveEdit(c.id)}
                         disabled={saving}
-                        style={{ background: 'var(--color-cyan)', color: '#000', border: 'none', borderRadius: 8, padding: '6px 14px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, fontFamily: 'inherit' }}
+                        style={{ background: 'var(--color-cyan-btn-bg)', color: 'var(--color-cyan-btn-text)', border: 'none', borderRadius: 8, padding: '6px 14px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, fontFamily: 'inherit' }}
                       >
                         Save
                       </button>

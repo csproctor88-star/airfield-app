@@ -344,8 +344,8 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
                   flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   padding: '8px 12px', borderRadius: 6,
                   border: '1px solid var(--color-border)',
-                  background: showMap ? 'var(--color-cyan)' : 'var(--color-bg-surface)',
-                  color: showMap ? '#000' : 'var(--color-text-2)',
+                  background: showMap ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-surface)',
+                  color: showMap ? 'var(--color-cyan-btn-text)' : 'var(--color-text-2)',
                   fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer',
                 }}
               >

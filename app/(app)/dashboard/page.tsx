@@ -472,8 +472,8 @@ export default function AMDashboardPage() {
             disabled={!manualText.trim() || submitting}
             style={{
               padding: '0 20px', borderRadius: 8, border: 'none', alignSelf: 'flex-end', height: 40,
-              background: manualText.trim() ? 'var(--color-cyan)' : 'var(--color-bg-elevated)',
-              color: manualText.trim() ? 'var(--color-bg-surface-solid)' : 'var(--color-text-4)',
+              background: manualText.trim() ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-elevated)',
+              color: manualText.trim() ? 'var(--color-cyan-btn-text)' : 'var(--color-text-4)',
               fontSize: 'var(--fs-md)', fontWeight: 700, cursor: manualText.trim() ? 'pointer' : 'default',
               fontFamily: 'inherit', whiteSpace: 'nowrap',
             }}

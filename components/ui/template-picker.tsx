@@ -352,7 +352,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
                           onClick={applyEdit}
                           style={{
                             padding: '6px 14px', borderRadius: 6, border: 'none',
-                            background: 'var(--color-cyan)', color: '#000',
+                            background: 'var(--color-cyan-btn-bg)', color: 'var(--color-cyan-btn-text)',
                             fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                           }}
                         >
@@ -546,7 +546,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
                   disabled={submitting}
                   style={{
                     padding: '8px 20px', borderRadius: 8, border: 'none',
-                    background: submitting ? 'rgba(6,182,212,0.5)' : 'var(--color-cyan)', color: '#000',
+                    background: submitting ? 'rgba(6,182,212,0.5)' : 'var(--color-cyan-btn-bg)', color: 'var(--color-cyan-btn-text)',
                     fontSize: 'var(--fs-base)', fontWeight: 700,
                     cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
                   }}

@@ -37,6 +37,8 @@
   --color-orange: #F97316;
   --color-purple: #A78BFA;
   --color-cyan: #22D3EE;
+  --color-cyan-btn-bg: #22D3EE;
+  --color-cyan-btn-text: #000000;
   --color-overlay: rgba(0, 0, 0, 0.7);
   --color-scrollbar: rgba(56, 189, 248, 0.1);
   --color-logo-start: #F1F5F9;
@@ -122,6 +124,8 @@
   --color-orange: #9A3412;
   --color-purple: #6D28D9;
   --color-cyan: #155E75;
+  --color-cyan-btn-bg: #0891B2;
+  --color-cyan-btn-text: #FFFFFF;
   --color-overlay: rgba(0, 0, 0, 0.3);
   --color-scrollbar: rgba(15, 23, 42, 0.1);
   --color-logo-start: #1E293B;
