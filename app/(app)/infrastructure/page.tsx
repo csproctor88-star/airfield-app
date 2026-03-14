@@ -1741,30 +1741,29 @@ export default function InfrastructureMapPage() {
           const isInop = props.status === 'inoperative'
           html += `<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:${isInop ? '#EF4444' : '#10B981'};color:white;">${isInop ? 'INOP' : 'OP'}</span>`
           html += `</div>`
-          if (props.source === 'user') {
-            html += `<div style="font-size:10px;color:#10B981;margin-bottom:4px;">User-added</div>`
-          }
-          html += `<div style="color:#94A3B8;font-size:11px;">Lat: ${coords[1].toFixed(6)}</div>`
-          html += `<div style="color:#94A3B8;font-size:11px;">Lon: ${coords[0].toFixed(6)}</div>`
           if (props.block) {
-            html += `<div style="margin-top:4px;color:#CBD5E1;">Fixture ID: ${props.block}</div>`
+            html += `<div style="font-size:11px;color:#CBD5E1;font-family:monospace;margin-bottom:2px;">${props.block}</div>`
           }
           if (props.text && ['location_sign','directional_sign','informational_sign','mandatory_sign'].includes(props.type)) {
-            html += `<div style="margin-top:4px;color:#CBD5E1;">Sign Text: ${props.text}</div>`
+            html += `<div style="color:#CBD5E1;">Sign Text: ${props.text}</div>`
           }
-          if (props.notes) {
-            html += `<div style="margin-top:4px;color:#CBD5E1;">Notes: ${props.notes}</div>`
-          }
-          if (props.rotation) {
-            html += `<div style="margin-top:4px;color:#CBD5E1;">Rotation: ${props.rotation}°</div>`
-          }
-          // System/component info (read-only in normal mode)
+          // System/component — show deduplicated
           if (props.id && allComponentsRef.current.length > 0 && !isEditing) {
             const currentCompId = props.system_component_id || ''
             const currentComp = allComponentsRef.current.find(c => c.id === currentCompId)
             if (currentComp) {
-              html += `<div style="margin-top:6px;font-size:10px;color:#94A3B8;">${currentComp.system_name} &mdash; ${currentComp.label}</div>`
+              // Only show component label after system name if they differ
+              const sysName = currentComp.system_name
+              const compLabel = currentComp.label
+              if (sysName === compLabel || sysName.endsWith(compLabel)) {
+                html += `<div style="font-size:10px;color:#94A3B8;">${sysName}</div>`
+              } else {
+                html += `<div style="font-size:10px;color:#94A3B8;">${sysName} &mdash; ${compLabel}</div>`
+              }
             }
+          }
+          if (props.notes) {
+            html += `<div style="margin-top:4px;font-size:10px;color:#94A3B8;">${props.notes}</div>`
           }
           // Status toggle button (always visible)
           if (props.id) {
