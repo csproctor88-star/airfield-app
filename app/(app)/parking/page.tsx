@@ -153,6 +153,53 @@ async function loadSvgElement(path: string): Promise<SVGElement | null> {
 // Fixed reference size for SVG rendering — Mapbox icon-size handles scaling
 const REF_ICON_SIZE = 256
 
+/** Tighten an SVG's viewBox to the actual content bounding box.
+ *  All silhouette SVGs use a fixed 80×80 viewBox, but smaller aircraft
+ *  only occupy a fraction of it. This crops to the actual path content. */
+function tightenSvgViewBox(svg: SVGElement): SVGElement {
+  const clone = svg.cloneNode(true) as SVGElement
+
+  // Temporarily insert into DOM to use getBBox()
+  const container = document.createElement('div')
+  container.style.position = 'absolute'
+  container.style.left = '-9999px'
+  container.style.top = '-9999px'
+  container.style.width = '200px'
+  container.style.height = '200px'
+  document.body.appendChild(container)
+
+  // Need an actual SVGSVGElement in the DOM for getBBox
+  const svgNs = 'http://www.w3.org/2000/svg'
+  const tempSvg = document.createElementNS(svgNs, 'svg') as SVGSVGElement
+  tempSvg.setAttribute('viewBox', clone.getAttribute('viewBox') || '0 0 80 80')
+  tempSvg.innerHTML = clone.innerHTML
+  container.appendChild(tempSvg)
+
+  try {
+    // Get bounding box of all content
+    const paths = tempSvg.querySelectorAll('path, circle, rect, ellipse, polygon, polyline, line')
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    paths.forEach(el => {
+      try {
+        const bbox = (el as SVGGraphicsElement).getBBox()
+        minX = Math.min(minX, bbox.x)
+        minY = Math.min(minY, bbox.y)
+        maxX = Math.max(maxX, bbox.x + bbox.width)
+        maxY = Math.max(maxY, bbox.y + bbox.height)
+      } catch { /* skip elements that can't compute bbox */ }
+    })
+
+    if (minX < Infinity) {
+      const pad = 0.5  // small SVG-unit padding
+      clone.setAttribute('viewBox', `${minX - pad} ${minY - pad} ${maxX - minX + pad * 2} ${maxY - minY + pad * 2}`)
+    }
+  } finally {
+    document.body.removeChild(container)
+  }
+
+  return clone
+}
+
 /** Render an SVG silhouette to a fixed-size canvas image.
  *  Scaling to real-world size is handled by icon-size in the symbol layer. */
 async function renderSilhouetteImage(
@@ -165,6 +212,9 @@ async function renderSilhouetteImage(
 
   const svg = await loadSvgElement(svgPath)
   if (!svg) return null
+
+  // Tighten viewBox so aircraft fills the image (SVGs share a fixed 80×80 viewBox)
+  const tightSvg = tightenSvgViewBox(svg)
 
   // Render to a fixed canvas — aspect ratio from aircraft dimensions
   const aspect = lengthFt / wingspanFt
@@ -183,7 +233,7 @@ async function renderSilhouetteImage(
   canvas.height = h + padding * 2
   const ctx = canvas.getContext('2d')!
 
-  const svgMarkup = new XMLSerializer().serializeToString(svg)
+  const svgMarkup = new XMLSerializer().serializeToString(tightSvg)
   const recolored = svgMarkup
     .replace(/fill="[^"]*"/g, 'fill="#E0E7FF"')
     .replace(/stroke="[^"]*"/g, 'stroke="#1E293B"')
