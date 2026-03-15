@@ -337,7 +337,10 @@ export default function ParkingPage() {
   const [editingObstacle, setEditingObstacle] = useState<ParkingObstacle | null>(null)
   const [showClearances, setShowClearances] = useState(true)
   const [apronContext, setApronContext] = useState<ApronContext>('parking')
-  const [panelTab, setPanelTab] = useState<'aircraft' | 'obstacles' | 'taxilanes' | 'clearance' | 'reference'>('aircraft')
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({ aircraft: true, obstacles: false, taxilanes: false, clearance: true, settings: false, reference: false })
+  const [visibleLayers, setVisibleLayers] = useState<Record<string, boolean>>({ aircraft: true, obstacles: true, taxilanes: true, boundaries: true, clearance: true })
+  const toggleLayerVisibility = (key: string) => setVisibleLayers(prev => ({ ...prev, [key]: !prev[key] }))
+  const toggleSection = (key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
   const [aircraftCategoryFilter, setAircraftCategoryFilter] = useState<'all' | 'military' | 'commercial'>('all')
   const [editingTaxilane, setEditingTaxilane] = useState<ParkingTaxilane | null>(null)
   const [editingBoundary, setEditingBoundary] = useState<ParkingApronBoundary | null>(null)
@@ -354,6 +357,15 @@ export default function ParkingPage() {
   // Apron boundary drawing state
   const [drawingBoundaryPoints, setDrawingBoundaryPoints] = useState<[number, number][]>([])
   const [drawingBoundaryId, setDrawingBoundaryId] = useState<string | null>(null)
+
+  // Freeform obstacle drawing state (circle drag / building drag)
+  const [drawingObsType, setDrawingObsType] = useState<'circle' | 'building' | null>(null)
+  const [drawingObsStart, setDrawingObsStart] = useState<[number, number] | null>(null) // [lng, lat] mousedown point
+  const [drawingObsCurrent, setDrawingObsCurrent] = useState<[number, number] | null>(null) // [lng, lat] current mouse
+  const drawingObsTypeRef = useRef(drawingObsType)
+  drawingObsTypeRef.current = drawingObsType
+  const drawingObsStartRef = useRef(drawingObsStart)
+  drawingObsStartRef.current = drawingObsStart
 
   // Lock mode — prevents dragging when locked
   const [planLocked, setPlanLocked] = useState(false)
@@ -544,6 +556,60 @@ export default function ParkingPage() {
 
       const { lng, lat } = e.lngLat
 
+      // ── Freeform obstacle drawing — second click finalizes ──
+      if (drawingObsType && drawingObsStart && installationId) {
+        const [startLng, startLat] = drawingObsStart
+        const { distanceFt } = await import('@/lib/calculations/geometry')
+
+        if (drawingObsType === 'circle') {
+          const radius = distanceFt({ lat: startLat, lon: startLng }, { lat, lon: lng })
+          if (radius < 5) { toast.error('Drag further to set radius'); return }
+          const obs = await createParkingObstacle({
+            base_id: installationId,
+            obstacle_type: 'circle',
+            longitude: startLng,
+            latitude: startLat,
+            radius_ft: Math.round(radius),
+            name: `Circle ${obstacles.length + 1}`,
+          })
+          if (obs) {
+            setObstacles(prev => [...prev, obs])
+            setEditingObstacle(obs)
+            setOpenSections(prev => ({ ...prev, obstacles: true }))
+            toast.success(`Circle placed (${Math.round(radius)}ft radius)`)
+          }
+        } else if (drawingObsType === 'building') {
+          // Compute width/length from start→current in local frame
+          const dEastFt = (lng - startLng) * 111319.9 * Math.cos(((startLat + lat) / 2) * Math.PI / 180) * 3.28084
+          const dNorthFt = (lat - startLat) * 111319.9 * 3.28084
+          const widthFt = Math.abs(dEastFt)
+          const lengthFt = Math.abs(dNorthFt)
+          if (widthFt < 5 && lengthFt < 5) { toast.error('Drag further to set size'); return }
+          // Center is midpoint
+          const centerLng = (startLng + lng) / 2
+          const centerLat = (startLat + lat) / 2
+          const obs = await createParkingObstacle({
+            base_id: installationId,
+            obstacle_type: 'building',
+            longitude: centerLng,
+            latitude: centerLat,
+            width_ft: Math.round(Math.max(widthFt, 10)),
+            length_ft: Math.round(Math.max(lengthFt, 10)),
+            name: `Building ${obstacles.length + 1}`,
+          })
+          if (obs) {
+            setObstacles(prev => [...prev, obs])
+            setEditingObstacle(obs)
+            setOpenSections(prev => ({ ...prev, obstacles: true }))
+            toast.success(`Building placed (${Math.round(widthFt)}×${Math.round(lengthFt)}ft)`)
+          }
+        }
+        setDrawingObsType(null)
+        setDrawingObsStart(null)
+        setDrawingObsCurrent(null)
+        return
+      }
+
       if (placingAircraft && selectedPlanId && installationId) {
         const ws = parseNum(placingAircraft.wing_span_ft)
         const clearance = getWingtipClearance(ws, apronContext, placingAircraft.aircraft)
@@ -563,7 +629,7 @@ export default function ParkingPage() {
         if (spot) {
           setSpots(prev => [...prev, spot])
           setEditingSpot(spot)
-          setPanelTab('aircraft')
+          setOpenSections(prev => ({ ...prev, aircraft: true }))
           toast.success(`Placed ${placingAircraft.aircraft}`)
         } else {
           toast.error('Failed to place aircraft')
@@ -610,15 +676,23 @@ export default function ParkingPage() {
           return
         }
 
+        // Building & circle: enter freeform drag-draw mode
+        if (placingObstacle === 'building' || placingObstacle === 'circle') {
+          setDrawingObsType(placingObstacle)
+          setDrawingObsStart([lng, lat])
+          setDrawingObsCurrent([lng, lat])
+          setPlacingObstacle(null)
+          toast.success(`Click and drag to set ${placingObstacle === 'circle' ? 'radius' : 'size'}. Release to confirm.`)
+          return
+        }
+
+        // Point: instant place
         const obs = await createParkingObstacle({
           base_id: installationId,
           obstacle_type: placingObstacle,
           longitude: lng,
           latitude: lat,
           name: `Obstacle ${obstacles.length + 1}`,
-          width_ft: placingObstacle === 'building' ? 100 : undefined,
-          length_ft: placingObstacle === 'building' ? 200 : undefined,
-          radius_ft: placingObstacle === 'circle' ? 50 : undefined,
         })
 
         if (obs) {
@@ -633,7 +707,7 @@ export default function ParkingPage() {
 
     m.on('click', handleClick)
     return () => { m.off('click', handleClick) }
-  }, [mapLoaded, placingAircraft, placingObstacle, selectedPlanId, installationId, obstacles.length, drawingLineObsId, drawingTaxilaneId, drawingBoundaryId])
+  }, [mapLoaded, placingAircraft, placingObstacle, selectedPlanId, installationId, obstacles.length, drawingLineObsId, drawingTaxilaneId, drawingBoundaryId, drawingObsType, drawingObsStart])
 
   // ── Render aircraft on map ──
 
@@ -682,7 +756,7 @@ export default function ParkingPage() {
       })
     }
 
-    if (showClearances && clearanceFeatures.length > 0) {
+    if (showClearances && visibleLayers.clearance && clearanceFeatures.length > 0) {
       m.addSource('parking-clearance', {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: clearanceFeatures },
@@ -763,7 +837,7 @@ export default function ParkingPage() {
       }
     }
 
-    if (obstacleFeatures.length > 0) {
+    if (obstacleFeatures.length > 0 && visibleLayers.obstacles) {
       m.addSource('parking-obstacles-src', {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: obstacleFeatures },
@@ -872,7 +946,7 @@ export default function ParkingPage() {
       })
     }
 
-    if (taxilaneEnvelopeFeatures.length > 0 && showClearances) {
+    if (taxilaneEnvelopeFeatures.length > 0 && showClearances && visibleLayers.taxilanes) {
       m.addSource('parking-taxilane-envelopes', {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: taxilaneEnvelopeFeatures },
@@ -887,7 +961,7 @@ export default function ParkingPage() {
       })
     }
 
-    if (taxilaneCenterlineFeatures.length > 0) {
+    if (taxilaneCenterlineFeatures.length > 0 && visibleLayers.taxilanes) {
       m.addSource('parking-taxilane-centerlines', {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: taxilaneCenterlineFeatures },
@@ -928,7 +1002,7 @@ export default function ParkingPage() {
       })
     }
 
-    if (apronBoundaryFeatures.length > 0) {
+    if (apronBoundaryFeatures.length > 0 && visibleLayers.boundaries) {
       m.addSource('parking-apron-boundaries-src', {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: apronBoundaryFeatures },
@@ -969,7 +1043,7 @@ export default function ParkingPage() {
       geometry: { type: 'Point', coordinates: [s.longitude, s.latitude] },
     }))
 
-    if (aircraftFeatures.length > 0) {
+    if (aircraftFeatures.length > 0 && visibleLayers.aircraft) {
       m.addSource('parking-aircraft', {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: aircraftFeatures },
@@ -1041,7 +1115,7 @@ export default function ParkingPage() {
 
       registerImages()
     }
-  }, [mapLoaded, spotsWithAircraft, obstacles, taxilanes, apronBoundaries, allResults, showClearances, apronContext])
+  }, [mapLoaded, spotsWithAircraft, obstacles, taxilanes, apronBoundaries, allResults, showClearances, apronContext, visibleLayers])
 
   // ── Update icon scale on zoom change ──
   // Images are fixed-size; only the iconScale property needs updating on zoom.
@@ -1086,13 +1160,21 @@ export default function ParkingPage() {
     const m = map.current
     if (!m || !mapLoaded) return
 
+    // Build a tolerance bounding box around a point for easier click targets
+    const hitBox = (pt: mapboxgl.Point, tolerance = 8): [mapboxgl.PointLike, mapboxgl.PointLike] => [
+      [pt.x - tolerance, pt.y - tolerance],
+      [pt.x + tolerance, pt.y + tolerance],
+    ]
+
     const onMouseDown = (e: mapboxgl.MapMouseEvent) => {
       // Don't start drag when plan is locked
       if (planLockedRef.current) return
 
+      const box = hitBox(e.point)
+
       // Check aircraft layer first
       if (m.getLayer('parking-aircraft-symbols')) {
-        const acFeatures = m.queryRenderedFeatures(e.point, { layers: ['parking-aircraft-symbols'] })
+        const acFeatures = m.queryRenderedFeatures(box, { layers: ['parking-aircraft-symbols'] })
         if (acFeatures.length) {
           const spotId = acFeatures[0].properties?.spotId
           if (spotId) {
@@ -1107,13 +1189,15 @@ export default function ParkingPage() {
         }
       }
 
-      // Check obstacle layers (points and polygon fills)
+      // Check obstacle layers (points, polygon fills, lines, labels)
       const obsLayers: string[] = []
       if (m.getLayer('parking-obstacles-points')) obsLayers.push('parking-obstacles-points')
       if (m.getLayer('parking-obstacles-fill')) obsLayers.push('parking-obstacles-fill')
       if (m.getLayer('parking-obstacles-lines-stroke')) obsLayers.push('parking-obstacles-lines-stroke')
+      if (m.getLayer('parking-obstacles-labels')) obsLayers.push('parking-obstacles-labels')
+      if (m.getLayer('parking-obstacles-line')) obsLayers.push('parking-obstacles-line')
       if (obsLayers.length > 0) {
-        const obsFeatures = m.queryRenderedFeatures(e.point, { layers: obsLayers })
+        const obsFeatures = m.queryRenderedFeatures(box, { layers: obsLayers })
         if (obsFeatures.length) {
           const matchId = obsFeatures[0].properties?.obsId
           const matchObs = matchId ? obstaclesRef.current.find(o => o.id === matchId) : null
@@ -1177,6 +1261,12 @@ export default function ParkingPage() {
     }
 
     const onMouseMove = (e: mapboxgl.MapMouseEvent) => {
+      // ── Freeform obstacle drawing ──
+      if (drawingObsTypeRef.current && drawingObsStartRef.current) {
+        setDrawingObsCurrent([e.lngLat.lng, e.lngLat.lat])
+        return
+      }
+
       if (!isDraggingRef.current) return
 
       const { lng, lat } = e.lngLat
@@ -1348,6 +1438,10 @@ export default function ParkingPage() {
     m.on('mouseleave', 'parking-obstacles-points', onObsLeave)
     m.on('mouseenter', 'parking-obstacles-fill', onObsEnter)
     m.on('mouseleave', 'parking-obstacles-fill', onObsLeave)
+    m.on('mouseenter', 'parking-obstacles-labels', onObsEnter)
+    m.on('mouseleave', 'parking-obstacles-labels', onObsLeave)
+    m.on('mouseenter', 'parking-obstacles-lines-stroke', onObsEnter)
+    m.on('mouseleave', 'parking-obstacles-lines-stroke', onObsLeave)
 
     return () => {
       canvas.removeEventListener('mousedown', onCanvasMouseDown)
@@ -1359,6 +1453,10 @@ export default function ParkingPage() {
       m.off('mouseleave', 'parking-obstacles-points', onObsLeave)
       m.off('mouseenter', 'parking-obstacles-fill', onObsEnter)
       m.off('mouseleave', 'parking-obstacles-fill', onObsLeave)
+      m.off('mouseenter', 'parking-obstacles-labels', onObsEnter)
+      m.off('mouseleave', 'parking-obstacles-labels', onObsLeave)
+      m.off('mouseenter', 'parking-obstacles-lines-stroke', onObsEnter)
+      m.off('mouseleave', 'parking-obstacles-lines-stroke', onObsLeave)
     }
   }, [mapLoaded]) // Only re-register on map load — refs handle current data
 
@@ -1468,7 +1566,7 @@ export default function ParkingPage() {
       setTaxilanes(prev => [...prev, tl])
       toast.success('Taxilane created')
       setEditingTaxilane(tl)
-      setPanelTab('taxilanes')
+      setOpenSections(prev => ({ ...prev, taxilanes: true }))
     }
     setDrawingTaxilaneId(null)
     setDrawingTaxilanePoints([])
@@ -1686,6 +1784,73 @@ export default function ParkingPage() {
     }
   }, [mapLoaded, drawingTaxilanePoints, drawingTaxilaneType, drawingBoundaryPoints])
 
+  // ── Render freeform obstacle drawing preview ──
+
+  useEffect(() => {
+    const m = map.current
+    if (!m || !mapLoaded) return
+
+    const srcId = 'parking-drawing-obs'
+    const fillId = 'parking-drawing-obs-fill'
+    const lineId = 'parking-drawing-obs-line'
+
+    if (drawingObsType && drawingObsStart && drawingObsCurrent) {
+      const [startLng, startLat] = drawingObsStart
+      const [curLng, curLat] = drawingObsCurrent
+      let features: GeoJSON.Feature[] = []
+
+      if (drawingObsType === 'circle') {
+        // Preview circle from center to cursor
+        const dEast = (curLng - startLng) * 111319.9 * Math.cos(startLat * Math.PI / 180) * 3.28084
+        const dNorth = (curLat - startLat) * 111319.9 * 3.28084
+        const radiusFt = Math.sqrt(dEast * dEast + dNorth * dNorth)
+        if (radiusFt > 1) {
+          const center = { lat: startLat, lon: startLng }
+          const segs = 48
+          const coords: [number, number][] = []
+          for (let i = 0; i <= segs; i++) {
+            const bearing = (360 * i) / segs
+            const pt = offsetPoint(center, bearing, radiusFt)
+            coords.push([pt.lon, pt.lat])
+          }
+          features.push({
+            type: 'Feature', properties: { label: `${Math.round(radiusFt)}ft` },
+            geometry: { type: 'Polygon', coordinates: [coords] },
+          })
+        }
+      } else if (drawingObsType === 'building') {
+        // Preview rectangle from corner to corner
+        features.push({
+          type: 'Feature', properties: {},
+          geometry: {
+            type: 'Polygon',
+            coordinates: [[
+              [startLng, startLat],
+              [curLng, startLat],
+              [curLng, curLat],
+              [startLng, curLat],
+              [startLng, startLat],
+            ]],
+          },
+        })
+      }
+
+      const data: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features }
+      const src = m.getSource(srcId) as mapboxgl.GeoJSONSource | undefined
+      if (src) {
+        src.setData(data)
+      } else {
+        m.addSource(srcId, { type: 'geojson', data })
+        m.addLayer({ id: fillId, type: 'fill', source: srcId, paint: { 'fill-color': '#F97316', 'fill-opacity': 0.3 } })
+        m.addLayer({ id: lineId, type: 'line', source: srcId, paint: { 'line-color': '#F97316', 'line-width': 2, 'line-dasharray': [4, 3] } })
+      }
+    } else {
+      if (m.getLayer(fillId)) m.removeLayer(fillId)
+      if (m.getLayer(lineId)) m.removeLayer(lineId)
+      if (m.getSource(srcId)) m.removeSource(srcId)
+    }
+  }, [mapLoaded, drawingObsType, drawingObsStart, drawingObsCurrent])
+
   // ── Fly to clearance result ──
 
   const flyToResult = (result: ClearanceResult) => {
@@ -1736,251 +1901,129 @@ export default function ParkingPage() {
     )
   }
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: 'var(--color-bg)' }}>
-      {/* Header bar */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '8px 16px', borderBottom: '1px solid var(--color-border)',
-        background: 'var(--color-bg-surface)', flexShrink: 0,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <h1 style={{ fontSize: 'var(--fs-lg)', fontWeight: 600, margin: 0, color: 'var(--color-text-primary)' }}>
-            Aircraft Parking
-          </h1>
-          {selectedPlan && (
-            <span style={{
-              fontSize: 'var(--fs-xs)', padding: '2px 8px', borderRadius: 4,
-              background: selectedPlan.is_active ? '#22C55E22' : 'var(--color-bg)',
-              color: selectedPlan.is_active ? '#22C55E' : 'var(--color-text-secondary)',
-              border: `1px solid ${selectedPlan.is_active ? '#22C55E44' : 'var(--color-border)'}`,
-            }}>
-              {selectedPlan.is_active ? 'Active' : 'Draft'}
-            </span>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Plan selector */}
-          <select
-            value={selectedPlanId || ''}
-            onChange={e => setSelectedPlanId(e.target.value || null)}
-            style={{
-              padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-sm)',
-              background: 'var(--color-bg)', color: 'var(--color-text-primary)',
-              border: '1px solid var(--color-border)', cursor: 'pointer',
-            }}
-          >
-            <option value="">No Plan Selected</option>
-            {plans.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.plan_name}{p.is_active ? ' (Active)' : ''}
-              </option>
-            ))}
-          </select>
-
-          <button
-            onClick={() => setShowNewPlan(true)}
-            style={{
-              padding: '4px 12px', borderRadius: 4, fontSize: 'var(--fs-sm)',
-              background: 'var(--color-cyan)', color: '#000', border: 'none',
-              cursor: 'pointer', fontWeight: 500,
-            }}
-          >
-            + New Plan
-          </button>
-        </div>
-      </div>
-
-      {/* Status bar */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '4px 16px', borderBottom: '1px solid var(--color-border)',
-        background: 'var(--color-bg-surface)', fontSize: 'var(--fs-sm)', flexShrink: 0,
-      }}>
-        <span style={{ color: 'var(--color-text-secondary)' }}>
-          {spots.length} Aircraft{taxilanes.length > 0 ? ` · ${taxilanes.length} Taxilane${taxilanes.length !== 1 ? 's' : ''}` : ''}
-        </span>
-        <span style={{ color: violations.length > 0 ? '#EF4444' : 'var(--color-text-secondary)' }}>
-          {violations.length} Violation{violations.length !== 1 ? 's' : ''}
-        </span>
-        <span style={{ color: warnings.length > 0 ? '#F59E0B' : 'var(--color-text-secondary)' }}>
-          {warnings.length} Warning{warnings.length !== 1 ? 's' : ''}
-        </span>
-        <div style={{ flex: 1 }} />
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)' }}>
-          UFC 3-260-01 Table 6-1a:
-          <select
-            value={apronContext}
-            onChange={e => setApronContext(e.target.value as ApronContext)}
-            style={{
-              padding: '2px 6px', borderRadius: 3, fontSize: 'var(--fs-xs)',
-              border: '1px solid var(--color-border)', background: 'var(--color-bg)',
-              color: 'var(--color-text-primary)',
-            }}
-          >
-            {(Object.entries(APRON_CONTEXT_LABELS) as [ApronContext, string][]).map(([val, label]) => (
-              <option key={val} value={val}>{label}</option>
-            ))}
-          </select>
-        </label>
+  // Collapsible section header helper
+  const SectionHeader = ({ id, label, count, color, badge, layerKey }: { id: string; label: string; count?: number; color?: string; badge?: string; layerKey?: string }) => (
+    <div style={{
+      display: 'flex', alignItems: 'center', width: '100%',
+      background: openSections[id] ? 'var(--color-bg)' : 'transparent',
+      borderBottom: '1px solid var(--color-border)',
+    }}>
+      <button
+        onClick={() => toggleSection(id)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6, flex: 1,
+          padding: '7px 10px', border: 'none', cursor: 'pointer',
+          background: 'transparent',
+          color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+          textAlign: 'left',
+        }}
+      >
+        <span style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>{openSections[id] ? '\u25BC' : '\u25B6'}</span>
+        {label}
+        {count != null && count > 0 && (
+          <span style={{ fontSize: 10, padding: '0 5px', borderRadius: 8, background: `${color || 'var(--color-cyan)'}22`, color: color || 'var(--color-cyan)' }}>
+            {count}
+          </span>
+        )}
+        {badge && (
+          <span style={{ fontSize: 10, padding: '0 5px', borderRadius: 8, marginLeft: 'auto', background: `${color || '#EF4444'}22`, color: color || '#EF4444', fontWeight: 700 }}>
+            {badge}
+          </span>
+        )}
+      </button>
+      {layerKey && (
         <button
-          onClick={() => setPlanLocked(l => !l)}
+          onClick={(e) => { e.stopPropagation(); toggleLayerVisibility(layerKey) }}
+          title={visibleLayers[layerKey] ? 'Hide on map' : 'Show on map'}
           style={{
-            padding: '2px 8px', borderRadius: 3, fontSize: 'var(--fs-xs)',
-            background: planLocked ? '#EF444422' : '#22C55E22',
-            border: `1px solid ${planLocked ? '#EF444444' : '#22C55E44'}`,
-            color: planLocked ? '#EF4444' : '#22C55E',
-            cursor: 'pointer', fontWeight: 500,
+            padding: '4px 8px', border: 'none', cursor: 'pointer', background: 'transparent',
+            fontSize: 14, lineHeight: 1, color: visibleLayers[layerKey] ? 'var(--color-cyan)' : 'var(--color-text-secondary)',
+            opacity: visibleLayers[layerKey] ? 1 : 0.4,
           }}
         >
-          {planLocked ? 'Locked' : 'Unlocked'}
+          {visibleLayers[layerKey] ? '\u25C9' : '\u25CB'}
         </button>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
-          <input type="checkbox" checked={showClearances} onChange={e => setShowClearances(e.target.checked)} />
-          Show Clearances
-        </label>
-      </div>
+      )}
+    </div>
+  )
 
-      {/* Placement mode indicator */}
-      {(placingAircraft || placingObstacle || drawingLineObsId || drawingTaxilaneId || drawingBoundaryId) && (
-        <div style={{
-          padding: '6px 16px',
-          background: drawingTaxilaneId ? (drawingTaxilaneType === 'peripheral' ? '#8B5CF622' : '#3B82F622') : drawingBoundaryId ? '#10B98122' : '#F59E0B22',
-          borderBottom: `1px solid ${drawingTaxilaneId ? (drawingTaxilaneType === 'peripheral' ? '#8B5CF644' : '#3B82F644') : drawingBoundaryId ? '#10B98144' : '#F59E0B44'}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          fontSize: 'var(--fs-sm)',
-          color: drawingTaxilaneId ? (drawingTaxilaneType === 'peripheral' ? '#8B5CF6' : '#3B82F6') : drawingBoundaryId ? '#10B981' : '#F59E0B',
-          flexShrink: 0,
-        }}>
-          <span>
-            {drawingTaxilaneId
-              ? `Drawing ${drawingTaxilaneType} taxilane (${drawingTaxilanePoints.length} point${drawingTaxilanePoints.length !== 1 ? 's' : ''})`
-              : drawingBoundaryId
-              ? `Drawing apron boundary (${drawingBoundaryPoints.length} point${drawingBoundaryPoints.length !== 1 ? 's' : ''})`
-              : drawingLineObsId
-              ? `Drawing line obstacle (${drawingLinePoints.length} point${drawingLinePoints.length !== 1 ? 's' : ''})`
-              : `Click on the map to place ${placingAircraft ? placingAircraft.aircraft : `${placingObstacle} obstacle`}`
-            }
-          </span>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {drawingTaxilaneId && (
-              <button
-                onClick={handleFinishTaxilane}
-                style={{ background: drawingTaxilaneType === 'peripheral' ? '#8B5CF6' : '#3B82F6', border: 'none', color: '#FFF', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 600, fontSize: 'var(--fs-xs)' }}
-              >
-                Finish Taxilane
-              </button>
+  return (
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--color-bg)' }}>
+      {/* ── Left Sidebar ── */}
+      <div style={{
+        width: 320, flexShrink: 0, display: 'flex', flexDirection: 'column',
+        borderRight: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
+        overflow: 'hidden',
+      }}>
+        {/* Sidebar header — plan selector */}
+        <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+            <h1 style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, margin: 0, color: 'var(--color-text-primary)', flex: 1 }}>
+              Aircraft Parking
+            </h1>
+            {selectedPlan && (
+              <span style={{
+                fontSize: 10, padding: '1px 6px', borderRadius: 3,
+                background: selectedPlan.is_active ? '#22C55E22' : 'var(--color-bg)',
+                color: selectedPlan.is_active ? '#22C55E' : 'var(--color-text-secondary)',
+                border: `1px solid ${selectedPlan.is_active ? '#22C55E44' : 'var(--color-border)'}`,
+              }}>
+                {selectedPlan.is_active ? 'Active' : 'Draft'}
+              </span>
             )}
-            {drawingBoundaryId && (
-              <button
-                onClick={handleFinishBoundary}
-                style={{ background: '#10B981', border: 'none', color: '#FFF', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 600, fontSize: 'var(--fs-xs)' }}
-              >
-                Finish Boundary
-              </button>
-            )}
-            {drawingLineObsId && (
-              <button
-                onClick={handleFinishLine}
-                style={{ background: '#F97316', border: 'none', color: '#000', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 600, fontSize: 'var(--fs-xs)' }}
-              >
-                Finish Line
-              </button>
-            )}
-            <button
-              onClick={() => {
-                setPlacingAircraft(null)
-                setPlacingObstacle(null)
-                if (drawingLineObsId) {
-                  handleDeleteObstacle(drawingLineObsId)
-                  setDrawingLineObsId(null)
-                  setDrawingLinePoints([])
-                }
-                if (drawingTaxilaneId) {
-                  setDrawingTaxilaneId(null)
-                  setDrawingTaxilanePoints([])
-                }
-                if (drawingBoundaryId) {
-                  setDrawingBoundaryId(null)
-                  setDrawingBoundaryPoints([])
-                }
+          </div>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <select
+              value={selectedPlanId || ''}
+              onChange={e => setSelectedPlanId(e.target.value || null)}
+              style={{
+                flex: 1, padding: '4px 6px', borderRadius: 4, fontSize: 'var(--fs-xs)',
+                background: 'var(--color-bg)', color: 'var(--color-text-primary)',
+                border: '1px solid var(--color-border)', cursor: 'pointer',
               }}
-              style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
             >
-              Cancel
+              <option value="">No Plan Selected</option>
+              {plans.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.plan_name}{p.is_active ? ' (Active)' : ''}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => setShowNewPlan(true)}
+              style={{
+                padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
+                background: 'var(--color-cyan)', color: '#000', border: 'none',
+                cursor: 'pointer', fontWeight: 600,
+              }}
+            >
+              +
             </button>
           </div>
-        </div>
-      )}
-
-      {/* Top panel strip — tabs + content above the map */}
-      <div style={{
-        borderBottom: '1px solid var(--color-border)',
-        background: 'var(--color-bg-surface)',
-        display: 'flex', flexDirection: 'column', maxHeight: '30vh',
-        flexShrink: 0, overflow: 'hidden',
-      }}>
-        {/* Tab row + plan actions */}
-        <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--color-border)' }}>
-          <div style={{ display: 'flex', flex: 1 }}>
-            {(['aircraft', 'obstacles', 'taxilanes', 'clearance', 'reference'] as const).map(tab => (
-              <button
-                key={tab}
-                onClick={() => setPanelTab(tab)}
-                style={{
-                  padding: '6px 16px', border: 'none', cursor: 'pointer',
-                  fontSize: 'var(--fs-xs)', textTransform: 'capitalize',
-                  background: panelTab === tab ? 'var(--color-bg)' : 'transparent',
-                  color: panelTab === tab ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-                  borderBottom: panelTab === tab ? '2px solid var(--color-cyan)' : '2px solid transparent',
-                }}
-              >
-                {tab}
-                {tab === 'taxilanes' && taxilanes.length > 0 && (
-                  <span style={{
-                    marginLeft: 4, fontSize: 10, padding: '0 4px', borderRadius: 8,
-                    background: '#3B82F622', color: '#3B82F6',
-                  }}>
-                    {taxilanes.length}
-                  </span>
-                )}
-                {tab === 'clearance' && (violations.length + warnings.length > 0) && (
-                  <span style={{
-                    marginLeft: 4, fontSize: 10, padding: '0 4px', borderRadius: 8,
-                    background: violations.length > 0 ? '#EF444422' : '#F59E0B22',
-                    color: violations.length > 0 ? '#EF4444' : '#F59E0B',
-                  }}>
-                    {violations.length + warnings.length}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
           {selectedPlan && (
-            <div style={{ display: 'flex', gap: 4, padding: '0 8px' }}>
+            <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
               {!selectedPlan.is_active && (
-                <button
-                  onClick={handleSetActive}
-                  style={{ padding: '4px 8px', borderRadius: 4, background: '#22C55E22', border: '1px solid #22C55E44', color: '#22C55E', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}
-                >
-                  Set Active
-                </button>
+                <button onClick={handleSetActive} style={{ flex: 1, padding: '3px 6px', borderRadius: 3, background: '#22C55E22', border: '1px solid #22C55E44', color: '#22C55E', cursor: 'pointer', fontSize: 10 }}>Set Active</button>
               )}
-              <button
-                onClick={handleDeletePlan}
-                style={{ padding: '4px 8px', borderRadius: 4, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}
-              >
-                Delete Plan
-              </button>
+              <button onClick={handleDeletePlan} style={{ padding: '3px 6px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 10 }}>Delete</button>
             </div>
           )}
         </div>
 
-        {/* Panel content — scrollable horizontal for aircraft, vertical for others */}
-        <div style={{ overflow: 'auto', padding: 8 }}>
-          {/* Aircraft tab — compact vertical list */}
-          {panelTab === 'aircraft' && (
+        {/* Status summary */}
+        <div style={{ display: 'flex', gap: 8, padding: '5px 10px', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-xs)', flexShrink: 0, flexWrap: 'wrap' }}>
+          <span style={{ color: 'var(--color-text-secondary)' }}>{spots.length} AC</span>
+          {taxilanes.length > 0 && <span style={{ color: '#3B82F6' }}>{taxilanes.length} TL</span>}
+          <span style={{ color: violations.length > 0 ? '#EF4444' : 'var(--color-text-secondary)' }}>{violations.length} Viol</span>
+          <span style={{ color: warnings.length > 0 ? '#F59E0B' : 'var(--color-text-secondary)' }}>{warnings.length} Warn</span>
+        </div>
+
+        {/* Scrollable section content */}
+        <div style={{ flex: 1, overflow: 'auto' }}>
+
+          {/* ── Aircraft Section ── */}
+          <SectionHeader id="aircraft" label="Aircraft" count={spots.length} color="var(--color-cyan)" layerKey="aircraft" />
+          {openSections.aircraft && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               {selectedPlanId && (
                 <button
@@ -2125,8 +2168,9 @@ export default function ParkingPage() {
             </div>
           )}
 
-          {/* Obstacles tab — compact vertical list */}
-          {panelTab === 'obstacles' && (
+          {/* ── Obstacles Section ── */}
+          <SectionHeader id="obstacles" label="Obstacles" count={obstacles.length} color="#F97316" layerKey="obstacles" />
+          {openSections.obstacles && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
                 {(['point', 'building', 'line', 'circle'] as const).map(type => (
@@ -2242,8 +2286,9 @@ export default function ParkingPage() {
             </div>
           )}
 
-          {/* Taxilanes tab */}
-          {panelTab === 'taxilanes' && (
+          {/* ── Taxilanes Section ── */}
+          <SectionHeader id="taxilanes" label="Taxilanes" count={taxilanes.length} color="#3B82F6" layerKey="taxilanes" badge={allResults.filter(r => r.spot_b_id && taxilanes.some(t => t.id === r.spot_b_id) && r.status !== 'ok').length > 0 ? `${allResults.filter(r => r.spot_b_id && taxilanes.some(t => t.id === r.spot_b_id) && r.status !== 'ok').length}!` : undefined} />
+          {openSections.taxilanes && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               <div style={{ display: 'flex', gap: 4, marginBottom: 4, flexWrap: 'wrap' }}>
                 <button
@@ -2382,8 +2427,15 @@ export default function ParkingPage() {
 
               {/* Apron boundary list */}
               {apronBoundaries.length > 0 && (
-                <div style={{ fontSize: 'var(--fs-xs)', color: '#10B981', fontWeight: 600, padding: '6px 8px 2px', marginTop: taxilanes.length > 0 ? 4 : 0 }}>
-                  Apron Boundaries
+                <div style={{ display: 'flex', alignItems: 'center', fontSize: 'var(--fs-xs)', color: '#10B981', fontWeight: 600, padding: '6px 8px 2px', marginTop: taxilanes.length > 0 ? 4 : 0 }}>
+                  <span style={{ flex: 1 }}>Apron Boundaries</span>
+                  <button
+                    onClick={() => toggleLayerVisibility('boundaries')}
+                    title={visibleLayers.boundaries ? 'Hide on map' : 'Show on map'}
+                    style={{ padding: '0 4px', border: 'none', cursor: 'pointer', background: 'transparent', fontSize: 12, color: visibleLayers.boundaries ? '#10B981' : 'var(--color-text-secondary)', opacity: visibleLayers.boundaries ? 1 : 0.4 }}
+                  >
+                    {visibleLayers.boundaries ? '\u25C9' : '\u25CB'}
+                  </button>
                 </div>
               )}
               {apronBoundaries.map(ab => {
@@ -2436,8 +2488,9 @@ export default function ParkingPage() {
             </div>
           )}
 
-          {/* Clearance tab — compact vertical list */}
-          {panelTab === 'clearance' && (
+          {/* ── Clearance Section ── */}
+          <SectionHeader id="clearance" label="Clearance" count={violations.length + warnings.length} color={violations.length > 0 ? '#EF4444' : '#F59E0B'} layerKey="clearance" />
+          {openSections.clearance && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               {allResults.length === 0 && (
                 <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '4px 0', margin: 0 }}>
@@ -2479,8 +2532,49 @@ export default function ParkingPage() {
             </div>
           )}
 
-          {/* Reference tab — UFC Table 6-1a items */}
-          {panelTab === 'reference' && (
+          {/* ── Settings Section ── */}
+          <SectionHeader id="settings" label="Settings" />
+          {openSections.settings && (
+            <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6, borderBottom: '1px solid var(--color-border)' }}>
+              <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
+                UFC 3-260-01 Table 6-1a Context
+                <select
+                  value={apronContext}
+                  onChange={e => setApronContext(e.target.value as ApronContext)}
+                  style={{
+                    width: '100%', padding: '4px 6px', borderRadius: 3, fontSize: 'var(--fs-xs)', marginTop: 2,
+                    border: '1px solid var(--color-border)', background: 'var(--color-bg)',
+                    color: 'var(--color-text-primary)',
+                  }}
+                >
+                  {(Object.entries(APRON_CONTEXT_LABELS) as [ApronContext, string][]).map(([val, label]) => (
+                    <option key={val} value={val}>{label}</option>
+                  ))}
+                </select>
+              </label>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <button
+                  onClick={() => setPlanLocked(l => !l)}
+                  style={{
+                    flex: 1, padding: '4px 8px', borderRadius: 3, fontSize: 'var(--fs-xs)',
+                    background: planLocked ? '#EF444422' : '#22C55E22',
+                    border: `1px solid ${planLocked ? '#EF444444' : '#22C55E44'}`,
+                    color: planLocked ? '#EF4444' : '#22C55E',
+                    cursor: 'pointer', fontWeight: 500,
+                  }}
+                >
+                  {planLocked ? 'Locked — No Dragging' : 'Unlocked — Drag Enabled'}
+                </button>
+              </div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', marginTop: 2 }}>
+                Use the eye toggles on each section header to show/hide layers on the map.
+              </div>
+            </div>
+          )}
+
+          {/* ── Reference Section ── */}
+          <SectionHeader id="reference" label="UFC Reference" />
+          {openSections.reference && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               <p style={{ margin: '0 0 4px', fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
                 UFC 3-260-01 Table 6-1a — A/AF Apron Clearances (4 Feb 2019, Change 3)
@@ -2515,11 +2609,64 @@ export default function ParkingPage() {
               ))}
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Map — full width, takes remaining height */}
-      <div ref={mapContainer} style={{ flex: 1, minHeight: 0 }} />
+        </div>{/* end scrollable sections */}
+      </div>{/* end sidebar */}
+
+      {/* ── Map + overlay area ── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {/* Placement mode indicator — above map */}
+        {(placingAircraft || placingObstacle || drawingLineObsId || drawingTaxilaneId || drawingBoundaryId || drawingObsType) && (
+          <div style={{
+            padding: '6px 12px',
+            background: drawingTaxilaneId ? (drawingTaxilaneType === 'peripheral' ? '#8B5CF622' : '#3B82F622') : drawingBoundaryId ? '#10B98122' : drawingObsType ? '#F9731622' : '#F59E0B22',
+            borderBottom: `1px solid ${drawingTaxilaneId ? (drawingTaxilaneType === 'peripheral' ? '#8B5CF644' : '#3B82F644') : drawingBoundaryId ? '#10B98144' : '#F59E0B44'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            fontSize: 'var(--fs-sm)',
+            color: drawingTaxilaneId ? (drawingTaxilaneType === 'peripheral' ? '#8B5CF6' : '#3B82F6') : drawingBoundaryId ? '#10B981' : drawingObsType ? '#F97316' : '#F59E0B',
+            flexShrink: 0,
+          }}>
+            <span>
+              {drawingObsType
+                ? `Drawing ${drawingObsType} — move mouse to set ${drawingObsType === 'circle' ? 'radius' : 'size'}, click to confirm`
+                : drawingTaxilaneId
+                ? `Drawing ${drawingTaxilaneType} taxilane (${drawingTaxilanePoints.length} pts)`
+                : drawingBoundaryId
+                ? `Drawing apron boundary (${drawingBoundaryPoints.length} pts)`
+                : drawingLineObsId
+                ? `Drawing line obstacle (${drawingLinePoints.length} pts)`
+                : `Click map to place ${placingAircraft ? placingAircraft.aircraft : `${placingObstacle} obstacle`}`
+              }
+            </span>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {drawingTaxilaneId && (
+                <button onClick={handleFinishTaxilane} style={{ background: drawingTaxilaneType === 'peripheral' ? '#8B5CF6' : '#3B82F6', border: 'none', color: '#FFF', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 600, fontSize: 'var(--fs-xs)' }}>Finish</button>
+              )}
+              {drawingBoundaryId && (
+                <button onClick={handleFinishBoundary} style={{ background: '#10B981', border: 'none', color: '#FFF', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 600, fontSize: 'var(--fs-xs)' }}>Finish</button>
+              )}
+              {drawingLineObsId && (
+                <button onClick={handleFinishLine} style={{ background: '#F97316', border: 'none', color: '#000', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 600, fontSize: 'var(--fs-xs)' }}>Finish</button>
+              )}
+              <button
+                onClick={() => {
+                  setPlacingAircraft(null)
+                  setPlacingObstacle(null)
+                  if (drawingLineObsId) { handleDeleteObstacle(drawingLineObsId); setDrawingLineObsId(null); setDrawingLinePoints([]) }
+                  if (drawingTaxilaneId) { setDrawingTaxilaneId(null); setDrawingTaxilanePoints([]) }
+                  if (drawingBoundaryId) { setDrawingBoundaryId(null); setDrawingBoundaryPoints([]) }
+                  if (drawingObsType) { setDrawingObsType(null); setDrawingObsStart(null); setDrawingObsCurrent(null) }
+                }}
+                style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textDecoration: 'underline', fontSize: 'var(--fs-xs)' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div ref={mapContainer} style={{ flex: 1, minHeight: 0 }} />
+      </div>
 
       {/* Aircraft Picker Modal */}
       {showAircraftPicker && (
