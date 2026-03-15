@@ -356,6 +356,37 @@ export const TABLE_6_1A_ITEMS: Table6_1aItem[] = [
 export type SpotWithAircraft = ParkingSpot & {
   wingspan_ft: number
   length_ft: number
+  pivot_point_ft: number  // nose-to-nose-gear distance; 0 = center-based placement
+}
+
+/**
+ * Compute the aircraft center position from a nose gear block location.
+ * The spot stores the nose gear block position. The aircraft center is offset
+ * backward (opposite of heading) by half the fuselage length minus the pivot distance.
+ * pivot_point_ft = distance from nose tip to nose gear.
+ * Offset = length/2 - pivot_point_ft (moves center behind the nose gear).
+ */
+export function getAircraftCenter(
+  noseGearLon: number,
+  noseGearLat: number,
+  headingDeg: number,
+  lengthFt: number,
+  pivotPointFt: number,
+): { lon: number; lat: number } {
+  if (pivotPointFt <= 0) return { lon: noseGearLon, lat: noseGearLat }
+  // Distance from nose gear to aircraft center = (length/2) - pivotPointFt
+  const offsetFt = lengthFt / 2 - pivotPointFt
+  if (Math.abs(offsetFt) < 0.1) return { lon: noseGearLon, lat: noseGearLat }
+  // Offset is backward from heading (add 180°)
+  const backBearing = (headingDeg + 180) % 360
+  const result = offsetPoint({ lat: noseGearLat, lon: noseGearLon }, backBearing, offsetFt)
+  return { lon: result.lon, lat: result.lat }
+}
+
+/** Get the true aircraft center for a spot (accounting for nose gear offset) */
+export function spotCenter(spot: SpotWithAircraft): LatLon {
+  const c = getAircraftCenter(spot.longitude, spot.latitude, spot.heading_deg, spot.length_ft, spot.pivot_point_ft)
+  return { lat: c.lat, lon: c.lon }
 }
 
 // ── Clearance Result ──
@@ -425,7 +456,7 @@ export function generateClearanceZonePolygon(
   spot: SpotWithAircraft,
   clearanceFt: number
 ): [number, number][] {
-  const center: LatLon = { lat: spot.latitude, lon: spot.longitude }
+  const center: LatLon = spotCenter(spot)
   const totalWidth = spot.wingspan_ft / 2 + clearanceFt
   const totalLength = spot.length_ft / 2 + clearanceFt
   const segments = 64
@@ -454,8 +485,8 @@ export function checkWingtipClearance(
   spotB: SpotWithAircraft,
   apronContext: ApronContext = 'parking'
 ): ClearanceResult {
-  const centerA: LatLon = { lat: spotA.latitude, lon: spotA.longitude }
-  const centerB: LatLon = { lat: spotB.latitude, lon: spotB.longitude }
+  const centerA: LatLon = spotCenter(spotA)
+  const centerB: LatLon = spotCenter(spotB)
 
   const tipsA = getWingtipPositions(centerA, spotA.heading_deg, spotA.wingspan_ft)
   const tipsB = getWingtipPositions(centerB, spotB.heading_deg, spotB.wingspan_ft)
@@ -521,7 +552,7 @@ export function checkWingtipClearance(
 // ── Obstacle clearance check ──
 
 function distanceToAircraftRect(spot: SpotWithAircraft, obsPt: LatLon): number {
-  const center: LatLon = { lat: spot.latitude, lon: spot.longitude }
+  const center: LatLon = spotCenter(spot)
   const dLon = obsPt.lon - center.lon
   const dLat = obsPt.lat - center.lat
   const eastFt = dLon * 111319.9 * Math.cos(center.lat * Math.PI / 180) * 3.28084
@@ -750,7 +781,7 @@ export function checkTaxilaneClearance(
 ): ClearanceResult {
   const { halfWidth, detail } = getTaxilaneEnvelopeHalfWidth(taxilane)
 
-  const center: LatLon = { lat: spot.latitude, lon: spot.longitude }
+  const center: LatLon = spotCenter(spot)
 
   // Get all extremity points of the parked aircraft
   const corners = getAircraftCorners(center, spot.heading_deg, spot.wingspan_ft, spot.length_ft)

@@ -56,6 +56,8 @@ import {
   type SpotWithAircraft,
   type ClearanceResult,
   type TaxilaneForCheck,
+  getAircraftCenter,
+  spotCenter,
 } from '@/lib/calculations/parking-clearance'
 import { offsetPoint } from '@/lib/calculations/geometry'
 import { DEMO_PARKING_PLAN, DEMO_PARKING_SPOTS, DEMO_PARKING_OBSTACLES } from '@/lib/demo-data'
@@ -393,6 +395,7 @@ export default function ParkingPage() {
         ...s,
         wingspan_ft: ac ? parseNum(ac.wing_span_ft) : 50,
         length_ft: ac ? parseNum(ac.length_ft) : 60,
+        pivot_point_ft: ac ? parseNum(ac.nose_gear_ft) : 0,
       }
     })
   }, [spots])
@@ -728,6 +731,7 @@ export default function ParkingPage() {
     if (m.getSource('parking-taxilane-envelopes')) m.removeSource('parking-taxilane-envelopes')
     if (m.getSource('parking-taxilane-centerlines')) m.removeSource('parking-taxilane-centerlines')
     if (m.getSource('parking-apron-boundaries-src')) m.removeSource('parking-apron-boundaries-src')
+    if (m.getSource('parking-nose-gear')) m.removeSource('parking-nose-gear')
 
     // Clean up old silhouette images
     Array.from(silhouetteImagesRef.current).forEach(imgName => {
@@ -1027,21 +1031,34 @@ export default function ParkingPage() {
     }
 
     // Build aircraft GeoJSON with to-scale silhouettes
-    const aircraftFeatures: GeoJSON.Feature[] = spotsWithAircraft.map(s => ({
-      type: 'Feature',
-      properties: {
-        spotId: s.id,
-        name: s.aircraft_name || 'Aircraft',
-        wingspan: s.wingspan_ft,
-        length: s.length_ft,
-        heading: s.heading_deg,
-        tailNumber: s.tail_number || '',
-        adg: getADGFromWingspan(s.wingspan_ft),
-        iconId: `sil-${s.id}`,
-        iconScale: computeIconScale(s.wingspan_ft, s.length_ft, m),
-      },
-      geometry: { type: 'Point', coordinates: [s.longitude, s.latitude] },
-    }))
+    // Position = aircraft center (offset from nose gear block by pivot_point)
+    const aircraftFeatures: GeoJSON.Feature[] = spotsWithAircraft.map(s => {
+      const c = spotCenter(s)
+      return {
+        type: 'Feature',
+        properties: {
+          spotId: s.id,
+          name: s.aircraft_name || 'Aircraft',
+          wingspan: s.wingspan_ft,
+          length: s.length_ft,
+          heading: s.heading_deg,
+          tailNumber: s.tail_number || '',
+          adg: getADGFromWingspan(s.wingspan_ft),
+          iconId: `sil-${s.id}`,
+          iconScale: computeIconScale(s.wingspan_ft, s.length_ft, m),
+        },
+        geometry: { type: 'Point', coordinates: [c.lon, c.lat] },
+      }
+    })
+
+    // Nose gear block markers (small diamond at the stored spot position)
+    const noseGearFeatures: GeoJSON.Feature[] = spotsWithAircraft
+      .filter(s => s.pivot_point_ft > 0)
+      .map(s => ({
+        type: 'Feature',
+        properties: { spotId: s.id, name: s.spot_name || s.aircraft_name || '' },
+        geometry: { type: 'Point', coordinates: [s.longitude, s.latitude] },
+      }))
 
     if (aircraftFeatures.length > 0 && visibleLayers.aircraft) {
       m.addSource('parking-aircraft', {
@@ -1115,6 +1132,39 @@ export default function ParkingPage() {
 
       registerImages()
     }
+
+    // Nose gear block markers
+    if (noseGearFeatures.length > 0 && visibleLayers.aircraft) {
+      m.addSource('parking-nose-gear', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: noseGearFeatures },
+      })
+      m.addLayer({
+        id: 'parking-nose-gear-markers',
+        type: 'circle',
+        source: 'parking-nose-gear',
+        paint: {
+          'circle-radius': 5,
+          'circle-color': '#FFD700',
+          'circle-stroke-color': '#000',
+          'circle-stroke-width': 1.5,
+        },
+      })
+      m.addLayer({
+        id: 'parking-nose-gear-labels',
+        type: 'symbol',
+        source: 'parking-nose-gear',
+        layout: {
+          'text-field': 'NG',
+          'text-size': 9,
+          'text-offset': [0, -1.2],
+          'text-anchor': 'bottom',
+          'text-allow-overlap': true,
+        },
+        paint: { 'text-color': '#FFD700', 'text-halo-color': '#000', 'text-halo-width': 1 },
+      })
+      cleanIds.push('parking-nose-gear-markers', 'parking-nose-gear-labels')
+    }
   }, [mapLoaded, spotsWithAircraft, obstacles, taxilanes, apronBoundaries, allResults, showClearances, apronContext, visibleLayers])
 
   // ── Update icon scale on zoom change ──
@@ -1129,21 +1179,24 @@ export default function ParkingPage() {
       if (src) {
         src.setData({
           type: 'FeatureCollection',
-          features: spotsWithAircraft.map(s => ({
-            type: 'Feature' as const,
-            properties: {
-              spotId: s.id,
-              name: s.aircraft_name || 'Aircraft',
-              wingspan: s.wingspan_ft,
-              length: s.length_ft,
-              heading: s.heading_deg,
-              tailNumber: s.tail_number || '',
-              adg: getADGFromWingspan(s.wingspan_ft),
-              iconId: `sil-${s.id}`,
-              iconScale: computeIconScale(s.wingspan_ft, s.length_ft, m),
-            },
-            geometry: { type: 'Point' as const, coordinates: [s.longitude, s.latitude] },
-          })),
+          features: spotsWithAircraft.map(s => {
+            const c = spotCenter(s)
+            return {
+              type: 'Feature' as const,
+              properties: {
+                spotId: s.id,
+                name: s.aircraft_name || 'Aircraft',
+                wingspan: s.wingspan_ft,
+                length: s.length_ft,
+                heading: s.heading_deg,
+                tailNumber: s.tail_number || '',
+                adg: getADGFromWingspan(s.wingspan_ft),
+                iconId: `sil-${s.id}`,
+                iconScale: computeIconScale(s.wingspan_ft, s.length_ft, m),
+              },
+              geometry: { type: 'Point' as const, coordinates: [c.lon, c.lat] },
+            }
+          }),
         })
       }
     }
@@ -1279,25 +1332,45 @@ export default function ParkingPage() {
           const currentSpots = spotsWithAircraftRef.current
           src.setData({
             type: 'FeatureCollection',
-            features: currentSpots.map(s => ({
-              type: 'Feature' as const,
-              properties: {
-                spotId: s.id,
-                name: s.aircraft_name || 'Aircraft',
-                wingspan: s.wingspan_ft,
-                length: s.length_ft,
-                heading: s.heading_deg,
-                tailNumber: s.tail_number || '',
-                adg: getADGFromWingspan(s.wingspan_ft),
-                iconId: `sil-${s.id}`,
-                iconScale: computeIconScale(s.wingspan_ft, s.length_ft, m),
-              },
-              geometry: {
-                type: 'Point' as const,
-                coordinates: s.id === sid ? [lng, lat] : [s.longitude, s.latitude],
-              },
-            })),
+            features: currentSpots.map(s => {
+              // During drag, lng/lat is the new nose gear block position
+              const isBeingDragged = s.id === sid
+              const ngsLon = isBeingDragged ? lng : s.longitude
+              const ngsLat = isBeingDragged ? lat : s.latitude
+              const c = getAircraftCenter(ngsLon, ngsLat, s.heading_deg, s.length_ft, s.pivot_point_ft)
+              return {
+                type: 'Feature' as const,
+                properties: {
+                  spotId: s.id,
+                  name: s.aircraft_name || 'Aircraft',
+                  wingspan: s.wingspan_ft,
+                  length: s.length_ft,
+                  heading: s.heading_deg,
+                  tailNumber: s.tail_number || '',
+                  adg: getADGFromWingspan(s.wingspan_ft),
+                  iconId: `sil-${s.id}`,
+                  iconScale: computeIconScale(s.wingspan_ft, s.length_ft, m),
+                },
+                geometry: {
+                  type: 'Point' as const,
+                  coordinates: [c.lon, c.lat],
+                },
+              }
+            }),
           })
+
+          // Also update nose gear markers during drag
+          const ngSrc = m.getSource('parking-nose-gear') as mapboxgl.GeoJSONSource | undefined
+          if (ngSrc) {
+            ngSrc.setData({
+              type: 'FeatureCollection',
+              features: currentSpots.filter(s => s.pivot_point_ft > 0).map(s => ({
+                type: 'Feature' as const,
+                properties: { spotId: s.id },
+                geometry: { type: 'Point' as const, coordinates: s.id === sid ? [lng, lat] : [s.longitude, s.latitude] },
+              })),
+            })
+          }
         }
 
         // Show clearance distance labels

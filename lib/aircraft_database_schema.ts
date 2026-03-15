@@ -67,8 +67,12 @@ export interface AircraftCharacteristics {
   vertical_clearance_in?: string;
 
   // === TURN DATA ===
-  /** Distance from nose to pivot point (ft) */
+  /** Distance from nose tip to pivot point / main gear (ft) */
   pivot_point_ft?: string;
+
+  // === NOSE GEAR ===
+  /** Distance from nose tip to nose gear centerline (ft) — used for nose block placement */
+  nose_gear_ft?: string;
   /** Minimum turn radius (ft) */
   turn_radius_ft?: string;
   /** 180-degree turn diameter (ft) */
