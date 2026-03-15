@@ -31,11 +31,13 @@ import {
 import {
   getADGFromWingspan,
   getWingtipClearance,
+  getWingtipClearanceDetail,
   findAllViolations,
   getAllClearanceResults,
   generateClearanceZonePolygon,
   getWingtipPositions,
   APRON_CONTEXT_LABELS,
+  TABLE_6_1A_ITEMS,
   type ADGGroup,
   type ApronContext,
   type SpotWithAircraft,
@@ -319,17 +321,23 @@ export default function ParkingPage() {
   const [editingObstacle, setEditingObstacle] = useState<ParkingObstacle | null>(null)
   const [showClearances, setShowClearances] = useState(true)
   const [apronContext, setApronContext] = useState<ApronContext>('parking')
-  const [panelTab, setPanelTab] = useState<'aircraft' | 'obstacles' | 'clearance'>('aircraft')
+  const [panelTab, setPanelTab] = useState<'aircraft' | 'obstacles' | 'clearance' | 'reference'>('aircraft')
   const [aircraftCategoryFilter, setAircraftCategoryFilter] = useState<'all' | 'military' | 'commercial'>('all')
 
   // Line drawing state
   const [drawingLinePoints, setDrawingLinePoints] = useState<[number, number][]>([])
   const [drawingLineObsId, setDrawingLineObsId] = useState<string | null>(null)
 
+  // Lock mode — prevents dragging when locked
+  const [planLocked, setPlanLocked] = useState(false)
+  const planLockedRef = useRef(planLocked)
+  planLockedRef.current = planLocked
+
   // Map refs
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const dragSpotId = useRef<string | null>(null)
+  const dragObstacleId = useRef<string | null>(null)
   const isDraggingRef = useRef(false)
   const silhouetteImagesRef = useRef<Set<string>>(new Set()) // track registered image names
   // ── Derived data ──
@@ -483,7 +491,7 @@ export default function ParkingPage() {
 
       if (placingAircraft && selectedPlanId && installationId) {
         const ws = parseNum(placingAircraft.wing_span_ft)
-        const clearance = getWingtipClearance(ws, apronContext)
+        const clearance = getWingtipClearance(ws, apronContext, placingAircraft.aircraft)
 
         const spot = await createParkingSpot({
           plan_id: selectedPlanId,
@@ -586,7 +594,7 @@ export default function ParkingPage() {
     // Build clearance zone GeoJSON
     const clearanceFeatures: GeoJSON.Feature[] = []
     for (const spot of spotsWithAircraft) {
-      const clearanceFt = spot.clearance_ft ?? getWingtipClearance(spot.wingspan_ft, apronContext)
+      const clearanceFt = spot.clearance_ft ?? getWingtipClearance(spot.wingspan_ft, apronContext, spot.aircraft_name)
       const polygon = generateClearanceZonePolygon(spot, clearanceFt)
 
       // Determine status for this aircraft
@@ -639,7 +647,7 @@ export default function ParkingPage() {
       if (obs.obstacle_type === 'point') {
         obstacleFeatures.push({
           type: 'Feature',
-          properties: { name: obs.name, type: obs.obstacle_type },
+          properties: { name: obs.name, type: obs.obstacle_type, obsId: obs.id },
           geometry: { type: 'Point', coordinates: [obs.longitude, obs.latitude] },
         })
       } else if (obs.obstacle_type === 'building') {
@@ -655,7 +663,7 @@ export default function ParkingPage() {
         ]
         obstacleFeatures.push({
           type: 'Feature',
-          properties: { name: obs.name, type: obs.obstacle_type },
+          properties: { name: obs.name, type: obs.obstacle_type, obsId: obs.id },
           geometry: {
             type: 'Polygon',
             coordinates: [corners.map(c => [c.lon, c.lat]).concat([[corners[0].lon, corners[0].lat]])],
@@ -673,13 +681,13 @@ export default function ParkingPage() {
         }
         obstacleFeatures.push({
           type: 'Feature',
-          properties: { name: obs.name, type: obs.obstacle_type },
+          properties: { name: obs.name, type: obs.obstacle_type, obsId: obs.id },
           geometry: { type: 'Polygon', coordinates: [coords] },
         })
       } else if (obs.obstacle_type === 'line' && obs.line_coords) {
         obstacleFeatures.push({
           type: 'Feature',
-          properties: { name: obs.name, type: obs.obstacle_type },
+          properties: { name: obs.name, type: obs.obstacle_type, obsId: obs.id },
           geometry: { type: 'LineString', coordinates: obs.line_coords },
         })
       }
@@ -886,115 +894,188 @@ export default function ParkingPage() {
     return () => { m.off('zoomend', onZoomEnd) }
   }, [mapLoaded, spotsWithAircraft])
 
-  // ── Aircraft drag interaction ──
-  // Uses refs to avoid re-registering listeners on every spots change.
-  // Updates the GeoJSON source directly during drag for smooth movement.
+  // ── Aircraft + Obstacle drag interaction ──
+  // Uses refs to avoid re-registering listeners on every data change.
+  // Updates GeoJSON sources directly during drag for smooth movement.
 
   useEffect(() => {
     const m = map.current
     if (!m || !mapLoaded) return
 
     const onMouseDown = (e: mapboxgl.MapMouseEvent) => {
-      // Guard: don't start drag if the layer doesn't exist yet
-      if (!m.getLayer('parking-aircraft-symbols')) return
-      const features = m.queryRenderedFeatures(e.point, { layers: ['parking-aircraft-symbols'] })
-      if (!features.length) return
+      // Don't start drag when plan is locked
+      if (planLockedRef.current) return
 
-      const spotId = features[0].properties?.spotId
-      if (!spotId) return
+      // Check aircraft layer first
+      if (m.getLayer('parking-aircraft-symbols')) {
+        const acFeatures = m.queryRenderedFeatures(e.point, { layers: ['parking-aircraft-symbols'] })
+        if (acFeatures.length) {
+          const spotId = acFeatures[0].properties?.spotId
+          if (spotId) {
+            isDraggingRef.current = true
+            dragSpotId.current = spotId
+            dragObstacleId.current = null
+            m.getCanvas().style.cursor = 'grabbing'
+            m.dragPan.disable()
+            e.preventDefault()
+            return
+          }
+        }
+      }
 
-      isDraggingRef.current = true
-      dragSpotId.current = spotId
-      m.getCanvas().style.cursor = 'grabbing'
-      m.dragPan.disable()
+      // Check obstacle layers (points and polygon fills)
+      const obsLayers: string[] = []
+      if (m.getLayer('parking-obstacles-points')) obsLayers.push('parking-obstacles-points')
+      if (m.getLayer('parking-obstacles-fill')) obsLayers.push('parking-obstacles-fill')
+      if (m.getLayer('parking-obstacles-lines-stroke')) obsLayers.push('parking-obstacles-lines-stroke')
+      if (obsLayers.length > 0) {
+        const obsFeatures = m.queryRenderedFeatures(e.point, { layers: obsLayers })
+        if (obsFeatures.length) {
+          const matchId = obsFeatures[0].properties?.obsId
+          const matchObs = matchId ? obstaclesRef.current.find(o => o.id === matchId) : null
+          if (matchObs) {
+            isDraggingRef.current = true
+            dragObstacleId.current = matchObs.id
+            dragSpotId.current = null
+            m.getCanvas().style.cursor = 'grabbing'
+            m.dragPan.disable()
+            e.preventDefault()
+            return
+          }
+        }
+      }
+    }
 
-      e.preventDefault()
+    const buildObstacleGeoJSON = (currentObs: ParkingObstacle[], dragId: string | null, newLng: number, newLat: number): GeoJSON.FeatureCollection => {
+      const features: GeoJSON.Feature[] = []
+      for (const obs of currentObs) {
+        const isDragged = obs.id === dragId
+        const lng = isDragged ? newLng : obs.longitude
+        const lat = isDragged ? newLat : obs.latitude
+        if (obs.obstacle_type === 'point') {
+          features.push({ type: 'Feature', properties: { name: obs.name, type: obs.obstacle_type, obsId: obs.id }, geometry: { type: 'Point', coordinates: [lng, lat] } })
+        } else if (obs.obstacle_type === 'building') {
+          const halfW = (obs.width_ft || 50) / 2
+          const halfL = (obs.length_ft || 50) / 2
+          const rot = obs.rotation_deg || 0
+          const center = { lat, lon: lng }
+          const corners = [
+            offsetPoint(offsetPoint(center, rot, halfL), (rot + 90) % 360, halfW),
+            offsetPoint(offsetPoint(center, rot, halfL), (rot - 90 + 360) % 360, halfW),
+            offsetPoint(offsetPoint(center, (rot + 180) % 360, halfL), (rot - 90 + 360) % 360, halfW),
+            offsetPoint(offsetPoint(center, (rot + 180) % 360, halfL), (rot + 90) % 360, halfW),
+          ]
+          features.push({ type: 'Feature', properties: { name: obs.name, type: obs.obstacle_type, obsId: obs.id }, geometry: { type: 'Polygon', coordinates: [corners.map(c => [c.lon, c.lat]).concat([[corners[0].lon, corners[0].lat]])] } })
+        } else if (obs.obstacle_type === 'circle') {
+          const center = { lat, lon: lng }
+          const radius = obs.radius_ft || 50
+          const segs = 48
+          const coords: [number, number][] = []
+          for (let i = 0; i <= segs; i++) {
+            const bearing = (360 * i) / segs
+            const pt = offsetPoint(center, bearing, radius)
+            coords.push([pt.lon, pt.lat])
+          }
+          features.push({ type: 'Feature', properties: { name: obs.name, type: obs.obstacle_type, obsId: obs.id }, geometry: { type: 'Polygon', coordinates: [coords] } })
+        } else if (obs.obstacle_type === 'line' && obs.line_coords) {
+          // For line obstacles, offset all line coords by the delta
+          if (isDragged) {
+            const dLng = newLng - obs.longitude
+            const dLat = newLat - obs.latitude
+            const movedCoords = obs.line_coords.map(c => [c[0] + dLng, c[1] + dLat] as [number, number])
+            features.push({ type: 'Feature', properties: { name: obs.name, type: obs.obstacle_type, obsId: obs.id }, geometry: { type: 'LineString', coordinates: movedCoords } })
+          } else {
+            features.push({ type: 'Feature', properties: { name: obs.name, type: obs.obstacle_type, obsId: obs.id }, geometry: { type: 'LineString', coordinates: obs.line_coords } })
+          }
+        }
+      }
+      return { type: 'FeatureCollection', features }
     }
 
     const onMouseMove = (e: mapboxgl.MapMouseEvent) => {
-      if (!isDraggingRef.current || !dragSpotId.current) return
+      if (!isDraggingRef.current) return
 
       const { lng, lat } = e.lngLat
-      const sid = dragSpotId.current
 
-      // Update the GeoJSON source directly (no React re-render)
-      const src = m.getSource('parking-aircraft') as mapboxgl.GeoJSONSource | undefined
-      if (src) {
-        const currentSpots = spotsWithAircraftRef.current
-        src.setData({
-          type: 'FeatureCollection',
-          features: currentSpots.map(s => ({
-            type: 'Feature' as const,
-            properties: {
-              spotId: s.id,
-              name: s.aircraft_name || 'Aircraft',
-              wingspan: s.wingspan_ft,
-              length: s.length_ft,
-              heading: s.heading_deg,
-              tailNumber: s.tail_number || '',
-              adg: getADGFromWingspan(s.wingspan_ft),
-              iconId: `sil-${s.id}`,
-              iconScale: computeIconScale(s.wingspan_ft, s.length_ft, m),
-            },
-            geometry: {
-              type: 'Point' as const,
-              coordinates: s.id === sid ? [lng, lat] : [s.longitude, s.latitude],
-            },
-          })),
-        })
-      }
-
-      // Show clearance distance labels
-      const draggedSpot = spotsWithAircraftRef.current.find(s => s.id === sid)
-      if (!draggedSpot) return
-
-      const movedSpot = { ...draggedSpot, longitude: lng, latitude: lat }
-      const labelFeatures: GeoJSON.Feature[] = []
-
-      for (const other of spotsWithAircraftRef.current) {
-        if (other.id === sid) continue
-        const dx = (lng - other.longitude) * 364567 * Math.cos(lat * Math.PI / 180)
-        const dy = (lat - other.latitude) * 364567
-        if (Math.sqrt(dx * dx + dy * dy) > 500) continue
-
-        const result = getAllClearanceResults([movedSpot, other], [], apronContextRef.current)
-        if (result.length > 0) {
-          labelFeatures.push({
-            type: 'Feature',
-            properties: {
-              label: `${result[0].distance_ft.toFixed(0)}ft`,
-              color: result[0].status === 'violation' ? '#EF4444' : result[0].status === 'warning' ? '#F59E0B' : '#22C55E',
-            },
-            geometry: { type: 'Point', coordinates: [(lng + other.longitude) / 2, (lat + other.latitude) / 2] },
+      // ── Aircraft drag ──
+      if (dragSpotId.current) {
+        const sid = dragSpotId.current
+        const src = m.getSource('parking-aircraft') as mapboxgl.GeoJSONSource | undefined
+        if (src) {
+          const currentSpots = spotsWithAircraftRef.current
+          src.setData({
+            type: 'FeatureCollection',
+            features: currentSpots.map(s => ({
+              type: 'Feature' as const,
+              properties: {
+                spotId: s.id,
+                name: s.aircraft_name || 'Aircraft',
+                wingspan: s.wingspan_ft,
+                length: s.length_ft,
+                heading: s.heading_deg,
+                tailNumber: s.tail_number || '',
+                adg: getADGFromWingspan(s.wingspan_ft),
+                iconId: `sil-${s.id}`,
+                iconScale: computeIconScale(s.wingspan_ft, s.length_ft, m),
+              },
+              geometry: {
+                type: 'Point' as const,
+                coordinates: s.id === sid ? [lng, lat] : [s.longitude, s.latitude],
+              },
+            })),
           })
+        }
+
+        // Show clearance distance labels
+        const draggedSpot = spotsWithAircraftRef.current.find(s => s.id === sid)
+        if (draggedSpot) {
+          const movedSpot = { ...draggedSpot, longitude: lng, latitude: lat }
+          const labelFeatures: GeoJSON.Feature[] = []
+
+          for (const other of spotsWithAircraftRef.current) {
+            if (other.id === sid) continue
+            const dx = (lng - other.longitude) * 364567 * Math.cos(lat * Math.PI / 180)
+            const dy = (lat - other.latitude) * 364567
+            if (Math.sqrt(dx * dx + dy * dy) > 500) continue
+            const result = getAllClearanceResults([movedSpot, other], [], apronContextRef.current)
+            if (result.length > 0) {
+              const r = result[0]
+              labelFeatures.push({ type: 'Feature', properties: { label: `${r.distance_ft.toFixed(0)}/${r.required_ft}ft`, color: r.status === 'violation' ? '#EF4444' : r.status === 'warning' ? '#F59E0B' : '#22C55E' }, geometry: { type: 'Point', coordinates: [(lng + other.longitude) / 2, (lat + other.latitude) / 2] } })
+            }
+          }
+
+          for (const obs of obstaclesRef.current) {
+            const dx = (lng - obs.longitude) * 364567 * Math.cos(lat * Math.PI / 180)
+            const dy = (lat - obs.latitude) * 364567
+            if (Math.sqrt(dx * dx + dy * dy) > 500) continue
+            const result = getAllClearanceResults([movedSpot], [obs], apronContextRef.current)
+            if (result.length > 0) {
+              const r2 = result[0]
+              labelFeatures.push({ type: 'Feature', properties: { label: `${r2.distance_ft.toFixed(0)}/${r2.required_ft}ft`, color: r2.status === 'violation' ? '#EF4444' : r2.status === 'warning' ? '#F59E0B' : '#22C55E' }, geometry: { type: 'Point', coordinates: [(lng + obs.longitude) / 2, (lat + obs.latitude) / 2] } })
+            }
+          }
+
+          showDragLabels(m, labelFeatures)
         }
       }
 
-      for (const obs of obstaclesRef.current) {
-        const dx = (lng - obs.longitude) * 364567 * Math.cos(lat * Math.PI / 180)
-        const dy = (lat - obs.latitude) * 364567
-        if (Math.sqrt(dx * dx + dy * dy) > 500) continue
-
-        const result = getAllClearanceResults([movedSpot], [obs], apronContextRef.current)
-        if (result.length > 0) {
-          labelFeatures.push({
-            type: 'Feature',
-            properties: {
-              label: `${result[0].distance_ft.toFixed(0)}ft`,
-              color: result[0].status === 'violation' ? '#EF4444' : result[0].status === 'warning' ? '#F59E0B' : '#22C55E',
-            },
-            geometry: { type: 'Point', coordinates: [(lng + obs.longitude) / 2, (lat + obs.latitude) / 2] },
-          })
+      // ── Obstacle drag ──
+      if (dragObstacleId.current) {
+        const obsSrc = m.getSource('parking-obstacles-src') as mapboxgl.GeoJSONSource | undefined
+        if (obsSrc) {
+          obsSrc.setData(buildObstacleGeoJSON(obstaclesRef.current, dragObstacleId.current, lng, lat))
         }
       }
+    }
 
-      const dragSrc = m.getSource('parking-drag-labels') as mapboxgl.GeoJSONSource | undefined
+    const showDragLabels = (mapInst: mapboxgl.Map, labelFeatures: GeoJSON.Feature[]) => {
+      const dragSrc = mapInst.getSource('parking-drag-labels') as mapboxgl.GeoJSONSource | undefined
       const dragData: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: labelFeatures }
       if (dragSrc) {
         dragSrc.setData(dragData)
       } else {
-        m.addSource('parking-drag-labels', { type: 'geojson', data: dragData })
-        m.addLayer({
+        mapInst.addSource('parking-drag-labels', { type: 'geojson', data: dragData })
+        mapInst.addLayer({
           id: 'parking-drag-labels',
           type: 'symbol',
           source: 'parking-drag-labels',
@@ -1019,40 +1100,81 @@ export default function ParkingPage() {
     }
 
     const onMouseUp = async (e: mapboxgl.MapMouseEvent) => {
-      if (!isDraggingRef.current || !dragSpotId.current) return
+      if (!isDraggingRef.current) return
 
-      const sid = dragSpotId.current
       const { lng, lat } = e.lngLat
 
-      isDraggingRef.current = false
-      dragSpotId.current = null
-      m.dragPan.enable()
-      m.getCanvas().style.cursor = ''
-      removeDragLabels()
+      // ── Aircraft drag end ──
+      if (dragSpotId.current) {
+        const sid = dragSpotId.current
+        isDraggingRef.current = false
+        dragSpotId.current = null
+        m.dragPan.enable()
+        m.getCanvas().style.cursor = ''
+        removeDragLabels()
+        setSpots(prev => prev.map(s => s.id === sid ? { ...s, longitude: lng, latitude: lat } : s))
+        await updateParkingSpot(sid, { longitude: lng, latitude: lat })
+        return
+      }
 
-      // Commit the new position to state + DB
-      setSpots(prev =>
-        prev.map(s => s.id === sid ? { ...s, longitude: lng, latitude: lat } : s)
-      )
-      await updateParkingSpot(sid, { longitude: lng, latitude: lat })
+      // ── Obstacle drag end ──
+      if (dragObstacleId.current) {
+        const oid = dragObstacleId.current
+        isDraggingRef.current = false
+        dragObstacleId.current = null
+        m.dragPan.enable()
+        m.getCanvas().style.cursor = ''
+        removeDragLabels()
+
+        const obs = obstaclesRef.current.find(o => o.id === oid)
+        if (obs) {
+          const updates: Partial<ParkingObstacle> = { longitude: lng, latitude: lat }
+          // For line obstacles, also shift line_coords
+          if (obs.obstacle_type === 'line' && obs.line_coords) {
+            const dLng = lng - obs.longitude
+            const dLat = lat - obs.latitude
+            updates.line_coords = obs.line_coords.map(c => [c[0] + dLng, c[1] + dLat] as [number, number])
+          }
+          setObstacles(prev => prev.map(o => o.id === oid ? { ...o, ...updates } : o))
+          await updateParkingObstacle(oid, updates)
+        }
+        return
+      }
     }
 
-    m.on('mousedown', 'parking-aircraft-symbols', onMouseDown as any)
+    // Bind mousedown on canvas (not specific layer) so we can check multiple layers
+    const canvas = m.getCanvas()
+    const onCanvasMouseDown = (ev: MouseEvent) => {
+      const point = new mapboxgl.Point(ev.offsetX, ev.offsetY)
+      const lngLat = m.unproject(point)
+      onMouseDown({ point, lngLat, originalEvent: ev, preventDefault: () => ev.preventDefault() } as any)
+    }
+    canvas.addEventListener('mousedown', onCanvasMouseDown)
     m.on('mousemove', onMouseMove as any)
     m.on('mouseup', onMouseUp as any)
 
-    // Hover cursor
-    const onEnter = () => { if (!isDraggingRef.current) m.getCanvas().style.cursor = 'grab' }
-    const onLeave = () => { if (!isDraggingRef.current) m.getCanvas().style.cursor = '' }
-    m.on('mouseenter', 'parking-aircraft-symbols', onEnter)
-    m.on('mouseleave', 'parking-aircraft-symbols', onLeave)
+    // Hover cursor for both aircraft and obstacles
+    const onAcEnter = () => { if (!isDraggingRef.current && !planLockedRef.current) m.getCanvas().style.cursor = 'grab' }
+    const onAcLeave = () => { if (!isDraggingRef.current) m.getCanvas().style.cursor = '' }
+    const onObsEnter = () => { if (!isDraggingRef.current && !planLockedRef.current) m.getCanvas().style.cursor = 'grab' }
+    const onObsLeave = () => { if (!isDraggingRef.current) m.getCanvas().style.cursor = '' }
+    m.on('mouseenter', 'parking-aircraft-symbols', onAcEnter)
+    m.on('mouseleave', 'parking-aircraft-symbols', onAcLeave)
+    m.on('mouseenter', 'parking-obstacles-points', onObsEnter)
+    m.on('mouseleave', 'parking-obstacles-points', onObsLeave)
+    m.on('mouseenter', 'parking-obstacles-fill', onObsEnter)
+    m.on('mouseleave', 'parking-obstacles-fill', onObsLeave)
 
     return () => {
-      m.off('mousedown', 'parking-aircraft-symbols', onMouseDown as any)
+      canvas.removeEventListener('mousedown', onCanvasMouseDown)
       m.off('mousemove', onMouseMove as any)
       m.off('mouseup', onMouseUp as any)
-      m.off('mouseenter', 'parking-aircraft-symbols', onEnter)
-      m.off('mouseleave', 'parking-aircraft-symbols', onLeave)
+      m.off('mouseenter', 'parking-aircraft-symbols', onAcEnter)
+      m.off('mouseleave', 'parking-aircraft-symbols', onAcLeave)
+      m.off('mouseenter', 'parking-obstacles-points', onObsEnter)
+      m.off('mouseleave', 'parking-obstacles-points', onObsLeave)
+      m.off('mouseenter', 'parking-obstacles-fill', onObsEnter)
+      m.off('mouseleave', 'parking-obstacles-fill', onObsLeave)
     }
   }, [mapLoaded]) // Only re-register on map load — refs handle current data
 
@@ -1320,7 +1442,7 @@ export default function ParkingPage() {
         </span>
         <div style={{ flex: 1 }} />
         <label style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)' }}>
-          Clearance Standard (UFC 3-260-01 Table 6-1):
+          UFC 3-260-01 Table 6-1a:
           <select
             value={apronContext}
             onChange={e => setApronContext(e.target.value as ApronContext)}
@@ -1335,6 +1457,18 @@ export default function ParkingPage() {
             ))}
           </select>
         </label>
+        <button
+          onClick={() => setPlanLocked(l => !l)}
+          style={{
+            padding: '2px 8px', borderRadius: 3, fontSize: 'var(--fs-xs)',
+            background: planLocked ? '#EF444422' : '#22C55E22',
+            border: `1px solid ${planLocked ? '#EF444444' : '#22C55E44'}`,
+            color: planLocked ? '#EF4444' : '#22C55E',
+            cursor: 'pointer', fontWeight: 500,
+          }}
+        >
+          {planLocked ? 'Locked' : 'Unlocked'}
+        </button>
         <label style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
           <input type="checkbox" checked={showClearances} onChange={e => setShowClearances(e.target.checked)} />
           Show Clearances
@@ -1392,7 +1526,7 @@ export default function ParkingPage() {
         {/* Tab row + plan actions */}
         <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--color-border)' }}>
           <div style={{ display: 'flex', flex: 1 }}>
-            {(['aircraft', 'obstacles', 'clearance'] as const).map(tab => (
+            {(['aircraft', 'obstacles', 'clearance', 'reference'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setPanelTab(tab)}
@@ -1439,181 +1573,162 @@ export default function ParkingPage() {
 
         {/* Panel content — scrollable horizontal for aircraft, vertical for others */}
         <div style={{ overflow: 'auto', padding: 8 }}>
-          {/* Aircraft tab */}
+          {/* Aircraft tab — compact vertical list */}
           {panelTab === 'aircraft' && (
-            <>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                {selectedPlanId && (
-                  <button
-                    onClick={() => setShowAircraftPicker(true)}
-                    style={{
-                      padding: '8px 16px', borderRadius: 4, flexShrink: 0,
-                      background: 'var(--color-cyan)11', border: '1px dashed var(--color-cyan)',
-                      color: 'var(--color-cyan)', cursor: 'pointer', fontSize: 'var(--fs-sm)',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    + Add Aircraft
-                  </button>
-                )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {selectedPlanId && (
+                <button
+                  onClick={() => setShowAircraftPicker(true)}
+                  style={{
+                    padding: '5px 12px', borderRadius: 4, marginBottom: 4, alignSelf: 'flex-start',
+                    background: 'var(--color-cyan)11', border: '1px dashed var(--color-cyan)',
+                    color: 'var(--color-cyan)', cursor: 'pointer', fontSize: 'var(--fs-xs)',
+                  }}
+                >
+                  + Add Aircraft
+                </button>
+              )}
 
-                {spots.length === 0 && !selectedPlanId && (
-                  <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-sm)', padding: '4px 8px', margin: 0 }}>
-                    Select or create a plan to add aircraft
-                  </p>
-                )}
+              {spots.length === 0 && !selectedPlanId && (
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-sm)', padding: '4px 0', margin: 0 }}>
+                  Select or create a plan to add aircraft
+                </p>
+              )}
+              {spots.length === 0 && selectedPlanId && (
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '4px 0', margin: 0 }}>
+                  No aircraft placed yet.
+                </p>
+              )}
 
-                {spots.length === 0 && selectedPlanId && (
-                  <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '4px 8px', margin: 0 }}>
-                    No aircraft placed yet.
-                  </p>
-                )}
+              {spots.map(s => {
+                const ac = allAircraft.find(a => a.aircraft === s.aircraft_name)
+                const ws = ac ? parseNum(ac.wing_span_ft) : 50
+                const adg = getADGFromWingspan(ws)
+                const clearanceDetail = s.clearance_ft != null
+                  ? { clearance_ft: s.clearance_ft, ufc_item: 'Manual', description: 'Override' }
+                  : getWingtipClearanceDetail(ws, apronContext, s.aircraft_name)
+                const clearance = clearanceDetail.clearance_ft
+                const spotViolations = allResults.filter(r =>
+                  (r.spot_a_id === s.id || r.spot_b_id === s.id) && r.status !== 'ok'
+                )
+                const isEditing = editingSpot?.id === s.id
 
-                {/* Aircraft cards in a horizontal scroll row */}
-                <div style={{ display: 'flex', gap: 6, overflow: 'auto', flex: 1 }}>
-                  {spots.map(s => {
-                    const ac = allAircraft.find(a => a.aircraft === s.aircraft_name)
-                    const ws = ac ? parseNum(ac.wing_span_ft) : 50
-                    const adg = getADGFromWingspan(ws)
-                    const clearance = s.clearance_ft ?? getWingtipClearance(ws, apronContext)
-                    const spotViolations = allResults.filter(r =>
-                      (r.spot_a_id === s.id || r.spot_b_id === s.id) && r.status !== 'ok'
-                    )
-                    const isEditing = editingSpot?.id === s.id
+                return (
+                  <div key={s.id}>
+                    {/* Compact row */}
+                    <div
+                      onClick={() => setEditingSpot(isEditing ? null : s)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '4px 8px', cursor: 'pointer',
+                        background: isEditing ? 'var(--color-bg)' : 'transparent',
+                        borderBottom: '1px solid var(--color-border)',
+                        borderLeft: spotViolations.length > 0 ? '3px solid #EF4444' : '3px solid transparent',
+                      }}
+                    >
+                      <span style={{
+                        fontSize: 10, padding: '1px 4px', borderRadius: 3,
+                        background: `${ADG_COLORS[adg]}22`, color: ADG_COLORS[adg],
+                        fontWeight: 600, flexShrink: 0,
+                      }}>
+                        {adg}
+                      </span>
+                      <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 500, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {s.aircraft_name || 'Unknown'}
+                      </span>
+                      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
+                        {s.tail_number || ''}
+                      </span>
+                      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
+                        {clearance}ft {clearanceDetail.ufc_item} &middot; {s.heading_deg}°
+                      </span>
+                      {spotViolations.length > 0 && (
+                        <span style={{ color: '#EF4444', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>!</span>
+                      )}
+                      <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', flexShrink: 0 }}>{isEditing ? '\u25B2' : '\u25BC'}</span>
+                    </div>
 
-                    return (
+                    {/* Expanded edit form below the row */}
+                    {isEditing && (
                       <div
-                        key={s.id}
-                        onClick={() => setEditingSpot(isEditing ? null : s)}
-                        style={{
-                          padding: '6px 10px', borderRadius: 4, cursor: 'pointer',
-                          background: isEditing ? 'var(--color-bg)' : 'transparent',
-                          border: `1px solid ${spotViolations.length > 0 ? '#EF444444' : 'var(--color-border)'}`,
-                          minWidth: isEditing ? 280 : 180, flexShrink: 0,
-                        }}
+                        onClick={e => e.stopPropagation()}
+                        style={{ padding: '8px 8px 8px 16px', display: 'flex', flexDirection: 'column', gap: 6, background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}
                       >
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
+                            Spot Name
+                            <input value={s.spot_name || ''} onChange={e => handleUpdateSpot(s.id, { spot_name: e.target.value })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                          </label>
+                          <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
+                            Tail Number
+                            <input value={s.tail_number || ''} onChange={e => handleUpdateSpot(s.id, { tail_number: e.target.value })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                          </label>
+                          <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
+                            Callsign
+                            <input value={s.unit_callsign || ''} onChange={e => handleUpdateSpot(s.id, { unit_callsign: e.target.value })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                          </label>
+                        </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{
-                            fontSize: 10, padding: '1px 4px', borderRadius: 3,
-                            background: `${ADG_COLORS[adg]}22`, color: ADG_COLORS[adg],
-                            fontWeight: 600,
-                          }}>
-                            {adg}
-                          </span>
-                          <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 500, color: 'var(--color-text-primary)', flex: 1, whiteSpace: 'nowrap' }}>
-                            {s.aircraft_name || 'Unknown'}
-                          </span>
-                          {spotViolations.length > 0 && (
-                            <span style={{ color: '#EF4444', fontSize: 12 }}>!</span>
-                          )}
+                          <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
+                            Heading
+                            <input type="range" min={0} max={360} step={1} value={s.heading_deg} onChange={e => handleUpdateSpot(s.id, { heading_deg: Number(e.target.value) })} style={{ width: '100%' }} />
+                          </label>
+                          <input
+                            type="number" min={0} max={360} step={1} value={s.heading_deg}
+                            onChange={e => { const v = Math.min(360, Math.max(0, Number(e.target.value) || 0)); handleUpdateSpot(s.id, { heading_deg: v }) }}
+                            style={{ width: 52, padding: '3px 4px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)', textAlign: 'center' }}
+                          />
+                          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>°</span>
                         </div>
-                        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', marginTop: 2, whiteSpace: 'nowrap' }}>
-                          {s.spot_name || s.spot_type || 'Unassigned'} &middot; {clearance}ft
-                          {s.tail_number && <> &middot; {s.tail_number}</>}
-                        </div>
-
-                        {/* Expanded edit form */}
-                        {isEditing && (
-                          <div
-                            onClick={e => e.stopPropagation()}
-                            style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}
+                        <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flexShrink: 0 }}>Clearance:</span>
+                          {[null, 10, 15, 25].map(val => (
+                            <button
+                              key={val ?? 'adg'}
+                              onClick={() => handleUpdateSpot(s.id, { clearance_ft: val as any })}
+                              style={{
+                                padding: '2px 6px', borderRadius: 3, fontSize: 'var(--fs-xs)',
+                                border: '1px solid var(--color-border)',
+                                background: s.clearance_ft === val ? 'var(--color-cyan)22' : 'var(--color-bg-surface)',
+                                color: s.clearance_ft === val ? 'var(--color-cyan)' : 'var(--color-text-secondary)',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {val ? `${val}ft` : `UFC (${getWingtipClearance(ws, apronContext, s.aircraft_name)}ft)`}
+                            </button>
+                          ))}
+                          <select
+                            value={s.status}
+                            onChange={e => handleUpdateSpot(s.id, { status: e.target.value as ParkingSpot['status'] })}
+                            style={{ marginLeft: 'auto', padding: '2px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
                           >
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
-                                Spot Name
-                                <input
-                                  value={s.spot_name || ''}
-                                  onChange={e => handleUpdateSpot(s.id, { spot_name: e.target.value })}
-                                  style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
-                                />
-                              </label>
-                              <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
-                                Tail Number
-                                <input
-                                  value={s.tail_number || ''}
-                                  onChange={e => handleUpdateSpot(s.id, { tail_number: e.target.value })}
-                                  style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
-                                />
-                              </label>
-                              <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
-                                Callsign
-                                <input
-                                  value={s.unit_callsign || ''}
-                                  onChange={e => handleUpdateSpot(s.id, { unit_callsign: e.target.value })}
-                                  style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
-                                />
-                              </label>
-                            </div>
-                            <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
-                              Heading ({s.heading_deg}°)
-                              <input
-                                type="range" min={0} max={360} step={5}
-                                value={s.heading_deg}
-                                onChange={e => handleUpdateSpot(s.id, { heading_deg: Number(e.target.value) })}
-                                style={{ width: '100%' }}
-                              />
-                            </label>
-                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flexShrink: 0 }}>Clearance:</span>
-                              {[null, 10, 15, 25].map(val => (
-                                <button
-                                  key={val ?? 'adg'}
-                                  onClick={() => handleUpdateSpot(s.id, { clearance_ft: val as any })}
-                                  style={{
-                                    padding: '2px 6px', borderRadius: 3, fontSize: 'var(--fs-xs)',
-                                    border: '1px solid var(--color-border)',
-                                    background: s.clearance_ft === val ? 'var(--color-cyan)22' : 'var(--color-bg)',
-                                    color: s.clearance_ft === val ? 'var(--color-cyan)' : 'var(--color-text-secondary)',
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  {val ? `${val}ft` : `UFC (${getWingtipClearance(ws, apronContext)}ft)`}
-                                </button>
-                              ))}
-                              <select
-                                value={s.status}
-                                onChange={e => handleUpdateSpot(s.id, { status: e.target.value as ParkingSpot['status'] })}
-                                style={{ marginLeft: 'auto', padding: '2px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
-                              >
-                                <option value="available">Available</option>
-                                <option value="occupied">Occupied</option>
-                                <option value="reserved">Reserved</option>
-                              </select>
-                            </div>
-                            <div style={{ display: 'flex', gap: 4 }}>
-                              <button
-                                onClick={() => map.current?.flyTo({ center: [s.longitude, s.latitude], zoom: 17 })}
-                                style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}
-                              >
-                                Fly To
-                              </button>
-                              <button
-                                onClick={() => handleDeleteSpot(s.id)}
-                                style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          </div>
-                        )}
+                            <option value="available">Available</option>
+                            <option value="occupied">Occupied</option>
+                            <option value="reserved">Reserved</option>
+                          </select>
+                        </div>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button onClick={() => map.current?.flyTo({ center: [s.longitude, s.latitude], zoom: 17 })} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
+                          <button onClick={() => handleDeleteSpot(s.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Remove</button>
+                        </div>
                       </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           )}
 
-          {/* Obstacles tab */}
+          {/* Obstacles tab — compact vertical list */}
           {panelTab === 'obstacles' && (
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-              <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
                 {(['point', 'building', 'line', 'circle'] as const).map(type => (
                   <button
                     key={type}
                     onClick={() => { setPlacingObstacle(type); setPlacingAircraft(null) }}
                     style={{
-                      padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)',
+                      padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                       background: placingObstacle === type ? '#F5730622' : 'var(--color-bg)',
                       border: `1px solid ${placingObstacle === type ? '#F97316' : 'var(--color-border)'}`,
                       color: placingObstacle === type ? '#F97316' : 'var(--color-text-secondary)',
@@ -1625,95 +1740,107 @@ export default function ParkingPage() {
                 ))}
               </div>
 
-              <div style={{ display: 'flex', gap: 6, overflow: 'auto', flex: 1 }}>
-                {obstacles.map(obs => (
-                  <div
-                    key={obs.id}
-                    onClick={() => setEditingObstacle(editingObstacle?.id === obs.id ? null : obs)}
-                    style={{
-                      padding: '6px 10px', borderRadius: 4, cursor: 'pointer',
-                      background: editingObstacle?.id === obs.id ? 'var(--color-bg)' : 'transparent',
-                      border: '1px solid var(--color-border)',
-                      minWidth: editingObstacle?.id === obs.id ? 260 : 150, flexShrink: 0,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {obstacles.length === 0 && (
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '4px 0', margin: 0 }}>
+                  No obstacles defined.
+                </p>
+              )}
+
+              {obstacles.map(obs => {
+                const isEditing = editingObstacle?.id === obs.id
+                return (
+                  <div key={obs.id}>
+                    <div
+                      onClick={() => setEditingObstacle(isEditing ? null : obs)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '4px 8px', cursor: 'pointer',
+                        background: isEditing ? 'var(--color-bg)' : 'transparent',
+                        borderBottom: '1px solid var(--color-border)',
+                        borderLeft: '3px solid #F97316',
+                      }}
+                    >
                       <span style={{
                         fontSize: 10, padding: '1px 4px', borderRadius: 3,
                         background: '#F9731622', color: '#F97316',
-                        textTransform: 'capitalize',
+                        textTransform: 'capitalize', flexShrink: 0,
                       }}>
                         {obs.obstacle_type}
                       </span>
-                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-primary)', flex: 1, whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-primary)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {obs.name || 'Unnamed'}
                       </span>
+                      {obs.obstacle_type === 'building' && (
+                        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
+                          {obs.width_ft || 0}x{obs.length_ft || 0}ft
+                        </span>
+                      )}
+                      {obs.obstacle_type === 'circle' && (
+                        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
+                          r={obs.radius_ft || 0}ft
+                        </span>
+                      )}
+                      <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', flexShrink: 0 }}>{isEditing ? '\u25B2' : '\u25BC'}</span>
                     </div>
 
-                    {editingObstacle?.id === obs.id && (
+                    {isEditing && (
                       <div
                         onClick={e => e.stopPropagation()}
-                        style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}
+                        style={{ padding: '8px 8px 8px 16px', display: 'flex', flexDirection: 'column', gap: 6, background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}
                       >
                         <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
                           Name
-                          <input
-                            value={obs.name || ''}
-                            onChange={e => handleUpdateObstacle(obs.id, { name: e.target.value })}
-                            style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
-                          />
+                          <input value={obs.name || ''} onChange={e => handleUpdateObstacle(obs.id, { name: e.target.value })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
                         </label>
                         {obs.obstacle_type === 'building' && (
                           <div style={{ display: 'flex', gap: 6 }}>
                             <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
                               Width (ft)
-                              <input type="number" value={obs.width_ft || 0} onChange={e => handleUpdateObstacle(obs.id, { width_ft: Number(e.target.value) })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                              <input type="number" value={obs.width_ft || 0} onChange={e => handleUpdateObstacle(obs.id, { width_ft: Number(e.target.value) })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
                             </label>
                             <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
                               Length (ft)
-                              <input type="number" value={obs.length_ft || 0} onChange={e => handleUpdateObstacle(obs.id, { length_ft: Number(e.target.value) })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                              <input type="number" value={obs.length_ft || 0} onChange={e => handleUpdateObstacle(obs.id, { length_ft: Number(e.target.value) })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
                             </label>
-                            <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
-                              Rotation ({obs.rotation_deg || 0}°)
-                              <input type="range" min={0} max={360} step={5} value={obs.rotation_deg || 0} onChange={e => handleUpdateObstacle(obs.id, { rotation_deg: Number(e.target.value) })} style={{ width: '100%' }} />
-                            </label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
+                              <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
+                                Rotation
+                                <input type="range" min={0} max={360} step={1} value={obs.rotation_deg || 0} onChange={e => handleUpdateObstacle(obs.id, { rotation_deg: Number(e.target.value) })} style={{ width: '100%' }} />
+                              </label>
+                              <input type="number" min={0} max={360} step={1} value={obs.rotation_deg || 0} onChange={e => { const v = Math.min(360, Math.max(0, Number(e.target.value) || 0)); handleUpdateObstacle(obs.id, { rotation_deg: v }) }} style={{ width: 52, padding: '3px 4px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)', textAlign: 'center' }} />
+                              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>°</span>
+                            </div>
                           </div>
                         )}
                         {obs.obstacle_type === 'circle' && (
                           <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
                             Radius (ft)
-                            <input type="number" value={obs.radius_ft || 0} onChange={e => handleUpdateObstacle(obs.id, { radius_ft: Number(e.target.value) })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                            <input type="number" value={obs.radius_ft || 0} onChange={e => handleUpdateObstacle(obs.id, { radius_ft: Number(e.target.value) })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
                           </label>
                         )}
                         {obs.obstacle_type === 'point' && (
                           <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
                             Height (ft)
-                            <input type="number" value={obs.height_ft || 0} onChange={e => handleUpdateObstacle(obs.id, { height_ft: Number(e.target.value) })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                            <input type="number" value={obs.height_ft || 0} onChange={e => handleUpdateObstacle(obs.id, { height_ft: Number(e.target.value) })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
                           </label>
                         )}
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button onClick={() => map.current?.flyTo({ center: [obs.longitude, obs.latitude], zoom: 17 })} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
+                          <button onClick={() => map.current?.flyTo({ center: [obs.longitude, obs.latitude], zoom: 17 })} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
                           <button onClick={() => handleDeleteObstacle(obs.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
                         </div>
                       </div>
                     )}
                   </div>
-                ))}
-
-                {obstacles.length === 0 && (
-                  <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '4px 8px', margin: 0 }}>
-                    No obstacles defined.
-                  </p>
-                )}
-              </div>
+                )
+              })}
             </div>
           )}
 
-          {/* Clearance tab */}
+          {/* Clearance tab — compact vertical list */}
           {panelTab === 'clearance' && (
-            <div style={{ display: 'flex', gap: 6, overflow: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               {allResults.length === 0 && (
-                <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '4px 8px', margin: 0 }}>
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '4px 0', margin: 0 }}>
                   Place at least 2 aircraft or 1 aircraft + 1 obstacle to see clearance checks.
                 </p>
               )}
@@ -1723,26 +1850,66 @@ export default function ParkingPage() {
                   key={i}
                   onClick={() => flyToResult(r)}
                   style={{
-                    padding: '6px 10px', borderRadius: 4, cursor: 'pointer',
-                    border: `1px solid ${STATUS_COLORS[r.status]}44`,
-                    background: `${STATUS_COLORS[r.status]}11`,
-                    minWidth: 200, flexShrink: 0,
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '4px 8px', cursor: 'pointer',
+                    borderBottom: '1px solid var(--color-border)',
+                    borderLeft: `3px solid ${STATUS_COLORS[r.status]}`,
+                    background: r.status !== 'ok' ? `${STATUS_COLORS[r.status]}08` : 'transparent',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{
-                      width: 8, height: 8, borderRadius: '50%',
-                      background: STATUS_COLORS[r.status],
-                      flexShrink: 0,
-                    }} />
-                    <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-primary)', flex: 1, whiteSpace: 'nowrap' }}>
-                      {r.aircraft_a} / {r.aircraft_b}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', marginTop: 2, marginLeft: 14, whiteSpace: 'nowrap' }}>
-                    {r.distance_ft.toFixed(1)}ft actual &middot; {r.required_ft}ft required
-                    {r.status === 'violation' && <span style={{ color: '#EF4444', marginLeft: 4 }}>VIOLATION</span>}
-                    {r.status === 'warning' && <span style={{ color: '#F59E0B', marginLeft: 4 }}>WARNING</span>}
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: STATUS_COLORS[r.status],
+                    flexShrink: 0,
+                  }} />
+                  <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {r.aircraft_a} / {r.aircraft_b}
+                  </span>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
+                    {r.distance_ft.toFixed(1)}ft / {r.required_ft}ft
+                  </span>
+                  {r.status === 'violation' && <span style={{ fontSize: 'var(--fs-xs)', color: '#EF4444', fontWeight: 600, flexShrink: 0 }}>VIOLATION</span>}
+                  {r.status === 'warning' && <span style={{ fontSize: 'var(--fs-xs)', color: '#F59E0B', fontWeight: 600, flexShrink: 0 }}>WARNING</span>}
+                  {r.status === 'ok' && <span style={{ fontSize: 'var(--fs-xs)', color: '#22C55E', flexShrink: 0 }}>OK</span>}
+                  <span style={{ fontSize: 10, color: 'var(--color-text-tertiary, #6B7280)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {r.ufc_item}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Reference tab — UFC Table 6-1a items */}
+          {panelTab === 'reference' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <p style={{ margin: '0 0 4px', fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
+                UFC 3-260-01 Table 6-1a — A/AF Apron Clearances (4 Feb 2019, Change 3)
+              </p>
+              {TABLE_6_1A_ITEMS.map(item => (
+                <div
+                  key={item.item}
+                  style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 8,
+                    padding: '4px 8px',
+                    borderBottom: '1px solid var(--color-border)',
+                    opacity: item.applicable_to_2d ? 1 : 0.5,
+                  }}
+                >
+                  <span style={{
+                    fontSize: 10, padding: '1px 6px', borderRadius: 3,
+                    background: item.applicable_to_2d ? 'var(--color-cyan)22' : 'var(--color-bg)',
+                    color: item.applicable_to_2d ? 'var(--color-cyan)' : 'var(--color-text-secondary)',
+                    fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap',
+                  }}>
+                    {item.item}{item.letter ? `(${item.letter})` : ''}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-primary)', fontWeight: 500 }}>
+                      {item.title}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginTop: 1 }}>
+                      {item.values}
+                    </div>
                   </div>
                 </div>
               ))}
