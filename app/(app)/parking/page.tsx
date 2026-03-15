@@ -150,23 +150,18 @@ async function loadSvgElement(path: string): Promise<SVGElement | null> {
   }
 }
 
-/** Get meters-per-pixel at a given latitude and zoom level.
- *  Uses the standard Web Mercator formula for 256px tile convention
- *  (Mapbox GL JS zoom levels follow the 256px convention despite using 512px tiles). */
+/** Get meters-per-pixel at a given latitude and zoom level */
 function metersPerPixel(lat: number, zoom: number): number {
-  return (40075016.686 * Math.cos(lat * Math.PI / 180)) / (256 * Math.pow(2, zoom))
+  return (40075016.686 * Math.cos(lat * Math.PI / 180)) / (512 * Math.pow(2, zoom))
 }
 
 /** Render an SVG silhouette to a canvas at to-scale pixel dimensions.
- *  Returns an ImageData or null if SVG not available.
- *  Accounts for devicePixelRatio so silhouettes are correctly sized on HiDPI displays.
- *  The silhouette is rendered as white with a dark outline for visibility on satellite imagery. */
+ *  Uses map.project() for exact pixel measurement instead of a formula. */
 async function renderSilhouetteImage(
   aircraftName: string,
   wingspanFt: number,
   lengthFt: number,
-  lat: number,
-  zoom: number,
+  mapInstance: mapboxgl.Map,
 ): Promise<{ imageData: ImageData; width: number; height: number; pixelRatio: number } | null> {
   const svgPath = findSilhouettePath(aircraftName)
   if (!svgPath) return null
@@ -174,36 +169,42 @@ async function renderSilhouetteImage(
   const svg = await loadSvgElement(svgPath)
   if (!svg) return null
 
-  const mpp = metersPerPixel(lat, zoom)
-  if (mpp <= 0) return null
+  // Use Mapbox's own projection to measure exact CSS pixels per aircraft dimension
+  const center = mapInstance.getCenter()
+  const p0 = mapInstance.project(center)
 
-  // Account for device pixel ratio — Mapbox renders at DPR resolution
+  // Measure wingspan pixels: offset east by wingspan distance
+  const wingspanM = wingspanFt * FT_TO_M
+  const dLng = wingspanM / (111319.9 * Math.cos(center.lat * Math.PI / 180))
+  const pW = mapInstance.project([center.lng + dLng, center.lat])
+  const wingspanCssPx = Math.abs(pW.x - p0.x)
+
+  // Measure length pixels: offset north by length distance
+  const lengthM = lengthFt * FT_TO_M
+  const dLat = lengthM / 111319.9
+  const pL = mapInstance.project([center.lng, center.lat + dLat])
+  const lengthCssPx = Math.abs(pL.y - p0.y)
+
+  if (wingspanCssPx < 4 || lengthCssPx < 4) return null
+
+  // Scale canvas by DPR for crisp rendering, tell Mapbox via pixelRatio
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+  const w = Math.max(8, Math.round(wingspanCssPx * dpr))
+  const h = Math.max(8, Math.round(lengthCssPx * dpr))
 
-  // Convert real aircraft dimensions to device pixels
-  const wingspanPx = Math.max(8, Math.round((wingspanFt * FT_TO_M) / mpp * dpr))
-  const lengthPx = Math.max(8, Math.round((lengthFt * FT_TO_M) / mpp * dpr))
-
-  // Cap at reasonable size to avoid huge canvases
+  // Cap at reasonable size
   const maxPx = 1600
-  const scale = Math.min(1, maxPx / Math.max(wingspanPx, lengthPx))
-  const w = Math.round(wingspanPx * scale)
-  const h = Math.round(lengthPx * scale)
+  const scale = Math.min(1, maxPx / Math.max(w, h))
+  const fw = Math.round(w * scale)
+  const fh = Math.round(h * scale)
 
-  if (w < 4 || h < 4) return null
-
-  // Render SVG to canvas
-  // SVGs are oriented nose-up, with wingspan horizontal.
-  // Canvas: width = wingspan (x), height = length (y)
   const canvas = document.createElement('canvas')
   const padding = Math.round(4 * dpr)
-  canvas.width = w + padding * 2
-  canvas.height = h + padding * 2
+  canvas.width = fw + padding * 2
+  canvas.height = fh + padding * 2
   const ctx = canvas.getContext('2d')!
 
-  // Create an Image from the SVG markup
   const svgMarkup = new XMLSerializer().serializeToString(svg)
-  // Recolor fill to white for satellite visibility
   const recolored = svgMarkup
     .replace(/fill="[^"]*"/g, 'fill="#E0E7FF"')
     .replace(/stroke="[^"]*"/g, 'stroke="#1E293B"')
@@ -211,9 +212,8 @@ async function renderSilhouetteImage(
   return new Promise(resolve => {
     const img = new Image()
     img.onload = () => {
-      // Draw shadow/outline first
       ctx.filter = `drop-shadow(0px 0px ${Math.round(2 * dpr)}px rgba(0,0,0,0.8))`
-      ctx.drawImage(img, padding, padding, w, h)
+      ctx.drawImage(img, padding, padding, fw, fh)
       ctx.filter = 'none'
 
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
@@ -227,12 +227,19 @@ async function renderSilhouetteImage(
 /** Generate a fallback circle icon for aircraft without silhouettes */
 function renderFallbackIcon(
   wingspanFt: number,
-  lat: number,
-  zoom: number,
+  mapInstance: mapboxgl.Map,
 ): { imageData: ImageData; width: number; height: number; pixelRatio: number } {
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
-  const mpp = metersPerPixel(lat, zoom)
-  const radiusPx = Math.max(6, Math.round((wingspanFt / 2 * FT_TO_M) / mpp * dpr))
+
+  // Use map projection for exact pixel measurement
+  const center = mapInstance.getCenter()
+  const p0 = mapInstance.project(center)
+  const radiusM = (wingspanFt / 2) * FT_TO_M
+  const dLng = radiusM / (111319.9 * Math.cos(center.lat * Math.PI / 180))
+  const pR = mapInstance.project([center.lng + dLng, center.lat])
+  const radiusCssPx = Math.abs(pR.x - p0.x)
+
+  const radiusPx = Math.max(6, Math.round(radiusCssPx * dpr))
   const size = Math.min(radiusPx * 2 + 8, 400)
   const canvas = document.createElement('canvas')
   canvas.width = size
@@ -740,9 +747,7 @@ export default function ParkingPage() {
       })
 
       // Register silhouette images for each aircraft at current zoom
-      const zoom = m.getZoom()
-      const centerLat = m.getCenter().lat
-      lastZoomRef.current = zoom
+      lastZoomRef.current = m.getZoom()
 
       const registerImages = async () => {
         for (const spot of spotsWithAircraft) {
@@ -757,8 +762,7 @@ export default function ParkingPage() {
             spot.aircraft_name || '',
             spot.wingspan_ft,
             spot.length_ft,
-            spot.latitude,
-            zoom,
+            m,
           )
 
           if (result) {
@@ -766,7 +770,7 @@ export default function ParkingPage() {
             silhouetteImagesRef.current.add(imgName)
           } else {
             // Fallback: to-scale circle
-            const fallback = renderFallbackIcon(spot.wingspan_ft, spot.latitude, zoom)
+            const fallback = renderFallbackIcon(spot.wingspan_ft, m)
             m.addImage(imgName, fallback.imageData, { pixelRatio: fallback.pixelRatio, sdf: false })
             silhouetteImagesRef.current.add(imgName)
           }
@@ -837,15 +841,14 @@ export default function ParkingPage() {
             spot.aircraft_name || '',
             spot.wingspan_ft,
             spot.length_ft,
-            spot.latitude,
-            newZoom,
+            m,
           )
 
           if (result) {
             if (m.hasImage(imgName)) m.removeImage(imgName)
             m.addImage(imgName, result.imageData, { pixelRatio: result.pixelRatio, sdf: false })
           } else {
-            const fallback = renderFallbackIcon(spot.wingspan_ft, spot.latitude, newZoom)
+            const fallback = renderFallbackIcon(spot.wingspan_ft, m)
             if (m.hasImage(imgName)) m.removeImage(imgName)
             m.addImage(imgName, fallback.imageData, { pixelRatio: fallback.pixelRatio, sdf: false })
           }
