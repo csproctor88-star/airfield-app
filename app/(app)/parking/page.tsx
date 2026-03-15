@@ -47,33 +47,63 @@ import { DEMO_PARKING_PLAN, DEMO_PARKING_SPOTS, DEMO_PARKING_OBSTACLES } from '@
 const manifest = silhouetteManifest as Record<string, { base_name: string; path: string; filename: string }>
 
 function findSilhouettePath(aircraftName: string): string | null {
-  // Try exact match first, then strip variant suffixes
-  const normalize = (s: string) => s.replace(/[-\s]/g, '').toLowerCase()
-  const norm = normalize(aircraftName)
+  const normalize = (s: string) => s.replace(/[-\s_]/g, '').toLowerCase()
+  const entries = Object.entries(manifest)
 
-  for (const [key, entry] of Object.entries(manifest)) {
-    if (normalize(key) === norm || normalize(entry.base_name) === norm) {
-      return entry.path
-    }
-  }
-
-  // Try matching by stripping suffix (e.g., "C-17A Globemaster III" → "C-17")
-  const parts = aircraftName.split(/[\s-]/)
-  for (let len = parts.length; len >= 1; len--) {
-    const prefix = normalize(parts.slice(0, len).join(''))
-    for (const [key, entry] of Object.entries(manifest)) {
-      if (normalize(key) === prefix || normalize(entry.base_name) === prefix) {
+  // Helper: check normalized name against all manifest keys/base_names
+  const tryMatch = (candidate: string): string | null => {
+    const norm = normalize(candidate)
+    for (const [key, entry] of entries) {
+      if (normalize(key) === norm || normalize(entry.base_name) === norm) {
         return entry.path
       }
     }
+    return null
   }
 
-  // Try matching just the base designation (e.g., "C17" from "C-17A Globemaster III")
-  const baseDesig = aircraftName.replace(/[^A-Za-z0-9]/g, '').replace(/[A-Z][a-z]+.*$/, '')
-  for (const [key] of Object.entries(manifest)) {
-    if (normalize(key) === normalize(baseDesig)) {
-      return manifest[key].path
+  // 1) Exact full name
+  const exact = tryMatch(aircraftName)
+  if (exact) return exact
+
+  // 2) Extract military-style designation: "C-17A Globemaster III" → "C-17A"
+  //    Also handles "KC-135R", "F/A-18F", "Boeing 737-800", etc.
+  const desigMatch = aircraftName.match(/^([A-Z][A-Z/]*-?\d+\w*)/i)
+  if (desigMatch) {
+    const desig = desigMatch[1]  // e.g. "C-17A"
+
+    // Try designation as-is
+    const d1 = tryMatch(desig)
+    if (d1) return d1
+
+    // Strip variant letter suffix: "C-17A" → "C-17", "KC-135R" → "KC-135"
+    const stripped = desig.replace(/([0-9])[A-Z]$/i, '$1')
+    if (stripped !== desig) {
+      const d2 = tryMatch(stripped)
+      if (d2) return d2
     }
+  }
+
+  // 3) Progressive word trimming from the right
+  //    "Boeing 747-400" → try "Boeing 747", then "Boeing"
+  const words = aircraftName.split(/\s+/)
+  for (let len = words.length - 1; len >= 1; len--) {
+    const prefix = words.slice(0, len).join(' ')
+    const r = tryMatch(prefix)
+    if (r) return r
+  }
+
+  // 4) Try each individual word/token: catches "Airbus A380-800" → "A380"
+  for (const word of words) {
+    // Try the word itself and also strip trailing dash-numbers (A380-800 → A380)
+    const r = tryMatch(word) || tryMatch(word.replace(/-\d+$/, ''))
+    if (r) return r
+  }
+
+  // 5) Try just the numeric part: "Boeing 737-800" → "737"
+  const numMatch = aircraftName.match(/\b(\d{2,4})\b/)
+  if (numMatch) {
+    const r = tryMatch(numMatch[1])
+    if (r) return r
   }
 
   return null
