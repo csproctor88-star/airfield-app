@@ -377,6 +377,8 @@ export default function ParkingPage() {
 
   // Ruler tool
   const isPlacing = !!(placingAircraft || placingObstacle || drawingLineObsId || drawingTaxilaneId || drawingBoundaryId || drawingObsType)
+  const isPlacingRef = useRef(isPlacing)
+  isPlacingRef.current = isPlacing
 
   // Map refs
   const mapContainer = useRef<HTMLDivElement>(null)
@@ -1227,8 +1229,9 @@ export default function ParkingPage() {
     ]
 
     const onMouseDown = (e: mapboxgl.MapMouseEvent) => {
-      // Don't start drag when plan is locked
+      // Don't start drag when plan is locked or in placement/drawing mode
       if (planLockedRef.current) return
+      if (isPlacingRef.current) return
 
       const box = hitBox(e.point)
 
@@ -1622,6 +1625,10 @@ export default function ParkingPage() {
     setDrawingTaxilaneType(type)
     setPlacingAircraft(null)
     setPlacingObstacle(null)
+    setDrawingLineObsId(null); setDrawingLinePoints([])
+    setDrawingBoundaryId(null); setDrawingBoundaryPoints([])
+    setDrawingObsType(null); setDrawingObsStart(null); setDrawingObsCurrent(null)
+    if (ruler.active) ruler.toggle() // deactivate ruler
     toast.success('Click on the map to draw taxilane centerline. Double-click or press Finish to complete.')
     // We'll create the DB record when finishing
     setDrawingTaxilaneId('pending')
@@ -1674,6 +1681,10 @@ export default function ParkingPage() {
   const handleStartBoundary = () => {
     setPlacingAircraft(null)
     setPlacingObstacle(null)
+    setDrawingLineObsId(null); setDrawingLinePoints([])
+    setDrawingTaxilaneId(null); setDrawingTaxilanePoints([])
+    setDrawingObsType(null); setDrawingObsStart(null); setDrawingObsCurrent(null)
+    if (ruler.active) ruler.toggle() // deactivate ruler
     toast.success('Click on the map to draw apron boundary. Double-click or press Finish to complete.')
     setDrawingBoundaryId('pending')
     setDrawingBoundaryPoints([])
