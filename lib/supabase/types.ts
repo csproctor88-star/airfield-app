@@ -961,10 +961,13 @@ export type Database = {
           base_id: string
           designator: string
           taxiway_type: string
-          tdg: number
+          tdg: number | null
           width_ft: number | null
           centerline_coords: [number, number][]
           notes: string | null
+          standard: string
+          runway_class: string | null
+          service_branch: string | null
           created_by: string | null
           created_at: string
           updated_at: string

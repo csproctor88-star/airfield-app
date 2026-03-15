@@ -137,6 +137,9 @@ function ObstructionsContent() {
         taxiwayType: tw.taxiway_type as 'taxiway' | 'taxilane',
         tdg: tw.tdg,
         centerline: ((tw.centerline_coords as [number, number][]) || []).map(c => ({ lat: c[1], lon: c[0] })),
+        standard: (tw.standard || 'faa') as 'faa' | 'ufc',
+        runwayClass: tw.runway_class as 'A' | 'B' | null,
+        serviceBranch: tw.service_branch as 'army' | 'air_force' | 'navy_mc' | null,
       })))
     })
   }, [installationId])
@@ -1000,7 +1003,7 @@ function ObstructionsContent() {
           {taxiwayResults.length > 0 && (
             <div className="card" style={{ marginTop: 10 }}>
               <span className="section-label" style={{ margin: 0, marginBottom: 6 }}>
-                Taxiway Surface Analysis (UFC 3-260-01)
+                Taxiway Surface Analysis
               </span>
               {taxiwayResults
                 .filter(r => r.isWithinBounds)

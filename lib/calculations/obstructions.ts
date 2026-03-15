@@ -20,6 +20,9 @@ import {
   getSafetyAreaHalfWidth,
   getTaxiwayCriteria,
   TAXIWAY_SURFACES,
+  getUfcCriteria,
+  type RunwayClass,
+  type ServiceBranch,
 } from './taxiway-criteria'
 
 // ---------------------------------------------------------------------------
@@ -811,8 +814,11 @@ export type TaxiwayGeometry = {
   id: string
   designator: string
   taxiwayType: 'taxiway' | 'taxilane'
-  tdg: number
+  tdg: number | null
   centerline: LatLon[]
+  standard: 'faa' | 'ufc'
+  runwayClass?: RunwayClass | null
+  serviceBranch?: ServiceBranch | null
 }
 
 export type TaxiwaySurfaceEvaluation = {
@@ -831,7 +837,8 @@ export type TaxiwaySurfaceEvaluation = {
 
 /**
  * Evaluate an obstruction against all taxiway surfaces.
- * Returns evaluations for each taxiway's OFA and Safety Area.
+ * FAA standard: evaluates OFA and Safety Area per AC 150/5300-13A.
+ * UFC standard: evaluates Taxiway Clearance Line per UFC 3-260-01, Table 5-1, Item 10.
  */
 export function evaluateObstructionTaxiways(
   point: LatLon,
@@ -843,45 +850,70 @@ export function evaluateObstructionTaxiways(
     if (tw.centerline.length < 2) continue
 
     const dist = pointToPolylineDistanceFt(point, tw.centerline)
-    const criteria = getTaxiwayCriteria(tw.tdg)
-    const ofaHalf = getOFAHalfWidth(tw.tdg, tw.taxiwayType)
-    const safetyHalf = getSafetyAreaHalfWidth(tw.tdg)
 
-    // OFA evaluation
-    const inOFA = dist <= ofaHalf
-    results.push({
-      taxiwayId: tw.id,
-      taxiwayDesignator: tw.designator,
-      distanceFromCenterlineFt: Math.round(dist),
-      surfaceKey: 'taxiway_ofa',
-      surfaceName: `TWY ${tw.designator} Object Free Area`,
-      isWithinBounds: inOFA,
-      violated: inOFA,
-      ufcReference: TAXIWAY_SURFACES.taxiway_ofa.ufcRef,
-      ufcCriteria: TAXIWAY_SURFACES.taxiway_ofa.ufcCriteria
-        .replace('{ofaWidth}', String(ofaHalf * 2))
-        .replace('{tdg}', String(tw.tdg)),
-      color: TAXIWAY_SURFACES.taxiway_ofa.color,
-      halfWidthFt: ofaHalf,
-    })
+    if (tw.standard === 'ufc') {
+      // UFC 3-260-01, Table 5-1, Item 10 — Taxiway Clearance Line
+      const rc = tw.runwayClass || 'A'
+      const sb = tw.serviceBranch || 'air_force'
+      const ufcCrit = getUfcCriteria(rc, sb)
+      const clearanceHalf = ufcCrit.clearanceLineFt
 
-    // Safety Area evaluation
-    const inSafety = dist <= safetyHalf
-    results.push({
-      taxiwayId: tw.id,
-      taxiwayDesignator: tw.designator,
-      distanceFromCenterlineFt: Math.round(dist),
-      surfaceKey: 'taxiway_safety_area',
-      surfaceName: `TWY ${tw.designator} Safety Area`,
-      isWithinBounds: inSafety,
-      violated: inSafety,
-      ufcReference: TAXIWAY_SURFACES.taxiway_safety_area.ufcRef,
-      ufcCriteria: TAXIWAY_SURFACES.taxiway_safety_area.ufcCriteria
-        .replace('{safetyWidth}', String(safetyHalf * 2))
-        .replace('{tdg}', String(tw.tdg)),
-      color: TAXIWAY_SURFACES.taxiway_safety_area.color,
-      halfWidthFt: safetyHalf,
-    })
+      const inClearance = dist <= clearanceHalf
+      results.push({
+        taxiwayId: tw.id,
+        taxiwayDesignator: tw.designator,
+        distanceFromCenterlineFt: Math.round(dist),
+        surfaceKey: 'taxiway_ofa', // reuse key for display compatibility
+        surfaceName: `TWY ${tw.designator} Clearance Line`,
+        isWithinBounds: inClearance,
+        violated: inClearance,
+        ufcReference: TAXIWAY_SURFACES.taxiway_clearance_line.ufcRef,
+        ufcCriteria: TAXIWAY_SURFACES.taxiway_clearance_line.ufcCriteria
+          .replace('{clearanceFt}', String(clearanceHalf))
+          .replace('{classLabel}', ufcCrit.label),
+        color: TAXIWAY_SURFACES.taxiway_clearance_line.color,
+        halfWidthFt: clearanceHalf,
+      })
+    } else {
+      // FAA AC 150/5300-13A — OFA + Safety Area
+      const tdg = tw.tdg ?? 3
+      const ofaHalf = getOFAHalfWidth(tdg, tw.taxiwayType)
+      const safetyHalf = getSafetyAreaHalfWidth(tdg)
+
+      const inOFA = dist <= ofaHalf
+      results.push({
+        taxiwayId: tw.id,
+        taxiwayDesignator: tw.designator,
+        distanceFromCenterlineFt: Math.round(dist),
+        surfaceKey: 'taxiway_ofa',
+        surfaceName: `TWY ${tw.designator} Object Free Area`,
+        isWithinBounds: inOFA,
+        violated: inOFA,
+        ufcReference: TAXIWAY_SURFACES.taxiway_ofa.ufcRef,
+        ufcCriteria: TAXIWAY_SURFACES.taxiway_ofa.ufcCriteria
+          .replace('{ofaWidth}', String(ofaHalf * 2))
+          .replace('{tdg}', String(tdg)),
+        color: TAXIWAY_SURFACES.taxiway_ofa.color,
+        halfWidthFt: ofaHalf,
+      })
+
+      const inSafety = dist <= safetyHalf
+      results.push({
+        taxiwayId: tw.id,
+        taxiwayDesignator: tw.designator,
+        distanceFromCenterlineFt: Math.round(dist),
+        surfaceKey: 'taxiway_safety_area',
+        surfaceName: `TWY ${tw.designator} Safety Area`,
+        isWithinBounds: inSafety,
+        violated: inSafety,
+        ufcReference: TAXIWAY_SURFACES.taxiway_safety_area.ufcRef,
+        ufcCriteria: TAXIWAY_SURFACES.taxiway_safety_area.ufcCriteria
+          .replace('{safetyWidth}', String(safetyHalf * 2))
+          .replace('{tdg}', String(tdg)),
+        color: TAXIWAY_SURFACES.taxiway_safety_area.color,
+        halfWidthFt: safetyHalf,
+      })
+    }
   }
 
   return results

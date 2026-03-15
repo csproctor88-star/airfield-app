@@ -1,9 +1,13 @@
-// UFC 3-260-01 Taxiway Clearance Criteria by Taxiway Design Group (TDG)
+// Taxiway Clearance Criteria — Dual Standard Support
 //
-// Source: UFC 3-260-01, Table 3-1 (Taxiway Dimensional Standards)
-// TDG is determined by cockpit-to-main-gear distance and main gear width.
+// FAA: AC 150/5300-13A, Table 4-1 (Taxiway Design Group 1–7)
+// UFC: UFC 3-260-01 (4 Feb 2019, Change 3), Table 5-1 (Fixed-Wing Taxiways)
 //
 // All dimensions in feet, measured from taxiway centerline unless noted.
+
+// ─────────────────────────────────────────────────────────
+// FAA AC 150/5300-13A — Taxiway Design Group (TDG) System
+// ─────────────────────────────────────────────────────────
 
 export interface TaxiwayCriteria {
   /** Taxiway Design Group (1–7) */
@@ -24,7 +28,7 @@ export interface TaxiwayCriteria {
   wingtipClearance: number
 }
 
-// UFC 3-260-01, Table 3-1 — Taxiway Design Standards
+// FAA AC 150/5300-13A, Table 4-1 — Taxiway Design Standards
 // These are the TAXIWAY values. Taxilane values are narrower (separate table below).
 export const TAXIWAY_CRITERIA: Record<number, TaxiwayCriteria> = {
   1: {
@@ -99,8 +103,7 @@ export const TAXIWAY_CRITERIA: Record<number, TaxiwayCriteria> = {
   },
 }
 
-// Taxilane criteria — narrower clearances than taxiways
-// UFC 3-260-01, Table 3-1 footnotes / Taxilane standards
+// FAA AC 150/5300-13A — Taxilane criteria (narrower clearances than taxiways)
 export interface TaxilaneCriteria {
   tdg: number
   ofaHalfWidth: number
@@ -117,7 +120,169 @@ export const TAXILANE_CRITERIA: Record<number, TaxilaneCriteria> = {
   7: { tdg: 7, ofaHalfWidth: 370, wingtipClearance: 76 },
 }
 
-/** Get the OFA half-width for a given TDG and type */
+// ─────────────────────────────────────────────────────────
+// UFC 3-260-01, Table 5-1 — Fixed-Wing Taxiway Standards
+// ─────────────────────────────────────────────────────────
+
+export type RunwayClass = 'A' | 'B'
+export type ServiceBranch = 'army' | 'air_force' | 'navy_mc'
+
+export interface UfcTaxiwayCriteria {
+  /** Runway class (A or B) */
+  runwayClass: RunwayClass
+  /** Service branch */
+  serviceBranch: ServiceBranch
+  /** Display label */
+  label: string
+  /** Taxiway pavement width (ft) — Table 5-1, Item 1 */
+  pavementWidthFt: number
+  /** Total shoulder width, each side (ft) — Table 5-1, Item 2 */
+  shoulderWidthFt: number
+  /** Paved shoulder width (ft) — Table 5-1, Item 3 */
+  pavedShoulderWidthFt: number
+  /** Clearance from CL to fixed/mobile obstacles (ft) — Table 5-1, Item 10 (Taxiway Clearance Line) */
+  clearanceLineFt: number
+  /** Distance between parallel taxiway/taxilane centerlines (ft) — Table 5-1, Item 11 */
+  parallelSpacingFt: number
+  /** Parallel spacing note — "or wingspan + X ft, whichever is greater" */
+  parallelSpacingNote: string
+}
+
+// UFC 3-260-01, Table 5-1 criteria by runway class × service branch
+export const UFC_TAXIWAY_CRITERIA: UfcTaxiwayCriteria[] = [
+  {
+    runwayClass: 'A',
+    serviceBranch: 'army',
+    label: 'Class A — Army',
+    pavementWidthFt: 50,
+    shoulderWidthFt: 25,
+    pavedShoulderWidthFt: 25,
+    clearanceLineFt: 150,
+    parallelSpacingFt: 175,
+    parallelSpacingNote: 'or wingspan + 50 ft, whichever is greater',
+  },
+  {
+    runwayClass: 'A',
+    serviceBranch: 'air_force',
+    label: 'Class A — Air Force',
+    pavementWidthFt: 50,
+    shoulderWidthFt: 25,
+    pavedShoulderWidthFt: 25,
+    clearanceLineFt: 150,
+    parallelSpacingFt: 175,
+    parallelSpacingNote: 'or wingspan + 50 ft, whichever is greater',
+  },
+  {
+    runwayClass: 'A',
+    serviceBranch: 'navy_mc',
+    label: 'Class A — Navy/MC',
+    pavementWidthFt: 40,
+    shoulderWidthFt: 25,
+    pavedShoulderWidthFt: 50,
+    clearanceLineFt: 150,
+    parallelSpacingFt: 175,
+    parallelSpacingNote: 'or wingspan + 50 ft, whichever is greater',
+  },
+  {
+    runwayClass: 'B',
+    serviceBranch: 'army',
+    label: 'Class B — Army',
+    pavementWidthFt: 75,
+    shoulderWidthFt: 50,
+    pavedShoulderWidthFt: 25,
+    clearanceLineFt: 150,
+    parallelSpacingFt: 187,
+    parallelSpacingNote: 'or wingspan + 50 ft, whichever is greater',
+  },
+  {
+    runwayClass: 'B',
+    serviceBranch: 'air_force',
+    label: 'Class B — Air Force',
+    pavementWidthFt: 75,
+    shoulderWidthFt: 50,
+    pavedShoulderWidthFt: 25,
+    clearanceLineFt: 200,
+    parallelSpacingFt: 237,
+    parallelSpacingNote: 'or wingspan + 50 ft, whichever is greater',
+  },
+  {
+    runwayClass: 'B',
+    serviceBranch: 'navy_mc',
+    label: 'Class B — Navy/MC',
+    pavementWidthFt: 75,
+    shoulderWidthFt: 50,
+    pavedShoulderWidthFt: 50,
+    clearanceLineFt: 150,
+    parallelSpacingFt: 237,
+    parallelSpacingNote: 'or wingspan + 50 ft, whichever is greater',
+  },
+]
+
+/** Look up UFC criteria for a given runway class and service branch */
+export function getUfcCriteria(
+  runwayClass: RunwayClass,
+  serviceBranch: ServiceBranch,
+): UfcTaxiwayCriteria {
+  return (
+    UFC_TAXIWAY_CRITERIA.find(
+      c => c.runwayClass === runwayClass && c.serviceBranch === serviceBranch,
+    ) ?? UFC_TAXIWAY_CRITERIA[0] // fallback to Class A Army
+  )
+}
+
+// ─────────────────────────────────────────────────────────
+// Unified accessor functions (work with both standards)
+// ─────────────────────────────────────────────────────────
+
+export type TaxiwayStandard = 'faa' | 'ufc'
+
+export interface TaxiwayConfig {
+  standard: TaxiwayStandard
+  // FAA fields
+  tdg?: number | null
+  taxiwayType?: 'taxiway' | 'taxilane'
+  // UFC fields
+  runwayClass?: RunwayClass | null
+  serviceBranch?: ServiceBranch | null
+}
+
+/** Get the obstacle clearance half-width from centerline (ft) for any standard */
+export function getClearanceHalfWidth(config: TaxiwayConfig): number {
+  if (config.standard === 'ufc') {
+    const rc = config.runwayClass || 'A'
+    const sb = config.serviceBranch || 'air_force'
+    return getUfcCriteria(rc, sb).clearanceLineFt
+  }
+  // FAA
+  return getOFAHalfWidth(config.tdg ?? 3, config.taxiwayType ?? 'taxiway')
+}
+
+/** Get the safety area half-width (FAA only — UFC has no separate safety area) */
+export function getSafetyHalfWidth(config: TaxiwayConfig): number | null {
+  if (config.standard === 'ufc') return null // UFC Table 5-1 has no separate safety area
+  return getSafetyAreaHalfWidth(config.tdg ?? 3)
+}
+
+/** Get display label for a taxiway's clearance standard */
+export function getClearanceLabel(config: TaxiwayConfig): string {
+  if (config.standard === 'ufc') {
+    const rc = config.runwayClass || 'A'
+    const sb = config.serviceBranch || 'air_force'
+    const c = getUfcCriteria(rc, sb)
+    return `${c.label} — ${c.clearanceLineFt}ft clearance line`
+  }
+  const tdg = config.tdg ?? 3
+  const type = config.taxiwayType ?? 'taxiway'
+  const ofa = getOFAHalfWidth(tdg, type) * 2
+  const safety = getSafetyAreaHalfWidth(tdg) * 2
+  return `TDG-${tdg} — OFA ${ofa}ft / Safety ${safety}ft`
+}
+
+// ─────────────────────────────────────────────────────────
+// Legacy accessor functions (FAA TDG — kept for compatibility)
+// ─────────────────────────────────────────────────────────
+
+/** Get the OFA half-width for a given FAA TDG and type */
 export function getOFAHalfWidth(tdg: number, type: 'taxiway' | 'taxilane' = 'taxiway'): number {
   if (type === 'taxilane') {
     return TAXILANE_CRITERIA[tdg]?.ofaHalfWidth ?? TAXILANE_CRITERIA[3].ofaHalfWidth
@@ -125,30 +290,40 @@ export function getOFAHalfWidth(tdg: number, type: 'taxiway' | 'taxilane' = 'tax
   return TAXIWAY_CRITERIA[tdg]?.ofaHalfWidth ?? TAXIWAY_CRITERIA[3].ofaHalfWidth
 }
 
-/** Get the safety area half-width for a given TDG */
+/** Get the safety area half-width for a given FAA TDG */
 export function getSafetyAreaHalfWidth(tdg: number): number {
   return TAXIWAY_CRITERIA[tdg]?.safetyAreaHalfWidth ?? TAXIWAY_CRITERIA[3].safetyAreaHalfWidth
 }
 
-/** Get full criteria for a TDG */
+/** Get full FAA criteria for a TDG */
 export function getTaxiwayCriteria(tdg: number): TaxiwayCriteria {
   return TAXIWAY_CRITERIA[tdg] ?? TAXIWAY_CRITERIA[3]
 }
 
-// Taxiway surface definitions for obstruction evaluation display
+// ─────────────────────────────────────────────────────────
+// Surface definitions for obstruction evaluation display
+// ─────────────────────────────────────────────────────────
+
 export const TAXIWAY_SURFACES = {
   taxiway_ofa: {
     name: 'Taxiway Object Free Area',
-    ufcRef: 'UFC 3-260-01, Table 3-1 (Taxiway Object Free Area)',
+    ufcRef: 'FAA AC 150/5300-13A, Table 4-1 (Taxiway Object Free Area)',
     ufcCriteria: 'No object may protrude above the taxiway elevation within the Object Free Area ({ofaWidth} ft wide for TDG-{tdg}).',
     description: 'Area centered on taxiway centerline that must be clear of objects above taxiway elevation.',
     color: '#F59E0B',
   },
   taxiway_safety_area: {
     name: 'Taxiway Safety Area',
-    ufcRef: 'UFC 3-260-01, Table 3-1 (Taxiway Safety Area)',
+    ufcRef: 'FAA AC 150/5300-13A, Table 4-1 (Taxiway Safety Area)',
     ufcCriteria: 'The Taxiway Safety Area ({safetyWidth} ft wide for TDG-{tdg}) must be cleared, graded, drained, and free of objects other than those required for air navigation or ground maneuvering.',
     description: 'Cleared, graded, and drained area centered on taxiway centerline.',
     color: '#FB923C',
+  },
+  taxiway_clearance_line: {
+    name: 'Taxiway Clearance Line',
+    ufcRef: 'UFC 3-260-01, Table 5-1, Item 10 (Taxiway Clearance Line)',
+    ufcCriteria: 'Minimum clearance from taxiway centerline to fixed or mobile obstacles is {clearanceFt} ft for {classLabel}.',
+    description: 'No fixed or mobile obstacles may be located within this distance from the taxiway centerline.',
+    color: '#F59E0B',
   },
 } as const

@@ -1,4 +1,5 @@
 // CRUD operations for base_taxiways (installation-level taxiway centerlines)
+// Supports both FAA (TDG) and UFC (Class A/B) standards.
 
 import { createClient } from './client'
 import type { BaseTaxiway } from './types'
@@ -25,10 +26,13 @@ export async function createTaxiway(
   taxiway: {
     designator: string
     taxiway_type?: string
-    tdg?: number
+    tdg?: number | null
     width_ft?: number | null
     centerline_coords: [number, number][]
     notes?: string | null
+    standard?: string
+    runway_class?: string | null
+    service_branch?: string | null
   },
 ): Promise<BaseTaxiway | null> {
   const supabase = createClient()
@@ -40,10 +44,13 @@ export async function createTaxiway(
       base_id: baseId,
       designator: taxiway.designator,
       taxiway_type: taxiway.taxiway_type || 'taxiway',
-      tdg: taxiway.tdg ?? 3,
+      tdg: taxiway.tdg ?? null,
       width_ft: taxiway.width_ft ?? null,
       centerline_coords: taxiway.centerline_coords as any,
       notes: taxiway.notes ?? null,
+      standard: taxiway.standard || 'faa',
+      runway_class: taxiway.runway_class ?? null,
+      service_branch: taxiway.service_branch ?? null,
     } as any)
     .select('*')
     .single()
@@ -60,10 +67,13 @@ export async function updateTaxiway(
   updates: Partial<{
     designator: string
     taxiway_type: string
-    tdg: number
+    tdg: number | null
     width_ft: number | null
     centerline_coords: [number, number][]
     notes: string | null
+    standard: string
+    runway_class: string | null
+    service_branch: string | null
   }>,
 ): Promise<BaseTaxiway | null> {
   const supabase = createClient()
