@@ -1363,22 +1363,21 @@ export default function ParkingPage() {
         </div>
       )}
 
-      {/* Main content: side panel + map */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* Side panel */}
-        <div style={{
-          width: 300, flexShrink: 0, borderRight: '1px solid var(--color-border)',
-          background: 'var(--color-bg-surface)', overflow: 'auto',
-          display: 'flex', flexDirection: 'column',
-        }}>
-          {/* Panel tabs */}
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)' }}>
+      {/* Top panel strip — tabs + content above the map */}
+      <div style={{
+        flexShrink: 0, borderBottom: '1px solid var(--color-border)',
+        background: 'var(--color-bg-surface)',
+        display: 'flex', flexDirection: 'column', maxHeight: '40vh',
+      }}>
+        {/* Tab row + plan actions */}
+        <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--color-border)' }}>
+          <div style={{ display: 'flex', flex: 1 }}>
             {(['aircraft', 'obstacles', 'clearance'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setPanelTab(tab)}
                 style={{
-                  flex: 1, padding: '8px 4px', border: 'none', cursor: 'pointer',
+                  padding: '6px 16px', border: 'none', cursor: 'pointer',
                   fontSize: 'var(--fs-xs)', textTransform: 'capitalize',
                   background: panelTab === tab ? 'var(--color-bg)' : 'transparent',
                   color: panelTab === tab ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
@@ -1398,118 +1397,150 @@ export default function ParkingPage() {
               </button>
             ))}
           </div>
+          {selectedPlan && (
+            <div style={{ display: 'flex', gap: 4, padding: '0 8px' }}>
+              {!selectedPlan.is_active && (
+                <button
+                  onClick={handleSetActive}
+                  style={{ padding: '4px 8px', borderRadius: 4, background: '#22C55E22', border: '1px solid #22C55E44', color: '#22C55E', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}
+                >
+                  Set Active
+                </button>
+              )}
+              <button
+                onClick={handleDeletePlan}
+                style={{ padding: '4px 8px', borderRadius: 4, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}
+              >
+                Delete Plan
+              </button>
+            </div>
+          )}
+        </div>
 
-          {/* Panel content */}
-          <div style={{ flex: 1, overflow: 'auto', padding: 8 }}>
-            {/* Aircraft tab */}
-            {panelTab === 'aircraft' && (
-              <>
+        {/* Panel content — scrollable horizontal for aircraft, vertical for others */}
+        <div style={{ overflow: 'auto', padding: 8 }}>
+          {/* Aircraft tab */}
+          {panelTab === 'aircraft' && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                 {selectedPlanId && (
                   <button
                     onClick={() => setShowAircraftPicker(true)}
                     style={{
-                      width: '100%', padding: '8px 12px', marginBottom: 8, borderRadius: 4,
+                      padding: '8px 16px', borderRadius: 4, flexShrink: 0,
                       background: 'var(--color-cyan)11', border: '1px dashed var(--color-cyan)',
                       color: 'var(--color-cyan)', cursor: 'pointer', fontSize: 'var(--fs-sm)',
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     + Add Aircraft
                   </button>
                 )}
 
-                {!selectedPlanId && (
-                  <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-sm)', textAlign: 'center', padding: 16 }}>
+                {spots.length === 0 && !selectedPlanId && (
+                  <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-sm)', padding: '4px 8px', margin: 0 }}>
                     Select or create a plan to add aircraft
                   </p>
                 )}
 
-                {spots.map(s => {
-                  const ac = allAircraft.find(a => a.aircraft === s.aircraft_name)
-                  const ws = ac ? parseNum(ac.wing_span_ft) : 50
-                  const adg = getADGFromWingspan(ws)
-                  const clearance = s.clearance_ft ?? getDefaultClearance(adg)
-                  const spotViolations = allResults.filter(r =>
-                    (r.spot_a_id === s.id || r.spot_b_id === s.id) && r.status !== 'ok'
-                  )
+                {spots.length === 0 && selectedPlanId && (
+                  <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '4px 8px', margin: 0 }}>
+                    No aircraft placed yet.
+                  </p>
+                )}
 
-                  return (
-                    <div
-                      key={s.id}
-                      onClick={() => setEditingSpot(editingSpot?.id === s.id ? null : s)}
-                      style={{
-                        padding: '8px 10px', marginBottom: 4, borderRadius: 4, cursor: 'pointer',
-                        background: editingSpot?.id === s.id ? 'var(--color-bg)' : 'transparent',
-                        border: `1px solid ${spotViolations.length > 0 ? '#EF444444' : 'var(--color-border)'}`,
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{
-                          fontSize: 10, padding: '1px 4px', borderRadius: 3,
-                          background: `${ADG_COLORS[adg]}22`, color: ADG_COLORS[adg],
-                          fontWeight: 600,
-                        }}>
-                          {adg}
-                        </span>
-                        <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 500, color: 'var(--color-text-primary)', flex: 1 }}>
-                          {s.aircraft_name || 'Unknown'}
-                        </span>
-                        {spotViolations.length > 0 && (
-                          <span style={{ color: '#EF4444', fontSize: 12 }}>!</span>
-                        )}
-                      </div>
-                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', marginTop: 2 }}>
-                        {s.spot_name || s.spot_type || 'Unassigned'} &middot; {clearance}ft clearance
-                        {s.tail_number && <> &middot; {s.tail_number}</>}
-                      </div>
+                {/* Aircraft cards in a horizontal scroll row */}
+                <div style={{ display: 'flex', gap: 6, overflow: 'auto', flex: 1 }}>
+                  {spots.map(s => {
+                    const ac = allAircraft.find(a => a.aircraft === s.aircraft_name)
+                    const ws = ac ? parseNum(ac.wing_span_ft) : 50
+                    const adg = getADGFromWingspan(ws)
+                    const clearance = s.clearance_ft ?? getDefaultClearance(adg)
+                    const spotViolations = allResults.filter(r =>
+                      (r.spot_a_id === s.id || r.spot_b_id === s.id) && r.status !== 'ok'
+                    )
+                    const isEditing = editingSpot?.id === s.id
 
-                      {/* Expanded edit form */}
-                      {editingSpot?.id === s.id && (
-                        <div
-                          onClick={e => e.stopPropagation()}
-                          style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}
-                        >
-                          <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
-                            Spot Name
-                            <input
-                              value={s.spot_name || ''}
-                              onChange={e => handleUpdateSpot(s.id, { spot_name: e.target.value })}
-                              style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
-                            />
-                          </label>
-                          <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
-                            Tail Number
-                            <input
-                              value={s.tail_number || ''}
-                              onChange={e => handleUpdateSpot(s.id, { tail_number: e.target.value })}
-                              style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
-                            />
-                          </label>
-                          <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
-                            Callsign
-                            <input
-                              value={s.unit_callsign || ''}
-                              onChange={e => handleUpdateSpot(s.id, { unit_callsign: e.target.value })}
-                              style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
-                            />
-                          </label>
-                          <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
-                            Heading ({s.heading_deg}°)
-                            <input
-                              type="range" min={0} max={360} step={5}
-                              value={s.heading_deg}
-                              onChange={e => handleUpdateSpot(s.id, { heading_deg: Number(e.target.value) })}
-                              style={{ width: '100%' }}
-                            />
-                          </label>
-                          <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
-                            Clearance Override (ft)
-                            <div style={{ display: 'flex', gap: 4 }}>
+                    return (
+                      <div
+                        key={s.id}
+                        onClick={() => setEditingSpot(isEditing ? null : s)}
+                        style={{
+                          padding: '6px 10px', borderRadius: 4, cursor: 'pointer',
+                          background: isEditing ? 'var(--color-bg)' : 'transparent',
+                          border: `1px solid ${spotViolations.length > 0 ? '#EF444444' : 'var(--color-border)'}`,
+                          minWidth: isEditing ? 280 : 180, flexShrink: 0,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{
+                            fontSize: 10, padding: '1px 4px', borderRadius: 3,
+                            background: `${ADG_COLORS[adg]}22`, color: ADG_COLORS[adg],
+                            fontWeight: 600,
+                          }}>
+                            {adg}
+                          </span>
+                          <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 500, color: 'var(--color-text-primary)', flex: 1, whiteSpace: 'nowrap' }}>
+                            {s.aircraft_name || 'Unknown'}
+                          </span>
+                          {spotViolations.length > 0 && (
+                            <span style={{ color: '#EF4444', fontSize: 12 }}>!</span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', marginTop: 2, whiteSpace: 'nowrap' }}>
+                          {s.spot_name || s.spot_type || 'Unassigned'} &middot; {clearance}ft
+                          {s.tail_number && <> &middot; {s.tail_number}</>}
+                        </div>
+
+                        {/* Expanded edit form */}
+                        {isEditing && (
+                          <div
+                            onClick={e => e.stopPropagation()}
+                            style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}
+                          >
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
+                                Spot Name
+                                <input
+                                  value={s.spot_name || ''}
+                                  onChange={e => handleUpdateSpot(s.id, { spot_name: e.target.value })}
+                                  style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
+                                />
+                              </label>
+                              <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
+                                Tail Number
+                                <input
+                                  value={s.tail_number || ''}
+                                  onChange={e => handleUpdateSpot(s.id, { tail_number: e.target.value })}
+                                  style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
+                                />
+                              </label>
+                              <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
+                                Callsign
+                                <input
+                                  value={s.unit_callsign || ''}
+                                  onChange={e => handleUpdateSpot(s.id, { unit_callsign: e.target.value })}
+                                  style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
+                                />
+                              </label>
+                            </div>
+                            <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
+                              Heading ({s.heading_deg}°)
+                              <input
+                                type="range" min={0} max={360} step={5}
+                                value={s.heading_deg}
+                                onChange={e => handleUpdateSpot(s.id, { heading_deg: Number(e.target.value) })}
+                                style={{ width: '100%' }}
+                              />
+                            </label>
+                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flexShrink: 0 }}>Clearance:</span>
                               {[null, 10, 15, 25].map(val => (
                                 <button
                                   key={val ?? 'adg'}
                                   onClick={() => handleUpdateSpot(s.id, { clearance_ft: val as any })}
                                   style={{
-                                    flex: 1, padding: '3px 4px', borderRadius: 3, fontSize: 'var(--fs-xs)',
+                                    padding: '2px 6px', borderRadius: 3, fontSize: 'var(--fs-xs)',
                                     border: '1px solid var(--color-border)',
                                     background: s.clearance_ft === val ? 'var(--color-cyan)22' : 'var(--color-bg)',
                                     color: s.clearance_ft === val ? 'var(--color-cyan)' : 'var(--color-text-secondary)',
@@ -1519,81 +1550,71 @@ export default function ParkingPage() {
                                   {val ? `${val}ft` : `ADG (${getDefaultClearance(adg)}ft)`}
                                 </button>
                               ))}
+                              <select
+                                value={s.status}
+                                onChange={e => handleUpdateSpot(s.id, { status: e.target.value as ParkingSpot['status'] })}
+                                style={{ marginLeft: 'auto', padding: '2px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
+                              >
+                                <option value="available">Available</option>
+                                <option value="occupied">Occupied</option>
+                                <option value="reserved">Reserved</option>
+                              </select>
                             </div>
-                          </label>
-                          <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
-                            Status
-                            <select
-                              value={s.status}
-                              onChange={e => handleUpdateSpot(s.id, { status: e.target.value as ParkingSpot['status'] })}
-                              style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
-                            >
-                              <option value="available">Available</option>
-                              <option value="occupied">Occupied</option>
-                              <option value="reserved">Reserved</option>
-                            </select>
-                          </label>
-                          <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-                            <button
-                              onClick={() => {
-                                map.current?.flyTo({ center: [s.longitude, s.latitude], zoom: 17 })
-                              }}
-                              style={{ flex: 1, padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}
-                            >
-                              Fly To
-                            </button>
-                            <button
-                              onClick={() => handleDeleteSpot(s.id)}
-                              style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}
-                            >
-                              Remove
-                            </button>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button
+                                onClick={() => map.current?.flyTo({ center: [s.longitude, s.latitude], zoom: 17 })}
+                                style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}
+                              >
+                                Fly To
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSpot(s.id)}
+                                style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}
+                              >
+                                Remove
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </>
+          )}
 
-                {spots.length === 0 && selectedPlanId && (
-                  <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', textAlign: 'center', padding: 16 }}>
-                    No aircraft placed yet. Click &quot;+ Add Aircraft&quot; to get started.
-                  </p>
-                )}
-              </>
-            )}
+          {/* Obstacles tab */}
+          {panelTab === 'obstacles' && (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                {(['point', 'building', 'line', 'circle'] as const).map(type => (
+                  <button
+                    key={type}
+                    onClick={() => { setPlacingObstacle(type); setPlacingAircraft(null) }}
+                    style={{
+                      padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)',
+                      background: placingObstacle === type ? '#F5730622' : 'var(--color-bg)',
+                      border: `1px solid ${placingObstacle === type ? '#F97316' : 'var(--color-border)'}`,
+                      color: placingObstacle === type ? '#F97316' : 'var(--color-text-secondary)',
+                      cursor: 'pointer', textTransform: 'capitalize',
+                    }}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
 
-            {/* Obstacles tab */}
-            {panelTab === 'obstacles' && (
-              <>
-                {(
-                  <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
-                    {(['point', 'building', 'line', 'circle'] as const).map(type => (
-                      <button
-                        key={type}
-                        onClick={() => { setPlacingObstacle(type); setPlacingAircraft(null) }}
-                        style={{
-                          flex: 1, padding: '6px 4px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                          background: placingObstacle === type ? '#F5730622' : 'var(--color-bg)',
-                          border: `1px solid ${placingObstacle === type ? '#F97316' : 'var(--color-border)'}`,
-                          color: placingObstacle === type ? '#F97316' : 'var(--color-text-secondary)',
-                          cursor: 'pointer', textTransform: 'capitalize',
-                        }}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
+              <div style={{ display: 'flex', gap: 6, overflow: 'auto', flex: 1 }}>
                 {obstacles.map(obs => (
                   <div
                     key={obs.id}
                     onClick={() => setEditingObstacle(editingObstacle?.id === obs.id ? null : obs)}
                     style={{
-                      padding: '8px 10px', marginBottom: 4, borderRadius: 4, cursor: 'pointer',
+                      padding: '6px 10px', borderRadius: 4, cursor: 'pointer',
                       background: editingObstacle?.id === obs.id ? 'var(--color-bg)' : 'transparent',
                       border: '1px solid var(--color-border)',
+                      minWidth: editingObstacle?.id === obs.id ? 260 : 150, flexShrink: 0,
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1604,7 +1625,7 @@ export default function ParkingPage() {
                       }}>
                         {obs.obstacle_type}
                       </span>
-                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-primary)', flex: 1 }}>
+                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-primary)', flex: 1, whiteSpace: 'nowrap' }}>
                         {obs.name || 'Unnamed'}
                       </span>
                     </div>
@@ -1623,67 +1644,36 @@ export default function ParkingPage() {
                           />
                         </label>
                         {obs.obstacle_type === 'building' && (
-                          <>
-                            <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
                               Width (ft)
-                              <input
-                                type="number" value={obs.width_ft || 0}
-                                onChange={e => handleUpdateObstacle(obs.id, { width_ft: Number(e.target.value) })}
-                                style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
-                              />
+                              <input type="number" value={obs.width_ft || 0} onChange={e => handleUpdateObstacle(obs.id, { width_ft: Number(e.target.value) })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
                             </label>
-                            <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
+                            <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
                               Length (ft)
-                              <input
-                                type="number" value={obs.length_ft || 0}
-                                onChange={e => handleUpdateObstacle(obs.id, { length_ft: Number(e.target.value) })}
-                                style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
-                              />
+                              <input type="number" value={obs.length_ft || 0} onChange={e => handleUpdateObstacle(obs.id, { length_ft: Number(e.target.value) })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
                             </label>
-                            <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
+                            <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
                               Rotation ({obs.rotation_deg || 0}°)
-                              <input
-                                type="range" min={0} max={360} step={5}
-                                value={obs.rotation_deg || 0}
-                                onChange={e => handleUpdateObstacle(obs.id, { rotation_deg: Number(e.target.value) })}
-                                style={{ width: '100%' }}
-                              />
+                              <input type="range" min={0} max={360} step={5} value={obs.rotation_deg || 0} onChange={e => handleUpdateObstacle(obs.id, { rotation_deg: Number(e.target.value) })} style={{ width: '100%' }} />
                             </label>
-                          </>
+                          </div>
                         )}
                         {obs.obstacle_type === 'circle' && (
                           <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
                             Radius (ft)
-                            <input
-                              type="number" value={obs.radius_ft || 0}
-                              onChange={e => handleUpdateObstacle(obs.id, { radius_ft: Number(e.target.value) })}
-                              style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
-                            />
+                            <input type="number" value={obs.radius_ft || 0} onChange={e => handleUpdateObstacle(obs.id, { radius_ft: Number(e.target.value) })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
                           </label>
                         )}
                         {obs.obstacle_type === 'point' && (
                           <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
                             Height (ft)
-                            <input
-                              type="number" value={obs.height_ft || 0}
-                              onChange={e => handleUpdateObstacle(obs.id, { height_ft: Number(e.target.value) })}
-                              style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
-                            />
+                            <input type="number" value={obs.height_ft || 0} onChange={e => handleUpdateObstacle(obs.id, { height_ft: Number(e.target.value) })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
                           </label>
                         )}
-                        <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-                          <button
-                            onClick={() => map.current?.flyTo({ center: [obs.longitude, obs.latitude], zoom: 17 })}
-                            style={{ flex: 1, padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}
-                          >
-                            Fly To
-                          </button>
-                          <button
-                            onClick={() => handleDeleteObstacle(obs.id)}
-                            style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}
-                          >
-                            Delete
-                          </button>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button onClick={() => map.current?.flyTo({ center: [obs.longitude, obs.latitude], zoom: 17 })} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
+                          <button onClick={() => handleDeleteObstacle(obs.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
                         </div>
                       </div>
                     )}
@@ -1691,82 +1681,58 @@ export default function ParkingPage() {
                 ))}
 
                 {obstacles.length === 0 && (
-                  <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', textAlign: 'center', padding: 16 }}>
-                    No obstacles defined. Obstacles are shared across all plans for this installation.
+                  <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '4px 8px', margin: 0 }}>
+                    No obstacles defined.
                   </p>
                 )}
-              </>
-            )}
+              </div>
+            </div>
+          )}
 
-            {/* Clearance tab */}
-            {panelTab === 'clearance' && (
-              <>
-                {allResults.length === 0 && (
-                  <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', textAlign: 'center', padding: 16 }}>
-                    Place at least 2 aircraft or 1 aircraft + 1 obstacle to see clearance checks.
-                  </p>
-                )}
+          {/* Clearance tab */}
+          {panelTab === 'clearance' && (
+            <div style={{ display: 'flex', gap: 6, overflow: 'auto' }}>
+              {allResults.length === 0 && (
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '4px 8px', margin: 0 }}>
+                  Place at least 2 aircraft or 1 aircraft + 1 obstacle to see clearance checks.
+                </p>
+              )}
 
-                {allResults.map((r, i) => (
-                  <div
-                    key={i}
-                    onClick={() => flyToResult(r)}
-                    style={{
-                      padding: '8px 10px', marginBottom: 4, borderRadius: 4, cursor: 'pointer',
-                      border: `1px solid ${STATUS_COLORS[r.status]}44`,
-                      background: `${STATUS_COLORS[r.status]}11`,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{
-                        width: 8, height: 8, borderRadius: '50%',
-                        background: STATUS_COLORS[r.status],
-                        flexShrink: 0,
-                      }} />
-                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-primary)', flex: 1 }}>
-                        {r.aircraft_a} / {r.aircraft_b}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', marginTop: 2, marginLeft: 14 }}>
-                      {r.distance_ft.toFixed(1)}ft actual &middot; {r.required_ft}ft required
-                      {r.status === 'violation' && <span style={{ color: '#EF4444', marginLeft: 4 }}>VIOLATION</span>}
-                      {r.status === 'warning' && <span style={{ color: '#F59E0B', marginLeft: 4 }}>WARNING</span>}
-                    </div>
+              {allResults.map((r, i) => (
+                <div
+                  key={i}
+                  onClick={() => flyToResult(r)}
+                  style={{
+                    padding: '6px 10px', borderRadius: 4, cursor: 'pointer',
+                    border: `1px solid ${STATUS_COLORS[r.status]}44`,
+                    background: `${STATUS_COLORS[r.status]}11`,
+                    minWidth: 200, flexShrink: 0,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{
+                      width: 8, height: 8, borderRadius: '50%',
+                      background: STATUS_COLORS[r.status],
+                      flexShrink: 0,
+                    }} />
+                    <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-primary)', flex: 1, whiteSpace: 'nowrap' }}>
+                      {r.aircraft_a} / {r.aircraft_b}
+                    </span>
                   </div>
-                ))}
-              </>
-            )}
-          </div>
-
-          {/* Plan info/actions at bottom */}
-          {selectedPlan && (
-            <div style={{
-              padding: 8, borderTop: '1px solid var(--color-border)',
-              display: 'flex', gap: 4, flexShrink: 0,
-            }}>
-              {!selectedPlan.is_active && (
-                <button
-                  onClick={handleSetActive}
-                  style={{ flex: 1, padding: '6px 8px', borderRadius: 4, background: '#22C55E22', border: '1px solid #22C55E44', color: '#22C55E', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}
-                >
-                  Set Active
-                </button>
-              )}
-              {(
-                <button
-                  onClick={handleDeletePlan}
-                  style={{ padding: '6px 8px', borderRadius: 4, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}
-                >
-                  Delete Plan
-                </button>
-              )}
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', marginTop: 2, marginLeft: 14, whiteSpace: 'nowrap' }}>
+                    {r.distance_ft.toFixed(1)}ft actual &middot; {r.required_ft}ft required
+                    {r.status === 'violation' && <span style={{ color: '#EF4444', marginLeft: 4 }}>VIOLATION</span>}
+                    {r.status === 'warning' && <span style={{ color: '#F59E0B', marginLeft: 4 }}>WARNING</span>}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
-
-        {/* Map */}
-        <div ref={mapContainer} style={{ flex: 1, minHeight: 0 }} />
       </div>
+
+      {/* Map — full width, takes remaining height */}
+      <div ref={mapContainer} style={{ flex: 1, minHeight: 0 }} />
 
       {/* Aircraft Picker Modal */}
       {showAircraftPicker && (
