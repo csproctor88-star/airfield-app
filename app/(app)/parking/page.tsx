@@ -279,7 +279,7 @@ export default function ParkingPage() {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const dragSpotId = useRef<string | null>(null)
-  const dragOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  const isDraggingRef = useRef(false)
   const silhouetteImagesRef = useRef<Set<string>>(new Set()) // track registered image names
   const lastZoomRef = useRef<number>(15)
 
@@ -300,6 +300,12 @@ export default function ParkingPage() {
       }
     })
   }, [spots])
+
+  // Stable refs for drag handler (avoids re-registering listeners on data change)
+  const spotsWithAircraftRef = useRef(spotsWithAircraft)
+  spotsWithAircraftRef.current = spotsWithAircraft
+  const obstaclesRef = useRef(obstacles)
+  obstaclesRef.current = obstacles
 
   const allResults: ClearanceResult[] = useMemo(
     () => getAllClearanceResults(spotsWithAircraft, obstacles),
@@ -419,6 +425,9 @@ export default function ParkingPage() {
     if (!m || !mapLoaded) return
 
     const handleClick = async (e: mapboxgl.MapMouseEvent) => {
+      // Ignore clicks that are part of a drag operation
+      if (isDraggingRef.current) return
+
       const { lng, lat } = e.lngLat
 
       if (placingAircraft && selectedPlanId && installationId) {
@@ -868,21 +877,23 @@ export default function ParkingPage() {
   }, [mapLoaded, spotsWithAircraft])
 
   // ── Aircraft drag interaction ──
+  // Uses refs to avoid re-registering listeners on every spots change.
+  // Updates the GeoJSON source directly during drag for smooth movement.
 
   useEffect(() => {
     const m = map.current
     if (!m || !mapLoaded) return
 
-    let isDragging = false
-
     const onMouseDown = (e: mapboxgl.MapMouseEvent) => {
+      // Guard: don't start drag if the layer doesn't exist yet
+      if (!m.getLayer('parking-aircraft-symbols')) return
       const features = m.queryRenderedFeatures(e.point, { layers: ['parking-aircraft-symbols'] })
       if (!features.length) return
 
       const spotId = features[0].properties?.spotId
       if (!spotId) return
 
-      isDragging = true
+      isDraggingRef.current = true
       dragSpotId.current = spotId
       m.getCanvas().style.cursor = 'grabbing'
       m.dragPan.disable()
@@ -891,29 +902,49 @@ export default function ParkingPage() {
     }
 
     const onMouseMove = (e: mapboxgl.MapMouseEvent) => {
-      if (!isDragging || !dragSpotId.current) return
+      if (!isDraggingRef.current || !dragSpotId.current) return
 
       const { lng, lat } = e.lngLat
-      setSpots(prev =>
-        prev.map(s =>
-          s.id === dragSpotId.current ? { ...s, longitude: lng, latitude: lat } : s
-        )
-      )
+      const sid = dragSpotId.current
 
-      // Show clearance distance labels to nearby aircraft/obstacles
-      const draggedSpot = spotsWithAircraft.find(s => s.id === dragSpotId.current)
+      // Update the GeoJSON source directly (no React re-render)
+      const src = m.getSource('parking-aircraft') as mapboxgl.GeoJSONSource | undefined
+      if (src) {
+        const currentSpots = spotsWithAircraftRef.current
+        src.setData({
+          type: 'FeatureCollection',
+          features: currentSpots.map(s => ({
+            type: 'Feature' as const,
+            properties: {
+              spotId: s.id,
+              name: s.aircraft_name || 'Aircraft',
+              wingspan: s.wingspan_ft,
+              length: s.length_ft,
+              heading: s.heading_deg,
+              tailNumber: s.tail_number || '',
+              adg: getADGFromWingspan(s.wingspan_ft),
+              iconId: `sil-${s.id}`,
+            },
+            geometry: {
+              type: 'Point' as const,
+              coordinates: s.id === sid ? [lng, lat] : [s.longitude, s.latitude],
+            },
+          })),
+        })
+      }
+
+      // Show clearance distance labels
+      const draggedSpot = spotsWithAircraftRef.current.find(s => s.id === sid)
       if (!draggedSpot) return
 
       const movedSpot = { ...draggedSpot, longitude: lng, latitude: lat }
       const labelFeatures: GeoJSON.Feature[] = []
 
-      // Check against other spots (within 500ft)
-      for (const other of spotsWithAircraft) {
-        if (other.id === dragSpotId.current) continue
+      for (const other of spotsWithAircraftRef.current) {
+        if (other.id === sid) continue
         const dx = (lng - other.longitude) * 364567 * Math.cos(lat * Math.PI / 180)
         const dy = (lat - other.latitude) * 364567
-        const roughDist = Math.sqrt(dx * dx + dy * dy)
-        if (roughDist > 500) continue
+        if (Math.sqrt(dx * dx + dy * dy) > 500) continue
 
         const result = getAllClearanceResults([movedSpot, other], [])
         if (result.length > 0) {
@@ -923,20 +954,15 @@ export default function ParkingPage() {
               label: `${result[0].distance_ft.toFixed(0)}ft`,
               color: result[0].status === 'violation' ? '#EF4444' : result[0].status === 'warning' ? '#F59E0B' : '#22C55E',
             },
-            geometry: {
-              type: 'Point',
-              coordinates: [(lng + other.longitude) / 2, (lat + other.latitude) / 2],
-            },
+            geometry: { type: 'Point', coordinates: [(lng + other.longitude) / 2, (lat + other.latitude) / 2] },
           })
         }
       }
 
-      // Check against obstacles
-      for (const obs of obstacles) {
+      for (const obs of obstaclesRef.current) {
         const dx = (lng - obs.longitude) * 364567 * Math.cos(lat * Math.PI / 180)
         const dy = (lat - obs.latitude) * 364567
-        const roughDist = Math.sqrt(dx * dx + dy * dy)
-        if (roughDist > 500) continue
+        if (Math.sqrt(dx * dx + dy * dy) > 500) continue
 
         const result = getAllClearanceResults([movedSpot], [obs])
         if (result.length > 0) {
@@ -946,10 +972,7 @@ export default function ParkingPage() {
               label: `${result[0].distance_ft.toFixed(0)}ft`,
               color: result[0].status === 'violation' ? '#EF4444' : result[0].status === 'warning' ? '#F59E0B' : '#22C55E',
             },
-            geometry: {
-              type: 'Point',
-              coordinates: [(lng + obs.longitude) / 2, (lat + obs.latitude) / 2],
-            },
+            geometry: { type: 'Point', coordinates: [(lng + obs.longitude) / 2, (lat + obs.latitude) / 2] },
           })
         }
       }
@@ -984,43 +1007,43 @@ export default function ParkingPage() {
       if (m.getSource('parking-drag-labels')) m.removeSource('parking-drag-labels')
     }
 
-    const onMouseUp = async () => {
-      if (!isDragging || !dragSpotId.current) return
+    const onMouseUp = async (e: mapboxgl.MapMouseEvent) => {
+      if (!isDraggingRef.current || !dragSpotId.current) return
 
-      isDragging = false
+      const sid = dragSpotId.current
+      const { lng, lat } = e.lngLat
+
+      isDraggingRef.current = false
+      dragSpotId.current = null
       m.dragPan.enable()
       m.getCanvas().style.cursor = ''
       removeDragLabels()
 
-      const spot = spots.find(s => s.id === dragSpotId.current)
-      if (spot) {
-        await updateParkingSpot(spot.id, {
-          longitude: spot.longitude,
-          latitude: spot.latitude,
-        })
-      }
-      dragSpotId.current = null
+      // Commit the new position to state + DB
+      setSpots(prev =>
+        prev.map(s => s.id === sid ? { ...s, longitude: lng, latitude: lat } : s)
+      )
+      await updateParkingSpot(sid, { longitude: lng, latitude: lat })
     }
 
     m.on('mousedown', 'parking-aircraft-symbols', onMouseDown as any)
     m.on('mousemove', onMouseMove as any)
-    m.on('mouseup', onMouseUp)
-    m.on('mouseleave', onMouseUp)
+    m.on('mouseup', onMouseUp as any)
 
     // Hover cursor
-    m.on('mouseenter', 'parking-aircraft-symbols', () => {
-      if (!isDragging) m.getCanvas().style.cursor = 'grab'
-    })
-    m.on('mouseleave', 'parking-aircraft-symbols', () => {
-      if (!isDragging) m.getCanvas().style.cursor = ''
-    })
+    const onEnter = () => { if (!isDraggingRef.current) m.getCanvas().style.cursor = 'grab' }
+    const onLeave = () => { if (!isDraggingRef.current) m.getCanvas().style.cursor = '' }
+    m.on('mouseenter', 'parking-aircraft-symbols', onEnter)
+    m.on('mouseleave', 'parking-aircraft-symbols', onLeave)
 
     return () => {
       m.off('mousedown', 'parking-aircraft-symbols', onMouseDown as any)
       m.off('mousemove', onMouseMove as any)
-      m.off('mouseup', onMouseUp)
+      m.off('mouseup', onMouseUp as any)
+      m.off('mouseenter', 'parking-aircraft-symbols', onEnter)
+      m.off('mouseleave', 'parking-aircraft-symbols', onLeave)
     }
-  }, [mapLoaded, spots, spotsWithAircraft, obstacles])
+  }, [mapLoaded]) // Only re-register on map load — refs handle current data
 
   // ── Plan actions ──
 
