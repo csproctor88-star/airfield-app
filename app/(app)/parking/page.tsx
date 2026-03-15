@@ -222,7 +222,10 @@ function renderFallbackIcon(): { imageData: ImageData; width: number; height: nu
 }
 
 /** Compute the icon-size scale factor to make a REF_ICON_SIZE image match
- *  the aircraft's real-world wingspan at the current map zoom. */
+ *  the aircraft's real-world wingspan at the current map zoom.
+ *  Mapbox addImage with pixelRatio=1 (default) treats each image pixel as
+ *  one device pixel — so the CSS display size is imageWidth / devicePixelRatio.
+ *  We must multiply by DPR to compensate. */
 function computeIconScale(wingspanFt: number, lengthFt: number, mapInstance: mapboxgl.Map): number {
   const center = mapInstance.getCenter()
   const p0 = mapInstance.project(center)
@@ -238,7 +241,10 @@ function computeIconScale(wingspanFt: number, lengthFt: number, mapInstance: map
   const aspect = lengthFt / wingspanFt
   const imageWidthPx = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) + 8 : REF_ICON_SIZE + 8
 
-  return targetCssPx / imageWidthPx
+  // DPR correction: Mapbox renders symbol icons in device pixels, so base
+  // CSS display size = imageWidthPx / DPR. Multiply scale by DPR to compensate.
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+  return (targetCssPx / imageWidthPx) * dpr
 }
 
 // ── Main Page ──
