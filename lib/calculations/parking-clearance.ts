@@ -457,65 +457,82 @@ export function generateClearanceZonePolygon(
   clearanceFt: number
 ): [number, number][] {
   const center: LatLon = spotCenter(spot)
-  const totalWidth = spot.wingspan_ft / 2 + clearanceFt
-  const totalLength = spot.length_ft / 2 + clearanceFt
-  const segments = 64
-  const coords: [number, number][] = []
+  const halfLen = spot.length_ft / 2
+  const halfSpan = spot.wingspan_ft / 2 + clearanceFt
+  const headingRad = (spot.heading_deg * Math.PI) / 180
 
-  for (let i = 0; i <= segments; i++) {
-    const angle = (2 * Math.PI * i) / segments
-    const localX = totalWidth * Math.sin(angle)
-    const localY = totalLength * Math.cos(angle)
-    const headingRad = (spot.heading_deg * Math.PI) / 180
-    // CW rotation for compass bearings (negate angle)
-    const rotX = localX * Math.cos(headingRad) + localY * Math.sin(headingRad)
-    const rotY = -localX * Math.sin(headingRad) + localY * Math.cos(headingRad)
-    const dist = Math.sqrt(rotX * rotX + rotY * rotY)
-    const mapBearing = (90 - Math.atan2(rotY, rotX) * 180 / Math.PI + 360) % 360
-    const pt = offsetPoint(center, mapBearing, dist)
-    coords.push([pt.lon, pt.lat])
+  // Helper: rotate local (x=lateral, y=forward) → map coords and project
+  const project = (lx: number, ly: number): [number, number] => {
+    const rx = lx * Math.cos(headingRad) + ly * Math.sin(headingRad)
+    const ry = -lx * Math.sin(headingRad) + ly * Math.cos(headingRad)
+    const dist = Math.sqrt(rx * rx + ry * ry)
+    const bearing = (90 - Math.atan2(ry, rx) * 180 / Math.PI + 360) % 360
+    const pt = offsetPoint(center, bearing, dist)
+    return [pt.lon, pt.lat]
   }
 
-  return coords
+  // Simple rectangle: clearance extends laterally from wingtips only
+  // No extra clearance fore/aft — just the aircraft length
+  return [
+    project(halfSpan, halfLen),   // right-nose
+    project(halfSpan, -halfLen),  // right-tail
+    project(-halfSpan, -halfLen), // left-tail
+    project(-halfSpan, halfLen),  // left-nose
+    project(halfSpan, halfLen),   // close
+  ]
 }
 
 // ── Wingtip-to-wingtip clearance check ──
+
+/** Sample points along an aircraft's bounding rectangle perimeter */
+function getAircraftPerimeterPoints(spot: SpotWithAircraft): LatLon[] {
+  const center: LatLon = spotCenter(spot)
+  const halfLen = spot.length_ft / 2
+  const halfWS = spot.wingspan_ft / 2
+  const h = spot.heading_deg
+  const leftB = (h - 90 + 360) % 360
+  const rightB = (h + 90) % 360
+  const tailB = (h + 180) % 360
+
+  const pts: LatLon[] = []
+  // 4 corners
+  const nose = offsetPoint(center, h, halfLen)
+  const tail = offsetPoint(center, tailB, halfLen)
+  pts.push(
+    offsetPoint(nose, leftB, halfWS),
+    offsetPoint(nose, rightB, halfWS),
+    offsetPoint(tail, rightB, halfWS),
+    offsetPoint(tail, leftB, halfWS),
+  )
+  // Midpoints of each edge (wing leading/trailing edges, wingtips)
+  pts.push(nose, tail)
+  pts.push(offsetPoint(center, leftB, halfWS))
+  pts.push(offsetPoint(center, rightB, halfWS))
+  // Quarter points along the long edges for better coverage
+  const qNose = offsetPoint(center, h, halfLen / 2)
+  const qTail = offsetPoint(center, tailB, halfLen / 2)
+  pts.push(
+    offsetPoint(qNose, leftB, halfWS),
+    offsetPoint(qNose, rightB, halfWS),
+    offsetPoint(qTail, leftB, halfWS),
+    offsetPoint(qTail, rightB, halfWS),
+  )
+  return pts
+}
 
 export function checkWingtipClearance(
   spotA: SpotWithAircraft,
   spotB: SpotWithAircraft,
   apronContext: ApronContext = 'parking'
 ): ClearanceResult {
-  const centerA: LatLon = spotCenter(spotA)
-  const centerB: LatLon = spotCenter(spotB)
+  // Sample points along each aircraft's outline and measure distance
+  // to the other aircraft's bounding rectangle
+  const ptsA = getAircraftPerimeterPoints(spotA)
+  const ptsB = getAircraftPerimeterPoints(spotB)
 
-  const tipsA = getWingtipPositions(centerA, spotA.heading_deg, spotA.wingspan_ft)
-  const tipsB = getWingtipPositions(centerB, spotB.heading_deg, spotB.wingspan_ft)
-
-  const distances = [
-    distanceFt(tipsA.left, tipsB.left),
-    distanceFt(tipsA.left, tipsB.right),
-    distanceFt(tipsA.right, tipsB.left),
-    distanceFt(tipsA.right, tipsB.right),
-  ]
-
-  const ntA = getNoseTailPositions(centerA, spotA.heading_deg, spotA.length_ft)
-  const ntB = getNoseTailPositions(centerB, spotB.heading_deg, spotB.length_ft)
-
-  distances.push(
-    distanceFt(tipsA.left, ntB.nose),
-    distanceFt(tipsA.left, ntB.tail),
-    distanceFt(tipsA.right, ntB.nose),
-    distanceFt(tipsA.right, ntB.tail),
-    distanceFt(tipsB.left, ntA.nose),
-    distanceFt(tipsB.left, ntA.tail),
-    distanceFt(tipsB.right, ntA.nose),
-    distanceFt(tipsB.right, ntA.tail),
-  )
-
-  const centerDist = distanceFt(centerA, centerB)
-  const combinedHalfWings = spotA.wingspan_ft / 2 + spotB.wingspan_ft / 2
-  distances.push(Math.max(0, centerDist - combinedHalfWings))
+  const distances: number[] = []
+  for (const pt of ptsA) distances.push(distanceToAircraftRect(spotB, pt))
+  for (const pt of ptsB) distances.push(distanceToAircraftRect(spotA, pt))
 
   const minDistance = Math.min(...distances)
 
