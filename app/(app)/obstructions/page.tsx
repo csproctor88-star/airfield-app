@@ -10,10 +10,14 @@ import { getRunwayGeometry, pointToRunwayRelation, distanceFt } from '@/lib/calc
 import {
   evaluateObstruction,
   evaluateObstructionAllRunways,
+  evaluateObstructionTaxiways,
   identifySurface,
   type ObstructionAnalysis,
   type MultiRunwayAnalysis,
+  type TaxiwayGeometry,
+  type TaxiwaySurfaceEvaluation,
 } from '@/lib/calculations/obstructions'
+import { fetchTaxiways } from '@/lib/supabase/taxiways'
 import { fetchElevation } from '@/lib/calculations/geometry'
 import {
   createObstructionEvaluation,
@@ -119,6 +123,24 @@ function ObstructionsContent() {
   const [saving, setSaving] = useState(false)
   const [showVerify, setShowVerify] = useState(false)
 
+  // Taxiway evaluation
+  const [taxiwayGeometries, setTaxiwayGeometries] = useState<TaxiwayGeometry[]>([])
+  const [taxiwayResults, setTaxiwayResults] = useState<TaxiwaySurfaceEvaluation[]>([])
+
+  // Load taxiway centerlines on mount
+  useEffect(() => {
+    if (!installationId) return
+    fetchTaxiways(installationId).then(tws => {
+      setTaxiwayGeometries(tws.map(tw => ({
+        id: tw.id,
+        designator: tw.designator,
+        taxiwayType: tw.taxiway_type as 'taxiway' | 'taxilane',
+        tdg: tw.tdg,
+        centerline: ((tw.centerline_coords as [number, number][]) || []).map(c => ({ lat: c[1], lon: c[0] })),
+      })))
+    })
+  }, [installationId])
+
   // Helper: find the closest runway to a point
   const findClosestRunway = useCallback((point: LatLon) => {
     const allRwys = getAllRunways()
@@ -180,6 +202,9 @@ function ObstructionsContent() {
         if (h > 0) {
           const result = evaluateObstructionAllRunways(point, h, groundElev, allRwys, airfieldElevMSL, runwayClass)
           setMultiAnalysis(result)
+          if (taxiwayGeometries.length > 0) {
+            setTaxiwayResults(evaluateObstructionTaxiways(point, taxiwayGeometries))
+          }
         }
       }
     }
@@ -290,8 +315,17 @@ function ObstructionsContent() {
     )
     setMultiAnalysis(result)
 
-    if (result.hasViolation) {
-      toast.error(`VIOLATION — ${result.violatedSurfaces.length} surface(s) penetrated`)
+    // Taxiway evaluation
+    const twResults = taxiwayGeometries.length > 0
+      ? evaluateObstructionTaxiways(pointInfo.point, taxiwayGeometries)
+      : []
+    setTaxiwayResults(twResults)
+
+    const twViolations = twResults.filter(r => r.violated)
+    const totalViolations = result.violatedSurfaces.length + twViolations.length
+
+    if (result.hasViolation || twViolations.length > 0) {
+      toast.error(`VIOLATION — ${totalViolations} surface(s) penetrated`)
     } else {
       toast.success('No violations detected')
     }
@@ -961,6 +995,71 @@ function ObstructionsContent() {
               )}
             </div>
           ))}
+
+          {/* Taxiway Surface Analysis */}
+          {taxiwayResults.length > 0 && (
+            <div className="card" style={{ marginTop: 10 }}>
+              <span className="section-label" style={{ margin: 0, marginBottom: 6 }}>
+                Taxiway Surface Analysis (UFC 3-260-01)
+              </span>
+              {taxiwayResults
+                .filter(r => r.isWithinBounds)
+                .map((r, i) => (
+                  <div
+                    key={`${r.taxiwayId}-${r.surfaceKey}-${i}`}
+                    style={{
+                      background: 'var(--color-bg-inset)',
+                      border: `1px solid ${r.violated ? 'rgba(245,158,11,0.3)' : 'var(--color-border)'}`,
+                      borderRadius: 8,
+                      padding: 10,
+                      marginBottom: 6,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: r.color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)', flex: 1 }}>
+                        {r.surfaceName}
+                      </span>
+                      <span style={{
+                        fontSize: 'var(--fs-xs)', fontWeight: 800, padding: '2px 6px', borderRadius: 4,
+                        background: r.violated ? '#F59E0B22' : '#22C55E22',
+                        color: r.violated ? '#F59E0B' : '#22C55E',
+                      }}>
+                        {r.violated ? 'WITHIN OFA' : 'CLEAR'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
+                      Distance from centerline: <strong style={{ color: 'var(--color-text-1)' }}>{r.distanceFromCenterlineFt} ft</strong>
+                      {' '}| OFA boundary: {r.halfWidthFt} ft
+                    </div>
+                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4, fontStyle: 'italic' }}>
+                      {r.ufcReference}
+                    </div>
+                  </div>
+                ))}
+              {taxiwayResults.filter(r => !r.isWithinBounds).length > 0 && (
+                <div style={{ marginTop: 6 }}>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4 }}>
+                    OUTSIDE TAXIWAY SURFACES:
+                  </div>
+                  {taxiwayResults
+                    .filter(r => !r.isWithinBounds)
+                    .map((r, i) => (
+                      <div
+                        key={`${r.taxiwayId}-${r.surfaceKey}-outside-${i}`}
+                        style={{
+                          fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)',
+                          display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 4, marginBottom: 2,
+                        }}
+                      >
+                        <span style={{ width: 6, height: 6, borderRadius: 2, background: r.color, opacity: 0.3, flexShrink: 0 }} />
+                        {r.surfaceName} ({r.distanceFromCenterlineFt} ft from CL)
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* UFC References (only if violations) */}
           {multiAnalysis.hasViolation && (

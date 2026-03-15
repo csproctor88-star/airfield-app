@@ -109,6 +109,23 @@ export function pointToSegmentDistanceFt(
   return Math.sqrt(dx * dx + dy * dy)
 }
 
+/** Minimum distance from a point to a multi-segment polyline, in feet.
+ *  Iterates all segments and returns the closest distance. */
+export function pointToPolylineDistanceFt(
+  point: LatLon,
+  polyline: LatLon[],
+): number {
+  if (polyline.length === 0) return Infinity
+  if (polyline.length === 1) return distanceFt(point, polyline[0])
+
+  let minDist = Infinity
+  for (let i = 0; i < polyline.length - 1; i++) {
+    const d = pointToSegmentDistanceFt(point, polyline[i], polyline[i + 1])
+    if (d < minDist) minDist = d
+  }
+  return minDist
+}
+
 // ---------------------------------------------------------------------------
 // Runway-relative coordinate system
 // ---------------------------------------------------------------------------

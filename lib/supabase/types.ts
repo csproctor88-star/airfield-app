@@ -955,6 +955,24 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['wildlife_strikes']['Insert']>
         Relationships: []
       }
+      base_taxiways: {
+        Row: {
+          id: string
+          base_id: string
+          designator: string
+          taxiway_type: string
+          tdg: number
+          width_ft: number | null
+          centerline_coords: [number, number][]
+          notes: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['base_taxiways']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['base_taxiways']['Insert']>
+        Relationships: []
+      }
       bwc_history: {
         Row: {
           id: string
@@ -1081,6 +1099,7 @@ export type LightingSystemComponent = Database['public']['Tables']['lighting_sys
 export type OutageEvent = Database['public']['Tables']['outage_events']['Row']
 export type OutageRuleTemplate = Database['public']['Tables']['outage_rule_templates']['Row']
 export type InspectionItemSystemLink = Database['public']['Tables']['inspection_item_system_links']['Row']
+export type BaseTaxiway = Database['public']['Tables']['base_taxiways']['Row']
 
 // === QRC (Quick Reaction Checklist) Types ===
 

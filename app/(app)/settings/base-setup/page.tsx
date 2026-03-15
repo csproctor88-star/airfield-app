@@ -17,6 +17,7 @@ import {
   type FrequencyType,
 } from '@/lib/supabase/shift-checklist'
 import { fetchNavaidStatuses, type NavaidStatus } from '@/lib/supabase/navaids'
+import TaxiwayEditor from '@/components/taxiway-editor'
 import {
   fetchLightingSystems,
   fetchLightingSystemWithComponents,
@@ -31,7 +32,7 @@ import {
 import { SYSTEM_TYPE_LABELS, SYSTEM_TYPES } from '@/lib/outage-rules'
 import type { LightingSystem, LightingSystemComponent, OutageRuleTemplate, InfrastructureFeature } from '@/lib/supabase/types'
 
-type SetupTab = 'runways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'templates' | 'shiftchecklist' | 'qrc' | 'lighting'
+type SetupTab = 'runways' | 'taxiways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'templates' | 'shiftchecklist' | 'qrc' | 'lighting'
 
 export default function BaseSetupPage() {
   const { installationId, currentInstallation, runways, areas, ceShops, arffAircraft, userRole } = useInstallation()
@@ -56,6 +57,7 @@ export default function BaseSetupPage() {
 
   const TABS: { key: SetupTab; label: string }[] = [
     { key: 'runways', label: 'Runways' },
+    { key: 'taxiways', label: 'Taxiways' },
     { key: 'navaids', label: 'NAVAIDs' },
     { key: 'areas', label: 'Areas' },
     { key: 'arff', label: 'ARFF Aircraft' },
@@ -114,6 +116,7 @@ export default function BaseSetupPage() {
         padding: 16,
       }}>
         {activeTab === 'runways' && <RunwayTab runways={runways} installationId={installationId} />}
+        {activeTab === 'taxiways' && <TaxiwayEditor />}
         {activeTab === 'navaids' && <NavaidTab installationId={installationId} />}
         {activeTab === 'areas' && <SimpleListTab title="Airfield Areas" items={areas} tableName="base_areas" fieldName="area_name" installationId={installationId} />}
         {activeTab === 'arff' && <SimpleListTab title="ARFF Aircraft" items={arffAircraft} tableName="base_arff_aircraft" fieldName="aircraft_name" installationId={installationId} />}
