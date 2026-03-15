@@ -40,6 +40,7 @@ import {
   type ClearanceResult,
 } from '@/lib/calculations/parking-clearance'
 import { offsetPoint } from '@/lib/calculations/geometry'
+import { DEMO_PARKING_PLAN, DEMO_PARKING_SPOTS, DEMO_PARKING_OBSTACLES } from '@/lib/demo-data'
 
 // ── Silhouette manifest lookup ──
 
@@ -239,6 +240,11 @@ export default function ParkingPage() {
   const [editingObstacle, setEditingObstacle] = useState<ParkingObstacle | null>(null)
   const [showClearances, setShowClearances] = useState(true)
   const [panelTab, setPanelTab] = useState<'aircraft' | 'obstacles' | 'clearance'>('aircraft')
+  const [aircraftCategoryFilter, setAircraftCategoryFilter] = useState<'all' | 'military' | 'commercial'>('all')
+
+  // Line drawing state
+  const [drawingLinePoints, setDrawingLinePoints] = useState<[number, number][]>([])
+  const [drawingLineObsId, setDrawingLineObsId] = useState<string | null>(null)
 
   // Map refs
   const mapContainer = useRef<HTMLDivElement>(null)
@@ -282,8 +288,14 @@ export default function ParkingPage() {
 
   // ── Data loading ──
 
+  const isDemo = !installationId
+
   const loadPlans = useCallback(async () => {
-    if (!installationId) return
+    if (!installationId) {
+      setPlans([DEMO_PARKING_PLAN as ParkingPlan])
+      if (!selectedPlanId) setSelectedPlanId(DEMO_PARKING_PLAN.id)
+      return
+    }
     const data = await fetchParkingPlans(installationId)
     setPlans(data)
     if (data.length > 0 && !selectedPlanId) {
@@ -294,15 +306,23 @@ export default function ParkingPage() {
 
   const loadSpots = useCallback(async () => {
     if (!selectedPlanId) { setSpots([]); return }
+    if (isDemo) {
+      setSpots(DEMO_PARKING_SPOTS as ParkingSpot[])
+      return
+    }
     const data = await fetchParkingSpots(selectedPlanId)
     setSpots(data)
-  }, [selectedPlanId])
+  }, [selectedPlanId, isDemo])
 
   const loadObstacles = useCallback(async () => {
+    if (isDemo) {
+      setObstacles(DEMO_PARKING_OBSTACLES as ParkingObstacle[])
+      return
+    }
     if (!installationId) { setObstacles([]); return }
     const data = await fetchParkingObstacles(installationId)
     setObstacles(data)
-  }, [installationId])
+  }, [installationId, isDemo])
 
   useEffect(() => {
     setLoading(true)
@@ -391,6 +411,8 @@ export default function ParkingPage() {
 
         if (spot) {
           setSpots(prev => [...prev, spot])
+          setEditingSpot(spot)
+          setPanelTab('aircraft')
           toast.success(`Placed ${placingAircraft.aircraft}`)
         } else {
           toast.error('Failed to place aircraft')
@@ -399,7 +421,32 @@ export default function ParkingPage() {
         return
       }
 
+      // Line drawing mode — accumulate points
+      if (drawingLineObsId) {
+        setDrawingLinePoints(prev => [...prev, [lng, lat]])
+        return
+      }
+
       if (placingObstacle && installationId) {
+        if (placingObstacle === 'line') {
+          // Start line drawing: create obstacle at first click, enter drawing mode
+          const obs = await createParkingObstacle({
+            base_id: installationId,
+            obstacle_type: 'line',
+            longitude: lng,
+            latitude: lat,
+            name: `Line ${obstacles.length + 1}`,
+          })
+          if (obs) {
+            setObstacles(prev => [...prev, obs])
+            setDrawingLineObsId(obs.id)
+            setDrawingLinePoints([[lng, lat]])
+            toast.success('Click to add points. Double-click or press Finish to complete.')
+          }
+          setPlacingObstacle(null)
+          return
+        }
+
         const obs = await createParkingObstacle({
           base_id: installationId,
           obstacle_type: placingObstacle,
@@ -423,7 +470,7 @@ export default function ParkingPage() {
 
     m.on('click', handleClick)
     return () => { m.off('click', handleClick) }
-  }, [mapLoaded, placingAircraft, placingObstacle, selectedPlanId, installationId, obstacles.length])
+  }, [mapLoaded, placingAircraft, placingObstacle, selectedPlanId, installationId, obstacles.length, drawingLineObsId])
 
   // ── Render aircraft on map ──
 
@@ -432,13 +479,15 @@ export default function ParkingPage() {
     if (!m || !mapLoaded) return
 
     // Clean up old sources/layers
-    const cleanIds = ['parking-clearance-fill', 'parking-clearance-line', 'parking-obstacles-fill', 'parking-obstacles-line', 'parking-aircraft-symbols', 'parking-aircraft-labels', 'parking-obstacles-points']
+    const cleanIds = ['parking-clearance-fill', 'parking-clearance-line', 'parking-obstacles-fill', 'parking-obstacles-line', 'parking-obstacles-points', 'parking-obstacles-labels', 'parking-obstacles-lines-stroke', 'parking-aircraft-symbols', 'parking-aircraft-labels', 'parking-drag-labels', 'parking-drawing-line-layer', 'parking-drawing-line-dots']
     for (const id of cleanIds) {
       if (m.getLayer(id)) m.removeLayer(id)
     }
     if (m.getSource('parking-clearance')) m.removeSource('parking-clearance')
     if (m.getSource('parking-obstacles-src')) m.removeSource('parking-obstacles-src')
     if (m.getSource('parking-aircraft')) m.removeSource('parking-aircraft')
+    if (m.getSource('parking-drag-labels')) m.removeSource('parking-drag-labels')
+    if (m.getSource('parking-drawing-line')) m.removeSource('parking-drawing-line')
 
     // Clean up old silhouette images
     Array.from(silhouetteImagesRef.current).forEach(imgName => {
@@ -571,9 +620,55 @@ export default function ParkingPage() {
         id: 'parking-obstacles-line',
         type: 'line',
         source: 'parking-obstacles-src',
+        filter: ['==', '$type', 'Polygon'],
         paint: {
           'line-color': '#F97316',
           'line-width': 2,
+        },
+      })
+
+      // Point obstacles — circle layer
+      m.addLayer({
+        id: 'parking-obstacles-points',
+        type: 'circle',
+        source: 'parking-obstacles-src',
+        filter: ['==', '$type', 'Point'],
+        paint: {
+          'circle-radius': 6,
+          'circle-color': '#F97316',
+          'circle-stroke-color': '#FFF',
+          'circle-stroke-width': 1.5,
+        },
+      })
+
+      // Line obstacles — stroke layer
+      m.addLayer({
+        id: 'parking-obstacles-lines-stroke',
+        type: 'line',
+        source: 'parking-obstacles-src',
+        filter: ['==', '$type', 'LineString'],
+        paint: {
+          'line-color': '#F97316',
+          'line-width': 3,
+        },
+      })
+
+      // Obstacle labels
+      m.addLayer({
+        id: 'parking-obstacles-labels',
+        type: 'symbol',
+        source: 'parking-obstacles-src',
+        layout: {
+          'text-field': ['get', 'name'],
+          'text-size': 11,
+          'text-offset': [0, 1.2],
+          'text-anchor': 'top',
+          'text-allow-overlap': true,
+        },
+        paint: {
+          'text-color': '#F97316',
+          'text-halo-color': '#000',
+          'text-halo-width': 1,
         },
       })
     }
@@ -775,6 +870,89 @@ export default function ParkingPage() {
           s.id === dragSpotId.current ? { ...s, longitude: lng, latitude: lat } : s
         )
       )
+
+      // Show clearance distance labels to nearby aircraft/obstacles
+      const draggedSpot = spotsWithAircraft.find(s => s.id === dragSpotId.current)
+      if (!draggedSpot) return
+
+      const movedSpot = { ...draggedSpot, longitude: lng, latitude: lat }
+      const labelFeatures: GeoJSON.Feature[] = []
+
+      // Check against other spots (within 500ft)
+      for (const other of spotsWithAircraft) {
+        if (other.id === dragSpotId.current) continue
+        const dx = (lng - other.longitude) * 364567 * Math.cos(lat * Math.PI / 180)
+        const dy = (lat - other.latitude) * 364567
+        const roughDist = Math.sqrt(dx * dx + dy * dy)
+        if (roughDist > 500) continue
+
+        const result = getAllClearanceResults([movedSpot, other], [])
+        if (result.length > 0) {
+          labelFeatures.push({
+            type: 'Feature',
+            properties: {
+              label: `${result[0].distance_ft.toFixed(0)}ft`,
+              color: result[0].status === 'violation' ? '#EF4444' : result[0].status === 'warning' ? '#F59E0B' : '#22C55E',
+            },
+            geometry: {
+              type: 'Point',
+              coordinates: [(lng + other.longitude) / 2, (lat + other.latitude) / 2],
+            },
+          })
+        }
+      }
+
+      // Check against obstacles
+      for (const obs of obstacles) {
+        const dx = (lng - obs.longitude) * 364567 * Math.cos(lat * Math.PI / 180)
+        const dy = (lat - obs.latitude) * 364567
+        const roughDist = Math.sqrt(dx * dx + dy * dy)
+        if (roughDist > 500) continue
+
+        const result = getAllClearanceResults([movedSpot], [obs])
+        if (result.length > 0) {
+          labelFeatures.push({
+            type: 'Feature',
+            properties: {
+              label: `${result[0].distance_ft.toFixed(0)}ft`,
+              color: result[0].status === 'violation' ? '#EF4444' : result[0].status === 'warning' ? '#F59E0B' : '#22C55E',
+            },
+            geometry: {
+              type: 'Point',
+              coordinates: [(lng + obs.longitude) / 2, (lat + obs.latitude) / 2],
+            },
+          })
+        }
+      }
+
+      const dragSrc = m.getSource('parking-drag-labels') as mapboxgl.GeoJSONSource | undefined
+      const dragData: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: labelFeatures }
+      if (dragSrc) {
+        dragSrc.setData(dragData)
+      } else {
+        m.addSource('parking-drag-labels', { type: 'geojson', data: dragData })
+        m.addLayer({
+          id: 'parking-drag-labels',
+          type: 'symbol',
+          source: 'parking-drag-labels',
+          layout: {
+            'text-field': ['get', 'label'],
+            'text-size': 13,
+            'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+            'text-allow-overlap': true,
+          },
+          paint: {
+            'text-color': ['get', 'color'],
+            'text-halo-color': '#000',
+            'text-halo-width': 1.5,
+          },
+        })
+      }
+    }
+
+    const removeDragLabels = () => {
+      if (m.getLayer('parking-drag-labels')) m.removeLayer('parking-drag-labels')
+      if (m.getSource('parking-drag-labels')) m.removeSource('parking-drag-labels')
     }
 
     const onMouseUp = async () => {
@@ -783,6 +961,7 @@ export default function ParkingPage() {
       isDragging = false
       m.dragPan.enable()
       m.getCanvas().style.cursor = ''
+      removeDragLabels()
 
       const spot = spots.find(s => s.id === dragSpotId.current)
       if (spot) {
@@ -812,7 +991,7 @@ export default function ParkingPage() {
       m.off('mousemove', onMouseMove as any)
       m.off('mouseup', onMouseUp)
     }
-  }, [mapLoaded, spots])
+  }, [mapLoaded, spots, spotsWithAircraft, obstacles])
 
   // ── Plan actions ──
 
@@ -890,6 +1069,71 @@ export default function ParkingPage() {
     }
   }
 
+  // ── Finish line drawing ──
+
+  const handleFinishLine = useCallback(async () => {
+    if (!drawingLineObsId || drawingLinePoints.length < 2) {
+      toast.error('A line needs at least 2 points')
+      return
+    }
+    const updated = await updateParkingObstacle(drawingLineObsId, { line_coords: drawingLinePoints })
+    if (updated) {
+      setObstacles(prev => prev.map(o => o.id === drawingLineObsId ? updated : o))
+      toast.success('Line obstacle saved')
+    }
+    setDrawingLineObsId(null)
+    setDrawingLinePoints([])
+  }, [drawingLineObsId, drawingLinePoints])
+
+  // ── Render drawing line preview on map ──
+
+  useEffect(() => {
+    const m = map.current
+    if (!m || !mapLoaded) return
+
+    const srcId = 'parking-drawing-line'
+    const layerId = 'parking-drawing-line-layer'
+    const dotsId = 'parking-drawing-line-dots'
+
+    if (drawingLinePoints.length >= 1) {
+      const data: GeoJSON.FeatureCollection = {
+        type: 'FeatureCollection',
+        features: [
+          ...(drawingLinePoints.length >= 2 ? [{
+            type: 'Feature' as const,
+            properties: {},
+            geometry: { type: 'LineString' as const, coordinates: drawingLinePoints },
+          }] : []),
+          ...drawingLinePoints.map(pt => ({
+            type: 'Feature' as const,
+            properties: {},
+            geometry: { type: 'Point' as const, coordinates: pt },
+          })),
+        ],
+      }
+
+      const src = m.getSource(srcId) as mapboxgl.GeoJSONSource | undefined
+      if (src) {
+        src.setData(data)
+      } else {
+        m.addSource(srcId, { type: 'geojson', data })
+        m.addLayer({
+          id: layerId, type: 'line', source: srcId,
+          paint: { 'line-color': '#F97316', 'line-width': 3, 'line-dasharray': [4, 3] },
+        })
+        m.addLayer({
+          id: dotsId, type: 'circle', source: srcId,
+          filter: ['==', '$type', 'Point'],
+          paint: { 'circle-radius': 5, 'circle-color': '#F97316', 'circle-stroke-color': '#FFF', 'circle-stroke-width': 1.5 },
+        })
+      }
+    } else {
+      if (m.getLayer(layerId)) m.removeLayer(layerId)
+      if (m.getLayer(dotsId)) m.removeLayer(dotsId)
+      if (m.getSource(srcId)) m.removeSource(srcId)
+    }
+  }, [mapLoaded, drawingLinePoints])
+
   // ── Fly to clearance result ──
 
   const flyToResult = (result: ClearanceResult) => {
@@ -916,14 +1160,18 @@ export default function ParkingPage() {
   // ── Aircraft picker filtering ──
 
   const filteredAircraft = useMemo(() => {
-    if (!aircraftSearch.trim()) return allAircraft.slice(0, 50)
+    let list = allAircraft
+    if (aircraftCategoryFilter !== 'all') {
+      list = list.filter(a => a.category === aircraftCategoryFilter)
+    }
+    if (!aircraftSearch.trim()) return list.slice(0, 50)
     const q = aircraftSearch.toLowerCase()
-    return allAircraft.filter(a =>
+    return list.filter(a =>
       a.aircraft.toLowerCase().includes(q) ||
       (a.manufacturer && a.manufacturer.toLowerCase().includes(q)) ||
       (a.category && a.category.toLowerCase().includes(q))
     ).slice(0, 50)
-  }, [aircraftSearch])
+  }, [aircraftSearch, aircraftCategoryFilter])
 
   // ── Render ──
 
@@ -1015,21 +1263,43 @@ export default function ParkingPage() {
       </div>
 
       {/* Placement mode indicator */}
-      {(placingAircraft || placingObstacle) && (
+      {(placingAircraft || placingObstacle || drawingLineObsId) && (
         <div style={{
           padding: '6px 16px', background: '#F59E0B22', borderBottom: '1px solid #F59E0B44',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           fontSize: 'var(--fs-sm)', color: '#F59E0B', flexShrink: 0,
         }}>
           <span>
-            Click on the map to place {placingAircraft ? placingAircraft.aircraft : `${placingObstacle} obstacle`}
+            {drawingLineObsId
+              ? `Drawing line obstacle (${drawingLinePoints.length} point${drawingLinePoints.length !== 1 ? 's' : ''})`
+              : `Click on the map to place ${placingAircraft ? placingAircraft.aircraft : `${placingObstacle} obstacle`}`
+            }
           </span>
-          <button
-            onClick={() => { setPlacingAircraft(null); setPlacingObstacle(null) }}
-            style={{ background: 'none', border: 'none', color: '#F59E0B', cursor: 'pointer', textDecoration: 'underline' }}
-          >
-            Cancel
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {drawingLineObsId && (
+              <button
+                onClick={handleFinishLine}
+                style={{ background: '#F97316', border: 'none', color: '#000', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 600, fontSize: 'var(--fs-xs)' }}
+              >
+                Finish Line
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setPlacingAircraft(null)
+                setPlacingObstacle(null)
+                if (drawingLineObsId) {
+                  // Cancel line drawing — remove the incomplete obstacle
+                  handleDeleteObstacle(drawingLineObsId)
+                  setDrawingLineObsId(null)
+                  setDrawingLinePoints([])
+                }
+              }}
+              style={{ background: 'none', border: 'none', color: '#F59E0B', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
@@ -1459,6 +1729,23 @@ export default function ParkingPage() {
               <h3 style={{ margin: '0 0 8px', fontSize: 'var(--fs-base)', color: 'var(--color-text-primary)' }}>
                 Select Aircraft
               </h3>
+              <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+                {(['all', 'military', 'commercial'] as const).map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setAircraftCategoryFilter(cat)}
+                    style={{
+                      flex: 1, padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
+                      border: `1px solid ${aircraftCategoryFilter === cat ? 'var(--color-cyan)' : 'var(--color-border)'}`,
+                      background: aircraftCategoryFilter === cat ? 'var(--color-cyan)11' : 'var(--color-bg)',
+                      color: aircraftCategoryFilter === cat ? 'var(--color-cyan)' : 'var(--color-text-secondary)',
+                      cursor: 'pointer', textTransform: 'capitalize',
+                    }}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
               <input
                 autoFocus
                 placeholder="Search aircraft..."
