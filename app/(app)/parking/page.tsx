@@ -6,6 +6,7 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
 import { isMapboxConfigured } from '@/lib/utils'
+import { useMapRuler, RulerButton } from '@/hooks/use-map-ruler'
 import { allAircraft } from '@/lib/aircraft-data'
 import type { AircraftCharacteristics } from '@/lib/aircraft_database_schema'
 import silhouetteManifest from '@/public/aircraft_silhouette_manifest.json'
@@ -374,9 +375,15 @@ export default function ParkingPage() {
   const planLockedRef = useRef(planLocked)
   planLockedRef.current = planLocked
 
+  // Ruler tool
+  const isPlacing = !!(placingAircraft || placingObstacle || drawingLineObsId || drawingTaxilaneId || drawingBoundaryId || drawingObsType)
+
   // Map refs
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
+  const ruler = useMapRuler(map, !isPlacing)
+  const rulerActiveRef = useRef(ruler.active)
+  rulerActiveRef.current = ruler.active
   const dragSpotId = useRef<string | null>(null)
   const dragObstacleId = useRef<string | null>(null)
   const isDraggingRef = useRef(false)
@@ -554,7 +561,8 @@ export default function ParkingPage() {
     if (!m || !mapLoaded) return
 
     const handleClick = async (e: mapboxgl.MapMouseEvent) => {
-      // Ignore clicks that are part of a drag operation
+      // Ignore clicks when ruler is active or part of a drag operation
+      if (rulerActiveRef.current) return
       if (isDraggingRef.current) return
 
       const { lng, lat } = e.lngLat
@@ -2737,7 +2745,18 @@ export default function ParkingPage() {
           </div>
         )}
 
-        <div ref={mapContainer} style={{ flex: 1, minHeight: 0 }} />
+        <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+          <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+          <RulerButton
+            active={ruler.active}
+            toggle={ruler.toggle}
+            clear={ruler.clear}
+            totalFt={ruler.totalFt}
+            points={ruler.points}
+            segments={ruler.segments}
+            style={{ position: 'absolute', bottom: 24, left: 10, zIndex: 5 }}
+          />
+        </div>
       </div>
 
       {/* Aircraft Picker Modal */}

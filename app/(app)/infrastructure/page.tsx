@@ -6,6 +6,7 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
 import { isMapboxConfigured, formatZuluDateTime } from '@/lib/utils'
+import { useMapRuler, RulerButton } from '@/hooks/use-map-ruler'
 import {
   fetchInfrastructureFeatures,
   createInfrastructureFeature,
@@ -370,6 +371,9 @@ const ICON_MAP: Record<string, string> = {
 export default function InfrastructureMapPage() {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
+  const ruler = useMapRuler(map, true)
+  const rulerActiveRef = useRef(ruler.active)
+  rulerActiveRef.current = ruler.active
   const [mapLoaded, setMapLoaded] = useState(false)
   const [legendOpen, setLegendOpen] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
@@ -2127,6 +2131,7 @@ export default function InfrastructureMapPage() {
 
       // Click on empty map area — place feature or bar in edit mode (skip if dragging or box selecting)
       m.on('click', (e) => {
+        if (rulerActiveRef.current) return
         if (!editModeRef.current || draggingRef.current || boxSelectRef.current || freeMoveRef.current) return
         const layerIds = LAYERS.map(l => l.key)
         const clicked = m.queryRenderedFeatures(e.point, { layers: layerIds })
@@ -2498,6 +2503,17 @@ export default function InfrastructureMapPage() {
       {/* Map + Overlays */}
       <div style={{ flex: 1, position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
         <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+
+        {/* Ruler tool */}
+        <RulerButton
+          active={ruler.active}
+          toggle={ruler.toggle}
+          clear={ruler.clear}
+          totalFt={ruler.totalFt}
+          points={ruler.points}
+          segments={ruler.segments}
+          style={{ position: 'absolute', bottom: 24, left: 10, zIndex: 5 }}
+        />
 
         {/* Audit panel */}
         {auditMode && (

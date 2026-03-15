@@ -6,6 +6,7 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
 import { isMapboxConfigured } from '@/lib/utils'
+import { useMapRuler, RulerButton } from '@/hooks/use-map-ruler'
 import { fetchTaxiways, createTaxiway, updateTaxiway, deleteTaxiway } from '@/lib/supabase/taxiways'
 import { TAXIWAY_CRITERIA, TAXILANE_CRITERIA, getTaxiwayCriteria, getOFAHalfWidth } from '@/lib/calculations/taxiway-criteria'
 import type { BaseTaxiway } from '@/lib/supabase/types'
@@ -25,6 +26,7 @@ export default function TaxiwayEditor() {
 
   // Drawing state
   const [drawing, setDrawing] = useState(false)
+  const ruler = useMapRuler(map, !drawing)
   const [drawingPoints, setDrawingPoints] = useState<[number, number][]>([])
   const [newDesignator, setNewDesignator] = useState('')
   const [newType, setNewType] = useState<'taxiway' | 'taxilane'>('taxiway')
@@ -579,17 +581,27 @@ export default function TaxiwayEditor() {
       )}
 
       {/* Map */}
-      <div
-        ref={mapContainer}
-        style={{
-          width: '100%',
-          height: 400,
-          borderRadius: 10,
-          border: drawing ? '2px solid #4ADE80' : '1px solid var(--color-border)',
-          marginBottom: 12,
-          overflow: 'hidden',
-        }}
-      />
+      <div style={{ position: 'relative', marginBottom: 12 }}>
+        <div
+          ref={mapContainer}
+          style={{
+            width: '100%',
+            height: 400,
+            borderRadius: 10,
+            border: drawing ? '2px solid #4ADE80' : '1px solid var(--color-border)',
+            overflow: 'hidden',
+          }}
+        />
+        <RulerButton
+          active={ruler.active}
+          toggle={ruler.toggle}
+          clear={ruler.clear}
+          totalFt={ruler.totalFt}
+          points={ruler.points}
+          segments={ruler.segments}
+          style={{ position: 'absolute', bottom: 12, left: 10, zIndex: 5 }}
+        />
+      </div>
 
       {/* Drawing mode controls */}
       {drawing && (

@@ -5,6 +5,7 @@ import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { useInstallation } from '@/lib/installation-context'
 import { isMapboxConfigured } from '@/lib/utils'
+import { useMapRuler, RulerButton } from '@/hooks/use-map-ruler'
 import {
   type LatLon,
   type RunwayGeometry,
@@ -249,6 +250,7 @@ function getDefaultVisibility(): Record<ToggleKey, boolean> {
 export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtPoint, flyToPoint }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
+  const ruler = useMapRuler(map, true)
   const marker = useRef<mapboxgl.Marker | null>(null)
   const numRunwaysRef = useRef(1)
   const [mapLoaded, setMapLoaded] = useState(false)
@@ -284,8 +286,12 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
     return []
   }, [installationRunways])
 
+  const rulerActiveRef = useRef(ruler.active)
+  rulerActiveRef.current = ruler.active
+
   const handleClick = useCallback(
     (e: mapboxgl.MapMouseEvent) => {
+      if (rulerActiveRef.current) return
       const { lng, lat } = e.lngLat
       onPointSelected({ lat, lon: lng })
     },
@@ -590,6 +596,16 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
           overflow: 'hidden',
           border: '1px solid var(--color-border-mid)',
         }}
+      />
+      {/* Ruler tool */}
+      <RulerButton
+        active={ruler.active}
+        toggle={ruler.toggle}
+        clear={ruler.clear}
+        totalFt={ruler.totalFt}
+        points={ruler.points}
+        segments={ruler.segments}
+        style={{ position: 'absolute', bottom: 12, left: 10, zIndex: 5 }}
       />
       {/* Collapsible surface legend with toggles */}
       <div
