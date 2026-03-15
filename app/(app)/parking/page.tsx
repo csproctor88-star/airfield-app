@@ -97,6 +97,121 @@ const STATUS_COLORS: Record<string, string> = {
   violation: '#EF4444',
 }
 
+// ── SVG Silhouette rendering engine ──
+
+const svgCache = new Map<string, SVGElement>()
+const FT_TO_M = 0.3048
+
+/** Fetch and parse an SVG file, caching the result */
+async function loadSvgElement(path: string): Promise<SVGElement | null> {
+  if (svgCache.has(path)) return svgCache.get(path)!
+  try {
+    const res = await fetch(path)
+    if (!res.ok) return null
+    const text = await res.text()
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(text, 'image/svg+xml')
+    const svg = doc.documentElement as unknown as SVGElement
+    svgCache.set(path, svg)
+    return svg
+  } catch {
+    return null
+  }
+}
+
+/** Get meters-per-pixel at a given latitude and zoom level */
+function metersPerPixel(lat: number, zoom: number): number {
+  return (40075016.686 * Math.cos(lat * Math.PI / 180)) / (512 * Math.pow(2, zoom))
+}
+
+/** Render an SVG silhouette to a canvas at to-scale pixel dimensions.
+ *  Returns an ImageData or null if SVG not available.
+ *  The silhouette is rendered as white with a dark outline for visibility on satellite imagery. */
+async function renderSilhouetteImage(
+  aircraftName: string,
+  wingspanFt: number,
+  lengthFt: number,
+  lat: number,
+  zoom: number,
+): Promise<{ imageData: ImageData; width: number; height: number } | null> {
+  const svgPath = findSilhouettePath(aircraftName)
+  if (!svgPath) return null
+
+  const svg = await loadSvgElement(svgPath)
+  if (!svg) return null
+
+  const mpp = metersPerPixel(lat, zoom)
+  if (mpp <= 0) return null
+
+  // Convert real aircraft dimensions to pixels
+  const wingspanPx = Math.max(8, Math.round((wingspanFt * FT_TO_M) / mpp))
+  const lengthPx = Math.max(8, Math.round((lengthFt * FT_TO_M) / mpp))
+
+  // Cap at reasonable size to avoid huge canvases
+  const maxPx = 800
+  const scale = Math.min(1, maxPx / Math.max(wingspanPx, lengthPx))
+  const w = Math.round(wingspanPx * scale)
+  const h = Math.round(lengthPx * scale)
+
+  if (w < 4 || h < 4) return null
+
+  // Render SVG to canvas
+  // SVGs are oriented nose-up, with wingspan horizontal.
+  // Canvas: width = wingspan (x), height = length (y)
+  const canvas = document.createElement('canvas')
+  const padding = 4  // px padding for stroke
+  canvas.width = w + padding * 2
+  canvas.height = h + padding * 2
+  const ctx = canvas.getContext('2d')!
+
+  // Create an Image from the SVG markup
+  const viewBox = svg.getAttribute('viewBox')
+  const svgMarkup = new XMLSerializer().serializeToString(svg)
+  // Recolor fill to white for satellite visibility
+  const recolored = svgMarkup
+    .replace(/fill="[^"]*"/g, 'fill="#E0E7FF"')
+    .replace(/stroke="[^"]*"/g, 'stroke="#1E293B"')
+
+  return new Promise(resolve => {
+    const img = new Image()
+    img.onload = () => {
+      // Draw shadow/outline first
+      ctx.filter = 'drop-shadow(0px 0px 2px rgba(0,0,0,0.8))'
+      ctx.drawImage(img, padding, padding, w, h)
+      ctx.filter = 'none'
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      resolve({ imageData, width: canvas.width, height: canvas.height })
+    }
+    img.onerror = () => resolve(null)
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(recolored)
+  })
+}
+
+/** Generate a fallback circle icon for aircraft without silhouettes */
+function renderFallbackIcon(
+  wingspanFt: number,
+  lat: number,
+  zoom: number,
+): { imageData: ImageData; width: number; height: number } {
+  const mpp = metersPerPixel(lat, zoom)
+  const radiusPx = Math.max(6, Math.round((wingspanFt / 2 * FT_TO_M) / mpp))
+  const size = Math.min(radiusPx * 2 + 8, 200)
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  const cx = size / 2
+  ctx.beginPath()
+  ctx.arc(cx, cx, Math.min(radiusPx, size / 2 - 2), 0, Math.PI * 2)
+  ctx.fillStyle = 'rgba(56, 189, 248, 0.5)'
+  ctx.fill()
+  ctx.strokeStyle = '#FFFFFF'
+  ctx.lineWidth = 2
+  ctx.stroke()
+  return { imageData: ctx.getImageData(0, 0, size, size), width: size, height: size }
+}
+
 // ── Main Page ──
 
 export default function ParkingPage() {
@@ -130,6 +245,8 @@ export default function ParkingPage() {
   const map = useRef<mapboxgl.Map | null>(null)
   const dragSpotId = useRef<string | null>(null)
   const dragOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  const silhouetteImagesRef = useRef<Set<string>>(new Set()) // track registered image names
+  const lastZoomRef = useRef<number>(15)
 
   // ── Derived data ──
 
@@ -315,13 +432,19 @@ export default function ParkingPage() {
     if (!m || !mapLoaded) return
 
     // Clean up old sources/layers
-    const cleanIds = ['parking-clearance-fill', 'parking-clearance-line', 'parking-obstacles-fill', 'parking-obstacles-line', 'parking-aircraft-circles', 'parking-aircraft-labels']
+    const cleanIds = ['parking-clearance-fill', 'parking-clearance-line', 'parking-obstacles-fill', 'parking-obstacles-line', 'parking-aircraft-symbols', 'parking-aircraft-labels', 'parking-obstacles-points']
     for (const id of cleanIds) {
       if (m.getLayer(id)) m.removeLayer(id)
     }
     if (m.getSource('parking-clearance')) m.removeSource('parking-clearance')
     if (m.getSource('parking-obstacles-src')) m.removeSource('parking-obstacles-src')
     if (m.getSource('parking-aircraft')) m.removeSource('parking-aircraft')
+
+    // Clean up old silhouette images
+    Array.from(silhouetteImagesRef.current).forEach(imgName => {
+      if (m.hasImage(imgName)) m.removeImage(imgName)
+    })
+    silhouetteImagesRef.current.clear()
 
     // Build clearance zone GeoJSON
     const clearanceFeatures: GeoJSON.Feature[] = []
@@ -455,16 +578,18 @@ export default function ParkingPage() {
       })
     }
 
-    // Build aircraft GeoJSON (circles for now, silhouettes later)
+    // Build aircraft GeoJSON with to-scale silhouettes
     const aircraftFeatures: GeoJSON.Feature[] = spotsWithAircraft.map(s => ({
       type: 'Feature',
       properties: {
         spotId: s.id,
         name: s.aircraft_name || 'Aircraft',
         wingspan: s.wingspan_ft,
+        length: s.length_ft,
         heading: s.heading_deg,
         tailNumber: s.tail_number || '',
         adg: getADGFromWingspan(s.wingspan_ft),
+        iconId: `sil-${s.id}`,
       },
       geometry: { type: 'Point', coordinates: [s.longitude, s.latitude] },
     }))
@@ -475,37 +600,148 @@ export default function ParkingPage() {
         data: { type: 'FeatureCollection', features: aircraftFeatures },
       })
 
-      m.addLayer({
-        id: 'parking-aircraft-circles',
-        type: 'circle',
-        source: 'parking-aircraft',
-        paint: {
-          'circle-radius': 8,
-          'circle-color': '#38BDF8',
-          'circle-stroke-color': '#FFFFFF',
-          'circle-stroke-width': 2,
-        },
-      })
+      // Register silhouette images for each aircraft at current zoom
+      const zoom = m.getZoom()
+      const centerLat = m.getCenter().lat
+      lastZoomRef.current = zoom
 
-      m.addLayer({
-        id: 'parking-aircraft-labels',
-        type: 'symbol',
-        source: 'parking-aircraft',
-        layout: {
-          'text-field': ['get', 'name'],
-          'text-size': 11,
-          'text-offset': [0, 1.5],
-          'text-anchor': 'top',
-          'text-allow-overlap': true,
-        },
-        paint: {
-          'text-color': '#FFFFFF',
-          'text-halo-color': '#000000',
-          'text-halo-width': 1,
-        },
-      })
+      const registerImages = async () => {
+        for (const spot of spotsWithAircraft) {
+          const imgName = `sil-${spot.id}`
+
+          // Remove old image if exists
+          if (m.hasImage(imgName)) {
+            m.removeImage(imgName)
+          }
+
+          const result = await renderSilhouetteImage(
+            spot.aircraft_name || '',
+            spot.wingspan_ft,
+            spot.length_ft,
+            spot.latitude,
+            zoom,
+          )
+
+          if (result) {
+            m.addImage(imgName, result.imageData, { pixelRatio: 1, sdf: false })
+            silhouetteImagesRef.current.add(imgName)
+          } else {
+            // Fallback: to-scale circle
+            const fallback = renderFallbackIcon(spot.wingspan_ft, spot.latitude, zoom)
+            m.addImage(imgName, fallback.imageData, { pixelRatio: 1, sdf: false })
+            silhouetteImagesRef.current.add(imgName)
+          }
+        }
+
+        // Add symbol layer for aircraft silhouettes
+        if (!m.getLayer('parking-aircraft-symbols')) {
+          m.addLayer({
+            id: 'parking-aircraft-symbols',
+            type: 'symbol',
+            source: 'parking-aircraft',
+            layout: {
+              'icon-image': ['get', 'iconId'],
+              'icon-rotate': ['get', 'heading'],
+              'icon-rotation-alignment': 'map',
+              'icon-allow-overlap': true,
+              'icon-size': 1,
+            },
+          })
+        }
+
+        // Labels layer on top
+        if (!m.getLayer('parking-aircraft-labels')) {
+          m.addLayer({
+            id: 'parking-aircraft-labels',
+            type: 'symbol',
+            source: 'parking-aircraft',
+            layout: {
+              'text-field': ['concat', ['get', 'name'], '\n', ['get', 'tailNumber']],
+              'text-size': 11,
+              'text-offset': [0, 2],
+              'text-anchor': 'top',
+              'text-allow-overlap': true,
+            },
+            paint: {
+              'text-color': '#FFFFFF',
+              'text-halo-color': '#000000',
+              'text-halo-width': 1,
+            },
+          })
+        }
+      }
+
+      registerImages()
     }
   }, [mapLoaded, spotsWithAircraft, obstacles, allResults, showClearances])
+
+  // ── Re-render silhouettes on zoom change (debounced) ──
+
+  useEffect(() => {
+    const m = map.current
+    if (!m || !mapLoaded || spotsWithAircraft.length === 0) return
+
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+    const onZoomEnd = () => {
+      const newZoom = m.getZoom()
+      // Only re-render if zoom changed significantly (> 0.5 levels)
+      if (Math.abs(newZoom - lastZoomRef.current) < 0.5) return
+      lastZoomRef.current = newZoom
+
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(async () => {
+        for (const spot of spotsWithAircraft) {
+          const imgName = `sil-${spot.id}`
+
+          const result = await renderSilhouetteImage(
+            spot.aircraft_name || '',
+            spot.wingspan_ft,
+            spot.length_ft,
+            spot.latitude,
+            newZoom,
+          )
+
+          if (result) {
+            if (m.hasImage(imgName)) m.removeImage(imgName)
+            m.addImage(imgName, result.imageData, { pixelRatio: 1, sdf: false })
+          } else {
+            const fallback = renderFallbackIcon(spot.wingspan_ft, spot.latitude, newZoom)
+            if (m.hasImage(imgName)) m.removeImage(imgName)
+            m.addImage(imgName, fallback.imageData, { pixelRatio: 1, sdf: false })
+          }
+        }
+
+        // Trigger source update to refresh icons
+        const src = m.getSource('parking-aircraft') as mapboxgl.GeoJSONSource | undefined
+        if (src) {
+          src.setData({
+            type: 'FeatureCollection',
+            features: spotsWithAircraft.map(s => ({
+              type: 'Feature' as const,
+              properties: {
+                spotId: s.id,
+                name: s.aircraft_name || 'Aircraft',
+                wingspan: s.wingspan_ft,
+                length: s.length_ft,
+                heading: s.heading_deg,
+                tailNumber: s.tail_number || '',
+                adg: getADGFromWingspan(s.wingspan_ft),
+                iconId: `sil-${s.id}`,
+              },
+              geometry: { type: 'Point' as const, coordinates: [s.longitude, s.latitude] },
+            })),
+          })
+        }
+      }, 200)
+    }
+
+    m.on('zoomend', onZoomEnd)
+    return () => {
+      m.off('zoomend', onZoomEnd)
+      if (debounceTimer) clearTimeout(debounceTimer)
+    }
+  }, [mapLoaded, spotsWithAircraft])
 
   // ── Aircraft drag interaction ──
 
@@ -516,7 +752,7 @@ export default function ParkingPage() {
     let isDragging = false
 
     const onMouseDown = (e: mapboxgl.MapMouseEvent) => {
-      const features = m.queryRenderedFeatures(e.point, { layers: ['parking-aircraft-circles'] })
+      const features = m.queryRenderedFeatures(e.point, { layers: ['parking-aircraft-symbols'] })
       if (!features.length) return
 
       const spotId = features[0].properties?.spotId
@@ -558,21 +794,21 @@ export default function ParkingPage() {
       dragSpotId.current = null
     }
 
-    m.on('mousedown', 'parking-aircraft-circles', onMouseDown as any)
+    m.on('mousedown', 'parking-aircraft-symbols', onMouseDown as any)
     m.on('mousemove', onMouseMove as any)
     m.on('mouseup', onMouseUp)
     m.on('mouseleave', onMouseUp)
 
     // Hover cursor
-    m.on('mouseenter', 'parking-aircraft-circles', () => {
+    m.on('mouseenter', 'parking-aircraft-symbols', () => {
       if (!isDragging) m.getCanvas().style.cursor = 'grab'
     })
-    m.on('mouseleave', 'parking-aircraft-circles', () => {
+    m.on('mouseleave', 'parking-aircraft-symbols', () => {
       if (!isDragging) m.getCanvas().style.cursor = ''
     })
 
     return () => {
-      m.off('mousedown', 'parking-aircraft-circles', onMouseDown as any)
+      m.off('mousedown', 'parking-aircraft-symbols', onMouseDown as any)
       m.off('mousemove', onMouseMove as any)
       m.off('mouseup', onMouseUp)
     }
