@@ -1515,14 +1515,42 @@ export default function ParkingPage() {
       }
     }
 
-    // Bind mousedown on canvas (not specific layer) so we can check multiple layers
+    // Bind mousedown/touchstart on canvas (not specific layer) so we can check multiple layers
     const canvas = m.getCanvas()
     const onCanvasMouseDown = (ev: MouseEvent) => {
       const point = new mapboxgl.Point(ev.offsetX, ev.offsetY)
       const lngLat = m.unproject(point)
       onMouseDown({ point, lngLat, originalEvent: ev, preventDefault: () => ev.preventDefault() } as any)
     }
+    const onCanvasTouchStart = (ev: TouchEvent) => {
+      if (ev.touches.length !== 1) return // only single-finger drag
+      const touch = ev.touches[0]
+      const rect = canvas.getBoundingClientRect()
+      const point = new mapboxgl.Point(touch.clientX - rect.left, touch.clientY - rect.top)
+      const lngLat = m.unproject(point)
+      onMouseDown({ point, lngLat, originalEvent: ev, preventDefault: () => ev.preventDefault() } as any)
+    }
+    const onTouchMove = (ev: TouchEvent) => {
+      if (!isDraggingRef.current || ev.touches.length !== 1) return
+      ev.preventDefault() // prevent map pan during drag
+      const touch = ev.touches[0]
+      const rect = canvas.getBoundingClientRect()
+      const point = new mapboxgl.Point(touch.clientX - rect.left, touch.clientY - rect.top)
+      const lngLat = m.unproject(point)
+      onMouseMove({ point, lngLat, originalEvent: ev, preventDefault: () => {} } as any)
+    }
+    const onTouchEnd = (ev: TouchEvent) => {
+      if (!isDraggingRef.current) return
+      const touch = ev.changedTouches[0]
+      const rect = canvas.getBoundingClientRect()
+      const point = new mapboxgl.Point(touch.clientX - rect.left, touch.clientY - rect.top)
+      const lngLat = m.unproject(point)
+      onMouseUp({ point, lngLat, originalEvent: ev, preventDefault: () => {} } as any)
+    }
     canvas.addEventListener('mousedown', onCanvasMouseDown)
+    canvas.addEventListener('touchstart', onCanvasTouchStart, { passive: false })
+    canvas.addEventListener('touchmove', onTouchMove, { passive: false })
+    canvas.addEventListener('touchend', onTouchEnd)
     m.on('mousemove', onMouseMove as any)
     m.on('mouseup', onMouseUp as any)
 
@@ -1544,6 +1572,9 @@ export default function ParkingPage() {
 
     return () => {
       canvas.removeEventListener('mousedown', onCanvasMouseDown)
+      canvas.removeEventListener('touchstart', onCanvasTouchStart)
+      canvas.removeEventListener('touchmove', onTouchMove)
+      canvas.removeEventListener('touchend', onTouchEnd)
       m.off('mousemove', onMouseMove as any)
       m.off('mouseup', onMouseUp as any)
       m.off('mouseenter', 'parking-aircraft-symbols', onAcEnter)
