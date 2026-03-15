@@ -264,27 +264,41 @@ export function checkWingtipClearance(
 
 // ── Obstacle clearance check ──
 
-function pointToPointDistance(spot: SpotWithAircraft, obstacle: ParkingObstacle): number {
+/** Minimum distance from a point to the aircraft's bounding rectangle.
+ *  Transforms the obstacle into the aircraft's local coordinate frame
+ *  (aligned with heading) and computes distance to the nearest edge. */
+function distanceToAircraftRect(spot: SpotWithAircraft, obsPt: LatLon): number {
   const center: LatLon = { lat: spot.latitude, lon: spot.longitude }
-  const obsPt: LatLon = { lat: obstacle.latitude, lon: obstacle.longitude }
-  const tips = getWingtipPositions(center, spot.heading_deg, spot.wingspan_ft)
-  const nt = getNoseTailPositions(center, spot.heading_deg, spot.length_ft)
 
-  return Math.min(
-    distanceFt(tips.left, obsPt),
-    distanceFt(tips.right, obsPt),
-    distanceFt(nt.nose, obsPt),
-    distanceFt(nt.tail, obsPt),
-  )
+  // Convert obstacle position to local offsets (ft) relative to aircraft center
+  const dLon = obsPt.lon - center.lon
+  const dLat = obsPt.lat - center.lat
+  const eastFt = dLon * 111319.9 * Math.cos(center.lat * Math.PI / 180) * 3.28084
+  const northFt = dLat * 111319.9 * 3.28084
+
+  // Rotate into aircraft-local frame (heading = 0 → nose points north)
+  const headingRad = (spot.heading_deg * Math.PI) / 180
+  const localAlong = eastFt * Math.sin(headingRad) + northFt * Math.cos(headingRad)   // along fuselage
+  const localCross = eastFt * Math.cos(headingRad) - northFt * Math.sin(headingRad)   // across wings
+
+  // Aircraft rectangle: half-length along fuselage, half-wingspan across
+  const halfLen = spot.length_ft / 2
+  const halfWS = spot.wingspan_ft / 2
+
+  // Signed distance to nearest edge (negative = inside the rectangle)
+  const dxOut = Math.max(0, Math.abs(localAlong) - halfLen)
+  const dyOut = Math.max(0, Math.abs(localCross) - halfWS)
+
+  return Math.sqrt(dxOut * dxOut + dyOut * dyOut)
+}
+
+function pointToPointDistance(spot: SpotWithAircraft, obstacle: ParkingObstacle): number {
+  const obsPt: LatLon = { lat: obstacle.latitude, lon: obstacle.longitude }
+  return distanceToAircraftRect(spot, obsPt)
 }
 
 function pointToBuildingDistance(spot: SpotWithAircraft, obstacle: ParkingObstacle): number {
-  const center: LatLon = { lat: spot.latitude, lon: spot.longitude }
   const obsCenter: LatLon = { lat: obstacle.latitude, lon: obstacle.longitude }
-  const tips = getWingtipPositions(center, spot.heading_deg, spot.wingspan_ft)
-  const nt = getNoseTailPositions(center, spot.heading_deg, spot.length_ft)
-
-  const aircraftPoints = [tips.left, tips.right, nt.nose, nt.tail]
 
   // Building corners
   const halfW = (obstacle.width_ft || 50) / 2
@@ -297,35 +311,24 @@ function pointToBuildingDistance(spot: SpotWithAircraft, obstacle: ParkingObstac
     offsetPoint(offsetPoint(obsCenter, (rot + 180) % 360, halfL), (rot + 90) % 360, halfW),
   ]
 
-  // Minimum distance: any aircraft point to any building corner
+  // Check distance from each building corner to the aircraft rectangle
   let minDist = Infinity
-  for (const ap of aircraftPoints) {
-    for (const bc of bCorners) {
-      minDist = Math.min(minDist, distanceFt(ap, bc))
-    }
-    // Also check distance to building center minus half-diagonal
-    const diagFt = Math.sqrt(halfW * halfW + halfL * halfL)
-    const toCenterDist = distanceFt(ap, obsCenter)
-    minDist = Math.min(minDist, Math.max(0, toCenterDist - diagFt))
+  for (const bc of bCorners) {
+    minDist = Math.min(minDist, distanceToAircraftRect(spot, bc))
   }
+  // Also check building center
+  minDist = Math.min(minDist, distanceToAircraftRect(spot, obsCenter))
 
   return minDist
 }
 
 function pointToCircleDistance(spot: SpotWithAircraft, obstacle: ParkingObstacle): number {
-  const center: LatLon = { lat: spot.latitude, lon: spot.longitude }
   const obsCenter: LatLon = { lat: obstacle.latitude, lon: obstacle.longitude }
-  const tips = getWingtipPositions(center, spot.heading_deg, spot.wingspan_ft)
-  const nt = getNoseTailPositions(center, spot.heading_deg, spot.length_ft)
   const radius = obstacle.radius_ft || 0
 
-  const aircraftPoints = [tips.left, tips.right, nt.nose, nt.tail]
-  let minDist = Infinity
-  for (const ap of aircraftPoints) {
-    const d = distanceFt(ap, obsCenter) - radius
-    minDist = Math.min(minDist, Math.max(0, d))
-  }
-  return minDist
+  // Distance from nearest edge of aircraft rect to circle center, minus radius
+  const rectDist = distanceToAircraftRect(spot, obsCenter)
+  return Math.max(0, rectDist - radius)
 }
 
 function pointToLineDistance(spot: SpotWithAircraft, obstacle: ParkingObstacle): number {
@@ -333,17 +336,11 @@ function pointToLineDistance(spot: SpotWithAircraft, obstacle: ParkingObstacle):
     return pointToPointDistance(spot, obstacle)
   }
 
-  const center: LatLon = { lat: spot.latitude, lon: spot.longitude }
-  const tips = getWingtipPositions(center, spot.heading_deg, spot.wingspan_ft)
-  const nt = getNoseTailPositions(center, spot.heading_deg, spot.length_ft)
-  const aircraftPoints = [tips.left, tips.right, nt.nose, nt.tail]
-
+  // Check each line vertex against the aircraft rectangle
   let minDist = Infinity
-  for (const ap of aircraftPoints) {
-    for (const coord of obstacle.line_coords) {
-      const linePt: LatLon = { lat: coord[1], lon: coord[0] }
-      minDist = Math.min(minDist, distanceFt(ap, linePt))
-    }
+  for (const coord of obstacle.line_coords) {
+    const linePt: LatLon = { lat: coord[1], lon: coord[0] }
+    minDist = Math.min(minDist, distanceToAircraftRect(spot, linePt))
   }
   return minDist
 }
