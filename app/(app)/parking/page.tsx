@@ -157,6 +157,7 @@ function metersPerPixel(lat: number, zoom: number): number {
 
 /** Render an SVG silhouette to a canvas at to-scale pixel dimensions.
  *  Returns an ImageData or null if SVG not available.
+ *  Accounts for devicePixelRatio so silhouettes are correctly sized on HiDPI displays.
  *  The silhouette is rendered as white with a dark outline for visibility on satellite imagery. */
 async function renderSilhouetteImage(
   aircraftName: string,
@@ -164,7 +165,7 @@ async function renderSilhouetteImage(
   lengthFt: number,
   lat: number,
   zoom: number,
-): Promise<{ imageData: ImageData; width: number; height: number } | null> {
+): Promise<{ imageData: ImageData; width: number; height: number; pixelRatio: number } | null> {
   const svgPath = findSilhouettePath(aircraftName)
   if (!svgPath) return null
 
@@ -174,12 +175,15 @@ async function renderSilhouetteImage(
   const mpp = metersPerPixel(lat, zoom)
   if (mpp <= 0) return null
 
-  // Convert real aircraft dimensions to pixels
-  const wingspanPx = Math.max(8, Math.round((wingspanFt * FT_TO_M) / mpp))
-  const lengthPx = Math.max(8, Math.round((lengthFt * FT_TO_M) / mpp))
+  // Account for device pixel ratio — Mapbox renders at DPR resolution
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+
+  // Convert real aircraft dimensions to device pixels
+  const wingspanPx = Math.max(8, Math.round((wingspanFt * FT_TO_M) / mpp * dpr))
+  const lengthPx = Math.max(8, Math.round((lengthFt * FT_TO_M) / mpp * dpr))
 
   // Cap at reasonable size to avoid huge canvases
-  const maxPx = 800
+  const maxPx = 1600
   const scale = Math.min(1, maxPx / Math.max(wingspanPx, lengthPx))
   const w = Math.round(wingspanPx * scale)
   const h = Math.round(lengthPx * scale)
@@ -190,13 +194,12 @@ async function renderSilhouetteImage(
   // SVGs are oriented nose-up, with wingspan horizontal.
   // Canvas: width = wingspan (x), height = length (y)
   const canvas = document.createElement('canvas')
-  const padding = 4  // px padding for stroke
+  const padding = Math.round(4 * dpr)
   canvas.width = w + padding * 2
   canvas.height = h + padding * 2
   const ctx = canvas.getContext('2d')!
 
   // Create an Image from the SVG markup
-  const viewBox = svg.getAttribute('viewBox')
   const svgMarkup = new XMLSerializer().serializeToString(svg)
   // Recolor fill to white for satellite visibility
   const recolored = svgMarkup
@@ -207,12 +210,12 @@ async function renderSilhouetteImage(
     const img = new Image()
     img.onload = () => {
       // Draw shadow/outline first
-      ctx.filter = 'drop-shadow(0px 0px 2px rgba(0,0,0,0.8))'
+      ctx.filter = `drop-shadow(0px 0px ${Math.round(2 * dpr)}px rgba(0,0,0,0.8))`
       ctx.drawImage(img, padding, padding, w, h)
       ctx.filter = 'none'
 
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-      resolve({ imageData, width: canvas.width, height: canvas.height })
+      resolve({ imageData, width: canvas.width, height: canvas.height, pixelRatio: dpr })
     }
     img.onerror = () => resolve(null)
     img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(recolored)
@@ -224,10 +227,11 @@ function renderFallbackIcon(
   wingspanFt: number,
   lat: number,
   zoom: number,
-): { imageData: ImageData; width: number; height: number } {
+): { imageData: ImageData; width: number; height: number; pixelRatio: number } {
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
   const mpp = metersPerPixel(lat, zoom)
-  const radiusPx = Math.max(6, Math.round((wingspanFt / 2 * FT_TO_M) / mpp))
-  const size = Math.min(radiusPx * 2 + 8, 200)
+  const radiusPx = Math.max(6, Math.round((wingspanFt / 2 * FT_TO_M) / mpp * dpr))
+  const size = Math.min(radiusPx * 2 + 8, 400)
   const canvas = document.createElement('canvas')
   canvas.width = size
   canvas.height = size
@@ -238,9 +242,9 @@ function renderFallbackIcon(
   ctx.fillStyle = 'rgba(56, 189, 248, 0.5)'
   ctx.fill()
   ctx.strokeStyle = '#FFFFFF'
-  ctx.lineWidth = 2
+  ctx.lineWidth = 2 * dpr
   ctx.stroke()
-  return { imageData: ctx.getImageData(0, 0, size, size), width: size, height: size }
+  return { imageData: ctx.getImageData(0, 0, size, size), width: size, height: size, pixelRatio: dpr }
 }
 
 // ── Main Page ──
@@ -756,12 +760,12 @@ export default function ParkingPage() {
           )
 
           if (result) {
-            m.addImage(imgName, result.imageData, { pixelRatio: 1, sdf: false })
+            m.addImage(imgName, result.imageData, { pixelRatio: result.pixelRatio, sdf: false })
             silhouetteImagesRef.current.add(imgName)
           } else {
             // Fallback: to-scale circle
             const fallback = renderFallbackIcon(spot.wingspan_ft, spot.latitude, zoom)
-            m.addImage(imgName, fallback.imageData, { pixelRatio: 1, sdf: false })
+            m.addImage(imgName, fallback.imageData, { pixelRatio: fallback.pixelRatio, sdf: false })
             silhouetteImagesRef.current.add(imgName)
           }
         }
@@ -837,11 +841,11 @@ export default function ParkingPage() {
 
           if (result) {
             if (m.hasImage(imgName)) m.removeImage(imgName)
-            m.addImage(imgName, result.imageData, { pixelRatio: 1, sdf: false })
+            m.addImage(imgName, result.imageData, { pixelRatio: result.pixelRatio, sdf: false })
           } else {
             const fallback = renderFallbackIcon(spot.wingspan_ft, spot.latitude, newZoom)
             if (m.hasImage(imgName)) m.removeImage(imgName)
-            m.addImage(imgName, fallback.imageData, { pixelRatio: 1, sdf: false })
+            m.addImage(imgName, fallback.imageData, { pixelRatio: fallback.pixelRatio, sdf: false })
           }
         }
 
