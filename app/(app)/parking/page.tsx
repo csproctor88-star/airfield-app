@@ -150,9 +150,11 @@ async function loadSvgElement(path: string): Promise<SVGElement | null> {
   }
 }
 
-/** Get meters-per-pixel at a given latitude and zoom level */
+/** Get meters-per-pixel at a given latitude and zoom level.
+ *  Uses the standard Web Mercator formula for 256px tile convention
+ *  (Mapbox GL JS zoom levels follow the 256px convention despite using 512px tiles). */
 function metersPerPixel(lat: number, zoom: number): number {
-  return (40075016.686 * Math.cos(lat * Math.PI / 180)) / (512 * Math.pow(2, zoom))
+  return (40075016.686 * Math.cos(lat * Math.PI / 180)) / (256 * Math.pow(2, zoom))
 }
 
 /** Render an SVG silhouette to a canvas at to-scale pixel dimensions.
