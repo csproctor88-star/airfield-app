@@ -216,8 +216,7 @@ function renderFallbackIcon(
 // ── Main Page ──
 
 export default function ParkingPage() {
-  const { installationId, currentInstallation, runways, userRole } = useInstallation()
-  const canWrite = userRole && ['admin', 'airfield_manager', 'operator', 'inspector'].includes(userRole)
+  const { installationId, currentInstallation, runways } = useInstallation()
 
   // ── State ──
   const [plans, setPlans] = useState<ParkingPlan[]>([])
@@ -1344,7 +1343,7 @@ export default function ParkingPage() {
             {/* Aircraft tab */}
             {panelTab === 'aircraft' && (
               <>
-                {canWrite && selectedPlanId && (
+                {selectedPlanId && (
                   <button
                     onClick={() => setShowAircraftPicker(true)}
                     style={{
@@ -1506,7 +1505,7 @@ export default function ParkingPage() {
             {/* Obstacles tab */}
             {panelTab === 'obstacles' && (
               <>
-                {canWrite && (
+                {(
                   <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
                     {(['point', 'building', 'line', 'circle'] as const).map(type => (
                       <button
@@ -1684,7 +1683,7 @@ export default function ParkingPage() {
               padding: 8, borderTop: '1px solid var(--color-border)',
               display: 'flex', gap: 4, flexShrink: 0,
             }}>
-              {!selectedPlan.is_active && canWrite && (
+              {!selectedPlan.is_active && (
                 <button
                   onClick={handleSetActive}
                   style={{ flex: 1, padding: '6px 8px', borderRadius: 4, background: '#22C55E22', border: '1px solid #22C55E44', color: '#22C55E', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}
@@ -1692,7 +1691,7 @@ export default function ParkingPage() {
                   Set Active
                 </button>
               )}
-              {canWrite && (
+              {(
                 <button
                   onClick={handleDeletePlan}
                   style={{ padding: '6px 8px', borderRadius: 4, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}

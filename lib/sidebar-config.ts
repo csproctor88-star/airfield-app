@@ -95,6 +95,25 @@ export async function loadSidebarConfig(): Promise<SidebarConfig | null> {
     const cfg = row.sidebar_config as SidebarConfig
     if (!cfg.pinned || !cfg.sections) return null
 
+    // Merge any new nav items from DEFAULT that aren't in the saved config
+    const savedHrefs = new Set([
+      ...cfg.pinned,
+      ...cfg.sections.flatMap(s => s.items),
+    ])
+    for (const section of DEFAULT_SIDEBAR_CONFIG.sections) {
+      for (const href of section.items) {
+        if (!savedHrefs.has(href)) {
+          // Find matching section in saved config, or add to last operational section
+          const target = cfg.sections.find(s => s.label === section.label)
+          if (target) {
+            target.items.push(href)
+          } else if (cfg.sections.length > 0) {
+            cfg.sections[0].items.push(href)
+          }
+        }
+      }
+    }
+
     return cfg
   } catch {
     return null
