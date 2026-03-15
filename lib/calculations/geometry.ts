@@ -63,6 +63,52 @@ export function normalizeBearing(deg: number): number {
   return ((deg % 360) + 360) % 360
 }
 
+/** Minimum distance from a point to a line segment, in feet.
+ *  Uses local tangent-plane (flat earth) projection. */
+export function pointToSegmentDistanceFt(
+  point: LatLon,
+  segStart: LatLon,
+  segEnd: LatLon
+): number {
+  // Use midpoint of segment as projection origin for best accuracy
+  const originLat = (segStart.lat + segEnd.lat) / 2
+  const originLon = (segStart.lon + segEnd.lon) / 2
+  const cosLat = Math.cos(originLat * DEG_TO_RAD)
+  const ftPerDegLat = EARTH_RADIUS_M * DEG_TO_RAD * M_TO_FT
+  const ftPerDegLon = ftPerDegLat * cosLat
+
+  // Project to local tangent plane (feet)
+  const px = (point.lon - originLon) * ftPerDegLon
+  const py = (point.lat - originLat) * ftPerDegLat
+  const ax = (segStart.lon - originLon) * ftPerDegLon
+  const ay = (segStart.lat - originLat) * ftPerDegLat
+  const bx = (segEnd.lon - originLon) * ftPerDegLon
+  const by = (segEnd.lat - originLat) * ftPerDegLat
+
+  // Vector AB and AP
+  const abx = bx - ax
+  const aby = by - ay
+  const apx = px - ax
+  const apy = py - ay
+
+  const abDotAb = abx * abx + aby * aby
+  if (abDotAb === 0) {
+    // Degenerate segment — just return distance to the point
+    return Math.sqrt(apx * apx + apy * apy)
+  }
+
+  // Projection parameter t = dot(AP, AB) / dot(AB, AB), clamped to [0, 1]
+  const t = Math.max(0, Math.min(1, (apx * abx + apy * aby) / abDotAb))
+
+  // Closest point on segment
+  const cx = ax + t * abx
+  const cy = ay + t * aby
+
+  const dx = px - cx
+  const dy = py - cy
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
 // ---------------------------------------------------------------------------
 // Runway-relative coordinate system
 // ---------------------------------------------------------------------------

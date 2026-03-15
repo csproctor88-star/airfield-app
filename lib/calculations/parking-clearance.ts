@@ -2,7 +2,7 @@
 // Calculates wingtip clearance requirements and violations for parking plans
 // Reference: UFC 3-260-01 (4 Feb 2019, Change 3, 4 Feb 2026)
 
-import { offsetPoint, distanceFt, type LatLon } from './geometry'
+import { offsetPoint, distanceFt, bearing, normalizeBearing, pointToSegmentDistanceFt, type LatLon } from './geometry'
 import type { ParkingSpot, ParkingObstacle } from '../supabase/parking'
 
 // ── ADG Classification (UFC 3-260-01 Table 3-1) ──
@@ -624,12 +624,224 @@ export function checkObstacleClearance(
   }
 }
 
+// ── Taxilane clearance (Items 5, 6, 7) ──
+
+/** Taxilane data needed for clearance checks — defined inline to avoid circular deps */
+export type TaxilaneForCheck = {
+  id: string
+  name: string | null
+  taxilane_type: 'interior' | 'peripheral'
+  design_wingspan_ft: number | null
+  line_coords: [number, number][]
+  is_transient: boolean
+}
+
+/** Compute the required taxilane envelope half-width */
+export function getTaxilaneEnvelopeHalfWidth(
+  taxilane: TaxilaneForCheck
+): { halfWidth: number; detail: ClearanceDetail } {
+  const designWingspan = taxilane.design_wingspan_ft ?? 100
+
+  // Determine apron context from taxilane type + transient flag
+  let context: ApronContext
+  if (taxilane.taxilane_type === 'interior') {
+    context = 'interior_taxilane'
+  } else if (taxilane.is_transient) {
+    context = 'peripheral_transient'
+  } else {
+    context = 'peripheral_taxilane'
+  }
+
+  const detail = getWingtipClearanceDetail(designWingspan, context)
+  const halfWidth = 0.5 * designWingspan + detail.clearance_ft
+
+  return { halfWidth, detail }
+}
+
+/** Generate a buffered polygon around a taxilane polyline centerline */
+export function generateTaxilaneEnvelopePolygon(
+  coords: [number, number][],
+  halfWidthFt: number
+): [number, number][] {
+  if (coords.length < 2) return []
+
+  const leftSide: [number, number][] = []
+  const rightSide: [number, number][] = []
+
+  for (let i = 0; i < coords.length; i++) {
+    const cur: LatLon = { lat: coords[i][1], lon: coords[i][0] }
+
+    // Compute perpendicular bearing at this vertex
+    let perpBearing: number
+    if (i === 0) {
+      // First point — use bearing to next
+      const next: LatLon = { lat: coords[i + 1][1], lon: coords[i + 1][0] }
+      perpBearing = bearing(cur, next)
+    } else if (i === coords.length - 1) {
+      // Last point — use bearing from prev
+      const prev: LatLon = { lat: coords[i - 1][1], lon: coords[i - 1][0] }
+      perpBearing = bearing(prev, cur)
+    } else {
+      // Middle point — average bearings of adjacent segments
+      const prev: LatLon = { lat: coords[i - 1][1], lon: coords[i - 1][0] }
+      const next: LatLon = { lat: coords[i + 1][1], lon: coords[i + 1][0] }
+      const b1 = bearing(prev, cur)
+      const b2 = bearing(cur, next)
+      // Average two bearings (handle wrap-around)
+      const sinAvg = (Math.sin(b1 * Math.PI / 180) + Math.sin(b2 * Math.PI / 180)) / 2
+      const cosAvg = (Math.cos(b1 * Math.PI / 180) + Math.cos(b2 * Math.PI / 180)) / 2
+      perpBearing = ((Math.atan2(sinAvg, cosAvg) * 180 / Math.PI) + 360) % 360
+    }
+
+    const leftBearing = normalizeBearing(perpBearing - 90)
+    const rightBearing = normalizeBearing(perpBearing + 90)
+
+    const leftPt = offsetPoint(cur, leftBearing, halfWidthFt)
+    const rightPt = offsetPoint(cur, rightBearing, halfWidthFt)
+
+    leftSide.push([leftPt.lon, leftPt.lat])
+    rightSide.push([rightPt.lon, rightPt.lat])
+  }
+
+  // Build polygon: left side forward + semicircular end cap at end +
+  // right side backward + semicircular end cap at start + close
+  const polygon: [number, number][] = []
+
+  // Left side forward
+  polygon.push(...leftSide)
+
+  // Semicircular end cap at last vertex
+  const lastPt: LatLon = { lat: coords[coords.length - 1][1], lon: coords[coords.length - 1][0] }
+  const prevPt: LatLon = { lat: coords[coords.length - 2][1], lon: coords[coords.length - 2][0] }
+  const endBearing = bearing(prevPt, lastPt)
+  const endCapStartAngle = normalizeBearing(endBearing - 90)
+  for (let i = 0; i <= 8; i++) {
+    const angle = normalizeBearing(endCapStartAngle + (180 * i) / 8)
+    const p = offsetPoint(lastPt, angle, halfWidthFt)
+    polygon.push([p.lon, p.lat])
+  }
+
+  // Right side backward
+  for (let i = rightSide.length - 1; i >= 0; i--) {
+    polygon.push(rightSide[i])
+  }
+
+  // Semicircular end cap at first vertex
+  const firstPt: LatLon = { lat: coords[0][1], lon: coords[0][0] }
+  const nextPt: LatLon = { lat: coords[1][1], lon: coords[1][0] }
+  const startBearing = bearing(firstPt, nextPt)
+  const startCapStartAngle = normalizeBearing(startBearing + 90)
+  for (let i = 0; i <= 8; i++) {
+    const angle = normalizeBearing(startCapStartAngle + (180 * i) / 8)
+    const p = offsetPoint(firstPt, angle, halfWidthFt)
+    polygon.push([p.lon, p.lat])
+  }
+
+  // Close ring
+  polygon.push(polygon[0])
+
+  return polygon
+}
+
+/** Check parked aircraft clearance against a taxilane */
+export function checkTaxilaneClearance(
+  spot: SpotWithAircraft,
+  taxilane: TaxilaneForCheck,
+): ClearanceResult {
+  const { halfWidth, detail } = getTaxilaneEnvelopeHalfWidth(taxilane)
+
+  const center: LatLon = { lat: spot.latitude, lon: spot.longitude }
+
+  // Get all extremity points of the parked aircraft
+  const corners = getAircraftCorners(center, spot.heading_deg, spot.wingspan_ft, spot.length_ft)
+  const tips = getWingtipPositions(center, spot.heading_deg, spot.wingspan_ft)
+  const nt = getNoseTailPositions(center, spot.heading_deg, spot.length_ft)
+
+  const extremities: LatLon[] = [
+    ...corners,
+    tips.left,
+    tips.right,
+    nt.nose,
+    nt.tail,
+  ]
+
+  // For each extremity, compute minimum distance to the taxilane polyline
+  let minDistance = Infinity
+  for (const ext of extremities) {
+    for (let i = 0; i < taxilane.line_coords.length - 1; i++) {
+      const segStart: LatLon = { lat: taxilane.line_coords[i][1], lon: taxilane.line_coords[i][0] }
+      const segEnd: LatLon = { lat: taxilane.line_coords[i + 1][1], lon: taxilane.line_coords[i + 1][0] }
+      const dist = pointToSegmentDistanceFt(ext, segStart, segEnd)
+      if (dist < minDistance) minDistance = dist
+    }
+  }
+
+  // The aircraft violates if any extremity is within the envelope half-width
+  let status: ClearanceResult['status'] = 'ok'
+  if (minDistance < halfWidth) {
+    status = 'violation'
+  } else if (minDistance < halfWidth * 1.1) {
+    status = 'warning'
+  }
+
+  return {
+    distance_ft: Math.round(minDistance * 10) / 10,
+    required_ft: Math.round(halfWidth * 10) / 10,
+    status,
+    aircraft_a: spot.aircraft_name || 'Aircraft',
+    aircraft_b: taxilane.name || 'Taxilane',
+    spot_a_id: spot.id,
+    spot_b_id: taxilane.id,
+    ufc_item: detail.ufc_item,
+    ufc_desc: detail.description,
+  }
+}
+
+/** Check apron boundary distance from taxilane centerline (Item 7) */
+export function checkApronBoundaryClearance(
+  taxilane: TaxilaneForCheck,
+  boundaryCoords: [number, number][],
+  designWingspan: number,
+): ClearanceResult {
+  const requirement = getApronBoundaryClearance(designWingspan)
+
+  let minDistance = Infinity
+  for (const coord of taxilane.line_coords) {
+    const pt: LatLon = { lat: coord[1], lon: coord[0] }
+    for (let i = 0; i < boundaryCoords.length - 1; i++) {
+      const segStart: LatLon = { lat: boundaryCoords[i][1], lon: boundaryCoords[i][0] }
+      const segEnd: LatLon = { lat: boundaryCoords[i + 1][1], lon: boundaryCoords[i + 1][0] }
+      const dist = pointToSegmentDistanceFt(pt, segStart, segEnd)
+      if (dist < minDistance) minDistance = dist
+    }
+  }
+
+  let status: ClearanceResult['status'] = 'ok'
+  if (minDistance < requirement.clearance_ft) {
+    status = 'violation'
+  } else if (minDistance < requirement.clearance_ft * 1.1) {
+    status = 'warning'
+  }
+
+  return {
+    distance_ft: Math.round(minDistance * 10) / 10,
+    required_ft: requirement.clearance_ft,
+    status,
+    aircraft_a: taxilane.name || 'Taxilane',
+    aircraft_b: 'Apron Boundary',
+    spot_a_id: taxilane.id,
+    ufc_item: requirement.ufc_item,
+    ufc_desc: requirement.description,
+  }
+}
+
 // ── Batch violation check ──
 
 export function findAllViolations(
   spots: SpotWithAircraft[],
   obstacles: ParkingObstacle[],
-  apronContext: ApronContext = 'parking'
+  apronContext: ApronContext = 'parking',
+  taxilanes?: TaxilaneForCheck[]
 ): ClearanceResult[] {
   const results: ClearanceResult[] = []
 
@@ -651,6 +863,17 @@ export function findAllViolations(
     }
   }
 
+  if (taxilanes) {
+    for (const spot of spots) {
+      for (const taxilane of taxilanes) {
+        const result = checkTaxilaneClearance(spot, taxilane)
+        if (result.status !== 'ok') {
+          results.push(result)
+        }
+      }
+    }
+  }
+
   results.sort((a, b) => {
     if (a.status === 'violation' && b.status !== 'violation') return -1
     if (a.status !== 'violation' && b.status === 'violation') return 1
@@ -664,7 +887,8 @@ export function findAllViolations(
 export function getAllClearanceResults(
   spots: SpotWithAircraft[],
   obstacles: ParkingObstacle[],
-  apronContext: ApronContext = 'parking'
+  apronContext: ApronContext = 'parking',
+  taxilanes?: TaxilaneForCheck[]
 ): ClearanceResult[] {
   const results: ClearanceResult[] = []
 
@@ -677,6 +901,14 @@ export function getAllClearanceResults(
   for (const spot of spots) {
     for (const obstacle of obstacles) {
       results.push(checkObstacleClearance(spot, obstacle, apronContext))
+    }
+  }
+
+  if (taxilanes) {
+    for (const spot of spots) {
+      for (const taxilane of taxilanes) {
+        results.push(checkTaxilaneClearance(spot, taxilane))
+      }
     }
   }
 

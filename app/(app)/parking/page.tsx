@@ -24,9 +24,19 @@ import {
   createParkingObstacle,
   updateParkingObstacle,
   deleteParkingObstacle,
+  fetchParkingTaxilanes,
+  createParkingTaxilane,
+  updateParkingTaxilane,
+  deleteParkingTaxilane,
+  fetchApronBoundaries,
+  createApronBoundary,
+  updateApronBoundary,
+  deleteApronBoundary,
   type ParkingPlan,
   type ParkingSpot,
   type ParkingObstacle,
+  type ParkingTaxilane,
+  type ParkingApronBoundary,
 } from '@/lib/supabase/parking'
 import {
   getADGFromWingspan,
@@ -38,10 +48,14 @@ import {
   getWingtipPositions,
   APRON_CONTEXT_LABELS,
   TABLE_6_1A_ITEMS,
+  getTaxilaneEnvelopeHalfWidth,
+  generateTaxilaneEnvelopePolygon,
+  checkTaxilaneClearance,
   type ADGGroup,
   type ApronContext,
   type SpotWithAircraft,
   type ClearanceResult,
+  type TaxilaneForCheck,
 } from '@/lib/calculations/parking-clearance'
 import { offsetPoint } from '@/lib/calculations/geometry'
 import { DEMO_PARKING_PLAN, DEMO_PARKING_SPOTS, DEMO_PARKING_OBSTACLES } from '@/lib/demo-data'
@@ -305,6 +319,8 @@ export default function ParkingPage() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
   const [spots, setSpots] = useState<ParkingSpot[]>([])
   const [obstacles, setObstacles] = useState<ParkingObstacle[]>([])
+  const [taxilanes, setTaxilanes] = useState<ParkingTaxilane[]>([])
+  const [apronBoundaries, setApronBoundaries] = useState<ParkingApronBoundary[]>([])
   const [loading, setLoading] = useState(true)
   const [mapLoaded, setMapLoaded] = useState(false)
 
@@ -321,12 +337,23 @@ export default function ParkingPage() {
   const [editingObstacle, setEditingObstacle] = useState<ParkingObstacle | null>(null)
   const [showClearances, setShowClearances] = useState(true)
   const [apronContext, setApronContext] = useState<ApronContext>('parking')
-  const [panelTab, setPanelTab] = useState<'aircraft' | 'obstacles' | 'clearance' | 'reference'>('aircraft')
+  const [panelTab, setPanelTab] = useState<'aircraft' | 'obstacles' | 'taxilanes' | 'clearance' | 'reference'>('aircraft')
   const [aircraftCategoryFilter, setAircraftCategoryFilter] = useState<'all' | 'military' | 'commercial'>('all')
+  const [editingTaxilane, setEditingTaxilane] = useState<ParkingTaxilane | null>(null)
+  const [editingBoundary, setEditingBoundary] = useState<ParkingApronBoundary | null>(null)
 
   // Line drawing state
   const [drawingLinePoints, setDrawingLinePoints] = useState<[number, number][]>([])
   const [drawingLineObsId, setDrawingLineObsId] = useState<string | null>(null)
+
+  // Taxilane drawing state
+  const [drawingTaxilanePoints, setDrawingTaxilanePoints] = useState<[number, number][]>([])
+  const [drawingTaxilaneId, setDrawingTaxilaneId] = useState<string | null>(null)
+  const [drawingTaxilaneType, setDrawingTaxilaneType] = useState<'interior' | 'peripheral'>('interior')
+
+  // Apron boundary drawing state
+  const [drawingBoundaryPoints, setDrawingBoundaryPoints] = useState<[number, number][]>([])
+  const [drawingBoundaryId, setDrawingBoundaryId] = useState<string | null>(null)
 
   // Lock mode — prevents dragging when locked
   const [planLocked, setPlanLocked] = useState(false)
@@ -363,12 +390,26 @@ export default function ParkingPage() {
   spotsWithAircraftRef.current = spotsWithAircraft
   const obstaclesRef = useRef(obstacles)
   obstaclesRef.current = obstacles
+  const taxilanesRef = useRef(taxilanes)
+  taxilanesRef.current = taxilanes
   const apronContextRef = useRef(apronContext)
   apronContextRef.current = apronContext
 
+  const taxilanesForCheck: TaxilaneForCheck[] = useMemo(
+    () => taxilanes.map(t => ({
+      id: t.id,
+      name: t.name,
+      taxilane_type: t.taxilane_type,
+      design_wingspan_ft: t.design_wingspan_ft,
+      line_coords: t.line_coords,
+      is_transient: t.is_transient,
+    })),
+    [taxilanes]
+  )
+
   const allResults: ClearanceResult[] = useMemo(
-    () => getAllClearanceResults(spotsWithAircraft, obstacles, apronContext),
-    [spotsWithAircraft, obstacles, apronContext]
+    () => getAllClearanceResults(spotsWithAircraft, obstacles, apronContext, taxilanesForCheck.length > 0 ? taxilanesForCheck : undefined),
+    [spotsWithAircraft, obstacles, apronContext, taxilanesForCheck]
   )
 
   const violations = useMemo(
@@ -423,8 +464,22 @@ export default function ParkingPage() {
     loadPlans().finally(() => setLoading(false))
   }, [loadPlans])
 
+  const loadTaxilanes = useCallback(async () => {
+    if (!selectedPlanId || isDemo) { setTaxilanes([]); return }
+    const data = await fetchParkingTaxilanes(selectedPlanId)
+    setTaxilanes(data)
+  }, [selectedPlanId, isDemo])
+
+  const loadApronBoundaries = useCallback(async () => {
+    if (!selectedPlanId || isDemo) { setApronBoundaries([]); return }
+    const data = await fetchApronBoundaries(selectedPlanId)
+    setApronBoundaries(data)
+  }, [selectedPlanId, isDemo])
+
   useEffect(() => { loadSpots() }, [loadSpots])
   useEffect(() => { loadObstacles() }, [loadObstacles])
+  useEffect(() => { loadTaxilanes() }, [loadTaxilanes])
+  useEffect(() => { loadApronBoundaries() }, [loadApronBoundaries])
 
   // ── Map initialization ──
 
@@ -523,6 +578,18 @@ export default function ParkingPage() {
         return
       }
 
+      // Taxilane drawing mode — accumulate points
+      if (drawingTaxilaneId) {
+        setDrawingTaxilanePoints(prev => [...prev, [lng, lat]])
+        return
+      }
+
+      // Apron boundary drawing mode — accumulate points
+      if (drawingBoundaryId) {
+        setDrawingBoundaryPoints(prev => [...prev, [lng, lat]])
+        return
+      }
+
       if (placingObstacle && installationId) {
         if (placingObstacle === 'line') {
           // Start line drawing: create obstacle at first click, enter drawing mode
@@ -566,7 +633,7 @@ export default function ParkingPage() {
 
     m.on('click', handleClick)
     return () => { m.off('click', handleClick) }
-  }, [mapLoaded, placingAircraft, placingObstacle, selectedPlanId, installationId, obstacles.length, drawingLineObsId])
+  }, [mapLoaded, placingAircraft, placingObstacle, selectedPlanId, installationId, obstacles.length, drawingLineObsId, drawingTaxilaneId, drawingBoundaryId])
 
   // ── Render aircraft on map ──
 
@@ -575,7 +642,7 @@ export default function ParkingPage() {
     if (!m || !mapLoaded) return
 
     // Clean up old sources/layers
-    const cleanIds = ['parking-clearance-fill', 'parking-clearance-line', 'parking-obstacles-fill', 'parking-obstacles-line', 'parking-obstacles-points', 'parking-obstacles-labels', 'parking-obstacles-lines-stroke', 'parking-aircraft-symbols', 'parking-aircraft-labels', 'parking-drag-labels', 'parking-drawing-line-layer', 'parking-drawing-line-dots']
+    const cleanIds = ['parking-clearance-fill', 'parking-clearance-line', 'parking-obstacles-fill', 'parking-obstacles-line', 'parking-obstacles-points', 'parking-obstacles-labels', 'parking-obstacles-lines-stroke', 'parking-aircraft-symbols', 'parking-aircraft-labels', 'parking-drag-labels', 'parking-drawing-line-layer', 'parking-drawing-line-dots', 'parking-taxilane-envelope-fill', 'parking-taxilane-envelope-line', 'parking-taxilane-centerline', 'parking-taxilane-labels', 'parking-apron-boundary-fill', 'parking-apron-boundary-line', 'parking-apron-boundary-labels']
     for (const id of cleanIds) {
       if (m.getLayer(id)) m.removeLayer(id)
     }
@@ -584,6 +651,9 @@ export default function ParkingPage() {
     if (m.getSource('parking-aircraft')) m.removeSource('parking-aircraft')
     if (m.getSource('parking-drag-labels')) m.removeSource('parking-drag-labels')
     if (m.getSource('parking-drawing-line')) m.removeSource('parking-drawing-line')
+    if (m.getSource('parking-taxilane-envelopes')) m.removeSource('parking-taxilane-envelopes')
+    if (m.getSource('parking-taxilane-centerlines')) m.removeSource('parking-taxilane-centerlines')
+    if (m.getSource('parking-apron-boundaries-src')) m.removeSource('parking-apron-boundaries-src')
 
     // Clean up old silhouette images
     Array.from(silhouetteImagesRef.current).forEach(imgName => {
@@ -768,6 +838,120 @@ export default function ParkingPage() {
       })
     }
 
+    // Build taxilane envelopes + centerlines GeoJSON
+    const taxilaneEnvelopeFeatures: GeoJSON.Feature[] = []
+    const taxilaneCenterlineFeatures: GeoJSON.Feature[] = []
+    for (const tl of taxilanes) {
+      if (!tl.line_coords || tl.line_coords.length < 2) continue
+      const tlForCheck: TaxilaneForCheck = { id: tl.id, name: tl.name, taxilane_type: tl.taxilane_type, design_wingspan_ft: tl.design_wingspan_ft, line_coords: tl.line_coords, is_transient: tl.is_transient }
+      const { halfWidth, detail } = getTaxilaneEnvelopeHalfWidth(tlForCheck)
+      const envelope = generateTaxilaneEnvelopePolygon(tl.line_coords, halfWidth)
+
+      // Check if any aircraft violates this taxilane
+      const hasViolation = spotsWithAircraft.some(s => {
+        const r = checkTaxilaneClearance(s, tlForCheck)
+        return r.status === 'violation'
+      })
+      const hasWarning = !hasViolation && spotsWithAircraft.some(s => {
+        const r = checkTaxilaneClearance(s, tlForCheck)
+        return r.status === 'warning'
+      })
+      const envelopeColor = hasViolation ? '#EF4444' : hasWarning ? '#F59E0B' : tl.taxilane_type === 'peripheral' ? '#8B5CF6' : '#3B82F6'
+
+      if (envelope.length > 0) {
+        taxilaneEnvelopeFeatures.push({
+          type: 'Feature',
+          properties: { color: envelopeColor, name: tl.name || (tl.taxilane_type === 'peripheral' ? 'Peripheral' : 'Interior'), halfWidth: Math.round(halfWidth), item: detail.ufc_item },
+          geometry: { type: 'Polygon', coordinates: [envelope] },
+        })
+      }
+      taxilaneCenterlineFeatures.push({
+        type: 'Feature',
+        properties: { name: tl.name || (tl.taxilane_type === 'peripheral' ? 'Peripheral' : 'Interior'), type: tl.taxilane_type, item: detail.ufc_item, halfWidth: Math.round(halfWidth) },
+        geometry: { type: 'LineString', coordinates: tl.line_coords },
+      })
+    }
+
+    if (taxilaneEnvelopeFeatures.length > 0 && showClearances) {
+      m.addSource('parking-taxilane-envelopes', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: taxilaneEnvelopeFeatures },
+      })
+      m.addLayer({
+        id: 'parking-taxilane-envelope-fill', type: 'fill', source: 'parking-taxilane-envelopes',
+        paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.1 },
+      })
+      m.addLayer({
+        id: 'parking-taxilane-envelope-line', type: 'line', source: 'parking-taxilane-envelopes',
+        paint: { 'line-color': ['get', 'color'], 'line-width': 1.5, 'line-dasharray': [6, 3] },
+      })
+    }
+
+    if (taxilaneCenterlineFeatures.length > 0) {
+      m.addSource('parking-taxilane-centerlines', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: taxilaneCenterlineFeatures },
+      })
+      m.addLayer({
+        id: 'parking-taxilane-centerline', type: 'line', source: 'parking-taxilane-centerlines',
+        paint: {
+          'line-color': ['match', ['get', 'type'], 'peripheral', '#8B5CF6', '#3B82F6'],
+          'line-width': 2.5,
+          'line-dasharray': [8, 4],
+        },
+      })
+      m.addLayer({
+        id: 'parking-taxilane-labels', type: 'symbol', source: 'parking-taxilane-centerlines',
+        layout: {
+          'symbol-placement': 'line-center',
+          'text-field': ['concat', ['get', 'name'], ' (', ['get', 'item'], ')'],
+          'text-size': 11,
+          'text-allow-overlap': false,
+        },
+        paint: {
+          'text-color': ['match', ['get', 'type'], 'peripheral', '#8B5CF6', '#3B82F6'],
+          'text-halo-color': '#000',
+          'text-halo-width': 1,
+        },
+      })
+    }
+
+    // Build apron boundary GeoJSON
+    const apronBoundaryFeatures: GeoJSON.Feature[] = []
+    for (const ab of apronBoundaries) {
+      if (!ab.polygon_coords || ab.polygon_coords.length < 3) continue
+      const coords = [...ab.polygon_coords, ab.polygon_coords[0]]
+      apronBoundaryFeatures.push({
+        type: 'Feature',
+        properties: { name: ab.name || 'Apron Boundary' },
+        geometry: { type: 'Polygon', coordinates: [coords] },
+      })
+    }
+
+    if (apronBoundaryFeatures.length > 0) {
+      m.addSource('parking-apron-boundaries-src', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: apronBoundaryFeatures },
+      })
+      m.addLayer({
+        id: 'parking-apron-boundary-fill', type: 'fill', source: 'parking-apron-boundaries-src',
+        paint: { 'fill-color': '#10B981', 'fill-opacity': 0.06 },
+      })
+      m.addLayer({
+        id: 'parking-apron-boundary-line', type: 'line', source: 'parking-apron-boundaries-src',
+        paint: { 'line-color': '#10B981', 'line-width': 2, 'line-dasharray': [4, 2] },
+      })
+      m.addLayer({
+        id: 'parking-apron-boundary-labels', type: 'symbol', source: 'parking-apron-boundaries-src',
+        layout: {
+          'text-field': ['get', 'name'],
+          'text-size': 11,
+          'text-allow-overlap': true,
+        },
+        paint: { 'text-color': '#10B981', 'text-halo-color': '#000', 'text-halo-width': 1 },
+      })
+    }
+
     // Build aircraft GeoJSON with to-scale silhouettes
     const aircraftFeatures: GeoJSON.Feature[] = spotsWithAircraft.map(s => ({
       type: 'Feature',
@@ -857,7 +1041,7 @@ export default function ParkingPage() {
 
       registerImages()
     }
-  }, [mapLoaded, spotsWithAircraft, obstacles, allResults, showClearances, apronContext])
+  }, [mapLoaded, spotsWithAircraft, obstacles, taxilanes, apronBoundaries, allResults, showClearances, apronContext])
 
   // ── Update icon scale on zoom change ──
   // Images are fixed-size; only the iconScale property needs updating on zoom.
@@ -1254,6 +1438,108 @@ export default function ParkingPage() {
     }
   }
 
+  // ── Taxilane actions ──
+
+  const handleStartTaxilane = (type: 'interior' | 'peripheral') => {
+    setDrawingTaxilaneType(type)
+    setPlacingAircraft(null)
+    setPlacingObstacle(null)
+    toast.success('Click on the map to draw taxilane centerline. Double-click or press Finish to complete.')
+    // We'll create the DB record when finishing
+    setDrawingTaxilaneId('pending')
+    setDrawingTaxilanePoints([])
+  }
+
+  const handleFinishTaxilane = useCallback(async () => {
+    if (drawingTaxilanePoints.length < 2) {
+      toast.error('A taxilane needs at least 2 points')
+      return
+    }
+    if (!selectedPlanId || !installationId) return
+
+    const tl = await createParkingTaxilane({
+      base_id: installationId,
+      plan_id: selectedPlanId,
+      name: `${drawingTaxilaneType === 'peripheral' ? 'Peripheral' : 'Interior'} Taxilane ${taxilanes.length + 1}`,
+      taxilane_type: drawingTaxilaneType,
+      line_coords: drawingTaxilanePoints,
+    })
+    if (tl) {
+      setTaxilanes(prev => [...prev, tl])
+      toast.success('Taxilane created')
+      setEditingTaxilane(tl)
+      setPanelTab('taxilanes')
+    }
+    setDrawingTaxilaneId(null)
+    setDrawingTaxilanePoints([])
+  }, [drawingTaxilanePoints, drawingTaxilaneType, selectedPlanId, installationId, taxilanes.length])
+
+  const handleDeleteTaxilane = async (id: string) => {
+    const ok = await deleteParkingTaxilane(id)
+    if (ok) {
+      setTaxilanes(prev => prev.filter(t => t.id !== id))
+      if (editingTaxilane?.id === id) setEditingTaxilane(null)
+      toast.success('Taxilane removed')
+    }
+  }
+
+  const handleUpdateTaxilane = async (id: string, updates: Partial<ParkingTaxilane>) => {
+    const updated = await updateParkingTaxilane(id, updates)
+    if (updated) {
+      setTaxilanes(prev => prev.map(t => t.id === id ? updated : t))
+      if (editingTaxilane?.id === id) setEditingTaxilane(updated)
+    }
+  }
+
+  // ── Apron boundary actions ──
+
+  const handleStartBoundary = () => {
+    setPlacingAircraft(null)
+    setPlacingObstacle(null)
+    toast.success('Click on the map to draw apron boundary. Double-click or press Finish to complete.')
+    setDrawingBoundaryId('pending')
+    setDrawingBoundaryPoints([])
+  }
+
+  const handleFinishBoundary = useCallback(async () => {
+    if (drawingBoundaryPoints.length < 3) {
+      toast.error('A boundary needs at least 3 points')
+      return
+    }
+    if (!selectedPlanId || !installationId) return
+
+    const ab = await createApronBoundary({
+      base_id: installationId,
+      plan_id: selectedPlanId,
+      name: `Apron Boundary ${apronBoundaries.length + 1}`,
+      polygon_coords: drawingBoundaryPoints,
+    })
+    if (ab) {
+      setApronBoundaries(prev => [...prev, ab])
+      toast.success('Apron boundary created')
+      setEditingBoundary(ab)
+    }
+    setDrawingBoundaryId(null)
+    setDrawingBoundaryPoints([])
+  }, [drawingBoundaryPoints, selectedPlanId, installationId, apronBoundaries.length])
+
+  const handleDeleteBoundary = async (id: string) => {
+    const ok = await deleteApronBoundary(id)
+    if (ok) {
+      setApronBoundaries(prev => prev.filter(b => b.id !== id))
+      if (editingBoundary?.id === id) setEditingBoundary(null)
+      toast.success('Boundary removed')
+    }
+  }
+
+  const handleUpdateBoundary = async (id: string, updates: Partial<ParkingApronBoundary>) => {
+    const updated = await updateApronBoundary(id, updates)
+    if (updated) {
+      setApronBoundaries(prev => prev.map(b => b.id === id ? updated : b))
+      if (editingBoundary?.id === id) setEditingBoundary(updated)
+    }
+  }
+
   // ── Finish line drawing ──
 
   const handleFinishLine = useCallback(async () => {
@@ -1318,6 +1604,87 @@ export default function ParkingPage() {
       if (m.getSource(srcId)) m.removeSource(srcId)
     }
   }, [mapLoaded, drawingLinePoints])
+
+  // ── Render taxilane/boundary drawing preview on map ──
+
+  useEffect(() => {
+    const m = map.current
+    if (!m || !mapLoaded) return
+
+    const tlSrcId = 'parking-drawing-taxilane'
+    const tlLineId = 'parking-drawing-taxilane-line'
+    const tlDotsId = 'parking-drawing-taxilane-dots'
+    const bdSrcId = 'parking-drawing-boundary'
+    const bdFillId = 'parking-drawing-boundary-fill'
+    const bdLineId = 'parking-drawing-boundary-line'
+    const bdDotsId = 'parking-drawing-boundary-dots'
+
+    // Taxilane drawing preview
+    if (drawingTaxilanePoints.length >= 1) {
+      const data: GeoJSON.FeatureCollection = {
+        type: 'FeatureCollection',
+        features: [
+          ...(drawingTaxilanePoints.length >= 2 ? [{
+            type: 'Feature' as const, properties: {},
+            geometry: { type: 'LineString' as const, coordinates: drawingTaxilanePoints },
+          }] : []),
+          ...drawingTaxilanePoints.map(pt => ({
+            type: 'Feature' as const, properties: {},
+            geometry: { type: 'Point' as const, coordinates: pt },
+          })),
+        ],
+      }
+      const src = m.getSource(tlSrcId) as mapboxgl.GeoJSONSource | undefined
+      if (src) {
+        src.setData(data)
+      } else {
+        m.addSource(tlSrcId, { type: 'geojson', data })
+        m.addLayer({ id: tlLineId, type: 'line', source: tlSrcId, paint: { 'line-color': drawingTaxilaneType === 'peripheral' ? '#8B5CF6' : '#3B82F6', 'line-width': 3, 'line-dasharray': [6, 3] } })
+        m.addLayer({ id: tlDotsId, type: 'circle', source: tlSrcId, filter: ['==', '$type', 'Point'], paint: { 'circle-radius': 5, 'circle-color': drawingTaxilaneType === 'peripheral' ? '#8B5CF6' : '#3B82F6', 'circle-stroke-color': '#FFF', 'circle-stroke-width': 1.5 } })
+      }
+    } else {
+      if (m.getLayer(tlLineId)) m.removeLayer(tlLineId)
+      if (m.getLayer(tlDotsId)) m.removeLayer(tlDotsId)
+      if (m.getSource(tlSrcId)) m.removeSource(tlSrcId)
+    }
+
+    // Boundary drawing preview
+    if (drawingBoundaryPoints.length >= 1) {
+      const coords = drawingBoundaryPoints.length >= 3
+        ? [...drawingBoundaryPoints, drawingBoundaryPoints[0]]
+        : drawingBoundaryPoints
+      const data: GeoJSON.FeatureCollection = {
+        type: 'FeatureCollection',
+        features: [
+          ...(drawingBoundaryPoints.length >= 3 ? [{
+            type: 'Feature' as const, properties: {},
+            geometry: { type: 'Polygon' as const, coordinates: [coords] },
+          }] : drawingBoundaryPoints.length >= 2 ? [{
+            type: 'Feature' as const, properties: {},
+            geometry: { type: 'LineString' as const, coordinates: drawingBoundaryPoints },
+          }] : []),
+          ...drawingBoundaryPoints.map(pt => ({
+            type: 'Feature' as const, properties: {},
+            geometry: { type: 'Point' as const, coordinates: pt },
+          })),
+        ],
+      }
+      const src = m.getSource(bdSrcId) as mapboxgl.GeoJSONSource | undefined
+      if (src) {
+        src.setData(data)
+      } else {
+        m.addSource(bdSrcId, { type: 'geojson', data })
+        m.addLayer({ id: bdFillId, type: 'fill', source: bdSrcId, filter: ['==', '$type', 'Polygon'], paint: { 'fill-color': '#10B981', 'fill-opacity': 0.15 } })
+        m.addLayer({ id: bdLineId, type: 'line', source: bdSrcId, paint: { 'line-color': '#10B981', 'line-width': 2, 'line-dasharray': [4, 2] } })
+        m.addLayer({ id: bdDotsId, type: 'circle', source: bdSrcId, filter: ['==', '$type', 'Point'], paint: { 'circle-radius': 5, 'circle-color': '#10B981', 'circle-stroke-color': '#FFF', 'circle-stroke-width': 1.5 } })
+      }
+    } else {
+      if (m.getLayer(bdFillId)) m.removeLayer(bdFillId)
+      if (m.getLayer(bdLineId)) m.removeLayer(bdLineId)
+      if (m.getLayer(bdDotsId)) m.removeLayer(bdDotsId)
+      if (m.getSource(bdSrcId)) m.removeSource(bdSrcId)
+    }
+  }, [mapLoaded, drawingTaxilanePoints, drawingTaxilaneType, drawingBoundaryPoints])
 
   // ── Fly to clearance result ──
 
@@ -1432,7 +1799,7 @@ export default function ParkingPage() {
         background: 'var(--color-bg-surface)', fontSize: 'var(--fs-sm)', flexShrink: 0,
       }}>
         <span style={{ color: 'var(--color-text-secondary)' }}>
-          {spots.length} Aircraft
+          {spots.length} Aircraft{taxilanes.length > 0 ? ` · ${taxilanes.length} Taxilane${taxilanes.length !== 1 ? 's' : ''}` : ''}
         </span>
         <span style={{ color: violations.length > 0 ? '#EF4444' : 'var(--color-text-secondary)' }}>
           {violations.length} Violation{violations.length !== 1 ? 's' : ''}
@@ -1476,19 +1843,43 @@ export default function ParkingPage() {
       </div>
 
       {/* Placement mode indicator */}
-      {(placingAircraft || placingObstacle || drawingLineObsId) && (
+      {(placingAircraft || placingObstacle || drawingLineObsId || drawingTaxilaneId || drawingBoundaryId) && (
         <div style={{
-          padding: '6px 16px', background: '#F59E0B22', borderBottom: '1px solid #F59E0B44',
+          padding: '6px 16px',
+          background: drawingTaxilaneId ? (drawingTaxilaneType === 'peripheral' ? '#8B5CF622' : '#3B82F622') : drawingBoundaryId ? '#10B98122' : '#F59E0B22',
+          borderBottom: `1px solid ${drawingTaxilaneId ? (drawingTaxilaneType === 'peripheral' ? '#8B5CF644' : '#3B82F644') : drawingBoundaryId ? '#10B98144' : '#F59E0B44'}`,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          fontSize: 'var(--fs-sm)', color: '#F59E0B', flexShrink: 0,
+          fontSize: 'var(--fs-sm)',
+          color: drawingTaxilaneId ? (drawingTaxilaneType === 'peripheral' ? '#8B5CF6' : '#3B82F6') : drawingBoundaryId ? '#10B981' : '#F59E0B',
+          flexShrink: 0,
         }}>
           <span>
-            {drawingLineObsId
+            {drawingTaxilaneId
+              ? `Drawing ${drawingTaxilaneType} taxilane (${drawingTaxilanePoints.length} point${drawingTaxilanePoints.length !== 1 ? 's' : ''})`
+              : drawingBoundaryId
+              ? `Drawing apron boundary (${drawingBoundaryPoints.length} point${drawingBoundaryPoints.length !== 1 ? 's' : ''})`
+              : drawingLineObsId
               ? `Drawing line obstacle (${drawingLinePoints.length} point${drawingLinePoints.length !== 1 ? 's' : ''})`
               : `Click on the map to place ${placingAircraft ? placingAircraft.aircraft : `${placingObstacle} obstacle`}`
             }
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
+            {drawingTaxilaneId && (
+              <button
+                onClick={handleFinishTaxilane}
+                style={{ background: drawingTaxilaneType === 'peripheral' ? '#8B5CF6' : '#3B82F6', border: 'none', color: '#FFF', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 600, fontSize: 'var(--fs-xs)' }}
+              >
+                Finish Taxilane
+              </button>
+            )}
+            {drawingBoundaryId && (
+              <button
+                onClick={handleFinishBoundary}
+                style={{ background: '#10B981', border: 'none', color: '#FFF', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 600, fontSize: 'var(--fs-xs)' }}
+              >
+                Finish Boundary
+              </button>
+            )}
             {drawingLineObsId && (
               <button
                 onClick={handleFinishLine}
@@ -1502,13 +1893,20 @@ export default function ParkingPage() {
                 setPlacingAircraft(null)
                 setPlacingObstacle(null)
                 if (drawingLineObsId) {
-                  // Cancel line drawing — remove the incomplete obstacle
                   handleDeleteObstacle(drawingLineObsId)
                   setDrawingLineObsId(null)
                   setDrawingLinePoints([])
                 }
+                if (drawingTaxilaneId) {
+                  setDrawingTaxilaneId(null)
+                  setDrawingTaxilanePoints([])
+                }
+                if (drawingBoundaryId) {
+                  setDrawingBoundaryId(null)
+                  setDrawingBoundaryPoints([])
+                }
               }}
-              style={{ background: 'none', border: 'none', color: '#F59E0B', cursor: 'pointer', textDecoration: 'underline' }}
+              style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
             >
               Cancel
             </button>
@@ -1526,7 +1924,7 @@ export default function ParkingPage() {
         {/* Tab row + plan actions */}
         <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--color-border)' }}>
           <div style={{ display: 'flex', flex: 1 }}>
-            {(['aircraft', 'obstacles', 'clearance', 'reference'] as const).map(tab => (
+            {(['aircraft', 'obstacles', 'taxilanes', 'clearance', 'reference'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setPanelTab(tab)}
@@ -1539,6 +1937,14 @@ export default function ParkingPage() {
                 }}
               >
                 {tab}
+                {tab === 'taxilanes' && taxilanes.length > 0 && (
+                  <span style={{
+                    marginLeft: 4, fontSize: 10, padding: '0 4px', borderRadius: 8,
+                    background: '#3B82F622', color: '#3B82F6',
+                  }}>
+                    {taxilanes.length}
+                  </span>
+                )}
                 {tab === 'clearance' && (violations.length + warnings.length > 0) && (
                   <span style={{
                     marginLeft: 4, fontSize: 10, padding: '0 4px', borderRadius: 8,
@@ -1827,6 +2233,200 @@ export default function ParkingPage() {
                         <div style={{ display: 'flex', gap: 4 }}>
                           <button onClick={() => map.current?.flyTo({ center: [obs.longitude, obs.latitude], zoom: 17 })} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
                           <button onClick={() => handleDeleteObstacle(obs.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Taxilanes tab */}
+          {panelTab === 'taxilanes' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <div style={{ display: 'flex', gap: 4, marginBottom: 4, flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => handleStartTaxilane('interior')}
+                  disabled={!selectedPlanId || !!drawingTaxilaneId}
+                  style={{
+                    padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)',
+                    background: '#3B82F611', border: '1px dashed #3B82F6',
+                    color: '#3B82F6', cursor: selectedPlanId ? 'pointer' : 'not-allowed',
+                    opacity: selectedPlanId ? 1 : 0.5,
+                  }}
+                >
+                  + Interior Taxilane
+                </button>
+                <button
+                  onClick={() => handleStartTaxilane('peripheral')}
+                  disabled={!selectedPlanId || !!drawingTaxilaneId}
+                  style={{
+                    padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)',
+                    background: '#8B5CF611', border: '1px dashed #8B5CF6',
+                    color: '#8B5CF6', cursor: selectedPlanId ? 'pointer' : 'not-allowed',
+                    opacity: selectedPlanId ? 1 : 0.5,
+                  }}
+                >
+                  + Peripheral Taxilane
+                </button>
+                <button
+                  onClick={handleStartBoundary}
+                  disabled={!selectedPlanId || !!drawingBoundaryId}
+                  style={{
+                    padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)',
+                    background: '#10B98111', border: '1px dashed #10B981',
+                    color: '#10B981', cursor: selectedPlanId ? 'pointer' : 'not-allowed',
+                    opacity: selectedPlanId ? 1 : 0.5,
+                  }}
+                >
+                  + Apron Boundary
+                </button>
+              </div>
+
+              {taxilanes.length === 0 && apronBoundaries.length === 0 && (
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '4px 0', margin: 0 }}>
+                  No taxilanes or boundaries defined. Draw centerlines to verify clearance envelopes.
+                </p>
+              )}
+
+              {/* Taxilane list */}
+              {taxilanes.map(tl => {
+                const isEditing = editingTaxilane?.id === tl.id
+                const tlForCheck: TaxilaneForCheck = { id: tl.id, name: tl.name, taxilane_type: tl.taxilane_type, design_wingspan_ft: tl.design_wingspan_ft, line_coords: tl.line_coords, is_transient: tl.is_transient }
+                const { halfWidth, detail } = getTaxilaneEnvelopeHalfWidth(tlForCheck)
+                const tlViolations = allResults.filter(r => r.spot_b_id === tl.id && r.status !== 'ok')
+
+                return (
+                  <div key={tl.id}>
+                    <div
+                      onClick={() => setEditingTaxilane(isEditing ? null : tl)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '4px 8px', cursor: 'pointer',
+                        background: isEditing ? 'var(--color-bg)' : 'transparent',
+                        borderBottom: '1px solid var(--color-border)',
+                        borderLeft: `3px solid ${tlViolations.length > 0 ? '#EF4444' : tl.taxilane_type === 'peripheral' ? '#8B5CF6' : '#3B82F6'}`,
+                      }}
+                    >
+                      <span style={{
+                        fontSize: 10, padding: '1px 4px', borderRadius: 3,
+                        background: tl.taxilane_type === 'peripheral' ? '#8B5CF622' : '#3B82F622',
+                        color: tl.taxilane_type === 'peripheral' ? '#8B5CF6' : '#3B82F6',
+                        textTransform: 'capitalize', flexShrink: 0,
+                      }}>
+                        {tl.taxilane_type}
+                      </span>
+                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-primary)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {tl.name || 'Unnamed'}
+                      </span>
+                      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
+                        {detail.ufc_item} &middot; {Math.round(halfWidth)}ft env
+                      </span>
+                      {tlViolations.length > 0 && (
+                        <span style={{ color: '#EF4444', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>!</span>
+                      )}
+                      <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', flexShrink: 0 }}>{isEditing ? '\u25B2' : '\u25BC'}</span>
+                    </div>
+
+                    {isEditing && (
+                      <div
+                        onClick={e => e.stopPropagation()}
+                        style={{ padding: '8px 8px 8px 16px', display: 'flex', flexDirection: 'column', gap: 6, background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}
+                      >
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
+                            Name
+                            <input value={tl.name || ''} onChange={e => handleUpdateTaxilane(tl.id, { name: e.target.value })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                          </label>
+                          <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
+                            Design Aircraft
+                            <input value={tl.design_aircraft || ''} onChange={e => handleUpdateTaxilane(tl.id, { design_aircraft: e.target.value })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                          </label>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
+                            Design Wingspan (ft)
+                            <input type="number" value={tl.design_wingspan_ft || ''} placeholder="100" onChange={e => handleUpdateTaxilane(tl.id, { design_wingspan_ft: Number(e.target.value) || null as any })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                          </label>
+                          <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
+                            <input type="checkbox" checked={tl.is_transient} onChange={e => handleUpdateTaxilane(tl.id, { is_transient: e.target.checked })} />
+                            {' '}Transient
+                          </label>
+                          <select
+                            value={tl.taxilane_type}
+                            onChange={e => handleUpdateTaxilane(tl.id, { taxilane_type: e.target.value as any })}
+                            style={{ padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
+                          >
+                            <option value="interior">Interior</option>
+                            <option value="peripheral">Peripheral</option>
+                          </select>
+                        </div>
+                        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', padding: '2px 0' }}>
+                          Envelope: 0.5 × {tl.design_wingspan_ft || 100}ft + {detail.clearance_ft}ft ({detail.ufc_item}) = {Math.round(halfWidth)}ft half-width
+                        </div>
+                        {tlViolations.length > 0 && (
+                          <div style={{ fontSize: 'var(--fs-xs)', color: '#EF4444', padding: '2px 0' }}>
+                            {tlViolations.length} aircraft intrude{tlViolations.length === 1 ? 's' : ''} into taxilane envelope
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button onClick={() => { if (tl.line_coords?.length > 0) map.current?.flyTo({ center: tl.line_coords[0] as [number, number], zoom: 17 }) }} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
+                          <button onClick={() => handleDeleteTaxilane(tl.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+
+              {/* Apron boundary list */}
+              {apronBoundaries.length > 0 && (
+                <div style={{ fontSize: 'var(--fs-xs)', color: '#10B981', fontWeight: 600, padding: '6px 8px 2px', marginTop: taxilanes.length > 0 ? 4 : 0 }}>
+                  Apron Boundaries
+                </div>
+              )}
+              {apronBoundaries.map(ab => {
+                const isEditing = editingBoundary?.id === ab.id
+                return (
+                  <div key={ab.id}>
+                    <div
+                      onClick={() => setEditingBoundary(isEditing ? null : ab)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '4px 8px', cursor: 'pointer',
+                        background: isEditing ? 'var(--color-bg)' : 'transparent',
+                        borderBottom: '1px solid var(--color-border)',
+                        borderLeft: '3px solid #10B981',
+                      }}
+                    >
+                      <span style={{
+                        fontSize: 10, padding: '1px 4px', borderRadius: 3,
+                        background: '#10B98122', color: '#10B981', flexShrink: 0,
+                      }}>
+                        boundary
+                      </span>
+                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-primary)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {ab.name || 'Unnamed'}
+                      </span>
+                      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
+                        {ab.polygon_coords?.length || 0} pts
+                      </span>
+                      <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', flexShrink: 0 }}>{isEditing ? '\u25B2' : '\u25BC'}</span>
+                    </div>
+
+                    {isEditing && (
+                      <div
+                        onClick={e => e.stopPropagation()}
+                        style={{ padding: '8px 8px 8px 16px', display: 'flex', flexDirection: 'column', gap: 6, background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}
+                      >
+                        <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
+                          Name
+                          <input value={ab.name || ''} onChange={e => handleUpdateBoundary(ab.id, { name: e.target.value })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                        </label>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button onClick={() => { if (ab.polygon_coords?.length > 0) map.current?.flyTo({ center: ab.polygon_coords[0] as [number, number], zoom: 17 }) }} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
+                          <button onClick={() => handleDeleteBoundary(ab.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
                         </div>
                       </div>
                     )}

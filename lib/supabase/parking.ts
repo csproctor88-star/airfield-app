@@ -60,6 +60,34 @@ export type ParkingObstacle = {
   updated_at: string
 }
 
+export type ParkingTaxilane = {
+  id: string
+  base_id: string
+  plan_id: string
+  name: string | null
+  taxilane_type: 'interior' | 'peripheral'
+  design_aircraft: string | null
+  design_wingspan_ft: number | null
+  line_coords: [number, number][]
+  is_transient: boolean
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type ParkingApronBoundary = {
+  id: string
+  base_id: string
+  plan_id: string
+  name: string | null
+  polygon_coords: [number, number][]
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
 // ── Plans CRUD ──
 
 export async function fetchParkingPlans(baseId: string): Promise<ParkingPlan[]> {
@@ -338,6 +366,144 @@ export async function deleteParkingObstacle(id: string): Promise<boolean> {
 
   const { error } = await supabase
     .from('parking_obstacles')
+    .delete()
+    .eq('id', id)
+
+  return !error
+}
+
+// ── Taxilanes CRUD ──
+
+export async function fetchParkingTaxilanes(planId: string): Promise<ParkingTaxilane[]> {
+  const supabase = db()
+  if (!supabase) return []
+
+  const { data } = await supabase
+    .from('parking_taxilanes')
+    .select('*')
+    .eq('plan_id', planId)
+    .order('created_at', { ascending: true })
+
+  return (data || []) as ParkingTaxilane[]
+}
+
+export async function createParkingTaxilane(input: {
+  base_id: string
+  plan_id: string
+  name?: string
+  taxilane_type?: string
+  design_aircraft?: string
+  design_wingspan_ft?: number
+  line_coords: [number, number][]
+  is_transient?: boolean
+  notes?: string
+}): Promise<ParkingTaxilane | null> {
+  const supabase = db()
+  if (!supabase) return null
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { data, error } = await supabase
+    .from('parking_taxilanes')
+    .insert({ ...input, created_by: user?.id })
+    .select()
+    .single()
+
+  if (error || !data) return null
+  return data as ParkingTaxilane
+}
+
+export async function updateParkingTaxilane(
+  id: string,
+  updates: Partial<Omit<ParkingTaxilane, 'id' | 'base_id' | 'plan_id' | 'created_by' | 'created_at'>>
+): Promise<ParkingTaxilane | null> {
+  const supabase = db()
+  if (!supabase) return null
+
+  const { data, error } = await supabase
+    .from('parking_taxilanes')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error || !data) return null
+  return data as ParkingTaxilane
+}
+
+export async function deleteParkingTaxilane(id: string): Promise<boolean> {
+  const supabase = db()
+  if (!supabase) return false
+
+  const { error } = await supabase
+    .from('parking_taxilanes')
+    .delete()
+    .eq('id', id)
+
+  return !error
+}
+
+// ── Apron Boundaries CRUD ──
+
+export async function fetchApronBoundaries(planId: string): Promise<ParkingApronBoundary[]> {
+  const supabase = db()
+  if (!supabase) return []
+
+  const { data } = await supabase
+    .from('parking_apron_boundaries')
+    .select('*')
+    .eq('plan_id', planId)
+    .order('created_at', { ascending: true })
+
+  return (data || []) as ParkingApronBoundary[]
+}
+
+export async function createApronBoundary(input: {
+  base_id: string
+  plan_id: string
+  name?: string
+  polygon_coords: [number, number][]
+  notes?: string
+}): Promise<ParkingApronBoundary | null> {
+  const supabase = db()
+  if (!supabase) return null
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { data, error } = await supabase
+    .from('parking_apron_boundaries')
+    .insert({ ...input, created_by: user?.id })
+    .select()
+    .single()
+
+  if (error || !data) return null
+  return data as ParkingApronBoundary
+}
+
+export async function updateApronBoundary(
+  id: string,
+  updates: Partial<Omit<ParkingApronBoundary, 'id' | 'base_id' | 'plan_id' | 'created_by' | 'created_at'>>
+): Promise<ParkingApronBoundary | null> {
+  const supabase = db()
+  if (!supabase) return null
+
+  const { data, error } = await supabase
+    .from('parking_apron_boundaries')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error || !data) return null
+  return data as ParkingApronBoundary
+}
+
+export async function deleteApronBoundary(id: string): Promise<boolean> {
+  const supabase = db()
+  if (!supabase) return false
+
+  const { error } = await supabase
+    .from('parking_apron_boundaries')
     .delete()
     .eq('id', id)
 
