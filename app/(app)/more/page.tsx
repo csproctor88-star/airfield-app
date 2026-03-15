@@ -6,33 +6,44 @@ import { createClient } from '@/lib/supabase/client'
 import { USER_ROLES } from '@/lib/constants'
 import type { UserRole } from '@/lib/supabase/types'
 
-// "More" menu — grouped to match sidebar nav structure
-
 type ModuleItem = { name: string; icon: string; color: string; href: string; adminOnly?: boolean; sysAdminOnly?: boolean }
 
-const mainItems: ModuleItem[] = [
+// Pinned — same items visible on bottom nav
+const pinnedItems: ModuleItem[] = [
+  { name: 'Airfield Status', icon: '📡', color: '#38BDF8', href: '/' },
   { name: 'Dashboard', icon: '📊', color: '#38BDF8', href: '/dashboard' },
+  { name: 'Events Log', icon: '📝', color: '#34D399', href: '/activity' },
+]
+
+// Operations
+const opsItems: ModuleItem[] = [
+  { name: 'QRC', icon: '⚡', color: '#EAB308', href: '/qrc' },
+  { name: 'Shift Checklist', icon: '☑️', color: '#38BDF8', href: '/shift-checklist' },
+  { name: 'Airfield Checks', icon: '✅', color: '#22D3EE', href: '/checks' },
+  { name: 'All Inspections', icon: '📋', color: '#22D3EE', href: '/inspections/all' },
+  { name: 'Wildlife / BASH', icon: '🦅', color: '#10B981', href: '/wildlife' },
+  { name: 'Personnel on Airfield', icon: '🚧', color: '#F59E0B', href: '/contractors' },
+]
+
+// Airfield Management
+const mgmtItems: ModuleItem[] = [
+  { name: 'Discrepancies', icon: '⚠️', color: '#FBBF24', href: '/discrepancies' },
+  { name: 'Obstruction Eval Tool', icon: '📍', color: '#F97316', href: '/obstructions' },
+  { name: 'Obstruction Database', icon: '🗺️', color: '#F97316', href: '/obstructions/history' },
+  { name: 'Waivers', icon: '📄', color: '#A78BFA', href: '/waivers' },
+  { name: 'Visual NAVAIDs', icon: '💡', color: '#FBBF24', href: '/infrastructure' },
+]
+
+// Reference
+const refItems: ModuleItem[] = [
   { name: 'Aircraft Database', icon: '✈️', color: '#38BDF8', href: '/aircraft' },
   { name: 'Reference Library', icon: '📚', color: '#22D3EE', href: '/regulations' },
   { name: 'NOTAMs', icon: '📡', color: '#22D3EE', href: '/notams' },
-]
-
-const amToolsItems: ModuleItem[] = [
-  { name: 'QRC', icon: '⚡', color: '#EAB308', href: '/qrc' },
-  { name: 'Shift Checklist', icon: '☑️', color: '#38BDF8', href: '/shift-checklist' },
-  { name: 'Events Log', icon: '📝', color: '#34D399', href: '/activity' },
-  { name: 'Airfield Checks', icon: '✅', color: '#22D3EE', href: '/checks' },
-  { name: 'All Inspections', icon: '📋', color: '#22D3EE', href: '/inspections/all' },
-  { name: 'Personnel on Airfield', icon: '🚧', color: '#F59E0B', href: '/contractors' },
-  { name: 'Wildlife / BASH', icon: '🦅', color: '#10B981', href: '/wildlife' },
-  { name: 'Airfield Discrepancies', icon: '⚠️', color: '#FBBF24', href: '/discrepancies' },
-  { name: 'Obstruction Database', icon: '🗺️', color: '#F97316', href: '/obstructions/history' },
-  { name: 'Airfield Waivers', icon: '📄', color: '#A78BFA', href: '/waivers' },
-  { name: 'Airfield Visual NAVAIDs', icon: '💡', color: '#FBBF24', href: '/infrastructure' },
   { name: 'Reports & Analytics', icon: '📈', color: '#22D3EE', href: '/reports' },
 ]
 
-const moreItems: ModuleItem[] = [
+// Settings / Admin
+const settingsItems: ModuleItem[] = [
   { name: 'Settings', icon: '⚙️', color: '#64748B', href: '/settings' },
   { name: 'PDF Library', icon: '📖', color: '#A855F7', href: '/library', adminOnly: true },
   { name: 'User Management', icon: '👥', color: '#64748B', href: '/users', adminOnly: true },
@@ -189,16 +200,22 @@ export default function MorePage() {
         marginBottom: 12,
         overflow: 'hidden',
       }}>
-        {/* Main items */}
-        {filterItems(mainItems).map(item => (
+        {/* Pinned items */}
+        {pinnedItems.map(item => (
           <NavItem key={item.href} item={item} />
         ))}
 
-        {/* AM Tools dropdown */}
-        <CollapsibleGroup label="AM Tools" icon="🔧" items={filterItems(amToolsItems)} />
+        {/* Operations */}
+        <CollapsibleGroup label="Operations" icon="🔧" items={filterItems(opsItems)} defaultOpen />
 
-        {/* More dropdown */}
-        <CollapsibleGroup label="More" icon="⋯" items={filterItems(moreItems)} />
+        {/* Airfield Management */}
+        <CollapsibleGroup label="Airfield Management" icon="📂" items={filterItems(mgmtItems)} />
+
+        {/* Reference */}
+        <CollapsibleGroup label="Reference" icon="📚" items={filterItems(refItems)} />
+
+        {/* Settings / Admin */}
+        <CollapsibleGroup label="Settings" icon="⚙️" items={filterItems(settingsItems)} />
       </div>
     </div>
   )
