@@ -753,7 +753,8 @@ export default function ParkingPage() {
     const clearanceFeatures: GeoJSON.Feature[] = []
     for (const spot of spotsWithAircraft) {
       const clearanceFt = spot.clearance_ft ?? getWingtipClearance(spot.wingspan_ft, apronContext, spot.aircraft_name)
-      const polygon = generateClearanceZonePolygon(spot, clearanceFt)
+      // Render zone at half clearance so overlap between two aircraft zones = violation threshold
+      const polygon = generateClearanceZonePolygon(spot, clearanceFt / 2)
 
       // Determine status for this aircraft
       const spotResults = allResults.filter(
