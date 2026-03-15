@@ -6,7 +6,7 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
 import { isMapboxConfigured } from '@/lib/utils'
-import { useMapRuler, RulerButton } from '@/hooks/use-map-ruler'
+import { useMapRuler } from '@/hooks/use-map-ruler'
 import { allAircraft } from '@/lib/aircraft-data'
 import type { AircraftCharacteristics } from '@/lib/aircraft_database_schema'
 import silhouetteManifest from '@/public/aircraft_silhouette_manifest.json'
@@ -348,6 +348,7 @@ export default function ParkingPage() {
   const [editingTaxilane, setEditingTaxilane] = useState<ParkingTaxilane | null>(null)
   const [editingBoundary, setEditingBoundary] = useState<ParkingApronBoundary | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const [clearanceFilter, setClearanceFilter] = useState<'all' | 'violations' | 'warnings' | 'ok'>('all')
   const [favoriteAircraft, setFavoriteAircraft] = useState<string[]>(() => {
     if (typeof window === 'undefined') return []
@@ -1577,6 +1578,11 @@ export default function ParkingPage() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [editingSpot])
 
+  // Resize map when sidebar collapses/expands or fullscreen toggles
+  useEffect(() => {
+    setTimeout(() => map.current?.resize(), 200)
+  }, [sidebarCollapsed, isFullscreen])
+
   // ── Plan actions ──
 
   const handleCreatePlan = async () => {
@@ -2113,8 +2119,12 @@ export default function ParkingPage() {
   )
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--color-bg)' }}>
+    <div style={{
+      display: 'flex', height: isFullscreen ? '100vh' : 'calc(100vh - 60px)', overflow: 'hidden', background: 'var(--color-bg)',
+      ...(isFullscreen ? { position: 'fixed', inset: 0, zIndex: 9999 } : {}),
+    }}>
       {/* ── Left Sidebar ── */}
+      {!isFullscreen && (
       <div style={{
         width: sidebarCollapsed ? 0 : 320, flexShrink: 0, display: 'flex', flexDirection: 'column',
         borderRight: sidebarCollapsed ? 'none' : '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
@@ -2809,8 +2819,9 @@ export default function ParkingPage() {
             </div>
           )}
 
-        </div>{/* end scrollable sections */}
-      </div>{/* end sidebar */}
+        </div>
+      </div>
+      )}
 
       {/* ── Map + overlay area ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
@@ -2866,33 +2877,65 @@ export default function ParkingPage() {
 
         <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
           <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
-          <RulerButton
-            active={ruler.active}
-            toggle={ruler.toggle}
-            clear={ruler.clear}
-            totalFt={ruler.totalFt}
-            points={ruler.points}
-            segments={ruler.segments}
-            style={{ position: 'absolute', bottom: 24, left: 10, zIndex: 5 }}
-          />
+          {/* Ruler readout — bottom left when active */}
+          {ruler.active && ruler.points.length >= 2 && (
+            <div style={{
+              position: 'absolute', bottom: 24, left: 10, zIndex: 5,
+              background: 'rgba(0,0,0,0.8)', borderRadius: 6, padding: '6px 12px',
+              fontSize: 12, fontWeight: 700, color: '#FFD700', fontFamily: 'monospace',
+              border: '1px solid rgba(255,215,0,0.3)', display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              {Math.round(ruler.totalFt)}ft
+              {ruler.points.length > 2 && <span style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 400 }}>({ruler.points.length - 1} seg)</span>}
+              <button onClick={ruler.clear} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 11, padding: 0 }}>Clear</button>
+            </div>
+          )}
           {/* Map controls — top left */}
           <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 5, display: 'flex', gap: 4 }}>
+            {!isFullscreen && (
+              <button
+                onClick={() => setSidebarCollapsed(c => !c)}
+                title={sidebarCollapsed ? 'Show panel' : 'Hide panel'}
+                style={{
+                  padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                  background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+                  color: 'var(--color-text-primary)', cursor: 'pointer',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                }}
+              >
+                {sidebarCollapsed ? '\u25B6 Panel' : '\u25C0 Hide'}
+              </button>
+            )}
             <button
-              onClick={() => setSidebarCollapsed(c => !c)}
-              title={sidebarCollapsed ? 'Show panel' : 'Hide panel'}
+              onClick={() => setIsFullscreen(f => !f)}
+              title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
               style={{
                 padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
-                background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-                color: 'var(--color-text-primary)', cursor: 'pointer',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                background: isFullscreen ? 'var(--color-cyan)22' : 'var(--color-bg-surface)',
+                border: `1px solid ${isFullscreen ? 'var(--color-cyan)' : 'var(--color-border)'}`,
+                color: isFullscreen ? 'var(--color-cyan)' : 'var(--color-text-primary)',
+                cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
               }}
             >
-              {sidebarCollapsed ? '\u25B6 Panel' : '\u25C0 Hide'}
+              {isFullscreen ? '\u2716 Exit' : '\u26F6'}
+            </button>
+            <button
+              onClick={ruler.toggle}
+              title={ruler.active ? 'Disable ruler' : 'Measure distance'}
+              style={{
+                padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                background: ruler.active ? '#FFD70022' : 'var(--color-bg-surface)',
+                border: `1px solid ${ruler.active ? '#FFD700' : 'var(--color-border)'}`,
+                color: ruler.active ? '#FFD700' : 'var(--color-text-primary)',
+                cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+              }}
+            >
+              Ruler{ruler.active && ruler.totalFt > 0 ? ` ${Math.round(ruler.totalFt)}ft` : ''}
             </button>
           </div>
 
-          {/* Floating toolbar — visible when sidebar is collapsed */}
-          {sidebarCollapsed && selectedPlanId && (
+          {/* Floating toolbar — visible when sidebar is hidden or fullscreen */}
+          {(sidebarCollapsed || isFullscreen) && selectedPlanId && (
             <div style={{
               position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 5,
               display: 'flex', gap: 4, padding: '6px 10px', borderRadius: 6,
@@ -2964,8 +3007,8 @@ export default function ParkingPage() {
             </div>
           )}
 
-          {/* Violation summary — bottom right when sidebar collapsed */}
-          {sidebarCollapsed && (violations.length > 0 || warnings.length > 0) && (
+          {/* Violation summary — bottom right when panel hidden or fullscreen */}
+          {(sidebarCollapsed || isFullscreen) && (violations.length > 0 || warnings.length > 0) && (
             <div style={{
               position: 'absolute', bottom: 24, right: 10, zIndex: 5,
               padding: '6px 12px', borderRadius: 6,
