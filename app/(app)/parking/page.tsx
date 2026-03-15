@@ -347,6 +347,12 @@ export default function ParkingPage() {
   const [aircraftCategoryFilter, setAircraftCategoryFilter] = useState<'all' | 'military' | 'commercial'>('all')
   const [editingTaxilane, setEditingTaxilane] = useState<ParkingTaxilane | null>(null)
   const [editingBoundary, setEditingBoundary] = useState<ParkingApronBoundary | null>(null)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [clearanceFilter, setClearanceFilter] = useState<'all' | 'violations' | 'warnings' | 'ok'>('all')
+  const [favoriteAircraft, setFavoriteAircraft] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return []
+    try { return JSON.parse(localStorage.getItem('glidepath_fav_aircraft') || '[]') } catch { return [] }
+  })
 
   // Line drawing state
   const [drawingLinePoints, setDrawingLinePoints] = useState<[number, number][]>([])
@@ -389,6 +395,7 @@ export default function ParkingPage() {
   const dragSpotId = useRef<string | null>(null)
   const dragObstacleId = useRef<string | null>(null)
   const isDraggingRef = useRef(false)
+  const dragOffsetRef = useRef<{ dLng: number; dLat: number }>({ dLng: 0, dLat: 0 })
   const silhouetteImagesRef = useRef<Set<string>>(new Set()) // track registered image names
   // ── Derived data ──
 
@@ -1242,6 +1249,10 @@ export default function ParkingPage() {
         if (acFeatures.length) {
           const spotId = acFeatures[0].properties?.spotId
           if (spotId) {
+            const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
+            dragOffsetRef.current = spot
+              ? { dLng: spot.longitude - e.lngLat.lng, dLat: spot.latitude - e.lngLat.lat }
+              : { dLng: 0, dLat: 0 }
             isDraggingRef.current = true
             dragSpotId.current = spotId
             dragObstacleId.current = null
@@ -1266,6 +1277,7 @@ export default function ParkingPage() {
           const matchId = obsFeatures[0].properties?.obsId
           const matchObs = matchId ? obstaclesRef.current.find(o => o.id === matchId) : null
           if (matchObs) {
+            dragOffsetRef.current = { dLng: matchObs.longitude - e.lngLat.lng, dLat: matchObs.latitude - e.lngLat.lat }
             isDraggingRef.current = true
             dragObstacleId.current = matchObs.id
             dragSpotId.current = null
@@ -1333,7 +1345,8 @@ export default function ParkingPage() {
 
       if (!isDraggingRef.current) return
 
-      const { lng, lat } = e.lngLat
+      const lng = e.lngLat.lng + dragOffsetRef.current.dLng
+      const lat = e.lngLat.lat + dragOffsetRef.current.dLat
 
       // ── Aircraft drag ──
       if (dragSpotId.current) {
@@ -1344,7 +1357,7 @@ export default function ParkingPage() {
           src.setData({
             type: 'FeatureCollection',
             features: currentSpots.map(s => {
-              // During drag, lng/lat is the new nose gear block position
+              // During drag, lng/lat is the new nose gear block position (with offset)
               const isBeingDragged = s.id === sid
               const ngsLon = isBeingDragged ? lng : s.longitude
               const ngsLat = isBeingDragged ? lat : s.latitude
@@ -1460,7 +1473,8 @@ export default function ParkingPage() {
     const onMouseUp = async (e: mapboxgl.MapMouseEvent) => {
       if (!isDraggingRef.current) return
 
-      const { lng, lat } = e.lngLat
+      const lng = e.lngLat.lng + dragOffsetRef.current.dLng
+      const lat = e.lngLat.lat + dragOffsetRef.current.dLat
 
       // ── Aircraft drag end ──
       if (dragSpotId.current) {
@@ -1544,6 +1558,25 @@ export default function ParkingPage() {
     }
   }, [mapLoaded]) // Only re-register on map load — refs handle current data
 
+  // ── Arrow key nudge for selected aircraft (1ft per press, 5ft with Shift) ──
+  useEffect(() => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      if (!editingSpot) return
+      const arrows: Record<string, number> = { ArrowUp: 0, ArrowRight: 90, ArrowDown: 180, ArrowLeft: 270 }
+      const bearing = arrows[e.key]
+      if (bearing === undefined) return
+      e.preventDefault()
+      const dist = e.shiftKey ? 5 : 1 // feet
+      const pt = offsetPoint({ lat: editingSpot.latitude, lon: editingSpot.longitude }, bearing, dist)
+      const updated = { ...editingSpot, longitude: pt.lon, latitude: pt.lat }
+      setEditingSpot(updated)
+      setSpots(prev => prev.map(s => s.id === updated.id ? { ...s, longitude: pt.lon, latitude: pt.lat } : s))
+      await updateParkingSpot(updated.id, { longitude: pt.lon, latitude: pt.lat })
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [editingSpot])
+
   // ── Plan actions ──
 
   const handleCreatePlan = async () => {
@@ -1599,6 +1632,37 @@ export default function ParkingPage() {
       setSpots(prev => prev.map(s => s.id === spotId ? updated : s))
       if (editingSpot?.id === spotId) setEditingSpot(updated)
     }
+  }
+
+  const handleDuplicateSpot = async (spot: ParkingSpot) => {
+    if (!selectedPlanId) return
+    // Offset 50ft to the right (east) so it doesn't stack exactly on top
+    const offset = offsetPoint({ lat: spot.latitude, lon: spot.longitude }, 90, 50)
+    const newSpot = await createParkingSpot({
+      plan_id: selectedPlanId,
+      base_id: installationId || '',
+      aircraft_name: spot.aircraft_name || undefined,
+      tail_number: spot.tail_number || undefined,
+      unit_callsign: spot.unit_callsign || undefined,
+      spot_name: spot.spot_name || undefined,
+      heading_deg: spot.heading_deg,
+      clearance_ft: spot.clearance_ft ?? undefined,
+      status: spot.status,
+      latitude: offset.lat,
+      longitude: offset.lon,
+    })
+    if (newSpot) {
+      setSpots(prev => [...prev, newSpot])
+      toast.success(`Duplicated ${spot.aircraft_name || 'aircraft'}`)
+    }
+  }
+
+  const toggleFavoriteAircraft = (name: string) => {
+    setFavoriteAircraft(prev => {
+      const next = prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
+      localStorage.setItem('glidepath_fav_aircraft', JSON.stringify(next))
+      return next
+    })
   }
 
   // ── Obstacle actions ──
@@ -1973,14 +2037,23 @@ export default function ParkingPage() {
     if (aircraftCategoryFilter !== 'all') {
       list = list.filter(a => a.category === aircraftCategoryFilter)
     }
-    if (!aircraftSearch.trim()) return list.slice(0, 50)
+    if (!aircraftSearch.trim()) {
+      // Show favorites first, then the rest
+      const favs = list.filter(a => favoriteAircraft.includes(a.aircraft))
+      const rest = list.filter(a => !favoriteAircraft.includes(a.aircraft))
+      return [...favs, ...rest].slice(0, 50)
+    }
     const q = aircraftSearch.toLowerCase()
-    return list.filter(a =>
+    const results = list.filter(a =>
       a.aircraft.toLowerCase().includes(q) ||
       (a.manufacturer && a.manufacturer.toLowerCase().includes(q)) ||
       (a.category && a.category.toLowerCase().includes(q))
-    ).slice(0, 50)
-  }, [aircraftSearch, aircraftCategoryFilter])
+    )
+    // Favorites first in search results too
+    const favs = results.filter(a => favoriteAircraft.includes(a.aircraft))
+    const rest = results.filter(a => !favoriteAircraft.includes(a.aircraft))
+    return [...favs, ...rest].slice(0, 50)
+  }, [aircraftSearch, aircraftCategoryFilter, favoriteAircraft])
 
   // ── Render ──
 
@@ -2043,9 +2116,9 @@ export default function ParkingPage() {
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--color-bg)' }}>
       {/* ── Left Sidebar ── */}
       <div style={{
-        width: 320, flexShrink: 0, display: 'flex', flexDirection: 'column',
-        borderRight: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
-        overflow: 'hidden',
+        width: sidebarCollapsed ? 0 : 320, flexShrink: 0, display: 'flex', flexDirection: 'column',
+        borderRight: sidebarCollapsed ? 'none' : '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
+        overflow: 'hidden', transition: 'width 0.15s ease',
       }}>
         {/* Sidebar header — plan selector */}
         <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
@@ -2250,6 +2323,7 @@ export default function ParkingPage() {
                         </div>
                         <div style={{ display: 'flex', gap: 4 }}>
                           <button onClick={() => map.current?.flyTo({ center: [s.longitude, s.latitude], zoom: 17 })} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
+                          <button onClick={() => handleDuplicateSpot(s)} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-cyan)11', border: '1px solid var(--color-cyan)44', color: 'var(--color-cyan)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Duplicate</button>
                           <button onClick={() => handleDeleteSpot(s.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Remove</button>
                         </div>
                       </div>
@@ -2288,7 +2362,25 @@ export default function ParkingPage() {
                 </p>
               )}
 
-              {obstacles.map(obs => {
+              {(['building', 'point', 'line', 'circle'] as const).map(obsType => {
+                const group = obstacles.filter(o => o.obstacle_type === obsType)
+                if (group.length === 0) return null
+                const groupOpen = openSections[`obs_${obsType}`] !== false
+                return (
+                  <div key={obsType}>
+                    <div
+                      onClick={() => setOpenSections(prev => ({ ...prev, [`obs_${obsType}`]: !groupOpen }))}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px',
+                        cursor: 'pointer', background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)',
+                        fontSize: 'var(--fs-xs)', fontWeight: 600, color: '#F97316', textTransform: 'capitalize',
+                      }}
+                    >
+                      <span style={{ fontSize: 10 }}>{groupOpen ? '\u25BC' : '\u25B6'}</span>
+                      {obsType}s
+                      <span style={{ fontSize: 10, padding: '0 5px', borderRadius: 8, background: '#F9731622', color: '#F97316' }}>{group.length}</span>
+                    </div>
+                    {groupOpen && group.map(obs => {
                 const isEditing = editingObstacle?.id === obs.id
                 return (
                   <div key={obs.id}>
@@ -2296,19 +2388,12 @@ export default function ParkingPage() {
                       onClick={() => setEditingObstacle(isEditing ? null : obs)}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 6,
-                        padding: '4px 8px', cursor: 'pointer',
+                        padding: '4px 8px 4px 20px', cursor: 'pointer',
                         background: isEditing ? 'var(--color-bg)' : 'transparent',
                         borderBottom: '1px solid var(--color-border)',
                         borderLeft: '3px solid #F97316',
                       }}
                     >
-                      <span style={{
-                        fontSize: 10, padding: '1px 4px', borderRadius: 3,
-                        background: '#F9731622', color: '#F97316',
-                        textTransform: 'capitalize', flexShrink: 0,
-                      }}>
-                        {obs.obstacle_type}
-                      </span>
                       <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-primary)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {obs.name || 'Unnamed'}
                       </span>
@@ -2372,6 +2457,9 @@ export default function ParkingPage() {
                         </div>
                       </div>
                     )}
+                  </div>
+                )
+              })}
                   </div>
                 )
               })}
@@ -2584,13 +2672,32 @@ export default function ParkingPage() {
           <SectionHeader id="clearance" label="Clearance" count={violations.length + warnings.length} color={violations.length > 0 ? '#EF4444' : '#F59E0B'} layerKey="clearance" />
           {openSections.clearance && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {allResults.length > 0 && (
+                <div style={{ display: 'flex', gap: 3, padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}>
+                  {(['all', 'violations', 'warnings', 'ok'] as const).map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setClearanceFilter(f)}
+                      style={{
+                        flex: 1, padding: '2px 4px', borderRadius: 3, fontSize: 10,
+                        border: `1px solid ${clearanceFilter === f ? (f === 'violations' ? '#EF444444' : f === 'warnings' ? '#F59E0B44' : f === 'ok' ? '#22C55E44' : 'var(--color-border)') : 'var(--color-border)'}`,
+                        background: clearanceFilter === f ? (f === 'violations' ? '#EF444422' : f === 'warnings' ? '#F59E0B22' : f === 'ok' ? '#22C55E22' : 'var(--color-bg)') : 'var(--color-bg)',
+                        color: clearanceFilter === f ? (f === 'violations' ? '#EF4444' : f === 'warnings' ? '#F59E0B' : f === 'ok' ? '#22C55E' : 'var(--color-text-primary)') : 'var(--color-text-secondary)',
+                        cursor: 'pointer', textTransform: 'capitalize',
+                      }}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              )}
               {allResults.length === 0 && (
                 <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '4px 0', margin: 0 }}>
                   Place at least 2 aircraft or 1 aircraft + 1 obstacle to see clearance checks.
                 </p>
               )}
 
-              {allResults.map((r, i) => (
+              {allResults.filter(r => clearanceFilter === 'all' || (clearanceFilter === 'violations' && r.status === 'violation') || (clearanceFilter === 'warnings' && r.status === 'warning') || (clearanceFilter === 'ok' && r.status === 'ok')).map((r, i) => (
                 <div
                   key={i}
                   onClick={() => flyToResult(r)}
@@ -2768,6 +2875,108 @@ export default function ParkingPage() {
             segments={ruler.segments}
             style={{ position: 'absolute', bottom: 24, left: 10, zIndex: 5 }}
           />
+          {/* Map controls — top left */}
+          <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 5, display: 'flex', gap: 4 }}>
+            <button
+              onClick={() => setSidebarCollapsed(c => !c)}
+              title={sidebarCollapsed ? 'Show panel' : 'Hide panel'}
+              style={{
+                padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+                color: 'var(--color-text-primary)', cursor: 'pointer',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+              }}
+            >
+              {sidebarCollapsed ? '\u25B6 Panel' : '\u25C0 Hide'}
+            </button>
+          </div>
+
+          {/* Floating toolbar — visible when sidebar is collapsed */}
+          {sidebarCollapsed && selectedPlanId && (
+            <div style={{
+              position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 5,
+              display: 'flex', gap: 4, padding: '6px 10px', borderRadius: 6,
+              background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+            }}>
+              <button
+                onClick={() => setShowAircraftPicker(true)}
+                style={{
+                  padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                  background: 'var(--color-cyan)11', border: '1px solid var(--color-cyan)44',
+                  color: 'var(--color-cyan)', cursor: 'pointer',
+                }}
+              >
+                + Aircraft
+              </button>
+              {(['point', 'building', 'line', 'circle'] as const).map(type => (
+                <button
+                  key={type}
+                  onClick={() => { setPlacingObstacle(type); setPlacingAircraft(null) }}
+                  style={{
+                    padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
+                    background: placingObstacle === type ? '#F9731622' : 'transparent',
+                    border: `1px solid ${placingObstacle === type ? '#F97316' : 'var(--color-border)'}`,
+                    color: placingObstacle === type ? '#F97316' : 'var(--color-text-secondary)',
+                    cursor: 'pointer', textTransform: 'capitalize',
+                  }}
+                >
+                  {type}
+                </button>
+              ))}
+              <div style={{ width: 1, background: 'var(--color-border)', margin: '0 2px' }} />
+              <button
+                onClick={() => handleStartTaxilane('interior')}
+                disabled={!!drawingTaxilaneId}
+                style={{
+                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
+                  background: '#3B82F611', border: '1px solid #3B82F644',
+                  color: '#3B82F6', cursor: 'pointer',
+                }}
+              >
+                Taxilane
+              </button>
+              <button
+                onClick={handleStartBoundary}
+                disabled={!!drawingBoundaryId}
+                style={{
+                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
+                  background: '#10B98111', border: '1px solid #10B98144',
+                  color: '#10B981', cursor: 'pointer',
+                }}
+              >
+                Boundary
+              </button>
+              <div style={{ width: 1, background: 'var(--color-border)', margin: '0 2px' }} />
+              <button
+                onClick={() => setPlanLocked(l => !l)}
+                title={planLocked ? 'Unlock dragging' : 'Lock positions'}
+                style={{
+                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
+                  background: planLocked ? '#EF444422' : '#22C55E22',
+                  border: `1px solid ${planLocked ? '#EF444444' : '#22C55E44'}`,
+                  color: planLocked ? '#EF4444' : '#22C55E',
+                  cursor: 'pointer',
+                }}
+              >
+                {planLocked ? 'Locked' : 'Unlocked'}
+              </button>
+            </div>
+          )}
+
+          {/* Violation summary — bottom right when sidebar collapsed */}
+          {sidebarCollapsed && (violations.length > 0 || warnings.length > 0) && (
+            <div style={{
+              position: 'absolute', bottom: 24, right: 10, zIndex: 5,
+              padding: '6px 12px', borderRadius: 6,
+              background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+              display: 'flex', gap: 8, fontSize: 'var(--fs-xs)', fontWeight: 600,
+            }}>
+              {violations.length > 0 && <span style={{ color: '#EF4444' }}>{violations.length} Violation{violations.length !== 1 ? 's' : ''}</span>}
+              {warnings.length > 0 && <span style={{ color: '#F59E0B' }}>{warnings.length} Warning{warnings.length !== 1 ? 's' : ''}</span>}
+            </div>
+          )}
         </div>
       </div>
 
@@ -2825,48 +3034,68 @@ export default function ParkingPage() {
               {filteredAircraft.map(ac => {
                 const ws = parseNum(ac.wing_span_ft)
                 const adg = ws > 0 ? getADGFromWingspan(ws) : null
+                const isFav = favoriteAircraft.includes(ac.aircraft)
                 return (
-                  <button
+                  <div
                     key={ac.aircraft}
-                    onClick={() => {
-                      setPlacingAircraft(ac)
-                      setShowAircraftPicker(false)
-                      setAircraftSearch('')
-                      setPlacingObstacle(null)
-                    }}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                      padding: '8px 16px', border: 'none', borderBottom: '1px solid var(--color-border)',
-                      background: 'transparent', cursor: 'pointer', textAlign: 'left',
-                      color: 'var(--color-text-primary)',
+                      display: 'flex', alignItems: 'center', width: '100%',
+                      borderBottom: '1px solid var(--color-border)',
+                      background: isFav ? 'var(--color-cyan)08' : 'transparent',
                     }}
                   >
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 500 }}>{ac.aircraft}</div>
-                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
-                        {ac.manufacturer || 'Unknown'} &middot;{' '}
-                        {ws > 0 ? `${ws}ft span` : 'No wingspan data'}
-                        {ac.turn_radius_ft ? ` &middot; ${ac.turn_radius_ft}ft turn` : ''}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleFavoriteAircraft(ac.aircraft) }}
+                      title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                      style={{
+                        padding: '8px 4px 8px 12px', border: 'none', background: 'transparent',
+                        cursor: 'pointer', fontSize: 16, color: isFav ? '#F59E0B' : 'var(--color-text-secondary)',
+                        opacity: isFav ? 1 : 0.3, flexShrink: 0,
+                      }}
+                    >
+                      {isFav ? '\u2605' : '\u2606'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setPlacingAircraft(ac)
+                        setShowAircraftPicker(false)
+                        setAircraftSearch('')
+                        setPlacingObstacle(null)
+                      }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10, flex: 1,
+                        padding: '8px 16px 8px 6px', border: 'none',
+                        background: 'transparent', cursor: 'pointer', textAlign: 'left',
+                        color: 'var(--color-text-primary)',
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 500 }}>{ac.aircraft}</div>
+                        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
+                          {ac.manufacturer || 'Unknown'} &middot;{' '}
+                          {ws > 0 ? `${ws}ft span` : 'No wingspan data'}
+                          {ac.turn_radius_ft ? ` &middot; ${ac.turn_radius_ft}ft turn` : ''}
+                        </div>
                       </div>
-                    </div>
-                    {adg && (
+                      {adg && (
+                        <span style={{
+                          fontSize: 10, padding: '1px 6px', borderRadius: 3,
+                          background: `${ADG_COLORS[adg]}22`, color: ADG_COLORS[adg],
+                          fontWeight: 600,
+                        }}>
+                          ADG {adg}
+                        </span>
+                      )}
                       <span style={{
                         fontSize: 10, padding: '1px 6px', borderRadius: 3,
-                        background: `${ADG_COLORS[adg]}22`, color: ADG_COLORS[adg],
-                        fontWeight: 600,
+                        background: ac.category === 'military' ? '#22C55E22' : '#3B82F622',
+                        color: ac.category === 'military' ? '#22C55E' : '#3B82F6',
+                        textTransform: 'capitalize',
                       }}>
-                        ADG {adg}
+                        {ac.category}
                       </span>
-                    )}
-                    <span style={{
-                      fontSize: 10, padding: '1px 6px', borderRadius: 3,
-                      background: ac.category === 'military' ? '#22C55E22' : '#3B82F622',
-                      color: ac.category === 'military' ? '#22C55E' : '#3B82F6',
-                      textTransform: 'capitalize',
-                    }}>
-                      {ac.category}
-                    </span>
-                  </button>
+                    </button>
+                  </div>
                 )
               })}
               {filteredAircraft.length === 0 && (
