@@ -36,6 +36,7 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'Obstruction Database', href: '/obstructions/history', iconName: 'Database' },
   { name: 'Waivers', href: '/waivers', iconName: 'Shield' },
   { name: 'Visual NAVAIDs', href: '/infrastructure', iconName: 'Lightbulb' },
+  { name: 'Aircraft Parking', href: '/parking', iconName: 'PlaneLanding' },
   { name: 'Aircraft Database', href: '/aircraft', iconName: 'Plane' },
   { name: 'Reference Library', href: '/regulations', iconName: 'BookOpen' },
   { name: 'NOTAMs', href: '/notams', iconName: 'FileText' },
@@ -54,7 +55,7 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
   sections: [
     {
       label: 'Operations',
-      items: ['/qrc', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/contractors'],
+      items: ['/qrc', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/contractors', '/parking'],
     },
     {
       label: 'Airfield Management',

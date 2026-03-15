@@ -565,3 +565,89 @@ export const DEMO_CONTRACTORS = [
     updated_at: new Date(Date.now() - 40 * 86400000).toISOString(),
   },
 ]
+
+// ── Demo Parking Data ──
+
+export const DEMO_PARKING_PLAN = {
+  id: 'demo-parking-plan-1',
+  base_id: 'demo-base',
+  plan_name: 'Standard Ops Layout',
+  description: 'Default parking arrangement for daily operations',
+  is_active: true,
+  created_by: 'demo-user',
+  updated_by: 'demo-user',
+  created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+  updated_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+}
+
+export const DEMO_PARKING_SPOTS = [
+  {
+    id: 'demo-spot-1', plan_id: 'demo-parking-plan-1', base_id: 'demo-base',
+    spot_name: 'Alpha-1', spot_type: 'apron' as const, aircraft_name: 'C-17A Globemaster III',
+    tail_number: '05-5139', unit_callsign: 'REACH',
+    longitude: -82.8375, latitude: 42.6145, heading_deg: 190,
+    clearance_ft: 25, status: 'occupied' as const, notes: null, sort_order: 0,
+    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+  },
+  {
+    id: 'demo-spot-2', plan_id: 'demo-parking-plan-1', base_id: 'demo-base',
+    spot_name: 'Alpha-2', spot_type: 'apron' as const, aircraft_name: 'KC-135R Stratotanker',
+    tail_number: '62-3534', unit_callsign: null,
+    longitude: -82.8365, latitude: 42.6143, heading_deg: 190,
+    clearance_ft: 25, status: 'occupied' as const, notes: null, sort_order: 1,
+    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+  },
+  {
+    id: 'demo-spot-3', plan_id: 'demo-parking-plan-1', base_id: 'demo-base',
+    spot_name: 'Trans-1', spot_type: 'transient' as const, aircraft_name: 'C-130J Super Hercules',
+    tail_number: '08-8604', unit_callsign: 'HERKY',
+    longitude: -82.8355, latitude: 42.6140, heading_deg: 10,
+    clearance_ft: null, status: 'available' as const, notes: 'Transient parking', sort_order: 2,
+    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+  },
+  {
+    id: 'demo-spot-4', plan_id: 'demo-parking-plan-1', base_id: 'demo-base',
+    spot_name: 'Bravo-1', spot_type: 'ramp' as const, aircraft_name: 'F-16C Fighting Falcon',
+    tail_number: '90-0778', unit_callsign: null,
+    longitude: -82.8380, latitude: 42.6138, heading_deg: 270,
+    clearance_ft: 20, status: 'reserved' as const, notes: null, sort_order: 3,
+    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+  },
+]
+
+export const DEMO_PARKING_OBSTACLES = [
+  {
+    id: 'demo-obs-1', base_id: 'demo-base',
+    obstacle_type: 'building' as const, name: 'Hangar 3',
+    longitude: -82.8370, latitude: 42.6150,
+    width_ft: 200, length_ft: 300, rotation_deg: 10,
+    radius_ft: null, height_ft: null, line_coords: null,
+    notes: null, created_by: 'demo-user',
+    created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+  },
+  {
+    id: 'demo-obs-2', base_id: 'demo-base',
+    obstacle_type: 'point' as const, name: 'Light Pole 7',
+    longitude: -82.8362, latitude: 42.6148,
+    width_ft: null, length_ft: null, rotation_deg: null,
+    radius_ft: null, height_ft: 40, line_coords: null,
+    notes: null, created_by: 'demo-user',
+    created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+  },
+  {
+    id: 'demo-obs-3', base_id: 'demo-base',
+    obstacle_type: 'circle' as const, name: 'Blast Fence A',
+    longitude: -82.8385, latitude: 42.6135,
+    width_ft: null, length_ft: null, rotation_deg: null,
+    radius_ft: 75, height_ft: null, line_coords: null,
+    notes: 'Jet blast deflector', created_by: 'demo-user',
+    created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+  },
+]

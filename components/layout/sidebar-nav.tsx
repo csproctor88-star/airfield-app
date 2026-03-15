@@ -44,6 +44,7 @@ import {
   Database,
   Lightbulb,
   Bird,
+  PlaneLanding,
   Wrench,
   FolderOpen,
   GripVertical,
@@ -60,7 +61,7 @@ import {
 const ICON_MAP: Record<string, LucideIcon> = {
   Home, LayoutDashboard, Activity, Zap, ListChecks, ClipboardCheck, ClipboardList,
   Bird, HardHat, AlertTriangle, MapPin, Database, Shield, Lightbulb,
-  Plane, BookOpen, FileText, BarChart3, Settings, BookMarked, Users,
+  PlaneLanding, Plane, BookOpen, FileText, BarChart3, Settings, BookMarked, Users,
   Wrench, FolderOpen,
 }
 

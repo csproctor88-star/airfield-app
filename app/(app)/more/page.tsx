@@ -23,6 +23,7 @@ const opsItems: ModuleItem[] = [
   { name: 'All Inspections', icon: '📋', color: '#22D3EE', href: '/inspections/all' },
   { name: 'Wildlife / BASH', icon: '🦅', color: '#10B981', href: '/wildlife' },
   { name: 'Personnel on Airfield', icon: '🚧', color: '#F59E0B', href: '/contractors' },
+  { name: 'Aircraft Parking', icon: '🛬', color: '#38BDF8', href: '/parking' },
 ]
 
 // Airfield Management

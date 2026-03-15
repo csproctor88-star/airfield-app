@@ -253,6 +253,21 @@ export async function fetchEntityDetails(entries: ActivityEntry[]): Promise<Map<
     } catch { /* deleted entities */ }
   }
 
+  // Parking plans
+  if (groups['parking_plan']?.length) {
+    try {
+      const { data } = await supabase
+        .from('parking_plans')
+        .select('id, plan_name, description')
+        .in('id', groups['parking_plan'])
+      if (data) {
+        for (const r of data as { id: string; plan_name?: string; description?: string }[]) {
+          result.set(r.id, { title: r.plan_name || undefined, description: r.description || undefined })
+        }
+      }
+    } catch { /* deleted entities */ }
+  }
+
   // Waiver reviews
   if (groups['waiver_review']?.length) {
     try {

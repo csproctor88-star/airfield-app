@@ -25,6 +25,7 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     wildlife_sighting: 'Wildlife Sighting',
     wildlife_strike: 'Wildlife Strike',
     manual: 'Manual Entry',
+    parking_plan: 'Parking Plan',
   }
   const entity = typeLabel[entityType] || entityType
   const id = displayId ? ` ${displayId}` : ''
@@ -62,6 +63,7 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
     case 'qrc': return `/qrc?exec=${entityId}`
     case 'wildlife_sighting': return `/wildlife`
     case 'wildlife_strike': return `/wildlife`
+    case 'parking_plan': return `/parking`
     default: return null
   }
 }
