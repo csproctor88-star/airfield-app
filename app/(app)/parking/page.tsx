@@ -719,7 +719,7 @@ export default function ParkingPage() {
     if (!m || !mapLoaded) return
 
     // Clean up old sources/layers
-    const cleanIds = ['parking-clearance-fill', 'parking-clearance-line', 'parking-obstacles-fill', 'parking-obstacles-line', 'parking-obstacles-points', 'parking-obstacles-labels', 'parking-obstacles-lines-stroke', 'parking-aircraft-symbols', 'parking-aircraft-labels', 'parking-drag-labels', 'parking-drawing-line-layer', 'parking-drawing-line-dots', 'parking-taxilane-envelope-fill', 'parking-taxilane-envelope-line', 'parking-taxilane-centerline', 'parking-taxilane-labels', 'parking-apron-boundary-fill', 'parking-apron-boundary-line', 'parking-apron-boundary-labels']
+    const cleanIds = ['parking-clearance-fill', 'parking-clearance-line', 'parking-obstacles-fill', 'parking-obstacles-line', 'parking-obstacles-points', 'parking-obstacles-labels', 'parking-obstacles-lines-stroke', 'parking-aircraft-symbols', 'parking-aircraft-labels', 'parking-nose-gear-markers', 'parking-nose-gear-labels', 'parking-drag-labels', 'parking-drawing-line-layer', 'parking-drawing-line-dots', 'parking-taxilane-envelope-fill', 'parking-taxilane-envelope-line', 'parking-taxilane-centerline', 'parking-taxilane-labels', 'parking-apron-boundary-fill', 'parking-apron-boundary-line', 'parking-apron-boundary-labels']
     for (const id of cleanIds) {
       if (m.getLayer(id)) m.removeLayer(id)
     }
@@ -1163,7 +1163,6 @@ export default function ParkingPage() {
         },
         paint: { 'text-color': '#FFD700', 'text-halo-color': '#000', 'text-halo-width': 1 },
       })
-      cleanIds.push('parking-nose-gear-markers', 'parking-nose-gear-labels')
     }
   }, [mapLoaded, spotsWithAircraft, obstacles, taxilanes, apronBoundaries, allResults, showClearances, apronContext, visibleLayers])
 
