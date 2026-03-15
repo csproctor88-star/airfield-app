@@ -30,12 +30,14 @@ import {
 } from '@/lib/supabase/parking'
 import {
   getADGFromWingspan,
-  getDefaultClearance,
+  getWingtipClearance,
   findAllViolations,
   getAllClearanceResults,
   generateClearanceZonePolygon,
   getWingtipPositions,
+  APRON_CONTEXT_LABELS,
   type ADGGroup,
+  type ApronContext,
   type SpotWithAircraft,
   type ClearanceResult,
 } from '@/lib/calculations/parking-clearance'
@@ -316,6 +318,7 @@ export default function ParkingPage() {
   const [editingSpot, setEditingSpot] = useState<ParkingSpot | null>(null)
   const [editingObstacle, setEditingObstacle] = useState<ParkingObstacle | null>(null)
   const [showClearances, setShowClearances] = useState(true)
+  const [apronContext, setApronContext] = useState<ApronContext>('parking')
   const [panelTab, setPanelTab] = useState<'aircraft' | 'obstacles' | 'clearance'>('aircraft')
   const [aircraftCategoryFilter, setAircraftCategoryFilter] = useState<'all' | 'military' | 'commercial'>('all')
 
@@ -352,10 +355,12 @@ export default function ParkingPage() {
   spotsWithAircraftRef.current = spotsWithAircraft
   const obstaclesRef = useRef(obstacles)
   obstaclesRef.current = obstacles
+  const apronContextRef = useRef(apronContext)
+  apronContextRef.current = apronContext
 
   const allResults: ClearanceResult[] = useMemo(
-    () => getAllClearanceResults(spotsWithAircraft, obstacles),
-    [spotsWithAircraft, obstacles]
+    () => getAllClearanceResults(spotsWithAircraft, obstacles, apronContext),
+    [spotsWithAircraft, obstacles, apronContext]
   )
 
   const violations = useMemo(
@@ -478,8 +483,7 @@ export default function ParkingPage() {
 
       if (placingAircraft && selectedPlanId && installationId) {
         const ws = parseNum(placingAircraft.wing_span_ft)
-        const adg = getADGFromWingspan(ws)
-        const clearance = getDefaultClearance(adg)
+        const clearance = getWingtipClearance(ws, apronContext)
 
         const spot = await createParkingSpot({
           plan_id: selectedPlanId,
@@ -582,8 +586,7 @@ export default function ParkingPage() {
     // Build clearance zone GeoJSON
     const clearanceFeatures: GeoJSON.Feature[] = []
     for (const spot of spotsWithAircraft) {
-      const adg = getADGFromWingspan(spot.wingspan_ft)
-      const clearanceFt = spot.clearance_ft ?? getDefaultClearance(adg)
+      const clearanceFt = spot.clearance_ft ?? getWingtipClearance(spot.wingspan_ft, apronContext)
       const polygon = generateClearanceZonePolygon(spot, clearanceFt)
 
       // Determine status for this aircraft
@@ -846,7 +849,7 @@ export default function ParkingPage() {
 
       registerImages()
     }
-  }, [mapLoaded, spotsWithAircraft, obstacles, allResults, showClearances])
+  }, [mapLoaded, spotsWithAircraft, obstacles, allResults, showClearances, apronContext])
 
   // ── Update icon scale on zoom change ──
   // Images are fixed-size; only the iconScale property needs updating on zoom.
@@ -954,7 +957,7 @@ export default function ParkingPage() {
         const dy = (lat - other.latitude) * 364567
         if (Math.sqrt(dx * dx + dy * dy) > 500) continue
 
-        const result = getAllClearanceResults([movedSpot, other], [])
+        const result = getAllClearanceResults([movedSpot, other], [], apronContextRef.current)
         if (result.length > 0) {
           labelFeatures.push({
             type: 'Feature',
@@ -972,7 +975,7 @@ export default function ParkingPage() {
         const dy = (lat - obs.latitude) * 364567
         if (Math.sqrt(dx * dx + dy * dy) > 500) continue
 
-        const result = getAllClearanceResults([movedSpot], [obs])
+        const result = getAllClearanceResults([movedSpot], [obs], apronContextRef.current)
         if (result.length > 0) {
           labelFeatures.push({
             type: 'Feature',
@@ -1245,7 +1248,7 @@ export default function ParkingPage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--color-bg)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: 'var(--color-bg)' }}>
       {/* Header bar */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -1302,7 +1305,7 @@ export default function ParkingPage() {
 
       {/* Status bar */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 16,
+        display: 'flex', alignItems: 'center', gap: 12,
         padding: '4px 16px', borderBottom: '1px solid var(--color-border)',
         background: 'var(--color-bg-surface)', fontSize: 'var(--fs-sm)', flexShrink: 0,
       }}>
@@ -1316,6 +1319,22 @@ export default function ParkingPage() {
           {warnings.length} Warning{warnings.length !== 1 ? 's' : ''}
         </span>
         <div style={{ flex: 1 }} />
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)' }}>
+          Clearance Standard (UFC 3-260-01 Table 6-1):
+          <select
+            value={apronContext}
+            onChange={e => setApronContext(e.target.value as ApronContext)}
+            style={{
+              padding: '2px 6px', borderRadius: 3, fontSize: 'var(--fs-xs)',
+              border: '1px solid var(--color-border)', background: 'var(--color-bg)',
+              color: 'var(--color-text-primary)',
+            }}
+          >
+            {(Object.entries(APRON_CONTEXT_LABELS) as [ApronContext, string][]).map(([val, label]) => (
+              <option key={val} value={val}>{label}</option>
+            ))}
+          </select>
+        </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
           <input type="checkbox" checked={showClearances} onChange={e => setShowClearances(e.target.checked)} />
           Show Clearances
@@ -1365,9 +1384,10 @@ export default function ParkingPage() {
 
       {/* Top panel strip — tabs + content above the map */}
       <div style={{
-        flexShrink: 0, borderBottom: '1px solid var(--color-border)',
+        borderBottom: '1px solid var(--color-border)',
         background: 'var(--color-bg-surface)',
-        display: 'flex', flexDirection: 'column', maxHeight: '40vh',
+        display: 'flex', flexDirection: 'column', maxHeight: '30vh',
+        flexShrink: 0, overflow: 'hidden',
       }}>
         {/* Tab row + plan actions */}
         <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--color-border)' }}>
@@ -1455,7 +1475,7 @@ export default function ParkingPage() {
                     const ac = allAircraft.find(a => a.aircraft === s.aircraft_name)
                     const ws = ac ? parseNum(ac.wing_span_ft) : 50
                     const adg = getADGFromWingspan(ws)
-                    const clearance = s.clearance_ft ?? getDefaultClearance(adg)
+                    const clearance = s.clearance_ft ?? getWingtipClearance(ws, apronContext)
                     const spotViolations = allResults.filter(r =>
                       (r.spot_a_id === s.id || r.spot_b_id === s.id) && r.status !== 'ok'
                     )
@@ -1547,7 +1567,7 @@ export default function ParkingPage() {
                                     cursor: 'pointer',
                                   }}
                                 >
-                                  {val ? `${val}ft` : `ADG (${getDefaultClearance(adg)}ft)`}
+                                  {val ? `${val}ft` : `UFC (${getWingtipClearance(ws, apronContext)}ft)`}
                                 </button>
                               ))}
                               <select

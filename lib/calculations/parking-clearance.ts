@@ -1,10 +1,11 @@
-// UFC 3-260-01 Aircraft Parking Clearance Engine
+// UFC 3-260-01 Table 6-1 Aircraft Parking Clearance Engine
 // Calculates wingtip clearance requirements and violations for parking plans
 
 import { offsetPoint, distanceFt, type LatLon } from './geometry'
 import type { ParkingSpot, ParkingObstacle } from '../supabase/parking'
 
 // ── ADG Classification (UFC 3-260-01 Table 3-1) ──
+// Retained for display / reference — clearances use 110ft threshold per Table 6-1
 
 export type ADGGroup = 'I' | 'II' | 'III' | 'IV' | 'V' | 'VI'
 
@@ -24,23 +25,70 @@ export function getADGFromWingspan(wingspanFt: number): ADGGroup {
   return 'VI'
 }
 
-// ── Wingtip Clearance Requirements (UFC 3-260-01 Table 3-8) ──
+// ── UFC 3-260-01 Table 6-1 Wingtip Clearances ──
 
-type ClearanceTable = { taxiway: number; apron: number; reduced: number }
+/** Apron/ramp area type determines which clearance column to use */
+export type ApronContext =
+  | 'parking'              // Item 4: Parking apron ("P")
+  | 'parking_transient'    // Item 4: Transient apron parking (C-5/C-17 = 25ft)
+  | 'parking_kc_refuel'    // Item 4: KC-10/KC-135 fuel load change (50ft)
+  | 'interior_taxilane'    // Item 5: Interior/secondary peripheral taxilane ("I")
+  | 'taxilane_transient'   // Item 5: Transient apron taxilane (25ft)
+  | 'through_taxilane'     // Item 6: Through/primary peripheral taxilane ("T")
 
-const CLEARANCE_TABLE: Record<ADGGroup, ClearanceTable> = {
-  I:   { taxiway: 20, apron: 15, reduced: 10 },
-  II:  { taxiway: 26, apron: 20, reduced: 10 },
-  III: { taxiway: 34, apron: 25, reduced: 15 },
-  IV:  { taxiway: 40, apron: 25, reduced: 15 },
-  V:   { taxiway: 53, apron: 25, reduced: 15 },
-  VI:  { taxiway: 66, apron: 25, reduced: 15 },
+/** Get the required wingtip clearance per UFC 3-260-01 Table 6-1 */
+export function getWingtipClearance(wingspanFt: number, context: ApronContext = 'parking'): number {
+  const large = wingspanFt >= 110  // 33.5m threshold
+
+  switch (context) {
+    // Item 4 — Parking Apron ("P")
+    case 'parking':
+      return large ? 20 : 10
+    case 'parking_transient':
+      return large ? 25 : 10
+    case 'parking_kc_refuel':
+      return 50
+
+    // Item 5 — Interior / Secondary Peripheral Taxilane ("I")
+    case 'interior_taxilane':
+      return large ? 30 : 20
+    case 'taxilane_transient':
+      return 25
+
+    // Item 6 — Through / Primary Peripheral Taxilane ("T")
+    case 'through_taxilane':
+      return large ? 50 : 30
+
+    default:
+      return large ? 20 : 10
+  }
 }
 
+/** Simplified context labels for UI display */
+export const APRON_CONTEXT_LABELS: Record<ApronContext, string> = {
+  parking: 'Parking Apron',
+  parking_transient: 'Transient Apron',
+  parking_kc_refuel: 'KC Refueling',
+  interior_taxilane: 'Interior Taxilane',
+  taxilane_transient: 'Transient Taxilane',
+  through_taxilane: 'Through Taxilane',
+}
+
+// Keep old function signature for compatibility but delegate to new logic
 export type ClearanceContext = 'taxiway' | 'apron' | 'reduced'
 
 export function getDefaultClearance(adg: ADGGroup, context: ClearanceContext = 'apron'): number {
-  return CLEARANCE_TABLE[adg][context]
+  // Map old ADG-based contexts to Table 6-1 wingspan-based approach
+  // Use the ADG max wingspan threshold to determine which bracket
+  const wsThreshold = ADG_RANGES.find(r => r.group === adg)?.maxWingspan ?? 100
+  const large = wsThreshold >= 110
+
+  switch (context) {
+    case 'taxiway': return large ? 50 : 30  // Through taxilane
+    case 'apron': return large ? 20 : 10     // Parking apron
+    case 'reduced': return large ? 20 : 10   // Same as parking (no "reduced" in Table 6-1)
+    default: return large ? 20 : 10
+  }
 }
 
 // ── Spot with Aircraft data ──
@@ -137,7 +185,6 @@ export function generateClearanceZonePolygon(
     const rotY = localX * Math.sin(headingRad) + localY * Math.cos(headingRad)
     // Convert to bearing + distance
     const dist = Math.sqrt(rotX * rotX + rotY * rotY)
-    const bearing = (Math.atan2(rotY, rotX) * 180 / Math.PI + 360) % 360
     // bearing: 0 = north (up), but atan2 gives 0 = east, so rotate -90
     const mapBearing = (90 - Math.atan2(rotY, rotX) * 180 / Math.PI + 360) % 360
     const pt = offsetPoint(center, mapBearing, dist)
@@ -149,9 +196,11 @@ export function generateClearanceZonePolygon(
 
 // ── Wingtip-to-wingtip clearance check ──
 
+/** Check wingtip clearance between two aircraft per UFC 3-260-01 Table 6-1 */
 export function checkWingtipClearance(
   spotA: SpotWithAircraft,
-  spotB: SpotWithAircraft
+  spotB: SpotWithAircraft,
+  apronContext: ApronContext = 'parking'
 ): ClearanceResult {
   const centerA: LatLon = { lat: spotA.latitude, lon: spotA.longitude }
   const centerB: LatLon = { lat: spotB.latitude, lon: spotB.longitude }
@@ -189,12 +238,11 @@ export function checkWingtipClearance(
 
   const minDistance = Math.min(...distances)
 
-  // Required clearance: use the higher ADG requirement between the two aircraft
-  const adgA = getADGFromWingspan(spotA.wingspan_ft)
-  const adgB = getADGFromWingspan(spotB.wingspan_ft)
-  const defaultA = spotA.clearance_ft ?? getDefaultClearance(adgA)
-  const defaultB = spotB.clearance_ft ?? getDefaultClearance(adgB)
-  const required = Math.max(defaultA, defaultB)
+  // Required clearance: use the larger wingspan's requirement (per Table 6-1 threshold logic)
+  // If either spot has a manual override, use that instead
+  const reqA = spotA.clearance_ft ?? getWingtipClearance(spotA.wingspan_ft, apronContext)
+  const reqB = spotB.clearance_ft ?? getWingtipClearance(spotB.wingspan_ft, apronContext)
+  const required = Math.max(reqA, reqB)
 
   let status: ClearanceResult['status'] = 'ok'
   if (minDistance < required) {
@@ -302,7 +350,8 @@ function pointToLineDistance(spot: SpotWithAircraft, obstacle: ParkingObstacle):
 
 export function checkObstacleClearance(
   spot: SpotWithAircraft,
-  obstacle: ParkingObstacle
+  obstacle: ParkingObstacle,
+  apronContext: ApronContext = 'parking'
 ): ClearanceResult {
   let distance: number
 
@@ -320,8 +369,7 @@ export function checkObstacleClearance(
       distance = pointToPointDistance(spot, obstacle)
   }
 
-  const adg = getADGFromWingspan(spot.wingspan_ft)
-  const required = spot.clearance_ft ?? getDefaultClearance(adg)
+  const required = spot.clearance_ft ?? getWingtipClearance(spot.wingspan_ft, apronContext)
 
   let status: ClearanceResult['status'] = 'ok'
   if (distance < required) {
@@ -345,14 +393,15 @@ export function checkObstacleClearance(
 
 export function findAllViolations(
   spots: SpotWithAircraft[],
-  obstacles: ParkingObstacle[]
+  obstacles: ParkingObstacle[],
+  apronContext: ApronContext = 'parking'
 ): ClearanceResult[] {
   const results: ClearanceResult[] = []
 
   // Check all aircraft pairs
   for (let i = 0; i < spots.length; i++) {
     for (let j = i + 1; j < spots.length; j++) {
-      const result = checkWingtipClearance(spots[i], spots[j])
+      const result = checkWingtipClearance(spots[i], spots[j], apronContext)
       if (result.status !== 'ok') {
         results.push(result)
       }
@@ -362,7 +411,7 @@ export function findAllViolations(
   // Check aircraft vs obstacles
   for (const spot of spots) {
     for (const obstacle of obstacles) {
-      const result = checkObstacleClearance(spot, obstacle)
+      const result = checkObstacleClearance(spot, obstacle, apronContext)
       if (result.status !== 'ok') {
         results.push(result)
       }
@@ -382,19 +431,20 @@ export function findAllViolations(
 /** Get all clearance results (including OK) for a complete picture */
 export function getAllClearanceResults(
   spots: SpotWithAircraft[],
-  obstacles: ParkingObstacle[]
+  obstacles: ParkingObstacle[],
+  apronContext: ApronContext = 'parking'
 ): ClearanceResult[] {
   const results: ClearanceResult[] = []
 
   for (let i = 0; i < spots.length; i++) {
     for (let j = i + 1; j < spots.length; j++) {
-      results.push(checkWingtipClearance(spots[i], spots[j]))
+      results.push(checkWingtipClearance(spots[i], spots[j], apronContext))
     }
   }
 
   for (const spot of spots) {
     for (const obstacle of obstacles) {
-      results.push(checkObstacleClearance(spot, obstacle))
+      results.push(checkObstacleClearance(spot, obstacle, apronContext))
     }
   }
 
