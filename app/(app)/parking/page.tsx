@@ -1559,9 +1559,20 @@ export default function ParkingPage() {
     }
   }, [mapLoaded]) // Only re-register on map load — refs handle current data
 
-  // ── Arrow key nudge for selected aircraft (1ft per press, 5ft with Shift) ──
+  // ── Keyboard shortcuts: arrow nudge + spacebar fullscreen ──
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
+      // Ignore if typing in an input/select/textarea
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+
+      // Spacebar toggles fullscreen
+      if (e.key === ' ') {
+        e.preventDefault()
+        setIsFullscreen(f => !f)
+        return
+      }
+
       if (!editingSpot) return
       const arrows: Record<string, number> = { ArrowUp: 0, ArrowRight: 90, ArrowDown: 180, ArrowLeft: 270 }
       const bearing = arrows[e.key]
@@ -2911,9 +2922,9 @@ export default function ParkingPage() {
               title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
               style={{
                 padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
-                background: isFullscreen ? 'var(--color-cyan)22' : 'var(--color-bg-surface)',
-                border: `1px solid ${isFullscreen ? 'var(--color-cyan)' : 'var(--color-border)'}`,
-                color: isFullscreen ? 'var(--color-cyan)' : 'var(--color-text-primary)',
+                background: isFullscreen ? 'rgba(0,0,0,0.7)' : 'var(--color-bg-surface)',
+                border: `1px solid ${isFullscreen ? 'rgba(255,255,255,0.4)' : 'var(--color-border)'}`,
+                color: isFullscreen ? '#FFF' : 'var(--color-text-primary)',
                 cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
               }}
             >

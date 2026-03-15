@@ -547,6 +547,12 @@ function ObstructionsContent() {
         selectedPoint={pointInfo?.point ?? null}
         surfaceAtPoint={surfaceAtPoint}
         flyToPoint={flyToPoint}
+        taxiways={taxiwayGeometries.map(tw => ({
+          id: tw.id,
+          designator: tw.designator,
+          centerline: tw.centerline,
+          standard: tw.standard,
+        }))}
       />
 
       {/* Use My Location */}

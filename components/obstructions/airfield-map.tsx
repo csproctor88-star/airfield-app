@@ -21,12 +21,21 @@ import {
 } from '@/lib/calculations/geometry'
 import { IMAGINARY_SURFACES } from '@/lib/calculations/obstructions'
 
+type TaxiwayLine = {
+  id: string
+  designator: string
+  centerline: LatLon[]
+  standard: 'faa' | 'ufc'
+}
+
 type Props = {
   onPointSelected: (point: LatLon) => void
   selectedPoint: LatLon | null
   surfaceAtPoint: string | null
   /** When set, the map will fly to this point. Used for GPS "Use My Location". */
   flyToPoint?: LatLon | null
+  /** Taxiway centerlines to display on map */
+  taxiways?: TaxiwayLine[]
 }
 
 // Toggle group keys used for visibility state
@@ -247,7 +256,7 @@ function getDefaultVisibility(): Record<ToggleKey, boolean> {
   return state
 }
 
-export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtPoint, flyToPoint }: Props) {
+export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtPoint, flyToPoint, taxiways = [] }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const ruler = useMapRuler(map, true)
@@ -257,6 +266,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
   const [visibility, setVisibility] = useState<Record<ToggleKey, boolean>>(getDefaultVisibility)
   const [runwayVisibility, setRunwayVisibility] = useState<Record<number, boolean>>({})
   const [legendOpen, setLegendOpen] = useState(false)
+  const [showTaxiways, setShowTaxiways] = useState(true)
   const { runways: installationRunways, installationId } = useInstallation()
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
@@ -457,6 +467,78 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
       m.off('click', handleClick)
     }
   }, [handleClick, mapLoaded])
+
+  // Render taxiway centerlines
+  useEffect(() => {
+    const m = map.current
+    if (!m || !mapLoaded) return
+
+    // Clean up previous taxiway layers
+    if (m.getLayer('taxiway-labels')) m.removeLayer('taxiway-labels')
+    if (m.getLayer('taxiway-lines')) m.removeLayer('taxiway-lines')
+    if (m.getSource('taxiway-centerlines')) m.removeSource('taxiway-centerlines')
+
+    if (taxiways.length === 0) return
+
+    const features: GeoJSON.Feature[] = taxiways
+      .filter(tw => tw.centerline.length >= 2)
+      .map(tw => ({
+        type: 'Feature',
+        properties: { designator: tw.designator, standard: tw.standard },
+        geometry: {
+          type: 'LineString',
+          coordinates: tw.centerline.map(c => [c.lon, c.lat]),
+        },
+      }))
+
+    if (features.length === 0) return
+
+    m.addSource('taxiway-centerlines', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features },
+    })
+
+    m.addLayer({
+      id: 'taxiway-lines',
+      type: 'line',
+      source: 'taxiway-centerlines',
+      layout: { visibility: showTaxiways ? 'visible' : 'none' },
+      paint: {
+        'line-color': '#38BDF8',
+        'line-width': 2,
+        'line-dasharray': [4, 3],
+        'line-opacity': 0.8,
+      },
+    })
+
+    m.addLayer({
+      id: 'taxiway-labels',
+      type: 'symbol',
+      source: 'taxiway-centerlines',
+      layout: {
+        visibility: showTaxiways ? 'visible' : 'none',
+        'symbol-placement': 'line-center',
+        'text-field': ['get', 'designator'],
+        'text-size': 12,
+        'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+        'text-allow-overlap': true,
+      },
+      paint: {
+        'text-color': '#38BDF8',
+        'text-halo-color': '#000',
+        'text-halo-width': 1.5,
+      },
+    })
+  }, [taxiways, mapLoaded, showTaxiways])
+
+  // Sync taxiway visibility
+  useEffect(() => {
+    const m = map.current
+    if (!m || !mapLoaded) return
+    const vis = showTaxiways ? 'visible' : 'none'
+    if (m.getLayer('taxiway-lines')) m.setLayoutProperty('taxiway-lines', 'visibility', vis)
+    if (m.getLayer('taxiway-labels')) m.setLayoutProperty('taxiway-labels', 'visibility', vis)
+  }, [showTaxiways, mapLoaded])
 
   // Sync surface-type toggle visibility to Mapbox layers
   useEffect(() => {
@@ -691,6 +773,26 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
                     <span style={{ color: '#CBD5E1' }}>{label}</span>
                   </div>
                 ))}
+              </div>
+            )}
+            {/* Taxiway toggle */}
+            {taxiways.length > 0 && (
+              <div style={{ paddingBottom: 5, marginBottom: 5, borderBottom: '1px solid rgba(148,163,184,0.15)' }}>
+                <div
+                  onClick={() => setShowTaxiways(v => !v)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    cursor: 'pointer', padding: '1px 0',
+                    opacity: showTaxiways ? 1 : 0.4,
+                  }}
+                >
+                  <span style={{
+                    width: 10, height: 10, borderRadius: 2,
+                    background: showTaxiways ? '#38BDF8' : 'transparent',
+                    border: '1.5px solid #38BDF8', flexShrink: 0,
+                  }} />
+                  <span style={{ color: '#CBD5E1' }}>Taxiways ({taxiways.length})</span>
+                </div>
               </div>
             )}
             {/* Surface type toggles */}
