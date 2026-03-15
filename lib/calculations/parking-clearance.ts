@@ -464,11 +464,12 @@ export function generateClearanceZonePolygon(
 
   for (let i = 0; i <= segments; i++) {
     const angle = (2 * Math.PI * i) / segments
-    const localX = totalLength * Math.cos(angle)
-    const localY = totalWidth * Math.sin(angle)
+    const localX = totalWidth * Math.sin(angle)
+    const localY = totalLength * Math.cos(angle)
     const headingRad = (spot.heading_deg * Math.PI) / 180
-    const rotX = localX * Math.cos(headingRad) - localY * Math.sin(headingRad)
-    const rotY = localX * Math.sin(headingRad) + localY * Math.cos(headingRad)
+    // CW rotation for compass bearings (negate angle)
+    const rotX = localX * Math.cos(headingRad) + localY * Math.sin(headingRad)
+    const rotY = -localX * Math.sin(headingRad) + localY * Math.cos(headingRad)
     const dist = Math.sqrt(rotX * rotX + rotY * rotY)
     const mapBearing = (90 - Math.atan2(rotY, rotX) * 180 / Math.PI + 360) % 360
     const pt = offsetPoint(center, mapBearing, dist)
