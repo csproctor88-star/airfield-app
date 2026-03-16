@@ -135,7 +135,6 @@ export async function createDiscrepancy(input: {
 
   const created = data as DiscrepancyRow
   let discDetails = `NEW DISCREPANCY — ${input.title.toUpperCase()}`
-  if (input.location_text) discDetails += `, ${input.location_text.toUpperCase()}`
   if (input.notam_reference) discDetails += `. NOTAM: ${input.notam_reference.toUpperCase()}`
   logActivity('created', 'discrepancy', created.id, created.display_id, { details: discDetails }, input.base_id)
 

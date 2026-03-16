@@ -552,6 +552,10 @@ function ObstructionsContent() {
           designator: tw.designator,
           centerline: tw.centerline,
           standard: tw.standard,
+          tdg: tw.tdg,
+          taxiwayType: tw.taxiwayType,
+          runwayClass: tw.runwayClass,
+          serviceBranch: tw.serviceBranch,
         }))}
       />
 

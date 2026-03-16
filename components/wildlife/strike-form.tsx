@@ -22,6 +22,7 @@ import {
   PRECIPITATION_OPTIONS,
   TIME_OF_DAY_OPTIONS,
 } from '@/lib/constants'
+import { fetchWeatherWithFormFields } from '@/lib/weather'
 
 type Props = {
   currentUser: string
@@ -86,6 +87,13 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
     else if (hour >= 7 && hour < 17) setTimeOfDay('day')
     else if (hour >= 17 && hour < 19) setTimeOfDay('dusk')
     else setTimeOfDay('night')
+
+    // Auto-fill weather from current conditions
+    fetchWeatherWithFormFields().then(result => {
+      if (!result) return
+      setSkyCondition(result.sky_condition)
+      setPrecipitation(result.precipitation)
+    })
   }, [isEdit])
 
   const handlePointSelected = useCallback((lat: number, lng: number) => {

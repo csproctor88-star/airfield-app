@@ -1231,9 +1231,16 @@ export default function InfrastructureMapPage() {
     const featureDisplayName = buildFeatureDisplayName(feature, comp?.system_name, comp?.label)
 
     // Auto-create discrepancy
+    const typeLabel = layerCfg?.label || feature.feature_type
+    const descParts = [
+      `Status: INOPERATIVE`,
+      `Component: ${typeLabel}`,
+      feature.layer ? `Location: ${feature.layer}` : null,
+    ].filter(Boolean)
+
     const { data: disc } = await createDiscrepancy({
-      title: `${featureDisplayName} — Inoperative`,
-      description: `Visual NAVAID marked inoperative from infrastructure map. Feature type: ${layerCfg?.label || feature.feature_type}.${comp ? ` System: ${comp.system_name}.` : ''}${feature.layer ? ` Layer: ${feature.layer}.` : ''}`,
+      title: `INOP: ${featureDisplayName}`,
+      description: descParts.join('\n'),
       location_text: feature.layer || 'Airfield',
       type: 'lighting',
       latitude: feature.latitude,
@@ -1250,7 +1257,7 @@ export default function InfrastructureMapPage() {
       system_component_id: feature.system_component_id || undefined,
       event_type: 'reported',
       discrepancy_id: disc?.id || undefined,
-      notes: `${featureDisplayName} reported inoperative`,
+      notes: `INOP — ${featureDisplayName}`,
     })
 
     const refreshed = await fetchInfrastructureFeatures(installationId)
@@ -1352,7 +1359,7 @@ export default function InfrastructureMapPage() {
               .from('discrepancies')
               .update({
                 status: 'completed',
-                resolution_notes: `Resolved — feature marked operational from Visual NAVAIDs map by ${resolvedByName} at ${resolvedAt}`,
+                resolution_notes: `Marked operational by ${resolvedByName} at ${resolvedAt}`,
                 resolution_date: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               } as any)

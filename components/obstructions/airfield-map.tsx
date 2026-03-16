@@ -18,14 +18,27 @@ import {
   generateStadiumPolygon,
   generateTransitionalPolygons,
   generateAPZPolygons,
+  offsetPoint,
 } from '@/lib/calculations/geometry'
 import { IMAGINARY_SURFACES } from '@/lib/calculations/obstructions'
+import {
+  getClearanceHalfWidth,
+  getSafetyHalfWidth,
+  TAXIWAY_SURFACES,
+  type TaxiwayStandard,
+  type RunwayClass,
+  type ServiceBranch,
+} from '@/lib/calculations/taxiway-criteria'
 
 type TaxiwayLine = {
   id: string
   designator: string
   centerline: LatLon[]
-  standard: 'faa' | 'ufc'
+  standard: TaxiwayStandard
+  tdg?: number | null
+  taxiwayType?: 'taxiway' | 'taxilane'
+  runwayClass?: RunwayClass | null
+  serviceBranch?: ServiceBranch | null
 }
 
 type Props = {
@@ -256,6 +269,64 @@ function getDefaultVisibility(): Record<ToggleKey, boolean> {
   return state
 }
 
+/**
+ * Compute bearing (degrees, 0=N, 90=E) from point A to point B.
+ */
+function bearingBetween(a: LatLon, b: LatLon): number {
+  const dLon = ((b.lon - a.lon) * Math.PI) / 180
+  const lat1 = (a.lat * Math.PI) / 180
+  const lat2 = (b.lat * Math.PI) / 180
+  const y = Math.sin(dLon) * Math.cos(lat2)
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon)
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360
+}
+
+/**
+ * Generate a buffer polygon around a polyline centerline at a given half-width (ft).
+ * Returns [lng, lat][] forming a closed polygon.
+ */
+function generateCenterlineBuffer(centerline: LatLon[], halfWidthFt: number): [number, number][] {
+  if (centerline.length < 2 || halfWidthFt <= 0) return []
+
+  const left: LatLon[] = []
+  const right: LatLon[] = []
+
+  for (let i = 0; i < centerline.length; i++) {
+    const pt = centerline[i]
+    let bearing: number
+
+    if (i === 0) {
+      bearing = bearingBetween(centerline[0], centerline[1])
+    } else if (i === centerline.length - 1) {
+      bearing = bearingBetween(centerline[i - 1], centerline[i])
+    } else {
+      // Average bearing at interior vertices for smooth corners
+      const b1 = bearingBetween(centerline[i - 1], centerline[i])
+      const b2 = bearingBetween(centerline[i], centerline[i + 1])
+      // Average via unit vectors to handle wrap-around
+      const r1 = (b1 * Math.PI) / 180
+      const r2 = (b2 * Math.PI) / 180
+      bearing = (Math.atan2(
+        (Math.sin(r1) + Math.sin(r2)) / 2,
+        (Math.cos(r1) + Math.cos(r2)) / 2,
+      ) * 180) / Math.PI
+      bearing = (bearing + 360) % 360
+    }
+
+    // Perpendicular offsets: left = bearing - 90, right = bearing + 90
+    left.push(offsetPoint(pt, (bearing - 90 + 360) % 360, halfWidthFt))
+    right.push(offsetPoint(pt, (bearing + 90) % 360, halfWidthFt))
+  }
+
+  // Close polygon: left forward, then right reversed, then close
+  const coords: [number, number][] = [
+    ...left.map(p => [p.lon, p.lat] as [number, number]),
+    ...right.reverse().map(p => [p.lon, p.lat] as [number, number]),
+  ]
+  coords.push(coords[0]) // close ring
+  return coords
+}
+
 export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtPoint, flyToPoint, taxiways = [] }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
@@ -468,67 +539,177 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
     }
   }, [handleClick, mapLoaded])
 
-  // Render taxiway centerlines
+  // Render taxiway clearance envelopes
   useEffect(() => {
     const m = map.current
     if (!m || !mapLoaded) return
 
     // Clean up previous taxiway layers
-    if (m.getLayer('taxiway-labels')) m.removeLayer('taxiway-labels')
-    if (m.getLayer('taxiway-lines')) m.removeLayer('taxiway-lines')
+    const cleanIds = [
+      'taxiway-labels', 'taxiway-lines',
+      'taxiway-ofa-fill', 'taxiway-ofa-line',
+      'taxiway-safety-fill', 'taxiway-safety-line',
+      'taxiway-centerlines-line',
+    ]
+    for (const id of cleanIds) { if (m.getLayer(id)) m.removeLayer(id) }
     if (m.getSource('taxiway-centerlines')) m.removeSource('taxiway-centerlines')
+    if (m.getSource('taxiway-ofa')) m.removeSource('taxiway-ofa')
+    if (m.getSource('taxiway-safety')) m.removeSource('taxiway-safety')
 
     if (taxiways.length === 0) return
 
-    const features: GeoJSON.Feature[] = taxiways
-      .filter(tw => tw.centerline.length >= 2)
-      .map(tw => ({
+    const ofaFeatures: GeoJSON.Feature[] = []
+    const safetyFeatures: GeoJSON.Feature[] = []
+    const centerlineFeatures: GeoJSON.Feature[] = []
+
+    for (const tw of taxiways) {
+      if (tw.centerline.length < 2) continue
+
+      const config = {
+        standard: tw.standard,
+        tdg: tw.tdg,
+        taxiwayType: tw.taxiwayType,
+        runwayClass: tw.runwayClass,
+        serviceBranch: tw.serviceBranch,
+      }
+
+      // OFA / Clearance Line envelope
+      const ofaHalf = getClearanceHalfWidth(config)
+      const ofaCoords = generateCenterlineBuffer(tw.centerline, ofaHalf)
+      if (ofaCoords.length > 0) {
+        ofaFeatures.push({
+          type: 'Feature',
+          properties: {
+            designator: tw.designator,
+            label: `${tw.designator} — ${tw.standard === 'ufc' ? 'Clearance Line' : 'OFA'} (${ofaHalf * 2}ft)`,
+          },
+          geometry: { type: 'Polygon', coordinates: [ofaCoords] },
+        })
+      }
+
+      // Safety area (FAA only)
+      const safetyHalf = getSafetyHalfWidth(config)
+      if (safetyHalf) {
+        const safetyCoords = generateCenterlineBuffer(tw.centerline, safetyHalf)
+        if (safetyCoords.length > 0) {
+          safetyFeatures.push({
+            type: 'Feature',
+            properties: {
+              designator: tw.designator,
+              label: `${tw.designator} — Safety Area (${safetyHalf * 2}ft)`,
+            },
+            geometry: { type: 'Polygon', coordinates: [safetyCoords] },
+          })
+        }
+      }
+
+      // Centerline for reference
+      centerlineFeatures.push({
         type: 'Feature',
-        properties: { designator: tw.designator, standard: tw.standard },
+        properties: { designator: tw.designator },
         geometry: {
           type: 'LineString',
           coordinates: tw.centerline.map(c => [c.lon, c.lat]),
         },
-      }))
+      })
+    }
 
-    if (features.length === 0) return
+    // OFA / Clearance Line polygons
+    if (ofaFeatures.length > 0) {
+      m.addSource('taxiway-ofa', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: ofaFeatures },
+      })
+      m.addLayer({
+        id: 'taxiway-ofa-fill',
+        type: 'fill',
+        source: 'taxiway-ofa',
+        layout: { visibility: showTaxiways ? 'visible' : 'none' },
+        paint: {
+          'fill-color': TAXIWAY_SURFACES.taxiway_ofa.color,
+          'fill-opacity': 0.12,
+        },
+      })
+      m.addLayer({
+        id: 'taxiway-ofa-line',
+        type: 'line',
+        source: 'taxiway-ofa',
+        layout: { visibility: showTaxiways ? 'visible' : 'none' },
+        paint: {
+          'line-color': TAXIWAY_SURFACES.taxiway_ofa.color,
+          'line-width': 1.5,
+          'line-opacity': 0.6,
+        },
+      })
+    }
 
-    m.addSource('taxiway-centerlines', {
-      type: 'geojson',
-      data: { type: 'FeatureCollection', features },
-    })
+    // Safety area polygons (FAA only — inner envelope)
+    if (safetyFeatures.length > 0) {
+      m.addSource('taxiway-safety', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: safetyFeatures },
+      })
+      m.addLayer({
+        id: 'taxiway-safety-fill',
+        type: 'fill',
+        source: 'taxiway-safety',
+        layout: { visibility: showTaxiways ? 'visible' : 'none' },
+        paint: {
+          'fill-color': TAXIWAY_SURFACES.taxiway_safety_area.color,
+          'fill-opacity': 0.15,
+        },
+      })
+      m.addLayer({
+        id: 'taxiway-safety-line',
+        type: 'line',
+        source: 'taxiway-safety',
+        layout: { visibility: showTaxiways ? 'visible' : 'none' },
+        paint: {
+          'line-color': TAXIWAY_SURFACES.taxiway_safety_area.color,
+          'line-width': 1,
+          'line-dasharray': [4, 3],
+          'line-opacity': 0.5,
+        },
+      })
+    }
 
-    m.addLayer({
-      id: 'taxiway-lines',
-      type: 'line',
-      source: 'taxiway-centerlines',
-      layout: { visibility: showTaxiways ? 'visible' : 'none' },
-      paint: {
-        'line-color': '#38BDF8',
-        'line-width': 2,
-        'line-dasharray': [4, 3],
-        'line-opacity': 0.8,
-      },
-    })
-
-    m.addLayer({
-      id: 'taxiway-labels',
-      type: 'symbol',
-      source: 'taxiway-centerlines',
-      layout: {
-        visibility: showTaxiways ? 'visible' : 'none',
-        'symbol-placement': 'line-center',
-        'text-field': ['get', 'designator'],
-        'text-size': 12,
-        'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
-        'text-allow-overlap': true,
-      },
-      paint: {
-        'text-color': '#38BDF8',
-        'text-halo-color': '#000',
-        'text-halo-width': 1.5,
-      },
-    })
+    // Dashed centerline + designator label
+    if (centerlineFeatures.length > 0) {
+      m.addSource('taxiway-centerlines', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: centerlineFeatures },
+      })
+      m.addLayer({
+        id: 'taxiway-centerlines-line',
+        type: 'line',
+        source: 'taxiway-centerlines',
+        layout: { visibility: showTaxiways ? 'visible' : 'none' },
+        paint: {
+          'line-color': '#FFFFFF',
+          'line-width': 1,
+          'line-dasharray': [3, 3],
+          'line-opacity': 0.5,
+        },
+      })
+      m.addLayer({
+        id: 'taxiway-labels',
+        type: 'symbol',
+        source: 'taxiway-centerlines',
+        layout: {
+          visibility: showTaxiways ? 'visible' : 'none',
+          'symbol-placement': 'line-center',
+          'text-field': ['get', 'designator'],
+          'text-size': 12,
+          'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+          'text-allow-overlap': true,
+        },
+        paint: {
+          'text-color': '#F59E0B',
+          'text-halo-color': '#000',
+          'text-halo-width': 1.5,
+        },
+      })
+    }
   }, [taxiways, mapLoaded, showTaxiways])
 
   // Sync taxiway visibility
@@ -536,8 +717,12 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
     const m = map.current
     if (!m || !mapLoaded) return
     const vis = showTaxiways ? 'visible' : 'none'
-    if (m.getLayer('taxiway-lines')) m.setLayoutProperty('taxiway-lines', 'visibility', vis)
-    if (m.getLayer('taxiway-labels')) m.setLayoutProperty('taxiway-labels', 'visibility', vis)
+    const ids = [
+      'taxiway-ofa-fill', 'taxiway-ofa-line',
+      'taxiway-safety-fill', 'taxiway-safety-line',
+      'taxiway-centerlines-line', 'taxiway-labels',
+    ]
+    for (const id of ids) { if (m.getLayer(id)) m.setLayoutProperty(id, 'visibility', vis) }
   }, [showTaxiways, mapLoaded])
 
   // Sync surface-type toggle visibility to Mapbox layers
@@ -775,7 +960,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
                 ))}
               </div>
             )}
-            {/* Taxiway toggle */}
+            {/* Taxiway clearance envelope toggle */}
             {taxiways.length > 0 && (
               <div style={{ paddingBottom: 5, marginBottom: 5, borderBottom: '1px solid rgba(148,163,184,0.15)' }}>
                 <div
@@ -788,10 +973,10 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
                 >
                   <span style={{
                     width: 10, height: 10, borderRadius: 2,
-                    background: showTaxiways ? '#38BDF8' : 'transparent',
-                    border: '1.5px solid #38BDF8', flexShrink: 0,
+                    background: showTaxiways ? TAXIWAY_SURFACES.taxiway_ofa.color : 'transparent',
+                    border: `1.5px solid ${TAXIWAY_SURFACES.taxiway_ofa.color}`, flexShrink: 0,
                   }} />
-                  <span style={{ color: '#CBD5E1' }}>Taxiways ({taxiways.length})</span>
+                  <span style={{ color: '#CBD5E1' }}>Taxiway Clearance ({taxiways.length})</span>
                 </div>
               </div>
             )}

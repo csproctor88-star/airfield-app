@@ -1191,7 +1191,7 @@ export default function InspectionsPage() {
               feature_id: fid,
               event_type: 'reported',
               discrepancy_id: info?.discrepancy_id || null,
-              notes: info?.comment ? `From lighting inspection: ${info.comment.slice(0, 200)}` : 'Reported via lighting inspection',
+              notes: info?.comment ? `INOP — ${info.comment.slice(0, 200)}` : 'INOP — Reported during lighting inspection',
             })
           }
 

@@ -164,7 +164,7 @@ export default function NewDiscrepancyPage() {
           feature_id: fid,
           event_type: 'reported',
           discrepancy_id: created.id,
-          notes: `From discrepancy: ${formData.title}`,
+          notes: `INOP — ${formData.title}`,
         })
       }
       toast.success(`${selectedFeatureIds.length} feature${selectedFeatureIds.length !== 1 ? 's' : ''} marked inoperative`)

@@ -15,6 +15,7 @@ import {
 } from '@/lib/constants'
 import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
+import { fetchWeatherWithFormFields } from '@/lib/weather'
 import { SpeciesPicker } from './species-picker'
 
 const LocationPickerMap = dynamic(
@@ -70,7 +71,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
     })
   }, [])
 
-  // Auto-detect time of day (skip when editing)
+  // Auto-detect time of day and weather (skip when editing)
   useEffect(() => {
     if (isEdit) return
     const hour = new Date().getHours()
@@ -78,6 +79,13 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
     else if (hour >= 7 && hour < 17) setTimeOfDay('day')
     else if (hour >= 17 && hour < 19) setTimeOfDay('dusk')
     else setTimeOfDay('night')
+
+    // Auto-fill weather from current conditions
+    fetchWeatherWithFormFields().then(result => {
+      if (!result) return
+      setSkyCondition(result.sky_condition)
+      setPrecipitation(result.precipitation)
+    })
   }, [isEdit])
 
   const handlePointSelected = useCallback((lat: number, lng: number) => {
