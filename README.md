@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, ACSI (annual compliance), NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.20.0 | **Build:** Clean | **50 routes** | **245 source files** | **106 migrations**
+**Version:** 2.21.0 | **Build:** Clean | **50 routes** | **245 source files** | **115 migrations**
 
 ## Tech Stack
 
@@ -54,7 +54,7 @@ RESEND_API_KEY=[resend-api-key]
 Apply the schema and migrations to a Supabase project:
 
 1. Run `supabase/schema.sql` to create the base tables and sequences
-2. Apply the 106 migrations in order from `supabase/migrations/`
+2. Apply the 115 migrations in order from `supabase/migrations/`
 
 See [docs/BASE-ONBOARDING.md](./docs/BASE-ONBOARDING.md) for adding new installations.
 
@@ -126,10 +126,11 @@ Five report types with PDF export and email delivery:
 UFC 3-260-01 Class B imaginary surface analysis with multi-runway support:
 - 10 surfaces: Primary, Approach-Departure, Transitional, Inner Horizontal, Conical, Outer Horizontal, Clear Zone, Graded Area, APZ I, APZ II
 - Interactive Mapbox map with color-coded surface overlays and per-runway toggles
+- **Taxiway clearance envelopes** — Full OFA/Clearance Line outer envelope and Safety Area inner envelope polygons rendered on the map (FAA TDG-based and UFC Class A/B criteria)
 - Evaluates against ALL base runways simultaneously
 - Geodesic calculations (Haversine, cross-track/along-track), Open-Elevation API for MSL heights
 - Multiple photos per evaluation, violation detection with UFC table references
-- Responsive map with expand/collapse toggle
+- Fullscreen map mode with toolbar toggle and spacebar shortcut
 - **History map view** with List/Map toggle showing all evaluations on a satellite map
 
 ### Aircraft Database (`/aircraft`)
@@ -161,7 +162,7 @@ Interactive Mapbox satellite map for digitizing and managing all airfield lighti
 
 **Legend System** — Three-tier grouped legend: Type legend (4 collapsible groups), Systems legend (auto-grouped by runway/taxiway/area/misc from Base Configuration), per-layer visibility toggles, Show All/Hide All, feature count badges. "Show outages only" and "Color by health" toggles.
 
-**Outage Tracking** — DAFMAN 13-204v2 Table A3.1 compliance engine with 23 lighting system types, configurable outage thresholds per component (percentage, count, consecutive), spatial adjacency violation detection, and 4-tier health alerts (green/yellow/red/black). System Health Panel with per-system/per-component outage bars, DAFMAN-prescribed required actions, and outage history timeline. Auto-creates discrepancies when features are marked inoperative; bidirectional resolution closes linked discrepancies with user attribution. Map health rings visualize system degradation on operational features. Daily ops report includes "VISUAL NAVAID OUTAGES" section.
+**Outage Tracking** — DAFMAN 13-204v2 Table A3.1 compliance engine with 23 lighting system types, configurable outage thresholds per component (percentage, count, consecutive), spatial adjacency violation detection, and 4-tier health alerts (green/yellow/red/black). **Bar-level analysis**: lights linked via `bar_group_id` enable DAFMAN bar-out rule (3+ inop lamps = bar inoperative); percentage thresholds use individual lights, count/spatial thresholds use bar-level counts. System Health Panel with per-system status, bar-level outage detail, DAFMAN-prescribed required actions, and outage history timeline. Auto-creates discrepancies when features are marked inoperative with structured descriptions and DAFMAN bar-out notes; bidirectional resolution closes linked discrepancies with user attribution. Map health rings visualize system degradation on operational features. Daily ops report includes "VISUAL NAVAID OUTAGES" section.
 
 **Audit Mode** — Feature verification workflow with audit panel (1,413 lines): filter by component, bulk label editing with sequential numbering, bulk assign/delete per component, fixture ID display. Designed for systematic field verification of digitized features.
 
@@ -169,7 +170,7 @@ Interactive Mapbox satellite map for digitizing and managing all airfield lighti
 
 **Fixture ID System** — Unique identifiers for all infrastructure features, displayed prominently in popups and audit panels for field cross-referencing.
 
-**Bulk Operations** — Box select for shift, re-layer, delete, free move, component assignment, and type change. GPS tracking for drive-around use. Supabase pagination handles 1,000+ features.
+**Bulk Operations** — Box select for shift, re-layer, delete, free move, component assignment, type change, and Link as Bar. Audit panel includes Bar Groups section for bulk fixture ID renaming of linked bars. GPS tracking for drive-around use. Supabase pagination handles 1,000+ features.
 
 ### QRC — Quick Reaction Checklists (`/qrc`)
 Interactive execution of 25 digitized Quick Reaction Checklists for airfield emergencies and operational events (IFE, aircraft mishap, bird strike, tornado warning, etc.).
@@ -274,7 +275,7 @@ airfield-app/
 │   └── supabase/                         # Client, server, types, CRUD modules (23 files)
 ├── supabase/
 │   ├── schema.sql                        # Full database schema
-│   ├── migrations/                       # 103 migration files
+│   ├── migrations/                       # 115 migration files
 │   └── functions/                        # Edge functions (PDF text extraction)
 ├── middleware.ts                          # Auth guard + demo mode bypass
 ├── public/                               # Static assets, PWA manifest, aircraft images
@@ -325,7 +326,7 @@ airfield-app/
 | `base_arff_aircraft` | ARFF aircraft per base |
 | `qrc_templates` | Admin-configured QRC definitions per base (steps, SCN fields, review tracking) |
 | `qrc_executions` | QRC execution instances with JSONB step responses and SCN data |
-| `infrastructure_features` | Airfield lighting, signage, and miscellaneous features with coordinates, rotation, status, and layer assignment |
+| `infrastructure_features` | Airfield lighting, signage, and miscellaneous features with coordinates, rotation, status, layer assignment, and `bar_group_id` for approach light bar grouping |
 | `lighting_systems` | DAFMAN-defined lighting system instances per base (ALSF-1, SALS, per-taxiway edge lights, etc.) |
 | `lighting_system_components` | Sub-components within systems with DAFMAN Table A3.1 outage thresholds and required actions |
 | `outage_events` | Structured outage history log (reported/resolved events per feature) |
@@ -351,8 +352,8 @@ airfield-app/
 | Item | Priority | Notes |
 |------|----------|-------|
 | No test suite | High | No unit or integration tests |
-| 119 `as any` casts | Medium | Across 28 files — Mapbox layer expressions (28), Supabase row inserts (62), jsPDF hooks (11), misc (18). Regenerate Supabase types to eliminate ~50% |
-| 49 files > 500 lines | Low | Largest: `infrastructure/page.tsx` (3,980), `base-setup/page.tsx` (2,260), `inspections/page.tsx` (2,296) |
+| 150 `as any` casts | Medium | Across 36 files — Mapbox layer expressions (~28), Supabase row inserts (~70), jsPDF hooks (~11), misc (~41). Regenerate Supabase types to eliminate ~50% |
+| 58 files > 500 lines | Low | Largest: `infrastructure/page.tsx` (4,079), `parking/page.tsx` (3,267), `inspections/page.tsx` (2,296), `base-setup/page.tsx` (2,263) |
 | Map init duplication | Low | 6 Mapbox components share similar init logic |
 | PDF boilerplate duplication | Low | 12 PDF generators share similar header/footer/photo helper patterns |
 
@@ -360,7 +361,7 @@ airfield-app/
 
 **Build**: TypeScript compiles clean (`npm run build` passes with zero errors)
 
-**Complete modules**: Dashboard (Supabase Realtime push + installation switcher + presence tracking + KPI badges), Airfield Status (inline personnel + construction/misc), Discrepancies (COP map + individual PDF export + linked NAVAID cards), Airfield Checks (7 types + cross-device drafts), Daily Inspections (multi-discrepancy + per-issue photos + reopening), ACSI (annual compliance with PDF/Excel export), NOTAMs (live FAA feed + expiry alerts), Obstruction Evaluations (UFC 3-260-01 + interactive map), References (70 refs + My Documents + offline caching), Reports (4 types + Events Log + QRC details + NAVAID outages in daily ops PDF), Aircraft Database (200+ aircraft + ACN/PCN), Waivers (full lifecycle with annual review + attachment management + PDF/Excel export), QRC (25 Quick Reaction Checklists + interactive execution + dashboard dialog), Shift Checklist (per-shift tasks + timezone-aware dates + dashboard dialog), Airfield Visual NAVAIDs (22 feature types + custom icons + bar placement + GPS tracking + DAFMAN 13-204v2 outage compliance engine + system health panel + outage timeline + map health rings), Settings (Base Setup + Templates + Shift Checklist config + QRC Templates + Lighting Systems + Default PDF Email), User Management (invite/edit/delete cascade + email privacy), Events Log (manual entries + edit/delete + activity templates + Excel export), All Inspections hub, Email PDF (all 11 export pages), More hub, Personnel on Airfield
+**Complete modules**: Dashboard (Supabase Realtime push + installation switcher + presence tracking + KPI badges), Airfield Status (inline personnel + construction/misc), Discrepancies (COP map + individual PDF export + linked NAVAID cards), Airfield Checks (7 types + cross-device drafts), Daily Inspections (multi-discrepancy + per-issue photos + reopening), ACSI (annual compliance with PDF/Excel export), NOTAMs (live FAA feed + expiry alerts), Obstruction Evaluations (UFC 3-260-01 + interactive map + taxiway clearance envelopes), References (70 refs + My Documents + offline caching), Reports (5 types + Events Log + QRC details + NAVAID outages in daily ops PDF), Aircraft Database (200+ aircraft + ACN/PCN), Waivers (full lifecycle with annual review + attachment management + PDF/Excel export), QRC (25 Quick Reaction Checklists + interactive execution + dashboard dialog), Shift Checklist (per-shift tasks + timezone-aware dates + dashboard dialog), Airfield Visual NAVAIDs (22 feature types + custom icons + bar placement + bar group linkage + DAFMAN bar-out rule + GPS tracking + DAFMAN 13-204v2 outage compliance engine + system health panel + outage timeline + map health rings), Wildlife (sightings + strikes + weather auto-fill), Settings (Base Setup + Templates + Shift Checklist config + QRC Templates + Lighting Systems + Default PDF Email), User Management (invite/edit/delete cascade + email privacy), Events Log (manual entries + edit/delete + activity templates + Excel export), All Inspections hub, Email PDF (all 11 export pages), More hub, Personnel on Airfield
 
 See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 

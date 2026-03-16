@@ -8,8 +8,52 @@ All notable changes to Glidepath.
 - METAR weather API integration (aviationweather.gov)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~119 `as any` casts
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~150 `as any` casts
 - Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 12 PDF generators
+
+---
+
+## [2.21.0] — 2026-03-15
+
+### Features — Obstruction Map Enhancements
+- **Taxiway clearance envelopes** — Obstruction evaluation map now renders full clearance envelope polygons (OFA/Clearance Line outer, Safety Area inner for FAA) instead of dashed centerlines. `generateCenterlineBuffer()` with perpendicular vertex offset and averaged interior bearings for smooth corners
+- **Taxiway data enrichment** — Obstruction map receives TDG, taxiway type, runway class, and service branch for accurate clearance width calculations
+- **Fullscreen map mode** — Toggle fullscreen on obstruction and parking maps with toolbar button and spacebar shortcut
+
+### Features — DAFMAN Bar-Level Outage Analysis
+- **Bar group linkage** (`bar_group_id`) — New column on `infrastructure_features` for grouping lights that form a single physical bar. Used by outage engine for spatial ordering and bar-level threshold checks
+- **3+ lamps = bar out** — DAFMAN 13-204v2 rule: a 5-lamp bar is considered inoperative when 3+ lights are out. `analyzeBarOutages()` function with `BAR_INOP_THRESHOLD = 3`
+- **Dual threshold evaluation** — Percentage threshold (10%) uses individual light counts; count threshold (3 barrettes) and consecutive/adjacent checks use bar-level counts
+- **Link as Bar UI** — Box select lights on infrastructure map, click "Link as Bar" to assign shared `bar_group_id`. Selection panel repositioned to top-anchored with scroll overflow
+- **Bar group indicator** — Feature edit popup shows cyan bar group ID when linked
+- **Auto-group bar lights** — Audit panel button clusters ungrouped bar-type lights by spatial proximity (~15ft threshold)
+- **Bulk rename linked bars** — New "Bar Groups" collapsible section in audit panel lists all bar groups with light count, inop status, and sequential fixture ID rename tool
+- **Bar-level health display** — System health panel expanded view shows bars out / total bars per component when bar groups exist
+- **DAFMAN bar-out note** — Discrepancy descriptions include "Bar considered INOPERATIVE per DAFMAN 13-204v2 (N/M lights out)" when applicable
+
+### Features — INOP Description Cleanup
+- **Structured discrepancy format** — INOP discrepancies use structured fields (Status, Component, Location) instead of unformatted text. Consistent across infrastructure map, lighting inspections, and new discrepancy page
+- **Clean events log entries** — Activity log no longer duplicates title/description when metadata already contains formatted details. Removed redundant location suffix
+- **Display name fix** — `buildFeatureDisplayName()` excludes fixture ID codes for non-sign features; only sign types include label text in display names
+- **Feature type formatting** — Events log uses `formatFeatureType()` fallback instead of raw DB values with underscores
+
+### Features — Wildlife Weather Auto-Fill
+- **Weather-to-form mapping** — `weatherToFormFields()` maps Open-Meteo weather codes (0-99) to form values: sky condition (clear/some_cloud/overcast) and precipitation (none/fog/rain/snow)
+- **Auto-populate on mount** — Wildlife sighting and strike forms auto-fill sky condition and precipitation from current weather data (skipped in edit mode)
+
+### Features — Parking Module Improvements
+- **Touch support** — Added touch event handlers for aircraft and obstacle drag on parking map
+- **Toolbar ruler button** — Quick-access measurement tool in parking map toolbar
+
+### Bug Fixes
+- **Outage percentage threshold** — Fixed to use individual light counts (not bar ratios) per DAFMAN 10% rule
+- **Bar group GeoJSON** — Added `bar_group_id` to feature GeoJSON properties (was missing, causing popup indicator to never render)
+- **Fullscreen exit** — Fixed escape key handler for fullscreen map mode
+- **Selection panel overflow** — Repositioned from bottom-anchored to top-anchored with `maxHeight` and scroll to prevent off-screen overflow
+
+### Database
+- **1 new migration** (`2026031505`) — Added `bar_group_id UUID DEFAULT NULL` column and partial index on `infrastructure_features`
+- **Total migrations**: 115
 
 ---
 
