@@ -22,6 +22,7 @@ import {
   bulkUpdateFixtureIds,
   bulkDeleteFeatures,
   bulkAssignComponentByIds,
+  bulkAssignBarGroup,
   bulkUpdateFeatureType,
   autoGroupBarLights,
   buildFeatureDisplayName,
@@ -1669,6 +1670,23 @@ export default function InfrastructureMapPage() {
     setRelayering(false)
   }, [installationId, relayering, selectedIds, relayerName])
 
+  // Link selected features as a bar group
+  const [linkingBar, setLinkingBar] = useState(false)
+  const handleLinkAsBar = useCallback(async () => {
+    if (!installationId || linkingBar || selectedIds.size === 0) return
+    setLinkingBar(true)
+    const barGroupId = crypto.randomUUID()
+    const count = await bulkAssignBarGroup(Array.from(selectedIds), barGroupId)
+    if (count > 0) {
+      const refreshed = await fetchInfrastructureFeatures(installationId)
+      setDbFeatures(refreshed)
+      toast.success(`Linked ${count} lights as a bar`)
+    } else {
+      toast.error('Failed to link bar')
+    }
+    setLinkingBar(false)
+  }, [installationId, linkingBar, selectedIds])
+
   // Assign selected features to a component
   const [assignCompId, setAssignCompId] = useState('')
   const [assigningSelected, setAssigningSelected] = useState(false)
@@ -3082,7 +3100,7 @@ export default function InfrastructureMapPage() {
         {editMode && boxSelectActive && selectedIds.size > 0 && !draggingId && (
           <div style={{
             position: 'absolute',
-            bottom: 70,
+            top: 60,
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 11,
@@ -3093,6 +3111,8 @@ export default function InfrastructureMapPage() {
             backdropFilter: 'blur(8px)',
             minWidth: 280,
             maxWidth: 'calc(100% - 28px)',
+            maxHeight: 'calc(100vh - 140px)',
+            overflowY: 'auto',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#A855F7' }}>
@@ -3238,6 +3258,31 @@ export default function InfrastructureMapPage() {
                 >
                   {assigningSelected ? 'Saving...' : 'Apply'}
                 </button>
+              </div>
+            </div>
+
+            {/* Link as bar */}
+            <div style={{ borderTop: '1px solid rgba(148,163,184,0.15)', paddingTop: 10, marginTop: 10 }}>
+              <button
+                onClick={handleLinkAsBar}
+                disabled={linkingBar || selectedIds.size < 2}
+                style={{
+                  width: '100%',
+                  padding: '7px 0',
+                  borderRadius: 6,
+                  border: '1px solid rgba(56,189,248,0.3)',
+                  background: selectedIds.size >= 2 ? 'rgba(56,189,248,0.15)' : 'transparent',
+                  color: selectedIds.size >= 2 ? '#38BDF8' : '#64748B',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: selectedIds.size >= 2 ? 'pointer' : 'default',
+                  opacity: linkingBar ? 0.6 : 1,
+                }}
+              >
+                {linkingBar ? 'Linking...' : `Link ${selectedIds.size} as Bar`}
+              </button>
+              <div style={{ fontSize: 10, color: '#64748B', marginTop: 3 }}>
+                Groups selected lights so outage tracking knows they belong to the same bar position
               </div>
             </div>
 

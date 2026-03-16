@@ -12,6 +12,10 @@ export type OutageStatus = {
   totalCount: number
   inoperativeCount: number
   outagePct: number
+  /** Number of bars with 3+ inop lights (null if no bar groups) */
+  barsOut: number | null
+  /** Total number of bars (null if no bar groups) */
+  totalBars: number | null
   allowablePct: number | null
   allowableCount: number | null
   allowableConsecutive: number | null
@@ -204,6 +208,73 @@ export function detectConsecutiveViolation(
   return false
 }
 
+// ── Bar-Level Analysis ──
+
+/** DAFMAN 13-204v2: A 5-lamp bar is considered out when 3+ lamps are inoperative */
+const BAR_INOP_THRESHOLD = 3
+
+/**
+ * Analyze bar groups within a set of features.
+ * Returns bar-level outage counts: how many bars have 3+ inop lights.
+ * For components without bar groups, returns null (use individual light counts).
+ */
+function analyzeBarOutages(features: InfrastructureFeature[]): {
+  totalBars: number
+  barsOut: number
+  /** Synthetic features representing bars (one per group) for consecutive/adjacent checks */
+  barUnits: InfrastructureFeature[]
+} | null {
+  const groups = new Map<string, InfrastructureFeature[]>()
+  const ungrouped: InfrastructureFeature[] = []
+
+  for (const f of features) {
+    if (f.bar_group_id) {
+      const g = groups.get(f.bar_group_id) || []
+      g.push(f)
+      groups.set(f.bar_group_id, g)
+    } else {
+      ungrouped.push(f)
+    }
+  }
+
+  // If no bar groups exist, return null — use standard individual light counting
+  if (groups.size === 0) return null
+
+  const barUnits: InfrastructureFeature[] = []
+  let barsOut = 0
+
+  for (const [groupId, lights] of Array.from(groups.entries())) {
+    const inopCount = lights.filter((l) => l.status === 'inoperative').length
+    const isBarOut = inopCount >= BAR_INOP_THRESHOLD
+
+    if (isBarOut) barsOut++
+
+    // Centroid for spatial ordering
+    const avgLat = lights.reduce((s, l) => s + l.latitude, 0) / lights.length
+    const avgLon = lights.reduce((s, l) => s + l.longitude, 0) / lights.length
+
+    barUnits.push({
+      ...lights[0],
+      id: groupId,
+      latitude: avgLat,
+      longitude: avgLon,
+      status: isBarOut ? 'inoperative' : 'operational',
+    })
+  }
+
+  // Ungrouped lights are each treated as individual units
+  for (const f of ungrouped) {
+    barUnits.push(f)
+    if (f.status === 'inoperative') barsOut++
+  }
+
+  return {
+    totalBars: groups.size + ungrouped.length,
+    barsOut,
+    barUnits,
+  }
+}
+
 // ── Component Outage Calculation ──
 
 export function calculateComponentOutage(
@@ -215,33 +286,47 @@ export function calculateComponentOutage(
   const componentFeatures = overrideFeatures || features.filter((f) => f.system_component_id === component.id)
   const inoperativeCount = componentFeatures.filter((f) => f.status === 'inoperative').length
   const totalCount = componentFeatures.length
-  const outagePct = totalCount > 0 ? (inoperativeCount / totalCount) * 100 : 0
+
+  // Bar-level analysis: if features are grouped into bars, use bar-level counts
+  // for allowable_outage_count checks (DAFMAN: "3 barrettes out" means 3 bars with 3+ inop lights)
+  const barAnalysis = analyzeBarOutages(componentFeatures)
+  const barsOut = barAnalysis?.barsOut ?? null
+  const totalBars = barAnalysis?.totalBars ?? null
+
+  // For percentage threshold: always use individual light counts (DAFMAN 10% = 10% of total lights)
+  const effectiveOutagePct = totalCount > 0 ? (inoperativeCount / totalCount) * 100 : 0
+
+  // For count threshold: use bars-out count if bars exist, otherwise individual inop count
+  const effectiveOutageCount = barAnalysis ? barAnalysis.barsOut : inoperativeCount
+
+  // For adjacent/consecutive: use bar units if bars exist, otherwise individual features
+  const spatialUnits = barAnalysis?.barUnits ?? componentFeatures
 
   const hasAdjacentViolation = component.allowable_no_adjacent
-    ? detectAdjacentViolation(componentFeatures)
+    ? detectAdjacentViolation(spatialUnits)
     : false
 
   const hasConsecutiveViolation =
     component.allowable_outage_consecutive !== null
-      ? detectConsecutiveViolation(componentFeatures, component.allowable_outage_consecutive)
+      ? detectConsecutiveViolation(spatialUnits, component.allowable_outage_consecutive)
       : false
 
   const isExceeded =
     (component.is_zero_tolerance && inoperativeCount > 0) ||
-    (component.allowable_outage_pct !== null && outagePct > component.allowable_outage_pct) ||
+    (component.allowable_outage_pct !== null && effectiveOutagePct > component.allowable_outage_pct) ||
     (component.allowable_outage_count !== null &&
-      inoperativeCount > component.allowable_outage_count) ||
+      effectiveOutageCount > component.allowable_outage_count) ||
     (component.allowable_no_adjacent && hasAdjacentViolation) ||
     (component.allowable_outage_consecutive !== null && hasConsecutiveViolation)
 
   const isApproaching =
     !isExceeded &&
     ((component.allowable_outage_pct !== null &&
-      outagePct >= component.allowable_outage_pct - 5 &&
-      inoperativeCount > 0) ||
+      effectiveOutagePct >= component.allowable_outage_pct - 5 &&
+      effectiveOutageCount > 0) ||
       (component.allowable_outage_count !== null &&
-        inoperativeCount >= component.allowable_outage_count &&
-        inoperativeCount > 0))
+        effectiveOutageCount >= component.allowable_outage_count &&
+        effectiveOutageCount > 0))
 
   return {
     componentId: component.id,
@@ -249,7 +334,9 @@ export function calculateComponentOutage(
     componentType: component.component_type,
     totalCount,
     inoperativeCount,
-    outagePct: Math.round(outagePct * 10) / 10,
+    outagePct: Math.round(effectiveOutagePct * 10) / 10,
+    barsOut,
+    totalBars,
     allowablePct: component.allowable_outage_pct,
     allowableCount: component.allowable_outage_count,
     allowableConsecutive: component.allowable_outage_consecutive,
