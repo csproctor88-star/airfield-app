@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { fetchWildlifeAnalytics, fetchStrikes, fetchBwcHistory, fetchHeatmapData } from '@/lib/supabase/wildlife'
+import { fetchWildlifeAnalytics, fetchSightings, fetchStrikes, fetchBwcHistory, fetchHeatmapData } from '@/lib/supabase/wildlife'
 import { formatZuluDateTime } from '@/lib/utils'
 
 interface Options {
@@ -65,8 +65,9 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
   const { baseId, baseName, icao, startDate, endDate, reportMonth, centerLat, centerLng } = options
 
   // Fetch data
-  const [analytics, strikes, bwcHistory, heatmapPoints] = await Promise.all([
+  const [analytics, sightings, strikes, bwcHistory, heatmapPoints] = await Promise.all([
     fetchWildlifeAnalytics(baseId, startDate, endDate),
+    fetchSightings(baseId, { startDate, endDate }).then(r => r.data),
     fetchStrikes(baseId, { startDate, endDate }).then(r => r.data),
     fetchBwcHistory(baseId, startDate, endDate),
     fetchHeatmapData(baseId, startDate, endDate, 'all'),
@@ -235,6 +236,83 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
     })
 
     y = (doc as any).lastAutoTable.finalY + 18
+  }
+
+  // ── Sighting Detail Log ──
+  if (sightings.length > 0) {
+    doc.addPage()
+    y = margin
+
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Sighting Detail Log', margin, y)
+    y += 4
+
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`${sightings.length} sighting${sightings.length !== 1 ? 's' : ''} recorded during report period`, margin, y + 10)
+    y += 22
+
+    for (let i = 0; i < sightings.length; i++) {
+      const s = sightings[i]
+      // Check if we need a new page (estimate ~120pt per sighting block)
+      if (y > 620) { doc.addPage(); y = margin }
+
+      // Sighting header bar
+      doc.setFillColor(16, 185, 129)
+      doc.rect(margin, y - 10, pageWidth - margin * 2, 14, 'F')
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(255)
+      doc.text(`${s.display_id} — ${s.species_common}`, margin + 4, y)
+      doc.setTextColor(0)
+      y += 10
+
+      // Build detail rows
+      const details: string[][] = [
+        ['Date/Time (Z)', formatZuluDateTime(s.observed_at) + 'Z'],
+        ['Species', `${s.species_common}${s.species_scientific ? ` (${s.species_scientific})` : ''}`],
+        ['Group / Size', `${s.species_group ? s.species_group.charAt(0).toUpperCase() + s.species_group.slice(1) : '—'} / ${s.size_category || '—'}`],
+        ['Count Observed', String(s.count_observed)],
+        ['Behavior', s.behavior ? s.behavior.charAt(0).toUpperCase() + s.behavior.slice(1) : '—'],
+        ['Location', s.location_text || '—'],
+        ['Airfield Zone', s.airfield_zone || '—'],
+        ['Coordinates', s.latitude && s.longitude ? `${s.latitude.toFixed(6)}, ${s.longitude.toFixed(6)}` : '—'],
+        ['Time of Day', s.time_of_day ? s.time_of_day.charAt(0).toUpperCase() + s.time_of_day.slice(1) : '—'],
+        ['Sky Condition', s.sky_condition ? s.sky_condition.replace(/_/g, ' ') : '—'],
+        ['Precipitation', s.precipitation ? s.precipitation.replace(/_/g, ' ') : '—'],
+        ['Action Taken', s.action_taken ? s.action_taken.replace(/_/g, ' ') : 'None'],
+      ]
+
+      if (s.action_taken === 'dispersal') {
+        details.push(['Dispersal Method', s.dispersal_method ? s.dispersal_method.replace(/_/g, ' ') : '—'])
+        details.push(['Effective', s.dispersal_effective === true ? 'Yes' : s.dispersal_effective === false ? 'No' : '—'])
+      }
+
+      details.push(['Observed By', s.observed_by || '—'])
+
+      if (s.notes) {
+        details.push(['Notes', s.notes])
+      }
+
+      autoTable(doc, {
+        startY: y,
+        margin: { left: margin, right: margin },
+        body: details,
+        theme: 'plain',
+        bodyStyles: { fontSize: 8, cellPadding: 2 },
+        columnStyles: {
+          0: { fontStyle: 'bold', cellWidth: 110, textColor: [100, 116, 139] },
+        },
+        didParseCell: (data: any) => {
+          if (data.row.index === 0) {
+            data.cell.styles.cellPadding = { top: 4, bottom: 2, left: 2, right: 2 }
+          }
+        },
+      })
+
+      y = (doc as any).lastAutoTable.finalY + 14
+    }
   }
 
   // ── Wildlife Hazard Depiction Map ──
