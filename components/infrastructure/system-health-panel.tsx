@@ -5,6 +5,7 @@ import type { SystemHealth, AlertTier } from '@/lib/outage-rules'
 import { getAlertTier, ALERT_TIER_CONFIG } from '@/lib/outage-rules'
 import type { EnrichedOutageEvent } from '@/lib/supabase/outage-events'
 import { formatZuluDateTime } from '@/lib/utils'
+import { formatFeatureType } from '@/lib/supabase/infrastructure-features'
 
 // ── Category definitions ──
 
@@ -121,14 +122,23 @@ function CategoryCard({ category }: { category: CategorySummary }) {
             const tier = getAlertTier(sys)
             const sysColor = TIER_COLORS[tier]
             return (
-              <div key={sys.systemId} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', fontSize: 'var(--fs-xs)' }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: sysColor, flexShrink: 0 }} />
-                <span style={{ flex: 1, fontWeight: 600, color: 'var(--color-text-1)' }}>{sys.systemName}</span>
-                {sys.inoperativeFeatures > 0 && (
-                  <span style={{ fontVariantNumeric: 'tabular-nums', color: sysColor, fontWeight: 600 }}>
-                    {sys.inoperativeFeatures} inop
-                  </span>
-                )}
+              <div key={sys.systemId} style={{ padding: '3px 0', fontSize: 'var(--fs-xs)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: sysColor, flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontWeight: 600, color: 'var(--color-text-1)' }}>{sys.systemName}</span>
+                  {sys.inoperativeFeatures > 0 && (
+                    <span style={{ fontVariantNumeric: 'tabular-nums', color: sysColor, fontWeight: 600 }}>
+                      {sys.inoperativeFeatures} inop
+                    </span>
+                  )}
+                </div>
+                {/* Show bar-level details for components with bar groups */}
+                {sys.components.filter(c => c.barsOut !== null && c.barsOut > 0).map(c => (
+                  <div key={c.componentId} style={{ marginLeft: 12, marginTop: 2, color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)' }}>
+                    {c.componentLabel}: <span style={{ color: sysColor, fontWeight: 600 }}>{c.barsOut}/{c.totalBars} bars out</span>
+                    {' '}({c.inoperativeCount} lights)
+                  </div>
+                ))}
               </div>
             )
           })}
@@ -267,7 +277,7 @@ export default function SystemHealthPanel({
             <div style={{ padding: '0 12px 10px' }}>
               {outageEvents.map((evt) => {
                 const isResolved = evt.event_type === 'resolved'
-                const label = evt.feature_label || evt.feature_type || 'Unknown feature'
+                const label = evt.feature_label || (evt.feature_type ? formatFeatureType(evt.feature_type) : 'Unknown feature')
                 const name = evt.reporter_rank ? `${evt.reporter_rank} ${evt.reporter_name}` : evt.reporter_name
                 return (
                   <div

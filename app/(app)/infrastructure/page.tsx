@@ -2014,6 +2014,10 @@ export default function InfrastructureMapPage() {
               color:#E2E8F0;font-size:12px;outline:none;
             " />`
             html += `</div>`
+            // Bar group indicator (read-only)
+            if (props.bar_group_id) {
+              html += `<div style="font-size:10px;color:#38BDF8;margin-bottom:6px;">Bar Group: ${(props.bar_group_id as string).slice(0, 8)}…</div>`
+            }
             // Rotation slider with compass
             html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">`
             html += `<div style="flex-shrink:0;"><svg width="32" height="32" viewBox="0 0 32 32">`
