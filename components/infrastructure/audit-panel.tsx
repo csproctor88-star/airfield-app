@@ -381,6 +381,9 @@ export default function AuditPanel({
   const [fixtureIdTarget, setFixtureIdTarget] = useState<string | null>(null) // component ID
   const [generatingAllIds, setGeneratingAllIds] = useState(false)
   const [groupingBars, setGroupingBars] = useState(false)
+  const [barGroupsOpen, setBarGroupsOpen] = useState(false)
+  const [barRenameInputs, setBarRenameInputs] = useState<Record<string, string>>({})
+  const [barRenaming, setBarRenaming] = useState<string | null>(null)
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false)
   const [baLayer, setBaLayer] = useState<string>('')
   const [baType, setBaType] = useState<string>('')
@@ -427,6 +430,29 @@ export default function AuditPanel({
     features.filter(f => BAR_TYPES.has(f.feature_type) && !f.bar_group_id).length,
     [features]
   )
+
+  // Bar groups — group features by bar_group_id
+  const barGroups = useMemo(() => {
+    const groups = new Map<string, InfrastructureFeature[]>()
+    for (const f of features) {
+      if (f.bar_group_id) {
+        const g = groups.get(f.bar_group_id) || []
+        g.push(f)
+        groups.set(f.bar_group_id, g)
+      }
+    }
+    // Sort groups by first feature's fixture ID or layer for consistent ordering
+    return Array.from(groups.entries())
+      .map(([groupId, lights]) => ({
+        groupId,
+        lights,
+        currentBlock: lights[0]?.block || '',
+        layer: lights[0]?.layer || '',
+        featureType: lights[0]?.feature_type || '',
+        componentId: lights[0]?.system_component_id || null,
+      }))
+      .sort((a, b) => (a.currentBlock || a.groupId).localeCompare(b.currentBlock || b.groupId))
+  }, [features])
 
   // Unique layers and types for bulk assign filters
   const uniqueLayers = useMemo(() =>
@@ -733,6 +759,122 @@ export default function AuditPanel({
           </button>
         )}
       </div>
+
+      {/* Bar Groups */}
+      {barGroups.length > 0 && (
+        <div style={{ padding: '0 12px', flexShrink: 0 }}>
+          <button
+            onClick={() => setBarGroupsOpen(prev => !prev)}
+            style={{
+              width: '100%',
+              padding: '6px 0',
+              borderRadius: 6,
+              border: barGroupsOpen ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid rgba(148, 163, 184, 0.15)',
+              background: barGroupsOpen ? 'rgba(56, 189, 248, 0.1)' : 'transparent',
+              color: barGroupsOpen ? '#38BDF8' : '#94A3B8',
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: 'pointer',
+              marginBottom: 6,
+            }}
+          >
+            {barGroupsOpen ? '▾' : '▸'} Bar Groups ({barGroups.length})
+          </button>
+
+          {barGroupsOpen && (
+            <div style={{
+              background: 'rgba(56, 189, 248, 0.05)',
+              border: '1px solid rgba(56, 189, 248, 0.15)',
+              borderRadius: 8,
+              padding: 8,
+              marginBottom: 8,
+              maxHeight: 300,
+              overflowY: 'auto',
+            }}>
+              {barGroups.map((bg) => {
+                const compInfo = bg.componentId ? allComponents.find(c => c.id === bg.componentId) : null
+                const displayType = formatFeatureType(bg.featureType)
+                const inopCount = bg.lights.filter(l => l.status === 'inoperative').length
+                const inputVal = barRenameInputs[bg.groupId] ?? ''
+                const isRenaming = barRenaming === bg.groupId
+
+                return (
+                  <div
+                    key={bg.groupId}
+                    style={{
+                      padding: '6px 8px',
+                      borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
+                      fontSize: 11,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <span style={{
+                        width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                        background: inopCount >= 3 ? '#EF4444' : inopCount > 0 ? '#F59E0B' : '#22C55E',
+                      }} />
+                      <span style={{ fontWeight: 600, color: 'var(--color-text-1)', flex: 1 }}>
+                        {bg.currentBlock || `Bar ${bg.groupId.slice(0, 6)}`}
+                      </span>
+                      <span style={{ color: 'var(--color-text-3)', fontSize: 10 }}>
+                        {bg.lights.length} lights
+                        {inopCount > 0 && <span style={{ color: inopCount >= 3 ? '#EF4444' : '#F59E0B', marginLeft: 4 }}>{inopCount} inop</span>}
+                      </span>
+                    </div>
+                    <div style={{ color: 'var(--color-text-3)', fontSize: 10, marginBottom: 4 }}>
+                      {displayType}{compInfo ? ` · ${compInfo.label}` : ''}{bg.layer ? ` · ${bg.layer}` : ''}
+                    </div>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <input
+                        type="text"
+                        value={inputVal}
+                        onChange={e => setBarRenameInputs(prev => ({ ...prev, [bg.groupId]: e.target.value }))}
+                        placeholder="New fixture ID prefix..."
+                        style={{
+                          flex: 1, padding: '3px 6px', borderRadius: 4,
+                          border: '1px solid rgba(148, 163, 184, 0.2)',
+                          background: 'rgba(30, 41, 59, 0.9)', color: '#E2E8F0',
+                          fontSize: 10, outline: 'none',
+                        }}
+                      />
+                      <button
+                        disabled={!inputVal.trim() || isRenaming}
+                        onClick={async () => {
+                          const prefix = inputVal.trim()
+                          if (!prefix) return
+                          setBarRenaming(bg.groupId)
+                          const updates = bg.lights.map((l, i) => ({
+                            id: l.id,
+                            block: `${prefix}-${String(i + 1).padStart(2, '0')}`,
+                          }))
+                          const count = await onBulkFixtureIds(updates)
+                          if (count > 0) {
+                            toast.success(`Renamed ${count} lights: ${prefix}-01 through ${prefix}-${String(bg.lights.length).padStart(2, '0')}`)
+                            setBarRenameInputs(prev => { const n = { ...prev }; delete n[bg.groupId]; return n })
+                          } else {
+                            toast.error('Failed to rename')
+                          }
+                          setBarRenaming(null)
+                        }}
+                        style={{
+                          padding: '3px 8px', borderRadius: 4,
+                          border: '1px solid rgba(56, 189, 248, 0.3)',
+                          background: inputVal.trim() ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+                          color: inputVal.trim() ? '#38BDF8' : '#64748B',
+                          fontSize: 10, fontWeight: 600,
+                          cursor: inputVal.trim() ? 'pointer' : 'default',
+                          opacity: isRenaming ? 0.6 : 1,
+                        }}
+                      >
+                        {isRenaming ? '...' : 'Rename'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Bulk Assign Tool */}
       <div style={{ padding: '0 12px', flexShrink: 0 }}>
