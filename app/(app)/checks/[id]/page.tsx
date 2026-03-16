@@ -15,7 +15,7 @@ import { ActionButton } from '@/components/ui/button'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
-import { formatZuluTime, formatZuluDate, formatZuluDateTime } from '@/lib/utils'
+import { formatZuluTime, formatZuluDate, formatZuluDateTime, compressImageForPdf } from '@/lib/utils'
 
 export default function CheckDetailPage() {
   const params = useParams()
@@ -593,10 +593,11 @@ export default function CheckDetailPage() {
                   } catch { /* skip failed photos */ }
                 }
                 if (dataUrl) {
-                  photoDataUrls.push(dataUrl)
+                  const compressed = await compressImageForPdf(dataUrl)
+                  photoDataUrls.push(compressed)
                   if (p.issue_index != null) {
                     if (!photoDataUrlsByIssue[p.issue_index]) photoDataUrlsByIssue[p.issue_index] = []
-                    photoDataUrlsByIssue[p.issue_index].push(dataUrl)
+                    photoDataUrlsByIssue[p.issue_index].push(compressed)
                   }
                 }
               }
@@ -656,10 +657,11 @@ export default function CheckDetailPage() {
                   } catch { /* skip failed photos */ }
                 }
                 if (dataUrl) {
-                  photoDataUrls.push(dataUrl)
+                  const compressed = await compressImageForPdf(dataUrl)
+                  photoDataUrls.push(compressed)
                   if (p.issue_index != null) {
                     if (!photoDataUrlsByIssue[p.issue_index]) photoDataUrlsByIssue[p.issue_index] = []
-                    photoDataUrlsByIssue[p.issue_index].push(dataUrl)
+                    photoDataUrlsByIssue[p.issue_index].push(compressed)
                   }
                 }
               }

@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { InspectionRow } from '@/lib/supabase/inspections'
 import type { CheckRow } from '@/lib/supabase/checks'
 import type { InspectionItem } from '@/lib/supabase/types'
-import { fetchMapImageDataUrl } from '@/lib/utils'
+import { fetchMapImageDataUrl, compressImageForPdf } from '@/lib/utils'
 
 // ── Types ──
 
@@ -627,8 +627,13 @@ async function resolvePhotoUrl(supabase: any, storagePath: string): Promise<stri
       const response = await fetch(urlData.publicUrl)
       if (response.ok) {
         const blob = await response.blob()
-        // Resize large images to prevent jsPDF memory issues
-        return await blobToResizedDataUrl(blob)
+        const reader = new FileReader()
+        const raw = await new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result as string)
+          reader.onerror = reject
+          reader.readAsDataURL(blob)
+        })
+        return await compressImageForPdf(raw)
       }
     }
   } catch {
@@ -637,36 +642,3 @@ async function resolvePhotoUrl(supabase: any, storagePath: string): Promise<stri
   return null
 }
 
-/** Convert blob to a data URL, resizing large images to max 800px for PDF thumbnails. */
-function blobToResizedDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(blob)
-    const img = new Image()
-    img.onload = () => {
-      URL.revokeObjectURL(url)
-      const MAX = 800
-      let { naturalWidth: w, naturalHeight: h } = img
-      if (w > MAX || h > MAX) {
-        const scale = Math.min(MAX / w, MAX / h)
-        w = Math.round(w * scale)
-        h = Math.round(h * scale)
-      }
-      const canvas = document.createElement('canvas')
-      canvas.width = w
-      canvas.height = h
-      const ctx = canvas.getContext('2d')
-      if (!ctx) { reject(new Error('No canvas context')); return }
-      ctx.drawImage(img, 0, 0, w, h)
-      resolve(canvas.toDataURL('image/jpeg', 0.85))
-    }
-    img.onerror = () => {
-      URL.revokeObjectURL(url)
-      // Fallback to raw data URL if image can't be loaded into canvas
-      const reader = new FileReader()
-      reader.onloadend = () => resolve(reader.result as string)
-      reader.onerror = reject
-      reader.readAsDataURL(blob)
-    }
-    img.src = url
-  })
-}

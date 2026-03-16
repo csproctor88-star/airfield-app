@@ -15,7 +15,7 @@ import type { InfrastructureFeature } from '@/lib/supabase/types'
 import { EditDiscrepancyModal, StatusUpdateModal, WorkOrderModal, PhotoViewerModal } from '@/components/discrepancies/modals'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
-import { fetchMapImageDataUrl, formatZuluDateTime } from '@/lib/utils'
+import { fetchMapImageDataUrl, formatZuluDateTime, compressImageForPdf } from '@/lib/utils'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
@@ -204,22 +204,25 @@ export default function DiscrepancyDetailPage() {
   const buildPdf = async () => {
     const photoDataUrls: string[] = []
     for (const p of allPhotos) {
+      let raw: string | null = null
       if (p.url.startsWith('data:')) {
-        photoDataUrls.push(p.url)
+        raw = p.url
       } else {
         try {
           const resp = await fetch(p.url)
           if (resp.ok) {
             const blob = await resp.blob()
             const reader = new FileReader()
-            const dataUrl = await new Promise<string>((resolve, reject) => {
+            raw = await new Promise<string>((resolve, reject) => {
               reader.onload = () => resolve(reader.result as string)
               reader.onerror = reject
               reader.readAsDataURL(blob)
             })
-            photoDataUrls.push(dataUrl)
           }
         } catch { /* skip */ }
+      }
+      if (raw) {
+        photoDataUrls.push(await compressImageForPdf(raw))
       }
     }
     let mapDataUrl: string | null = null

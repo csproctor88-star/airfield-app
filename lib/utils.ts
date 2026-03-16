@@ -126,6 +126,34 @@ export async function resizeImageForUpload(file: File, maxDimension = 1600, qual
   })
 }
 
+/**
+ * Compress a data URL image for PDF embedding.
+ * Resizes to max 800px and re-encodes as JPEG at 0.7 quality.
+ * Typical reduction: 300-500KB photo → 40-80KB in PDF.
+ */
+export function compressImageForPdf(dataUrl: string, maxDimension = 800, quality = 0.7): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      let { naturalWidth: w, naturalHeight: h } = img
+      if (w > maxDimension || h > maxDimension) {
+        const scale = Math.min(maxDimension / w, maxDimension / h)
+        w = Math.round(w * scale)
+        h = Math.round(h * scale)
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { resolve(dataUrl); return }
+      ctx.drawImage(img, 0, 0, w, h)
+      resolve(canvas.toDataURL('image/jpeg', quality))
+    }
+    img.onerror = () => resolve(dataUrl)
+    img.src = dataUrl
+  })
+}
+
 export function isMapboxConfigured(): boolean {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   return !!(token && token !== 'your-mapbox-token-here')

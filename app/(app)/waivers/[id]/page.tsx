@@ -23,7 +23,7 @@ import { toast } from 'sonner'
 import type { WaiverStatus, WaiverCoordinationOffice, WaiverCoordinationStatus, WaiverAttachmentType, WaiverReviewRecommendation } from '@/lib/supabase/types'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
-import { formatZuluDate } from '@/lib/utils'
+import { formatZuluDate, compressImageForPdf } from '@/lib/utils'
 
 type ModalType = 'approve' | 'coordination' | 'review' | 'attachment' | 'status_change' | null
 
@@ -462,7 +462,7 @@ export default function WaiverDetailPage() {
             reader.onloadend = () => resolve(reader.result as string)
             reader.readAsDataURL(blob)
           })
-          photoDataUrls.push({ name: photo.caption || photo.file_name, dataUrl })
+          photoDataUrls.push({ name: photo.caption || photo.file_name, dataUrl: await compressImageForPdf(dataUrl) })
         } catch { /* skip */ }
       }
     }

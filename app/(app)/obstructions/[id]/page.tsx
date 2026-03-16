@@ -8,7 +8,7 @@ import { PhotoViewerModal } from '@/components/discrepancies/modals'
 import { generateObstructionPdf } from '@/lib/obstruction-pdf'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
-import { formatZuluDateTime, fetchMapImageDataUrl } from '@/lib/utils'
+import { formatZuluDateTime, fetchMapImageDataUrl, compressImageForPdf } from '@/lib/utils'
 import { toast } from 'sonner'
 
 type SurfaceResult = {
@@ -91,7 +91,7 @@ export default function ObstructionDetailPage() {
           reader.onloadend = () => resolve(reader.result as string)
           reader.readAsDataURL(blob)
         })
-        photoDataUrls.push(dataUrl)
+        photoDataUrls.push(await compressImageForPdf(dataUrl))
       } catch { /* skip */ }
     }
     let mapDataUrl: string | null = null
