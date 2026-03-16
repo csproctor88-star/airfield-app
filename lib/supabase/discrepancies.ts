@@ -159,6 +159,7 @@ export async function updateDiscrepancy(
     resolution_notes?: string | null
     latitude?: number | null
     longitude?: number | null
+    infrastructure_feature_id?: string | null
   }
 ): Promise<{ data: DiscrepancyRow | null; error: string | null }> {
   const supabase = createClient()

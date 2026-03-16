@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, type ReactNode } from 'react'
+import { useState, useCallback, useEffect, type ReactNode } from 'react'
 import dynamic from 'next/dynamic'
 import type { DiscrepancyRow } from '@/lib/supabase/discrepancies'
 import { DISCREPANCY_TYPES, ALLOWED_TRANSITIONS, STATUS_CONFIG, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
@@ -8,6 +8,11 @@ import { useInstallation } from '@/lib/installation-context'
 
 const LocationPickerMap = dynamic(
   () => import('@/components/ui/location-picker-map'),
+  { ssr: false },
+)
+
+const InfraFeaturePicker = dynamic(
+  () => import('@/components/ui/infrastructure-feature-picker').then(m => ({ default: m.InfrastructureFeaturePicker })),
   { ssr: false },
 )
 
@@ -65,7 +70,7 @@ export function EditDiscrepancyModal({
   onClose: () => void
   onSaved: (updated: DiscrepancyRow) => void
 }) {
-  const { areas: installationAreas, facilities } = useInstallation()
+  const { areas: installationAreas, facilities, installationId } = useInstallation()
   const [saving, setSaving] = useState(false)
   const [gpsLoading, setGpsLoading] = useState(false)
   const [form, setForm] = useState({
@@ -79,6 +84,22 @@ export function EditDiscrepancyModal({
     latitude: discrepancy.latitude,
     longitude: discrepancy.longitude,
   })
+
+  // ── Link to Visual NAVAID ──
+  const [showFeaturePicker, setShowFeaturePicker] = useState(false)
+  const [selectedFeatureIds, setSelectedFeatureIds] = useState<string[]>(
+    discrepancy.infrastructure_feature_id ? [discrepancy.infrastructure_feature_id] : []
+  )
+  const [lightingSystemIds, setLightingSystemIds] = useState<string[]>([])
+
+  useEffect(() => {
+    if (!installationId) return
+    import('@/lib/supabase/lighting-systems').then(({ fetchLightingSystems }) =>
+      fetchLightingSystems(installationId!).then(systems =>
+        setLightingSystemIds(systems.map(s => s.id))
+      )
+    )
+  }, [installationId])
 
   const handlePointSelected = useCallback((lat: number, lng: number) => {
     setForm((prev) => ({ ...prev, latitude: lat, longitude: lng }))
@@ -127,6 +148,10 @@ export function EditDiscrepancyModal({
   const handleSave = async () => {
     if (!form.title || !form.description || !form.location_text) return
     setSaving(true)
+
+    const newFeatureId = selectedFeatureIds.length > 0 ? selectedFeatureIds[0] : null
+    const oldFeatureId = discrepancy.infrastructure_feature_id || null
+
     const { updateDiscrepancy } = await import('@/lib/supabase/discrepancies')
     const { data, error } = await updateDiscrepancy(discrepancy.id, {
       title: form.title,
@@ -138,7 +163,31 @@ export function EditDiscrepancyModal({
       facility_number: form.facility_number || null,
       latitude: form.latitude,
       longitude: form.longitude,
+      infrastructure_feature_id: newFeatureId,
     })
+
+    // Handle feature status changes when link changed
+    if (!error && installationId) {
+      const { bulkUpdateStatus } = await import('@/lib/supabase/infrastructure-features')
+      const { createOutageEvent } = await import('@/lib/supabase/outage-events')
+
+      // If we linked new features that weren't linked before, mark inoperative
+      if (newFeatureId && newFeatureId !== oldFeatureId) {
+        await bulkUpdateStatus([newFeatureId], 'inoperative')
+        await createOutageEvent({
+          base_id: installationId,
+          feature_id: newFeatureId,
+          event_type: 'reported',
+          discrepancy_id: discrepancy.id,
+          notes: `Linked to discrepancy ${discrepancy.display_id}`,
+        })
+      }
+      // If we unlinked an old feature, mark it operational
+      if (oldFeatureId && oldFeatureId !== newFeatureId) {
+        await bulkUpdateStatus([oldFeatureId], 'operational')
+      }
+    }
+
     setSaving(false)
     if (error) {
       const { toast } = await import('sonner')
@@ -208,6 +257,51 @@ export function EditDiscrepancyModal({
             onChange={(e) => setForm(p => ({ ...p, facility_number: e.target.value }))} />
         )}
       </div>
+
+      {/* Link to Visual NAVAID */}
+      {lightingSystemIds.length > 0 && installationId && (
+        <div style={{ marginBottom: 12 }}>
+          <button
+            type="button"
+            onClick={() => setShowFeaturePicker(!showFeaturePicker)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 700,
+              width: '100%', padding: '10px 12px', borderRadius: 8,
+              border: showFeaturePicker ? '2px solid #22D3EE' : '2px solid var(--color-text-4)',
+              background: showFeaturePicker ? 'rgba(34,211,238,0.08)' : 'transparent',
+              color: showFeaturePicker ? '#22D3EE' : 'var(--color-text-2)',
+            }}
+          >
+            <span style={{
+              width: 20, height: 20, borderRadius: 5, flexShrink: 0,
+              border: showFeaturePicker ? '2px solid #22D3EE' : '2px solid var(--color-text-3)',
+              background: showFeaturePicker ? '#22D3EE' : 'transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 14, fontWeight: 800, color: '#000',
+            }}>
+              {showFeaturePicker ? '\u2713' : ''}
+            </span>
+            Link to Visual NAVAID
+            {selectedFeatureIds.length > 0 && (
+              <span style={{ fontSize: 'var(--fs-xs)', background: 'rgba(34,211,238,0.2)', color: '#22D3EE', padding: '1px 6px', borderRadius: 4 }}>
+                {selectedFeatureIds.length} selected
+              </span>
+            )}
+          </button>
+
+          {showFeaturePicker && (
+            <div style={{ marginTop: 8 }}>
+              <InfraFeaturePicker
+                systemIds={lightingSystemIds}
+                baseId={installationId}
+                selectedFeatureIds={selectedFeatureIds}
+                onSelectionChange={setSelectedFeatureIds}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Pin Location on Map */}
       <div style={{ marginBottom: 12 }}>
