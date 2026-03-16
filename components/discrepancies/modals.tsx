@@ -65,7 +65,7 @@ export function EditDiscrepancyModal({
   onClose: () => void
   onSaved: (updated: DiscrepancyRow) => void
 }) {
-  const { areas: installationAreas } = useInstallation()
+  const { areas: installationAreas, facilities } = useInstallation()
   const [saving, setSaving] = useState(false)
   const [gpsLoading, setGpsLoading] = useState(false)
   const [form, setForm] = useState({
@@ -75,6 +75,7 @@ export function EditDiscrepancyModal({
     type: discrepancy.type,
     notam_reference: ((discrepancy as DiscrepancyRow & { notam_reference?: string }).notam_reference || '') as string,
     current_status: ((discrepancy as DiscrepancyRow & { current_status?: string }).current_status || 'submitted_to_afm') as string,
+    facility_number: (discrepancy as DiscrepancyRow & { facility_number?: string | null }).facility_number || '',
     latitude: discrepancy.latitude,
     longitude: discrepancy.longitude,
   })
@@ -134,6 +135,7 @@ export function EditDiscrepancyModal({
       type: form.type,
       notam_reference: form.notam_reference || null,
       current_status: form.current_status,
+      facility_number: form.facility_number || null,
       latitude: form.latitude,
       longitude: form.longitude,
     })
@@ -192,6 +194,17 @@ export function EditDiscrepancyModal({
           {CURRENT_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </div>
+
+      {facilities.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <FieldLabel>Assign to Facility #</FieldLabel>
+          <select className="input-dark" value={form.facility_number}
+            onChange={(e) => setForm(p => ({ ...p, facility_number: e.target.value }))}>
+            <option value="">— None —</option>
+            {facilities.map(f => <option key={f.id} value={`${f.facility_number} — ${f.description}`}>{f.facility_number} — {f.description}</option>)}
+          </select>
+        </div>
+      )}
 
       {/* Pin Location on Map */}
       <div style={{ marginBottom: 12 }}>

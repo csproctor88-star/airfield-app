@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
@@ -32,7 +32,7 @@ import {
 import { SYSTEM_TYPE_LABELS, SYSTEM_TYPES } from '@/lib/outage-rules'
 import type { LightingSystem, LightingSystemComponent, OutageRuleTemplate, InfrastructureFeature } from '@/lib/supabase/types'
 
-type SetupTab = 'runways' | 'taxiways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'templates' | 'shiftchecklist' | 'qrc' | 'lighting'
+type SetupTab = 'runways' | 'taxiways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'facilities' | 'templates' | 'shiftchecklist' | 'qrc' | 'lighting'
 
 export default function BaseSetupPage() {
   const { installationId, currentInstallation, runways, areas, ceShops, arffAircraft, userRole } = useInstallation()
@@ -62,6 +62,7 @@ export default function BaseSetupPage() {
     { key: 'areas', label: 'Areas' },
     { key: 'arff', label: 'ARFF Aircraft' },
     { key: 'shops', label: 'CE Shops' },
+    { key: 'facilities', label: 'Facilities' },
     { key: 'templates', label: 'Templates' },
     { key: 'shiftchecklist', label: 'Shift Checklist' },
     { key: 'qrc', label: 'QRC Templates' },
@@ -121,6 +122,7 @@ export default function BaseSetupPage() {
         {activeTab === 'areas' && <SimpleListTab title="Airfield Areas" items={areas} tableName="base_areas" fieldName="area_name" installationId={installationId} />}
         {activeTab === 'arff' && <SimpleListTab title="ARFF Aircraft" items={arffAircraft} tableName="base_arff_aircraft" fieldName="aircraft_name" installationId={installationId} />}
         {activeTab === 'shops' && <ShopsTab shops={ceShops} installationId={installationId} />}
+        {activeTab === 'facilities' && <FacilitiesTab installationId={installationId} />}
         {activeTab === 'templates' && <TemplatesTab installationId={installationId} />}
         {activeTab === 'shiftchecklist' && <ShiftChecklistTab installationId={installationId} currentInstallation={currentInstallation} />}
         {activeTab === 'qrc' && <QrcTemplatesTab installationId={installationId} />}
@@ -835,6 +837,199 @@ function ShopsTab({ shops, installationId }: { shops: string[]; installationId: 
           Save
         </button>
       </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Facilities tab
+// ═══════════════════════════════════════════════════════════════
+
+function FacilitiesTab({ installationId }: { installationId: string | null }) {
+  const [facilities, setFacilities] = useState<{ id: string; facility_number: string; description: string }[]>([])
+  const [newNumber, setNewNumber] = useState('')
+  const [newDesc, setNewDesc] = useState('')
+  const [importing, setImporting] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const load = useCallback(async () => {
+    if (!installationId) return
+    const { fetchFacilities } = await import('@/lib/supabase/facilities')
+    const data = await fetchFacilities(installationId)
+    setFacilities(data.map(f => ({ id: f.id, facility_number: f.facility_number, description: f.description })))
+  }, [installationId])
+
+  useEffect(() => { load() }, [load])
+
+  const handleAdd = async () => {
+    if (!newNumber.trim() || !newDesc.trim() || !installationId) return
+    const { createFacility } = await import('@/lib/supabase/facilities')
+    const { error } = await createFacility({
+      base_id: installationId,
+      facility_number: newNumber.trim(),
+      description: newDesc.trim(),
+      sort_order: facilities.length,
+    })
+    if (error) {
+      toast.error(`Failed to add: ${error}`)
+    } else {
+      toast.success(`Added facility ${newNumber.trim()}`)
+      setNewNumber('')
+      setNewDesc('')
+      load()
+    }
+  }
+
+  const handleDelete = async (fac: { id: string; facility_number: string }) => {
+    if (!confirm(`Delete facility ${fac.facility_number}?`)) return
+    const { deleteFacility } = await import('@/lib/supabase/facilities')
+    const { error } = await deleteFacility(fac.id)
+    if (error) {
+      toast.error(`Failed to delete: ${error}`)
+    } else {
+      toast.success(`Deleted facility ${fac.facility_number}`)
+      load()
+    }
+  }
+
+  const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !installationId) return
+    setImporting(true)
+
+    try {
+      const ExcelJS = await import('exceljs')
+      const wb = new ExcelJS.Workbook()
+      const buf = await file.arrayBuffer()
+      await wb.xlsx.load(buf)
+      const ws = wb.worksheets[0]
+      if (!ws) {
+        toast.error('No worksheet found in file')
+        setImporting(false)
+        return
+      }
+
+      const rows: { facility_number: string; description: string }[] = []
+      ws.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return // skip header
+        const num = String(row.getCell(1).value ?? '').trim()
+        const desc = String(row.getCell(2).value ?? '').trim()
+        if (num && desc) {
+          rows.push({ facility_number: num, description: desc })
+        }
+      })
+
+      if (rows.length === 0) {
+        toast.error('No valid rows found. Expected columns: Facility Number, Description')
+        setImporting(false)
+        return
+      }
+
+      const { bulkCreateFacilities } = await import('@/lib/supabase/facilities')
+      const { count, error } = await bulkCreateFacilities(installationId, rows)
+      if (error) {
+        toast.error(`Import failed: ${error}`)
+      } else {
+        toast.success(`Imported ${count} facilities`)
+        load()
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to read Excel file')
+    }
+
+    setImporting(false)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  return (
+    <div>
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>Facility Numbers</h3>
+      <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12 }}>
+        Real property facility numbers assigned to Airfield Management. Used for discrepancy tracking.
+      </p>
+
+      {facilities.length === 0 && (
+        <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 8 }}>No facilities configured.</p>
+      )}
+      {facilities.map(fac => (
+        <div key={fac.id} style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '8px 0', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-md)',
+        }}>
+          <div>
+            <span style={{ color: 'var(--color-accent)', fontWeight: 700, fontFamily: 'monospace', marginRight: 10 }}>{fac.facility_number}</span>
+            <span style={{ color: 'var(--color-text-1)' }}>{fac.description}</span>
+          </div>
+          <button
+            onClick={() => handleDelete(fac)}
+            style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-3xl)', padding: '0 4px', flexShrink: 0 }}
+          >
+            &times;
+          </button>
+        </div>
+      ))}
+
+      {/* Add single facility */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        <input
+          value={newNumber}
+          onChange={e => setNewNumber(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleAdd()}
+          placeholder="Facility #"
+          style={{
+            width: 100, padding: '8px 10px', borderRadius: 6,
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-inset)',
+            color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
+            fontFamily: 'monospace',
+          }}
+        />
+        <input
+          value={newDesc}
+          onChange={e => setNewDesc(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleAdd()}
+          placeholder="Description..."
+          style={{
+            flex: 1, padding: '8px 10px', borderRadius: 6,
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-inset)',
+            color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
+          }}
+        />
+        <button
+          onClick={handleAdd}
+          disabled={!newNumber.trim() || !newDesc.trim()}
+          style={{
+            padding: '8px 16px', borderRadius: 6, border: 'none',
+            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+            color: '#fff',
+            cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
+            opacity: !newNumber.trim() || !newDesc.trim() ? 0.5 : 1,
+          }}
+        >
+          Save
+        </button>
+      </div>
+
+      {/* Excel import */}
+      <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleExcelImport} style={{ display: 'none' }} />
+      <button
+        onClick={() => fileRef.current?.click()}
+        disabled={importing}
+        style={{
+          marginTop: 12, width: '100%', padding: '10px 16px', borderRadius: 8,
+          border: '2px dashed var(--color-border)',
+          background: 'transparent', color: 'var(--color-text-2)',
+          fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+          opacity: importing ? 0.6 : 1,
+        }}
+      >
+        {importing ? 'Importing...' : 'Import from Excel (.xlsx)'}
+      </button>
+      <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
+        Expected columns: Column A = Facility Number, Column B = Description. First row is treated as a header.
+      </p>
     </div>
   )
 }

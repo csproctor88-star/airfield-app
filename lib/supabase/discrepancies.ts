@@ -23,6 +23,7 @@ export type DiscrepancyRow = {
   inspection_id: string | null
   resolution_notes: string | null
   resolution_date: string | null
+  facility_number: string | null
   infrastructure_feature_id: string | null
   lighting_system_id: string | null
   photo_count: number
@@ -81,6 +82,7 @@ export async function createDiscrepancy(input: {
   latitude?: number | null
   longitude?: number | null
   base_id?: string | null
+  facility_number?: string | null
   infrastructure_feature_id?: string | null
   lighting_system_id?: string | null
   assigned_shop?: string | null
@@ -115,6 +117,7 @@ export async function createDiscrepancy(input: {
     work_order_number: 'Pending',
     latitude: input.latitude ?? null,
     longitude: input.longitude ?? null,
+    facility_number: input.facility_number ?? null,
     infrastructure_feature_id: input.infrastructure_feature_id ?? null,
     lighting_system_id: input.lighting_system_id ?? null,
   }
@@ -149,6 +152,7 @@ export async function updateDiscrepancy(
     location_text?: string
     type?: string
     current_status?: string
+    facility_number?: string | null
     notam_reference?: string | null
     assigned_shop?: string | null
     work_order_number?: string | null

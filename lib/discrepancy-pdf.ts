@@ -64,9 +64,12 @@ export async function generateDiscrepancyPdf(input: DiscrepancyPdfInput) {
   y += 8
 
   // -- Info box --
+  const facilityNumber = d.facility_number || null
+  const boxHeight = facilityNumber ? 38 : 26
+
   doc.setDrawColor(200)
   doc.setFillColor(248, 248, 248)
-  doc.roundedRect(margin, y, contentWidth, 26, 2, 2, 'FD')
+  doc.roundedRect(margin, y, contentWidth, boxHeight, 2, 2, 'FD')
 
   const col1 = margin + 4
   const col2 = margin + contentWidth / 3
@@ -98,7 +101,17 @@ export async function generateDiscrepancyPdf(input: DiscrepancyPdfInput) {
   doc.text(locationLabel, col2, y + 22)
   doc.text(d.assigned_shop || 'Unassigned', col3, y + 22)
 
-  y += 32
+  // Row 3 — Facility Number (if assigned)
+  if (facilityNumber) {
+    doc.setFontSize(7)
+    doc.setTextColor(120)
+    doc.text('Facility #:', col1, y + 29)
+    doc.setFontSize(9)
+    doc.setTextColor(0)
+    doc.text(facilityNumber, col1, y + 34)
+  }
+
+  y += boxHeight + 6
 
   // -- Current Status --
   doc.setFontSize(7)

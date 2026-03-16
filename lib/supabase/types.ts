@@ -137,6 +137,7 @@ export type Database = {
           inspection_id: string | null
           resolution_notes: string | null
           resolution_date: string | null
+          facility_number: string | null
           infrastructure_feature_id: string | null
           lighting_system_id: string | null
           photo_count: number

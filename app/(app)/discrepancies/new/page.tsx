@@ -25,7 +25,7 @@ const InfraFeaturePicker = dynamic(
 
 export default function NewDiscrepancyPage() {
   const router = useRouter()
-  const { installationId, areas: installationAreas } = useInstallation()
+  const { installationId, areas: installationAreas, facilities } = useInstallation()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [photos, setPhotos] = useState<{ file: File; url: string; name: string }[]>([])
@@ -67,6 +67,7 @@ export default function NewDiscrepancyPage() {
     notam_reference: '',
     description: '',
     current_status: 'submitted_to_afm',
+    facility_number: '',
     latitude: null as number | null,
     longitude: null as number | null,
   })
@@ -145,6 +146,7 @@ export default function NewDiscrepancyPage() {
       current_status: formData.current_status,
       latitude: formData.latitude,
       longitude: formData.longitude,
+      facility_number: formData.facility_number || undefined,
       base_id: installationId,
       infrastructure_feature_id: selectedFeatureIds.length > 0 ? selectedFeatureIds[0] : undefined,
     })
@@ -297,6 +299,16 @@ export default function NewDiscrepancyPage() {
             {CURRENT_STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
+
+        {facilities.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <span className="section-label">Assign to Facility #</span>
+            <select className="input-dark" value={formData.facility_number} onChange={(e) => setFormData((p) => ({ ...p, facility_number: e.target.value }))}>
+              <option value="">— None —</option>
+              {facilities.map((f) => <option key={f.id} value={`${f.facility_number} — ${f.description}`}>{f.facility_number} — {f.description}</option>)}
+            </select>
+          </div>
+        )}
 
         {/* Location Map */}
         <div style={{ marginBottom: 12 }}>

@@ -259,6 +259,7 @@ export default function DiscrepancyDetailPage() {
             ['Location', (() => { const loc = LOCATION_OPTIONS.find(l => l.value === d.location_text); return loc ? `${loc.emoji} ${loc.label}` : d.location_text })()],
             ['Type', (() => { return d.type.split(', ').map(v => { const t = DISCREPANCY_TYPES.find(dt => dt.value === v); return t ? `${t.emoji} ${t.label}` : v }).join(', ') })()],
             ['Current Status', (() => { const cs = (d as typeof d & { current_status?: string }).current_status; return CURRENT_STATUS_OPTIONS.find(o => o.value === cs)?.label || cs || 'N/A' })()],
+            ['Facility #', (d as typeof d & { facility_number?: string | null }).facility_number || '—'],
             ['Work Order Currently Assigned to', d.assigned_shop || 'Unassigned'],
             ['NOTAM', (d as typeof d & { notam_reference?: string }).notam_reference || 'None'],
             ['Days Open', `${daysOpen}`],

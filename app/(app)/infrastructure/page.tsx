@@ -392,7 +392,7 @@ export default function InfrastructureMapPage() {
     () => Object.fromEntries(LAYERS.map(l => [l.key, true]))
   )
   const [visibleSourceLayers, setVisibleSourceLayers] = useState<Record<string, boolean>>({})
-  const { runways, installationId, userRole } = useInstallation()
+  const { runways, installationId, userRole, facilities } = useInstallation()
 
   // Fullscreen
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -1254,6 +1254,23 @@ export default function InfrastructureMapPage() {
       barOutNote,
     ].filter(Boolean)
 
+    // Auto-match facility number from feature type keywords
+    const featureTypeStr = formatFeatureType(feature.feature_type).toLowerCase()
+    const matchedFacility = facilities.find(f => {
+      const desc = f.description.toLowerCase()
+      // Match feature type words against facility description
+      if (featureTypeStr.includes('approach') && desc.includes('approach')) return true
+      if (featureTypeStr.includes('taxiway') && desc.includes('taxiway')) return true
+      if (featureTypeStr.includes('runway') && (desc.includes('runway') && desc.includes('light'))) return true
+      if (featureTypeStr.includes('ramp') && desc.includes('ramp') && desc.includes('light')) return true
+      if (featureTypeStr.includes('obstruction') && desc.includes('obst')) return true
+      if (featureTypeStr.includes('beacon') && desc.includes('beacon')) return true
+      if (featureTypeStr.includes('papi') && desc.includes('approach')) return true
+      if (featureTypeStr.includes('vasi') && desc.includes('approach')) return true
+      return false
+    })
+    const facilityLabel = matchedFacility ? `${matchedFacility.facility_number} — ${matchedFacility.description}` : undefined
+
     const { data: disc } = await createDiscrepancy({
       title: `INOP: ${featureDisplayName}`,
       description: descParts.join('\n'),
@@ -1261,6 +1278,7 @@ export default function InfrastructureMapPage() {
       type: 'lighting',
       latitude: feature.latitude,
       longitude: feature.longitude,
+      facility_number: facilityLabel,
       base_id: installationId,
       infrastructure_feature_id: id,
       assigned_shop: 'Airfield Management',
