@@ -23,6 +23,7 @@ import { ExpandableTextarea } from '@/components/ui/expandable-textarea'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort } from '@/lib/utils'
 import type { SimpleDiscrepancy } from '@/lib/supabase/types'
 import { loadCheckDraft, saveCheckDraft, clearCheckDraft, type CheckDraft } from '@/lib/check-draft'
+import { logActivity } from '@/lib/supabase/activity'
 import { SightingForm } from '@/components/wildlife/sighting-form'
 import { StrikeForm } from '@/components/wildlife/strike-form'
 
@@ -35,7 +36,7 @@ type LocalComment = {
 
 export default function AirfieldChecksPage() {
   const router = useRouter()
-  const { installationId, areas: installationAreas } = useInstallation()
+  const { installationId, areas: installationAreas, facilities } = useInstallation()
   const [checkType, setCheckType] = useState<CheckType | ''>('')
   const [areas, setAreas] = useState<string[]>(['Entire Airfield'])
   const [saving, setSaving] = useState(false)
@@ -48,6 +49,11 @@ export default function AirfieldChecksPage() {
   // ── Airfield diagram state ──
   const [diagramUrl, setDiagramUrl] = useState<string | null>(null)
   const [showDiagram, setShowDiagram] = useState(false)
+  // ── Check lifecycle state ──
+  const [checkStarted, setCheckStarted] = useState(false)
+  const [userOI, setUserOI] = useState('')
+  const [showResumePrompt, setShowResumePrompt] = useState(false)
+  const [pendingDraft, setPendingDraft] = useState<CheckDraft | null>(null)
   // ── Inline BASH wildlife form state ──
   const [bashFormType, setBashFormType] = useState<'sighting' | 'strike'>('sighting')
   const [bashFormSaved, setBashFormSaved] = useState(false)
@@ -67,7 +73,8 @@ export default function AirfieldChecksPage() {
     }
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return
-      const { data: profile } = await supabase.from('profiles').select('name, rank, first_name, last_name').eq('id', user.id).single()
+      const { data: profile } = await supabase.from('profiles').select('name, rank, first_name, last_name, operating_initials').eq('id', user.id).single()
+      if (profile?.operating_initials) setUserOI(profile.operating_initials)
       if (profile?.first_name && profile?.last_name) {
         const displayName = `${profile.first_name} ${profile.last_name}`
         setCurrentUser(profile.rank ? `${profile.rank} ${displayName}` : displayName)
@@ -112,34 +119,49 @@ export default function AirfieldChecksPage() {
     }
   }, [])
 
-  // Two-phase draft load: localStorage (instant) then Supabase (async, cross-device)
+  // Two-phase draft load: check for existing draft and show resume prompt
   useEffect(() => {
-    // Phase 1: Sync — load from localStorage
     const localDraft = loadCheckDraft(installationId)
-    if (localDraft) {
-      hydrateFormFromDraft(localDraft)
-    }
-    draftLoaded.current = true
 
     // Phase 2: Async — check Supabase for a newer draft
     loadCheckDraftFromDb(installationId).then((dbRow) => {
-      if (!dbRow?.draft_data) return
-      const localTime = localDraft?.savedAt ? new Date(localDraft.savedAt).getTime() : 0
-      const dbTime = dbRow.saved_at ? new Date(dbRow.saved_at).getTime() : 0
-      if (dbTime > localTime) {
-        const dbDraft: CheckDraft = { ...dbRow.draft_data, dbRowId: dbRow.id, savedAt: dbRow.saved_at || '' }
-        hydrateFormFromDraft(dbDraft)
-        // Mirror to localStorage
-        saveCheckDraft(dbDraft, installationId)
-        toast.info('Draft loaded from server')
-      } else if (dbRow.id && !localDraft?.dbRowId) {
-        // Local is newer but link the DB row ID
-        setDraftDbRowId(dbRow.id)
-        setDraftSavedAt(dbRow.saved_at || null)
+      let bestDraft = localDraft
+      if (dbRow?.draft_data) {
+        const localTime = localDraft?.savedAt ? new Date(localDraft.savedAt).getTime() : 0
+        const dbTime = dbRow.saved_at ? new Date(dbRow.saved_at).getTime() : 0
+        if (dbTime > localTime) {
+          bestDraft = { ...dbRow.draft_data, dbRowId: dbRow.id, savedAt: dbRow.saved_at || '' }
+        } else if (dbRow.id && bestDraft && !bestDraft.dbRowId) {
+          bestDraft.dbRowId = dbRow.id
+        }
       }
+      if (bestDraft && bestDraft.checkType) {
+        setPendingDraft(bestDraft)
+        setShowResumePrompt(true)
+      }
+      draftLoaded.current = true
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [installationId])
+
+  // Resume or discard handlers
+  const handleResumeDraft = () => {
+    if (pendingDraft) {
+      hydrateFormFromDraft(pendingDraft)
+      setCheckStarted(true)
+    }
+    setShowResumePrompt(false)
+    setPendingDraft(null)
+  }
+
+  const handleDiscardDraft = async () => {
+    if (pendingDraft?.dbRowId) {
+      await deleteCheckDraft(pendingDraft.dbRowId)
+    }
+    clearCheckDraft(installationId)
+    setShowResumePrompt(false)
+    setPendingDraft(null)
+  }
 
   // Issue Found toggle
   const [issueFound, setIssueFound] = useState(false)
@@ -321,6 +343,40 @@ export default function AirfieldChecksPage() {
     toast.success('Draft saved')
   }
 
+  // ── Build current draft snapshot (for auto-save) ──
+  const buildDraftSnapshot = useCallback((): CheckDraft => ({
+    checkType, areas, issueFound, issues, remarks, remarkText,
+    rscCondition, reportRcr, rcrValue, rcrConditionType, bashCondition,
+    aircraftType, callsign, emergencyNature, checkedActions, notifiedAgencies,
+    heavyAircraftType, savedAt: '', dbRowId: draftDbRowId,
+  }), [checkType, areas, issueFound, issues, remarks, remarkText,
+    rscCondition, reportRcr, rcrValue, rcrConditionType, bashCondition,
+    aircraftType, callsign, emergencyNature, checkedActions, notifiedAgencies,
+    heavyAircraftType, draftDbRowId])
+
+  // Keep a ref to the latest snapshot for beforeunload (can't use state in event handlers)
+  const draftSnapshotRef = useRef<CheckDraft | null>(null)
+  const checkStartedRef = useRef(false)
+  useEffect(() => { draftSnapshotRef.current = buildDraftSnapshot() }, [buildDraftSnapshot])
+  useEffect(() => { checkStartedRef.current = checkStarted }, [checkStarted])
+
+  // ── Auto-save to localStorage on navigation away ──
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (checkStartedRef.current && draftSnapshotRef.current?.checkType) {
+        saveCheckDraft(draftSnapshotRef.current, installationId)
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => {
+      // Also auto-save on unmount (in-app navigation)
+      if (checkStartedRef.current && draftSnapshotRef.current?.checkType) {
+        saveCheckDraft(draftSnapshotRef.current, installationId)
+      }
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [installationId])
+
   const toggleAction = (action: string) => {
     setCheckedActions((prev) =>
       prev.includes(action) ? prev.filter((a) => a !== action) : [...prev, action]
@@ -483,6 +539,7 @@ export default function AirfieldChecksPage() {
         description: iss.comment,
         location_text: discLocation,
         type: discType,
+        facility_number: iss.facility_number || null,
         latitude: iss.location?.lat ?? null,
         longitude: iss.location?.lon ?? null,
         base_id: installationId,
@@ -507,6 +564,45 @@ export default function AirfieldChecksPage() {
       setDraftSavedAt(null)
     }
     clearCheckDraft(installationId)
+
+    // Log "off the AFLD" activity entry
+    const checkTypeMap: Record<string, string> = {
+      fod: 'FOD', bash: 'BASH', construction: 'CONSTRUCTION',
+      rsc: 'RSC/RCR', rcr: 'RSC/RCR', ife: 'IFE',
+      ground_emergency: 'GROUND EMERGENCY', heavy_aircraft: 'HEAVY ACFT',
+    }
+    const cLabel = checkTypeMap[checkType] || checkType.toUpperCase()
+    const dataIssues = Array.isArray(data?.issues) ? (data.issues as { comment?: string }[]) : []
+    const issueDescs = dataIssues.map(i => i.comment).filter(Boolean) as string[]
+    const wildlifeFormType = (data?.wildlife_form_type as string) || ''
+    const wildlifeDisplayId = (data?.wildlife_display_id as string) || ''
+    let cDiscStr: string
+    if (checkType === 'bash' && wildlifeFormType && wildlifeDisplayId) {
+      const wildlifeLabel = wildlifeFormType === 'strike' ? 'WILDLIFE STRIKE' : 'WILDLIFE SIGHTING'
+      cDiscStr = `${wildlifeLabel} REPORTED — REF ${wildlifeDisplayId}`
+    } else if (issueDescs.length > 0) {
+      cDiscStr = `DISCREPANCIES FOUND: ${issueDescs.join('; ').toUpperCase()}`
+    } else {
+      cDiscStr = 'NO NEW DISCREPANCIES'
+    }
+    let cDetails = `${cLabel} CHECK CMPLT, ${cDiscStr}`
+    const cBwc = (data.condition_code as string) || ''
+    const cRsc = (data.condition as string) || (data.runway_condition as string) || ''
+    if (cRsc && cBwc) cDetails += `. ADVISES RSC/${cRsc.toUpperCase()} & BWC/${cBwc.toUpperCase()}`
+    else if (cRsc) cDetails += `. ADVISES RSC/${cRsc.toUpperCase()}`
+    else if (cBwc) cDetails += `. ADVISES BWC/${cBwc.toUpperCase()}`
+
+    const oiStr = userOI ? `/${userOI}` : ''
+    logActivity(
+      'completed',
+      'airfield_check',
+      created.id,
+      created.display_id,
+      { details: `AFLD3${oiStr} off the AFLD, ${cDetails}` },
+      installationId,
+    )
+
+    setCheckStarted(false)
     setSaving(false)
     const summary = discCreated > 0
       ? `Check ${created.display_id} filed — ${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'} logged`
@@ -549,6 +645,57 @@ export default function AirfieldChecksPage() {
         <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>DAFI 13-213 / UFC 3-260-01</div>
       </div>
 
+      {/* Resume / Discard Prompt */}
+      {showResumePrompt && pendingDraft && (
+        <div className="card" style={{
+          marginBottom: 8,
+          border: '2px solid #D97706',
+          background: 'rgba(217, 119, 6, 0.06)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <span style={{ fontSize: 20 }}>⚠️</span>
+            <div>
+              <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: '#D97706' }}>
+                Check In Progress
+              </div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginTop: 2 }}>
+                You have an unfinished <span style={{ fontWeight: 700 }}>
+                  {CHECK_TYPE_CONFIG[pendingDraft.checkType as keyof typeof CHECK_TYPE_CONFIG]?.label || pendingDraft.checkType}
+                </span> check{pendingDraft.savedAt ? ` saved ${formatZuluDateShort(new Date(pendingDraft.savedAt))}` : ''}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              onClick={handleResumeDraft}
+              style={{
+                flex: 1, padding: '12px', borderRadius: 8,
+                border: '1.5px solid var(--color-success)',
+                background: 'rgba(34, 197, 94, 0.1)',
+                color: 'var(--color-success)', fontSize: 'var(--fs-base)', fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Resume Check
+            </button>
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              style={{
+                flex: 1, padding: '12px', borderRadius: 8,
+                border: '1.5px solid rgba(239, 68, 68, 0.5)',
+                background: 'rgba(239, 68, 68, 0.08)',
+                color: '#EF4444', fontSize: 'var(--fs-base)', fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Check Type Dropdown */}
       <div className="card" style={{ marginBottom: 8 }}>
         <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
@@ -557,7 +704,8 @@ export default function AirfieldChecksPage() {
         <select
           className="input-dark"
           value={checkType}
-          onChange={(e) => {
+          disabled={checkStarted}
+          onChange={async (e) => {
             const newType = e.target.value as CheckType | ''
             setCheckType(newType)
             resetTypeFields()
@@ -568,6 +716,20 @@ export default function AirfieldChecksPage() {
               setAreas(['Entire Airfield'])
             } else {
               setAreas(['Entire Airfield'])
+            }
+            // Log "on the AFLD" when check starts
+            if (newType && !checkStarted) {
+              setCheckStarted(true)
+              const oiStr = userOI ? `/${userOI}` : ''
+              const checkLabel = CHECK_TYPE_CONFIG[newType as keyof typeof CHECK_TYPE_CONFIG]?.label?.toUpperCase() || newType.toUpperCase()
+              logActivity(
+                'started',
+                'airfield_check',
+                installationId || crypto.randomUUID(),
+                undefined,
+                { details: `AFLD3${oiStr} on the AFLD, ${checkLabel} CHECK` },
+                installationId,
+              )
             }
           }}
           style={{ fontSize: 'var(--fs-lg)' }}
@@ -1161,6 +1323,7 @@ export default function AirfieldChecksPage() {
             onSaveDraft={handleSaveDraft}
             draftSaving={draftSaving}
             areaOptions={installationAreas}
+            facilityOptions={facilities}
           />
         </div>
       )}

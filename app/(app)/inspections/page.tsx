@@ -49,7 +49,7 @@ type TabType = 'airfield' | 'lighting'
 
 export default function InspectionsPage() {
   const router = useRouter()
-  const { installationId, runways, areas: installationAreas } = useInstallation()
+  const { installationId, runways, areas: installationAreas, facilities } = useInstallation()
 
   // Base coordinates for weather (midpoint of first runway)
   const rwy0 = runways[0]
@@ -815,7 +815,7 @@ export default function InspectionsPage() {
           description: d.comment,
           location_text: discLocation,
           type: discType,
-
+          facility_number: d.facility_number || null,
           latitude: d.location?.lat ?? null,
           longitude: d.location?.lon ?? null,
           base_id: installationId,
@@ -1130,6 +1130,7 @@ export default function InspectionsPage() {
               description: d.comment,
               location_text: discLocation,
               type: discType,
+              facility_number: d.facility_number || null,
               latitude: d.location?.lat ?? null,
               longitude: d.location?.lon ?? null,
               base_id: installationId,
@@ -1765,6 +1766,7 @@ export default function InspectionsPage() {
                               onSaveDraft={handleSave}
                               draftSaving={saving}
                               areaOptions={installationAreas}
+                              facilityOptions={facilities}
                             />
                           </div>
                         )}

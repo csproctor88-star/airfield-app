@@ -35,6 +35,8 @@ interface SimpleDiscrepancyPanelGroupProps {
   linkedBaseId?: string
   /** Called when selected features change, with full feature objects */
   onFeaturesSelected?: (index: number, features: InfrastructureFeature[]) => void
+  /** Available facility numbers for the discrepancy facility dropdown */
+  facilityOptions?: { facility_number: string; description: string }[]
 }
 
 export function SimpleDiscrepancyPanelGroup({
@@ -58,6 +60,7 @@ export function SimpleDiscrepancyPanelGroup({
   linkedComponentIds,
   linkedBaseId,
   onFeaturesSelected,
+  facilityOptions,
 }: SimpleDiscrepancyPanelGroupProps) {
   return (
     <div style={{ marginTop: 4 }}>
@@ -129,6 +132,7 @@ export function SimpleDiscrepancyPanelGroup({
             linkedComponentIds={linkedComponentIds}
             linkedBaseId={linkedBaseId}
             onFeaturesSelected={onFeaturesSelected}
+            facilityOptions={facilityOptions}
           />
         </div>
       ))}

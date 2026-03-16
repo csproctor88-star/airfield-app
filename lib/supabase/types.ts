@@ -1046,6 +1046,8 @@ export type SimpleDiscrepancy = {
   discrepancy_location_text?: string
   /** Discrepancy type value (from DISCREPANCY_TYPES) */
   discrepancy_type?: string
+  /** Facility number (from base_facilities) */
+  facility_number?: string
   /** ID of the created discrepancy (set after submission) */
   generated_discrepancy_id?: string | null
   /** Infrastructure feature IDs selected via feature picker (linked lighting systems) */

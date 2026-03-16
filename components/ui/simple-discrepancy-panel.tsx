@@ -45,6 +45,8 @@ interface SimpleDiscrepancyPanelProps {
   linkedBaseId?: string
   /** Called when selected features change, with full feature objects for auto-populating fields */
   onFeaturesSelected?: (index: number, features: InfrastructureFeature[]) => void
+  /** Available facility numbers for the discrepancy facility dropdown */
+  facilityOptions?: { facility_number: string; description: string }[]
 }
 
 export function SimpleDiscrepancyPanel({
@@ -65,6 +67,7 @@ export function SimpleDiscrepancyPanel({
   linkedComponentIds,
   linkedBaseId,
   onFeaturesSelected,
+  facilityOptions,
 }: SimpleDiscrepancyPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -354,6 +357,43 @@ export function SimpleDiscrepancyPanel({
                   <option key={t.value} value={t.value}>{t.emoji} {t.label}</option>
                 ))}
               </select>
+            </div>
+
+            {/* Facility # */}
+            <div>
+              <label style={labelStyle}>Assign to Facility #</label>
+              {facilityOptions && facilityOptions.length > 0 ? (
+                <select
+                  value={detail.facility_number || ''}
+                  onChange={(e) => handleDiscrepancyFieldChange('facility_number', e.target.value)}
+                  style={{
+                    width: '100%', padding: '8px 10px', borderRadius: 6,
+                    border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+                    color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
+                    fontFamily: 'inherit', boxSizing: 'border-box',
+                  }}
+                >
+                  <option value="">None</option>
+                  {facilityOptions.map((f) => (
+                    <option key={f.facility_number} value={`${f.facility_number} — ${f.description}`}>
+                      {f.facility_number} — {f.description}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={detail.facility_number || ''}
+                  onChange={(e) => handleDiscrepancyFieldChange('facility_number', e.target.value)}
+                  placeholder="e.g. 06010"
+                  style={{
+                    width: '100%', padding: '8px 10px', borderRadius: 6,
+                    border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+                    color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
+                    fontFamily: 'inherit', boxSizing: 'border-box',
+                  }}
+                />
+              )}
             </div>
 
           </div>

@@ -18,8 +18,9 @@ ALTER TABLE base_facilities ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users with base access can read facilities"
   ON base_facilities FOR SELECT
-  USING (user_has_base_access(base_id));
+  USING (user_has_base_access(auth.uid(), base_id));
 
 CREATE POLICY "Writers can manage facilities"
   ON base_facilities FOR ALL
-  USING (user_can_write(base_id));
+  USING (user_can_write(auth.uid()))
+  WITH CHECK (user_can_write(auth.uid()));
