@@ -195,16 +195,19 @@ export function EditDiscrepancyModal({
         </select>
       </div>
 
-      {facilities.length > 0 && (
-        <div style={{ marginBottom: 12 }}>
-          <FieldLabel>Assign to Facility #</FieldLabel>
+      <div style={{ marginBottom: 12 }}>
+        <FieldLabel>Assign to Facility #</FieldLabel>
+        {facilities.length > 0 ? (
           <select className="input-dark" value={form.facility_number}
             onChange={(e) => setForm(p => ({ ...p, facility_number: e.target.value }))}>
             <option value="">— None —</option>
             {facilities.map(f => <option key={f.id} value={`${f.facility_number} — ${f.description}`}>{f.facility_number} — {f.description}</option>)}
           </select>
-        </div>
-      )}
+        ) : (
+          <input className="input-dark" placeholder="e.g., 06010 — Runway" value={form.facility_number}
+            onChange={(e) => setForm(p => ({ ...p, facility_number: e.target.value }))} />
+        )}
+      </div>
 
       {/* Pin Location on Map */}
       <div style={{ marginBottom: 12 }}>

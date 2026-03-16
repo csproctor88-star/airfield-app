@@ -1,7 +1,8 @@
 import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import type { ObstructionRow } from '@/lib/supabase/obstructions'
 import { parsePhotoPaths } from '@/lib/supabase/obstructions'
-import { formatZuluTime, formatZuluDate } from '@/lib/utils'
+import { formatZuluTime, formatZuluDate, fetchMapImageDataUrl } from '@/lib/utils'
 
 type SurfaceResult = {
   surfaceKey: string
@@ -19,6 +20,7 @@ type SurfaceResult = {
 interface ObstructionPdfInput {
   evaluation: ObstructionRow
   photoDataUrls: string[]
+  mapDataUrl?: string | null
   baseName?: string
   baseIcao?: string
 }
@@ -61,70 +63,58 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
   doc.setFontSize(11)
   doc.setTextColor(60)
   doc.text(displayId, margin, y)
-  y += 5
 
-  // Status
-  const createdAt = new Date(evaluation.created_at)
-  doc.setFontSize(9)
-  doc.text(`${formatZuluDate(createdAt)} @ ${formatZuluTime(createdAt)}Z`, margin, y)
-  y += 8
-
-  // ── Status Badge ──
-  doc.setDrawColor(200)
+  // Status badge (right-aligned)
+  const badgeText = evaluation.has_violation ? 'VIOLATION' : 'CLEAR'
+  const badgeWidth = doc.getTextWidth(badgeText) + 8
+  const badgeX = pageWidth - margin - badgeWidth
   if (evaluation.has_violation) {
     doc.setFillColor(239, 68, 68)
   } else {
     doc.setFillColor(34, 197, 94)
   }
-  doc.roundedRect(margin, y, 30, 7, 1, 1, 'F')
-  doc.setFontSize(9)
-  doc.setTextColor(255)
+  doc.roundedRect(badgeX, y - 5, badgeWidth, 7, 1.5, 1.5, 'F')
+  doc.setFontSize(8)
   doc.setFont('helvetica', 'bold')
-  doc.text(evaluation.has_violation ? 'VIOLATION' : 'CLEAR', margin + 15, y + 5, { align: 'center' })
+  doc.setTextColor(255)
+  doc.text(badgeText, badgeX + badgeWidth / 2, y - 0.5, { align: 'center' })
   doc.setFont('helvetica', 'normal')
-  y += 14
+  y += 5
 
-  // ── Obstruction Details ──
-  doc.setDrawColor(200)
-  doc.setFillColor(248, 248, 248)
-  doc.roundedRect(margin, y, contentWidth, 32, 2, 2, 'FD')
-
-  const col1 = margin + 4
-  const col2 = margin + contentWidth / 3
-  const col3 = margin + (contentWidth * 2) / 3
-
-  doc.setFontSize(7)
-  doc.setTextColor(120)
-  doc.text('Height AGL:', col1, y + 5)
-  doc.text('Top Elevation MSL:', col2, y + 5)
-  doc.text('Ground Elevation MSL:', col3, y + 5)
-
+  // Date
+  const createdAt = new Date(evaluation.created_at)
   doc.setFontSize(9)
-  doc.setTextColor(0)
-  doc.text(`${evaluation.object_height_agl} ft`, col1, y + 10)
-  doc.text(`${evaluation.obstruction_top_msl?.toFixed(0) ?? '—'} ft`, col2, y + 10)
-  doc.text(`${evaluation.object_elevation_msl?.toFixed(0) ?? '—'} ft`, col3, y + 10)
+  doc.setTextColor(100)
+  doc.text(`${formatZuluDate(createdAt)} @ ${formatZuluTime(createdAt)}Z`, margin, y)
+  y += 8
 
-  doc.setFontSize(7)
-  doc.setTextColor(120)
-  doc.text('From Centerline:', col1, y + 18)
-  doc.text('Coordinates:', col2, y + 18)
-  doc.text('Runway Class:', col3, y + 18)
-
-  doc.setFontSize(9)
-  doc.setTextColor(0)
-  doc.text(`${evaluation.distance_from_centerline_ft?.toFixed(0) ?? '—'} ft`, col1, y + 23)
+  // ── Obstruction Details Table ──
   const lat = evaluation.latitude?.toFixed(5) ?? '—'
   const lng = evaluation.longitude ? Math.abs(evaluation.longitude).toFixed(5) : '—'
-  doc.text(`${lat}°N, ${lng}°W`, col2, y + 23)
   const rwClass = evaluation.runway_class === 'Army_B' ? 'Army Class B' : `Class ${evaluation.runway_class}`
-  doc.text(rwClass, col3, y + 23)
 
-  y += 38
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    head: [['Metric', 'Value']],
+    body: [
+      ['Height AGL', `${evaluation.object_height_agl} ft`],
+      ['Top Elevation MSL', `${evaluation.obstruction_top_msl?.toFixed(0) ?? '—'} ft`],
+      ['Ground Elevation MSL', `${evaluation.object_elevation_msl?.toFixed(0) ?? '—'} ft`],
+      ['Distance from Centerline', `${evaluation.distance_from_centerline_ft?.toFixed(0) ?? '—'} ft`],
+      ['Coordinates', `${lat}\u00b0N, ${lng}\u00b0W`],
+      ['Runway Class', rwClass],
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: [30, 41, 59], fontSize: 8, fontStyle: 'bold' },
+    bodyStyles: { fontSize: 9 },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 55, textColor: [100, 116, 139] } },
+  })
+  y = (doc as any).lastAutoTable.finalY + 6
 
-  // ── Notes / Description ──
+  // ── Description ──
   if (evaluation.notes) {
-    checkPageBreak(14)
+    checkPageBreak(16)
     doc.setFontSize(10)
     doc.setTextColor(0)
     doc.setFont('helvetica', 'bold')
@@ -135,7 +125,7 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
     doc.setTextColor(40)
     const lines = doc.splitTextToSize(evaluation.notes, contentWidth)
     doc.text(lines, margin, y)
-    y += lines.length * 4 + 4
+    y += lines.length * 4 + 6
   }
 
   // ── Controlling Surface ──
@@ -160,82 +150,92 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
     doc.setTextColor(0)
     doc.setFont('helvetica', 'bold')
     doc.text('SURFACE ANALYSIS', margin, y)
-    y += 6
-
-    // Table header
-    doc.setFillColor(240, 240, 240)
-    doc.rect(margin, y, contentWidth, 6, 'F')
-    doc.setFontSize(7)
-    doc.setTextColor(80)
-    doc.setFont('helvetica', 'bold')
-    const cSurface = margin + 2
-    const cMaxAllow = margin + 70
-    const cObsTop = margin + 105
-    const cStatus = margin + 135
-    const cPen = margin + 160
-    doc.text('Surface', cSurface, y + 4)
-    doc.text('Max Allowable', cMaxAllow, y + 4)
-    doc.text('Obs. Top MSL', cObsTop, y + 4)
-    doc.text('Status', cStatus, y + 4)
-    doc.text('Penetration', cPen, y + 4)
-    y += 8
-
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-
-    for (const s of applicableResults) {
-      checkPageBreak(7)
-      const isLandUse = s.maxAllowableHeightMSL === -1
-
-      doc.setTextColor(0)
-      doc.text(s.surfaceName, cSurface, y)
-
-      if (isLandUse) {
-        doc.setTextColor(100)
-        doc.text('Land Use Zone', cMaxAllow, y)
-        doc.text('—', cObsTop, y)
-        doc.text('WITHIN ZONE', cStatus, y)
-        doc.text('—', cPen, y)
-      } else {
-        doc.setTextColor(40)
-        doc.text(`${s.maxAllowableHeightMSL.toFixed(0)} ft`, cMaxAllow, y)
-        doc.text(`${s.obstructionTopMSL.toFixed(0)} ft`, cObsTop, y)
-        if (s.violated) {
-          doc.setTextColor(239, 68, 68)
-          doc.text('VIOLATION', cStatus, y)
-          doc.text(`${s.penetrationFt.toFixed(1)} ft`, cPen, y)
-        } else {
-          doc.setTextColor(34, 197, 94)
-          doc.text('CLEAR', cStatus, y)
-          doc.setTextColor(40)
-          doc.text('—', cPen, y)
-        }
-      }
-
-      y += 5
-
-      // UFC reference
-      doc.setFontSize(6)
-      doc.setTextColor(120)
-      doc.text(s.ufcReference, cSurface, y)
-      y += 4
-      doc.setFontSize(8)
-    }
     y += 2
+
+    const tableBody = applicableResults.map((s) => {
+      const isLandUse = s.maxAllowableHeightMSL === -1
+      if (isLandUse) {
+        return [s.surfaceName, 'Land Use Zone', '—', 'WITHIN ZONE', '—']
+      }
+      return [
+        s.surfaceName,
+        `${s.maxAllowableHeightMSL.toFixed(0)} ft`,
+        `${s.obstructionTopMSL.toFixed(0)} ft`,
+        s.violated ? 'VIOLATION' : 'CLEAR',
+        s.violated ? `${s.penetrationFt.toFixed(1)} ft` : '—',
+      ]
+    })
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [['Surface', 'Max Allowable', 'Obs. Top MSL', 'Status', 'Penetration']],
+      body: tableBody,
+      theme: 'grid',
+      headStyles: { fillColor: [30, 41, 59], fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 45 },
+        3: { cellWidth: 25 },
+        4: { cellWidth: 25 },
+      },
+      didParseCell: (data: any) => {
+        if (data.section === 'body' && data.column.index === 3) {
+          const val = data.cell.raw
+          if (val === 'VIOLATION') {
+            data.cell.styles.textColor = [239, 68, 68]
+            data.cell.styles.fontStyle = 'bold'
+          } else if (val === 'CLEAR') {
+            data.cell.styles.textColor = [34, 197, 94]
+            data.cell.styles.fontStyle = 'bold'
+          } else if (val === 'WITHIN ZONE') {
+            data.cell.styles.textColor = [100, 116, 139]
+            data.cell.styles.fontStyle = 'bold'
+          }
+        }
+        if (data.section === 'body' && data.column.index === 4) {
+          const val = data.cell.raw
+          if (val !== '—') {
+            data.cell.styles.textColor = [239, 68, 68]
+          }
+        }
+      },
+    })
+    y = (doc as any).lastAutoTable.finalY + 4
+
+    // UFC references under table
+    doc.setFontSize(6.5)
+    doc.setTextColor(130)
+    for (const s of applicableResults) {
+      checkPageBreak(5)
+      doc.text(`${s.surfaceName}: ${s.ufcReference}`, margin, y)
+      y += 3
+    }
+    y += 4
   }
 
   // ── Required Actions ──
   if (violatedResults.length > 0) {
-    checkPageBreak(40)
+    checkPageBreak(50)
+    doc.setFillColor(254, 242, 242)
+    doc.setDrawColor(239, 68, 68)
+    const actionsBoxY = y
+    // Draw box after calculating content height — use a manual layout
     doc.setFontSize(10)
-    doc.setTextColor(239, 68, 68)
     doc.setFont('helvetica', 'bold')
-    doc.text('REQUIRED ACTIONS', margin, y)
+    doc.setTextColor(239, 68, 68)
+    doc.text('REQUIRED ACTIONS', margin + 4, y + 6)
+    y += 10
+
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(200, 30, 30)
+    doc.text('OBSTRUCTION VIOLATION DETECTED — The following actions are required:', margin + 4, y)
     y += 6
 
-    doc.setFontSize(9)
-    doc.setTextColor(0)
     doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.setTextColor(40)
 
     const actions = [
       '1. Submit Work Order to CES (Civil Engineering Squadron) for evaluation and corrective action.',
@@ -245,42 +245,83 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
     ]
 
     for (const action of actions) {
-      checkPageBreak(6)
-      const lines = doc.splitTextToSize(action, contentWidth)
-      doc.text(lines, margin, y)
-      y += lines.length * 4 + 1
+      const lines = doc.splitTextToSize(action, contentWidth - 10)
+      doc.text(lines, margin + 4, y)
+      y += lines.length * 3.5 + 2
     }
 
     y += 2
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(239, 68, 68)
     for (const v of violatedResults) {
-      checkPageBreak(6)
-      const vLine = `${v.surfaceName} violation (${v.penetrationFt.toFixed(1)} ft) — ${v.ufcReference}`
-      const lines = doc.splitTextToSize(vLine, contentWidth)
-      doc.setTextColor(239, 68, 68)
-      doc.text(lines, margin, y)
-      y += lines.length * 4 + 1
+      const vLine = `• ${v.surfaceName} — ${v.penetrationFt.toFixed(1)} ft penetration — ${v.ufcReference}`
+      const lines = doc.splitTextToSize(vLine, contentWidth - 10)
+      doc.text(lines, margin + 4, y)
+      y += lines.length * 3.5 + 1
     }
+
+    // Draw border around actions box
+    const boxH = y - actionsBoxY + 3
+    doc.setFillColor(254, 242, 242)
+    doc.setDrawColor(239, 68, 68)
+    doc.roundedRect(margin, actionsBoxY, contentWidth, boxH, 2, 2, 'D')
+
+    y += 6
     doc.setTextColor(0)
-    y += 4
+    doc.setFont('helvetica', 'normal')
+  }
+
+  // ── Location Map ──
+  let mapDataUrl = input.mapDataUrl ?? null
+  if (!mapDataUrl && evaluation.latitude != null && evaluation.longitude != null) {
+    mapDataUrl = await fetchMapImageDataUrl(evaluation.latitude, evaluation.longitude)
+  }
+  if (mapDataUrl) {
+    checkPageBreak(55)
+    doc.setFontSize(10)
+    doc.setTextColor(0)
+    doc.setFont('helvetica', 'bold')
+    doc.text('PINNED LOCATION', margin, y)
+    y += 2
+    doc.setFont('helvetica', 'normal')
+    try {
+      const imgWidth = contentWidth
+      const imgHeight = imgWidth * (300 / 600)
+      doc.addImage(mapDataUrl, 'PNG', margin, y, imgWidth, imgHeight)
+      y += imgHeight + 3
+      doc.setFontSize(7)
+      doc.setTextColor(34, 197, 94)
+      doc.setFont('helvetica', 'bold')
+      doc.text(`${evaluation.latitude!.toFixed(5)}, ${evaluation.longitude!.toFixed(5)}`, margin, y)
+      doc.setFont('helvetica', 'normal')
+      y += 6
+    } catch {
+      doc.setFontSize(7)
+      doc.setTextColor(150)
+      doc.text('(Map image could not be rendered)', margin, y)
+      y += 5
+    }
   }
 
   // ── Photos ──
   if (photoDataUrls.length > 0) {
     checkPageBreak(14)
-    y += 4
+    y += 2
     doc.setFontSize(10)
     doc.setTextColor(0)
     doc.setFont('helvetica', 'bold')
     doc.text(`PHOTOS (${photoDataUrls.length})`, margin, y)
-    y += 6
+    y += 5
     doc.setFont('helvetica', 'normal')
 
     for (const dataUrl of photoDataUrls) {
-      checkPageBreak(45)
+      checkPageBreak(55)
       try {
         const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG'
-        doc.addImage(dataUrl, format, margin, y, 50, 38)
-        y += 42
+        const imgWidth = contentWidth * 0.6
+        const imgHeight = imgWidth * 0.75
+        doc.addImage(dataUrl, format, margin, y, imgWidth, imgHeight)
+        y += imgHeight + 4
       } catch {
         doc.setFontSize(7)
         doc.setTextColor(150)
@@ -295,6 +336,7 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i)
     doc.setFontSize(7)
+    doc.setFont('helvetica', 'normal')
     doc.setTextColor(150)
     const footerY = pageHeight - 8
     doc.text(

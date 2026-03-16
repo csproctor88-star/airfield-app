@@ -8,7 +8,7 @@ import { PhotoViewerModal } from '@/components/discrepancies/modals'
 import { generateObstructionPdf } from '@/lib/obstruction-pdf'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
-import { formatZuluDateTime } from '@/lib/utils'
+import { formatZuluDateTime, fetchMapImageDataUrl } from '@/lib/utils'
 import { toast } from 'sonner'
 
 type SurfaceResult = {
@@ -94,9 +94,14 @@ export default function ObstructionDetailPage() {
         photoDataUrls.push(dataUrl)
       } catch { /* skip */ }
     }
+    let mapDataUrl: string | null = null
+    if (eval_.latitude != null && eval_.longitude != null) {
+      mapDataUrl = await fetchMapImageDataUrl(eval_.latitude, eval_.longitude)
+    }
     return generateObstructionPdf({
       evaluation: eval_,
       photoDataUrls,
+      mapDataUrl,
       baseName: currentInstallation?.name,
       baseIcao: currentInstallation?.icao,
     })
@@ -170,6 +175,13 @@ export default function ObstructionDetailPage() {
   const violatedResults = results.filter((r) => r.violated)
   const createdAt = new Date(evaluation.created_at)
   const photoPaths = parsePhotoPaths(evaluation.photo_storage_path)
+
+  // Static map image URL for pinned location
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+  const hasCoords = evaluation.latitude != null && evaluation.longitude != null
+  const staticMapUrl = hasCoords && mapboxToken && mapboxToken !== 'your-mapbox-token-here'
+    ? `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${evaluation.longitude},${evaluation.latitude})/${evaluation.longitude},${evaluation.latitude},15,0/600x300@2x?access_token=${mapboxToken}&logo=false&attribution=false`
+    : null
 
   return (
     <div style={{ padding: 16, paddingBottom: 120 }}>
@@ -300,6 +312,23 @@ export default function ObstructionDetailPage() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Pinned Location Map */}
+      {staticMapUrl && (
+        <div className="card" style={{ marginBottom: 10, padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '8px 12px 4px', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            Pinned Location
+          </div>
+          <img
+            src={staticMapUrl}
+            alt="Obstruction location on map"
+            style={{ width: '100%', display: 'block', borderRadius: '0 0 10px 10px' }}
+          />
+          <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-sm)', color: '#34D399', fontFamily: 'monospace', fontWeight: 600 }}>
+            {evaluation.latitude!.toFixed(5)}, {evaluation.longitude!.toFixed(5)}
+          </div>
         </div>
       )}
 

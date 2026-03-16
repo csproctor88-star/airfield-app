@@ -300,15 +300,17 @@ export default function NewDiscrepancyPage() {
           </select>
         </div>
 
-        {facilities.length > 0 && (
-          <div style={{ marginBottom: 12 }}>
-            <span className="section-label">Assign to Facility #</span>
+        <div style={{ marginBottom: 12 }}>
+          <span className="section-label">Assign to Facility #</span>
+          {facilities.length > 0 ? (
             <select className="input-dark" value={formData.facility_number} onChange={(e) => setFormData((p) => ({ ...p, facility_number: e.target.value }))}>
               <option value="">— None —</option>
               {facilities.map((f) => <option key={f.id} value={`${f.facility_number} — ${f.description}`}>{f.facility_number} — {f.description}</option>)}
             </select>
-          </div>
-        )}
+          ) : (
+            <input type="text" className="input-dark" placeholder="e.g., 06010 — Runway" value={formData.facility_number} onChange={(e) => setFormData((p) => ({ ...p, facility_number: e.target.value }))} />
+          )}
+        </div>
 
         {/* Location Map */}
         <div style={{ marginBottom: 12 }}>
