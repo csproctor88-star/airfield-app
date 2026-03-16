@@ -140,8 +140,10 @@ function buildDetailsString(a: ActivityEntry, detailsMap: Map<string, EntityDeta
   const metaStr = formatMetadata(a.metadata)
   if (metaStr) parts.push(metaStr)
 
-  // Add DB-fetched entity details (if available and not already covered by metadata)
-  if (a.entity_id && detailsMap.has(a.entity_id)) {
+  // Add DB-fetched entity details — skip if metadata already has a formatted details string
+  // to avoid duplicating title/description that's already in the metadata
+  const hasFormattedMeta = a.metadata && typeof (a.metadata as Record<string, unknown>).details === 'string'
+  if (!hasFormattedMeta && a.entity_id && detailsMap.has(a.entity_id)) {
     const ed = detailsMap.get(a.entity_id)!
     const dbParts: string[] = []
     if (ed.title) dbParts.push(ed.title)

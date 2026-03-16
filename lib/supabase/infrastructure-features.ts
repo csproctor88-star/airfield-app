@@ -68,7 +68,10 @@ export function buildFeatureDisplayName(
     parts.push(dashIdx >= 0 ? systemName.substring(0, dashIdx) : systemName)
   }
 
-  if (feature.label) parts.push(feature.label)
+  // Only include label for sign types (where label = sign text). For other features
+  // the label is the fixture ID code which shouldn't be in the display name.
+  const isSign = feature.feature_type.endsWith('_sign')
+  if (feature.label && isSign) parts.push(feature.label)
   parts.push(typeLabel)
 
   return parts.join(' ')

@@ -26,6 +26,7 @@ import {
   bulkUpdateFeatureType,
   autoGroupBarLights,
   buildFeatureDisplayName,
+  formatFeatureType,
   type InfrastructureFeatureType,
 } from '@/lib/supabase/infrastructure-features'
 import { createDiscrepancy } from '@/lib/supabase/discrepancies'
@@ -1233,12 +1234,24 @@ export default function InfrastructureMapPage() {
       : null
     const featureDisplayName = buildFeatureDisplayName(feature, comp?.system_name, comp?.label)
 
+    // Check if this light is part of a bar group and if the bar is now out (3+ inop)
+    let barOutNote: string | null = null
+    if (feature.bar_group_id) {
+      const barSiblings = dbFeatures.filter(f => f.bar_group_id === feature.bar_group_id)
+      // Count inop including this light (which was just marked inop but dbFeatures hasn't refreshed yet)
+      const inopInBar = barSiblings.filter(f => f.status === 'inoperative' || f.id === id).length
+      if (inopInBar >= 3) {
+        barOutNote = `Bar considered INOPERATIVE per DAFMAN 13-204v2 (${inopInBar}/${barSiblings.length} lights out)`
+      }
+    }
+
     // Auto-create discrepancy
-    const typeLabel = layerCfg?.label || feature.feature_type
+    const typeLabel = layerCfg?.label || formatFeatureType(feature.feature_type)
     const descParts = [
       `Status: INOPERATIVE`,
       `Component: ${typeLabel}`,
       feature.layer ? `Location: ${feature.layer}` : null,
+      barOutNote,
     ].filter(Boolean)
 
     const { data: disc } = await createDiscrepancy({
