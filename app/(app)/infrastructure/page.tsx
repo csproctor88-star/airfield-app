@@ -23,6 +23,7 @@ import {
   bulkDeleteFeatures,
   bulkAssignComponentByIds,
   bulkUpdateFeatureType,
+  autoGroupBarLights,
   buildFeatureDisplayName,
   type InfrastructureFeatureType,
 } from '@/lib/supabase/infrastructure-features'
@@ -1583,15 +1584,18 @@ export default function InfrastructureMapPage() {
     const perpBearing = normalizeBearing(bp.rotation + 90)
     const halfWidth = ((spec.count - 1) * spec.spacing) / 2
 
-    const features: { feature_type: InfrastructureFeatureType; longitude: number; latitude: number; rotation?: number }[] = []
+    // All lights in this bar share a group ID for outage tracking
+    const barGroupId = crypto.randomUUID()
+
+    const features: { feature_type: InfrastructureFeatureType; longitude: number; latitude: number; rotation?: number; bar_group_id?: string }[] = []
     for (let i = 0; i < spec.count; i++) {
       const offset = -halfWidth + i * spec.spacing
       if (Math.abs(offset) < 0.01) {
-        features.push({ feature_type: spec.featureType, longitude: lng, latitude: lat, rotation: bp.rotation })
+        features.push({ feature_type: spec.featureType, longitude: lng, latitude: lat, rotation: bp.rotation, bar_group_id: barGroupId })
       } else {
         const dir = offset < 0 ? normalizeBearing(perpBearing + 180) : perpBearing
         const pt = offsetPoint(center, dir, Math.abs(offset))
-        features.push({ feature_type: spec.featureType, longitude: pt.lon, latitude: pt.lat, rotation: bp.rotation })
+        features.push({ feature_type: spec.featureType, longitude: pt.lon, latitude: pt.lat, rotation: bp.rotation, bar_group_id: barGroupId })
       }
     }
 
@@ -2608,6 +2612,15 @@ export default function InfrastructureMapPage() {
             onBulkTypeChange={async (featureIds, newType) => {
               const count = await bulkUpdateFeatureType(featureIds, newType)
               if (count > 0 && installationId) {
+                const refreshed = await fetchInfrastructureFeatures(installationId)
+                setDbFeatures(refreshed)
+              }
+              return count
+            }}
+            onAutoGroupBars={async () => {
+              if (!installationId) return 0
+              const count = await autoGroupBarLights(installationId)
+              if (count > 0) {
                 const refreshed = await fetchInfrastructureFeatures(installationId)
                 setDbFeatures(refreshed)
               }

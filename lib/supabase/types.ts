@@ -765,6 +765,7 @@ export type Database = {
           status_changed_at: string | null
           status_changed_by: string | null
           system_component_id: string | null
+          bar_group_id: string | null
           created_by: string | null
           created_at: string
           updated_at: string

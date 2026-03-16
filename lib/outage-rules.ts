@@ -127,23 +127,54 @@ export function getDafmanNotes(notesStr: string | null): { number: number; text:
 
 // ── Adjacent / Consecutive Detection ──
 
-/** Sort features by geodesic position along a line (uses latitude + longitude) */
+/**
+ * Sort features by geodesic position along a line (uses latitude + longitude).
+ * When features have bar_group_id, uses each bar's centroid for positioning
+ * so that lights within the same bar cluster together in sequence.
+ */
 function sortByPosition(features: InfrastructureFeature[]): InfrastructureFeature[] {
   if (features.length <= 1) return features
-  // Use the first two features to determine primary axis
-  const first = features[0]
-  const last = features[features.length - 1]
+
+  // If features have bar groups, compute centroid for each group to use as sort key
+  const barCentroids = new Map<string, { lat: number; lon: number }>()
+  const hasGroups = features.some((f) => f.bar_group_id)
+
+  if (hasGroups) {
+    const groups = new Map<string, InfrastructureFeature[]>()
+    for (const f of features) {
+      if (f.bar_group_id) {
+        const g = groups.get(f.bar_group_id) || []
+        g.push(f)
+        groups.set(f.bar_group_id, g)
+      }
+    }
+    for (const [gid, lights] of Array.from(groups.entries())) {
+      barCentroids.set(gid, {
+        lat: lights.reduce((s, l) => s + l.latitude, 0) / lights.length,
+        lon: lights.reduce((s, l) => s + l.longitude, 0) / lights.length,
+      })
+    }
+  }
+
+  // Sort position: use bar centroid if grouped, otherwise feature's own coords
+  const getSortPos = (f: InfrastructureFeature) => {
+    if (f.bar_group_id && barCentroids.has(f.bar_group_id)) {
+      return barCentroids.get(f.bar_group_id)!
+    }
+    return { lat: f.latitude, lon: f.longitude }
+  }
+
   const latRange = Math.abs(
-    Math.max(...features.map((f) => f.latitude)) - Math.min(...features.map((f) => f.latitude)),
+    Math.max(...features.map((f) => getSortPos(f).lat)) - Math.min(...features.map((f) => getSortPos(f).lat)),
   )
   const lonRange = Math.abs(
-    Math.max(...features.map((f) => f.longitude)) - Math.min(...features.map((f) => f.longitude)),
+    Math.max(...features.map((f) => getSortPos(f).lon)) - Math.min(...features.map((f) => getSortPos(f).lon)),
   )
   // Sort by the axis with more spread
   if (latRange >= lonRange) {
-    return [...features].sort((a, b) => a.latitude - b.latitude)
+    return [...features].sort((a, b) => getSortPos(a).lat - getSortPos(b).lat)
   }
-  return [...features].sort((a, b) => a.longitude - b.longitude)
+  return [...features].sort((a, b) => getSortPos(a).lon - getSortPos(b).lon)
 }
 
 export function detectAdjacentViolation(features: InfrastructureFeature[]): boolean {

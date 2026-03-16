@@ -372,6 +372,7 @@ export async function bulkCreateInfrastructureFeatures(
     label?: string
     rotation?: number
     source?: 'import' | 'user'
+    bar_group_id?: string | null
   }[]
 ): Promise<number> {
   const supabase = createClient()
@@ -391,6 +392,7 @@ export async function bulkCreateInfrastructureFeatures(
     notes: null,
     source: f.source || 'import',
     created_by: user?.id || null,
+    bar_group_id: f.bar_group_id || null,
   }))
 
   // Insert in batches of 500
@@ -404,6 +406,82 @@ export async function bulkCreateInfrastructureFeatures(
   }
 
   return inserted
+}
+
+// ── Bulk assign bar_group_id ──
+
+export async function bulkAssignBarGroup(ids: string[], barGroupId: string): Promise<number> {
+  const supabase = createClient()
+  if (!supabase || ids.length === 0) return 0
+
+  let updated = 0
+  for (let i = 0; i < ids.length; i += 200) {
+    const batch = ids.slice(i, i + 200)
+    const { error } = await supabase
+      .from('infrastructure_features')
+      .update({ bar_group_id: barGroupId, updated_at: new Date().toISOString() } as any)
+      .in('id', batch)
+    if (!error) updated += batch.length
+  }
+  return updated
+}
+
+/**
+ * Auto-detect and group ungrouped bar lights by spatial proximity.
+ * Finds bar-type lights without a bar_group_id, clusters lights within
+ * ~15ft of each other, and assigns matching bar_group_ids.
+ */
+export async function autoGroupBarLights(baseId: string): Promise<number> {
+  const supabase = createClient()
+  if (!supabase) return 0
+
+  const BAR_TYPES = [
+    'centerline_bar_light', 'threshold_light', 'pre_threshold_light',
+    'terminating_bar_light', 'thousand_ft_bar_light',
+  ]
+
+  const { data, error } = await supabase
+    .from('infrastructure_features')
+    .select('id, feature_type, latitude, longitude')
+    .eq('base_id', baseId)
+    .is('bar_group_id', null)
+    .in('feature_type', BAR_TYPES)
+
+  if (error || !data || data.length === 0) return 0
+
+  // Cluster lights by proximity (~15ft threshold ≈ 0.0000455° lat/lon)
+  const CLUSTER_THRESHOLD = 0.0000455 * 15 // ~15ft in degrees
+  const assigned = new Set<string>()
+  let groupsCreated = 0
+
+  for (let i = 0; i < data.length; i++) {
+    if (assigned.has(data[i].id)) continue
+
+    const cluster = [data[i]]
+    assigned.add(data[i].id)
+
+    // Find all nearby lights of the same type
+    for (let j = i + 1; j < data.length; j++) {
+      if (assigned.has(data[j].id)) continue
+      if (data[j].feature_type !== data[i].feature_type) continue
+
+      const dLat = Math.abs(data[j].latitude - data[i].latitude)
+      const dLon = Math.abs(data[j].longitude - data[i].longitude)
+      if (dLat < CLUSTER_THRESHOLD && dLon < CLUSTER_THRESHOLD) {
+        cluster.push(data[j])
+        assigned.add(data[j].id)
+      }
+    }
+
+    // Only group clusters of 2+ lights (single lights aren't bars)
+    if (cluster.length >= 2) {
+      const groupId = crypto.randomUUID()
+      await bulkAssignBarGroup(cluster.map(c => c.id), groupId)
+      groupsCreated++
+    }
+  }
+
+  return groupsCreated
 }
 
 // ── Bulk delete features by IDs ──

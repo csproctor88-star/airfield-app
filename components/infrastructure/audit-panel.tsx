@@ -34,6 +34,7 @@ type AuditPanelProps = {
   onBulkFixtureIds: (updates: { id: string; block: string }[]) => Promise<number>
   onBulkDelete: (featureIds: string[]) => Promise<number>
   onBulkTypeChange: (featureIds: string[], newType: string) => Promise<number>
+  onAutoGroupBars: () => Promise<number>
   onHighlightFeatures: (featureIds: string[]) => void
   onClose: () => void
 }
@@ -368,6 +369,7 @@ export default function AuditPanel({
   onBulkFixtureIds,
   onBulkDelete,
   onBulkTypeChange,
+  onAutoGroupBars,
   onHighlightFeatures,
   onClose,
 }: AuditPanelProps) {
@@ -378,6 +380,7 @@ export default function AuditPanel({
   const [reassigning, setReassigning] = useState<string | null>(null) // feature ID showing dropdown
   const [fixtureIdTarget, setFixtureIdTarget] = useState<string | null>(null) // component ID
   const [generatingAllIds, setGeneratingAllIds] = useState(false)
+  const [groupingBars, setGroupingBars] = useState(false)
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false)
   const [baLayer, setBaLayer] = useState<string>('')
   const [baType, setBaType] = useState<string>('')
@@ -417,6 +420,13 @@ export default function AuditPanel({
 
   // Total counts
   const totalFiltered = Object.values(byComponent).reduce((s, arr) => s + arr.length, 0) + unassigned.length
+
+  // Count ungrouped bar lights (for auto-group button)
+  const BAR_TYPES = new Set(['centerline_bar_light', 'threshold_light', 'pre_threshold_light', 'terminating_bar_light', 'thousand_ft_bar_light'])
+  const ungroupedBarCount = useMemo(() =>
+    features.filter(f => BAR_TYPES.has(f.feature_type) && !f.bar_group_id).length,
+    [features]
+  )
 
   // Unique layers and types for bulk assign filters
   const uniqueLayers = useMemo(() =>
@@ -694,6 +704,34 @@ export default function AuditPanel({
         >
           {generatingAllIds ? 'Generating...' : `Generate All Fixture IDs (${features.length})`}
         </button>
+        {/* Auto-group bar lights */}
+        {ungroupedBarCount > 0 && (
+          <button
+            onClick={async () => {
+              setGroupingBars(true)
+              const count = await onAutoGroupBars()
+              if (count > 0) toast.success(`Grouped ${count} bar${count !== 1 ? 's' : ''} by proximity`)
+              else toast.info('No ungrouped bars found')
+              setGroupingBars(false)
+            }}
+            disabled={groupingBars}
+            style={{
+              width: '100%',
+              padding: '6px 0',
+              marginTop: 4,
+              borderRadius: 6,
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              background: 'rgba(56, 189, 248, 0.1)',
+              color: '#38BDF8',
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: 'pointer',
+              opacity: groupingBars ? 0.6 : 1,
+            }}
+          >
+            {groupingBars ? 'Grouping...' : `Link Bar Lights (${ungroupedBarCount} ungrouped)`}
+          </button>
+        )}
       </div>
 
       {/* Bulk Assign Tool */}
