@@ -957,6 +957,7 @@ export default function InfrastructureMapPage() {
             notes: f.notes,
             rotation: f.rotation || 0,
             system_component_id: f.system_component_id || '',
+            bar_group_id: f.bar_group_id || '',
             signIcon: f.label && SIGN_COLORS[f.feature_type] ? `sign-label-${f.id}` : null,
             systemHealthTier: tier,
             auditHighlight: auditHighlightSet.has(f.id) ? 1 : 0,
