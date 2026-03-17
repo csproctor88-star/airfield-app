@@ -289,6 +289,14 @@ export default function InspectionsPage() {
         if (!current[tab]) continue
 
         if (dbRow.draft_data) {
+          // Skip empty/orphaned drafts with no real responses
+          const dd = dbRow.draft_data as unknown as Record<string, unknown>
+          const ddResponses = dd.responses as Record<string, unknown> | undefined
+          if (ddResponses && Object.keys(ddResponses).length === 0 && !dd.savedAt) {
+            // Orphaned empty draft — delete it from DB
+            deleteInspection(dbRow.id)
+            continue
+          }
           // Normal draft — load from draft_data
           const localTime = current[tab].savedAt ? new Date(current[tab].savedAt!).getTime() : 0
           const dbTime = dbRow.saved_at ? new Date(dbRow.saved_at).getTime() : 0
@@ -312,6 +320,11 @@ export default function InspectionsPage() {
       }
 
       if (merged) {
+        // Final check: don't set draft if all halves are empty
+        const anyWork = Object.keys(current.airfield.responses).length > 0 ||
+          Object.keys(current.lighting.responses).length > 0 ||
+          current.airfield.savedAt || current.lighting.savedAt
+        if (!anyWork) return
         setDraft({ ...current })
         saveDraftToStorage(current, installationId)
         toast.info('Draft loaded from server')
@@ -814,36 +827,15 @@ export default function InspectionsPage() {
 
     updateHalf(targetTab, () => completedHalf)
 
-    // Also save to DB
+    // Build items for filing
     const secs = targetTab === 'airfield'
       ? (dbAirfieldSections ?? AIRFIELD_INSPECTION_SECTIONS).filter(s => !s.conditional)
       : (dbLightingSections ?? LIGHTING_INSPECTION_SECTIONS)
     const { items, passed, failed, na, total } = halfDraftToItems(completedHalf, secs, itemLocations)
 
-    const { data: saved } = await saveInspectionDraft({
-      id: half.dbRowId,
-      inspection_type: targetTab,
-      draft_data: completedHalf,
-      items,
-      total_items: total,
-      passed_count: passed,
-      failed_count: failed,
-      na_count: na,
-      bwc_value: completedHalf.bwcValue,
-      rsc_condition: completedHalf.rscCondition,
-      rcr_value: completedHalf.rcrReported ? completedHalf.rcrValue : null,
-      rcr_condition: completedHalf.rcrReported ? completedHalf.rcrConditionType : null,
-      notes: completedHalf.notes || null,
-      daily_group_id: draft.id,
-      construction_meeting: false,
-      joint_monthly: false,
-      base_id: installationId,
-    })
-
-    // Store the DB row ID back into the draft
-    if (saved && !half.dbRowId) {
-      updateHalf(targetTab, (h) => ({ ...h, dbRowId: saved.id }))
-    }
+    // NOTE: We skip saveInspectionDraft here — filing immediately below.
+    // Previously, saveInspectionDraft created an in_progress record that was
+    // never filed when dbRowId was null, leaving orphaned DB rows.
 
     // Push BWC/RSC/RCR to dashboard in a single update (avoids multiple realtime alerts)
     if (typeof window !== 'undefined') window.dispatchEvent(new Event('glidepath:local-status-update'))
