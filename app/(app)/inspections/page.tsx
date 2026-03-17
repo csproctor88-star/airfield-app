@@ -129,6 +129,18 @@ export default function InspectionsPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [showHistory, setShowHistory] = useState(false)
 
+  // ── User operating initials ──
+  const [userOI, setUserOI] = useState('')
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) return
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase.from('profiles').select('operating_initials').eq('id', user.id).single()
+        .then(({ data }) => { if (data?.operating_initials) setUserOI(data.operating_initials) })
+    })
+  }, [])
+
   // ── Scroll to top on mount ──
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -145,6 +157,12 @@ export default function InspectionsPage() {
       setActiveTab(typeParam)
     }
   }, [])
+
+  // ── Lighting tab prompt state ──
+  const [showLightingPrompt, setShowLightingPrompt] = useState(false)
+  const [lightingStarted, setLightingStarted] = useState(false)
+  // Track whether the airfield half has been filed (so handleFile skips it)
+  const [airfieldFiled, setAirfieldFiled] = useState(false)
 
   // ── Action state ──
   const [saving, setSaving] = useState(false)
@@ -242,7 +260,13 @@ export default function InspectionsPage() {
   useEffect(() => {
     // Phase 1: Sync — load from localStorage
     const stored = loadDraft(installationId)
-    if (stored) setDraft(stored)
+    if (stored) {
+      setDraft(stored)
+      // If lighting has responses, it was previously started
+      if (Object.keys(stored.lighting.responses).length > 0 || stored.lighting.savedAt) {
+        setLightingStarted(true)
+      }
+    }
     setDraftLoaded(true)
 
     // Phase 2: Async — check Supabase for newer in-progress drafts
@@ -287,25 +311,17 @@ export default function InspectionsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [installationId])
 
-  // ── Auto-begin: if ?action=begin and no draft, create one ──
+  // ── Auto-begin: if ?action=begin, show start/resume prompt instead of auto-starting ──
+  const [showBeginPrompt, setShowBeginPrompt] = useState(false)
   useEffect(() => {
     if (!draftLoaded || autoBeginHandled.current) return
     const params = new URLSearchParams(window.location.search)
     if (params.get('action') === 'begin') {
       autoBeginHandled.current = true
-      const typeParam = params.get('type') as TabType | null
-      const tab: TabType = (typeParam && ['airfield', 'lighting'].includes(typeParam))
-        ? typeParam : 'airfield'
-      if (!draft) {
-        const newDraft = createNewDraft()
-        setDraft(newDraft)
-        saveDraftToStorage(newDraft, installationId)
-        toast.success('New inspection started')
-      }
-      setActiveTab(tab)
+      setShowBeginPrompt(true)
       window.scrollTo(0, 0)
     }
-  }, [draftLoaded, draft, installationId])
+  }, [draftLoaded])
 
   // ── Load history ──
   const loadHistory = useCallback(async () => {
@@ -616,6 +632,17 @@ export default function InspectionsPage() {
     saveDraftToStorage(newDraft, installationId)
     window.scrollTo(0, 0)
     toast.success('New daily inspection started')
+
+    // Log "Started Airfield Inspection"
+    const oiStr = userOI ? `/${userOI}` : ''
+    logActivity(
+      'started',
+      'inspection',
+      installationId || crypto.randomUUID(),
+      undefined,
+      { details: `AFLD3${oiStr} is on the airfield for the Daily Airfield Inspection` },
+      installationId,
+    )
   }
 
   // ── Save current tab's draft to DB ──
@@ -844,17 +871,125 @@ export default function InspectionsPage() {
     }
 
     const tabLabels: Record<TabType, string> = { airfield: 'Airfield', lighting: 'Lighting' }
+
+    // ── File the completed half immediately to DB ──
+    const filer = await getInspectorName()
+    const filerName = filer.name || (usingDemo ? 'Demo Inspector' : 'Unknown')
+    const filerId = filer.id
+    let filedEntityId: string | null = completedHalf.dbRowId || null
+    let filedDisplayId: string | null = null
+    if (completedHalf.dbRowId) {
+      const { data: filed_data } = await fileInspection({
+        id: completedHalf.dbRowId,
+        items,
+        total_items: total,
+        passed_count: passed,
+        failed_count: failed,
+        na_count: na,
+        bwc_value: completedHalf.bwcValue,
+        rsc_condition: completedHalf.rscCondition,
+        rcr_value: completedHalf.rcrReported ? completedHalf.rcrValue : null,
+        rcr_condition: completedHalf.rcrReported ? completedHalf.rcrConditionType : null,
+        weather_conditions: completedHalf.weatherConditions,
+        temperature_f: completedHalf.temperatureF,
+        notes: completedHalf.notes || null,
+        inspector_name: completedHalf.inspectorName || 'Unknown',
+        completed_by_name: completedHalf.inspectorName || 'Unknown',
+        completed_by_id: completedHalf.inspectorId,
+        completed_at: completedHalf.savedAt || new Date().toISOString(),
+        filed_by_name: filerName,
+        filed_by_id: filerId,
+        base_id: installationId,
+      })
+      if (filed_data) { filedEntityId = filed_data.id; filedDisplayId = filed_data.display_id }
+    } else {
+      const { data: created } = await createInspection({
+        inspection_type: targetTab,
+        inspector_name: completedHalf.inspectorName || 'Unknown',
+        items,
+        total_items: total,
+        passed_count: passed,
+        failed_count: failed,
+        na_count: na,
+        construction_meeting: false,
+        joint_monthly: false,
+        bwc_value: completedHalf.bwcValue,
+        rsc_condition: completedHalf.rscCondition,
+        rcr_value: completedHalf.rcrReported ? completedHalf.rcrValue : null,
+        rcr_condition: completedHalf.rcrReported ? completedHalf.rcrConditionType : null,
+        weather_conditions: completedHalf.weatherConditions,
+        temperature_f: completedHalf.temperatureF,
+        notes: completedHalf.notes || null,
+        daily_group_id: draft.id,
+        completed_by_name: completedHalf.inspectorName || 'Unknown',
+        completed_by_id: completedHalf.inspectorId,
+        completed_at: completedHalf.savedAt,
+        filed_by_name: filerName,
+        filed_by_id: filerId,
+        base_id: installationId,
+      })
+      if (created) {
+        filedEntityId = created.id
+        filedDisplayId = created.display_id
+        updateHalf(targetTab, (h) => ({ ...h, dbRowId: created.id }))
+      }
+    }
+
+    // ── Log completion to activity log ──
+    const oiStr = userOI ? `/${userOI}` : ''
+    const inspLabel = targetTab === 'lighting' ? 'Daily Lighting Inspection' : 'Daily Airfield Inspection'
+    const failedItems = items.filter(i => i.response === 'fail')
+    const discStr = failedItems.length > 0
+      ? `DISCREPANCIES FOUND: ${failedItems.map(i => `${i.item.toUpperCase()}${i.notes ? ` - ${i.notes}` : ''}`).join('; ')}`
+      : 'NO NEW DISCREPANCIES'
+    let condStr = ''
+    if (completedHalf.rscCondition && completedHalf.bwcValue) {
+      condStr = `, RSC/${completedHalf.rscCondition.toUpperCase()}`
+      if (completedHalf.rcrReported && completedHalf.rcrValue) condStr += ` RCR/${completedHalf.rcrValue}`
+      condStr += ` & BWC/${completedHalf.bwcValue.toUpperCase()}`
+    } else if (completedHalf.rscCondition) {
+      condStr = `, RSC/${completedHalf.rscCondition.toUpperCase()}`
+      if (completedHalf.rcrReported && completedHalf.rcrValue) condStr += ` RCR/${completedHalf.rcrValue}`
+    } else if (completedHalf.bwcValue) {
+      condStr = `, BWC/${completedHalf.bwcValue.toUpperCase()}`
+    }
+    const completeDetails = `AFLD3${oiStr} off the airfield, ${inspLabel} Complete${condStr}, ${discStr}`
+
+    logActivity(
+      'completed',
+      'inspection',
+      filedEntityId || installationId || crypto.randomUUID(),
+      filedDisplayId || undefined,
+      { details: completeDetails },
+      installationId,
+    )
+
     setSaving(false)
-    const parts = [`${tabLabels[targetTab]} inspection completed`]
+    const parts = [`${tabLabels[targetTab]} inspection completed & filed`]
     if (discCreated > 0) parts.push(`${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'} logged`)
     toast.success(parts.join(' — '))
 
     await loadHistory()
 
-    // Auto-switch to lighting tab after completing airfield (only if lighting not started)
-    if (targetTab === 'airfield' && !draft.lighting.savedAt) {
+    // After completing airfield, mark it filed and show the lighting prompt
+    if (targetTab === 'airfield') {
+      setAirfieldFiled(true)
       setActiveTab('lighting')
+      setShowLightingPrompt(true)
       window.scrollTo(0, 0)
+    }
+
+    // After completing lighting, clear the draft and go to history
+    if (targetTab === 'lighting') {
+      clearDraft(installationId)
+      setDraft(null)
+      // Clean up object URLs
+      Object.values(itemPhotos).flat().forEach((p) => URL.revokeObjectURL(p.url))
+      Object.values(discPhotos).flat().flat().forEach((p) => URL.revokeObjectURL(p.url))
+      setItemPhotos({})
+      setDiscPhotos({})
+      setItemLocations({})
+      toast.success('Daily inspection complete')
     }
   }
 
@@ -894,16 +1029,17 @@ export default function InspectionsPage() {
 
     const airfieldHalf = draft.airfield
     const lightingHalf = draft.lighting
-    const airfieldSaved = !!airfieldHalf.savedAt
+    // Skip airfield if already filed during handleComplete
+    const airfieldSaved = !airfieldFiled && !!airfieldHalf.savedAt
     const lightingSaved = !!lightingHalf.savedAt
 
-    if (!airfieldSaved && !lightingSaved) {
+    if (!airfieldSaved && !lightingSaved && !airfieldFiled) {
       toast.error('Complete at least one inspection (airfield or lighting) before filing')
       return
     }
 
     // Show warning if airfield is done but lighting is not
-    if (airfieldSaved && !lightingSaved && !skipLightingWarning) {
+    if ((airfieldSaved || airfieldFiled) && !lightingSaved && !skipLightingWarning) {
       setShowLightingWarning(true)
       return
     }
@@ -1400,6 +1536,175 @@ export default function InspectionsPage() {
   }
 
   // ══════════════════════════════════════════════
+  // ══  BEGIN PROMPT (from KPI badge)           ══
+  // ══════════════════════════════════════════════
+  if (showBeginPrompt && !draft) {
+    return (
+      <div className="page-container">
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Daily Inspection</div>
+        </div>
+        <div className="card" style={{
+          textAlign: 'center', padding: 32,
+          border: '1px solid var(--color-border)',
+        }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>📋</div>
+          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
+            No inspection in progress
+          </div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 20 }}>
+            Start a new daily airfield inspection
+          </div>
+          <button
+            onClick={() => { handleBeginNew(); setShowBeginPrompt(false) }}
+            style={{
+              background: 'var(--color-success)', border: 'none', borderRadius: 8,
+              padding: '14px 32px', color: '#FFF', fontSize: 'var(--fs-lg)', fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            Start Inspection
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (showBeginPrompt && draft) {
+    const afCount = Object.keys(draft.airfield.responses).length
+    const ltCount = Object.keys(draft.lighting.responses).length
+    const totalResponses = afCount + ltCount
+    return (
+      <div className="page-container">
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Daily Inspection</div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4 }}>
+            Draft found from {formatZuluDateShort(new Date(draft.createdAt))}
+          </div>
+        </div>
+        <div className="card" style={{
+          textAlign: 'center', padding: 32,
+          border: '2px solid var(--color-accent-secondary)',
+          background: 'rgba(14, 165, 233, 0.04)',
+        }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>📋</div>
+          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
+            Inspection in progress
+          </div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 20 }}>
+            {totalResponses} item{totalResponses !== 1 ? 's' : ''} recorded
+            {afCount > 0 && ltCount > 0 ? ` (${afCount} airfield, ${ltCount} lighting)` :
+             afCount > 0 ? ' (airfield)' : ltCount > 0 ? ' (lighting)' : ''}
+          </div>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+            <button
+              onClick={() => { setShowBeginPrompt(false); setShowHistory(false) }}
+              style={{
+                background: 'var(--color-accent-secondary)', border: 'none', borderRadius: 8,
+                padding: '14px 32px', color: '#FFF', fontSize: 'var(--fs-lg)', fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Resume Inspection
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ══════════════════════════════════════════════
+  // ══  LIGHTING START/RESUME PROMPT            ══
+  // ══════════════════════════════════════════════
+  if (draft && !showHistory && showLightingPrompt && activeTab === 'lighting') {
+    const ltResponses = Object.keys(draft.lighting.responses).length
+    const hasLightingWork = ltResponses > 0
+    return (
+      <div className="page-container">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div>
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Daily Inspection</div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
+              Airfield inspection filed
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Bar */}
+        <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-text-4)', marginBottom: 12 }}>
+          <button
+            onClick={() => { setActiveTab('airfield'); setShowLightingPrompt(false) }}
+            style={{
+              flex: '1.3 0 0%', padding: '10px 8px', border: 'none',
+              background: 'transparent', color: 'var(--color-text-2)',
+              fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              position: 'relative',
+            }}
+          >
+            <span>Airfield</span>
+            <span style={{
+              position: 'absolute', top: 2, right: 2,
+              width: 14, height: 14, borderRadius: '50%',
+              background: '#22C55E', color: '#FFF', fontSize: 'var(--fs-2xs)',
+              fontWeight: 800, display: 'inline-flex', alignItems: 'center',
+              justifyContent: 'center', lineHeight: 1,
+            }}>{'\u2713'}</span>
+          </button>
+          <button
+            style={{
+              flex: '1.3 0 0%', padding: '10px 8px', border: 'none',
+              background: 'var(--color-accent-secondary)', color: '#FFF',
+              fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            <span>Lighting</span>
+          </button>
+        </div>
+
+        {/* Prompt Card */}
+        <div className="card" style={{
+          textAlign: 'center', padding: 32,
+          border: '1px solid var(--color-border)',
+        }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>💡</div>
+          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
+            Lighting Inspection
+          </div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 20 }}>
+            {hasLightingWork
+              ? `${ltResponses} item${ltResponses !== 1 ? 's' : ''} recorded — pick up where you left off`
+              : 'Begin the lighting portion of the daily inspection'
+            }
+          </div>
+          <button
+            onClick={() => {
+              setShowLightingPrompt(false)
+              setLightingStarted(true)
+              const ltOiStr = userOI ? `/${userOI}` : ''
+              const ltHasWork = Object.keys(draft.lighting.responses).length > 0
+              logActivity(
+                'started',
+                'inspection',
+                installationId || crypto.randomUUID(),
+                undefined,
+                { details: `AFLD3${ltOiStr} is on the airfield for the Daily Lighting Inspection${ltHasWork ? ' (RESUMED)' : ''}` },
+                installationId,
+              )
+            }}
+            style={{
+              background: 'var(--color-success)', border: 'none', borderRadius: 8,
+              padding: '14px 32px', color: '#FFF', fontSize: 'var(--fs-lg)', fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            {hasLightingWork ? 'Resume Lighting Inspection' : 'Start Lighting Inspection'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ══════════════════════════════════════════════
   // ══  WORKSPACE VIEW (active draft exists)  ══
   // ══════════════════════════════════════════════
   if (draft && !showHistory) {
@@ -1450,7 +1755,16 @@ export default function InspectionsPage() {
             return (
               <button
                 key={type}
-                onClick={() => { setActiveTab(type); window.scrollTo(0, 0) }}
+                onClick={() => {
+                  if (type === 'lighting' && !lightingStarted && !draft[type].savedAt && Object.keys(draft[type].responses).length === 0) {
+                    setActiveTab(type)
+                    setShowLightingPrompt(true)
+                  } else {
+                    setActiveTab(type)
+                    setShowLightingPrompt(false)
+                  }
+                  window.scrollTo(0, 0)
+                }}
                 style={{
                   flex: wide ? '1.3 0 0%' : '1 0 0%',
                   minWidth: 0,
@@ -1827,24 +2141,7 @@ export default function InspectionsPage() {
             )
           )}
 
-          {/* File button: appears once at least one standard tab is completed */}
-          {(draft.airfield.savedAt || draft.lighting.savedAt) && (
-            <button
-              onClick={() => setShowFileConfirm(true)}
-              disabled={filing}
-              style={{
-                flex: 1, padding: '14px 0', borderRadius: 10,
-                border: '1px solid rgba(34,197,94,0.4)',
-                background: 'rgba(34,197,94,0.1)',
-                color: '#22C55E',
-                fontSize: 'var(--fs-xl)', fontWeight: 700,
-                cursor: filing ? 'default' : 'pointer', fontFamily: 'inherit',
-                opacity: filing ? 0.7 : 1,
-              }}
-            >
-              {filing ? 'Filing...' : 'File'}
-            </button>
-          )}
+          {/* File button removed — each half now files on Complete */}
         </div>
 
         {/* Hidden file inputs for photo capture */}
