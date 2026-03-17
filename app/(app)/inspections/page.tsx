@@ -14,7 +14,7 @@ import {
   type InspectionSection,
 } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
-import { fetchInspections, createInspection, saveInspectionDraft, fileInspection, fetchDailyGroup, getInspectorName, type InspectionRow } from '@/lib/supabase/inspections'
+import { fetchInspections, createInspection, saveInspectionDraft, fileInspection, fetchDailyGroup, getInspectorName, deleteInspection, type InspectionRow } from '@/lib/supabase/inspections'
 import { logActivity } from '@/lib/supabase/activity'
 import { updateAirfieldStatus } from '@/lib/supabase/airfield-status'
 import { useInstallation } from '@/lib/installation-context'
@@ -643,6 +643,43 @@ export default function InspectionsPage() {
       { details: `AFLD3${oiStr} is on the airfield for the Daily Airfield Inspection` },
       installationId,
     )
+  }
+
+  // ── Discard current draft (localStorage + DB in-progress records) ──
+  const handleDiscardDraft = async () => {
+    if (!draft) return
+    // Delete any DB in-progress records for this draft
+    const dbIds = [draft.airfield.dbRowId, draft.lighting.dbRowId].filter(Boolean) as string[]
+    for (const id of dbIds) {
+      await deleteInspection(id)
+    }
+    // Clear localStorage
+    clearDraft(installationId)
+    setDraft(null)
+    setShowBeginPrompt(false)
+    setAirfieldFiled(false)
+    setLightingStarted(false)
+    toast.success('Draft discarded')
+    await loadHistory()
+  }
+
+  // ── Delete an in-progress inspection from the history list ──
+  const handleDeleteInProgress = async (report: { id: string; airfield?: { id?: string } | null; lighting?: { id?: string } | null }) => {
+    const ids = [report.airfield?.id, report.lighting?.id].filter(Boolean) as string[]
+    if (ids.length === 0) ids.push(report.id)
+    for (const id of ids) {
+      await deleteInspection(id)
+    }
+    // Also clear local draft if it matches
+    if (draft) {
+      const draftIds = [draft.airfield.dbRowId, draft.lighting.dbRowId]
+      if (ids.some(id => draftIds.includes(id))) {
+        clearDraft(installationId)
+        setDraft(null)
+      }
+    }
+    toast.success('In-progress inspection deleted')
+    await loadHistory()
   }
 
   // ── Save current tab's draft to DB ──
@@ -1607,6 +1644,16 @@ export default function InspectionsPage() {
             >
               Resume Inspection
             </button>
+            <button
+              onClick={handleDiscardDraft}
+              style={{
+                background: 'transparent', border: '1.5px solid rgba(239, 68, 68, 0.5)', borderRadius: 8,
+                padding: '14px 24px', color: '#EF4444', fontSize: 'var(--fs-lg)', fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Discard
+            </button>
           </div>
         </div>
       </div>
@@ -2562,15 +2609,45 @@ export default function InspectionsPage() {
           return (
             <div
               key={report.id}
-              onClick={() => handleResume(report)}
               className="card"
               style={{
-                display: 'block', marginBottom: 6, cursor: 'pointer',
+                display: 'block', marginBottom: 6,
                 textDecoration: 'none', color: 'inherit',
                 borderLeft: `3px solid ${borderColor}`,
               }}
             >
-              {cardContent}
+              <div onClick={() => handleResume(report)} style={{ cursor: 'pointer' }}>
+                {cardContent}
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--color-border)' }}>
+                <button
+                  onClick={() => handleResume(report)}
+                  style={{
+                    flex: 1, padding: '8px 0', borderRadius: 6,
+                    border: '1px solid rgba(59,130,246,0.4)', background: 'rgba(59,130,246,0.08)',
+                    color: '#3B82F6', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  Resume
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (confirm('Delete this in-progress inspection? This cannot be undone.')) {
+                      handleDeleteInProgress(report)
+                    }
+                  }}
+                  style={{
+                    padding: '8px 16px', borderRadius: 6,
+                    border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.08)',
+                    color: '#EF4444', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           )
         }
