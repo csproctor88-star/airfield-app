@@ -310,22 +310,54 @@ export default function InspectionsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [installationId])
 
-  // ── Resume / Discard handlers ──
-  const handleResumeInspection = () => {
-    setShowResumePrompt(false)
-    // Mark tabs as started based on existing work
-    if (draft) {
-      const hasAf = Object.keys(draft.airfield.responses).length > 0 || !!draft.airfield.savedAt
-      const hasLt = Object.keys(draft.lighting.responses).length > 0 || !!draft.lighting.savedAt
-      setTabStarted({ airfield: hasAf, lighting: hasLt })
+  // ── Resume / Discard handlers (per-tab) ──
+  const handleResumeTab = (tab: TabType) => {
+    setTabStarted(prev => ({ ...prev, [tab]: true }))
+    // Log the resume as a start entry
+    if (installationId) {
+      const oiStr = userOI ? `/${userOI}` : ''
+      const tabLabel = tab === 'lighting' ? 'LIGHTING INSPECTION' : 'AIRFIELD INSPECTION'
+      logActivity(
+        'started',
+        'airfield_check',
+        installationId,
+        undefined,
+        { details: `AFLD3${oiStr} on the AFLD, ${tabLabel} (RESUMED)` },
+        installationId,
+      )
     }
+    // If both tabs are now resolved, dismiss the prompt
+    const otherTab = tab === 'airfield' ? 'lighting' : 'airfield'
+    const otherHasWork = draft && (Object.keys(draft[otherTab].responses).length > 0 || !!draft[otherTab].savedAt)
+    if (!otherHasWork || tabStarted[otherTab]) {
+      setShowResumePrompt(false)
+    }
+    setActiveTab(tab)
   }
 
-  const handleDiscardInspection = () => {
-    setShowResumePrompt(false)
-    clearDraft(installationId)
-    setDraft(null)
-    setTabStarted({ airfield: false, lighting: false })
+  const handleDiscardTab = (tab: TabType) => {
+    if (draft) {
+      // Clear just this tab's data
+      const cleared = { ...draft }
+      cleared[tab] = createNewDraft()[tab]
+      const otherTab = tab === 'airfield' ? 'lighting' : 'airfield'
+      const otherHasWork = Object.keys(cleared[otherTab].responses).length > 0 || !!cleared[otherTab].savedAt
+      if (!otherHasWork) {
+        // Both tabs empty — discard entire draft
+        setShowResumePrompt(false)
+        clearDraft(installationId)
+        setDraft(null)
+        setTabStarted({ airfield: false, lighting: false })
+      } else {
+        setDraft(cleared)
+        saveDraftToStorage(cleared, installationId)
+        setTabStarted(prev => ({ ...prev, [tab]: false }))
+        // If other tab already resumed, dismiss prompt
+        if (tabStarted[otherTab]) {
+          setShowResumePrompt(false)
+        }
+      }
+    }
   }
 
   // ── Auto-save on navigation away ──
@@ -691,6 +723,7 @@ export default function InspectionsPage() {
     const newDraft = createNewDraft()
     setDraft(newDraft)
     setActiveTab('airfield')
+    logTabStart('airfield')
     saveDraftToStorage(newDraft, installationId)
     window.scrollTo(0, 0)
     toast.success('New daily inspection started')
@@ -1538,60 +1571,63 @@ export default function InspectionsPage() {
     if (showResumePrompt) {
       const hasAf = Object.keys(draft.airfield.responses).length > 0 || !!draft.airfield.savedAt
       const hasLt = Object.keys(draft.lighting.responses).length > 0 || !!draft.lighting.savedAt
-      const resumeParts: string[] = []
-      if (hasAf) resumeParts.push('Airfield')
-      if (hasLt) resumeParts.push('Lighting')
+      const tabs: { key: TabType; label: string; has: boolean }[] = [
+        { key: 'airfield', label: 'Airfield Inspection', has: hasAf },
+        { key: 'lighting', label: 'Lighting Inspection', has: hasLt },
+      ]
 
       return (
         <div className="page-container">
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Daily Inspection</div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4 }}>
+              Unfinished work found{draft.createdAt ? ` from ${formatZuluDateShort(new Date(draft.createdAt))}` : ''}
+            </div>
           </div>
-          <div className="card" style={{
-            border: '2px solid #D97706',
-            background: 'rgba(217, 119, 6, 0.06)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <span style={{ fontSize: 20 }}>⚠️</span>
-              <div>
-                <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: '#D97706' }}>
-                  Inspection In Progress
-                </div>
-                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginTop: 2 }}>
-                  You have an unfinished inspection ({resumeParts.join(' + ')})
-                  {draft.createdAt ? ` started ${formatZuluDateShort(new Date(draft.createdAt))}` : ''}
+          {tabs.filter(t => t.has).map(t => (
+            <div key={t.key} className="card" style={{
+              border: '2px solid #D97706',
+              background: 'rgba(217, 119, 6, 0.06)',
+              marginBottom: 12,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: 20 }}>⚠️</span>
+                <div>
+                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: '#D97706' }}>
+                    {t.label} In Progress
+                  </div>
                 </div>
               </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => handleResumeTab(t.key)}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: 8,
+                    border: '1.5px solid var(--color-success)',
+                    background: 'rgba(34, 197, 94, 0.1)',
+                    color: 'var(--color-success)', fontSize: 'var(--fs-base)', fontWeight: 700,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  Resume
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDiscardTab(t.key)}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: 8,
+                    border: '1.5px solid rgba(239, 68, 68, 0.5)',
+                    background: 'rgba(239, 68, 68, 0.08)',
+                    color: '#EF4444', fontSize: 'var(--fs-base)', fontWeight: 700,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  Discard
+                </button>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                type="button"
-                onClick={handleResumeInspection}
-                style={{
-                  flex: 1, padding: '12px', borderRadius: 8,
-                  border: '1.5px solid var(--color-success)',
-                  background: 'rgba(34, 197, 94, 0.1)',
-                  color: 'var(--color-success)', fontSize: 'var(--fs-base)', fontWeight: 700,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                Resume Inspection
-              </button>
-              <button
-                type="button"
-                onClick={handleDiscardInspection}
-                style={{
-                  flex: 1, padding: '12px', borderRadius: 8,
-                  border: '1.5px solid rgba(239, 68, 68, 0.5)',
-                  background: 'rgba(239, 68, 68, 0.08)',
-                  color: '#EF4444', fontSize: 'var(--fs-base)', fontWeight: 700,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                Discard
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
       )
     }
@@ -1642,7 +1678,7 @@ export default function InspectionsPage() {
             return (
               <button
                 key={type}
-                onClick={() => { setActiveTab(type); window.scrollTo(0, 0) }}
+                onClick={() => { logTabStart(type); setActiveTab(type); window.scrollTo(0, 0) }}
                 style={{
                   flex: wide ? '1.3 0 0%' : '1 0 0%',
                   minWidth: 0,
