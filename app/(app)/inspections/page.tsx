@@ -262,9 +262,17 @@ export default function InspectionsPage() {
     // Phase 1: Sync — load from localStorage
     const stored = loadDraft(installationId)
 
-    // Phase 2: Async — check Supabase for newer in-progress drafts
-    fetchInspections(installationId, 'in_progress').then((dbDrafts) => {
+    // Phase 2: Async — check Supabase for in-progress AND completed drafts
+    Promise.all([
+      fetchInspections(installationId, 'in_progress'),
+      fetchInspections(installationId, 'completed'),
+    ]).then(([dbDrafts, completedInspections]) => {
       const current = stored || (dbDrafts.length > 0 ? createNewDraft() : null)
+
+      // Build sets for cross-referencing
+      const inProgressIds = new Set(dbDrafts.map(d => d.id))
+      const inProgressTypes = new Set(dbDrafts.map(d => d.inspection_type))
+      const completedIds = new Set(completedInspections.map(d => d.id))
 
       if (dbDrafts.length > 0 && current) {
         let merged = false
@@ -297,13 +305,35 @@ export default function InspectionsPage() {
 
       // Determine if there's a draft to resume
       const bestDraft = current || stored
+
+      if (bestDraft) {
+        // Clear ghost drafts: halves whose dbRowId is now completed, or
+        // halves with responses but no matching in_progress DB record (stale localStorage)
+        for (const tab of ['airfield', 'lighting'] as const) {
+          const half = bestDraft[tab]
+          const hasWork = Object.keys(half.responses).length > 0
+          if (!hasWork) continue
+
+          const isCompletedInDb = half.dbRowId && completedIds.has(half.dbRowId)
+          const hasNoInProgressRecord = !half.dbRowId && !inProgressTypes.has(tab)
+
+          if (isCompletedInDb || (hasNoInProgressRecord && !half.savedAt)) {
+            // Clear this ghost half
+            const blank = createNewDraft()
+            bestDraft[tab] = blank[tab]
+          }
+        }
+      }
+
       const hasAirfieldWork = bestDraft && (Object.keys(bestDraft.airfield.responses).length > 0 || bestDraft.airfield.savedAt)
       const hasLightingWork = bestDraft && (Object.keys(bestDraft.lighting.responses).length > 0 || bestDraft.lighting.savedAt)
 
       if (bestDraft && (hasAirfieldWork || hasLightingWork)) {
         setShowResumePrompt(true)
-        // Store draft for resume handler
         setDraft(bestDraft)
+      } else if (bestDraft) {
+        // All halves were ghost drafts — clean up localStorage
+        clearDraft(installationId)
       }
       setDraftLoaded(true)
     })

@@ -16,7 +16,7 @@ function formatAction(action: string, entityType: string, displayId?: string): s
   const typeLabel: Record<string, string> = {
     discrepancy: 'Discrepancy',
     check: 'Check',
-    airfield_check: 'Airfield Check',
+    airfield_check: 'Inspection',
     inspection: 'Inspection',
     obstruction_evaluation: 'Obstruction Eval',
     navaid_status: 'NAVAID',
