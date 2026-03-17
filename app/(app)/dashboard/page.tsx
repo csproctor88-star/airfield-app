@@ -195,7 +195,8 @@ export default function AMDashboardPage() {
   // --- Load Today's Inspection Status ---
   useEffect(() => {
     if (!installationId) return
-    const todayStr = new Date().toISOString().split('T')[0]
+    const now = new Date()
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     fetchInspections(installationId).then((inspections) => {
       setTodayAirfieldDone(inspections.some(i =>
         i.inspection_type === 'airfield' && i.status === 'completed' && i.inspection_date === todayStr
@@ -332,69 +333,6 @@ export default function AMDashboardPage() {
         </div>
       </div>
 
-      {/* ===== Today's Inspections ===== */}
-      <span className="section-label">Today&apos;s Inspections</span>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
-        <Link
-          href={todayAirfieldDone ? '/inspections' : '/inspections?action=begin&type=airfield'}
-          style={{
-            background: todayAirfieldDone ? 'rgba(34,197,94,0.08)' : 'var(--color-bg-surface)',
-            border: todayAirfieldDone ? '2px solid rgba(34,197,94,0.4)' : '1px solid var(--color-border)',
-            borderRadius: 12,
-            padding: '14px 12px',
-            cursor: 'pointer',
-            textDecoration: 'none',
-            textAlign: 'center',
-          }}
-        >
-          <div style={{ fontSize: 28, marginBottom: 4 }}>
-            {todayAirfieldDone ? '\u2705' : '\u2600\uFE0F'}
-          </div>
-          <div style={{
-            fontSize: 'var(--fs-md)', fontWeight: 700,
-            color: todayAirfieldDone ? '#22C55E' : 'var(--color-text-1)',
-          }}>
-            Airfield
-          </div>
-          <div style={{
-            fontSize: 'var(--fs-xs)', marginTop: 2,
-            color: todayAirfieldDone ? '#22C55E' : 'var(--color-text-3)',
-            fontWeight: 600,
-          }}>
-            {todayAirfieldDone ? 'Complete' : 'Not Started'}
-          </div>
-        </Link>
-        <Link
-          href={todayLightingDone ? '/inspections' : '/inspections?action=begin&type=lighting'}
-          style={{
-            background: todayLightingDone ? 'rgba(34,197,94,0.08)' : 'var(--color-bg-surface)',
-            border: todayLightingDone ? '2px solid rgba(34,197,94,0.4)' : '1px solid var(--color-border)',
-            borderRadius: 12,
-            padding: '14px 12px',
-            cursor: 'pointer',
-            textDecoration: 'none',
-            textAlign: 'center',
-          }}
-        >
-          <div style={{ fontSize: 28, marginBottom: 4 }}>
-            {todayLightingDone ? '\u2705' : '\uD83C\uDF19'}
-          </div>
-          <div style={{
-            fontSize: 'var(--fs-md)', fontWeight: 700,
-            color: todayLightingDone ? '#22C55E' : 'var(--color-text-1)',
-          }}>
-            Lighting
-          </div>
-          <div style={{
-            fontSize: 'var(--fs-xs)', marginTop: 2,
-            color: todayLightingDone ? '#22C55E' : 'var(--color-text-3)',
-            fontWeight: 600,
-          }}>
-            {todayLightingDone ? 'Complete' : 'Not Started'}
-          </div>
-        </Link>
-      </div>
-
       {/* ===== Quick Actions ===== */}
       <span className="section-label">Quick Actions</span>
       <div className="kpi-grid" style={{ marginBottom: 20 }}>
@@ -421,6 +359,47 @@ export default function AMDashboardPage() {
             </span>
           </Link>
         ))}
+        {/* Inspection badges */}
+        <Link
+          href={todayAirfieldDone ? '/inspections' : '/inspections?action=begin&type=airfield'}
+          style={{
+            background: todayAirfieldDone ? 'rgba(34,197,94,0.08)' : 'var(--color-bg-surface)',
+            border: todayAirfieldDone ? '2px solid rgba(34,197,94,0.4)' : '1px solid var(--color-border)',
+            borderRadius: 12,
+            padding: '14px 16px',
+            cursor: 'pointer',
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+          }}
+        >
+          <span style={{ fontSize: 'var(--fs-5xl)' }}>{todayAirfieldDone ? '\u2705' : '\u2600\uFE0F'}</span>
+          <span style={{ fontSize: 'var(--fs-xl)', color: todayAirfieldDone ? '#22C55E' : 'var(--color-cyan)', letterSpacing: '0.04em', fontWeight: 700 }}>
+            Airfield Inspection
+          </span>
+        </Link>
+        <Link
+          href={todayLightingDone ? '/inspections' : '/inspections?action=begin&type=lighting'}
+          style={{
+            background: todayLightingDone ? 'rgba(34,197,94,0.08)' : 'var(--color-bg-surface)',
+            border: todayLightingDone ? '2px solid rgba(34,197,94,0.4)' : '1px solid var(--color-border)',
+            borderRadius: 12,
+            padding: '14px 16px',
+            cursor: 'pointer',
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+          }}
+        >
+          <span style={{ fontSize: 'var(--fs-5xl)' }}>{todayLightingDone ? '\u2705' : '\uD83C\uDF19'}</span>
+          <span style={{ fontSize: 'var(--fs-xl)', color: todayLightingDone ? '#22C55E' : 'var(--color-cyan)', letterSpacing: '0.04em', fontWeight: 700 }}>
+            Lighting Inspection
+          </span>
+        </Link>
         {/* Contractors on Airfield badge */}
         <button
           onClick={() => setShowContractorForm(true)}
