@@ -360,7 +360,14 @@ export default function AirfieldChecksPage() {
   useEffect(() => { draftSnapshotRef.current = buildDraftSnapshot() }, [buildDraftSnapshot])
   useEffect(() => { checkStartedRef.current = checkStarted }, [checkStarted])
 
-  // ── Auto-save to localStorage on navigation away ──
+  // ── Auto-save to localStorage continuously + on navigation away ──
+  useEffect(() => {
+    // Continuous auto-save: persist draft whenever form state changes
+    if (checkStartedRef.current && draftSnapshotRef.current?.checkType) {
+      saveCheckDraft(draftSnapshotRef.current, installationId)
+    }
+  }, [buildDraftSnapshot, installationId])
+
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (checkStartedRef.current && draftSnapshotRef.current?.checkType) {
