@@ -1510,8 +1510,9 @@ export default function InspectionDetailPage() {
                     return
                   }
                 }
-                toast.success('Inspection reopened — go to Daily Inspections to make edits and re-file')
-                router.push('/inspections')
+                toast.success('Inspection reopened for editing')
+                const gid = inspections[0]?.daily_group_id || inspections[0]?.id || ''
+                router.push(`/inspections?action=reopen&groupId=${gid}`)
               }}
               disabled={actionLoading}
             >

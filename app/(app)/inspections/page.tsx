@@ -351,6 +351,15 @@ export default function InspectionsPage() {
       setShowBeginPrompt(true)
       window.scrollTo(0, 0)
     }
+    if (params.get('action') === 'reopen') {
+      autoBeginHandled.current = true
+      const groupId = params.get('groupId')
+      if (groupId) {
+        // Auto-resume the reopened inspection
+        handleResume({ id: groupId, type: 'daily' })
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftLoaded])
 
   // ── Load history ──
