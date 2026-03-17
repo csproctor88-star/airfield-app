@@ -659,6 +659,9 @@ export default function InspectionsPage() {
     const newDraft = createNewDraft()
     setDraft(newDraft)
     setActiveTab('airfield')
+    setAirfieldFiled(false)
+    setShowLightingPrompt(false)
+    setLightingStarted(false)
     saveDraftToStorage(newDraft, installationId)
     window.scrollTo(0, 0)
     toast.success('New daily inspection started')
@@ -794,6 +797,11 @@ export default function InspectionsPage() {
         newDraft[tab] = { ...newDraft[tab], dbRowId: member.id }
       }
     }
+
+    // Clear airfieldFiled so reopened inspections aren't blocked
+    setAirfieldFiled(false)
+    setShowLightingPrompt(false)
+    setLightingStarted(false)
 
     setDraft(newDraft)
     saveDraftToStorage(newDraft, installationId)
