@@ -116,7 +116,8 @@ export async function createContractor(input: {
   }
 
   const created = data as ContractorRow
-  logActivity('logged_personnel', 'contractor', created.id, undefined, { details: `${input.company_name.toUpperCase()} ON AIRFIELD FOR ${(input.work_description || 'WORK').toUpperCase()}` }, input.base_id)
+  const label = (input.callsign || input.company_name).toUpperCase()
+  logActivity('logged_personnel', 'contractor', created.id, undefined, { details: `${label} ON AIRFIELD FOR ${(input.work_description || 'WORK').toUpperCase()}` }, input.base_id)
 
   return { data: created, error: null }
 }
@@ -165,9 +166,11 @@ export async function updateContractor(
   const updated = data as ContractorRow
 
   if (fields.status === 'completed') {
-    logActivity('personnel_off_airfield', 'contractor', updated.id, undefined, { details: `${updated.company_name.toUpperCase()} OFF AIRFIELD` }, updated.base_id)
+    const offLabel = (updated.callsign || updated.company_name).toUpperCase()
+    logActivity('personnel_off_airfield', 'contractor', updated.id, undefined, { details: `${offLabel} OFF AIRFIELD` }, updated.base_id)
   } else {
-    logActivity('updated', 'contractor', updated.id, updated.company_name, { details: `${updated.company_name.toUpperCase()} INFO UPDATED${fields.work_description ? `. ${fields.work_description.toUpperCase()}` : ''}` }, updated.base_id)
+    const updLabel = (updated.callsign || updated.company_name).toUpperCase()
+    logActivity('updated', 'contractor', updated.id, updated.callsign || updated.company_name, { details: `${updLabel} INFO UPDATED${fields.work_description ? `. ${fields.work_description.toUpperCase()}` : ''}` }, updated.base_id)
   }
 
   return { data: updated, error: null }
