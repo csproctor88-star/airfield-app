@@ -1008,9 +1008,14 @@ export default function InspectionsPage() {
 
     await loadHistory()
 
-    // After completing airfield, mark it filed and show the lighting prompt
+    // After completing airfield, mark it filed, clear airfield from draft, show lighting prompt
     if (targetTab === 'airfield') {
       setAirfieldFiled(true)
+      // Clear the filed airfield half from the draft so it won't trigger resume prompts
+      const clearedDraft = { ...draft }
+      clearedDraft.airfield = createNewDraft().airfield
+      setDraft(clearedDraft)
+      saveDraftToStorage(clearedDraft, installationId)
       setActiveTab('lighting')
       setShowLightingPrompt(true)
       window.scrollTo(0, 0)
@@ -1575,7 +1580,14 @@ export default function InspectionsPage() {
   // ══════════════════════════════════════════════
   // ══  BEGIN PROMPT (from KPI badge)           ══
   // ══════════════════════════════════════════════
-  if (showBeginPrompt && !draft) {
+  // Check if draft has any meaningful work (non-empty responses in either half)
+  const draftHasWork = draft && (
+    Object.keys(draft.airfield.responses).length > 0 ||
+    Object.keys(draft.lighting.responses).length > 0 ||
+    draft.airfield.savedAt || draft.lighting.savedAt
+  )
+
+  if (showBeginPrompt && !draftHasWork) {
     return (
       <div className="page-container">
         <div style={{ marginBottom: 16 }}>
@@ -1607,7 +1619,7 @@ export default function InspectionsPage() {
     )
   }
 
-  if (showBeginPrompt && draft) {
+  if (showBeginPrompt && draftHasWork) {
     const afCount = Object.keys(draft.airfield.responses).length
     const ltCount = Object.keys(draft.lighting.responses).length
     const totalResponses = afCount + ltCount
@@ -1663,7 +1675,7 @@ export default function InspectionsPage() {
   // ══════════════════════════════════════════════
   // ══  LIGHTING START/RESUME PROMPT            ══
   // ══════════════════════════════════════════════
-  if (draft && !showHistory && showLightingPrompt && activeTab === 'lighting') {
+  if (draftHasWork && !showHistory && showLightingPrompt && activeTab === 'lighting') {
     const ltResponses = Object.keys(draft.lighting.responses).length
     const hasLightingWork = ltResponses > 0
     return (
@@ -1754,7 +1766,7 @@ export default function InspectionsPage() {
   // ══════════════════════════════════════════════
   // ══  WORKSPACE VIEW (active draft exists)  ══
   // ══════════════════════════════════════════════
-  if (draft && !showHistory) {
+  if (draftHasWork && !showHistory) {
 
     return (
       <div className="page-container">
@@ -2393,7 +2405,7 @@ export default function InspectionsPage() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          {draft && showHistory && (
+          {draftHasWork && showHistory && (
             <button
               onClick={() => setShowHistory(false)}
               style={{
@@ -2405,7 +2417,7 @@ export default function InspectionsPage() {
               View Current Inspection Form
             </button>
           )}
-          {!draft && (
+          {!draftHasWork && (
             <button
               onClick={handleBeginNew}
               style={{
