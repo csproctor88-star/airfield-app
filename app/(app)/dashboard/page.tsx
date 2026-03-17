@@ -39,14 +39,18 @@ function formatAction(action: string, entityType: string, displayId?: string): s
   const typeLabel: Record<string, string> = {
     discrepancy: 'Discrepancy',
     check: 'Check',
+    airfield_check: 'Check',
     inspection: 'Inspection',
     obstruction_evaluation: 'Obstruction Eval',
     navaid_status: 'NAVAID',
     airfield_status: 'Runway',
     arff_status: 'ARFF',
-    contractor: 'Personnel on Airfield',
+    contractor: 'Personnel',
     qrc: 'QRC',
+    wildlife_sighting: 'Wildlife Sighting',
+    wildlife_strike: 'Wildlife Strike',
     manual: 'Manual Entry',
+    parking_plan: 'Parking Plan',
   }
   const entity = typeLabel[entityType] || entityType
   const id = displayId ? ` ${displayId}` : ''
@@ -93,6 +97,7 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
   switch (entityType) {
     case 'discrepancy': return `/discrepancies/${entityId}`
     case 'check': return `/checks/${entityId}`
+    case 'airfield_check': return `/checks/${entityId}`
     case 'inspection': return `/inspections/${entityId}`
     case 'obstruction_evaluation': return `/obstructions`
     case 'qrc': return `/qrc?exec=${entityId}`
@@ -336,30 +341,7 @@ export default function AMDashboardPage() {
       {/* ===== Quick Actions ===== */}
       <span className="section-label">Quick Actions</span>
       <div className="kpi-grid" style={{ marginBottom: 20 }}>
-        {QUICK_ACTIONS.map((q) => (
-          <Link
-            key={q.label}
-            href={q.href}
-            style={{
-              background: 'var(--color-bg-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 12,
-              padding: '14px 16px',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
-            }}
-          >
-            <span style={{ fontSize: 'var(--fs-5xl)' }}>{q.icon}</span>
-            <span style={{ fontSize: 'var(--fs-xl)', color: q.color, letterSpacing: '0.04em', fontWeight: 700 }}>
-              {q.label}
-            </span>
-          </Link>
-        ))}
-        {/* Inspection badges */}
+        {/* Inspection badges — first row */}
         <Link
           href={todayAirfieldDone ? '/inspections' : '/inspections?action=begin&type=airfield'}
           style={{
@@ -400,6 +382,30 @@ export default function AMDashboardPage() {
             Lighting Inspection
           </span>
         </Link>
+        {/* Other quick actions */}
+        {QUICK_ACTIONS.map((q) => (
+          <Link
+            key={q.label}
+            href={q.href}
+            style={{
+              background: 'var(--color-bg-surface)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 12,
+              padding: '14px 16px',
+              cursor: 'pointer',
+              textDecoration: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+            }}
+          >
+            <span style={{ fontSize: 'var(--fs-5xl)' }}>{q.icon}</span>
+            <span style={{ fontSize: 'var(--fs-xl)', color: q.color, letterSpacing: '0.04em', fontWeight: 700 }}>
+              {q.label}
+            </span>
+          </Link>
+        ))}
         {/* Contractors on Airfield badge */}
         <button
           onClick={() => setShowContractorForm(true)}

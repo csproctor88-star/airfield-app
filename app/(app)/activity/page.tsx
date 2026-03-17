@@ -16,11 +16,13 @@ function formatAction(action: string, entityType: string, displayId?: string): s
   const typeLabel: Record<string, string> = {
     discrepancy: 'Discrepancy',
     check: 'Check',
+    airfield_check: 'Check',
     inspection: 'Inspection',
     obstruction_evaluation: 'Obstruction Eval',
     navaid_status: 'NAVAID',
     airfield_status: 'Runway',
-    contractor: 'Personnel on Airfield',
+    arff_status: 'ARFF',
+    contractor: 'Personnel',
     qrc: 'QRC',
     wildlife_sighting: 'Wildlife Sighting',
     wildlife_strike: 'Wildlife Strike',
@@ -58,6 +60,7 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
   switch (entityType) {
     case 'discrepancy': return `/discrepancies/${entityId}`
     case 'check': return `/checks/${entityId}`
+    case 'airfield_check': return `/checks/${entityId}`
     case 'inspection': return `/inspections/${entityId}`
     case 'obstruction_evaluation': return `/obstructions`
     case 'qrc': return `/qrc?exec=${entityId}`

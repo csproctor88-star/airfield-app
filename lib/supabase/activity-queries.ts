@@ -146,13 +146,14 @@ export async function fetchEntityDetails(entries: ActivityEntry[]): Promise<Map<
     } catch { /* deleted entities */ }
   }
 
-  // Airfield checks + comments
-  if (groups['check']?.length) {
+  // Airfield checks + comments (entity_type may be 'check' or 'airfield_check')
+  const checkIds = [...(groups['check'] || []), ...(groups['airfield_check'] || [])]
+  if (checkIds.length) {
     try {
           const { data } = await supabase
         .from('airfield_checks')
         .select('id, check_type')
-        .in('id', groups['check'])
+        .in('id', checkIds)
       if (data) {
         for (const r of data as { id: string; check_type?: string }[]) {
           result.set(r.id, { title: r.check_type?.toUpperCase() || undefined })
@@ -162,7 +163,7 @@ export async function fetchEntityDetails(entries: ActivityEntry[]): Promise<Map<
           const { data: comments } = await supabase
         .from('check_comments')
         .select('check_id, comment')
-        .in('check_id', groups['check'])
+        .in('check_id', checkIds)
       if (comments) {
         const commentsByCheck: Record<string, string[]> = {}
         for (const c of comments as { check_id: string; comment: string }[]) {
