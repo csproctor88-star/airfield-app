@@ -983,7 +983,7 @@ export type Database = {
       base_wildlife_species: {
         Row: {
           id: string
-          installation_id: string
+          base_id: string
           species_common: string
           added_by: string | null
           created_at: string
