@@ -146,14 +146,6 @@ export default function InspectionsPage() {
     }
   }, [])
 
-  // ── Check lifecycle state ──
-  const [userOI, setUserOI] = useState('')
-  const [tabStarted, setTabStarted] = useState<Record<TabType, boolean>>({ airfield: false, lighting: false })
-  const [tabCompletionLogged, setTabCompletionLogged] = useState<Record<TabType, boolean>>({ airfield: false, lighting: false })
-  const [showResumePrompt, setShowResumePrompt] = useState(false)
-  const tabStartedRef = useRef<Record<TabType, boolean>>({ airfield: false, lighting: false })
-  useEffect(() => { tabStartedRef.current = tabStarted }, [tabStarted])
-
   // ── Action state ──
   const [saving, setSaving] = useState(false)
   const [filing, setFiling] = useState(false)
@@ -187,17 +179,6 @@ export default function InspectionsPage() {
     if (!installationId) return
     getAirfieldDiagram(installationId).then(setDiagramUrl).catch(() => setDiagramUrl(null))
   }, [installationId])
-
-  // Fetch user's operating initials
-  useEffect(() => {
-    const supabase = createClient()
-    if (!supabase) return
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return
-      const { data: profile } = await supabase.from('profiles').select('operating_initials').eq('id', user.id).single()
-      if (profile?.operating_initials) setUserOI(profile.operating_initials)
-    })
-  }, [])
 
   const handleItemPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!activePhotoItemId) return
@@ -261,182 +242,50 @@ export default function InspectionsPage() {
   useEffect(() => {
     // Phase 1: Sync — load from localStorage
     const stored = loadDraft(installationId)
+    if (stored) setDraft(stored)
+    setDraftLoaded(true)
 
-    // Phase 2: Async — check Supabase for in-progress AND completed drafts
-    Promise.all([
-      fetchInspections(installationId, 'in_progress'),
-      fetchInspections(installationId, 'completed'),
-    ]).then(([dbDrafts, completedInspections]) => {
-      const current = stored || (dbDrafts.length > 0 ? createNewDraft() : null)
+    // Phase 2: Async — check Supabase for newer in-progress drafts
+    fetchInspections(installationId, 'in_progress').then((dbDrafts) => {
+      if (!dbDrafts.length) return
+      let merged = false
+      const current = stored || createNewDraft()
 
-      // Build sets for cross-referencing
-      const inProgressIds = new Set(dbDrafts.map(d => d.id))
-      const inProgressTypes = new Set(dbDrafts.map(d => d.inspection_type))
-      const completedIds = new Set(completedInspections.map(d => d.id))
+      for (const dbRow of dbDrafts) {
+        const tab = dbRow.inspection_type as 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
+        if (!current[tab]) continue
 
-      // Track which tabs have 100% complete DB records
-      const dbCompletedTabs = new Set<string>()
-      if (dbDrafts.length > 0 && current) {
-        let merged = false
-        for (const dbRow of dbDrafts) {
-          const tab = dbRow.inspection_type as 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
-          if (!current[tab]) continue
-
-          // Track if this DB row is 100% complete (handleComplete was run)
-          if (dbRow.completion_percent === 100) dbCompletedTabs.add(tab)
-
-          if (dbRow.draft_data) {
-            const localTime = current[tab].savedAt ? new Date(current[tab].savedAt!).getTime() : 0
-            const dbTime = dbRow.saved_at ? new Date(dbRow.saved_at).getTime() : 0
-            if (dbTime > localTime) {
-              current[tab] = { ...(dbRow.draft_data as unknown as InspectionHalfDraft), dbRowId: dbRow.id }
-              merged = true
-            } else if (!current[tab].dbRowId && dbRow.id) {
-              current[tab].dbRowId = dbRow.id
-            }
-          } else if (dbRow.items && dbRow.items.length > 0) {
-            current[tab] = itemsToDraftHalf(
-              dbRow.items, dbRow.id,
-              dbRow.inspector_name, dbRow.inspector_id || null,
-              dbRow.rsc_condition, dbRow.rcr_value, dbRow.rcr_condition,
-              dbRow.bwc_value, dbRow.weather_conditions, dbRow.temperature_f,
-              dbRow.notes,
-            )
+        if (dbRow.draft_data) {
+          // Normal draft — load from draft_data
+          const localTime = current[tab].savedAt ? new Date(current[tab].savedAt!).getTime() : 0
+          const dbTime = dbRow.saved_at ? new Date(dbRow.saved_at).getTime() : 0
+          if (dbTime > localTime) {
+            current[tab] = { ...(dbRow.draft_data as unknown as InspectionHalfDraft), dbRowId: dbRow.id }
             merged = true
+          } else if (!current[tab].dbRowId && dbRow.id) {
+            current[tab].dbRowId = dbRow.id
           }
-
-          // Ensure savedAt is set for 100% complete halves (fixes itemsToDraftHalf losing savedAt)
-          if (dbRow.completion_percent === 100 && !current[tab].savedAt) {
-            current[tab].savedAt = dbRow.saved_at || new Date().toISOString()
-          }
-        }
-        if (merged) saveDraftToStorage(current, installationId)
-      }
-
-      // Determine if there's a draft to resume
-      const bestDraft = current || stored
-
-      if (bestDraft) {
-        // Clear ghost drafts: halves whose dbRowId is now completed, or
-        // halves with responses but no matching in_progress DB record (stale localStorage)
-        for (const tab of ['airfield', 'lighting'] as const) {
-          const half = bestDraft[tab]
-          const hasWork = Object.keys(half.responses).length > 0
-          if (!hasWork) continue
-
-          const isCompletedInDb = half.dbRowId && completedIds.has(half.dbRowId)
-          const hasNoInProgressRecord = !half.dbRowId && !inProgressTypes.has(tab)
-          // Half was completed (savedAt set) but its DB row is no longer in_progress — already filed
-          const savedButFiled = half.savedAt && (!half.dbRowId || !inProgressIds.has(half.dbRowId))
-
-          if (isCompletedInDb || hasNoInProgressRecord || savedButFiled) {
-            // Clear this ghost half
-            const blank = createNewDraft()
-            bestDraft[tab] = blank[tab]
-          }
+        } else if (dbRow.items && dbRow.items.length > 0) {
+          // Reopened inspection — reconstruct draft from completed items
+          current[tab] = itemsToDraftHalf(
+            dbRow.items, dbRow.id,
+            dbRow.inspector_name, dbRow.inspector_id || null,
+            dbRow.rsc_condition, dbRow.rcr_value, dbRow.rcr_condition,
+            dbRow.bwc_value, dbRow.weather_conditions, dbRow.temperature_f,
+            dbRow.notes,
+          )
+          merged = true
         }
       }
 
-      const hasAirfieldWork = bestDraft && (Object.keys(bestDraft.airfield.responses).length > 0 || bestDraft.airfield.savedAt)
-      const hasLightingWork = bestDraft && (Object.keys(bestDraft.lighting.responses).length > 0 || bestDraft.lighting.savedAt)
-
-      if (bestDraft && (hasAirfieldWork || hasLightingWork)) {
-        setShowResumePrompt(true)
-        setDraft(bestDraft)
-      } else if (bestDraft) {
-        // All halves were ghost drafts — clean up localStorage
-        clearDraft(installationId)
+      if (merged) {
+        setDraft({ ...current })
+        saveDraftToStorage(current, installationId)
+        toast.info('Draft loaded from server')
       }
-      setDraftLoaded(true)
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [installationId])
-
-  // ── Resume / Discard handlers (per-tab) ──
-  const handleResumeTab = (tab: TabType) => {
-    setTabStarted(prev => ({ ...prev, [tab]: true }))
-    // Log the resume as a start entry
-    if (installationId) {
-      const oiStr = userOI ? `/${userOI}` : ''
-      const tabLabel = tab === 'lighting' ? 'LIGHTING INSPECTION' : 'AIRFIELD INSPECTION'
-      logActivity(
-        'started',
-        'inspection',
-        installationId,
-        undefined,
-        { details: `AFLD3${oiStr} on the AFLD, ${tabLabel} (RESUMED)` },
-        installationId,
-      )
-    }
-    // If both tabs are now resolved, dismiss the prompt
-    const otherTab = tab === 'airfield' ? 'lighting' : 'airfield'
-    const otherHasWork = draft && (Object.keys(draft[otherTab].responses).length > 0 || !!draft[otherTab].savedAt)
-    if (!otherHasWork || tabStarted[otherTab]) {
-      setShowResumePrompt(false)
-    }
-    setActiveTab(tab)
-  }
-
-  const handleDiscardTab = (tab: TabType) => {
-    if (draft) {
-      // Clear just this tab's data
-      const cleared = { ...draft }
-      cleared[tab] = createNewDraft()[tab]
-      const otherTab = tab === 'airfield' ? 'lighting' : 'airfield'
-      const otherHasWork = Object.keys(cleared[otherTab].responses).length > 0 || !!cleared[otherTab].savedAt
-      if (!otherHasWork) {
-        // Both tabs empty — discard entire draft
-        setShowResumePrompt(false)
-        clearDraft(installationId)
-        setDraft(null)
-        setTabStarted({ airfield: false, lighting: false })
-      } else {
-        setDraft(cleared)
-        saveDraftToStorage(cleared, installationId)
-        setTabStarted(prev => ({ ...prev, [tab]: false }))
-        // If other tab already resumed, dismiss prompt
-        if (tabStarted[otherTab]) {
-          setShowResumePrompt(false)
-        }
-      }
-    }
-  }
-
-  // ── Auto-save on navigation away ──
-  const draftRef = useRef<DailyInspectionDraft | null>(null)
-  useEffect(() => { draftRef.current = draft }, [draft])
-
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (draftRef.current && (tabStartedRef.current.airfield || tabStartedRef.current.lighting)) {
-        saveDraftToStorage(draftRef.current, installationId)
-      }
-    }
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    return () => {
-      // Also save on unmount (in-app navigation)
-      if (draftRef.current && (tabStartedRef.current.airfield || tabStartedRef.current.lighting)) {
-        saveDraftToStorage(draftRef.current, installationId)
-      }
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-    }
-  }, [installationId])
-
-  // ── Log start when user begins working on a tab ──
-  const logTabStart = useCallback((tab: TabType) => {
-    if (tabStarted[tab]) return
-    setTabStarted(prev => ({ ...prev, [tab]: true }))
-    const oiStr = userOI ? `/${userOI}` : ''
-    const tabLabel = tab === 'lighting' ? 'LIGHTING INSPECTION' : 'AIRFIELD INSPECTION'
-    logActivity(
-      'started',
-      'inspection',
-      installationId || crypto.randomUUID(),
-      undefined,
-      { details: `AFLD3${oiStr} on the AFLD, ${tabLabel}` },
-      installationId,
-    )
-  }, [tabStarted, userOI, installationId])
 
   // ── Auto-begin: if ?action=begin and no draft, create one ──
   useEffect(() => {
@@ -535,7 +384,6 @@ export default function InspectionsPage() {
   }
 
   const toggle = (id: string) => {
-    logTabStart(activeTab)
     updateHalf(activeTab, (h) => {
       const current = h.responses[id] ?? 'pass' // default = pass
       let next: 'pass' | 'fail' | 'na' = 'pass'
@@ -765,7 +613,6 @@ export default function InspectionsPage() {
     const newDraft = createNewDraft()
     setDraft(newDraft)
     setActiveTab('airfield')
-    logTabStart('airfield')
     saveDraftToStorage(newDraft, installationId)
     window.scrollTo(0, 0)
     toast.success('New daily inspection started')
@@ -997,29 +844,6 @@ export default function InspectionsPage() {
     }
 
     const tabLabels: Record<TabType, string> = { airfield: 'Airfield', lighting: 'Lighting' }
-
-    // Log "off the AFLD" activity entry
-    const oiStr = userOI ? `/${userOI}` : ''
-    const inspLabel = targetTab === 'lighting' ? 'LIGHTING INSPECTION' : 'AIRFIELD INSPECTION'
-    const failedItems = items.filter(i => i.response === 'fail')
-    const inspDiscStr = failedItems.length > 0
-      ? `DISCREPANCIES FOUND: ${failedItems.map(i => i.item.toUpperCase()).join(', ')}`
-      : 'NO NEW DISCREPANCIES'
-    let inspCompleteDetails = `${inspLabel} CMPLT, ${inspDiscStr}`
-    if (completedHalf.rscCondition && completedHalf.bwcValue) inspCompleteDetails += `. ADVISES RSC/${completedHalf.rscCondition.toUpperCase()} & BWC/${completedHalf.bwcValue.toUpperCase()}`
-    else if (completedHalf.rscCondition) inspCompleteDetails += `. ADVISES RSC/${completedHalf.rscCondition.toUpperCase()}`
-    else if (completedHalf.bwcValue) inspCompleteDetails += `. ADVISES BWC/${completedHalf.bwcValue.toUpperCase()}`
-
-    logActivity(
-      'completed',
-      'inspection',
-      saved?.id || installationId || crypto.randomUUID(),
-      saved?.display_id || undefined,
-      { details: `AFLD3${oiStr} off the AFLD, ${inspCompleteDetails}` },
-      installationId,
-    )
-    setTabCompletionLogged(prev => ({ ...prev, [targetTab]: true }))
-
     setSaving(false)
     const parts = [`${tabLabels[targetTab]} inspection completed`]
     if (discCreated > 0) parts.push(`${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'} logged`)
@@ -1094,8 +918,6 @@ export default function InspectionsPage() {
     const groupId = draft.id
     let filed = 0
     let filedId: string | null = null
-    let filedDisplayId: string | null = null
-    const filedIds: Record<TabType, { id: string; displayId: string | null }> = {} as any
 
     // ── File airfield half (normal) ──
     if (airfieldSaved) {
@@ -1129,10 +951,7 @@ export default function InspectionsPage() {
           toast.error(`Failed to file airfield: ${error}`)
         } else {
           filed++
-          if (filed_data) {
-            if (!filedId) { filedId = filed_data.id; filedDisplayId = filed_data.display_id }
-            filedIds.airfield = { id: filed_data.id, displayId: filed_data.display_id }
-          }
+          if (filed_data && !filedId) filedId = filed_data.id
         }
       } else {
         const { data: created, error } = await createInspection({
@@ -1164,10 +983,7 @@ export default function InspectionsPage() {
           toast.error(`Failed to file airfield: ${error}`)
         } else {
           filed++
-          if (created) {
-            if (!filedId) { filedId = created.id; filedDisplayId = created.display_id }
-            filedIds.airfield = { id: created.id, displayId: created.display_id }
-          }
+          if (created && !filedId) filedId = created.id
         }
       }
     }
@@ -1204,10 +1020,7 @@ export default function InspectionsPage() {
           toast.error(`Failed to file lighting: ${error}`)
         } else {
           filed++
-          if (filed_data) {
-            if (!filedId) { filedId = filed_data.id; filedDisplayId = filed_data.display_id }
-            filedIds.lighting = { id: filed_data.id, displayId: filed_data.display_id }
-          }
+          if (filed_data && !filedId) filedId = filed_data.id
         }
       } else {
         const { data: created, error } = await createInspection({
@@ -1239,10 +1052,7 @@ export default function InspectionsPage() {
           toast.error(`Failed to file lighting: ${error}`)
         } else {
           filed++
-          if (created) {
-            if (!filedId) { filedId = created.id; filedDisplayId = created.display_id }
-            filedIds.lighting = { id: created.id, displayId: created.display_id }
-          }
+          if (created && !filedId) filedId = created.id
         }
       }
     }
@@ -1423,39 +1233,6 @@ export default function InspectionsPage() {
         }
       }
 
-      // Log "off the AFLD" for each filed half (skip if already logged via handleComplete)
-      const fileOiStr = userOI ? `/${userOI}` : ''
-      for (const { half, tab } of allHalves) {
-        // Skip if completion was already logged this session or in a previous session
-        if (tabCompletionLogged[tab] || half.savedAt) continue
-        const fileInspLabel = tab === 'lighting' ? 'LIGHTING INSPECTION' : 'AIRFIELD INSPECTION'
-        const fileSecs = tab === 'airfield'
-          ? (dbAirfieldSections ?? AIRFIELD_INSPECTION_SECTIONS).filter(s => !s.conditional)
-          : (dbLightingSections ?? LIGHTING_INSPECTION_SECTIONS)
-        const { items: fileItems } = halfDraftToItems(half, fileSecs, itemLocations)
-        const fileFailed = fileItems.filter(i => i.response === 'fail')
-        const fileDiscStr = fileFailed.length > 0
-          ? `DISCREPANCIES FOUND: ${fileFailed.map(i => i.item.toUpperCase()).join(', ')}`
-          : 'NO NEW DISCREPANCIES'
-        let fileDetails = `${fileInspLabel} CMPLT, ${fileDiscStr}`
-        if (half.rscCondition && half.bwcValue) fileDetails += `. ADVISES RSC/${half.rscCondition.toUpperCase()} & BWC/${half.bwcValue.toUpperCase()}`
-        else if (half.rscCondition) fileDetails += `. ADVISES RSC/${half.rscCondition.toUpperCase()}`
-        else if (half.bwcValue) fileDetails += `. ADVISES BWC/${half.bwcValue.toUpperCase()}`
-
-        // Use per-half entity ID so each log links to the correct inspection
-        const halfEntityId = filedIds[tab]?.id || filedId || installationId || crypto.randomUUID()
-        const halfDisplayId = filedIds[tab]?.displayId || filedDisplayId || undefined
-        logActivity(
-          'completed',
-          'inspection',
-          halfEntityId,
-          halfDisplayId,
-          { details: `AFLD3${fileOiStr} off the AFLD, ${fileDetails}` },
-          installationId,
-        )
-      }
-      setTabStarted({ airfield: false, lighting: false })
-
       // Clean up object URLs
       Object.values(itemPhotos).flat().forEach((p) => URL.revokeObjectURL(p.url))
       Object.values(discPhotos).flat().flat().forEach((p) => URL.revokeObjectURL(p.url))
@@ -1465,9 +1242,6 @@ export default function InspectionsPage() {
 
       clearDraft(installationId)
       setDraft(null)
-      // Reset refs immediately so unmount auto-save doesn't re-save the cleared draft
-      draftRef.current = null
-      tabStartedRef.current = { airfield: false, lighting: false }
       const fileParts = [`Inspection${filed !== 1 ? 's' : ''} filed`]
       if (discCreated > 0) fileParts.push(`${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'}`)
       if (featuresMarkedInop > 0) fileParts.push(`${featuresMarkedInop} feature${featuresMarkedInop !== 1 ? 's' : ''} marked inop`)
@@ -1630,81 +1404,6 @@ export default function InspectionsPage() {
   // ══════════════════════════════════════════════
   if (draft && !showHistory) {
 
-    // Show resume/discard prompt before allowing workspace access
-    if (showResumePrompt) {
-      const hasAf = Object.keys(draft.airfield.responses).length > 0 || !!draft.airfield.savedAt
-      const hasLt = Object.keys(draft.lighting.responses).length > 0 || !!draft.lighting.savedAt
-      const afCompleted = !!draft.airfield.savedAt
-      const ltCompleted = !!draft.lighting.savedAt
-
-      // Only show tabs that have work AND are not already completed
-      const resumableTabs: { key: TabType; label: string }[] = []
-      if (hasAf && !afCompleted) resumableTabs.push({ key: 'airfield', label: 'Airfield Inspection' })
-      if (hasLt && !ltCompleted) resumableTabs.push({ key: 'lighting', label: 'Lighting Inspection' })
-
-      // If no resumable tabs (all completed or empty), auto-discard the stale draft
-      if (resumableTabs.length === 0) {
-        clearDraft(installationId)
-        setDraft(null)
-        setShowResumePrompt(false)
-      } else {
-        return (
-          <div className="page-container">
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Daily Inspection</div>
-              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4 }}>
-                Unfinished work found{draft.createdAt ? ` from ${formatZuluDateShort(new Date(draft.createdAt))}` : ''}
-              </div>
-            </div>
-            {resumableTabs.map(t => (
-              <div key={t.key} className="card" style={{
-                border: '2px solid #D97706',
-                background: 'rgba(217, 119, 6, 0.06)',
-                marginBottom: 12,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <span style={{ fontSize: 20 }}>⚠️</span>
-                  <div>
-                    <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: '#D97706' }}>
-                      {t.label} In Progress
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    type="button"
-                    onClick={() => handleResumeTab(t.key)}
-                    style={{
-                      flex: 1, padding: '12px', borderRadius: 8,
-                      border: '1.5px solid var(--color-success)',
-                      background: 'rgba(34, 197, 94, 0.1)',
-                      color: 'var(--color-success)', fontSize: 'var(--fs-base)', fontWeight: 700,
-                      cursor: 'pointer', fontFamily: 'inherit',
-                    }}
-                  >
-                    Resume
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDiscardTab(t.key)}
-                    style={{
-                      flex: 1, padding: '12px', borderRadius: 8,
-                      border: '1.5px solid rgba(239, 68, 68, 0.5)',
-                      background: 'rgba(239, 68, 68, 0.08)',
-                      color: '#EF4444', fontSize: 'var(--fs-base)', fontWeight: 700,
-                      cursor: 'pointer', fontFamily: 'inherit',
-                    }}
-                  >
-                    Discard
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )
-      }
-    }
-
     return (
       <div className="page-container">
         {/* ── Header ── */}
@@ -1751,7 +1450,7 @@ export default function InspectionsPage() {
             return (
               <button
                 key={type}
-                onClick={() => { logTabStart(type); setActiveTab(type); window.scrollTo(0, 0) }}
+                onClick={() => { setActiveTab(type); window.scrollTo(0, 0) }}
                 style={{
                   flex: wide ? '1.3 0 0%' : '1 0 0%',
                   minWidth: 0,
