@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
 import { createSighting, updateSighting, type WildlifeSightingRow } from '@/lib/supabase/wildlife'
@@ -19,6 +19,7 @@ import { useDashboard } from '@/lib/dashboard-context'
 import { createClient } from '@/lib/supabase/client'
 import { fetchWeatherWithFormFields } from '@/lib/weather'
 import { formatZuluTime } from '@/lib/utils'
+import { fetchBaseSpecies } from '@/lib/supabase/base-wildlife-species'
 import { SpeciesPicker } from './species-picker'
 
 const LocationPickerMap = dynamic(
@@ -38,9 +39,17 @@ type Props = {
 }
 
 export function SightingForm({ currentUser, baseId, onClose, onSaved, initialData, checkId, required, inline }: Props) {
-  const { areas: installationAreas } = useInstallation()
+  const { installationId, areas: installationAreas } = useInstallation()
   const { bwcValue: currentBwc } = useDashboard()
   const isEdit = !!initialData
+
+  const [baseSpeciesNames, setBaseSpeciesNames] = useState<Set<string> | null>(null)
+  useEffect(() => {
+    if (!installationId) return
+    fetchBaseSpecies(installationId).then(rows => {
+      if (rows.length > 0) setBaseSpeciesNames(new Set(rows.map(r => r.species_common)))
+    })
+  }, [installationId])
 
   const [userId, setUserId] = useState<string | null>(null)
   const [selectedSpecies, setSelectedSpecies] = useState<WildlifeSpecies | null>(() => {
@@ -55,7 +64,10 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
   const [timeOfDay, setTimeOfDay] = useState(initialData?.time_of_day ?? '')
   const [skyCondition, setSkyCondition] = useState(initialData?.sky_condition ?? '')
   const [precipitation, setPrecipitation] = useState(initialData?.precipitation ?? '')
-  const [actionTaken, setActionTaken] = useState(initialData?.action_taken ?? 'none')
+  const [actionsTaken, setActionsTaken] = useState<string[]>(() => {
+    if (initialData?.action_taken && initialData.action_taken !== 'none') return initialData.action_taken.split(',')
+    return []
+  })
   const [dispersalMethod, setDispersalMethod] = useState(initialData?.dispersal_method ?? '')
   const [dispersalEffective, setDispersalEffective] = useState<boolean | null>(initialData?.dispersal_effective ?? null)
   const [bwcAtTime, setBwcAtTime] = useState(initialData?.bwc_at_time ?? '')
@@ -162,15 +174,15 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
         behavior: behavior || null,
         latitude,
         longitude,
-        location_text: locationText || null,
+        location_text: airfieldZone || null,
         airfield_zone: airfieldZone || null,
         observed_at: observationTime + 'Z',
         time_of_day: timeOfDay || null,
         sky_condition: skyCondition || null,
         precipitation: precipitation || null,
-        action_taken: actionTaken,
-        dispersal_method: actionTaken !== 'none' ? dispersalMethod || null : null,
-        dispersal_effective: actionTaken !== 'none' ? dispersalEffective : null,
+        action_taken: actionsTaken.length > 0 ? actionsTaken.join(',') : 'none',
+        dispersal_method: actionsTaken.length > 0 ? dispersalMethod || null : null,
+        dispersal_effective: actionsTaken.length > 0 ? dispersalEffective : null,
         bwc_at_time: bwcAtTime || null,
         notes: notes || null,
       })
@@ -190,15 +202,15 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
       behavior: behavior || null,
       latitude,
       longitude,
-      location_text: locationText || null,
+      location_text: airfieldZone || null,
       airfield_zone: airfieldZone || null,
       observed_at: observationTime + 'Z',
       time_of_day: timeOfDay || null,
       sky_condition: skyCondition || null,
       precipitation: precipitation || null,
-      action_taken: actionTaken,
-      dispersal_method: actionTaken !== 'none' ? dispersalMethod || null : null,
-      dispersal_effective: actionTaken !== 'none' ? dispersalEffective : null,
+      action_taken: actionsTaken.length > 0 ? actionsTaken.join(',') : 'none',
+      dispersal_method: actionsTaken.length > 0 ? dispersalMethod || null : null,
+      dispersal_effective: actionsTaken.length > 0 ? dispersalEffective : null,
       bwc_at_time: bwcAtTime || null,
       observed_by: currentUser,
       observed_by_id: userId,
@@ -340,23 +352,13 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
             </div>
           </div>
 
-          {/* Location text + Zone */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
-            <div>
-              <label style={labelStyle}>Location</label>
-              <input
-                type="text" placeholder="e.g. RWY 01, TWY A"
-                value={locationText} onChange={e => setLocationText(e.target.value)}
-                style={selectStyle}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Airfield Zone</label>
-              <select value={airfieldZone} onChange={e => setAirfieldZone(e.target.value)} style={selectStyle}>
-                <option value="">— Select —</option>
-                {(installationAreas || []).map(a => <option key={a} value={a}>{a}</option>)}
-              </select>
-            </div>
+          {/* Location */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Location</label>
+            <select value={airfieldZone} onChange={e => setAirfieldZone(e.target.value)} style={selectStyle}>
+              <option value="">— Select —</option>
+              {(installationAreas || []).map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
           </div>
 
           {/* GPS + Map Location */}
@@ -456,12 +458,30 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
           {/* Action taken */}
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle}>Action Taken</label>
-            <select value={actionTaken} onChange={e => setActionTaken(e.target.value)} style={selectStyle}>
-              {WILDLIFE_ACTIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
-            </select>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {WILDLIFE_ACTIONS.filter(a => a.value !== 'none').map(a => {
+                const selected = actionsTaken.includes(a.value)
+                return (
+                  <button
+                    key={a.value}
+                    type="button"
+                    onClick={() => setActionsTaken(prev => selected ? prev.filter(v => v !== a.value) : [...prev, a.value])}
+                    style={{
+                      padding: '6px 14px', borderRadius: 20,
+                      border: selected ? '2px solid #10B981' : '1px solid var(--color-border)',
+                      background: selected ? 'rgba(16,185,129,0.15)' : 'var(--color-bg-surface)',
+                      color: selected ? '#10B981' : 'var(--color-text-2)',
+                      fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    {a.label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
-          {actionTaken !== 'none' && (
+          {actionsTaken.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
               <div>
                 <label style={labelStyle}>Method</label>
@@ -520,6 +540,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
           <SpeciesPicker
             onSelect={sp => { setSelectedSpecies(sp); setShowPicker(false) }}
             onClose={() => setShowPicker(false)}
+            allowedSpecies={baseSpeciesNames}
           />
         )}
       </>

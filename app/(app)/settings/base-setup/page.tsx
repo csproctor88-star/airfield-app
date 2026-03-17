@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
@@ -31,8 +31,10 @@ import {
 } from '@/lib/supabase/lighting-systems'
 import { SYSTEM_TYPE_LABELS, SYSTEM_TYPES } from '@/lib/outage-rules'
 import type { LightingSystem, LightingSystemComponent, OutageRuleTemplate, InfrastructureFeature } from '@/lib/supabase/types'
+import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
+import { fetchBaseSpecies, addBaseSpecies, addBaseSpeciesBulk, removeBaseSpeciesByName, type BaseWildlifeSpeciesRow } from '@/lib/supabase/base-wildlife-species'
 
-type SetupTab = 'runways' | 'taxiways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'facilities' | 'templates' | 'shiftchecklist' | 'qrc' | 'lighting'
+type SetupTab = 'runways' | 'taxiways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'facilities' | 'templates' | 'shiftchecklist' | 'qrc' | 'lighting' | 'wildlife'
 
 export default function BaseSetupPage() {
   const { installationId, currentInstallation, runways, areas, ceShops, arffAircraft, userRole } = useInstallation()
@@ -67,6 +69,7 @@ export default function BaseSetupPage() {
     { key: 'shiftchecklist', label: 'Shift Checklist' },
     { key: 'qrc', label: 'QRC Templates' },
     { key: 'lighting', label: 'Lighting Systems' },
+    { key: 'wildlife', label: 'Wildlife Species' },
   ]
 
   return (
@@ -127,6 +130,7 @@ export default function BaseSetupPage() {
         {activeTab === 'shiftchecklist' && <ShiftChecklistTab installationId={installationId} currentInstallation={currentInstallation} />}
         {activeTab === 'qrc' && <QrcTemplatesTab installationId={installationId} />}
         {activeTab === 'lighting' && <LightingSystemsTab installationId={installationId} />}
+        {activeTab === 'wildlife' && <WildlifeSpeciesTab installationId={installationId} />}
       </div>
 
       {/* Preview Dashboard Button */}
@@ -2453,6 +2457,291 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
           + Add Lighting System
         </button>
       )}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Wildlife Species Tab — searchable species picker for base config
+// ═══════════════════════════════════════════════════════════════
+
+function WildlifeSpeciesTab({ installationId }: { installationId: string | null }) {
+  const [baseSpecies, setBaseSpecies] = useState<BaseWildlifeSpeciesRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [activeGroup, setActiveGroup] = useState<string>('all')
+  const [adding, setAdding] = useState<string | null>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  const GROUPS = [
+    { key: 'all', label: 'All' },
+    { key: 'bird', label: 'Birds' },
+    { key: 'mammal', label: 'Mammals' },
+    { key: 'reptile', label: 'Reptiles' },
+    { key: 'bat', label: 'Bats' },
+  ] as const
+
+  const SIZE_ORDER: Record<string, number> = { large: 0, medium: 1, small: 2 }
+  const RISK_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+
+  const loadSpecies = useCallback(async () => {
+    if (!installationId) return
+    setLoading(true)
+    const data = await fetchBaseSpecies(installationId)
+    setBaseSpecies(data)
+    setLoading(false)
+  }, [installationId])
+
+  useEffect(() => { loadSpecies() }, [loadSpecies])
+
+  const baseSpeciesNames = useMemo(() => new Set(baseSpecies.map(s => s.species_common)), [baseSpecies])
+
+  const filtered = useMemo(() => {
+    let list = WILDLIFE_SPECIES as WildlifeSpecies[]
+    if (activeGroup !== 'all') {
+      list = list.filter(s => s.group === activeGroup)
+    }
+    if (search.length > 0) {
+      const q = search.toLowerCase()
+      list = list.filter(s =>
+        s.common_name.toLowerCase().includes(q) ||
+        s.scientific_name.toLowerCase().includes(q),
+      )
+    }
+    return [...list].sort((a, b) => {
+      // Base species first
+      const aInBase = baseSpeciesNames.has(a.common_name) ? 0 : 1
+      const bInBase = baseSpeciesNames.has(b.common_name) ? 0 : 1
+      if (aInBase !== bInBase) return aInBase - bInBase
+      const riskDiff = RISK_ORDER[a.strike_risk] - RISK_ORDER[b.strike_risk]
+      if (riskDiff !== 0) return riskDiff
+      const sizeDiff = SIZE_ORDER[a.size_category] - SIZE_ORDER[b.size_category]
+      if (sizeDiff !== 0) return sizeDiff
+      return a.common_name.localeCompare(b.common_name)
+    })
+  }, [search, activeGroup, baseSpeciesNames])
+
+  const groupCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: WILDLIFE_SPECIES.length }
+    for (const sp of WILDLIFE_SPECIES) {
+      counts[sp.group] = (counts[sp.group] || 0) + 1
+    }
+    return counts
+  }, [])
+
+  const riskColor = (risk: string) => {
+    switch (risk) {
+      case 'critical': return '#EF4444'
+      case 'high': return '#F97316'
+      case 'medium': return '#FBBF24'
+      default: return '#10B981'
+    }
+  }
+
+  async function toggleSpecies(sp: WildlifeSpecies) {
+    if (!installationId) return
+    setAdding(sp.common_name)
+    if (baseSpeciesNames.has(sp.common_name)) {
+      const { error } = await removeBaseSpeciesByName(installationId, sp.common_name)
+      if (error) toast.error(error)
+      else toast.success(`Removed ${sp.common_name}`)
+    } else {
+      const { error } = await addBaseSpecies(installationId, sp.common_name)
+      if (error) toast.error(error)
+      else toast.success(`Added ${sp.common_name}`)
+    }
+    await loadSpecies()
+    setAdding(null)
+  }
+
+  async function addAllFiltered() {
+    if (!installationId) return
+    const names = filtered.filter(sp => !baseSpeciesNames.has(sp.common_name)).map(sp => sp.common_name)
+    if (names.length === 0) { toast.info('All filtered species already added'); return }
+    setAdding('bulk')
+    const { error } = await addBaseSpeciesBulk(installationId, names)
+    if (error) toast.error(error)
+    else toast.success(`Added ${names.length} species`)
+    await loadSpecies()
+    setAdding(null)
+  }
+
+  if (loading) return <div style={{ padding: 20, color: 'var(--color-text-3)' }}>Loading species...</div>
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div>
+          <h3 style={{ margin: 0, fontSize: 'var(--fs-xl)', fontWeight: 800 }}>Wildlife Species</h3>
+          <p style={{ margin: '4px 0 0', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
+            {baseSpecies.length} species configured — tap to add/remove from your base&apos;s wildlife forms
+          </p>
+        </div>
+        <button
+          onClick={addAllFiltered}
+          disabled={adding === 'bulk'}
+          style={{
+            padding: '6px 14px', borderRadius: 8, border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-surface)', color: 'var(--color-text-2)',
+            fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer',
+          }}
+        >
+          {adding === 'bulk' ? 'Adding...' : 'Add All Visible'}
+        </button>
+      </div>
+
+      {/* Search + Group tabs */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input
+          ref={searchRef}
+          type="text"
+          placeholder="Search by name or scientific name..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{
+            flex: '1 1 200px', minWidth: 0, padding: '10px 12px', borderRadius: 8,
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-surface)', color: 'var(--color-text)',
+            fontSize: 'var(--fs-base)',
+          }}
+        />
+        <div style={{ display: 'flex', gap: 4, overflowX: 'auto', flexShrink: 0 }}>
+          {GROUPS.map(g => (
+            <button
+              key={g.key}
+              onClick={() => setActiveGroup(g.key)}
+              style={{
+                padding: '6px 12px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                fontSize: 'var(--fs-sm)', fontWeight: 700, whiteSpace: 'nowrap',
+                background: activeGroup === g.key ? 'var(--color-cyan)' : 'var(--color-bg-surface)',
+                color: activeGroup === g.key ? '#000' : 'var(--color-text-2)',
+              }}
+            >
+              {g.label} ({groupCounts[g.key] || 0})
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Results count + legend */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        paddingBottom: 8, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)',
+      }}>
+        <span>{filtered.length} species {search && `matching "${search}"`}</span>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444', display: 'inline-block' }} /> Critical
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#F97316', display: 'inline-block' }} /> High
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#FBBF24', display: 'inline-block' }} /> Med
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} /> Low
+          </span>
+        </div>
+      </div>
+
+      {/* Species grid */}
+      <style>{`
+        .base-species-grid {
+          display: grid;
+          gap: 8px;
+          grid-template-columns: repeat(3, 1fr);
+          align-content: start;
+        }
+        @media (min-width: 600px) {
+          .base-species-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+        .base-species-card:hover {
+          border-color: var(--color-cyan) !important;
+        }
+      `}</style>
+      <div className="base-species-grid" style={{ maxHeight: 500, overflowY: 'auto' }}>
+        {filtered.map(sp => {
+          const inBase = baseSpeciesNames.has(sp.common_name)
+          const isAdding = adding === sp.common_name
+          return (
+            <button
+              key={sp.common_name}
+              className="base-species-card"
+              onClick={() => toggleSpecies(sp)}
+              disabled={isAdding}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                padding: 6, borderRadius: 10,
+                border: inBase ? '2px solid #10B981' : '1px solid var(--color-border)',
+                background: inBase ? 'rgba(16,185,129,0.08)' : 'var(--color-bg-surface)',
+                cursor: isAdding ? 'wait' : 'pointer',
+                textAlign: 'center', color: 'var(--color-text)',
+                transition: 'border-color 0.15s',
+                opacity: isAdding ? 0.5 : 1,
+                position: 'relative',
+              }}
+            >
+              {inBase && (
+                <div style={{
+                  position: 'absolute', top: 4, left: 4, width: 20, height: 20,
+                  borderRadius: '50%', background: '#10B981',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 12, color: '#fff', fontWeight: 700, zIndex: 1,
+                }}>&#10003;</div>
+              )}
+              <div style={{
+                width: '100%', aspectRatio: '4/3', borderRadius: 8, overflow: 'hidden',
+                background: 'var(--color-bg)', marginBottom: 4, position: 'relative',
+              }}>
+                <img
+                  src={resolveWildlifeImage(sp)!}
+                  alt={sp.common_name}
+                  loading="lazy"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={e => {
+                    const img = e.target as HTMLImageElement
+                    img.style.display = 'none'
+                    const parent = img.parentElement
+                    if (parent && !parent.querySelector('.fallback-icon')) {
+                      const div = document.createElement('div')
+                      div.className = 'fallback-icon'
+                      div.style.cssText = 'display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:28px;color:var(--color-text-4);'
+                      div.textContent = sp.group === 'bird' ? '\uD83E\uDD85' : sp.group === 'mammal' ? '\uD83E\uDD8C' : sp.group === 'bat' ? '\uD83E\uDD87' : '\uD83E\uDD8E'
+                      parent.appendChild(div)
+                    }
+                  }}
+                />
+                <div style={{
+                  position: 'absolute', top: 3, right: 3, width: 10, height: 10,
+                  borderRadius: '50%', background: riskColor(sp.strike_risk),
+                  border: '1.5px solid var(--color-bg-surface)',
+                }} />
+              </div>
+              <div style={{
+                fontWeight: 700, fontSize: 'var(--fs-xs)', lineHeight: 1.2,
+                overflow: 'hidden', textOverflow: 'ellipsis',
+                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                minHeight: '2.4em', width: '100%',
+              }}>
+                {sp.common_name}
+              </div>
+              <div style={{
+                fontSize: '9px', color: 'var(--color-text-4)', fontStyle: 'italic',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                width: '100%',
+              }}>
+                {sp.scientific_name}
+              </div>
+            </button>
+          )
+        })}
+        {filtered.length === 0 && (
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 40, color: 'var(--color-text-3)' }}>
+            No species found matching &quot;{search}&quot;
+          </div>
+        )}
+      </div>
     </div>
   )
 }

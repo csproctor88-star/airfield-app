@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { createStrike, updateStrike, type WildlifeStrikeRow } from '@/lib/supabase/wildlife'
 import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import { createClient } from '@/lib/supabase/client'
+import { fetchBaseSpecies } from '@/lib/supabase/base-wildlife-species'
 import { SpeciesPicker } from './species-picker'
 
 const LocationPickerMap = dynamic(
@@ -24,6 +25,7 @@ import {
   BWC_OPTIONS,
 } from '@/lib/constants'
 import { useDashboard } from '@/lib/dashboard-context'
+import { useInstallation } from '@/lib/installation-context'
 import { fetchWeatherWithFormFields } from '@/lib/weather'
 import { formatZuluTime } from '@/lib/utils'
 
@@ -39,7 +41,17 @@ type Props = {
 
 export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData, checkId, inline }: Props) {
   const { bwcValue: currentBwc } = useDashboard()
+  const { installationId, areas: installationAreas } = useInstallation()
   const isEdit = !!initialData
+
+  const [baseSpeciesNames, setBaseSpeciesNames] = useState<Set<string> | null>(null)
+  useEffect(() => {
+    if (!installationId) return
+    fetchBaseSpecies(installationId).then(rows => {
+      if (rows.length > 0) setBaseSpeciesNames(new Set(rows.map(r => r.species_common)))
+    })
+  }, [installationId])
+
   const [userId, setUserId] = useState<string | null>(null)
   const [selectedSpecies, setSelectedSpecies] = useState<WildlifeSpecies | null>(() => {
     if (initialData?.species_common) return WILDLIFE_SPECIES.find(s => s.common_name === initialData.species_common) ?? null
@@ -333,8 +345,10 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
         {/* Location */}
         <div style={{ marginBottom: 14 }}>
           <label style={labelStyle}>Location</label>
-          <input type="text" placeholder="e.g. RWY 01, TWY B"
-            value={locationText} onChange={e => setLocationText(e.target.value)} style={selectStyle} />
+          <select value={locationText} onChange={e => setLocationText(e.target.value)} style={selectStyle}>
+            <option value="">— Select —</option>
+            {(installationAreas || []).map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
         </div>
 
         {/* Strike Time (Zulu) */}
@@ -630,6 +644,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
           <SpeciesPicker
             onSelect={sp => { setSelectedSpecies(sp); setShowPicker(false) }}
             onClose={() => setShowPicker(false)}
+            allowedSpecies={baseSpeciesNames}
           />
         )}
       </>
@@ -655,6 +670,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
       <SpeciesPicker
         onSelect={sp => { setSelectedSpecies(sp); setShowPicker(false) }}
         onClose={() => setShowPicker(false)}
+        allowedSpecies={baseSpeciesNames}
       />
     )}
     </>

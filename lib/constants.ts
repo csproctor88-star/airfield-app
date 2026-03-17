@@ -350,6 +350,8 @@ export const WILDLIFE_ACTIONS = [
   { value: 'dispersed', label: 'Dispersed' },
   { value: 'depredated', label: 'Depredated' },
   { value: 'relocated', label: 'Relocated' },
+  { value: 'disposed', label: 'Disposed' },
+  { value: 'given_to_usda', label: 'Given to USDA' },
 ] as const
 
 export const FLIGHT_PHASES = [

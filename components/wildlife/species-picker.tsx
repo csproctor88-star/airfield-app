@@ -6,6 +6,7 @@ import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/
 type Props = {
   onSelect: (species: WildlifeSpecies) => void
   onClose: () => void
+  allowedSpecies?: Set<string> | null
 }
 
 const GROUPS = [
@@ -19,7 +20,7 @@ const GROUPS = [
 const SIZE_ORDER = { large: 0, medium: 1, small: 2 }
 const RISK_ORDER = { critical: 0, high: 1, medium: 2, low: 3 }
 
-export function SpeciesPicker({ onSelect, onClose }: Props) {
+export function SpeciesPicker({ onSelect, onClose, allowedSpecies }: Props) {
   const [search, setSearch] = useState('')
   const [activeGroup, setActiveGroup] = useState<string>('all')
   const searchRef = useRef<HTMLInputElement>(null)
@@ -28,8 +29,15 @@ export function SpeciesPicker({ onSelect, onClose }: Props) {
     searchRef.current?.focus()
   }, [])
 
+  const sourceList = useMemo(() => {
+    if (allowedSpecies && allowedSpecies.size > 0) {
+      return WILDLIFE_SPECIES.filter(s => allowedSpecies.has(s.common_name))
+    }
+    return WILDLIFE_SPECIES
+  }, [allowedSpecies])
+
   const filtered = useMemo(() => {
-    let list = WILDLIFE_SPECIES
+    let list = sourceList
     if (activeGroup !== 'all') {
       list = list.filter(s => s.group === activeGroup)
     }
@@ -48,15 +56,15 @@ export function SpeciesPicker({ onSelect, onClose }: Props) {
       if (sizeDiff !== 0) return sizeDiff
       return a.common_name.localeCompare(b.common_name)
     })
-  }, [search, activeGroup])
+  }, [search, activeGroup, sourceList])
 
   const groupCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: WILDLIFE_SPECIES.length }
-    for (const sp of WILDLIFE_SPECIES) {
+    const counts: Record<string, number> = { all: sourceList.length }
+    for (const sp of sourceList) {
       counts[sp.group] = (counts[sp.group] || 0) + 1
     }
     return counts
-  }, [])
+  }, [sourceList])
 
   const riskColor = (risk: string) => {
     switch (risk) {
