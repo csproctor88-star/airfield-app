@@ -1820,7 +1820,7 @@ export default function InspectionsPage() {
           ]).map(({ key: type, topLine, bottomLine, wide }) => {
             const active = activeTab === type
             const half = draft[type]
-            const saved = !!half.savedAt
+            const saved = !!half.savedAt || (type === 'airfield' && airfieldFiled)
             return (
               <button
                 key={type}
@@ -1886,6 +1886,8 @@ export default function InspectionsPage() {
                     </div>
                     <div style={{ color: 'var(--color-text-2)', fontSize: 'var(--fs-xs)' }}>{draft.airfield.inspectorName}</div>
                   </>
+                ) : airfieldFiled ? (
+                  <div style={{ color: '#22C55E', fontWeight: 600 }}>Completed & Filed</div>
                 ) : (
                   <div style={{ color: 'var(--color-text-3)' }}>Not completed</div>
                 )}
@@ -1909,7 +1911,41 @@ export default function InspectionsPage() {
           </div>
 
 
+        {/* ── Airfield Filed Card (when user clicks airfield tab after filing) ── */}
+        {activeTab === 'airfield' && airfieldFiled && (
+          <div className="card" style={{ padding: 24, textAlign: 'center', marginBottom: 16 }}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>{'\u2705'}</div>
+            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, marginBottom: 4 }}>Airfield Inspection Complete</div>
+            <div style={{ color: 'var(--color-text-3)', marginBottom: 16 }}>
+              The airfield inspection has been completed and filed. Switch to the Lighting tab to continue.
+            </div>
+            <button
+              onClick={() => {
+                setActiveTab('lighting')
+                if (!lightingStarted && Object.keys(draft.lighting.responses).length === 0 && !draft.lighting.savedAt) {
+                  setShowLightingPrompt(true)
+                }
+                window.scrollTo(0, 0)
+              }}
+              style={{
+                padding: '10px 24px',
+                background: 'var(--color-accent-secondary)',
+                color: '#FFF',
+                border: 'none',
+                borderRadius: 8,
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                fontSize: 'var(--fs-base)',
+              }}
+            >
+              Continue to Lighting Inspection
+            </button>
+          </div>
+        )}
+
         {/* ── Progress + Mark All Pass ── */}
+        {!(activeTab === 'airfield' && airfieldFiled) && (<>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <div>
                 <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700 }}>
@@ -2262,6 +2298,8 @@ export default function InspectionsPage() {
             </div>
           </div>
         )}
+
+        </>)}
 
         {/* ── Complete Confirmation Dialog ── */}
         {showCompleteConfirm && (
