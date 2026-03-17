@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { fetchCurrentWeather, type WeatherResult } from '@/lib/weather'
@@ -13,7 +13,7 @@ import { logRunwayStatusChange } from '@/lib/supabase/airfield-status'
 import { RSC_CONDITIONS, BWC_OPTIONS, RCR_CONDITION_TYPES, CONTRACTOR_STATUS_CONFIG } from '@/lib/constants'
 import { fetchActiveContractors, updateContractor, createContractor, type ContractorRow } from '@/lib/supabase/contractors'
 import { DEMO_CONTRACTORS } from '@/lib/demo-data'
-import { formatZuluDate } from '@/lib/utils'
+import { formatZuluDate, formatZuluTime } from '@/lib/utils'
 import LoginActivityDialog from '@/components/login-activity-dialog'
 
 // --- Weather emoji mapping ---
@@ -84,6 +84,11 @@ export default function HomePage() {
   const [editingAdvisoryId, setEditingAdvisoryId] = useState<string | null>(null)
   const [advisoryDraftType, setAdvisoryDraftType] = useState<'WATCH' | 'WARNING' | 'ADVISORY'>('ADVISORY')
   const [advisoryDraftText, setAdvisoryDraftText] = useState('')
+  const [advisoryDraftStart, setAdvisoryDraftStart] = useState('')
+  const [advisoryDraftEnd, setAdvisoryDraftEnd] = useState('')
+  const [advisoryDraftUfn, setAdvisoryDraftUfn] = useState(true)
+  const [, setExpiryTick] = useState(0)
+  const expiryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Confirmation dialog state for runway changes
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -120,6 +125,34 @@ export default function HomePage() {
     }
     loadWeather()
   }, [])
+
+  // --- Advisory expiration timer ---
+  useEffect(() => {
+    const hasExpiring = advisories.some(a => a.effective_end)
+    if (!hasExpiring) {
+      if (expiryTimerRef.current) { clearInterval(expiryTimerRef.current); expiryTimerRef.current = null }
+      return
+    }
+    // Tick every 15s to update countdowns and check for expirations
+    expiryTimerRef.current = setInterval(() => {
+      const now = Date.now()
+      for (const adv of advisories) {
+        if (adv.effective_end) {
+          const endMs = new Date(adv.effective_end).getTime()
+          if (now >= endMs) {
+            // Expired — log and remove
+            const effLabel = adv.effective_start
+              ? `${formatZuluTime(new Date(adv.effective_start))}Z–${formatZuluTime(new Date(adv.effective_end))}Z`
+              : `UFN–${formatZuluTime(new Date(adv.effective_end))}Z`
+            if (installationId) logActivity('updated', 'airfield_status', installationId, 'Weather Info Expired', { details: `WX ${adv.type.toUpperCase()} EXPIRED — ${adv.text.toUpperCase()} (EFF ${effLabel})` }, installationId)
+            removeAdvisory(adv.id)
+          }
+        }
+      }
+      setExpiryTick(t => t + 1) // force re-render for countdowns
+    }, 15000)
+    return () => { if (expiryTimerRef.current) clearInterval(expiryTimerRef.current) }
+  }, [advisories, installationId, removeAdvisory])
 
   // --- Load NAVAIDs ---
   const loadNavaids = useCallback(async () => {
@@ -358,34 +391,83 @@ export default function HomePage() {
       </div>
 
       {/* Advisory banners — stacked, each clickable to edit */}
-      {advisories.map((adv) => (
-        <div
-          key={adv.id}
-          onClick={() => {
-            setEditingAdvisoryId(adv.id)
-            setAdvisoryDraftType(adv.type)
-            setAdvisoryDraftText(adv.text)
-            setAdvisoryDialogOpen(true)
-          }}
-          style={{
-            padding: 'var(--advisory-padding)',
-            marginBottom: 8,
-            borderRadius: 10,
-            background: ADVISORY_COLORS[adv.type].bg,
-            border: `1px solid ${ADVISORY_COLORS[adv.type].border}`,
-            cursor: 'pointer',
-          }}
-        >
-          <div style={{ fontSize: 'var(--fs-base)', fontWeight: 800, color: ADVISORY_COLORS[adv.type].text, marginBottom: 2 }}>{adv.type}</div>
-          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: 1.4 }}>{adv.text}</div>
-        </div>
-      ))}
+      {advisories.map((adv) => {
+        const now = Date.now()
+        const endMs = adv.effective_end ? new Date(adv.effective_end).getTime() : null
+        const msRemaining = endMs ? endMs - now : null
+        const expiringSoon = msRemaining !== null && msRemaining > 0 && msRemaining <= 5 * 60 * 1000
+        const colors = ADVISORY_COLORS[adv.type]
+
+        // Build effective time label
+        let effLabel = ''
+        if (adv.effective_start || adv.effective_end) {
+          const startStr = adv.effective_start ? formatZuluTime(new Date(adv.effective_start)) + 'Z' : 'Now'
+          const endStr = adv.effective_end ? formatZuluTime(new Date(adv.effective_end)) + 'Z' : 'UFN'
+          effLabel = `${startStr} – ${endStr}`
+        }
+
+        // Countdown text
+        let countdownText = ''
+        if (msRemaining !== null && msRemaining > 0) {
+          const mins = Math.ceil(msRemaining / 60000)
+          if (mins >= 60) {
+            const hrs = Math.floor(mins / 60)
+            const rem = mins % 60
+            countdownText = rem > 0 ? `${hrs}h ${rem}m remaining` : `${hrs}h remaining`
+          } else {
+            countdownText = `${mins}m remaining`
+          }
+        }
+
+        return (
+          <div
+            key={adv.id}
+            onClick={() => {
+              setEditingAdvisoryId(adv.id)
+              setAdvisoryDraftType(adv.type)
+              setAdvisoryDraftText(adv.text)
+              setAdvisoryDraftStart(adv.effective_start ? new Date(adv.effective_start).toISOString().slice(0, 16) : '')
+              setAdvisoryDraftEnd(adv.effective_end ? new Date(adv.effective_end).toISOString().slice(0, 16) : '')
+              setAdvisoryDraftUfn(!adv.effective_end)
+              setAdvisoryDialogOpen(true)
+            }}
+            style={{
+              padding: 'var(--advisory-padding)',
+              marginBottom: 8,
+              borderRadius: 10,
+              background: expiringSoon ? 'transparent' : colors.bg,
+              border: expiringSoon ? `2px solid ${colors.text}` : `1px solid ${colors.border}`,
+              cursor: 'pointer',
+              opacity: expiringSoon ? 0.85 : 1,
+              transition: 'all 0.3s',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+              <div style={{ fontSize: 'var(--fs-base)', fontWeight: 800, color: colors.text }}>{adv.type}</div>
+              {countdownText && (
+                <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: expiringSoon ? colors.text : 'var(--color-text-3)' }}>
+                  {countdownText}
+                </div>
+              )}
+            </div>
+            <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: 1.4 }}>{adv.text}</div>
+            {effLabel && (
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4, fontWeight: 600 }}>
+                Effective {effLabel}
+              </div>
+            )}
+          </div>
+        )
+      })}
       {/* + Add Weather Info button */}
       <div
         onClick={() => {
           setEditingAdvisoryId(null)
           setAdvisoryDraftType('ADVISORY')
           setAdvisoryDraftText('')
+          setAdvisoryDraftStart(new Date().toISOString().slice(0, 16))
+          setAdvisoryDraftEnd('')
+          setAdvisoryDraftUfn(true)
           setAdvisoryDialogOpen(true)
         }}
         style={{
@@ -451,6 +533,57 @@ export default function HomePage() {
                 fontFamily: 'inherit',
               }}
             />
+
+            {/* Effective Times */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 6 }}>Effective Times (Zulu)</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+                <div>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 2 }}>Start</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <input
+                      type="datetime-local"
+                      value={advisoryDraftStart}
+                      onChange={(e) => setAdvisoryDraftStart(e.target.value)}
+                      style={{
+                        flex: 1, padding: '8px 10px', borderRadius: 6,
+                        background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                        color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+                      }}
+                    />
+                    <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)' }}>Z</span>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 2 }}>End</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <input
+                      type="datetime-local"
+                      value={advisoryDraftEnd}
+                      onChange={(e) => { setAdvisoryDraftEnd(e.target.value); setAdvisoryDraftUfn(false) }}
+                      disabled={advisoryDraftUfn}
+                      style={{
+                        flex: 1, padding: '8px 10px', borderRadius: 6,
+                        background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                        color: advisoryDraftUfn ? 'var(--color-text-4)' : 'var(--color-text-1)',
+                        fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+                        opacity: advisoryDraftUfn ? 0.5 : 1,
+                      }}
+                    />
+                    <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)' }}>Z</span>
+                  </div>
+                </div>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={advisoryDraftUfn}
+                  onChange={(e) => { setAdvisoryDraftUfn(e.target.checked); if (e.target.checked) setAdvisoryDraftEnd('') }}
+                />
+                <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', fontWeight: 600 }}>Until Further Notice (UFN)</span>
+              </label>
+            </div>
+
             <div style={{ display: 'flex', gap: 8 }}>
               {editingAdvisoryId && (
                 <button
@@ -476,6 +609,11 @@ export default function HomePage() {
               <button
                 onClick={async () => {
                   if (advisoryDraftText.trim()) {
+                    const effStart = advisoryDraftStart ? advisoryDraftStart + 'Z' : null
+                    const effEnd = (!advisoryDraftUfn && advisoryDraftEnd) ? advisoryDraftEnd + 'Z' : null
+                    const startLabel = effStart ? formatZuluTime(new Date(effStart)) + 'Z' : 'Now'
+                    const endLabel = effEnd ? formatZuluTime(new Date(effEnd)) + 'Z' : 'UFN'
+                    const effSuffix = ` — EFF ${startLabel}–${endLabel}`
                     if (editingAdvisoryId) {
                       const existing = advisories.find(a => a.id === editingAdvisoryId)
                       logRunwayStatusChange({
@@ -484,15 +622,15 @@ export default function HomePage() {
                         newAdvisoryType: advisoryDraftType,
                         newAdvisoryText: advisoryDraftText.trim(),
                       }, installationId)
-                      if (installationId) logActivity('updated', 'airfield_status', installationId, `Weather ${advisoryDraftType}`, { details: `WX ${advisoryDraftType.toUpperCase()}, ${advisoryDraftText.trim().toUpperCase()}` }, installationId)
-                      await updateAdvisory(editingAdvisoryId, advisoryDraftType, advisoryDraftText.trim())
+                      if (installationId) logActivity('updated', 'airfield_status', installationId, `Weather ${advisoryDraftType}`, { details: `WX ${advisoryDraftType.toUpperCase()}, ${advisoryDraftText.trim().toUpperCase()}${effSuffix}` }, installationId)
+                      await updateAdvisory(editingAdvisoryId, advisoryDraftType, advisoryDraftText.trim(), effStart, effEnd)
                     } else {
                       logRunwayStatusChange({
                         newAdvisoryType: advisoryDraftType,
                         newAdvisoryText: advisoryDraftText.trim(),
                       }, installationId)
-                      if (installationId) logActivity('updated', 'airfield_status', installationId, `Weather ${advisoryDraftType}`, { details: `WX ${advisoryDraftType.toUpperCase()}, ${advisoryDraftText.trim().toUpperCase()}` }, installationId)
-                      await addAdvisory(advisoryDraftType, advisoryDraftText.trim())
+                      if (installationId) logActivity('updated', 'airfield_status', installationId, `Weather ${advisoryDraftType}`, { details: `WX ${advisoryDraftType.toUpperCase()}, ${advisoryDraftText.trim().toUpperCase()}${effSuffix}` }, installationId)
+                      await addAdvisory(advisoryDraftType, advisoryDraftText.trim(), effStart, effEnd)
                     }
                   }
                   setAdvisoryDialogOpen(false)

@@ -13,6 +13,8 @@ export interface AdvisoryItem {
   type: 'WATCH' | 'WARNING' | 'ADVISORY'
   text: string
   created_at: string
+  effective_start?: string | null
+  effective_end?: string | null
 }
 
 export interface AirfieldStatus {

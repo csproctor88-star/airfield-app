@@ -10,8 +10,8 @@ type ArffReadiness = 'inadequate' | 'critical' | 'reduced' | 'optimum'
 
 type DashboardState = {
   advisories: AdvisoryItem[]
-  addAdvisory: (type: AdvisoryItem['type'], text: string) => Promise<void>
-  updateAdvisory: (id: string, type: AdvisoryItem['type'], text: string) => Promise<void>
+  addAdvisory: (type: AdvisoryItem['type'], text: string, effectiveStart?: string | null, effectiveEnd?: string | null) => Promise<void>
+  updateAdvisory: (id: string, type: AdvisoryItem['type'], text: string, effectiveStart?: string | null, effectiveEnd?: string | null) => Promise<void>
   removeAdvisory: (id: string) => Promise<void>
   // Legacy single-runway accessors (first runway)
   activeRunway: string
@@ -210,13 +210,17 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }, installationId)
   }, [installationId, markLocalUpdate])
 
-  const addAdvisory = useCallback(async (type: AdvisoryItem['type'], text: string) => {
-    const item: AdvisoryItem = { id: crypto.randomUUID(), type, text, created_at: new Date().toISOString() }
+  const addAdvisory = useCallback(async (type: AdvisoryItem['type'], text: string, effectiveStart?: string | null, effectiveEnd?: string | null) => {
+    const item: AdvisoryItem = {
+      id: crypto.randomUUID(), type, text, created_at: new Date().toISOString(),
+      effective_start: effectiveStart || null,
+      effective_end: effectiveEnd || null,
+    }
     await persistAdvisories([...advisories, item])
   }, [advisories, persistAdvisories])
 
-  const updateAdvisoryFn = useCallback(async (id: string, type: AdvisoryItem['type'], text: string) => {
-    const updated = advisories.map(a => a.id === id ? { ...a, type, text } : a)
+  const updateAdvisoryFn = useCallback(async (id: string, type: AdvisoryItem['type'], text: string, effectiveStart?: string | null, effectiveEnd?: string | null) => {
+    const updated = advisories.map(a => a.id === id ? { ...a, type, text, effective_start: effectiveStart || null, effective_end: effectiveEnd || null } : a)
     await persistAdvisories(updated)
   }, [advisories, persistAdvisories])
 
