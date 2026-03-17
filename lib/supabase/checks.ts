@@ -107,36 +107,7 @@ export async function createCheck(input: {
     }
   }
 
-  // Build formatted details matching manual entry template verbiage
-  const checkTypeMap: Record<string, string> = {
-    fod: 'FOD', bash: 'BASH', construction: 'CONSTRUCTION',
-    rsc: 'RSC/RCR', rcr: 'RSC/RCR', ife: 'IFE',
-    ground_emergency: 'GROUND EMERGENCY', heavy_aircraft: 'HEAVY ACFT',
-  }
-  const checkLabel = checkTypeMap[input.check_type] || input.check_type.toUpperCase()
-  // Issues are stored in data.issues as { comment: string }[]
-  const dataIssues = Array.isArray(input.data?.issues) ? (input.data.issues as { comment?: string }[]) : []
-  const issueDescs = dataIssues.map(i => i.comment).filter(Boolean) as string[]
-  // BASH checks with wildlife sightings/strikes get custom detail string
-  const wildlifeFormType = (input.data?.wildlife_form_type as string) || ''
-  const wildlifeDisplayId = (input.data?.wildlife_display_id as string) || ''
-  let discStr: string
-  if (input.check_type === 'bash' && wildlifeFormType && wildlifeDisplayId) {
-    const wildlifeLabel = wildlifeFormType === 'strike' ? 'WILDLIFE STRIKE' : 'WILDLIFE SIGHTING'
-    discStr = `${wildlifeLabel} REPORTED — REF ${wildlifeDisplayId}`
-  } else if (issueDescs.length > 0) {
-    discStr = `DISCREPANCIES FOUND: ${issueDescs.join('; ').toUpperCase()}`
-  } else {
-    discStr = 'NO NEW DISCREPANCIES'
-  }
-  let checkDetails = `${checkLabel} CHECK CMPLT; ${discStr}`
-  // Append RSC/BWC if reported
-  const bwcVal = (input.data.condition_code as string) || ''
-  const rscVal = (input.data.condition as string) || (input.data.runway_condition as string) || ''
-  if (rscVal && bwcVal) checkDetails += `. ADVISES RSC/${rscVal.toUpperCase()} & BWC/${bwcVal.toUpperCase()}`
-  else if (rscVal) checkDetails += `. ADVISES RSC/${rscVal.toUpperCase()}`
-  else if (bwcVal) checkDetails += `. ADVISES BWC/${bwcVal.toUpperCase()}`
-  logActivity('completed', 'check', created.id, created.display_id, { details: checkDetails }, input.base_id)
+  // Activity logging is handled by the page (AFLD3/{OI} on/off the AFLD format)
 
   // Auto-update airfield_status RSC/BWC from check data
   const nowIso = now.toISOString()

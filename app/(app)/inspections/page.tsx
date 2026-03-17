@@ -146,6 +146,14 @@ export default function InspectionsPage() {
     }
   }, [])
 
+  // ── Check lifecycle state ──
+  const [userOI, setUserOI] = useState('')
+  const [tabStarted, setTabStarted] = useState<Record<TabType, boolean>>({ airfield: false, lighting: false })
+  const [tabCompletionLogged, setTabCompletionLogged] = useState<Record<TabType, boolean>>({ airfield: false, lighting: false })
+  const [showResumePrompt, setShowResumePrompt] = useState(false)
+  const tabStartedRef = useRef<Record<TabType, boolean>>({ airfield: false, lighting: false })
+  useEffect(() => { tabStartedRef.current = tabStarted }, [tabStarted])
+
   // ── Action state ──
   const [saving, setSaving] = useState(false)
   const [filing, setFiling] = useState(false)
@@ -179,6 +187,17 @@ export default function InspectionsPage() {
     if (!installationId) return
     getAirfieldDiagram(installationId).then(setDiagramUrl).catch(() => setDiagramUrl(null))
   }, [installationId])
+
+  // Fetch user's operating initials
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) return
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      const { data: profile } = await supabase.from('profiles').select('operating_initials').eq('id', user.id).single()
+      if (profile?.operating_initials) setUserOI(profile.operating_initials)
+    })
+  }, [])
 
   const handleItemPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!activePhotoItemId) return
@@ -242,50 +261,108 @@ export default function InspectionsPage() {
   useEffect(() => {
     // Phase 1: Sync — load from localStorage
     const stored = loadDraft(installationId)
-    if (stored) setDraft(stored)
-    setDraftLoaded(true)
 
     // Phase 2: Async — check Supabase for newer in-progress drafts
     fetchInspections(installationId, 'in_progress').then((dbDrafts) => {
-      if (!dbDrafts.length) return
-      let merged = false
-      const current = stored || createNewDraft()
+      const current = stored || (dbDrafts.length > 0 ? createNewDraft() : null)
 
-      for (const dbRow of dbDrafts) {
-        const tab = dbRow.inspection_type as 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
-        if (!current[tab]) continue
+      if (dbDrafts.length > 0 && current) {
+        let merged = false
+        for (const dbRow of dbDrafts) {
+          const tab = dbRow.inspection_type as 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
+          if (!current[tab]) continue
 
-        if (dbRow.draft_data) {
-          // Normal draft — load from draft_data
-          const localTime = current[tab].savedAt ? new Date(current[tab].savedAt!).getTime() : 0
-          const dbTime = dbRow.saved_at ? new Date(dbRow.saved_at).getTime() : 0
-          if (dbTime > localTime) {
-            current[tab] = { ...(dbRow.draft_data as unknown as InspectionHalfDraft), dbRowId: dbRow.id }
+          if (dbRow.draft_data) {
+            const localTime = current[tab].savedAt ? new Date(current[tab].savedAt!).getTime() : 0
+            const dbTime = dbRow.saved_at ? new Date(dbRow.saved_at).getTime() : 0
+            if (dbTime > localTime) {
+              current[tab] = { ...(dbRow.draft_data as unknown as InspectionHalfDraft), dbRowId: dbRow.id }
+              merged = true
+            } else if (!current[tab].dbRowId && dbRow.id) {
+              current[tab].dbRowId = dbRow.id
+            }
+          } else if (dbRow.items && dbRow.items.length > 0) {
+            current[tab] = itemsToDraftHalf(
+              dbRow.items, dbRow.id,
+              dbRow.inspector_name, dbRow.inspector_id || null,
+              dbRow.rsc_condition, dbRow.rcr_value, dbRow.rcr_condition,
+              dbRow.bwc_value, dbRow.weather_conditions, dbRow.temperature_f,
+              dbRow.notes,
+            )
             merged = true
-          } else if (!current[tab].dbRowId && dbRow.id) {
-            current[tab].dbRowId = dbRow.id
           }
-        } else if (dbRow.items && dbRow.items.length > 0) {
-          // Reopened inspection — reconstruct draft from completed items
-          current[tab] = itemsToDraftHalf(
-            dbRow.items, dbRow.id,
-            dbRow.inspector_name, dbRow.inspector_id || null,
-            dbRow.rsc_condition, dbRow.rcr_value, dbRow.rcr_condition,
-            dbRow.bwc_value, dbRow.weather_conditions, dbRow.temperature_f,
-            dbRow.notes,
-          )
-          merged = true
         }
+        if (merged) saveDraftToStorage(current, installationId)
       }
 
-      if (merged) {
-        setDraft({ ...current })
-        saveDraftToStorage(current, installationId)
-        toast.info('Draft loaded from server')
+      // Determine if there's a draft to resume
+      const bestDraft = current || stored
+      const hasAirfieldWork = bestDraft && (Object.keys(bestDraft.airfield.responses).length > 0 || bestDraft.airfield.savedAt)
+      const hasLightingWork = bestDraft && (Object.keys(bestDraft.lighting.responses).length > 0 || bestDraft.lighting.savedAt)
+
+      if (bestDraft && (hasAirfieldWork || hasLightingWork)) {
+        setShowResumePrompt(true)
+        // Store draft for resume handler
+        setDraft(bestDraft)
       }
+      setDraftLoaded(true)
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [installationId])
+
+  // ── Resume / Discard handlers ──
+  const handleResumeInspection = () => {
+    setShowResumePrompt(false)
+    // Mark tabs as started based on existing work
+    if (draft) {
+      const hasAf = Object.keys(draft.airfield.responses).length > 0 || !!draft.airfield.savedAt
+      const hasLt = Object.keys(draft.lighting.responses).length > 0 || !!draft.lighting.savedAt
+      setTabStarted({ airfield: hasAf, lighting: hasLt })
+    }
+  }
+
+  const handleDiscardInspection = () => {
+    setShowResumePrompt(false)
+    clearDraft(installationId)
+    setDraft(null)
+    setTabStarted({ airfield: false, lighting: false })
+  }
+
+  // ── Auto-save on navigation away ──
+  const draftRef = useRef<DailyInspectionDraft | null>(null)
+  useEffect(() => { draftRef.current = draft }, [draft])
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (draftRef.current && (tabStartedRef.current.airfield || tabStartedRef.current.lighting)) {
+        saveDraftToStorage(draftRef.current, installationId)
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => {
+      // Also save on unmount (in-app navigation)
+      if (draftRef.current && (tabStartedRef.current.airfield || tabStartedRef.current.lighting)) {
+        saveDraftToStorage(draftRef.current, installationId)
+      }
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [installationId])
+
+  // ── Log start when user begins working on a tab ──
+  const logTabStart = useCallback((tab: TabType) => {
+    if (tabStarted[tab]) return
+    setTabStarted(prev => ({ ...prev, [tab]: true }))
+    const oiStr = userOI ? `/${userOI}` : ''
+    const tabLabel = tab === 'lighting' ? 'LIGHTING INSPECTION' : 'AIRFIELD INSPECTION'
+    logActivity(
+      'started',
+      'airfield_check',
+      installationId || crypto.randomUUID(),
+      undefined,
+      { details: `AFLD3${oiStr} on the AFLD, ${tabLabel}` },
+      installationId,
+    )
+  }, [tabStarted, userOI, installationId])
 
   // ── Auto-begin: if ?action=begin and no draft, create one ──
   useEffect(() => {
@@ -384,6 +461,7 @@ export default function InspectionsPage() {
   }
 
   const toggle = (id: string) => {
+    logTabStart(activeTab)
     updateHalf(activeTab, (h) => {
       const current = h.responses[id] ?? 'pass' // default = pass
       let next: 'pass' | 'fail' | 'na' = 'pass'
@@ -844,6 +922,29 @@ export default function InspectionsPage() {
     }
 
     const tabLabels: Record<TabType, string> = { airfield: 'Airfield', lighting: 'Lighting' }
+
+    // Log "off the AFLD" activity entry
+    const oiStr = userOI ? `/${userOI}` : ''
+    const inspLabel = targetTab === 'lighting' ? 'LIGHTING INSPECTION' : 'AIRFIELD INSPECTION'
+    const failedItems = items.filter(i => i.response === 'fail')
+    const inspDiscStr = failedItems.length > 0
+      ? `DISCREPANCIES FOUND: ${failedItems.map(i => i.item.toUpperCase()).join(', ')}`
+      : 'NO NEW DISCREPANCIES'
+    let inspCompleteDetails = `${inspLabel} CMPLT, ${inspDiscStr}`
+    if (completedHalf.rscCondition && completedHalf.bwcValue) inspCompleteDetails += `. ADVISES RSC/${completedHalf.rscCondition.toUpperCase()} & BWC/${completedHalf.bwcValue.toUpperCase()}`
+    else if (completedHalf.rscCondition) inspCompleteDetails += `. ADVISES RSC/${completedHalf.rscCondition.toUpperCase()}`
+    else if (completedHalf.bwcValue) inspCompleteDetails += `. ADVISES BWC/${completedHalf.bwcValue.toUpperCase()}`
+
+    logActivity(
+      'completed',
+      'airfield_check',
+      saved?.id || installationId || crypto.randomUUID(),
+      saved?.display_id || undefined,
+      { details: `AFLD3${oiStr} off the AFLD, ${inspCompleteDetails}` },
+      installationId,
+    )
+    setTabCompletionLogged(prev => ({ ...prev, [targetTab]: true }))
+
     setSaving(false)
     const parts = [`${tabLabels[targetTab]} inspection completed`]
     if (discCreated > 0) parts.push(`${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'} logged`)
@@ -1233,6 +1334,35 @@ export default function InspectionsPage() {
         }
       }
 
+      // Log "off the AFLD" for each filed half (skip if already logged via handleComplete)
+      const fileOiStr = userOI ? `/${userOI}` : ''
+      for (const { half, tab } of allHalves) {
+        if (!tabStarted[tab] || tabCompletionLogged[tab]) continue
+        const fileInspLabel = tab === 'lighting' ? 'LIGHTING INSPECTION' : 'AIRFIELD INSPECTION'
+        const fileSecs = tab === 'airfield'
+          ? (dbAirfieldSections ?? AIRFIELD_INSPECTION_SECTIONS).filter(s => !s.conditional)
+          : (dbLightingSections ?? LIGHTING_INSPECTION_SECTIONS)
+        const { items: fileItems } = halfDraftToItems(half, fileSecs, itemLocations)
+        const fileFailed = fileItems.filter(i => i.response === 'fail')
+        const fileDiscStr = fileFailed.length > 0
+          ? `DISCREPANCIES FOUND: ${fileFailed.map(i => i.item.toUpperCase()).join(', ')}`
+          : 'NO NEW DISCREPANCIES'
+        let fileDetails = `${fileInspLabel} CMPLT, ${fileDiscStr}`
+        if (half.rscCondition && half.bwcValue) fileDetails += `. ADVISES RSC/${half.rscCondition.toUpperCase()} & BWC/${half.bwcValue.toUpperCase()}`
+        else if (half.rscCondition) fileDetails += `. ADVISES RSC/${half.rscCondition.toUpperCase()}`
+        else if (half.bwcValue) fileDetails += `. ADVISES BWC/${half.bwcValue.toUpperCase()}`
+
+        logActivity(
+          'completed',
+          'airfield_check',
+          filedId || installationId || crypto.randomUUID(),
+          undefined,
+          { details: `AFLD3${fileOiStr} off the AFLD, ${fileDetails}` },
+          installationId,
+        )
+      }
+      setTabStarted({ airfield: false, lighting: false })
+
       // Clean up object URLs
       Object.values(itemPhotos).flat().forEach((p) => URL.revokeObjectURL(p.url))
       Object.values(discPhotos).flat().flat().forEach((p) => URL.revokeObjectURL(p.url))
@@ -1403,6 +1533,68 @@ export default function InspectionsPage() {
   // ══  WORKSPACE VIEW (active draft exists)  ══
   // ══════════════════════════════════════════════
   if (draft && !showHistory) {
+
+    // Show resume/discard prompt before allowing workspace access
+    if (showResumePrompt) {
+      const hasAf = Object.keys(draft.airfield.responses).length > 0 || !!draft.airfield.savedAt
+      const hasLt = Object.keys(draft.lighting.responses).length > 0 || !!draft.lighting.savedAt
+      const resumeParts: string[] = []
+      if (hasAf) resumeParts.push('Airfield')
+      if (hasLt) resumeParts.push('Lighting')
+
+      return (
+        <div className="page-container">
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Daily Inspection</div>
+          </div>
+          <div className="card" style={{
+            border: '2px solid #D97706',
+            background: 'rgba(217, 119, 6, 0.06)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <span style={{ fontSize: 20 }}>⚠️</span>
+              <div>
+                <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: '#D97706' }}>
+                  Inspection In Progress
+                </div>
+                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginTop: 2 }}>
+                  You have an unfinished inspection ({resumeParts.join(' + ')})
+                  {draft.createdAt ? ` started ${formatZuluDateShort(new Date(draft.createdAt))}` : ''}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                onClick={handleResumeInspection}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: 8,
+                  border: '1.5px solid var(--color-success)',
+                  background: 'rgba(34, 197, 94, 0.1)',
+                  color: 'var(--color-success)', fontSize: 'var(--fs-base)', fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Resume Inspection
+              </button>
+              <button
+                type="button"
+                onClick={handleDiscardInspection}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: 8,
+                  border: '1.5px solid rgba(239, 68, 68, 0.5)',
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  color: '#EF4444', fontSize: 'var(--fs-base)', fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        </div>
+      )
+    }
 
     return (
       <div className="page-container">
