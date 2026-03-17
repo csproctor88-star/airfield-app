@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { fetchActivityLog } from '@/lib/supabase/activity-queries'
+import { fetchInspections } from '@/lib/supabase/inspections'
 import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/supabase/activity'
 import { toast } from 'sonner'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort } from '@/lib/utils'
@@ -16,9 +17,8 @@ import { calculateAllSystemHealth, getAlertTier, getHealthSummary, ALERT_TIER_CO
 
 // --- Quick Actions (KPI badges) ---
 const QUICK_ACTIONS = [
-  { label: 'Airfield Inspections', icon: '📋', color: 'var(--color-success)', href: '/inspections?action=begin' },
-  { label: 'Airfield Checks', icon: '🛡️', color: 'var(--color-warning)', href: '/checks' },
-  { label: 'New Discrepancy', icon: '🚨', color: 'var(--color-danger)', href: '/discrepancies/new' },
+  { label: 'Airfield Checks', icon: '\uD83D\uDEE1\uFE0F', color: 'var(--color-warning)', href: '/checks' },
+  { label: 'New Discrepancy', icon: '\uD83D\uDEA8', color: 'var(--color-danger)', href: '/discrepancies/new' },
 ]
 
 function maskEdipi(edipi: string): string {
@@ -131,6 +131,10 @@ export default function AMDashboardPage() {
   const [lastCheckType, setLastCheckType] = useState<string | null>(null)
   const [lastCheckTime, setLastCheckTime] = useState<string | null>(null)
 
+  // ── Today's inspection status ──
+  const [todayAirfieldDone, setTodayAirfieldDone] = useState(false)
+  const [todayLightingDone, setTodayLightingDone] = useState(false)
+
   // ── Lighting system health summary ──
   const [lightingHealthSummary, setLightingHealthSummary] = useState<{
     worstTier: AlertTier
@@ -187,6 +191,20 @@ export default function AMDashboardPage() {
   }, [installationId])
 
   useEffect(() => { loadLastCheck() }, [loadLastCheck])
+
+  // --- Load Today's Inspection Status ---
+  useEffect(() => {
+    if (!installationId) return
+    const todayStr = new Date().toISOString().split('T')[0]
+    fetchInspections(installationId).then((inspections) => {
+      setTodayAirfieldDone(inspections.some(i =>
+        i.inspection_type === 'airfield' && i.status === 'completed' && i.inspection_date === todayStr
+      ))
+      setTodayLightingDone(inspections.some(i =>
+        i.inspection_type === 'lighting' && i.status === 'completed' && i.inspection_date === todayStr
+      ))
+    })
+  }, [installationId])
 
   // Realtime: auto-refresh activity feed on new entries
   useEffect(() => {
@@ -312,6 +330,69 @@ export default function AMDashboardPage() {
               : 'No Data'}
           </div>
         </div>
+      </div>
+
+      {/* ===== Today's Inspections ===== */}
+      <span className="section-label">Today&apos;s Inspections</span>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+        <Link
+          href={todayAirfieldDone ? '/inspections' : '/inspections?action=begin&type=airfield'}
+          style={{
+            background: todayAirfieldDone ? 'rgba(34,197,94,0.08)' : 'var(--color-bg-surface)',
+            border: todayAirfieldDone ? '2px solid rgba(34,197,94,0.4)' : '1px solid var(--color-border)',
+            borderRadius: 12,
+            padding: '14px 12px',
+            cursor: 'pointer',
+            textDecoration: 'none',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ fontSize: 28, marginBottom: 4 }}>
+            {todayAirfieldDone ? '\u2705' : '\u2600\uFE0F'}
+          </div>
+          <div style={{
+            fontSize: 'var(--fs-md)', fontWeight: 700,
+            color: todayAirfieldDone ? '#22C55E' : 'var(--color-text-1)',
+          }}>
+            Airfield
+          </div>
+          <div style={{
+            fontSize: 'var(--fs-xs)', marginTop: 2,
+            color: todayAirfieldDone ? '#22C55E' : 'var(--color-text-3)',
+            fontWeight: 600,
+          }}>
+            {todayAirfieldDone ? 'Complete' : 'Not Started'}
+          </div>
+        </Link>
+        <Link
+          href={todayLightingDone ? '/inspections' : '/inspections?action=begin&type=lighting'}
+          style={{
+            background: todayLightingDone ? 'rgba(34,197,94,0.08)' : 'var(--color-bg-surface)',
+            border: todayLightingDone ? '2px solid rgba(34,197,94,0.4)' : '1px solid var(--color-border)',
+            borderRadius: 12,
+            padding: '14px 12px',
+            cursor: 'pointer',
+            textDecoration: 'none',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ fontSize: 28, marginBottom: 4 }}>
+            {todayLightingDone ? '\u2705' : '\uD83C\uDF19'}
+          </div>
+          <div style={{
+            fontSize: 'var(--fs-md)', fontWeight: 700,
+            color: todayLightingDone ? '#22C55E' : 'var(--color-text-1)',
+          }}>
+            Lighting
+          </div>
+          <div style={{
+            fontSize: 'var(--fs-xs)', marginTop: 2,
+            color: todayLightingDone ? '#22C55E' : 'var(--color-text-3)',
+            fontWeight: 600,
+          }}>
+            {todayLightingDone ? 'Complete' : 'Not Started'}
+          </div>
+        </Link>
       </div>
 
       {/* ===== Quick Actions ===== */}

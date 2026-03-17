@@ -10,6 +10,57 @@ function getDraftKey(baseId?: string): string {
   return baseId ? `${DRAFT_KEY_PREFIX}_${baseId}` : DRAFT_KEY_PREFIX
 }
 
+// ── Per-type draft storage (for separated airfield/lighting forms) ──
+const TYPE_DRAFT_PREFIX = 'glidepath_inspection_draft'
+
+function getTypeDraftKey(type: string, baseId?: string): string {
+  return baseId ? `${TYPE_DRAFT_PREFIX}_${type}_${baseId}` : `${TYPE_DRAFT_PREFIX}_${type}`
+}
+
+export interface SingleInspectionDraft {
+  id: string
+  createdAt: string
+  type: 'airfield' | 'lighting'
+  half: InspectionHalfDraft
+}
+
+export function createSingleDraft(type: 'airfield' | 'lighting'): SingleInspectionDraft {
+  return {
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    type,
+    half: createEmptyHalf(),
+  }
+}
+
+export function loadTypeDraft(type: 'airfield' | 'lighting', baseId?: string | null): SingleInspectionDraft | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(getTypeDraftKey(type, baseId ?? undefined))
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as SingleInspectionDraft
+    // Backward-compat
+    if (parsed.half.rscCondition === undefined) parsed.half.rscCondition = null
+    if (parsed.half.rcrReported === undefined) parsed.half.rcrReported = false
+    if (parsed.half.rcrValue === undefined) parsed.half.rcrValue = null
+    if (parsed.half.rcrConditionType === undefined) parsed.half.rcrConditionType = null
+    if (!parsed.half.discrepancies) parsed.half.discrepancies = {}
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+export function saveTypeDraft(type: 'airfield' | 'lighting', draft: SingleInspectionDraft, baseId?: string | null): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(getTypeDraftKey(type, baseId ?? undefined), JSON.stringify(draft))
+}
+
+export function clearTypeDraft(type: 'airfield' | 'lighting', baseId?: string | null): void {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem(getTypeDraftKey(type, baseId ?? undefined))
+}
+
 export interface InspectionHalfDraft {
   responses: Record<string, 'pass' | 'fail' | 'na' | null>
   bwcValue: string | null
