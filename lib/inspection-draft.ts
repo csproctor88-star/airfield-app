@@ -39,6 +39,8 @@ export interface DailyInspectionDraft {
   lighting: InspectionHalfDraft
   construction_meeting: InspectionHalfDraft
   joint_monthly: InspectionHalfDraft
+  /** Set when the airfield half has been filed — persists across reloads so the lighting prompt shows */
+  airfieldFiled?: boolean
 }
 
 function createEmptyHalf(): InspectionHalfDraft {

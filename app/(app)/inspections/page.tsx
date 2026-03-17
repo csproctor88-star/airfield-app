@@ -261,12 +261,19 @@ export default function InspectionsPage() {
     // Phase 1: Sync — load from localStorage
     const stored = loadDraft(installationId)
     if (stored) {
-      // Check if the draft has any meaningful work
+      // Check if the draft has any meaningful work (including airfieldFiled flag)
       const hasWork = Object.keys(stored.airfield.responses).length > 0 ||
         Object.keys(stored.lighting.responses).length > 0 ||
-        stored.airfield.savedAt || stored.lighting.savedAt
+        stored.airfield.savedAt || stored.lighting.savedAt ||
+        stored.airfieldFiled
       if (hasWork) {
         setDraft(stored)
+        // Restore airfieldFiled state from persisted draft
+        if (stored.airfieldFiled) {
+          setAirfieldFiled(true)
+          setActiveTab('lighting')
+          setShowLightingPrompt(true)
+        }
         // If lighting has responses, it was previously started
         if (Object.keys(stored.lighting.responses).length > 0 || stored.lighting.savedAt) {
           setLightingStarted(true)
@@ -323,7 +330,8 @@ export default function InspectionsPage() {
         // Final check: don't set draft if all halves are empty
         const anyWork = Object.keys(current.airfield.responses).length > 0 ||
           Object.keys(current.lighting.responses).length > 0 ||
-          current.airfield.savedAt || current.lighting.savedAt
+          current.airfield.savedAt || current.lighting.savedAt ||
+          current.airfieldFiled
         if (!anyWork) return
         setDraft({ ...current })
         saveDraftToStorage(current, installationId)
@@ -1012,8 +1020,8 @@ export default function InspectionsPage() {
     // After completing airfield, mark it filed, clear airfield from draft, show lighting prompt
     if (targetTab === 'airfield') {
       setAirfieldFiled(true)
-      // Clear the filed airfield half from the draft so it won't trigger resume prompts
-      const clearedDraft = { ...draft }
+      // Clear the filed airfield half but persist airfieldFiled flag so it survives reloads
+      const clearedDraft = { ...draft, airfieldFiled: true }
       clearedDraft.airfield = createNewDraft().airfield
       setDraft(clearedDraft)
       saveDraftToStorage(clearedDraft, installationId)
@@ -1585,7 +1593,8 @@ export default function InspectionsPage() {
   const draftHasWork = draft && (
     Object.keys(draft.airfield.responses).length > 0 ||
     Object.keys(draft.lighting.responses).length > 0 ||
-    draft.airfield.savedAt || draft.lighting.savedAt
+    draft.airfield.savedAt || draft.lighting.savedAt ||
+    draft.airfieldFiled
   )
 
   if (showBeginPrompt && !draftHasWork) {
