@@ -274,11 +274,16 @@ export default function InspectionsPage() {
       const inProgressTypes = new Set(dbDrafts.map(d => d.inspection_type))
       const completedIds = new Set(completedInspections.map(d => d.id))
 
+      // Track which tabs have 100% complete DB records
+      const dbCompletedTabs = new Set<string>()
       if (dbDrafts.length > 0 && current) {
         let merged = false
         for (const dbRow of dbDrafts) {
           const tab = dbRow.inspection_type as 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
           if (!current[tab]) continue
+
+          // Track if this DB row is 100% complete (handleComplete was run)
+          if (dbRow.completion_percent === 100) dbCompletedTabs.add(tab)
 
           if (dbRow.draft_data) {
             const localTime = current[tab].savedAt ? new Date(current[tab].savedAt!).getTime() : 0
@@ -299,6 +304,11 @@ export default function InspectionsPage() {
             )
             merged = true
           }
+
+          // Ensure savedAt is set for 100% complete halves (fixes itemsToDraftHalf losing savedAt)
+          if (dbRow.completion_percent === 100 && !current[tab].savedAt) {
+            current[tab].savedAt = dbRow.saved_at || new Date().toISOString()
+          }
         }
         if (merged) saveDraftToStorage(current, installationId)
       }
@@ -316,8 +326,10 @@ export default function InspectionsPage() {
 
           const isCompletedInDb = half.dbRowId && completedIds.has(half.dbRowId)
           const hasNoInProgressRecord = !half.dbRowId && !inProgressTypes.has(tab)
+          // Half was completed (savedAt set) but its DB row is no longer in_progress — already filed
+          const savedButFiled = half.savedAt && (!half.dbRowId || !inProgressIds.has(half.dbRowId))
 
-          if (isCompletedInDb || (hasNoInProgressRecord && !half.savedAt)) {
+          if (isCompletedInDb || hasNoInProgressRecord || savedButFiled) {
             // Clear this ghost half
             const blank = createNewDraft()
             bestDraft[tab] = blank[tab]
@@ -1083,6 +1095,7 @@ export default function InspectionsPage() {
     let filed = 0
     let filedId: string | null = null
     let filedDisplayId: string | null = null
+    const filedIds: Record<TabType, { id: string; displayId: string | null }> = {} as any
 
     // ── File airfield half (normal) ──
     if (airfieldSaved) {
@@ -1116,7 +1129,10 @@ export default function InspectionsPage() {
           toast.error(`Failed to file airfield: ${error}`)
         } else {
           filed++
-          if (filed_data && !filedId) { filedId = filed_data.id; filedDisplayId = filed_data.display_id }
+          if (filed_data) {
+            if (!filedId) { filedId = filed_data.id; filedDisplayId = filed_data.display_id }
+            filedIds.airfield = { id: filed_data.id, displayId: filed_data.display_id }
+          }
         }
       } else {
         const { data: created, error } = await createInspection({
@@ -1148,7 +1164,10 @@ export default function InspectionsPage() {
           toast.error(`Failed to file airfield: ${error}`)
         } else {
           filed++
-          if (created && !filedId) { filedId = created.id; filedDisplayId = created.display_id }
+          if (created) {
+            if (!filedId) { filedId = created.id; filedDisplayId = created.display_id }
+            filedIds.airfield = { id: created.id, displayId: created.display_id }
+          }
         }
       }
     }
@@ -1185,7 +1204,10 @@ export default function InspectionsPage() {
           toast.error(`Failed to file lighting: ${error}`)
         } else {
           filed++
-          if (filed_data && !filedId) { filedId = filed_data.id; filedDisplayId = filed_data.display_id }
+          if (filed_data) {
+            if (!filedId) { filedId = filed_data.id; filedDisplayId = filed_data.display_id }
+            filedIds.lighting = { id: filed_data.id, displayId: filed_data.display_id }
+          }
         }
       } else {
         const { data: created, error } = await createInspection({
@@ -1217,7 +1239,10 @@ export default function InspectionsPage() {
           toast.error(`Failed to file lighting: ${error}`)
         } else {
           filed++
-          if (created && !filedId) { filedId = created.id; filedDisplayId = created.display_id }
+          if (created) {
+            if (!filedId) { filedId = created.id; filedDisplayId = created.display_id }
+            filedIds.lighting = { id: created.id, displayId: created.display_id }
+          }
         }
       }
     }
@@ -1401,7 +1426,8 @@ export default function InspectionsPage() {
       // Log "off the AFLD" for each filed half (skip if already logged via handleComplete)
       const fileOiStr = userOI ? `/${userOI}` : ''
       for (const { half, tab } of allHalves) {
-        if (!tabStarted[tab] || tabCompletionLogged[tab]) continue
+        // Skip if completion was already logged this session or in a previous session
+        if (tabCompletionLogged[tab] || half.savedAt) continue
         const fileInspLabel = tab === 'lighting' ? 'LIGHTING INSPECTION' : 'AIRFIELD INSPECTION'
         const fileSecs = tab === 'airfield'
           ? (dbAirfieldSections ?? AIRFIELD_INSPECTION_SECTIONS).filter(s => !s.conditional)
@@ -1416,11 +1442,14 @@ export default function InspectionsPage() {
         else if (half.rscCondition) fileDetails += `. ADVISES RSC/${half.rscCondition.toUpperCase()}`
         else if (half.bwcValue) fileDetails += `. ADVISES BWC/${half.bwcValue.toUpperCase()}`
 
+        // Use per-half entity ID so each log links to the correct inspection
+        const halfEntityId = filedIds[tab]?.id || filedId || installationId || crypto.randomUUID()
+        const halfDisplayId = filedIds[tab]?.displayId || filedDisplayId || undefined
         logActivity(
           'completed',
           'inspection',
-          filedId || installationId || crypto.randomUUID(),
-          filedDisplayId || undefined,
+          halfEntityId,
+          halfDisplayId,
           { details: `AFLD3${fileOiStr} off the AFLD, ${fileDetails}` },
           installationId,
         )
