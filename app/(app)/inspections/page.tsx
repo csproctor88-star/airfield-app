@@ -319,7 +319,7 @@ export default function InspectionsPage() {
       const tabLabel = tab === 'lighting' ? 'LIGHTING INSPECTION' : 'AIRFIELD INSPECTION'
       logActivity(
         'started',
-        'airfield_check',
+        'inspection',
         installationId,
         undefined,
         { details: `AFLD3${oiStr} on the AFLD, ${tabLabel} (RESUMED)` },
@@ -388,7 +388,7 @@ export default function InspectionsPage() {
     const tabLabel = tab === 'lighting' ? 'LIGHTING INSPECTION' : 'AIRFIELD INSPECTION'
     logActivity(
       'started',
-      'airfield_check',
+      'inspection',
       installationId || crypto.randomUUID(),
       undefined,
       { details: `AFLD3${oiStr} on the AFLD, ${tabLabel}` },
@@ -970,7 +970,7 @@ export default function InspectionsPage() {
 
     logActivity(
       'completed',
-      'airfield_check',
+      'inspection',
       saved?.id || installationId || crypto.randomUUID(),
       saved?.display_id || undefined,
       { details: `AFLD3${oiStr} off the AFLD, ${inspCompleteDetails}` },
@@ -1052,6 +1052,7 @@ export default function InspectionsPage() {
     const groupId = draft.id
     let filed = 0
     let filedId: string | null = null
+    let filedDisplayId: string | null = null
 
     // ── File airfield half (normal) ──
     if (airfieldSaved) {
@@ -1085,7 +1086,7 @@ export default function InspectionsPage() {
           toast.error(`Failed to file airfield: ${error}`)
         } else {
           filed++
-          if (filed_data && !filedId) filedId = filed_data.id
+          if (filed_data && !filedId) { filedId = filed_data.id; filedDisplayId = filed_data.display_id }
         }
       } else {
         const { data: created, error } = await createInspection({
@@ -1117,7 +1118,7 @@ export default function InspectionsPage() {
           toast.error(`Failed to file airfield: ${error}`)
         } else {
           filed++
-          if (created && !filedId) filedId = created.id
+          if (created && !filedId) { filedId = created.id; filedDisplayId = created.display_id }
         }
       }
     }
@@ -1154,7 +1155,7 @@ export default function InspectionsPage() {
           toast.error(`Failed to file lighting: ${error}`)
         } else {
           filed++
-          if (filed_data && !filedId) filedId = filed_data.id
+          if (filed_data && !filedId) { filedId = filed_data.id; filedDisplayId = filed_data.display_id }
         }
       } else {
         const { data: created, error } = await createInspection({
@@ -1186,7 +1187,7 @@ export default function InspectionsPage() {
           toast.error(`Failed to file lighting: ${error}`)
         } else {
           filed++
-          if (created && !filedId) filedId = created.id
+          if (created && !filedId) { filedId = created.id; filedDisplayId = created.display_id }
         }
       }
     }
@@ -1387,9 +1388,9 @@ export default function InspectionsPage() {
 
         logActivity(
           'completed',
-          'airfield_check',
+          'inspection',
           filedId || installationId || crypto.randomUUID(),
-          undefined,
+          filedDisplayId || undefined,
           { details: `AFLD3${fileOiStr} off the AFLD, ${fileDetails}` },
           installationId,
         )
@@ -1405,6 +1406,9 @@ export default function InspectionsPage() {
 
       clearDraft(installationId)
       setDraft(null)
+      // Reset refs immediately so unmount auto-save doesn't re-save the cleared draft
+      draftRef.current = null
+      tabStartedRef.current = { airfield: false, lighting: false }
       const fileParts = [`Inspection${filed !== 1 ? 's' : ''} filed`]
       if (discCreated > 0) fileParts.push(`${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'}`)
       if (featuresMarkedInop > 0) fileParts.push(`${featuresMarkedInop} feature${featuresMarkedInop !== 1 ? 's' : ''} marked inop`)
@@ -1571,65 +1575,75 @@ export default function InspectionsPage() {
     if (showResumePrompt) {
       const hasAf = Object.keys(draft.airfield.responses).length > 0 || !!draft.airfield.savedAt
       const hasLt = Object.keys(draft.lighting.responses).length > 0 || !!draft.lighting.savedAt
-      const tabs: { key: TabType; label: string; has: boolean }[] = [
-        { key: 'airfield', label: 'Airfield Inspection', has: hasAf },
-        { key: 'lighting', label: 'Lighting Inspection', has: hasLt },
-      ]
+      const afCompleted = !!draft.airfield.savedAt
+      const ltCompleted = !!draft.lighting.savedAt
 
-      return (
-        <div className="page-container">
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Daily Inspection</div>
-            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4 }}>
-              Unfinished work found{draft.createdAt ? ` from ${formatZuluDateShort(new Date(draft.createdAt))}` : ''}
+      // Only show tabs that have work AND are not already completed
+      const resumableTabs: { key: TabType; label: string }[] = []
+      if (hasAf && !afCompleted) resumableTabs.push({ key: 'airfield', label: 'Airfield Inspection' })
+      if (hasLt && !ltCompleted) resumableTabs.push({ key: 'lighting', label: 'Lighting Inspection' })
+
+      // If no resumable tabs (all completed or empty), auto-discard the stale draft
+      if (resumableTabs.length === 0) {
+        clearDraft(installationId)
+        setDraft(null)
+        setShowResumePrompt(false)
+      } else {
+        return (
+          <div className="page-container">
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Daily Inspection</div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4 }}>
+                Unfinished work found{draft.createdAt ? ` from ${formatZuluDateShort(new Date(draft.createdAt))}` : ''}
+              </div>
             </div>
-          </div>
-          {tabs.filter(t => t.has).map(t => (
-            <div key={t.key} className="card" style={{
-              border: '2px solid #D97706',
-              background: 'rgba(217, 119, 6, 0.06)',
-              marginBottom: 12,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <span style={{ fontSize: 20 }}>⚠️</span>
-                <div>
-                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: '#D97706' }}>
-                    {t.label} In Progress
+            {resumableTabs.map(t => (
+              <div key={t.key} className="card" style={{
+                border: '2px solid #D97706',
+                background: 'rgba(217, 119, 6, 0.06)',
+                marginBottom: 12,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 20 }}>⚠️</span>
+                  <div>
+                    <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: '#D97706' }}>
+                      {t.label} In Progress
+                    </div>
                   </div>
                 </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => handleResumeTab(t.key)}
+                    style={{
+                      flex: 1, padding: '12px', borderRadius: 8,
+                      border: '1.5px solid var(--color-success)',
+                      background: 'rgba(34, 197, 94, 0.1)',
+                      color: 'var(--color-success)', fontSize: 'var(--fs-base)', fontWeight: 700,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                  >
+                    Resume
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDiscardTab(t.key)}
+                    style={{
+                      flex: 1, padding: '12px', borderRadius: 8,
+                      border: '1.5px solid rgba(239, 68, 68, 0.5)',
+                      background: 'rgba(239, 68, 68, 0.08)',
+                      color: '#EF4444', fontSize: 'var(--fs-base)', fontWeight: 700,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                  >
+                    Discard
+                  </button>
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  type="button"
-                  onClick={() => handleResumeTab(t.key)}
-                  style={{
-                    flex: 1, padding: '12px', borderRadius: 8,
-                    border: '1.5px solid var(--color-success)',
-                    background: 'rgba(34, 197, 94, 0.1)',
-                    color: 'var(--color-success)', fontSize: 'var(--fs-base)', fontWeight: 700,
-                    cursor: 'pointer', fontFamily: 'inherit',
-                  }}
-                >
-                  Resume
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDiscardTab(t.key)}
-                  style={{
-                    flex: 1, padding: '12px', borderRadius: 8,
-                    border: '1.5px solid rgba(239, 68, 68, 0.5)',
-                    background: 'rgba(239, 68, 68, 0.08)',
-                    color: '#EF4444', fontSize: 'var(--fs-base)', fontWeight: 700,
-                    cursor: 'pointer', fontFamily: 'inherit',
-                  }}
-                >
-                  Discard
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )
+            ))}
+          </div>
+        )
+      }
     }
 
     return (

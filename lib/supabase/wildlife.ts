@@ -21,6 +21,7 @@ export type WildlifeSightingRow = {
   time_of_day: string | null
   sky_condition: string | null
   precipitation: string | null
+  bwc_at_time: string | null
   action_taken: string | null
   dispersal_method: string | null
   dispersal_effective: boolean | null
@@ -52,6 +53,7 @@ export type WildlifeStrikeRow = {
   time_of_day: string | null
   sky_condition: string | null
   precipitation: string | null
+  bwc_at_time: string | null
   aircraft_type: string | null
   aircraft_registration: string | null
   engine_type: string | null
@@ -113,6 +115,7 @@ export async function createSighting(input: {
   action_taken?: string | null
   dispersal_method?: string | null
   dispersal_effective?: boolean | null
+  bwc_at_time?: string | null
   observed_by: string
   observed_by_id?: string | null
   check_id?: string | null
@@ -146,6 +149,7 @@ export async function createSighting(input: {
     action_taken: input.action_taken ?? 'none',
     dispersal_method: input.dispersal_method ?? null,
     dispersal_effective: input.dispersal_effective ?? null,
+    bwc_at_time: input.bwc_at_time ?? null,
     observed_by: input.observed_by,
     observed_by_id: input.observed_by_id ?? null,
     check_id: input.check_id ?? null,
@@ -244,6 +248,7 @@ export async function updateSighting(
     action_taken?: string | null
     dispersal_method?: string | null
     dispersal_effective?: boolean | null
+    bwc_at_time?: string | null
     notes?: string | null
   },
 ): Promise<{ data: WildlifeSightingRow | null; error: string | null }> {
@@ -303,6 +308,7 @@ export async function createStrike(input: {
   time_of_day?: string | null
   sky_condition?: string | null
   precipitation?: string | null
+  bwc_at_time?: string | null
   aircraft_type?: string | null
   aircraft_registration?: string | null
   engine_type?: string | null
@@ -350,6 +356,7 @@ export async function createStrike(input: {
     time_of_day: input.time_of_day ?? null,
     sky_condition: input.sky_condition ?? null,
     precipitation: input.precipitation ?? null,
+    bwc_at_time: input.bwc_at_time ?? null,
     aircraft_type: input.aircraft_type ?? null,
     aircraft_registration: input.aircraft_registration ?? null,
     engine_type: input.engine_type ?? null,
@@ -463,6 +470,7 @@ export async function updateStrike(
     time_of_day?: string | null
     sky_condition?: string | null
     precipitation?: string | null
+    bwc_at_time?: string | null
     aircraft_type?: string | null
     aircraft_registration?: string | null
     engine_type?: string | null

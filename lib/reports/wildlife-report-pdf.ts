@@ -195,10 +195,11 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
     autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
-      head: [['Date', 'Species', 'Aircraft', 'Phase', 'Damage', 'Cost', 'Flight Effect']],
+      head: [['Date', 'Species', 'BWC', 'Aircraft', 'Phase', 'Damage', 'Cost', 'Flight Effect']],
       body: strikes.map(s => [
         formatZuluDateTime(s.strike_date),
         s.species_common || 'Unknown',
+        s.bwc_at_time || '—',
         s.aircraft_type || '—',
         s.phase_of_flight?.replace(/_/g, ' ') || '—',
         s.damage_level || 'none',
@@ -281,6 +282,7 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
         ['Time of Day', s.time_of_day ? s.time_of_day.charAt(0).toUpperCase() + s.time_of_day.slice(1) : '—'],
         ['Sky Condition', s.sky_condition ? s.sky_condition.replace(/_/g, ' ') : '—'],
         ['Precipitation', s.precipitation ? s.precipitation.replace(/_/g, ' ') : '—'],
+        ['BWC at Time', s.bwc_at_time || '—'],
         ['Action Taken', s.action_taken ? s.action_taken.replace(/_/g, ' ') : 'None'],
       ]
 

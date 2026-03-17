@@ -21,7 +21,9 @@ import {
   SKY_CONDITIONS,
   PRECIPITATION_OPTIONS,
   TIME_OF_DAY_OPTIONS,
+  BWC_OPTIONS,
 } from '@/lib/constants'
+import { useDashboard } from '@/lib/dashboard-context'
 import { fetchWeatherWithFormFields } from '@/lib/weather'
 
 type Props = {
@@ -35,6 +37,7 @@ type Props = {
 }
 
 export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData, checkId, inline }: Props) {
+  const { bwcValue: currentBwc } = useDashboard()
   const isEdit = !!initialData
   const [userId, setUserId] = useState<string | null>(null)
   const [selectedSpecies, setSelectedSpecies] = useState<WildlifeSpecies | null>(() => {
@@ -64,6 +67,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
   const [hoursOutOfService, setHoursOutOfService] = useState<number | null>(initialData?.hours_out_of_service ?? null)
   const [remainsCollected, setRemainsCollected] = useState(initialData?.remains_collected ?? false)
   const [remainsSentToLab, setRemainsSentToLab] = useState(initialData?.remains_sent_to_lab ?? false)
+  const [bwcAtTime, setBwcAtTime] = useState(initialData?.bwc_at_time ?? '')
   const [notes, setNotes] = useState(initialData?.notes ?? '')
   const [saving, setSaving] = useState(false)
   const [latitude, setLatitude] = useState<number | null>(initialData?.latitude ?? null)
@@ -95,6 +99,11 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
       setPrecipitation(result.precipitation)
     })
   }, [isEdit])
+
+  // Auto-populate BWC from current airfield status
+  useEffect(() => {
+    if (!isEdit && currentBwc && !bwcAtTime) setBwcAtTime(currentBwc)
+  }, [isEdit, currentBwc, bwcAtTime])
 
   const handlePointSelected = useCallback((lat: number, lng: number) => {
     setLatitude(lat)
@@ -162,6 +171,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
         time_of_day: timeOfDay || null,
         sky_condition: skyCondition || null,
         precipitation: precipitation || null,
+        bwc_at_time: bwcAtTime || null,
         aircraft_type: aircraftType || null,
         aircraft_registration: aircraftRegistration || null,
         engine_type: engineType || null,
@@ -199,6 +209,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
       time_of_day: timeOfDay || null,
       sky_condition: skyCondition || null,
       precipitation: precipitation || null,
+      bwc_at_time: bwcAtTime || null,
       aircraft_type: aircraftType || null,
       aircraft_registration: aircraftRegistration || null,
       engine_type: engineType || null,
@@ -378,7 +389,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
           )}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
           <div>
             <label style={labelStyle}>Time</label>
             <select value={timeOfDay} onChange={e => setTimeOfDay(e.target.value)} style={selectStyle}>
@@ -398,6 +409,13 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
             <select value={precipitation} onChange={e => setPrecipitation(e.target.value)} style={selectStyle}>
               <option value="">—</option>
               {PRECIPITATION_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>BWC</label>
+            <select value={bwcAtTime} onChange={e => setBwcAtTime(e.target.value)} style={selectStyle}>
+              <option value="">—</option>
+              {BWC_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
             </select>
           </div>
         </div>

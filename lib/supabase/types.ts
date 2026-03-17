@@ -890,6 +890,7 @@ export type Database = {
           time_of_day: string | null
           sky_condition: string | null
           precipitation: string | null
+          bwc_at_time: string | null
           action_taken: string | null
           dispersal_method: string | null
           dispersal_effective: boolean | null
@@ -925,6 +926,7 @@ export type Database = {
           time_of_day: string | null
           sky_condition: string | null
           precipitation: string | null
+          bwc_at_time: string | null
           aircraft_type: string | null
           aircraft_registration: string | null
           engine_type: string | null

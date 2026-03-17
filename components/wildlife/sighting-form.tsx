@@ -12,8 +12,10 @@ import {
   SKY_CONDITIONS,
   PRECIPITATION_OPTIONS,
   TIME_OF_DAY_OPTIONS,
+  BWC_OPTIONS,
 } from '@/lib/constants'
 import { useInstallation } from '@/lib/installation-context'
+import { useDashboard } from '@/lib/dashboard-context'
 import { createClient } from '@/lib/supabase/client'
 import { fetchWeatherWithFormFields } from '@/lib/weather'
 import { SpeciesPicker } from './species-picker'
@@ -36,6 +38,7 @@ type Props = {
 
 export function SightingForm({ currentUser, baseId, onClose, onSaved, initialData, checkId, required, inline }: Props) {
   const { areas: installationAreas } = useInstallation()
+  const { bwcValue: currentBwc } = useDashboard()
   const isEdit = !!initialData
 
   const [userId, setUserId] = useState<string | null>(null)
@@ -54,6 +57,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
   const [actionTaken, setActionTaken] = useState(initialData?.action_taken ?? 'none')
   const [dispersalMethod, setDispersalMethod] = useState(initialData?.dispersal_method ?? '')
   const [dispersalEffective, setDispersalEffective] = useState<boolean | null>(initialData?.dispersal_effective ?? null)
+  const [bwcAtTime, setBwcAtTime] = useState(initialData?.bwc_at_time ?? '')
   const [notes, setNotes] = useState(initialData?.notes ?? '')
   const [saving, setSaving] = useState(false)
   const [latitude, setLatitude] = useState<number | null>(initialData?.latitude ?? null)
@@ -71,7 +75,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
     })
   }, [])
 
-  // Auto-detect time of day and weather (skip when editing)
+  // Auto-detect time of day, weather, and BWC (skip when editing)
   useEffect(() => {
     if (isEdit) return
     const hour = new Date().getHours()
@@ -87,6 +91,11 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
       setPrecipitation(result.precipitation)
     })
   }, [isEdit])
+
+  // Auto-populate BWC from current airfield status
+  useEffect(() => {
+    if (!isEdit && currentBwc && !bwcAtTime) setBwcAtTime(currentBwc)
+  }, [isEdit, currentBwc, bwcAtTime])
 
   const handlePointSelected = useCallback((lat: number, lng: number) => {
     setLatitude(lat)
@@ -153,6 +162,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
         action_taken: actionTaken,
         dispersal_method: actionTaken !== 'none' ? dispersalMethod || null : null,
         dispersal_effective: actionTaken !== 'none' ? dispersalEffective : null,
+        bwc_at_time: bwcAtTime || null,
         notes: notes || null,
       })
       setSaving(false)
@@ -179,6 +189,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
       action_taken: actionTaken,
       dispersal_method: actionTaken !== 'none' ? dispersalMethod || null : null,
       dispersal_effective: actionTaken !== 'none' ? dispersalEffective : null,
+      bwc_at_time: bwcAtTime || null,
       observed_by: currentUser,
       observed_by_id: userId,
       check_id: checkId ?? undefined,
@@ -384,7 +395,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
           </div>
 
           {/* Conditions */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
             <div>
               <label style={labelStyle}>Time of Day</label>
               <select value={timeOfDay} onChange={e => setTimeOfDay(e.target.value)} style={selectStyle}>
@@ -404,6 +415,13 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
               <select value={precipitation} onChange={e => setPrecipitation(e.target.value)} style={selectStyle}>
                 <option value="">—</option>
                 {PRECIPITATION_OPTIONS.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>BWC</label>
+              <select value={bwcAtTime} onChange={e => setBwcAtTime(e.target.value)} style={selectStyle}>
+                <option value="">—</option>
+                {BWC_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
               </select>
             </div>
           </div>
