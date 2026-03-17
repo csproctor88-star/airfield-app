@@ -261,10 +261,19 @@ export default function InspectionsPage() {
     // Phase 1: Sync — load from localStorage
     const stored = loadDraft(installationId)
     if (stored) {
-      setDraft(stored)
-      // If lighting has responses, it was previously started
-      if (Object.keys(stored.lighting.responses).length > 0 || stored.lighting.savedAt) {
-        setLightingStarted(true)
+      // Check if the draft has any meaningful work
+      const hasWork = Object.keys(stored.airfield.responses).length > 0 ||
+        Object.keys(stored.lighting.responses).length > 0 ||
+        stored.airfield.savedAt || stored.lighting.savedAt
+      if (hasWork) {
+        setDraft(stored)
+        // If lighting has responses, it was previously started
+        if (Object.keys(stored.lighting.responses).length > 0 || stored.lighting.savedAt) {
+          setLightingStarted(true)
+        }
+      } else {
+        // Empty draft leftover — clean up
+        clearDraft(installationId)
       }
     }
     setDraftLoaded(true)
@@ -1675,7 +1684,7 @@ export default function InspectionsPage() {
   // ══════════════════════════════════════════════
   // ══  LIGHTING START/RESUME PROMPT            ══
   // ══════════════════════════════════════════════
-  if (draftHasWork && !showHistory && showLightingPrompt && activeTab === 'lighting') {
+  if (draft && !showHistory && showLightingPrompt && activeTab === 'lighting') {
     const ltResponses = Object.keys(draft.lighting.responses).length
     const hasLightingWork = ltResponses > 0
     return (
@@ -1766,7 +1775,7 @@ export default function InspectionsPage() {
   // ══════════════════════════════════════════════
   // ══  WORKSPACE VIEW (active draft exists)  ══
   // ══════════════════════════════════════════════
-  if (draftHasWork && !showHistory) {
+  if (draft && !showHistory) {
 
     return (
       <div className="page-container">
@@ -2405,7 +2414,7 @@ export default function InspectionsPage() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          {draftHasWork && showHistory && (
+          {draft && showHistory && (
             <button
               onClick={() => setShowHistory(false)}
               style={{
@@ -2417,7 +2426,7 @@ export default function InspectionsPage() {
               View Current Inspection Form
             </button>
           )}
-          {!draftHasWork && (
+          {!draft && (
             <button
               onClick={handleBeginNew}
               style={{
