@@ -18,6 +18,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { useDashboard } from '@/lib/dashboard-context'
 import { createClient } from '@/lib/supabase/client'
 import { fetchWeatherWithFormFields } from '@/lib/weather'
+import { formatZuluTime } from '@/lib/utils'
 import { SpeciesPicker } from './species-picker'
 
 const LocationPickerMap = dynamic(
@@ -58,6 +59,13 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
   const [dispersalMethod, setDispersalMethod] = useState(initialData?.dispersal_method ?? '')
   const [dispersalEffective, setDispersalEffective] = useState<boolean | null>(initialData?.dispersal_effective ?? null)
   const [bwcAtTime, setBwcAtTime] = useState(initialData?.bwc_at_time ?? '')
+  const [observationTime, setObservationTime] = useState(() => {
+    if (initialData?.observed_at) {
+      const d = new Date(initialData.observed_at)
+      return d.toISOString().slice(0, 16) // YYYY-MM-DDTHH:mm in UTC
+    }
+    return new Date().toISOString().slice(0, 16)
+  })
   const [notes, setNotes] = useState(initialData?.notes ?? '')
   const [saving, setSaving] = useState(false)
   const [latitude, setLatitude] = useState<number | null>(initialData?.latitude ?? null)
@@ -156,6 +164,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
         longitude,
         location_text: locationText || null,
         airfield_zone: airfieldZone || null,
+        observed_at: observationTime + 'Z',
         time_of_day: timeOfDay || null,
         sky_condition: skyCondition || null,
         precipitation: precipitation || null,
@@ -183,6 +192,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
       longitude,
       location_text: locationText || null,
       airfield_zone: airfieldZone || null,
+      observed_at: observationTime + 'Z',
       time_of_day: timeOfDay || null,
       sky_condition: skyCondition || null,
       precipitation: precipitation || null,
@@ -292,6 +302,23 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
                 <span style={{ fontSize: 'var(--fs-sm)' }}>Browse All</span>
               </button>
             )}
+          </div>
+
+          {/* Observation Time (Zulu) */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Time of Observation (Zulu)</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="datetime-local"
+                value={observationTime}
+                onChange={e => setObservationTime(e.target.value)}
+                style={{ ...selectStyle, flex: 1 }}
+              />
+              <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', flexShrink: 0 }}>Z</span>
+            </div>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+              {formatZuluTime(new Date(observationTime + 'Z'))}Z — all times in UTC/Zulu
+            </div>
           </div>
 
           {/* Count + Behavior */}

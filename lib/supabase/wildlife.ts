@@ -242,6 +242,7 @@ export async function updateSighting(
     longitude?: number | null
     location_text?: string | null
     airfield_zone?: string | null
+    observed_at?: string
     time_of_day?: string | null
     sky_condition?: string | null
     precipitation?: string | null
@@ -467,6 +468,7 @@ export async function updateStrike(
     latitude?: number | null
     longitude?: number | null
     location_text?: string | null
+    strike_date?: string
     time_of_day?: string | null
     sky_condition?: string | null
     precipitation?: string | null

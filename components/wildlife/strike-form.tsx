@@ -25,6 +25,7 @@ import {
 } from '@/lib/constants'
 import { useDashboard } from '@/lib/dashboard-context'
 import { fetchWeatherWithFormFields } from '@/lib/weather'
+import { formatZuluTime } from '@/lib/utils'
 
 type Props = {
   currentUser: string
@@ -68,6 +69,13 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
   const [remainsCollected, setRemainsCollected] = useState(initialData?.remains_collected ?? false)
   const [remainsSentToLab, setRemainsSentToLab] = useState(initialData?.remains_sent_to_lab ?? false)
   const [bwcAtTime, setBwcAtTime] = useState(initialData?.bwc_at_time ?? '')
+  const [strikeTime, setStrikeTime] = useState(() => {
+    if (initialData?.strike_date) {
+      const d = new Date(initialData.strike_date)
+      return d.toISOString().slice(0, 16)
+    }
+    return new Date().toISOString().slice(0, 16)
+  })
   const [notes, setNotes] = useState(initialData?.notes ?? '')
   const [saving, setSaving] = useState(false)
   const [latitude, setLatitude] = useState<number | null>(initialData?.latitude ?? null)
@@ -168,6 +176,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
         number_seen: numberSeen,
         latitude, longitude,
         location_text: locationText || null,
+        strike_date: strikeTime + 'Z',
         time_of_day: timeOfDay || null,
         sky_condition: skyCondition || null,
         precipitation: precipitation || null,
@@ -206,6 +215,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
       number_seen: numberSeen,
       latitude, longitude,
       location_text: locationText || null,
+      strike_date: strikeTime + 'Z',
       time_of_day: timeOfDay || null,
       sky_condition: skyCondition || null,
       precipitation: precipitation || null,
@@ -325,6 +335,23 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
           <label style={labelStyle}>Location</label>
           <input type="text" placeholder="e.g. RWY 01, TWY B"
             value={locationText} onChange={e => setLocationText(e.target.value)} style={selectStyle} />
+        </div>
+
+        {/* Strike Time (Zulu) */}
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Time of Strike (Zulu)</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input
+              type="datetime-local"
+              value={strikeTime}
+              onChange={e => setStrikeTime(e.target.value)}
+              style={{ ...selectStyle, flex: 1 }}
+            />
+            <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', flexShrink: 0 }}>Z</span>
+          </div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+            {formatZuluTime(new Date(strikeTime + 'Z'))}Z — all times in UTC/Zulu
+          </div>
         </div>
 
         {/* GPS + Map Location */}
