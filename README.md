@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, ACSI (annual compliance), NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.21.0 | **Build:** Clean | **50 routes** | **245 source files** | **115 migrations**
+**Version:** 2.22.0 | **Build:** Clean | **52 routes** | **193 source files** | **117 migrations**
 
 ## Tech Stack
 
@@ -54,7 +54,7 @@ RESEND_API_KEY=[resend-api-key]
 Apply the schema and migrations to a Supabase project:
 
 1. Run `supabase/schema.sql` to create the base tables and sequences
-2. Apply the 115 migrations in order from `supabase/migrations/`
+2. Apply the 117 migrations in order from `supabase/migrations/`
 
 See [docs/BASE-ONBOARDING.md](./docs/BASE-ONBOARDING.md) for adding new installations.
 
@@ -100,7 +100,7 @@ Combined Airfield Inspection Report with two halves:
 - **Airfield** — configurable sections and checklist items (per-base templates)
 - **Lighting** — configurable sections and checklist items (per-base templates)
 
-All items default to Pass — three-state toggle (Pass → Fail → N/A → Pass) for amending individual items. Multiple discrepancies per failed item with per-discrepancy comments, GPS pins, map thumbnails, and photos. BWC integration (LOW/MOD/SEV/PROHIB), draft persistence to localStorage and Supabase for cross-device access, two-step Complete/File workflow with per-user tracking, combined PDF export with per-discrepancy photo embedding. Also supports standalone Construction Meeting and Joint Monthly inspection forms with personnel attendance tracking.
+All items default to Pass — three-state toggle (Pass → Fail → N/A → Pass) for amending individual items. Multiple discrepancies per failed item with per-discrepancy comments, GPS pins, map thumbnails, and photos. BWC integration (LOW/MOD/SEV/PROHIB), draft persistence to localStorage and Supabase for cross-device access. **File-on-complete lifecycle**: each half (airfield/lighting) files to the database immediately on Complete — no separate File step. Start/Resume prompts on the KPI badge and inspections page. After airfield is filed, the lighting tab shows a dedicated Start/Resume card with the airfield tab marked "Completed & Filed". AFLD3/{OI} activity logging for start and completion events (includes BWC, RSC/RCR, discrepancies). Reopen for Editing auto-loads the inspection form. Combined PDF export with per-discrepancy photo embedding. Also supports standalone Construction Meeting and Joint Monthly inspection forms with personnel attendance tracking.
 
 ### ACSI (`/acsi`)
 Airfield Compliance and Safety Inspection per DAFMAN 13-204v2, Para 5.4.3. Annual compliance inspection with 10 sections and ~100 checklist items.
@@ -275,7 +275,7 @@ airfield-app/
 │   └── supabase/                         # Client, server, types, CRUD modules (23 files)
 ├── supabase/
 │   ├── schema.sql                        # Full database schema
-│   ├── migrations/                       # 115 migration files
+│   ├── migrations/                       # 117 migration files
 │   └── functions/                        # Edge functions (PDF text extraction)
 ├── middleware.ts                          # Auth guard + demo mode bypass
 ├── public/                               # Static assets, PWA manifest, aircraft images
@@ -352,8 +352,8 @@ airfield-app/
 | Item | Priority | Notes |
 |------|----------|-------|
 | No test suite | High | No unit or integration tests |
-| 150 `as any` casts | Medium | Across 36 files — Mapbox layer expressions (~28), Supabase row inserts (~70), jsPDF hooks (~11), misc (~41). Regenerate Supabase types to eliminate ~50% |
-| 58 files > 500 lines | Low | Largest: `infrastructure/page.tsx` (4,079), `parking/page.tsx` (3,267), `inspections/page.tsx` (2,296), `base-setup/page.tsx` (2,263) |
+| 157 `as any` casts | Medium | Across 36 files — Mapbox layer expressions (~28), Supabase row inserts (~70), jsPDF hooks (~11), misc (~48). Regenerate Supabase types to eliminate ~50% |
+| 59 files > 500 lines | Low | Largest: `infrastructure/page.tsx` (4,097), `parking/page.tsx` (3,267), `inspections/page.tsx` (2,749), `base-setup/page.tsx` (2,458) |
 | Map init duplication | Low | 6 Mapbox components share similar init logic |
 | PDF boilerplate duplication | Low | 12 PDF generators share similar header/footer/photo helper patterns |
 
@@ -367,11 +367,5 @@ See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 
 ## Reference Documents
 
-- [`docs/GLIDEPATH_CAPABILITIES_BRIEF.md`](./docs/GLIDEPATH_CAPABILITIES_BRIEF.md) — Capabilities brief (v2.17.0)
-- [`docs/GLIDEPATH_BETA_TESTER_GUIDE.md`](./docs/GLIDEPATH_BETA_TESTER_GUIDE.md) — Beta tester onboarding guide
-- [`docs/GLIDEPATH_ROLLOUT_PLAN.md`](./docs/GLIDEPATH_ROLLOUT_PLAN.md) — 5-phase rollout strategy
-- [`docs/BASE-ONBOARDING.md`](./docs/BASE-ONBOARDING.md) — Guide for adding new installations
 - [`docs/Glidepath_SRS_v5.0.md`](./docs/Glidepath_SRS_v5.0.md) — Software Requirements Specification
-- [`docs/RLS_TEST_CHECKLIST.md`](./docs/RLS_TEST_CHECKLIST.md) — Row-Level Security test results
 - [`docs/Airfield_Inspection_Checklist_Template.md`](./docs/Airfield_Inspection_Checklist_Template.md) — ACSI checklist reference (DAFMAN 13-204v2)
-- `docs/NotebookLM_Source_*.md` — 8 source documents for NotebookLM cinematic video overviews

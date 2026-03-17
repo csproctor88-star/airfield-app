@@ -8,8 +8,54 @@ All notable changes to Glidepath.
 - METAR weather API integration (aviationweather.gov)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~150 `as any` casts
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~157 `as any` casts
 - Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 12 PDF generators
+
+---
+
+## [2.22.0] — 2026-03-17
+
+### Features — Inspection Lifecycle Overhaul
+Complete rewrite of the daily inspection lifecycle. Each inspection half (airfield/lighting) now operates as an independent entity with a simplified flow: Start → Fill Out → Complete (files to DB immediately). No separate File step.
+
+- **File on Complete** — Clicking "Complete" saves the inspection half directly to the database as completed, eliminating the intermediate in-progress-then-file workflow
+- **Start/Resume prompts** — KPI badge on the dashboard and the inspections page show "Start Inspection" or "Resume Inspection" buttons instead of auto-loading the form
+- **Lighting tab prompt** — After the airfield half is completed and filed, the lighting tab shows a dedicated Start/Resume card
+- **Airfield filed indicator** — Status bar shows "Completed & Filed" with green checkmark; clicking the airfield tab shows a completion card with "Continue to Lighting" button. Persists across page reloads via `airfieldFiled` flag in the draft object
+- **AFLD3/{OI} activity logging** — Start logs "AFLD3/{OI} is on the airfield for the Daily Airfield Inspection"; completion logs BWC, RSC/RCR, and all discrepancies found with remarks
+- **Draft cleanup** — Empty orphaned drafts auto-deleted from both localStorage and Supabase on page load. Phase 2 server sync skips empty/orphaned DB drafts and auto-deletes them
+- **Discard/delete** — Discard current draft (clears localStorage + deletes DB records) or delete in-progress inspections from history with Resume/Delete buttons on history cards
+- **Reopen for editing** — "Reopen for Editing" on the detail page now auto-loads the inspection form via `?action=reopen&groupId=xxx` instead of requiring a manual Resume click
+- **Orphan prevention** — Removed redundant `saveInspectionDraft()` call from `handleComplete` that was creating orphaned `in_progress` DB records never filed
+
+### Features — Wildlife/BASH Enhancements
+- **Zulu time auto-populate** — Sighting and strike forms now show an editable datetime field pre-filled with the current UTC time. Saved to `observed_at` (sightings) and `strike_date` (strikes). Already exported in BASH monthly report PDFs
+- **BWC at time of observation** — New field on both sighting and strike forms, auto-populated from current airfield status
+- **Sighting detail log** — New section in the BASH monthly report PDF with per-sighting detail cards (species, location, coordinates, conditions, action taken, dispersal effectiveness)
+- **Weather auto-fill** — `weatherToFormFields()` maps Open-Meteo weather codes to sky condition and precipitation on form mount
+
+### Features — Discrepancy & Check Improvements
+- **Per-installation facility numbers** — `base_facilities` table for tracking facility numbers per base. Always-visible facility # field on discrepancy forms
+- **Check lifecycle logging** — Auto-save persistence for checks with AFLD3/{OI} format activity entries
+- **Link to Visual NAVAID toggle** — Discrepancy edit modal includes a toggle to link/unlink discrepancies to infrastructure features
+- **Facility # in inspections** — Facility number field available in inspection and check discrepancy sub-forms
+
+### Features — PDF & Photo Performance
+- **Image compression** — Photos are compressed before embedding in PDFs, significantly reducing file size
+- **Photo thumbnails** — Thumbnail generation on upload, used in list views for faster rendering
+- **Obstruction PDF fix** — Fixed map image cutoff by calculating correct page break height before embedding
+
+### Bug Fixes
+- **Ghost draft resume prompt** — Fixed multiple edge cases where completed inspections showed "Resume" prompts due to orphaned DB records, empty localStorage drafts, or stale `airfieldFiled` state
+- **Activity log entity type** — Fixed `airfield_check` incorrectly displaying as entity type for inspections
+- **Double completion log** — Eliminated duplicate activity log entries on inspection filing
+- **Inspection form not loading** — Fixed "Begin New Inspection" not rendering the form when `draftHasWork` was used for workspace view guard
+
+### Database
+- **2 new migrations** (`2026031600`, `2026031601`)
+  - `create_base_facilities` — Per-installation facility number tracking
+  - `add_bwc_at_time_wildlife` — BWC at time of observation column on `wildlife_sightings` and `wildlife_strikes`
+- **Total migrations**: 117
 
 ---
 
