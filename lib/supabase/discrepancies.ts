@@ -293,14 +293,17 @@ export async function uploadDiscrepancyPhoto(
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
 
-  const { resizeImageForUpload } = await import('@/lib/utils')
+  const { resizeImageForUpload, generateThumbnail } = await import('@/lib/utils')
   file = await resizeImageForUpload(file)
 
+  const ts = Date.now()
   const ext = file.name.split('.').pop() || 'jpg'
-  const storagePath = `discrepancy-photos/${discrepancyId}/${Date.now()}.${ext}`
+  const storagePath = `discrepancy-photos/${discrepancyId}/${ts}.${ext}`
+  const thumbPath = `discrepancy-photos/${discrepancyId}/${ts}_thumb.jpg`
 
   let storageUrl = storagePath
   let usedStorage = false
+  let thumbnailUrl: string | null = null
   try {
       const { error: uploadError } = await supabase.storage
       .from('photos')
@@ -308,6 +311,14 @@ export async function uploadDiscrepancyPhoto(
 
     if (!uploadError) {
       usedStorage = true
+      // Upload thumbnail
+      const thumb = await generateThumbnail(file)
+      if (thumb) {
+        const { error: thumbErr } = await supabase.storage
+          .from('photos')
+          .upload(thumbPath, thumb, { contentType: 'image/jpeg' })
+        if (!thumbErr) thumbnailUrl = thumbPath
+      }
     } else {
       console.warn('Storage upload failed, storing as data URL:', uploadError.message)
     }
@@ -359,6 +370,7 @@ export async function uploadDiscrepancyPhoto(
     file_size: file.size,
     mime_type: file.type || 'image/jpeg',
   }
+  if (thumbnailUrl) photoRow.thumbnail_path = thumbnailUrl
   if (uploaded_by) photoRow.uploaded_by = uploaded_by
   if (resolvedBaseId) photoRow.base_id = resolvedBaseId
 

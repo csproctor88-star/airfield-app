@@ -319,14 +319,17 @@ export async function uploadCheckPhoto(
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
 
-  const { resizeImageForUpload } = await import('@/lib/utils')
+  const { resizeImageForUpload, generateThumbnail } = await import('@/lib/utils')
   file = await resizeImageForUpload(file)
 
+  const ts = Date.now()
   const ext = file.name.split('.').pop() || 'jpg'
-  const storagePath = `check-photos/${checkId}/${Date.now()}.${ext}`
+  const storagePath = `check-photos/${checkId}/${ts}.${ext}`
+  const thumbPath = `check-photos/${checkId}/${ts}_thumb.jpg`
 
   let storageUrl = storagePath
   let usedStorage = false
+  let thumbnailUrl: string | null = null
   try {
       const { error: uploadError } = await supabase.storage
       .from('photos')
@@ -334,6 +337,13 @@ export async function uploadCheckPhoto(
 
     if (!uploadError) {
       usedStorage = true
+      const thumb = await generateThumbnail(file)
+      if (thumb) {
+        const { error: thumbErr } = await supabase.storage
+          .from('photos')
+          .upload(thumbPath, thumb, { contentType: 'image/jpeg' })
+        if (!thumbErr) thumbnailUrl = thumbPath
+      }
     } else {
       console.warn('Storage upload failed, storing as data URL:', uploadError.message)
     }
@@ -372,6 +382,7 @@ export async function uploadCheckPhoto(
     file_size: file.size,
     mime_type: file.type || 'image/jpeg',
   }
+  if (thumbnailUrl) photoRow.thumbnail_path = thumbnailUrl
   if (uploaded_by) photoRow.uploaded_by = uploaded_by
   if (baseId) photoRow.base_id = baseId
   if (issueIndex != null) photoRow.issue_index = issueIndex

@@ -76,7 +76,7 @@ export default function DiscrepanciesPage() {
           const ids = data.map(d => d.id)
           const { data: photoRows } = await supabase
             .from('photos')
-            .select('discrepancy_id, storage_path')
+            .select('discrepancy_id, storage_path, thumbnail_path')
             .in('discrepancy_id', ids)
             .order('created_at', { ascending: true })
           if (photoRows && photoRows.length > 0) {
@@ -89,7 +89,9 @@ export default function DiscrepanciesPage() {
               if (row.storage_path.startsWith('data:')) {
                 pMap[dId] = row.storage_path
               } else if (supabaseUrl) {
-                pMap[dId] = `${supabaseUrl}/storage/v1/object/public/photos/${row.storage_path}`
+                // Prefer thumbnail for list views (much smaller)
+                const path = row.thumbnail_path || row.storage_path
+                pMap[dId] = `${supabaseUrl}/storage/v1/object/public/photos/${path}`
               }
             }
             setDiscrepancyPhotoMap(pMap)
@@ -281,19 +283,20 @@ export default function DiscrepanciesPage() {
       const supabase = createClient()
       if (supabase) {
         const ids = filtered.map(d => d.id)
-        // Fetch uploaded photos (keyed by discrepancy_id FK)
+        // Fetch uploaded photos (keyed by discrepancy_id FK) — prefer thumbnails for map popups
         const { data: photoRows } = await supabase
           .from('photos')
-          .select('discrepancy_id, storage_path')
+          .select('discrepancy_id, storage_path, thumbnail_path')
           .in('discrepancy_id', ids)
         if (photoRows && photoRows.length > 0) {
           for (const row of photoRows) {
             try {
               let dataUrl: string | null = null
-              if (row.storage_path.startsWith('data:')) {
-                dataUrl = row.storage_path
+              const imgPath = row.thumbnail_path || row.storage_path
+              if (imgPath.startsWith('data:')) {
+                dataUrl = imgPath
               } else {
-                const { data: urlData } = supabase.storage.from('photos').getPublicUrl(row.storage_path)
+                const { data: urlData } = supabase.storage.from('photos').getPublicUrl(imgPath)
                 if (urlData?.publicUrl) {
                   const resp = await fetch(urlData.publicUrl)
                   if (resp.ok) {

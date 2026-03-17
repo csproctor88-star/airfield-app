@@ -154,6 +154,41 @@ export function compressImageForPdf(dataUrl: string, maxDimension = 800, quality
   })
 }
 
+/**
+ * Generate a small thumbnail File from an image File.
+ * Default: 200px max dimension, JPEG quality 0.6 → typically 5-15KB.
+ */
+export async function generateThumbnail(file: File, maxDimension = 200, quality = 0.6): Promise<File | null> {
+  if (!file.type.startsWith('image/')) return null
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let { naturalWidth: w, naturalHeight: h } = img
+      const scale = Math.min(maxDimension / w, maxDimension / h, 1)
+      w = Math.round(w * scale)
+      h = Math.round(h * scale)
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { resolve(null); return }
+      ctx.drawImage(img, 0, 0, w, h)
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { resolve(null); return }
+          resolve(new File([blob], 'thumb.jpg', { type: 'image/jpeg', lastModified: Date.now() }))
+        },
+        'image/jpeg',
+        quality,
+      )
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null) }
+    img.src = url
+  })
+}
+
 export function isMapboxConfigured(): boolean {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   return !!(token && token !== 'your-mapbox-token-here')
