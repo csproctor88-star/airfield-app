@@ -277,7 +277,8 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
     mapDataUrl = await fetchMapImageDataUrl(evaluation.latitude, evaluation.longitude)
   }
   if (mapDataUrl) {
-    checkPageBreak(55)
+    const mapImgHeight = contentWidth * (300 / 600)
+    checkPageBreak(mapImgHeight + 15) // map image + title + coordinates
     doc.setFontSize(10)
     doc.setTextColor(0)
     doc.setFont('helvetica', 'bold')
