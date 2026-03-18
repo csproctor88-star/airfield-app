@@ -63,6 +63,8 @@ import {
 import { offsetPoint } from '@/lib/calculations/geometry'
 import { DEMO_PARKING_PLAN, DEMO_PARKING_SPOTS, DEMO_PARKING_OBSTACLES } from '@/lib/demo-data'
 import { generateParkingPdf } from '@/lib/parking-pdf'
+import { sendPdfViaEmail } from '@/lib/email-pdf'
+import EmailPdfModal from '@/components/ui/email-pdf-modal'
 
 // ── Silhouette manifest lookup ──
 
@@ -320,7 +322,7 @@ function computeIconScale(wingspanFt: number, lengthFt: number, mapInstance: map
 // ── Main Page ──
 
 export default function ParkingPage() {
-  const { installationId, currentInstallation, runways } = useInstallation()
+  const { installationId, currentInstallation, runways, defaultPdfEmail } = useInstallation()
 
   // ── State ──
   const [plans, setPlans] = useState<ParkingPlan[]>([])
@@ -392,8 +394,11 @@ export default function ParkingPage() {
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // PDF export
+  // PDF export & email
   const [exportingPdf, setExportingPdf] = useState(false)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
+  const [sendingEmail, setSendingEmail] = useState(false)
 
   // Lock mode — prevents dragging when locked
   const [planLocked, setPlanLocked] = useState(false)
@@ -1694,71 +1699,80 @@ export default function ParkingPage() {
 
   // ── PDF export ──
 
+  const buildParkingPdf = async () => {
+    if (!selectedPlan) return null
+    const m = map.current
+    let mapDataUrl: string | null = null
+
+    if (m) {
+      const prevCenter = m.getCenter()
+      const prevZoom = m.getZoom()
+      const prevPitch = m.getPitch()
+      const prevBearing = m.getBearing()
+
+      const container = m.getContainer()
+      const prevWidth = container.style.width
+      const prevHeight = container.style.height
+      const prevPosition = container.style.position
+      container.style.position = 'fixed'
+      container.style.width = '1600px'
+      container.style.height = '900px'
+      m.resize()
+
+      m.jumpTo({ pitch: 0 })
+
+      await new Promise<void>(resolve => {
+        const onIdle = () => { m.off('idle', onIdle); resolve() }
+        m.on('idle', onIdle)
+        m.triggerRepaint()
+      })
+      await new Promise(resolve => requestAnimationFrame(resolve))
+      await new Promise(resolve => requestAnimationFrame(resolve))
+
+      mapDataUrl = m.getCanvas().toDataURL('image/jpeg', 0.9)
+
+      container.style.width = prevWidth
+      container.style.height = prevHeight
+      container.style.position = prevPosition
+      m.resize()
+      m.jumpTo({ center: prevCenter, zoom: prevZoom, pitch: prevPitch, bearing: prevBearing })
+    }
+
+    return generateParkingPdf({
+      plan: selectedPlan, spots, spotsWithAircraft, obstacles, taxilanes,
+      allResults, violations, warnings, apronContext, mapDataUrl,
+      baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao,
+    })
+  }
+
   const handleExportPdf = async () => {
     if (!selectedPlan) return
     setExportingPdf(true)
     try {
-      const m = map.current
-      let mapDataUrl: string | null = null
-
-      if (m) {
-        // Save current view state
-        const prevCenter = m.getCenter()
-        const prevZoom = m.getZoom()
-        const prevPitch = m.getPitch()
-        const prevBearing = m.getBearing()
-
-        // Force map container to a fixed landscape size for capture
-        const container = m.getContainer()
-        const prevWidth = container.style.width
-        const prevHeight = container.style.height
-        const prevPosition = container.style.position
-        container.style.position = 'fixed'
-        container.style.width = '1600px'
-        container.style.height = '900px'
-        m.resize()
-
-        // Set top-down view but preserve current bearing (rotation)
-        m.jumpTo({ pitch: 0 })
-
-        // Wait for the map to fully re-render at landscape size
-        await new Promise<void>(resolve => {
-          const onIdle = () => { m.off('idle', onIdle); resolve() }
-          m.on('idle', onIdle)
-          m.triggerRepaint()
-        })
-        // Extra frame to ensure canvas is fully painted
-        await new Promise(resolve => requestAnimationFrame(resolve))
-        await new Promise(resolve => requestAnimationFrame(resolve))
-
-        mapDataUrl = m.getCanvas().toDataURL('image/jpeg', 0.9)
-
-        // Restore container size and view
-        container.style.width = prevWidth
-        container.style.height = prevHeight
-        container.style.position = prevPosition
-        m.resize()
-        m.jumpTo({ center: prevCenter, zoom: prevZoom, pitch: prevPitch, bearing: prevBearing })
+      const result = await buildParkingPdf()
+      if (result) {
+        result.doc.save(result.filename)
+        toast.success('PDF exported')
       }
-
-      const { doc, filename } = await generateParkingPdf({
-        plan: selectedPlan,
-        spots,
-        spotsWithAircraft,
-        obstacles,
-        taxilanes,
-        allResults,
-        violations,
-        warnings,
-        apronContext,
-        mapDataUrl,
-        baseName: currentInstallation?.name,
-        baseIcao: currentInstallation?.icao,
-      })
-      doc.save(filename)
-      toast.success('PDF exported')
     } catch (err) {
       toast.error('Failed to export PDF')
+      console.error(err)
+    } finally {
+      setExportingPdf(false)
+    }
+  }
+
+  const handleEmailPdf = async () => {
+    if (!selectedPlan) return
+    setExportingPdf(true)
+    try {
+      const result = await buildParkingPdf()
+      if (result) {
+        setEmailPdfData(result)
+        setEmailModalOpen(true)
+      }
+    } catch (err) {
+      toast.error('Failed to generate PDF')
       console.error(err)
     } finally {
       setExportingPdf(false)
@@ -2300,19 +2314,34 @@ export default function ParkingPage() {
               ))}
             </select>
             {selectedPlan && (
-              <button
-                onClick={handleExportPdf}
-                disabled={exportingPdf}
-                title="Export PDF"
-                style={{
-                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                  background: 'var(--color-bg)', color: 'var(--color-text-secondary)',
-                  border: '1px solid var(--color-border)', cursor: exportingPdf ? 'wait' : 'pointer',
-                  fontWeight: 600, opacity: exportingPdf ? 0.5 : 1,
-                }}
-              >
-                {exportingPdf ? '...' : 'PDF'}
-              </button>
+              <>
+                <button
+                  onClick={handleExportPdf}
+                  disabled={exportingPdf}
+                  title="Export PDF"
+                  style={{
+                    padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
+                    background: 'var(--color-bg)', color: 'var(--color-text-secondary)',
+                    border: '1px solid var(--color-border)', cursor: exportingPdf ? 'wait' : 'pointer',
+                    fontWeight: 600, opacity: exportingPdf ? 0.5 : 1,
+                  }}
+                >
+                  {exportingPdf ? '...' : 'PDF'}
+                </button>
+                <button
+                  onClick={handleEmailPdf}
+                  disabled={exportingPdf}
+                  title="Email PDF"
+                  style={{
+                    padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
+                    background: 'var(--color-bg)', color: 'var(--color-text-secondary)',
+                    border: '1px solid var(--color-border)', cursor: exportingPdf ? 'wait' : 'pointer',
+                    fontWeight: 600, opacity: exportingPdf ? 0.5 : 1,
+                  }}
+                >
+                  ✉
+                </button>
+              </>
             )}
             <button
               onClick={() => setShowNewPlan(true)}
@@ -3183,6 +3212,36 @@ export default function ParkingPage() {
             >
               Ruler{ruler.active && ruler.totalFt > 0 ? ` ${Math.round(ruler.totalFt)}ft` : ''}
             </button>
+            {selectedPlan && (
+              <>
+                <button
+                  onClick={handleExportPdf}
+                  disabled={exportingPdf}
+                  title="Export PDF"
+                  style={{
+                    padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                    background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+                    color: 'var(--color-text-primary)', cursor: exportingPdf ? 'wait' : 'pointer',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.3)', opacity: exportingPdf ? 0.5 : 1,
+                  }}
+                >
+                  {exportingPdf ? '...' : 'PDF'}
+                </button>
+                <button
+                  onClick={handleEmailPdf}
+                  disabled={exportingPdf}
+                  title="Email PDF"
+                  style={{
+                    padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                    background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+                    color: 'var(--color-text-primary)', cursor: exportingPdf ? 'wait' : 'pointer',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.3)', opacity: exportingPdf ? 0.5 : 1,
+                  }}
+                >
+                  ✉
+                </button>
+              </>
+            )}
           </div>
 
           {/* Floating toolbar — visible when sidebar is hidden, fullscreen, or mobile */}
@@ -3513,6 +3572,27 @@ export default function ParkingPage() {
           </div>
         </div>
       )}
+
+      <EmailPdfModal
+        open={emailModalOpen}
+        onClose={() => { setEmailModalOpen(false); setEmailPdfData(null) }}
+        onSend={async (email: string) => {
+          if (!emailPdfData) return
+          setSendingEmail(true)
+          const result = await sendPdfViaEmail(emailPdfData.doc, emailPdfData.filename, email, `Parking Plan: ${selectedPlan?.plan_name || 'Export'}`)
+          if (result.success) {
+            toast.success('Email sent successfully')
+            setEmailModalOpen(false)
+            setEmailPdfData(null)
+          } else {
+            toast.error(result.error || 'Failed to send email')
+          }
+          setSendingEmail(false)
+        }}
+        sending={sendingEmail}
+        filename={emailPdfData?.filename}
+        defaultEmail={defaultPdfEmail}
+      />
     </div>
   )
 }
