@@ -684,7 +684,22 @@ export default function InspectionsPage() {
     const label = type === 'airfield' ? 'Daily Airfield Inspection' : 'Daily Lighting Inspection'
     toast.success(`${label} started`)
 
-    const oiStr = userOI ? `/${userOI}` : ''
+    // Fetch OI directly to avoid race with async profile load on mount
+    let oi = userOI
+    if (!oi) {
+      const supabase = createClient()
+      if (supabase) {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: profile } = await supabase.from('profiles').select('operating_initials').eq('id', user.id).single()
+          if (profile?.operating_initials) {
+            oi = profile.operating_initials
+            setUserOI(oi)
+          }
+        }
+      }
+    }
+    const oiStr = oi ? `/${oi}` : ''
     logActivity(
       'started',
       'inspection',
