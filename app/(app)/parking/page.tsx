@@ -1123,11 +1123,11 @@ export default function ParkingPage() {
           )
 
           if (result) {
-            m.addImage(imgName, result.imageData, { sdf: false })
+            m.addImage(imgName, result.imageData, { sdf: false, pixelRatio: 1 })
             silhouetteImagesRef.current.add(imgName)
           } else {
             const fallback = renderFallbackIcon()
-            m.addImage(imgName, fallback.imageData, { sdf: false })
+            m.addImage(imgName, fallback.imageData, { sdf: false, pixelRatio: 1 })
             silhouetteImagesRef.current.add(imgName)
           }
         }
