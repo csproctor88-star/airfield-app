@@ -1708,29 +1708,36 @@ export default function ParkingPage() {
         const prevPitch = m.getPitch()
         const prevBearing = m.getBearing()
 
+        // Force map container to a fixed landscape size for capture
+        const container = m.getContainer()
+        const prevWidth = container.style.width
+        const prevHeight = container.style.height
+        const prevPosition = container.style.position
+        container.style.position = 'fixed'
+        container.style.width = '1600px'
+        container.style.height = '900px'
+        m.resize()
+
         // Set top-down view at current zoom for capture
         m.jumpTo({ pitch: 0, bearing: 0 })
 
-        // Wait for the map to fully re-render at the new view
+        // Wait for the map to fully re-render at landscape size
         await new Promise<void>(resolve => {
-          // First wait for a render frame, then wait for idle (tiles loaded)
-          m.once('render', () => {
-            const onIdle = () => { m.off('idle', onIdle); resolve() }
-            m.on('idle', onIdle)
-            // Fallback in case map is already idle after render
-            if (m.isSourceLoaded('composite') || m.loaded()) {
-              m.off('idle', onIdle)
-              resolve()
-            }
-          })
+          const onIdle = () => { m.off('idle', onIdle); resolve() }
+          m.on('idle', onIdle)
           m.triggerRepaint()
         })
         // Extra frame to ensure canvas is fully painted
         await new Promise(resolve => requestAnimationFrame(resolve))
+        await new Promise(resolve => requestAnimationFrame(resolve))
 
         mapDataUrl = m.getCanvas().toDataURL('image/jpeg', 0.9)
 
-        // Restore previous view
+        // Restore container size and view
+        container.style.width = prevWidth
+        container.style.height = prevHeight
+        container.style.position = prevPosition
+        m.resize()
         m.jumpTo({ center: prevCenter, zoom: prevZoom, pitch: prevPitch, bearing: prevBearing })
       }
 
