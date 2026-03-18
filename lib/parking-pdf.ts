@@ -29,7 +29,7 @@ interface ParkingPdfInput {
 
 export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc: jsPDF; filename: string }> {
   const {
-    plan, spots, spotsWithAircraft, obstacles, taxilanes,
+    plan, spots, spotsWithAircraft,
     allResults, violations, warnings, apronContext,
     mapDataUrl, baseName, baseIcao,
   } = input
@@ -102,41 +102,7 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
     y += descLines.length * 3.5 + 4
   }
 
-  // ── Map screenshot (preserve aspect ratio, centered) ──
-  if (mapDataUrl) {
-    checkPageBreak(80)
-    try {
-      // Decode image dimensions to preserve aspect ratio
-      const img = new Image()
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve()
-        img.onerror = () => reject()
-        img.src = mapDataUrl
-      })
-      const aspect = img.width / img.height
-      const maxW = contentWidth
-      const maxH = Math.min(contentWidth * 0.55, pageHeight - y - 20)
-      let imgW = maxW
-      let imgH = imgW / aspect
-      if (imgH > maxH) {
-        imgH = maxH
-        imgW = imgH * aspect
-      }
-      const imgX = margin + (contentWidth - imgW) / 2
-      doc.addImage(mapDataUrl, 'JPEG', imgX, y, imgW, imgH)
-      y += imgH + 4
-    } catch {
-      // Map capture failed — skip silently
-    }
-  }
-
-  // ── Aircraft Summary Table (grouped by type) ──
-  checkPageBreak(30)
-  doc.setFontSize(10)
-  doc.setTextColor(0)
-  doc.text('AIRCRAFT PLACEMENT SUMMARY', margin, y)
-  y += 5
-
+  // ── Aircraft Summary (compact, part of header) ──
   if (spotsWithAircraft.length > 0) {
     // Group by aircraft_name
     const groups = new Map<string, SpotWithAircraft[]>()
@@ -146,30 +112,12 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
       groups.get(name)!.push(s)
     }
 
-    // Compute average actual distance between aircraft of each type
-    // Uses all clearance results that involve this aircraft type
-    const avgDistByType = new Map<string, { sum: number; count: number }>()
-    for (const r of allResults) {
-      const addDist = (name: string) => {
-        if (!avgDistByType.has(name)) avgDistByType.set(name, { sum: 0, count: 0 })
-        const entry = avgDistByType.get(name)!
-        entry.sum += r.distance_ft
-        entry.count++
-      }
-      if (r.aircraft_a) addDist(r.aircraft_a)
-      if (r.aircraft_b) addDist(r.aircraft_b)
-    }
-
     const summaryRows = Array.from(groups.entries()).map(([name, group]) => {
       const s = group[0]
       const adg = getADGFromWingspan(s.wingspan_ft)
       const detail = s.clearance_ft != null
         ? { clearance_ft: s.clearance_ft, ufc_item: 'Manual' }
         : getWingtipClearanceDetail(s.wingspan_ft, apronContext, name)
-      const distEntry = avgDistByType.get(name)
-      const avgDist = distEntry && distEntry.count > 0
-        ? (distEntry.sum / distEntry.count).toFixed(1)
-        : '—'
 
       return [
         name,
@@ -177,27 +125,53 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
         adg,
         `${Math.round(s.wingspan_ft)} × ${Math.round(s.length_ft)}`,
         `${detail.clearance_ft} ft`,
-        `${avgDist} ft`,
       ]
     })
 
-    const tableWidth = contentWidth * 0.75
     autoTable(doc, {
       startY: y,
-      head: [['Aircraft Type', 'Count', 'ADG', 'WS × Len (ft)', 'Min Required', 'Avg Distance']],
+      head: [['Aircraft Type', 'Qty', 'ADG', 'WS × Len (ft)', 'Min Clearance']],
       body: summaryRows,
       margin: { left: margin, right: margin },
-      tableWidth,
-      styles: { fontSize: 8, cellPadding: 2 },
+      tableWidth: 'wrap',
+      styles: { fontSize: 7, cellPadding: 1.5 },
       headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: 'bold' },
       columnStyles: {
-        1: { cellWidth: 16, halign: 'center' },
-        2: { cellWidth: 14, halign: 'center' },
-        4: { halign: 'right' },
-        5: { halign: 'right' },
+        1: { cellWidth: 10, halign: 'center' },
+        2: { cellWidth: 12, halign: 'center' },
+        3: { cellWidth: 30 },
+        4: { cellWidth: 22, halign: 'right' },
       },
     })
-    y = (doc as any).lastAutoTable.finalY + 6
+    y = (doc as any).lastAutoTable.finalY + 4
+  }
+
+  // ── Map screenshot (preserve aspect ratio, wider landscape crop) ──
+  if (mapDataUrl) {
+    checkPageBreak(80)
+    try {
+      const img = new Image()
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve()
+        img.onerror = () => reject()
+        img.src = mapDataUrl
+      })
+      const srcAspect = img.width / img.height
+      // Target a wide landscape ratio (at least 2.2:1) for a panoramic feel
+      const targetAspect = Math.max(srcAspect, 2.2)
+      const maxH = pageHeight - y - 15
+      let imgW = contentWidth + 4 // extend slightly beyond normal margins
+      let imgH = imgW / targetAspect
+      if (imgH > maxH) {
+        imgH = maxH
+        imgW = imgH * targetAspect
+      }
+      const imgX = margin + (contentWidth - imgW) / 2
+      doc.addImage(mapDataUrl, 'JPEG', Math.max(margin - 2, imgX), y, imgW, imgH)
+      y += imgH + 4
+    } catch {
+      // Map capture failed — skip silently
+    }
   }
 
   // ── Clearance Violations & Warnings (only if any) ──

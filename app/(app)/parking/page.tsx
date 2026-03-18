@@ -1702,8 +1702,8 @@ export default function ParkingPage() {
         const prevPitch = m.getPitch()
         const prevBearing = m.getBearing()
 
-        // Set top-down view zoomed out 2 levels for a wider overview
-        m.jumpTo({ pitch: 0, bearing: 0, zoom: prevZoom - 2 })
+        // Set top-down view at current zoom for capture
+        m.jumpTo({ pitch: 0, bearing: 0 })
 
         // Wait for tiles to render
         await new Promise<void>(resolve => {
