@@ -35,6 +35,7 @@ export const CURRENT_STATUS_OPTIONS = [
   { value: 'submitted_to_afm', label: 'Submitted to AFM' },
   { value: 'submitted_to_ces', label: 'Submitted to CES' },
   { value: 'awaiting_action_by_ces', label: 'Awaiting Action by CES' },
+  { value: 'waiting_for_project', label: 'Waiting for Project Design/Execution' },
   { value: 'work_completed_awaiting_verification', label: 'Work Completed and Awaiting Verification' },
 ] as const
 

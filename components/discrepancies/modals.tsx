@@ -349,6 +349,7 @@ const WORKFLOW_STEPS = [
   { value: 'submitted_to_afm', short: 'AFM', color: '#3B82F6' },
   { value: 'submitted_to_ces', short: 'CES', color: '#F97316' },
   { value: 'awaiting_action_by_ces', short: 'In Work', color: '#FBBF24' },
+  { value: 'waiting_for_project', short: 'Project', color: '#A78BFA' },
   { value: 'work_completed_awaiting_verification', short: 'Verify', color: '#22C55E' },
 ] as const
 
@@ -561,10 +562,11 @@ export function StatusUpdateModal({
       <div style={{ marginBottom: 12 }}>
         <FieldLabel>Current Status</FieldLabel>
         {isCes ? (
-          // CES users can only advance to "Work Completed"
-          <div style={{ display: 'flex', gap: 6 }}>
+          // CES users: limited status options
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {[
               { value: 'awaiting_action_by_ces', label: 'In Work' },
+              { value: 'waiting_for_project', label: 'Project' },
               { value: 'work_completed_awaiting_verification', label: 'Work Completed' },
             ].map(o => {
               const active = currentStatus === o.value

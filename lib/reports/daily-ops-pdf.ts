@@ -27,6 +27,7 @@ const STATUS_LABELS: Record<string, string> = {
   submitted_to_afm: 'Submitted to AFM',
   submitted_to_ces: 'Submitted to CES',
   awaiting_action_by_ces: 'Awaiting CES Action',
+  waiting_for_project: 'Waiting for Project',
   work_completed_awaiting_verification: 'Awaiting Verification',
   open: 'Open',
   completed: 'Completed',

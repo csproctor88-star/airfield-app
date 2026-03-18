@@ -29,7 +29,7 @@ type KpiKey = 'afm' | 'ces' | 'amops'
 
 const KPI_DEFS: { key: KpiKey; label: string; color: string; match: (cs: string) => boolean }[] = [
   { key: 'afm', label: 'AFM', color: '#3B82F6', match: (cs) => cs === 'submitted_to_afm' },
-  { key: 'ces', label: 'CES', color: '#F97316', match: (cs) => cs === 'submitted_to_ces' || cs === 'awaiting_action_by_ces' },
+  { key: 'ces', label: 'CES', color: '#F97316', match: (cs) => cs === 'submitted_to_ces' || cs === 'awaiting_action_by_ces' || cs === 'waiting_for_project' },
   { key: 'amops', label: 'AMOPS', color: '#22C55E', match: (cs) => cs === 'work_completed_awaiting_verification' },
 ]
 

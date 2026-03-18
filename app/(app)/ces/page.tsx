@@ -22,6 +22,7 @@ const CURRENT_STATUS_COLORS: Record<string, string> = {
   submitted_to_afm: '#3B82F6',
   submitted_to_ces: '#F97316',
   awaiting_action_by_ces: '#FBBF24',
+  waiting_for_project: '#A78BFA',
   work_completed_awaiting_verification: '#22C55E',
 }
 
@@ -58,6 +59,7 @@ export default function CESDashboardPage() {
     d.status === 'open' &&
     (d.current_status === 'submitted_to_ces' ||
      d.current_status === 'awaiting_action_by_ces' ||
+     d.current_status === 'waiting_for_project' ||
      d.current_status === 'work_completed_awaiting_verification') &&
     d.assigned_shop
   )
@@ -70,6 +72,7 @@ export default function CESDashboardPage() {
   // KPI counts
   const submittedCount = shopFiltered.filter(d => d.current_status === 'submitted_to_ces').length
   const inWorkCount = shopFiltered.filter(d => d.current_status === 'awaiting_action_by_ces').length
+  const projectCount = shopFiltered.filter(d => d.current_status === 'waiting_for_project').length
   const awaitingVerifyCount = shopFiltered.filter(d => d.current_status === 'work_completed_awaiting_verification').length
   const overdueCount = shopFiltered.filter(d => daysOpen(d.created_at) > 30).length
 
@@ -188,10 +191,11 @@ export default function CESDashboardPage() {
       </div>
 
       {/* KPI badges */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: 16 }}>
         {[
           { label: 'NEW', value: submittedCount, color: '#F97316', desc: 'Submitted to CES' },
           { label: 'IN WORK', value: inWorkCount, color: '#FBBF24', desc: 'Awaiting action' },
+          { label: 'PROJECT', value: projectCount, color: '#A78BFA', desc: 'Waiting for project' },
           { label: 'VERIFY', value: awaitingVerifyCount, color: '#22C55E', desc: 'Awaiting AFM verification' },
           { label: 'OVERDUE', value: overdueCount, color: overdueCount > 0 ? '#EF4444' : '#34D399', desc: '> 30 days open' },
         ].map(kpi => (
@@ -230,7 +234,7 @@ export default function CESDashboardPage() {
                   const aOverdue = daysOpen(a.created_at) > 30 ? 0 : 1
                   const bOverdue = daysOpen(b.created_at) > 30 ? 0 : 1
                   if (aOverdue !== bOverdue) return aOverdue - bOverdue
-                  const statusOrder = ['submitted_to_ces', 'awaiting_action_by_ces', 'work_completed_awaiting_verification']
+                  const statusOrder = ['submitted_to_ces', 'awaiting_action_by_ces', 'waiting_for_project', 'work_completed_awaiting_verification']
                   const aIdx = statusOrder.indexOf(a.current_status)
                   const bIdx = statusOrder.indexOf(b.current_status)
                   if (aIdx !== bIdx) return aIdx - bIdx
