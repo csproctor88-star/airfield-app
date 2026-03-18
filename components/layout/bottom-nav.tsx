@@ -25,8 +25,8 @@ const defaultTabs: { href: string; label: string; icon: LucideIcon }[] = [
 
 const cesTabs: { href: string; label: string; icon: LucideIcon }[] = [
   { href: '/ces', label: 'WORK ORDERS', icon: Wrench },
+  { href: '/discrepancies', label: 'DISCREPANCIES', icon: AlertTriangle },
   { href: '/infrastructure', label: 'NAVAIDs', icon: Lightbulb },
-  { href: '/settings', label: 'SETTINGS', icon: Menu },
 ]
 
 export function BottomNav() {

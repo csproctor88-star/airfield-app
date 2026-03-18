@@ -77,7 +77,7 @@ const GROUP_ICONS: Record<string, LucideIcon> = {
 const ADMIN_ITEMS = new Set(['/library', '/users'])
 
 // CES role — limited navigation
-const CES_ALLOWED_ITEMS = new Set(['/ces', '/infrastructure', '/settings'])
+const CES_ALLOWED_ITEMS = new Set(['/ces', '/discrepancies', '/infrastructure', '/settings'])
 
 function getIcon(iconName: string): LucideIcon {
   return ICON_MAP[iconName] || Home

@@ -184,7 +184,7 @@ export default function MorePage() {
     checkRole()
   }, [])
 
-  const CES_ALLOWED = new Set(['/ces', '/infrastructure', '/settings'])
+  const CES_ALLOWED = new Set(['/ces', '/discrepancies', '/infrastructure', '/settings'])
 
   function filterItems(items: ModuleItem[]) {
     if (!loaded) return items.filter(m => !m.adminOnly && !m.sysAdminOnly)
