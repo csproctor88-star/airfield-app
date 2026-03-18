@@ -1140,9 +1140,26 @@ export default function InspectionsPage() {
     // ── Log completion ──
     const oiStr = userOI ? `/${userOI}` : ''
     const inspLabel = activeForm === 'lighting' ? 'Daily Lighting Inspection' : 'Daily Airfield Inspection'
+    // Gather all discrepancies from the draft (more reliable than checking item responses)
+    const allDiscs: string[] = []
+    for (const [itemId, discs] of Object.entries(completedHalf.discrepancies || {})) {
+      for (const d of discs) {
+        const itemDef = visibleItems.find(vi => vi.id === itemId)
+        const itemLabel = itemDef?.item?.toUpperCase() || itemId.toUpperCase()
+        const desc = d.comment ? `${itemLabel} - ${d.comment}` : itemLabel
+        allDiscs.push(desc)
+      }
+    }
+    // Also include failed items that may not have discrepancy entries
     const failedItems = items.filter(i => i.response === 'fail')
-    const discStr = failedItems.length > 0
-      ? `DISCREPANCIES FOUND: ${failedItems.map(i => `${i.item.toUpperCase()}${i.notes ? ` - ${i.notes}` : ''}`).join('; ')}`
+    for (const fi of failedItems) {
+      const alreadyCovered = allDiscs.some(d => d.startsWith(fi.item.toUpperCase()))
+      if (!alreadyCovered) {
+        allDiscs.push(`${fi.item.toUpperCase()}${fi.notes ? ` - ${fi.notes}` : ''}`)
+      }
+    }
+    const discStr = allDiscs.length > 0
+      ? `DISCREPANCIES FOUND: ${allDiscs.join('; ')}`
       : 'NO NEW DISCREPANCIES'
     let condStr = ''
     if (completedHalf.rscCondition && completedHalf.bwcValue) {
