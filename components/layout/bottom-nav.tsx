@@ -2,24 +2,37 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { useInstallation } from '@/lib/installation-context'
 import {
   Radio,
   LayoutDashboard,
   MapPin,
   ClipboardList,
   Menu,
+  Wrench,
+  AlertTriangle,
+  Lightbulb,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
-const tabs = [
+const defaultTabs: { href: string; label: string; icon: LucideIcon }[] = [
   { href: '/', label: 'STATUS', icon: Radio },
   { href: '/dashboard', label: 'DASHBOARD', icon: LayoutDashboard },
   { href: '/obstructions', label: 'OBSTRUCTION', icon: MapPin },
   { href: '/activity', label: 'EVENTS LOG', icon: ClipboardList },
   { href: '/more', label: 'MORE', icon: Menu },
-] as const
+]
+
+const cesTabs: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: '/ces', label: 'WORK ORDERS', icon: Wrench },
+  { href: '/discrepancies', label: 'DISCREPANCIES', icon: AlertTriangle },
+  { href: '/infrastructure', label: 'NAVAIDs', icon: Lightbulb },
+]
 
 export function BottomNav() {
   const pathname = usePathname()
+  const { userRole } = useInstallation()
+  const tabs = userRole === 'ces' ? cesTabs : defaultTabs
 
   return (
     <nav

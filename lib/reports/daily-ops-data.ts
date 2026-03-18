@@ -13,6 +13,7 @@ export interface DiscrepancyWithReporter {
   type: string
   location_text: string
   assigned_shop: string | null
+  current_status: string
   reported_by: string
   created_at: string
   // Joined
@@ -228,7 +229,7 @@ async function fetchNewDiscrepanciesForDate(supabase: any, startUTC: string, end
   // Try with profile join
   let query = supabase
     .from('discrepancies')
-    .select('id, display_id, title, type, location_text, assigned_shop, reported_by, created_at, profiles:reported_by(name, rank)')
+    .select('id, display_id, title, type, location_text, assigned_shop, current_status, reported_by, created_at, profiles:reported_by(name, rank)')
     .gte('created_at', startUTC)
     .lte('created_at', endUTC)
     .order('created_at', { ascending: true })
@@ -248,7 +249,7 @@ async function fetchNewDiscrepanciesForDate(supabase: any, startUTC: string, end
   // Fallback
   let fbQuery = supabase
     .from('discrepancies')
-    .select('id, display_id, title, type, location_text, assigned_shop, reported_by, created_at')
+    .select('id, display_id, title, type, location_text, assigned_shop, current_status, reported_by, created_at')
     .gte('created_at', startUTC)
     .lte('created_at', endUTC)
     .order('created_at', { ascending: true })

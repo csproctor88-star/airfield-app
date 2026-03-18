@@ -16,6 +16,7 @@ export type Database = {
           timezone: string
           installation_code: string | null
           ce_shops: string[]
+          discrepancy_type_shop_map: Record<string, string>
           checklist_reset_time: string
           is_active: boolean
           created_at: string

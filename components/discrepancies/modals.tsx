@@ -344,6 +344,53 @@ export function EditDiscrepancyModal({
 
 // ─── Status Update Modal ────────────────────────────────────────────
 
+// Workflow step indicator
+const WORKFLOW_STEPS = [
+  { value: 'submitted_to_afm', short: 'AFM', color: '#3B82F6' },
+  { value: 'submitted_to_ces', short: 'CES', color: '#F97316' },
+  { value: 'awaiting_action_by_ces', short: 'In Work', color: '#FBBF24' },
+  { value: 'work_completed_awaiting_verification', short: 'Verify', color: '#22C55E' },
+] as const
+
+function WorkflowProgressBar({ currentStatus }: { currentStatus: string }) {
+  const activeIdx = WORKFLOW_STEPS.findIndex(s => s.value === currentStatus)
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 14 }}>
+      {WORKFLOW_STEPS.map((step, i) => {
+        const isActive = i === activeIdx
+        const isPast = i < activeIdx
+        const stepColor = isActive ? step.color : isPast ? '#10B981' : 'var(--color-text-4)'
+        return (
+          <div key={step.value} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1,
+            }}>
+              <div style={{
+                width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', fontSize: 'var(--fs-xs)', fontWeight: 800,
+                background: isActive ? stepColor : isPast ? '#10B981' : 'transparent',
+                border: `2px solid ${stepColor}`,
+                color: isActive || isPast ? '#fff' : stepColor,
+              }}>
+                {isPast ? '\u2713' : i + 1}
+              </div>
+              <div style={{ fontSize: 'var(--fs-2xs)', fontWeight: isActive ? 700 : 500, color: stepColor, marginTop: 2 }}>
+                {step.short}
+              </div>
+            </div>
+            {i < WORKFLOW_STEPS.length - 1 && (
+              <div style={{
+                height: 2, flex: '0 0 12px',
+                background: i < activeIdx ? '#10B981' : 'var(--color-text-4)',
+              }} />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export function StatusUpdateModal({
   discrepancy, onClose, onSaved, onDeleted,
 }: {
@@ -352,17 +399,29 @@ export function StatusUpdateModal({
   onSaved: (updated: DiscrepancyRow) => void
   onDeleted?: () => void
 }) {
-  const { ceShops } = useInstallation()
-  const allowed = ALLOWED_TRANSITIONS[discrepancy.status] || []
+  const { ceShops, userRole } = useInstallation()
+  const isCes = userRole === 'ces'
+  const allowed = isCes ? [] : (ALLOWED_TRANSITIONS[discrepancy.status] || [])
   const [saving, setSaving] = useState(false)
   const [newStatus, setNewStatus] = useState('')
   const [currentStatus, setCurrentStatus] = useState(
     ((discrepancy as DiscrepancyRow & { current_status?: string }).current_status || 'submitted_to_afm') as string
   )
   const [notes, setNotes] = useState('')
+  const [resolutionNotes, setResolutionNotes] = useState(discrepancy.resolution_notes || '')
   const [assignedShop, setAssignedShop] = useState(discrepancy.assigned_shop || '')
 
+  // Determine if resolution notes should be required
+  const needsResolutionNotes = currentStatus === 'work_completed_awaiting_verification' || newStatus === 'completed'
+
   const handleSave = async () => {
+    // Require notes when CES marks work completed
+    if (currentStatus === 'work_completed_awaiting_verification' && !resolutionNotes.trim() && !notes.trim()) {
+      const { toast } = await import('sonner')
+      toast.error('Please describe the work completed before marking as done')
+      return
+    }
+
     setSaving(true)
 
     // Cancelled = delete from DB entirely
@@ -387,15 +446,25 @@ export function StatusUpdateModal({
       return
     }
 
-    // Update assigned_shop and/or current_status if changed
+    // Update assigned_shop, current_status, and/or resolution_notes if changed
     const origCurrentStatus = (discrepancy as DiscrepancyRow & { current_status?: string }).current_status || 'submitted_to_afm'
     const shopChanged = assignedShop !== (discrepancy.assigned_shop || '')
     const currentStatusChanged = currentStatus !== origCurrentStatus
-    if (shopChanged || currentStatusChanged) {
+    const resolutionChanged = resolutionNotes !== (discrepancy.resolution_notes || '')
+
+    // Auto-advance current_status when closing
+    let effectiveCurrentStatus = currentStatus
+    if (newStatus === 'completed' && currentStatus !== 'work_completed_awaiting_verification') {
+      effectiveCurrentStatus = 'work_completed_awaiting_verification'
+    }
+    const autoAdvanced = effectiveCurrentStatus !== currentStatus
+
+    if (shopChanged || currentStatusChanged || autoAdvanced || resolutionChanged) {
       const { updateDiscrepancy } = await import('@/lib/supabase/discrepancies')
       const fields: Record<string, unknown> = {}
       if (shopChanged) fields.assigned_shop = assignedShop || null
-      if (currentStatusChanged) fields.current_status = currentStatus
+      if (currentStatusChanged || autoAdvanced) fields.current_status = effectiveCurrentStatus
+      if (resolutionChanged) fields.resolution_notes = resolutionNotes || null
       await updateDiscrepancy(discrepancy.id, fields)
     }
 
@@ -406,12 +475,14 @@ export function StatusUpdateModal({
         const { updateFeatureStatus } = await import('@/lib/supabase/infrastructure-features')
         await updateFeatureStatus(discrepancy.infrastructure_feature_id, 'operational')
       }
+      const combinedNotes = [notes, resolutionNotes && `RESOLUTION: ${resolutionNotes}`].filter(Boolean).join('. ')
       const { updateDiscrepancyStatus } = await import('@/lib/supabase/discrepancies')
       const { data, error } = await updateDiscrepancyStatus(
         discrepancy.id,
         discrepancy.status,
         newStatus,
-        notes || undefined,
+        combinedNotes || undefined,
+        { resolution_notes: resolutionNotes || undefined },
       )
       setSaving(false)
       if (error) {
@@ -443,11 +514,19 @@ export function StatusUpdateModal({
     onClose()
   }
 
+  // Derive button label
+  let saveLabel = 'Update Status'
+  if (newStatus === 'cancelled') saveLabel = 'Cancel Discrepancy'
+  else if (newStatus === 'completed') saveLabel = 'Close Discrepancy'
+
   /* Note: even if no primary status transitions are available, we still
      render the full modal so the user can change current_status, shop, etc. */
 
   return (
     <ModalOverlay title="Update Status" onClose={onClose}>
+      {/* Workflow progress bar */}
+      <WorkflowProgressBar currentStatus={currentStatus} />
+
       {allowed.length > 0 && (
         <>
           <div style={{ marginBottom: 12 }}>
@@ -464,7 +543,7 @@ export function StatusUpdateModal({
                 const cfg = STATUS_CONFIG[s as keyof typeof STATUS_CONFIG]
                 const active = s === newStatus
                 return (
-                  <button key={s} type="button" onClick={() => setNewStatus(s)} style={{
+                  <button key={s} type="button" onClick={() => setNewStatus(active ? '' : s)} style={{
                     background: active ? `${cfg?.color || '#64748B'}22` : 'transparent',
                     border: `1px solid ${active ? cfg?.color || 'var(--color-text-3)' : 'var(--color-text-4)'}`,
                     borderRadius: 6, padding: '6px 12px', fontSize: 'var(--fs-base)', fontWeight: 600,
@@ -481,20 +560,64 @@ export function StatusUpdateModal({
 
       <div style={{ marginBottom: 12 }}>
         <FieldLabel>Current Status</FieldLabel>
-        <select className="input-dark" value={currentStatus}
-          onChange={(e) => setCurrentStatus(e.target.value)}>
-          {CURRENT_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
+        {isCes ? (
+          // CES users can only advance to "Work Completed"
+          <div style={{ display: 'flex', gap: 6 }}>
+            {[
+              { value: 'awaiting_action_by_ces', label: 'In Work' },
+              { value: 'work_completed_awaiting_verification', label: 'Work Completed' },
+            ].map(o => {
+              const active = currentStatus === o.value
+              const color = o.value === 'work_completed_awaiting_verification' ? '#22C55E' : '#FBBF24'
+              return (
+                <button key={o.value} type="button" onClick={() => setCurrentStatus(o.value)} style={{
+                  flex: 1, padding: '8px 12px', borderRadius: 6, fontSize: 'var(--fs-base)', fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  background: active ? `${color}18` : 'transparent',
+                  border: `1.5px solid ${active ? color : 'var(--color-text-4)'}`,
+                  color: active ? color : 'var(--color-text-3)',
+                }}>
+                  {o.label}
+                </button>
+              )
+            })}
+          </div>
+        ) : (
+          <select className="input-dark" value={currentStatus}
+            onChange={(e) => setCurrentStatus(e.target.value)}>
+            {CURRENT_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        )}
       </div>
 
-      <div style={{ marginBottom: 12 }}>
-        <FieldLabel>Work Order Currently Assigned to:</FieldLabel>
-        <select className="input-dark" value={assignedShop}
-          onChange={(e) => setAssignedShop(e.target.value)}>
-          <option value="">Unassigned</option>
-          {ceShops.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-      </div>
+      {!isCes && (
+        <div style={{ marginBottom: 12 }}>
+          <FieldLabel>Assigned Shop</FieldLabel>
+          <select className="input-dark" value={assignedShop}
+            onChange={(e) => setAssignedShop(e.target.value)}>
+            <option value="">Unassigned</option>
+            {ceShops.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+      )}
+
+      {/* Resolution notes — shown when work completed or closing */}
+      {needsResolutionNotes && (
+        <div style={{
+          marginBottom: 12, padding: 10, borderRadius: 8,
+          background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)',
+        }}>
+          <FieldLabel>
+            {newStatus === 'completed' ? 'Resolution Summary' : 'Work Completed — Describe Actions Taken'}
+            <span style={{ color: '#EF4444', marginLeft: 4 }}>*</span>
+          </FieldLabel>
+          <textarea className="input-dark" rows={3} style={{ resize: 'vertical' }}
+            placeholder={newStatus === 'completed'
+              ? 'Summarize how this discrepancy was resolved...'
+              : 'Describe the work performed, parts used, etc...'}
+            value={resolutionNotes} onChange={(e) => setResolutionNotes(e.target.value)} />
+        </div>
+      )}
 
       <div style={{ marginBottom: 12 }}>
         <FieldLabel>Notes (optional)</FieldLabel>
@@ -503,7 +626,7 @@ export function StatusUpdateModal({
           value={notes} onChange={(e) => setNotes(e.target.value)} />
       </div>
 
-      <SaveButton saving={saving} onClick={handleSave} label={newStatus === 'cancelled' ? 'Cancel Discrepancy' : 'Update Status'} />
+      <SaveButton saving={saving} onClick={handleSave} label={saveLabel} />
     </ModalOverlay>
   )
 }

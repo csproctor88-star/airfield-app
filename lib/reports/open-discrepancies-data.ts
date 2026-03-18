@@ -53,6 +53,7 @@ export interface OpenDiscrepanciesData {
     total: number
     byArea: Record<string, number>
     byType: Record<string, number>
+    byShop: Record<string, number>
     agingOver30: number
   }
   // Keyed by discrepancy ID, last 3 notes
@@ -86,7 +87,7 @@ export async function fetchOpenDiscrepanciesData(
 ): Promise<OpenDiscrepanciesData> {
   const supabase = createClient()
   if (!supabase) {
-    return { discrepancies: [], summary: { total: 0, byArea: {}, byType: {}, agingOver30: 0 }, notesHistory: {}, photos: {} }
+    return { discrepancies: [], summary: { total: 0, byArea: {}, byType: {}, byShop: {}, agingOver30: 0 }, notesHistory: {}, photos: {} }
   }
 
   const now = new Date()
@@ -251,12 +252,15 @@ export async function fetchOpenDiscrepanciesData(
   // Compute summary stats
   const byArea: Record<string, number> = {}
   const byType: Record<string, number> = {}
+  const byShop: Record<string, number> = {}
   let agingOver30 = 0
 
   for (const d of discrepancies) {
     const area = d.location_text || 'Unknown'
     byArea[area] = (byArea[area] || 0) + 1
     byType[d.type] = (byType[d.type] || 0) + 1
+    const shop = d.assigned_shop || 'Unassigned'
+    byShop[shop] = (byShop[shop] || 0) + 1
     if (d.days_open > 30) agingOver30++
   }
 
@@ -266,6 +270,7 @@ export async function fetchOpenDiscrepanciesData(
       total: discrepancies.length,
       byArea,
       byType,
+      byShop,
       agingOver30,
     },
     notesHistory,

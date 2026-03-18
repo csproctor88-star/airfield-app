@@ -19,6 +19,8 @@ export interface InstallationContextValue {
   areas: string[]
   /** CE shops for the current installation */
   ceShops: string[]
+  /** Discrepancy type → CE shop mapping for the current installation */
+  typeShopMap: Record<string, string>
   /** ARFF aircraft configured for the current installation */
   arffAircraft: string[]
   /** Facility numbers configured for the current installation */
@@ -46,6 +48,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
   const [runways, setRunways] = useState<InstallationRunway[]>([])
   const [areas, setAreas] = useState<string[]>([])
   const [ceShops, setCeShops] = useState<string[]>([])
+  const [typeShopMap, setTypeShopMap] = useState<Record<string, string>>({})
   const [arffAircraft, setArffAircraft] = useState<string[]>([])
   const [facilities, setFacilities] = useState<FacilityRow[]>([])
   const [userRole, setUserRole] = useState<UserRole | null>(null)
@@ -66,6 +69,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
       setCurrentInstallation(installation)
       setInstallationId(installation.id)
       setCeShops(installation.ce_shops || [])
+      setTypeShopMap((installation as unknown as { discrepancy_type_shop_map?: Record<string, string> }).discrepancy_type_shop_map || {})
     }
     setRunways(installationRunways)
     const areaNames = installationAreas.map(a => a.area_name)
@@ -195,7 +199,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
 
   return (
     <InstallationContext.Provider
-      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, arffAircraft, facilities, switchInstallation, removeInstallation, userRole, defaultPdfEmail, updateDefaultPdfEmail, loaded }}
+      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, typeShopMap, arffAircraft, facilities, switchInstallation, removeInstallation, userRole, defaultPdfEmail, updateDefaultPdfEmail, loaded }}
     >
       {children}
     </InstallationContext.Provider>

@@ -34,7 +34,8 @@ const KPI_DEFS: { key: KpiKey; label: string; color: string; match: (cs: string)
 ]
 
 export default function DiscrepanciesPage() {
-  const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
+  const { installationId, currentInstallation, defaultPdfEmail, ceShops, userRole } = useInstallation()
+  const isCes = userRole === 'ces'
   const [filter, setFilter] = useState<string>('open')
   const [over30Only, setOver30Only] = useState(false)
   const [currentStatusFilter, setCurrentStatusFilter] = useState<KpiKey | null>(null)
@@ -44,6 +45,7 @@ export default function DiscrepanciesPage() {
   const [usingDemo, setUsingDemo] = useState(false)
   const [viewMode, setViewMode] = useState<'list' | 'map'>('map')
   const [typeFilter, setTypeFilter] = useState<string | null>(null)
+  const [shopFilter, setShopFilter] = useState<string | null>(null)
   const [discrepancyPhotoMap, setDiscrepancyPhotoMap] = useState<Record<string, string>>({})
   const [editingDiscrepancy, setEditingDiscrepancy] = useState<DiscrepancyRow | null>(null)
   const [emailModalOpen, setEmailModalOpen] = useState(false)
@@ -155,11 +157,18 @@ export default function DiscrepanciesPage() {
     return type.split(',').map(v => v.trim()).includes(typeFilter)
   }
 
+  const matchesShop = (d: { assigned_shop: string | null }) => {
+    if (!shopFilter) return true
+    if (shopFilter === '__unassigned') return !d.assigned_shop
+    return d.assigned_shop === shopFilter
+  }
+
   const demoFiltered = DEMO_DISCREPANCIES
     .filter(d => filter === 'all' || d.status === filter)
     .filter(d => !over30Only || (d.status === 'open' && daysOpen(d.created_at) > 30))
     .filter(d => matchesCurrentStatus(d.current_status))
     .filter(d => matchesType(d.type))
+    .filter(matchesShop)
     .filter(matchesSearch)
 
   const liveFiltered = discrepancies
@@ -167,6 +176,7 @@ export default function DiscrepanciesPage() {
     .filter(d => !over30Only || (d.status === 'open' && daysOpen(d.created_at) > 30))
     .filter(d => matchesCurrentStatus(d.current_status))
     .filter(d => matchesType(d.type))
+    .filter(matchesShop)
     .filter(matchesSearch)
 
   const filtered = usingDemo ? demoFiltered : liveFiltered
@@ -360,7 +370,7 @@ export default function DiscrepanciesPage() {
     y += 7
 
     // Table columns
-    const headRow = ['ID', 'Title', 'Type', 'Status', 'Location', 'Work Order', 'Days']
+    const headRow = ['ID', 'Title', 'Type', 'Status', 'Location', 'Shop', 'Work Order', 'Days']
     if (hasAnyPhotos) headRow.push('Photos')
 
     const tableBody = filtered.map(d => {
@@ -368,8 +378,9 @@ export default function DiscrepanciesPage() {
         d.display_id,
         d.title,
         getTypeLabel(d.type),
-        d.status,
+        getCurrentStatusLabel(d.current_status),
         d.location_text,
+        d.assigned_shop || '',
         d.work_order_number || '',
         String(usingDemo ? (d as typeof DEMO_DISCREPANCIES[number]).days_open : daysOpen(d.created_at)),
       ]
@@ -380,7 +391,7 @@ export default function DiscrepanciesPage() {
       return row
     })
 
-    const photoColIdx = hasAnyPhotos ? 8 : -1
+    const photoColIdx = hasAnyPhotos ? 9 : -1
 
     autoTable(doc, {
       startY: y,
@@ -391,10 +402,10 @@ export default function DiscrepanciesPage() {
       headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
       alternateRowStyles: { fillColor: [245, 245, 245] },
       columnStyles: {
-        0: { cellWidth: 20 },
-        1: { cellWidth: 40 },
-        7: { cellWidth: 12, halign: 'center' },
-        ...(hasAnyPhotos ? { 8: { cellWidth: PHOTO_COL_W } } : {}),
+        0: { cellWidth: 18 },
+        1: { cellWidth: 34 },
+        8: { cellWidth: 12, halign: 'center' },
+        ...(hasAnyPhotos ? { 9: { cellWidth: PHOTO_COL_W } } : {}),
       },
       didParseCell: (data: { section: string; column: { index: number }; row: { index: number }; cell: { styles: { minCellHeight?: number } } }) => {
         if (data.section === 'body' && data.column.index === photoColIdx) {
@@ -537,22 +548,24 @@ export default function DiscrepanciesPage() {
           >
             ✉
           </button>
-          <Link
-            href="/discrepancies/new"
-            style={{
-              background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-              border: 'none',
-              borderRadius: 8,
-              padding: '7px 12px',
-              color: '#fff',
-              fontSize: 'var(--fs-base)',
-              fontWeight: 700,
-              cursor: 'pointer',
-              textDecoration: 'none',
-            }}
-          >
-            + New
-          </Link>
+          {!isCes && (
+            <Link
+              href="/discrepancies/new"
+              style={{
+                background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+                border: 'none',
+                borderRadius: 8,
+                padding: '7px 12px',
+                color: '#fff',
+                fontSize: 'var(--fs-base)',
+                fontWeight: 700,
+                cursor: 'pointer',
+                textDecoration: 'none',
+              }}
+            >
+              + New
+            </Link>
+          )}
         </div>
       </div>
 
@@ -613,6 +626,65 @@ export default function DiscrepanciesPage() {
           )
         })}
       </div>
+
+      {/* Shop filter chips */}
+      {ceShops.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8, justifyContent: 'center' }}>
+          {ceShops.map(shop => {
+            const active = shopFilter === shop
+            const count = allItems.filter(d => d.status === 'open' && d.assigned_shop === shop).length
+            return (
+              <button
+                key={shop}
+                type="button"
+                onClick={() => {
+                  setShopFilter(active ? null : shop)
+                  if (!active) { setFilter('open'); setOver30Only(false); setCurrentStatusFilter(null) }
+                }}
+                style={{
+                  padding: '3px 8px', borderRadius: 5, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                  border: active ? '1.5px solid #F97316' : '1px solid var(--color-border)',
+                  background: active ? 'rgba(249,115,22,0.12)' : 'var(--color-bg-inset)',
+                  color: active ? '#F97316' : 'var(--color-text-2)',
+                  display: 'flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                {shop}
+                {count > 0 && (
+                  <span style={{
+                    fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                    background: active ? 'rgba(249,115,22,0.2)' : 'var(--color-border)',
+                    color: active ? '#F97316' : 'var(--color-text-3)',
+                    padding: '0 4px', borderRadius: 3, minWidth: 16, textAlign: 'center',
+                  }}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+          {allItems.some(d => d.status === 'open' && !d.assigned_shop) && (
+            <button
+              type="button"
+              onClick={() => {
+                const active = shopFilter === '__unassigned'
+                setShopFilter(active ? null : '__unassigned')
+                if (!active) { setFilter('open'); setOver30Only(false); setCurrentStatusFilter(null) }
+              }}
+              style={{
+                padding: '3px 8px', borderRadius: 5, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                border: shopFilter === '__unassigned' ? '1.5px solid #EF4444' : '1px solid var(--color-border)',
+                background: shopFilter === '__unassigned' ? 'rgba(239,68,68,0.12)' : 'var(--color-bg-inset)',
+                color: shopFilter === '__unassigned' ? '#EF4444' : 'var(--color-text-3)',
+              }}
+            >
+              Unassigned
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="filter-bar" style={{ marginBottom: 12, justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', gap: 4 }}>
@@ -809,7 +881,7 @@ export default function DiscrepanciesPage() {
                       {days}d
                     </span>
                   </Link>
-                  {!usingDemo && (
+                  {!usingDemo && !isCes && (
                     <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                       <button
                         onClick={(e) => { e.preventDefault(); setEditingDiscrepancy(d as DiscrepancyRow) }}

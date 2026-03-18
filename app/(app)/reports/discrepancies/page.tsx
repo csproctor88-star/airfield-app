@@ -99,6 +99,7 @@ export default function OpenDiscrepanciesPage() {
   const { summary } = data
   const areaEntries = Object.entries(summary.byArea).sort((a, b) => b[1] - a[1])
   const typeEntries = Object.entries(summary.byType).sort((a, b) => b[1] - a[1])
+  const shopEntries = Object.entries(summary.byShop).sort((a, b) => b[1] - a[1])
 
   return (
     <div className="page-container">
@@ -163,6 +164,27 @@ export default function OpenDiscrepanciesPage() {
           ))}
         </div>
       </div>
+
+      {/* By Shop — KPI badges */}
+      {shopEntries.length > 0 && (
+        <div className="card" style={{ padding: 14, marginBottom: 14 }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+            By Shop
+          </div>
+          <div className="badge-grid">
+            {shopEntries.map(([shop, count]) => (
+              <div key={shop} style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.15)',
+                borderRadius: 8, padding: '8px 12px', minWidth: 64,
+              }}>
+                <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: '#F97316' }}>{count}</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', marginTop: 2, fontWeight: 600 }}>{shop}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Export Buttons */}
       <div style={{ display: 'flex', gap: 8 }}>

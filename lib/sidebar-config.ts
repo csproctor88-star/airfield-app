@@ -31,6 +31,7 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'All Inspections', href: '/inspections/all', iconName: 'ClipboardList' },
   { name: 'Wildlife / BASH', href: '/wildlife', iconName: 'Bird' },
   { name: 'Personnel on Airfield', href: '/contractors', iconName: 'HardHat' },
+  { name: 'CES Work Orders', href: '/ces', iconName: 'Wrench' },
   { name: 'Discrepancies', href: '/discrepancies', iconName: 'AlertTriangle' },
   { name: 'Obstruction Eval Tool', href: '/obstructions', iconName: 'MapPin' },
   { name: 'Obstruction Database', href: '/obstructions/history', iconName: 'Database' },
@@ -59,7 +60,7 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
     },
     {
       label: 'Airfield Management',
-      items: ['/discrepancies', '/obstructions', '/obstructions/history', '/waivers', '/infrastructure'],
+      items: ['/ces', '/discrepancies', '/obstructions', '/obstructions/history', '/waivers', '/infrastructure'],
     },
     {
       label: 'Reference',
