@@ -62,6 +62,7 @@ import {
 } from '@/lib/calculations/parking-clearance'
 import { offsetPoint } from '@/lib/calculations/geometry'
 import { DEMO_PARKING_PLAN, DEMO_PARKING_SPOTS, DEMO_PARKING_OBSTACLES } from '@/lib/demo-data'
+import { generateParkingPdf } from '@/lib/parking-pdf'
 
 // ── Silhouette manifest lookup ──
 
@@ -377,6 +378,19 @@ export default function ParkingPage() {
   const drawingObsStartRef = useRef(drawingObsStart)
   drawingObsStartRef.current = drawingObsStart
 
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(false)
+  const [sheetExpanded, setSheetExpanded] = useState(false)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // PDF export
+  const [exportingPdf, setExportingPdf] = useState(false)
+
   // Lock mode — prevents dragging when locked
   const [planLocked, setPlanLocked] = useState(false)
   const planLockedRef = useRef(planLocked)
@@ -544,6 +558,7 @@ export default function ParkingPage() {
       pitch: 0,
       bearing: 0,
       attributionControl: false,
+      preserveDrawingBuffer: true,
     })
 
     m.addControl(new mapboxgl.NavigationControl(), 'bottom-right')
@@ -1663,6 +1678,37 @@ export default function ParkingPage() {
     toast.success(`"${selectedPlan.plan_name}" set as active plan`)
   }
 
+  // ── PDF export ──
+
+  const handleExportPdf = async () => {
+    if (!selectedPlan) return
+    setExportingPdf(true)
+    try {
+      const mapDataUrl = map.current?.getCanvas().toDataURL('image/jpeg', 0.9) || null
+      const { doc, filename } = await generateParkingPdf({
+        plan: selectedPlan,
+        spots,
+        spotsWithAircraft,
+        obstacles,
+        taxilanes,
+        allResults,
+        violations,
+        warnings,
+        apronContext,
+        mapDataUrl,
+        baseName: currentInstallation?.name,
+        baseIcao: currentInstallation?.icao,
+      })
+      doc.save(filename)
+      toast.success('PDF exported')
+    } catch (err) {
+      toast.error('Failed to export PDF')
+      console.error(err)
+    } finally {
+      setExportingPdf(false)
+    }
+  }
+
   // ── Spot actions ──
 
   const handleDeleteSpot = async (spotId: string) => {
@@ -2125,7 +2171,7 @@ export default function ParkingPage() {
         onClick={() => toggleSection(id)}
         style={{
           display: 'flex', alignItems: 'center', gap: 6, flex: 1,
-          padding: '7px 10px', border: 'none', cursor: 'pointer',
+          padding: isMobile ? '12px 14px' : '7px 10px', border: 'none', cursor: 'pointer',
           background: 'transparent',
           color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)', fontWeight: 600,
           textAlign: 'left',
@@ -2160,20 +2206,11 @@ export default function ParkingPage() {
     </div>
   )
 
-  return (
-    <div style={{
-      display: 'flex', height: isFullscreen ? '100vh' : 'calc(100vh - 60px)', overflow: 'hidden', background: 'var(--color-bg)',
-      ...(isFullscreen ? { position: 'fixed', inset: 0, zIndex: 9999 } : {}),
-    }}>
-      {/* ── Left Sidebar ── */}
-      {!isFullscreen && (
-      <div style={{
-        width: sidebarCollapsed ? 0 : 320, flexShrink: 0, display: 'flex', flexDirection: 'column',
-        borderRight: sidebarCollapsed ? 'none' : '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
-        overflow: 'hidden', transition: 'width 0.15s ease',
-      }}>
+  // ── Sidebar content (shared between desktop sidebar and mobile bottom sheet) ──
+  const sidebarContent = (mobile?: boolean) => (
+    <>
         {/* Sidebar header — plan selector */}
-        <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
+        <div style={{ padding: mobile ? '10px 12px' : '8px 10px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
             <h1 style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, margin: 0, color: 'var(--color-text-primary)', flex: 1 }}>
               Aircraft Parking
@@ -2206,6 +2243,21 @@ export default function ParkingPage() {
                 </option>
               ))}
             </select>
+            {selectedPlan && (
+              <button
+                onClick={handleExportPdf}
+                disabled={exportingPdf}
+                title="Export PDF"
+                style={{
+                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
+                  background: 'var(--color-bg)', color: 'var(--color-text-secondary)',
+                  border: '1px solid var(--color-border)', cursor: exportingPdf ? 'wait' : 'pointer',
+                  fontWeight: 600, opacity: exportingPdf ? 0.5 : 1,
+                }}
+              >
+                {exportingPdf ? '...' : 'PDF'}
+              </button>
+            )}
             <button
               onClick={() => setShowNewPlan(true)}
               style={{
@@ -2286,7 +2338,7 @@ export default function ParkingPage() {
                       onClick={() => setEditingSpot(isEditing ? null : s)}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 6,
-                        padding: '4px 8px', cursor: 'pointer',
+                        padding: isMobile ? '10px 12px' : '4px 8px', cursor: 'pointer',
                         background: isEditing ? 'var(--color-bg)' : 'transparent',
                         borderBottom: '1px solid var(--color-border)',
                         borderLeft: spotViolations.length > 0 ? '3px solid #EF4444' : '3px solid transparent',
@@ -2440,7 +2492,7 @@ export default function ParkingPage() {
                       onClick={() => setEditingObstacle(isEditing ? null : obs)}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 6,
-                        padding: '4px 8px 4px 20px', cursor: 'pointer',
+                        padding: isMobile ? '10px 12px 10px 20px' : '4px 8px 4px 20px', cursor: 'pointer',
                         background: isEditing ? 'var(--color-bg)' : 'transparent',
                         borderBottom: '1px solid var(--color-border)',
                         borderLeft: '3px solid #F97316',
@@ -2580,7 +2632,7 @@ export default function ParkingPage() {
                       onClick={() => setEditingTaxilane(isEditing ? null : tl)}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 6,
-                        padding: '4px 8px', cursor: 'pointer',
+                        padding: isMobile ? '10px 12px' : '4px 8px', cursor: 'pointer',
                         background: isEditing ? 'var(--color-bg)' : 'transparent',
                         borderBottom: '1px solid var(--color-border)',
                         borderLeft: `3px solid ${tlViolations.length > 0 ? '#EF4444' : tl.taxilane_type === 'peripheral' ? '#8B5CF6' : '#3B82F6'}`,
@@ -2678,7 +2730,7 @@ export default function ParkingPage() {
                       onClick={() => setEditingBoundary(isEditing ? null : ab)}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 6,
-                        padding: '4px 8px', cursor: 'pointer',
+                        padding: isMobile ? '10px 12px' : '4px 8px', cursor: 'pointer',
                         background: isEditing ? 'var(--color-bg)' : 'transparent',
                         borderBottom: '1px solid var(--color-border)',
                         borderLeft: '3px solid #10B981',
@@ -2755,7 +2807,7 @@ export default function ParkingPage() {
                   onClick={() => flyToResult(r)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '4px 8px', cursor: 'pointer',
+                    padding: isMobile ? '10px 12px' : '4px 8px', cursor: 'pointer',
                     borderBottom: '1px solid var(--color-border)',
                     borderLeft: `3px solid ${STATUS_COLORS[r.status]}`,
                     background: r.status !== 'ok' ? `${STATUS_COLORS[r.status]}08` : 'transparent',
@@ -2862,6 +2914,22 @@ export default function ParkingPage() {
           )}
 
         </div>
+    </>
+  )
+
+  return (
+    <div style={{
+      display: 'flex', height: isFullscreen ? '100vh' : 'calc(100vh - 60px)', overflow: 'hidden', background: 'var(--color-bg)',
+      ...(isFullscreen ? { position: 'fixed', inset: 0, zIndex: 9999 } : {}),
+    }}>
+      {/* ── Desktop Left Sidebar ── */}
+      {!isFullscreen && !isMobile && (
+      <div style={{
+        width: sidebarCollapsed ? 0 : 320, flexShrink: 0, display: 'flex', flexDirection: 'column',
+        borderRight: sidebarCollapsed ? 'none' : '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
+        overflow: 'hidden', transition: 'width 0.15s ease',
+      }}>
+        {sidebarContent()}
       </div>
       )}
 
@@ -2917,7 +2985,7 @@ export default function ParkingPage() {
           </div>
         )}
 
-        <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+        <div style={{ flex: 1, minHeight: 0, position: 'relative', paddingBottom: isMobile && !isFullscreen ? 48 : 0 }}>
           <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
           {/* Ruler readout — bottom left when active */}
           {ruler.active && ruler.points.length >= 2 && (
@@ -2934,7 +3002,7 @@ export default function ParkingPage() {
           )}
           {/* Map controls — top left */}
           <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 5, display: 'flex', gap: 4 }}>
-            {!isFullscreen && (
+            {!isFullscreen && !isMobile && (
               <button
                 onClick={() => setSidebarCollapsed(c => !c)}
                 title={sidebarCollapsed ? 'Show panel' : 'Hide panel'}
@@ -2976,8 +3044,8 @@ export default function ParkingPage() {
             </button>
           </div>
 
-          {/* Floating toolbar — visible when sidebar is hidden or fullscreen */}
-          {(sidebarCollapsed || isFullscreen) && selectedPlanId && (
+          {/* Floating toolbar — visible when sidebar is hidden, fullscreen, or mobile */}
+          {(sidebarCollapsed || isFullscreen || isMobile) && selectedPlanId && (
             <div style={{
               position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 5,
               display: 'flex', gap: 4, padding: '6px 10px', borderRadius: 6,
@@ -3049,8 +3117,8 @@ export default function ParkingPage() {
             </div>
           )}
 
-          {/* Violation summary — bottom right when panel hidden or fullscreen */}
-          {(sidebarCollapsed || isFullscreen) && (violations.length > 0 || warnings.length > 0) && (
+          {/* Violation summary — bottom right when panel hidden or fullscreen (desktop only) */}
+          {!isMobile && (sidebarCollapsed || isFullscreen) && (violations.length > 0 || warnings.length > 0) && (
             <div style={{
               position: 'absolute', bottom: 24, right: 10, zIndex: 5,
               padding: '6px 12px', borderRadius: 6,
@@ -3064,6 +3132,48 @@ export default function ParkingPage() {
           )}
         </div>
       </div>
+
+      {/* ── Mobile Bottom Sheet ── */}
+      {isMobile && !isFullscreen && (
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
+          display: 'flex', flexDirection: 'column',
+          maxHeight: sheetExpanded ? '75vh' : 48,
+          transition: 'max-height 0.25s ease',
+          background: 'var(--color-bg-surface)',
+          borderTop: '1px solid var(--color-border)',
+          boxShadow: '0 -2px 12px rgba(0,0,0,0.4)',
+          borderRadius: '12px 12px 0 0',
+          overflow: 'hidden',
+        }}>
+          {/* Drag handle + summary bar */}
+          <div
+            onClick={() => setSheetExpanded(e => !e)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px',
+              cursor: 'pointer', flexShrink: 0, minHeight: 48,
+            }}
+          >
+            <div style={{
+              width: 36, height: 4, borderRadius: 2, background: 'var(--color-text-secondary)',
+              opacity: 0.4, flexShrink: 0,
+            }} />
+            <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-primary)', flex: 1 }}>
+              {selectedPlan?.plan_name || 'No Plan'}
+            </span>
+            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>{spots.length} AC</span>
+            {violations.length > 0 && <span style={{ fontSize: 'var(--fs-xs)', color: '#EF4444', fontWeight: 600 }}>{violations.length} Viol</span>}
+            {warnings.length > 0 && <span style={{ fontSize: 'var(--fs-xs)', color: '#F59E0B', fontWeight: 600 }}>{warnings.length} Warn</span>}
+            <span style={{ fontSize: 14, color: 'var(--color-text-secondary)', transform: sheetExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>&#9650;</span>
+          </div>
+          {/* Expandable content */}
+          {sheetExpanded && (
+            <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+              {sidebarContent(true)}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Aircraft Picker Modal */}
       {showAircraftPicker && (
