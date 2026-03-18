@@ -270,16 +270,12 @@ export default function InspectionsPage() {
     const afStored = loadTypeDraft('airfield', installationId)
     const ltStored = loadTypeDraft('lighting', installationId)
 
-    if (afStored && (Object.keys(afStored.half.responses).length > 0 || afStored.half.savedAt)) {
+    if (afStored) {
       setAirfieldDraft(afStored)
-    } else if (afStored) {
-      clearTypeDraft('airfield', installationId)
     }
 
-    if (ltStored && (Object.keys(ltStored.half.responses).length > 0 || ltStored.half.savedAt)) {
+    if (ltStored) {
       setLightingDraft(ltStored)
-    } else if (ltStored) {
-      clearTypeDraft('lighting', installationId)
     }
 
     setDraftLoaded(true)
