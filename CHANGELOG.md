@@ -8,8 +8,36 @@ All notable changes to Glidepath.
 - METAR weather API integration (aviationweather.gov)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~157 `as any` casts
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~159 `as any` casts
 - Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 12 PDF generators
+
+---
+
+## [2.23.0] — 2026-03-18
+
+### Features — Parking Plan PDF Export & Email
+- **Parking plan PDF** — Landscape-oriented PDF with compact aircraft summary table (type, qty, ADG, dimensions, min clearance), top-down map screenshot preserving user bearing/rotation, and clearance violations section. Generated via `lib/parking-pdf.ts` with jsPDF + jspdf-autotable
+- **Map capture system** — Temporarily resizes map container to 1600×900, flattens pitch while preserving bearing, waits for idle render, captures canvas via `toDataURL()`, restores original view state
+- **PDF + Email buttons** — Added to both fullscreen map controls (top-left toolbar) and sidebar header. Email uses shared `EmailPdfModal` pattern with default email pre-fill
+- **Shared `buildParkingPdf()` helper** — Single function returns `{ doc, filename }` for both download and email workflows
+
+### Features — Parking Module Enhancements
+- **Tabbed sidebar** — Replaced accordion sections with 4 tabs (Aircraft, Environment, Clearance, Settings) with count badges. Responsive bottom sheet on mobile
+- **Independent obstacle locking** — Obstacles default to locked position; separate lock toggle prevents accidental drag. Ref-based guard in drag handler
+- **Wildlife species favorites** — Star toggle on species picker and base setup. Favorites sort first with gold border. Stored via `is_favorite` column on `base_wildlife_species`
+
+### Bug Fixes
+- **Aircraft silhouette scaling on high-DPI** — Added `pixelRatio: 1` to Mapbox `addImage` calls to prevent icons from rendering at half size on Retina displays
+- **Icons shrink during zoom** — Changed from `zoomend` (fires only after animation) to `zoom` event for continuous scale updates. Used ref to avoid stale closures
+- **Icons distort during rotation** — `computeIconScale` used x-only distance (`Math.abs(pW.x - p0.x)`) which collapsed to zero at 90° rotation. Fixed to 2D distance (`Math.sqrt(dx² + dy²)`). Added `rotate` and `pitch` event listeners
+- **PDF map aspect ratio distortion** — Removed forced aspect ratio; uses source canvas dimensions to preserve natural proportions
+- **PDF map capture timing** — Wait for Mapbox `idle` event + 2x `requestAnimationFrame` to ensure canvas is fully painted before `toDataURL()`
+
+### Database
+- **2 new migrations** (`2026031700`, `2026031505`)
+  - `create_base_wildlife_species` — Per-installation wildlife species configuration with favorites
+  - `add_bar_group_id` — Bar group UUID column on infrastructure_features for approach light bar grouping
+- **Total migrations**: 119
 
 ---
 
