@@ -301,7 +301,7 @@ const SIGN_COLORS: Record<string, { bg: string; text: string; border: string }> 
   mandatory_sign:     { bg: '#CC0000', text: '#FFFFFF', border: '#FFFFFF' },
   directional_sign:   { bg: '#FBBF24', text: '#000000', border: '#000000' },
   informational_sign:      { bg: '#FBBF24', text: '#000000', border: '#000000' },
-  runway_distance_marker:  { bg: '#FFFFFF', text: '#000000', border: '#000000' },
+  runway_distance_marker:  { bg: '#000000', text: '#FFFFFF', border: '#FFFFFF' },
 }
 
 // Register labeled sign images with the map, returns set of registered image names
@@ -2025,7 +2025,7 @@ export default function InfrastructureMapPage() {
             "><option value="">— None —</option>${compOptGroups}</select>`
             html += `</div>`
             // Label (signs only — shows sign face text)
-            const isSign = ['location_sign','directional_sign','informational_sign','mandatory_sign'].includes(props.type)
+            const isSign = ['location_sign','directional_sign','informational_sign','mandatory_sign','runway_distance_marker'].includes(props.type)
             if (isSign) {
               html += `<div style="margin-bottom:6px;">`
               html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">Sign Text</div>`
