@@ -294,7 +294,8 @@ function renderFallbackIcon(): { imageData: ImageData; width: number; height: nu
 }
 
 /** Compute the icon-size scale factor to make a REF_ICON_SIZE image match
- *  the aircraft's real-world wingspan at the current map zoom. */
+ *  the aircraft's real-world wingspan at the current map zoom.
+ *  Uses 2D distance between projected points so bearing/pitch don't shrink the result. */
 function computeIconScale(wingspanFt: number, lengthFt: number, mapInstance: mapboxgl.Map): number {
   const center = mapInstance.getCenter()
   const p0 = mapInstance.project(center)
@@ -303,7 +304,10 @@ function computeIconScale(wingspanFt: number, lengthFt: number, mapInstance: map
   const wingspanM = wingspanFt * FT_TO_M
   const dLng = wingspanM / (111319.9 * Math.cos(center.lat * Math.PI / 180))
   const pW = mapInstance.project([center.lng + dLng, center.lat])
-  const targetCssPx = Math.abs(pW.x - p0.x)
+  // Use full 2D distance — not just x — so rotation/pitch don't distort the scale
+  const dx = pW.x - p0.x
+  const dy = pW.y - p0.y
+  const targetCssPx = Math.sqrt(dx * dx + dy * dy)
 
   // The icon image is REF_ICON_SIZE px wide (for the wider dimension)
   // Figure out which dimension is wider in the image
@@ -1242,7 +1246,9 @@ export default function ParkingPage() {
     }
 
     m.on('zoom', updateScale)
-    return () => { m.off('zoom', updateScale) }
+    m.on('rotate', updateScale)
+    m.on('pitch', updateScale)
+    return () => { m.off('zoom', updateScale); m.off('rotate', updateScale); m.off('pitch', updateScale) }
   }, [mapLoaded, spotsWithAircraft])
 
   // ── Aircraft + Obstacle drag interaction ──
@@ -1705,11 +1711,22 @@ export default function ParkingPage() {
         // Set top-down view at current zoom for capture
         m.jumpTo({ pitch: 0, bearing: 0 })
 
-        // Wait for tiles to render
+        // Wait for the map to fully re-render at the new view
         await new Promise<void>(resolve => {
-          const onIdle = () => { m.off('idle', onIdle); resolve() }
-          m.on('idle', onIdle)
+          // First wait for a render frame, then wait for idle (tiles loaded)
+          m.once('render', () => {
+            const onIdle = () => { m.off('idle', onIdle); resolve() }
+            m.on('idle', onIdle)
+            // Fallback in case map is already idle after render
+            if (m.isSourceLoaded('composite') || m.loaded()) {
+              m.off('idle', onIdle)
+              resolve()
+            }
+          })
+          m.triggerRepaint()
         })
+        // Extra frame to ensure canvas is fully painted
+        await new Promise(resolve => requestAnimationFrame(resolve))
 
         mapDataUrl = m.getCanvas().toDataURL('image/jpeg', 0.9)
 

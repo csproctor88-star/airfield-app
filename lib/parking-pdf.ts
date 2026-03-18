@@ -146,7 +146,7 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
     y = (doc as any).lastAutoTable.finalY + 4
   }
 
-  // ── Map screenshot (preserve aspect ratio, wider landscape crop) ──
+  // ── Map screenshot (preserve source aspect ratio exactly) ──
   if (mapDataUrl) {
     checkPageBreak(80)
     try {
@@ -156,18 +156,16 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
         img.onerror = () => reject()
         img.src = mapDataUrl
       })
-      const srcAspect = img.width / img.height
-      // Target a wide landscape ratio (at least 2.2:1) for a panoramic feel
-      const targetAspect = Math.max(srcAspect, 2.2)
+      const aspect = img.width / img.height
       const maxH = pageHeight - y - 15
-      let imgW = contentWidth + 4 // extend slightly beyond normal margins
-      let imgH = imgW / targetAspect
+      let imgW = contentWidth
+      let imgH = imgW / aspect
       if (imgH > maxH) {
         imgH = maxH
-        imgW = imgH * targetAspect
+        imgW = imgH * aspect
       }
       const imgX = margin + (contentWidth - imgW) / 2
-      doc.addImage(mapDataUrl, 'JPEG', Math.max(margin - 2, imgX), y, imgW, imgH)
+      doc.addImage(mapDataUrl, 'JPEG', imgX, y, imgW, imgH)
       y += imgH + 4
     } catch {
       // Map capture failed — skip silently
