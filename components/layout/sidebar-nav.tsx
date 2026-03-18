@@ -571,7 +571,10 @@ export function SidebarNav() {
 
   // ── Normal sidebar ──
 
-  const activeConfig = config
+  // CES users get a flat list — no collapsible sections
+  const activeConfig = isCesRole
+    ? { pinned: ['/ces', '/discrepancies', '/infrastructure', '/settings'], sections: [] } as SidebarConfig
+    : config
 
   return (
     <nav className={`sidebar-drawer${isOpen ? '' : ' sidebar-collapsed'}`}>
