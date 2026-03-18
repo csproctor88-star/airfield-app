@@ -1208,40 +1208,41 @@ export default function ParkingPage() {
 
   // ── Update icon scale on zoom change ──
   // Images are fixed-size; only the iconScale property needs updating on zoom.
+  // Listen to 'zoom' (continuous) so icons stay to-scale during pinch/scroll.
 
   useEffect(() => {
     const m = map.current
     if (!m || !mapLoaded || spotsWithAircraft.length === 0) return
 
-    const onZoomEnd = () => {
+    const updateScale = () => {
       const src = m.getSource('parking-aircraft') as mapboxgl.GeoJSONSource | undefined
-      if (src) {
-        src.setData({
-          type: 'FeatureCollection',
-          features: spotsWithAircraft.map(s => {
-            const c = spotCenter(s)
-            return {
-              type: 'Feature' as const,
-              properties: {
-                spotId: s.id,
-                name: s.aircraft_name || 'Aircraft',
-                wingspan: s.wingspan_ft,
-                length: s.length_ft,
-                heading: s.heading_deg,
-                tailNumber: s.tail_number || '',
-                adg: getADGFromWingspan(s.wingspan_ft),
-                iconId: `sil-${s.id}`,
-                iconScale: computeIconScale(s.wingspan_ft, s.length_ft, m),
-              },
-              geometry: { type: 'Point' as const, coordinates: [c.lon, c.lat] },
-            }
-          }),
-        })
-      }
+      if (!src) return
+      const spots = spotsWithAircraftRef.current
+      src.setData({
+        type: 'FeatureCollection',
+        features: spots.map(s => {
+          const c = spotCenter(s)
+          return {
+            type: 'Feature' as const,
+            properties: {
+              spotId: s.id,
+              name: s.aircraft_name || 'Aircraft',
+              wingspan: s.wingspan_ft,
+              length: s.length_ft,
+              heading: s.heading_deg,
+              tailNumber: s.tail_number || '',
+              adg: getADGFromWingspan(s.wingspan_ft),
+              iconId: `sil-${s.id}`,
+              iconScale: computeIconScale(s.wingspan_ft, s.length_ft, m),
+            },
+            geometry: { type: 'Point' as const, coordinates: [c.lon, c.lat] },
+          }
+        }),
+      })
     }
 
-    m.on('zoomend', onZoomEnd)
-    return () => { m.off('zoomend', onZoomEnd) }
+    m.on('zoom', updateScale)
+    return () => { m.off('zoom', updateScale) }
   }, [mapLoaded, spotsWithAircraft])
 
   // ── Aircraft + Obstacle drag interaction ──
@@ -1691,7 +1692,31 @@ export default function ParkingPage() {
     if (!selectedPlan) return
     setExportingPdf(true)
     try {
-      const mapDataUrl = map.current?.getCanvas().toDataURL('image/jpeg', 0.9) || null
+      const m = map.current
+      let mapDataUrl: string | null = null
+
+      if (m) {
+        // Save current view state
+        const prevCenter = m.getCenter()
+        const prevZoom = m.getZoom()
+        const prevPitch = m.getPitch()
+        const prevBearing = m.getBearing()
+
+        // Set top-down view zoomed out 2 levels for a wider overview
+        m.jumpTo({ pitch: 0, bearing: 0, zoom: prevZoom - 2 })
+
+        // Wait for tiles to render
+        await new Promise<void>(resolve => {
+          const onIdle = () => { m.off('idle', onIdle); resolve() }
+          m.on('idle', onIdle)
+        })
+
+        mapDataUrl = m.getCanvas().toDataURL('image/jpeg', 0.9)
+
+        // Restore previous view
+        m.jumpTo({ center: prevCenter, zoom: prevZoom, pitch: prevPitch, bearing: prevBearing })
+      }
+
       const { doc, filename } = await generateParkingPdf({
         plan: selectedPlan,
         spots,

@@ -102,113 +102,105 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
     y += descLines.length * 3.5 + 4
   }
 
-  // ── Statistics summary ──
-  const adgBreakdown: Record<string, number> = {}
-  const statusBreakdown: Record<string, number> = { occupied: 0, available: 0, reserved: 0 }
-  for (const s of spotsWithAircraft) {
-    const adg = getADGFromWingspan(s.wingspan_ft)
-    adgBreakdown[adg] = (adgBreakdown[adg] || 0) + 1
-    statusBreakdown[s.status] = (statusBreakdown[s.status] || 0) + 1
-  }
-
-  doc.setDrawColor(200)
-  doc.setFillColor(248, 248, 248)
-  doc.roundedRect(margin, y, contentWidth, 12, 2, 2, 'FD')
-
-  doc.setFontSize(7)
-  doc.setTextColor(120)
-  let sx = margin + 4
-  doc.text('ADG Breakdown:', sx, y + 4)
-  doc.setFontSize(8)
-  doc.setTextColor(0)
-  const adgParts = Object.entries(adgBreakdown).sort().map(([g, c]) => `${g}: ${c}`).join('  ')
-  doc.text(adgParts || 'None', sx, y + 8)
-
-  sx = margin + contentWidth * 0.4
-  doc.setFontSize(7)
-  doc.setTextColor(120)
-  doc.text('Status:', sx, y + 4)
-  doc.setFontSize(8)
-  doc.setTextColor(0)
-  doc.text(`${statusBreakdown.occupied} Occupied  ${statusBreakdown.available} Available  ${statusBreakdown.reserved} Reserved`, sx, y + 8)
-
-  sx = margin + contentWidth * 0.78
-  doc.setFontSize(7)
-  doc.setTextColor(120)
-  doc.text('Clearance:', sx, y + 4)
-  doc.setFontSize(8)
-  doc.setTextColor(violations.length > 0 ? 200 : 0, violations.length > 0 ? 0 : 0, 0)
-  doc.text(`${violations.length} Violations  ${warnings.length} Warnings`, sx, y + 8)
-
-  y += 16
-
-  // ── Map screenshot ──
+  // ── Map screenshot (preserve aspect ratio, centered) ──
   if (mapDataUrl) {
     checkPageBreak(80)
     try {
-      // Landscape letter: ~255mm content width; maintain aspect ratio
-      const imgH = Math.min(contentWidth * 0.5, pageHeight - y - 20)
-      doc.addImage(mapDataUrl, 'PNG', margin, y, contentWidth, imgH)
+      // Decode image dimensions to preserve aspect ratio
+      const img = new Image()
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve()
+        img.onerror = () => reject()
+        img.src = mapDataUrl
+      })
+      const aspect = img.width / img.height
+      const maxW = contentWidth
+      const maxH = Math.min(contentWidth * 0.55, pageHeight - y - 20)
+      let imgW = maxW
+      let imgH = imgW / aspect
+      if (imgH > maxH) {
+        imgH = maxH
+        imgW = imgH * aspect
+      }
+      const imgX = margin + (contentWidth - imgW) / 2
+      doc.addImage(mapDataUrl, 'JPEG', imgX, y, imgW, imgH)
       y += imgH + 4
     } catch {
       // Map capture failed — skip silently
     }
   }
 
-  // ── Aircraft summary table ──
+  // ── Aircraft Summary Table (grouped by type) ──
   checkPageBreak(30)
   doc.setFontSize(10)
   doc.setTextColor(0)
-  doc.text('AIRCRAFT PLACEMENT DETAILS', margin, y)
+  doc.text('AIRCRAFT PLACEMENT SUMMARY', margin, y)
   y += 5
 
   if (spotsWithAircraft.length > 0) {
-    const acRows = spotsWithAircraft.map(s => {
+    // Group by aircraft_name
+    const groups = new Map<string, SpotWithAircraft[]>()
+    for (const s of spotsWithAircraft) {
+      const name = s.aircraft_name || 'Unknown'
+      if (!groups.has(name)) groups.set(name, [])
+      groups.get(name)!.push(s)
+    }
+
+    // Compute average actual distance between aircraft of each type
+    // Uses all clearance results that involve this aircraft type
+    const avgDistByType = new Map<string, { sum: number; count: number }>()
+    for (const r of allResults) {
+      const addDist = (name: string) => {
+        if (!avgDistByType.has(name)) avgDistByType.set(name, { sum: 0, count: 0 })
+        const entry = avgDistByType.get(name)!
+        entry.sum += r.distance_ft
+        entry.count++
+      }
+      if (r.aircraft_a) addDist(r.aircraft_a)
+      if (r.aircraft_b) addDist(r.aircraft_b)
+    }
+
+    const summaryRows = Array.from(groups.entries()).map(([name, group]) => {
+      const s = group[0]
       const adg = getADGFromWingspan(s.wingspan_ft)
       const detail = s.clearance_ft != null
-        ? { clearance_ft: s.clearance_ft, ufc_item: 'Manual', description: 'Override' }
-        : getWingtipClearanceDetail(s.wingspan_ft, apronContext, s.aircraft_name || '')
+        ? { clearance_ft: s.clearance_ft, ufc_item: 'Manual' }
+        : getWingtipClearanceDetail(s.wingspan_ft, apronContext, name)
+      const distEntry = avgDistByType.get(name)
+      const avgDist = distEntry && distEntry.count > 0
+        ? (distEntry.sum / distEntry.count).toFixed(1)
+        : '—'
+
       return [
-        s.aircraft_name || 'Unknown',
+        name,
+        String(group.length),
         adg,
-        `${Math.round(s.wingspan_ft)}`,
-        `${Math.round(s.length_ft)}`,
-        s.tail_number || '—',
-        s.unit_callsign || '—',
-        s.status || '—',
-        `${detail.clearance_ft}`,
-        detail.ufc_item,
+        `${Math.round(s.wingspan_ft)} × ${Math.round(s.length_ft)}`,
+        `${detail.clearance_ft} ft`,
+        `${avgDist} ft`,
       ]
     })
 
+    const tableWidth = contentWidth * 0.75
     autoTable(doc, {
       startY: y,
-      head: [['Aircraft', 'ADG', 'WS (ft)', 'Len (ft)', 'Tail #', 'Callsign', 'Status', 'Clr (ft)', 'UFC Item']],
-      body: acRows,
+      head: [['Aircraft Type', 'Count', 'ADG', 'WS × Len (ft)', 'Min Required', 'Avg Distance']],
+      body: summaryRows,
       margin: { left: margin, right: margin },
-      styles: { fontSize: 7, cellPadding: 1.5 },
+      tableWidth,
+      styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: 'bold' },
       columnStyles: {
-        0: { cellWidth: 50 },
-        1: { cellWidth: 12, halign: 'center' },
-        2: { cellWidth: 16, halign: 'right' },
-        3: { cellWidth: 16, halign: 'right' },
-        6: { cellWidth: 20 },
-        7: { cellWidth: 14, halign: 'right' },
-      },
-      didParseCell: (data) => {
-        if (data.section === 'body' && data.column.index === 6) {
-          const status = String(data.cell.raw)
-          if (status === 'occupied') data.cell.styles.textColor = [239, 68, 68]
-          else if (status === 'reserved') data.cell.styles.textColor = [249, 115, 22]
-          else if (status === 'available') data.cell.styles.textColor = [34, 197, 94]
-        }
+        1: { cellWidth: 16, halign: 'center' },
+        2: { cellWidth: 14, halign: 'center' },
+        4: { halign: 'right' },
+        5: { halign: 'right' },
       },
     })
     y = (doc as any).lastAutoTable.finalY + 6
   }
 
-  // ── Clearance results table ──
+  // ── Clearance Violations & Warnings (only if any) ──
   const issueResults = allResults.filter(r => r.status !== 'ok')
   if (issueResults.length > 0) {
     checkPageBreak(30)
@@ -225,13 +217,12 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
         r.distance_ft.toFixed(1),
         String(r.required_ft),
         r.ufc_item,
-        r.ufc_desc,
         r.status.toUpperCase(),
       ])
 
     autoTable(doc, {
       startY: y,
-      head: [['Aircraft A', 'Aircraft B / Obstacle', 'Dist (ft)', 'Req (ft)', 'UFC Item', 'Description', 'Status']],
+      head: [['Aircraft A', 'Aircraft B / Obstacle', 'Actual (ft)', 'Required (ft)', 'UFC Item', 'Status']],
       body: crRows,
       margin: { left: margin, right: margin },
       styles: { fontSize: 7, cellPadding: 1.5 },
@@ -241,7 +232,7 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
         3: { halign: 'right' },
       },
       didParseCell: (data) => {
-        if (data.section === 'body' && data.column.index === 6) {
+        if (data.section === 'body' && data.column.index === 5) {
           const status = String(data.cell.raw)
           if (status === 'VIOLATION') {
             data.cell.styles.textColor = [239, 68, 68]
@@ -252,60 +243,6 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
           }
         }
       },
-    })
-    y = (doc as any).lastAutoTable.finalY + 6
-  }
-
-  // ── Obstacles summary ──
-  if (obstacles.length > 0) {
-    checkPageBreak(20)
-    doc.setFontSize(10)
-    doc.setTextColor(0)
-    doc.text('OBSTACLES', margin, y)
-    y += 5
-
-    const obsRows = obstacles.map(o => [
-      o.name || 'Unnamed',
-      o.obstacle_type,
-      o.obstacle_type === 'building' ? `${o.width_ft || 0} x ${o.length_ft || 0}` :
-      o.obstacle_type === 'circle' ? `r=${o.radius_ft || 0}` :
-      o.height_ft ? `h=${o.height_ft}` : '—',
-    ])
-
-    autoTable(doc, {
-      startY: y,
-      head: [['Obstacle', 'Type', 'Dimensions (ft)']],
-      body: obsRows,
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 7, cellPadding: 1.5 },
-      headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: 'bold' },
-    })
-    y = (doc as any).lastAutoTable.finalY + 6
-  }
-
-  // ── Taxilanes summary ──
-  if (taxilanes.length > 0) {
-    checkPageBreak(20)
-    doc.setFontSize(10)
-    doc.setTextColor(0)
-    doc.text('TAXILANES', margin, y)
-    y += 5
-
-    const tlRows = taxilanes.map(t => [
-      t.name || 'Unnamed',
-      t.taxilane_type,
-      t.design_aircraft || '—',
-      t.design_wingspan_ft ? `${t.design_wingspan_ft}` : '—',
-      t.is_transient ? 'Yes' : 'No',
-    ])
-
-    autoTable(doc, {
-      startY: y,
-      head: [['Taxilane', 'Type', 'Design Aircraft', 'Design WS (ft)', 'Transient']],
-      body: tlRows,
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 7, cellPadding: 1.5 },
-      headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: 'bold' },
     })
     y = (doc as any).lastAutoTable.finalY + 6
   }
