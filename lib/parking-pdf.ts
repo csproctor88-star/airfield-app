@@ -10,14 +10,12 @@ import {
   type SpotWithAircraft,
   type ClearanceResult,
 } from '@/lib/calculations/parking-clearance'
-import type { ParkingPlan, ParkingSpot, ParkingObstacle, ParkingTaxilane } from '@/lib/supabase/parking'
+import type { ParkingPlan, ParkingSpot } from '@/lib/supabase/parking'
 
 interface ParkingPdfInput {
   plan: ParkingPlan
   spots: ParkingSpot[]
   spotsWithAircraft: SpotWithAircraft[]
-  obstacles: ParkingObstacle[]
-  taxilanes: ParkingTaxilane[]
   allResults: ClearanceResult[]
   violations: ClearanceResult[]
   warnings: ClearanceResult[]
@@ -29,9 +27,8 @@ interface ParkingPdfInput {
 
 export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc: jsPDF; filename: string }> {
   const {
-    plan, spots, spotsWithAircraft,
-    allResults, violations, warnings, apronContext,
-    mapDataUrl, baseName, baseIcao,
+    plan, spots, spotsWithAircraft, allResults, violations, warnings,
+    apronContext, mapDataUrl, baseName, baseIcao,
   } = input
 
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' })

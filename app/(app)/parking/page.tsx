@@ -1739,7 +1739,7 @@ export default function ParkingPage() {
     }
 
     return generateParkingPdf({
-      plan: selectedPlan, spots, spotsWithAircraft, obstacles, taxilanes,
+      plan: selectedPlan, spots, spotsWithAircraft,
       allResults, violations, warnings, apronContext, mapDataUrl,
       baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao,
     })
