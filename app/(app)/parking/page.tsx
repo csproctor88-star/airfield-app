@@ -1718,8 +1718,8 @@ export default function ParkingPage() {
         container.style.height = '900px'
         m.resize()
 
-        // Set top-down view at current zoom for capture
-        m.jumpTo({ pitch: 0, bearing: 0 })
+        // Set top-down view but preserve current bearing (rotation)
+        m.jumpTo({ pitch: 0 })
 
         // Wait for the map to fully re-render at landscape size
         await new Promise<void>(resolve => {
