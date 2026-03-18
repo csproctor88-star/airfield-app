@@ -395,6 +395,12 @@ export default function ParkingPage() {
   const [planLocked, setPlanLocked] = useState(false)
   const planLockedRef = useRef(planLocked)
   planLockedRef.current = planLocked
+  const [obstaclesLocked, setObstaclesLocked] = useState(true) // obstacles locked by default
+  const obstaclesLockedRef = useRef(obstaclesLocked)
+  obstaclesLockedRef.current = obstaclesLocked
+
+  // Sidebar tab navigation
+  const [sidebarTab, setSidebarTab] = useState<'aircraft' | 'environment' | 'clearance' | 'settings'>('aircraft')
 
   // Ruler tool
   const isPlacing = !!(placingAircraft || placingObstacle || drawingLineObsId || drawingTaxilaneId || drawingBoundaryId || drawingObsType)
@@ -1280,7 +1286,8 @@ export default function ParkingPage() {
         }
       }
 
-      // Check obstacle layers (points, polygon fills, lines, labels)
+      // Check obstacle layers (points, polygon fills, lines, labels) — skip if obstacles are locked
+      if (obstaclesLockedRef.current) return
       const obsLayers: string[] = []
       if (m.getLayer('parking-obstacles-points')) obsLayers.push('parking-obstacles-points')
       if (m.getLayer('parking-obstacles-fill')) obsLayers.push('parking-obstacles-fill')
@@ -2279,20 +2286,43 @@ export default function ParkingPage() {
           )}
         </div>
 
-        {/* Status summary */}
-        <div style={{ display: 'flex', gap: 8, padding: '5px 10px', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-xs)', flexShrink: 0, flexWrap: 'wrap' }}>
-          <span style={{ color: 'var(--color-text-secondary)' }}>{spots.length} AC</span>
-          {taxilanes.length > 0 && <span style={{ color: '#3B82F6' }}>{taxilanes.length} TL</span>}
-          <span style={{ color: violations.length > 0 ? '#EF4444' : 'var(--color-text-secondary)' }}>{violations.length} Viol</span>
-          <span style={{ color: warnings.length > 0 ? '#F59E0B' : 'var(--color-text-secondary)' }}>{warnings.length} Warn</span>
+        {/* Tab bar */}
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
+          {([
+            { key: 'aircraft' as const, label: 'Aircraft', count: spots.length, color: 'var(--color-cyan)' },
+            { key: 'environment' as const, label: 'Environment', count: obstacles.length + taxilanes.length + apronBoundaries.length, color: '#F97316' },
+            { key: 'clearance' as const, label: 'Clearance', count: violations.length + warnings.length, color: violations.length > 0 ? '#EF4444' : '#F59E0B' },
+            { key: 'settings' as const, label: 'Settings', color: 'var(--color-text-secondary)' },
+          ] as const).map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setSidebarTab(tab.key)}
+              style={{
+                flex: 1, padding: isMobile ? '10px 4px' : '7px 4px', border: 'none', cursor: 'pointer',
+                background: 'transparent', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                color: sidebarTab === tab.key ? tab.color : 'var(--color-text-secondary)',
+                borderBottom: sidebarTab === tab.key ? `2px solid ${tab.color}` : '2px solid transparent',
+                opacity: sidebarTab === tab.key ? 1 : 0.6,
+              }}
+            >
+              {tab.label}
+              {'count' in tab && tab.count != null && tab.count > 0 && (
+                <span style={{
+                  marginLeft: 3, fontSize: 9, padding: '0 4px', borderRadius: 6,
+                  background: `${tab.color}22`, color: tab.color,
+                }}>
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
 
-        {/* Scrollable section content */}
+        {/* Scrollable tab content */}
         <div style={{ flex: 1, overflow: 'auto' }}>
 
-          {/* ── Aircraft Section ── */}
-          <SectionHeader id="aircraft" label="Aircraft" count={spots.length} color="var(--color-cyan)" layerKey="aircraft" />
-          {openSections.aircraft && (
+          {/* ── Aircraft Tab ── */}
+          {sidebarTab === 'aircraft' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               {selectedPlanId && (
                 <button
@@ -2438,11 +2468,47 @@ export default function ParkingPage() {
             </div>
           )}
 
-          {/* ── Obstacles Section ── */}
-          <SectionHeader id="obstacles" label="Obstacles" count={obstacles.length} color="#F97316" layerKey="obstacles" />
-          {openSections.obstacles && (
+          {/* ── Environment Tab (Obstacles + Taxilanes + Boundaries) ── */}
+          {sidebarTab === 'environment' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
+              {/* Obstacle lock toggle */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: isMobile ? '10px 12px' : '6px 10px',
+                borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg)',
+              }}>
+                <button
+                  onClick={() => setObstaclesLocked(l => !l)}
+                  style={{
+                    padding: isMobile ? '8px 12px' : '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                    background: obstaclesLocked ? '#F9731622' : '#22C55E22',
+                    border: `1px solid ${obstaclesLocked ? '#F9731644' : '#22C55E44'}`,
+                    color: obstaclesLocked ? '#F97316' : '#22C55E',
+                    cursor: 'pointer', flex: 1,
+                  }}
+                >
+                  {obstaclesLocked ? 'Obstacles Locked' : 'Obstacles Unlocked — Drag Enabled'}
+                </button>
+                {(['aircraft', 'obstacles', 'taxilanes', 'boundaries'] as const).map(lk => (
+                  <button
+                    key={lk}
+                    onClick={() => toggleLayerVisibility(lk)}
+                    title={`${visibleLayers[lk] ? 'Hide' : 'Show'} ${lk}`}
+                    style={{
+                      padding: '2px 4px', border: 'none', cursor: 'pointer', background: 'transparent',
+                      fontSize: 11, color: visibleLayers[lk] ? 'var(--color-cyan)' : 'var(--color-text-secondary)',
+                      opacity: visibleLayers[lk] ? 1 : 0.3,
+                    }}
+                  >
+                    {lk === 'aircraft' ? 'AC' : lk === 'obstacles' ? 'OB' : lk === 'taxilanes' ? 'TL' : 'AB'}
+                  </button>
+                ))}
+              </div>
+
+              {/* Obstacles sub-section */}
+              <SectionHeader id="obstacles" label="Obstacles" count={obstacles.length} color="#F97316" layerKey="obstacles" />
+              {openSections.obstacles && (
+              <div>
+              <div style={{ display: 'flex', gap: 4, marginBottom: 4, padding: '4px 8px' }}>
                 {(['point', 'building', 'line', 'circle'] as const).map(type => (
                   <button
                     key={type}
@@ -2570,11 +2636,11 @@ export default function ParkingPage() {
             </div>
           )}
 
-          {/* ── Taxilanes Section ── */}
-          <SectionHeader id="taxilanes" label="Taxilanes" count={taxilanes.length} color="#3B82F6" layerKey="taxilanes" badge={allResults.filter(r => r.spot_b_id && taxilanes.some(t => t.id === r.spot_b_id) && r.status !== 'ok').length > 0 ? `${allResults.filter(r => r.spot_b_id && taxilanes.some(t => t.id === r.spot_b_id) && r.status !== 'ok').length}!` : undefined} />
-          {openSections.taxilanes && (
+              {/* Taxilanes sub-section */}
+              <SectionHeader id="taxilanes" label="Taxilanes" count={taxilanes.length} color="#3B82F6" layerKey="taxilanes" badge={allResults.filter(r => r.spot_b_id && taxilanes.some(t => t.id === r.spot_b_id) && r.status !== 'ok').length > 0 ? `${allResults.filter(r => r.spot_b_id && taxilanes.some(t => t.id === r.spot_b_id) && r.status !== 'ok').length}!` : undefined} />
+              {openSections.taxilanes && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <div style={{ display: 'flex', gap: 4, marginBottom: 4, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 4, marginBottom: 4, flexWrap: 'wrap', padding: '4px 8px' }}>
                 <button
                   onClick={() => handleStartTaxilane('interior')}
                   disabled={!selectedPlanId || !!drawingTaxilaneId}
@@ -2771,11 +2837,26 @@ export default function ParkingPage() {
               })}
             </div>
           )}
+            </div>
+          )}
 
-          {/* ── Clearance Section ── */}
-          <SectionHeader id="clearance" label="Clearance" count={violations.length + warnings.length} color={violations.length > 0 ? '#EF4444' : '#F59E0B'} layerKey="clearance" />
-          {openSections.clearance && (
+          {/* ── Clearance Tab ── */}
+          {sidebarTab === 'clearance' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {/* Layer visibility toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg)' }}>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>Show clearance zones on map</span>
+                <button
+                  onClick={() => toggleLayerVisibility('clearance')}
+                  style={{
+                    padding: '2px 8px', border: 'none', cursor: 'pointer', background: 'transparent',
+                    fontSize: 14, color: visibleLayers.clearance ? 'var(--color-cyan)' : 'var(--color-text-secondary)',
+                    opacity: visibleLayers.clearance ? 1 : 0.4,
+                  }}
+                >
+                  {visibleLayers.clearance ? '\u25C9' : '\u25CB'}
+                </button>
+              </div>
               {allResults.length > 0 && (
                 <div style={{ display: 'flex', gap: 3, padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}>
                   {(['all', 'violations', 'warnings', 'ok'] as const).map(f => (
@@ -2835,17 +2916,17 @@ export default function ParkingPage() {
             </div>
           )}
 
-          {/* ── Settings Section ── */}
-          <SectionHeader id="settings" label="Settings" />
-          {openSections.settings && (
-            <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6, borderBottom: '1px solid var(--color-border)' }}>
+          {/* ── Settings Tab ── */}
+          {sidebarTab === 'settings' && (
+            <div>
+            <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 8, borderBottom: '1px solid var(--color-border)' }}>
               <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
                 UFC 3-260-01 Table 6-1a Context
                 <select
                   value={apronContext}
                   onChange={e => setApronContext(e.target.value as ApronContext)}
                   style={{
-                    width: '100%', padding: '4px 6px', borderRadius: 3, fontSize: 'var(--fs-xs)', marginTop: 2,
+                    width: '100%', padding: '6px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', marginTop: 2,
                     border: '1px solid var(--color-border)', background: 'var(--color-bg)',
                     color: 'var(--color-text-primary)',
                   }}
@@ -2855,29 +2936,37 @@ export default function ParkingPage() {
                   ))}
                 </select>
               </label>
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 6 }}>
                 <button
                   onClick={() => setPlanLocked(l => !l)}
                   style={{
-                    flex: 1, padding: '4px 8px', borderRadius: 3, fontSize: 'var(--fs-xs)',
+                    flex: 1, padding: isMobile ? '10px 8px' : '6px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                     background: planLocked ? '#EF444422' : '#22C55E22',
                     border: `1px solid ${planLocked ? '#EF444444' : '#22C55E44'}`,
                     color: planLocked ? '#EF4444' : '#22C55E',
-                    cursor: 'pointer', fontWeight: 500,
+                    cursor: 'pointer', fontWeight: 600,
                   }}
                 >
-                  {planLocked ? 'Locked — No Dragging' : 'Unlocked — Drag Enabled'}
+                  {planLocked ? 'All Locked — No Dragging' : 'Aircraft Unlocked — Drag Enabled'}
+                </button>
+                <button
+                  onClick={() => setObstaclesLocked(l => !l)}
+                  style={{
+                    flex: 1, padding: isMobile ? '10px 8px' : '6px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
+                    background: obstaclesLocked ? '#F9731622' : '#22C55E22',
+                    border: `1px solid ${obstaclesLocked ? '#F9731644' : '#22C55E44'}`,
+                    color: obstaclesLocked ? '#F97316' : '#22C55E',
+                    cursor: 'pointer', fontWeight: 600,
+                  }}
+                >
+                  {obstaclesLocked ? 'Obstacles Locked' : 'Obstacles Unlocked'}
                 </button>
               </div>
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', marginTop: 2 }}>
-                Use the eye toggles on each section header to show/hide layers on the map.
-              </div>
             </div>
-          )}
 
-          {/* ── Reference Section ── */}
-          <SectionHeader id="reference" label="UFC Reference" />
-          {openSections.reference && (
+            {/* UFC Reference */}
+            <SectionHeader id="reference" label="UFC Reference" />
+            {openSections.reference && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               <p style={{ margin: '0 0 4px', fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
                 UFC 3-260-01 Table 6-1a — A/AF Apron Clearances (4 Feb 2019, Change 3)
@@ -2910,6 +2999,9 @@ export default function ParkingPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
             </div>
           )}
 
