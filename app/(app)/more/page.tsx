@@ -184,7 +184,7 @@ export default function MorePage() {
     checkRole()
   }, [])
 
-  const CES_ALLOWED = new Set(['/ces', '/discrepancies', '/infrastructure'])
+  const CES_ALLOWED = new Set(['/ces', '/infrastructure', '/settings'])
 
   function filterItems(items: ModuleItem[]) {
     if (!loaded) return items.filter(m => !m.adminOnly && !m.sysAdminOnly)
@@ -198,6 +198,7 @@ export default function MorePage() {
 
   // CES users get a simplified More page
   if (isCes) {
+    const cesItems = [...mgmtItems, ...settingsItems].filter(m => CES_ALLOWED.has(m.href))
     return (
       <div className="page-container">
         <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>More</div>
@@ -205,7 +206,7 @@ export default function MorePage() {
           background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
           borderRadius: 12, marginBottom: 12, overflow: 'hidden',
         }}>
-          {mgmtItems.filter(m => CES_ALLOWED.has(m.href)).map(item => (
+          {cesItems.map(item => (
             <NavItem key={item.href} item={item} />
           ))}
         </div>

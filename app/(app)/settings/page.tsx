@@ -21,6 +21,9 @@ import type { UserRole } from '@/lib/supabase/types'
 // ═══════════════════════════════════════════════════════════════
 
 export default function SettingsPage() {
+  const { userRole } = useInstallation()
+  const isCes = userRole === 'ces'
+
   return (
     <div className="page-container">
       <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>Settings</div>
@@ -30,15 +33,19 @@ export default function SettingsPage() {
       <CollapsibleSection label="INSTALLATION" icon={MapPin}>
         <InstallationSectionContent />
       </CollapsibleSection>
-      <CollapsibleSection label="DATA & STORAGE" icon={HardDrive}>
-        <StorageSectionContent />
-      </CollapsibleSection>
-      <CollapsibleSection label="REGULATIONS LIBRARY" icon={BookOpen}>
-        <RegulationsSectionContent />
-      </CollapsibleSection>
-      <CollapsibleSection label="BASE CONFIGURATION" icon={Wrench}>
-        <BaseConfigSectionContent />
-      </CollapsibleSection>
+      {!isCes && (
+        <>
+          <CollapsibleSection label="DATA & STORAGE" icon={HardDrive}>
+            <StorageSectionContent />
+          </CollapsibleSection>
+          <CollapsibleSection label="REGULATIONS LIBRARY" icon={BookOpen}>
+            <RegulationsSectionContent />
+          </CollapsibleSection>
+          <CollapsibleSection label="BASE CONFIGURATION" icon={Wrench}>
+            <BaseConfigSectionContent />
+          </CollapsibleSection>
+        </>
+      )}
       <CollapsibleSection label="APPEARANCE" icon={Sun}>
         <ThemeSectionContent />
       </CollapsibleSection>
