@@ -668,7 +668,7 @@ export default function InspectionsPage() {
       : 0
 
   // ── Begin new inspection of a specific type ──
-  const handleBeginNew = (type: FormType) => {
+  const handleBeginNew = async (type: FormType) => {
     const newDraft = createSingleDraft(type)
     if (type === 'airfield') {
       setAirfieldDraft(newDraft)
@@ -693,6 +693,36 @@ export default function InspectionsPage() {
       { details: `AFLD3${oiStr} is on the airfield for the ${label}` },
       installationId,
     )
+
+    // Save initial draft to DB so it persists across devices
+    const secs = type === 'airfield'
+      ? (dbAirfieldSections ?? AIRFIELD_INSPECTION_SECTIONS).filter(s => !s.conditional)
+      : (dbLightingSections ?? LIGHTING_INSPECTION_SECTIONS)
+    const { items, passed, failed, na, total } = halfDraftToItems(newDraft.half, secs)
+    const { data: saved } = await saveInspectionDraft({
+      inspection_type: type,
+      draft_data: newDraft.half,
+      items,
+      total_items: total,
+      passed_count: passed,
+      failed_count: failed,
+      na_count: na,
+      bwc_value: newDraft.half.bwcValue,
+      rsc_condition: newDraft.half.rscCondition,
+      notes: null,
+      daily_group_id: newDraft.id,
+      construction_meeting: false,
+      joint_monthly: false,
+      base_id: installationId,
+    })
+    if (saved) {
+      const updateDraft = (prev: SingleInspectionDraft | null): SingleInspectionDraft | null => {
+        if (!prev) return prev
+        return { ...prev, half: { ...prev.half, dbRowId: saved.id } }
+      }
+      if (type === 'airfield') setAirfieldDraft(updateDraft)
+      else setLightingDraft(updateDraft)
+    }
   }
 
   // ── Discard current draft ──
