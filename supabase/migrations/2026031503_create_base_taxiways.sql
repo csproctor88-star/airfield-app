@@ -15,16 +15,20 @@ CREATE TABLE IF NOT EXISTS base_taxiways (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_base_taxiways_base ON base_taxiways(base_id);
+CREATE INDEX IF NOT EXISTS idx_base_taxiways_base ON base_taxiways(base_id);
 
 -- RLS Policies
 ALTER TABLE base_taxiways ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "base_taxiways_select" ON base_taxiways;
 CREATE POLICY "base_taxiways_select" ON base_taxiways
   FOR SELECT USING (user_has_base_access(auth.uid(), base_id));
+DROP POLICY IF EXISTS "base_taxiways_insert" ON base_taxiways;
 CREATE POLICY "base_taxiways_insert" ON base_taxiways
   FOR INSERT WITH CHECK (user_has_base_access(auth.uid(), base_id));
+DROP POLICY IF EXISTS "base_taxiways_update" ON base_taxiways;
 CREATE POLICY "base_taxiways_update" ON base_taxiways
   FOR UPDATE USING (user_has_base_access(auth.uid(), base_id));
+DROP POLICY IF EXISTS "base_taxiways_delete" ON base_taxiways;
 CREATE POLICY "base_taxiways_delete" ON base_taxiways
   FOR DELETE USING (user_has_base_access(auth.uid(), base_id));

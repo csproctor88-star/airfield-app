@@ -9,5 +9,7 @@ CREATE TABLE IF NOT EXISTS base_wildlife_species (
 );
 
 ALTER TABLE base_wildlife_species ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view their base species" ON base_wildlife_species;
 CREATE POLICY "Users can view their base species" ON base_wildlife_species FOR SELECT USING (user_has_base_access(auth.uid(), base_id));
+DROP POLICY IF EXISTS "Admins can manage base species" ON base_wildlife_species;
 CREATE POLICY "Admins can manage base species" ON base_wildlife_species FOR ALL USING (user_can_write(auth.uid()) AND user_has_base_access(auth.uid(), base_id));

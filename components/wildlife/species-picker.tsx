@@ -7,6 +7,7 @@ type Props = {
   onSelect: (species: WildlifeSpecies) => void
   onClose: () => void
   allowedSpecies?: Set<string> | null
+  favoriteSpecies?: Set<string> | null
 }
 
 const GROUPS = [
@@ -20,10 +21,13 @@ const GROUPS = [
 const SIZE_ORDER = { large: 0, medium: 1, small: 2 }
 const RISK_ORDER = { critical: 0, high: 1, medium: 2, low: 3 }
 
-export function SpeciesPicker({ onSelect, onClose, allowedSpecies }: Props) {
+export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpecies }: Props) {
   const [search, setSearch] = useState('')
   const [activeGroup, setActiveGroup] = useState<string>('all')
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
+
+  const hasFavorites = favoriteSpecies && favoriteSpecies.size > 0
 
   useEffect(() => {
     searchRef.current?.focus()
@@ -38,6 +42,9 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies }: Props) {
 
   const filtered = useMemo(() => {
     let list = sourceList
+    if (showFavoritesOnly && hasFavorites) {
+      list = list.filter(s => favoriteSpecies!.has(s.common_name))
+    }
     if (activeGroup !== 'all') {
       list = list.filter(s => s.group === activeGroup)
     }
@@ -48,23 +55,35 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies }: Props) {
         s.scientific_name.toLowerCase().includes(q),
       )
     }
-    // Sort: critical/high risk first, then by size (large→small), then alphabetical
+    // Sort: favorites first (if not in favorites-only mode), then risk, size, alpha
     return [...list].sort((a, b) => {
+      if (hasFavorites && !showFavoritesOnly) {
+        const aFav = favoriteSpecies!.has(a.common_name) ? 0 : 1
+        const bFav = favoriteSpecies!.has(b.common_name) ? 0 : 1
+        if (aFav !== bFav) return aFav - bFav
+      }
       const riskDiff = RISK_ORDER[a.strike_risk] - RISK_ORDER[b.strike_risk]
       if (riskDiff !== 0) return riskDiff
       const sizeDiff = SIZE_ORDER[a.size_category] - SIZE_ORDER[b.size_category]
       if (sizeDiff !== 0) return sizeDiff
       return a.common_name.localeCompare(b.common_name)
     })
-  }, [search, activeGroup, sourceList])
+  }, [search, activeGroup, sourceList, showFavoritesOnly, hasFavorites, favoriteSpecies])
+
+  const favCount = hasFavorites
+    ? sourceList.filter(s => favoriteSpecies!.has(s.common_name)).length
+    : 0
 
   const groupCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: sourceList.length }
-    for (const sp of sourceList) {
+    const base = showFavoritesOnly && hasFavorites
+      ? sourceList.filter(s => favoriteSpecies!.has(s.common_name))
+      : sourceList
+    const counts: Record<string, number> = { all: base.length }
+    for (const sp of base) {
       counts[sp.group] = (counts[sp.group] || 0) + 1
     }
     return counts
-  }, [sourceList])
+  }, [sourceList, showFavoritesOnly, hasFavorites, favoriteSpecies])
 
   const riskColor = (risk: string) => {
     switch (risk) {
@@ -130,6 +149,19 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies }: Props) {
               }}
             />
             <div style={{ display: 'flex', gap: 4, overflowX: 'auto', flexShrink: 0 }}>
+              {hasFavorites && (
+                <button
+                  onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                  style={{
+                    padding: '6px 12px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                    fontSize: 'var(--fs-sm)', fontWeight: 700, whiteSpace: 'nowrap',
+                    background: showFavoritesOnly ? '#FBBF24' : 'var(--color-bg-surface)',
+                    color: showFavoritesOnly ? '#000' : '#FBBF24',
+                  }}
+                >
+                  ★ Favorites ({favCount})
+                </button>
+              )}
               {GROUPS.map(g => (
                 <button
                   key={g.key}
@@ -174,65 +206,91 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies }: Props) {
         <div className="species-grid" style={{
           flex: 1, overflowY: 'auto', padding: '0 12px 16px',
         }}>
-          {filtered.map(sp => (
-            <button
-              key={sp.common_name}
-              className="species-card"
-              onClick={() => onSelect(sp)}
-              style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                padding: 6, borderRadius: 10, border: '1px solid var(--color-border)',
-                background: 'var(--color-bg-surface)', cursor: 'pointer',
-                textAlign: 'center', color: 'var(--color-text)',
-                transition: 'border-color 0.15s',
-              }}
-            >
-              <div style={{
-                width: '100%', aspectRatio: '4/3', borderRadius: 8, overflow: 'hidden',
-                background: 'var(--color-bg)', marginBottom: 4, position: 'relative',
-              }}>
-                <img
-                  src={resolveWildlifeImage(sp)!}
-                  alt={sp.common_name}
-                  loading="lazy"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={e => {
-                    const img = e.target as HTMLImageElement
-                    img.style.display = 'none'
-                    const parent = img.parentElement
-                    if (parent && !parent.querySelector('.fallback-icon')) {
-                      const div = document.createElement('div')
-                      div.className = 'fallback-icon'
-                      div.style.cssText = 'display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:28px;color:var(--color-text-4);'
-                      div.textContent = sp.group === 'bird' ? '\uD83E\uDD85' : sp.group === 'mammal' ? '\uD83E\uDD8C' : sp.group === 'bat' ? '\uD83E\uDD87' : '\uD83E\uDD8E'
-                      parent.appendChild(div)
-                    }
-                  }}
-                />
-                {/* Risk indicator dot */}
+          {filtered.map((sp, idx) => {
+            const isFav = hasFavorites && favoriteSpecies!.has(sp.common_name)
+            // Insert a separator between favorites and non-favorites
+            const prevFav = idx > 0 && hasFavorites && !showFavoritesOnly && favoriteSpecies!.has(filtered[idx - 1].common_name)
+            const showSeparator = !showFavoritesOnly && hasFavorites && prevFav && !isFav
+
+            return (
+              <>{showSeparator && (
+                <div key="__sep" style={{
+                  gridColumn: '1 / -1', borderTop: '1px solid var(--color-border)',
+                  margin: '4px 0', paddingTop: 6,
+                  fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600,
+                  letterSpacing: '0.06em', textTransform: 'uppercase',
+                }}>
+                  All Species
+                </div>
+              )}
+              <button
+                key={sp.common_name}
+                className="species-card"
+                onClick={() => onSelect(sp)}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  padding: 6, borderRadius: 10,
+                  border: isFav ? '1.5px solid #FBBF24' : '1px solid var(--color-border)',
+                  background: 'var(--color-bg-surface)', cursor: 'pointer',
+                  textAlign: 'center', color: 'var(--color-text)',
+                  transition: 'border-color 0.15s',
+                }}
+              >
                 <div style={{
-                  position: 'absolute', top: 3, right: 3, width: 10, height: 10,
-                  borderRadius: '50%', background: riskColor(sp.strike_risk),
-                  border: '1.5px solid var(--color-bg-surface)',
-                }} />
-              </div>
-              <div style={{
-                fontWeight: 700, fontSize: 'var(--fs-xs)', lineHeight: 1.2,
-                overflow: 'hidden', textOverflow: 'ellipsis',
-                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                minHeight: '2.4em', width: '100%',
-              }}>
-                {sp.common_name}
-              </div>
-              <div style={{
-                fontSize: '9px', color: 'var(--color-text-4)', fontStyle: 'italic',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                width: '100%',
-              }}>
-                {sp.scientific_name}
-              </div>
-            </button>
-          ))}
+                  width: '100%', aspectRatio: '4/3', borderRadius: 8, overflow: 'hidden',
+                  background: 'var(--color-bg)', marginBottom: 4, position: 'relative',
+                }}>
+                  <img
+                    src={resolveWildlifeImage(sp)!}
+                    alt={sp.common_name}
+                    loading="lazy"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={e => {
+                      const img = e.target as HTMLImageElement
+                      img.style.display = 'none'
+                      const parent = img.parentElement
+                      if (parent && !parent.querySelector('.fallback-icon')) {
+                        const div = document.createElement('div')
+                        div.className = 'fallback-icon'
+                        div.style.cssText = 'display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:28px;color:var(--color-text-4);'
+                        div.textContent = sp.group === 'bird' ? '\uD83E\uDD85' : sp.group === 'mammal' ? '\uD83E\uDD8C' : sp.group === 'bat' ? '\uD83E\uDD87' : '\uD83E\uDD8E'
+                        parent.appendChild(div)
+                      }
+                    }}
+                  />
+                  {/* Risk indicator dot */}
+                  <div style={{
+                    position: 'absolute', top: 3, right: 3, width: 10, height: 10,
+                    borderRadius: '50%', background: riskColor(sp.strike_risk),
+                    border: '1.5px solid var(--color-bg-surface)',
+                  }} />
+                  {/* Favorite star */}
+                  {isFav && (
+                    <div style={{
+                      position: 'absolute', top: 2, left: 3,
+                      fontSize: 12, color: '#FBBF24', lineHeight: 1,
+                    }}>★</div>
+                  )}
+                </div>
+                <div style={{
+                  fontWeight: 700, fontSize: 'var(--fs-xs)', lineHeight: 1.2,
+                  overflow: 'hidden', textOverflow: 'ellipsis',
+                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                  minHeight: '2.4em', width: '100%',
+                }}>
+                  {sp.common_name}
+                </div>
+                <div style={{
+                  fontSize: '9px', color: 'var(--color-text-4)', fontStyle: 'italic',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  width: '100%',
+                }}>
+                  {sp.scientific_name}
+                </div>
+              </button>
+              </>
+            )
+          })}
           {filtered.length === 0 && (
             <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 40, color: 'var(--color-text-3)' }}>
               No species found matching &quot;{search}&quot;

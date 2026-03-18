@@ -2,12 +2,22 @@
 -- Existing taxiways default to 'faa' standard to preserve current behavior.
 
 ALTER TABLE base_taxiways
-  ADD COLUMN standard TEXT NOT NULL DEFAULT 'faa'
-    CHECK (standard IN ('faa', 'ufc')),
-  ADD COLUMN runway_class TEXT
-    CHECK (runway_class IN ('A', 'B')),
-  ADD COLUMN service_branch TEXT
-    CHECK (service_branch IN ('army', 'air_force', 'navy_mc'));
+  ADD COLUMN IF NOT EXISTS standard TEXT NOT NULL DEFAULT 'faa',
+  ADD COLUMN IF NOT EXISTS runway_class TEXT,
+  ADD COLUMN IF NOT EXISTS service_branch TEXT;
+
+-- Add CHECK constraints only if they don't exist
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'base_taxiways_standard_check') THEN
+    ALTER TABLE base_taxiways ADD CONSTRAINT base_taxiways_standard_check CHECK (standard IN ('faa', 'ufc'));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'base_taxiways_runway_class_check') THEN
+    ALTER TABLE base_taxiways ADD CONSTRAINT base_taxiways_runway_class_check CHECK (runway_class IN ('A', 'B'));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'base_taxiways_service_branch_check') THEN
+    ALTER TABLE base_taxiways ADD CONSTRAINT base_taxiways_service_branch_check CHECK (service_branch IN ('army', 'air_force', 'navy_mc'));
+  END IF;
+END $$;
 
 -- Make tdg nullable — only used for FAA standard
 ALTER TABLE base_taxiways ALTER COLUMN tdg DROP NOT NULL;

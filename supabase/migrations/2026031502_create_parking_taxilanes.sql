@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS parking_taxilanes (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_parking_taxilanes_plan ON parking_taxilanes(plan_id);
-CREATE INDEX idx_parking_taxilanes_base ON parking_taxilanes(base_id);
+CREATE INDEX IF NOT EXISTS idx_parking_taxilanes_plan ON parking_taxilanes(plan_id);
+CREATE INDEX IF NOT EXISTS idx_parking_taxilanes_base ON parking_taxilanes(base_id);
 
 -- ── Parking Apron Boundaries ──
 CREATE TABLE IF NOT EXISTS parking_apron_boundaries (
@@ -34,29 +34,37 @@ CREATE TABLE IF NOT EXISTS parking_apron_boundaries (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_parking_apron_boundaries_plan ON parking_apron_boundaries(plan_id);
-CREATE INDEX idx_parking_apron_boundaries_base ON parking_apron_boundaries(base_id);
+CREATE INDEX IF NOT EXISTS idx_parking_apron_boundaries_plan ON parking_apron_boundaries(plan_id);
+CREATE INDEX IF NOT EXISTS idx_parking_apron_boundaries_base ON parking_apron_boundaries(base_id);
 
 -- ── RLS Policies ──
 ALTER TABLE parking_taxilanes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE parking_apron_boundaries ENABLE ROW LEVEL SECURITY;
 
 -- ── Parking Taxilanes ──
+DROP POLICY IF EXISTS "parking_taxilanes_select" ON parking_taxilanes;
 CREATE POLICY "parking_taxilanes_select" ON parking_taxilanes
   FOR SELECT USING (user_has_base_access(auth.uid(), base_id));
+DROP POLICY IF EXISTS "parking_taxilanes_insert" ON parking_taxilanes;
 CREATE POLICY "parking_taxilanes_insert" ON parking_taxilanes
   FOR INSERT WITH CHECK (user_has_base_access(auth.uid(), base_id));
+DROP POLICY IF EXISTS "parking_taxilanes_update" ON parking_taxilanes;
 CREATE POLICY "parking_taxilanes_update" ON parking_taxilanes
   FOR UPDATE USING (user_has_base_access(auth.uid(), base_id));
+DROP POLICY IF EXISTS "parking_taxilanes_delete" ON parking_taxilanes;
 CREATE POLICY "parking_taxilanes_delete" ON parking_taxilanes
   FOR DELETE USING (user_has_base_access(auth.uid(), base_id));
 
 -- ── Parking Apron Boundaries ──
+DROP POLICY IF EXISTS "parking_apron_boundaries_select" ON parking_apron_boundaries;
 CREATE POLICY "parking_apron_boundaries_select" ON parking_apron_boundaries
   FOR SELECT USING (user_has_base_access(auth.uid(), base_id));
+DROP POLICY IF EXISTS "parking_apron_boundaries_insert" ON parking_apron_boundaries;
 CREATE POLICY "parking_apron_boundaries_insert" ON parking_apron_boundaries
   FOR INSERT WITH CHECK (user_has_base_access(auth.uid(), base_id));
+DROP POLICY IF EXISTS "parking_apron_boundaries_update" ON parking_apron_boundaries;
 CREATE POLICY "parking_apron_boundaries_update" ON parking_apron_boundaries
   FOR UPDATE USING (user_has_base_access(auth.uid(), base_id));
+DROP POLICY IF EXISTS "parking_apron_boundaries_delete" ON parking_apron_boundaries;
 CREATE POLICY "parking_apron_boundaries_delete" ON parking_apron_boundaries
   FOR DELETE USING (user_has_base_access(auth.uid(), base_id));

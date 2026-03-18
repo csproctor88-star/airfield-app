@@ -14,8 +14,8 @@ CREATE TABLE IF NOT EXISTS parking_plans (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_parking_plans_base ON parking_plans(base_id);
-CREATE INDEX idx_parking_plans_active ON parking_plans(base_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_parking_plans_base ON parking_plans(base_id);
+CREATE INDEX IF NOT EXISTS idx_parking_plans_active ON parking_plans(base_id, is_active);
 
 -- ── Parking Spots ──
 CREATE TABLE IF NOT EXISTS parking_spots (
@@ -38,8 +38,8 @@ CREATE TABLE IF NOT EXISTS parking_spots (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_parking_spots_plan ON parking_spots(plan_id);
-CREATE INDEX idx_parking_spots_base ON parking_spots(base_id);
+CREATE INDEX IF NOT EXISTS idx_parking_spots_plan ON parking_spots(plan_id);
+CREATE INDEX IF NOT EXISTS idx_parking_spots_base ON parking_spots(base_id);
 
 -- ── Parking Obstacles ──
 CREATE TABLE IF NOT EXISTS parking_obstacles (
@@ -61,24 +61,36 @@ CREATE TABLE IF NOT EXISTS parking_obstacles (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_parking_obstacles_base ON parking_obstacles(base_id);
+CREATE INDEX IF NOT EXISTS idx_parking_obstacles_base ON parking_obstacles(base_id);
 
 -- ── RLS Policies ──
 ALTER TABLE parking_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE parking_spots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE parking_obstacles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "parking_plans_select" ON parking_plans;
 CREATE POLICY "parking_plans_select" ON parking_plans FOR SELECT USING (true);
+DROP POLICY IF EXISTS "parking_plans_insert" ON parking_plans;
 CREATE POLICY "parking_plans_insert" ON parking_plans FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "parking_plans_update" ON parking_plans;
 CREATE POLICY "parking_plans_update" ON parking_plans FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "parking_plans_delete" ON parking_plans;
 CREATE POLICY "parking_plans_delete" ON parking_plans FOR DELETE USING (true);
 
+DROP POLICY IF EXISTS "parking_spots_select" ON parking_spots;
 CREATE POLICY "parking_spots_select" ON parking_spots FOR SELECT USING (true);
+DROP POLICY IF EXISTS "parking_spots_insert" ON parking_spots;
 CREATE POLICY "parking_spots_insert" ON parking_spots FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "parking_spots_update" ON parking_spots;
 CREATE POLICY "parking_spots_update" ON parking_spots FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "parking_spots_delete" ON parking_spots;
 CREATE POLICY "parking_spots_delete" ON parking_spots FOR DELETE USING (true);
 
+DROP POLICY IF EXISTS "parking_obstacles_select" ON parking_obstacles;
 CREATE POLICY "parking_obstacles_select" ON parking_obstacles FOR SELECT USING (true);
+DROP POLICY IF EXISTS "parking_obstacles_insert" ON parking_obstacles;
 CREATE POLICY "parking_obstacles_insert" ON parking_obstacles FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "parking_obstacles_update" ON parking_obstacles;
 CREATE POLICY "parking_obstacles_update" ON parking_obstacles FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "parking_obstacles_delete" ON parking_obstacles;
 CREATE POLICY "parking_obstacles_delete" ON parking_obstacles FOR DELETE USING (true);

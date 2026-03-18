@@ -32,7 +32,7 @@ import {
 import { SYSTEM_TYPE_LABELS, SYSTEM_TYPES } from '@/lib/outage-rules'
 import type { LightingSystem, LightingSystemComponent, OutageRuleTemplate, InfrastructureFeature } from '@/lib/supabase/types'
 import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
-import { fetchBaseSpecies, addBaseSpecies, addBaseSpeciesBulk, removeBaseSpeciesByName, type BaseWildlifeSpeciesRow } from '@/lib/supabase/base-wildlife-species'
+import { fetchBaseSpecies, addBaseSpecies, addBaseSpeciesBulk, removeBaseSpeciesByName, toggleFavoriteSpecies, type BaseWildlifeSpeciesRow } from '@/lib/supabase/base-wildlife-species'
 
 type SetupTab = 'runways' | 'taxiways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'facilities' | 'templates' | 'shiftchecklist' | 'qrc' | 'lighting' | 'wildlife'
 
@@ -2495,6 +2495,7 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
   useEffect(() => { loadSpecies() }, [loadSpecies])
 
   const baseSpeciesNames = useMemo(() => new Set(baseSpecies.map(s => s.species_common)), [baseSpecies])
+  const favoriteNames = useMemo(() => new Set(baseSpecies.filter(s => s.is_favorite).map(s => s.species_common)), [baseSpecies])
 
   const filtered = useMemo(() => {
     let list = WILDLIFE_SPECIES as WildlifeSpecies[]
@@ -2513,13 +2514,19 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
       const aInBase = baseSpeciesNames.has(a.common_name) ? 0 : 1
       const bInBase = baseSpeciesNames.has(b.common_name) ? 0 : 1
       if (aInBase !== bInBase) return aInBase - bInBase
+      // Favorites before non-favorites (within base species)
+      if (aInBase === 0 && bInBase === 0) {
+        const aFav = favoriteNames.has(a.common_name) ? 0 : 1
+        const bFav = favoriteNames.has(b.common_name) ? 0 : 1
+        if (aFav !== bFav) return aFav - bFav
+      }
       const riskDiff = RISK_ORDER[a.strike_risk] - RISK_ORDER[b.strike_risk]
       if (riskDiff !== 0) return riskDiff
       const sizeDiff = SIZE_ORDER[a.size_category] - SIZE_ORDER[b.size_category]
       if (sizeDiff !== 0) return sizeDiff
       return a.common_name.localeCompare(b.common_name)
     })
-  }, [search, activeGroup, baseSpeciesNames])
+  }, [search, activeGroup, baseSpeciesNames, favoriteNames])
 
   const groupCounts = useMemo(() => {
     const counts: Record<string, number> = { all: WILDLIFE_SPECIES.length }
@@ -2550,6 +2557,18 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
       if (error) toast.error(error)
       else toast.success(`Added ${sp.common_name}`)
     }
+    await loadSpecies()
+    setAdding(null)
+  }
+
+  async function toggleFav(e: React.MouseEvent, sp: WildlifeSpecies) {
+    e.stopPropagation()
+    if (!installationId) return
+    const newVal = !favoriteNames.has(sp.common_name)
+    setAdding(sp.common_name)
+    const { error } = await toggleFavoriteSpecies(installationId, sp.common_name, newVal)
+    if (error) toast.error(error)
+    else toast.success(newVal ? `Favorited ${sp.common_name}` : `Unfavorited ${sp.common_name}`)
     await loadSpecies()
     setAdding(null)
   }
@@ -2689,6 +2708,20 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 12, color: '#fff', fontWeight: 700, zIndex: 1,
                 }}>&#10003;</div>
+              )}
+              {inBase && (
+                <div
+                  onClick={(e) => toggleFav(e, sp)}
+                  style={{
+                    position: 'absolute', top: 3, right: 3, zIndex: 2,
+                    width: 22, height: 22, borderRadius: '50%',
+                    background: 'rgba(0,0,0,0.5)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 14, lineHeight: 1, cursor: 'pointer',
+                    color: favoriteNames.has(sp.common_name) ? '#FBBF24' : 'rgba(255,255,255,0.5)',
+                  }}
+                  title={favoriteNames.has(sp.common_name) ? 'Remove from favorites' : 'Add to favorites'}
+                >&#9733;</div>
               )}
               <div style={{
                 width: '100%', aspectRatio: '4/3', borderRadius: 8, overflow: 'hidden',

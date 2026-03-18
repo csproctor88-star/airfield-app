@@ -4,7 +4,7 @@
 -- at bar granularity rather than individual light granularity.
 
 ALTER TABLE infrastructure_features
-  ADD COLUMN bar_group_id UUID DEFAULT NULL;
+  ADD COLUMN IF NOT EXISTS bar_group_id UUID DEFAULT NULL;
 
 -- Index for efficient grouping queries
 CREATE INDEX IF NOT EXISTS idx_infra_features_bar_group

@@ -45,10 +45,15 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
   const isEdit = !!initialData
 
   const [baseSpeciesNames, setBaseSpeciesNames] = useState<Set<string> | null>(null)
+  const [favoriteSpeciesNames, setFavoriteSpeciesNames] = useState<Set<string> | null>(null)
   useEffect(() => {
     if (!installationId) return
     fetchBaseSpecies(installationId).then(rows => {
-      if (rows.length > 0) setBaseSpeciesNames(new Set(rows.map(r => r.species_common)))
+      if (rows.length > 0) {
+        setBaseSpeciesNames(new Set(rows.map(r => r.species_common)))
+        const favs = rows.filter(r => r.is_favorite).map(r => r.species_common)
+        if (favs.length > 0) setFavoriteSpeciesNames(new Set(favs))
+      }
     })
   }, [installationId])
 
@@ -645,6 +650,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
             onSelect={sp => { setSelectedSpecies(sp); setShowPicker(false) }}
             onClose={() => setShowPicker(false)}
             allowedSpecies={baseSpeciesNames}
+            favoriteSpecies={favoriteSpeciesNames}
           />
         )}
       </>
