@@ -412,14 +412,19 @@ export function StatusUpdateModal({
   const [resolutionNotes, setResolutionNotes] = useState(discrepancy.resolution_notes || '')
   const [assignedShop, setAssignedShop] = useState(discrepancy.assigned_shop || '')
 
-  // Determine if resolution notes should be required
-  const needsResolutionNotes = currentStatus === 'work_completed_awaiting_verification' || newStatus === 'completed'
+  // Determine if resolution/remarks notes should be required
+  const needsResolutionNotes = currentStatus === 'work_completed_awaiting_verification' || currentStatus === 'waiting_for_project' || newStatus === 'completed'
 
   const handleSave = async () => {
-    // Require notes when CES marks work completed
+    // Require notes when CES marks work completed or sends to project
     if (currentStatus === 'work_completed_awaiting_verification' && !resolutionNotes.trim() && !notes.trim()) {
       const { toast } = await import('sonner')
       toast.error('Please describe the work completed before marking as done')
+      return
+    }
+    if (currentStatus === 'waiting_for_project' && !resolutionNotes.trim() && !notes.trim()) {
+      const { toast } = await import('sonner')
+      toast.error('Please provide remarks explaining why this requires a project')
       return
     }
 
@@ -603,23 +608,36 @@ export function StatusUpdateModal({
         </div>
       )}
 
-      {/* Resolution notes — shown when work completed or closing */}
-      {needsResolutionNotes && (
-        <div style={{
-          marginBottom: 12, padding: 10, borderRadius: 8,
-          background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)',
-        }}>
-          <FieldLabel>
-            {newStatus === 'completed' ? 'Resolution Summary' : 'Work Completed — Describe Actions Taken'}
-            <span style={{ color: '#EF4444', marginLeft: 4 }}>*</span>
-          </FieldLabel>
-          <textarea className="input-dark" rows={3} style={{ resize: 'vertical' }}
-            placeholder={newStatus === 'completed'
-              ? 'Summarize how this discrepancy was resolved...'
-              : 'Describe the work performed, parts used, etc...'}
-            value={resolutionNotes} onChange={(e) => setResolutionNotes(e.target.value)} />
-        </div>
-      )}
+      {/* Resolution / remarks notes — shown when work completed, project, or closing */}
+      {needsResolutionNotes && (() => {
+        const isProject = currentStatus === 'waiting_for_project'
+        const isComplete = currentStatus === 'work_completed_awaiting_verification' || newStatus === 'completed'
+        const accentColor = isProject ? 'rgba(167,139,250,' : 'rgba(34,197,94,'
+        const label = isProject
+          ? 'Project Remarks — Why does this require a project?'
+          : newStatus === 'completed'
+            ? 'Resolution Summary'
+            : 'Work Completed — Describe Actions Taken'
+        const placeholder = isProject
+          ? 'Describe the scope, project number if known, expected timeline...'
+          : newStatus === 'completed'
+            ? 'Summarize how this discrepancy was resolved...'
+            : 'Describe the work performed, parts used, etc...'
+        return (
+          <div style={{
+            marginBottom: 12, padding: 10, borderRadius: 8,
+            background: `${accentColor}0.06)`, border: `1px solid ${accentColor}0.2)`,
+          }}>
+            <FieldLabel>
+              {label}
+              <span style={{ color: '#EF4444', marginLeft: 4 }}>*</span>
+            </FieldLabel>
+            <textarea className="input-dark" rows={3} style={{ resize: 'vertical' }}
+              placeholder={placeholder}
+              value={resolutionNotes} onChange={(e) => setResolutionNotes(e.target.value)} />
+          </div>
+        )
+      })()}
 
       <div style={{ marginBottom: 12 }}>
         <FieldLabel>Notes (optional)</FieldLabel>
