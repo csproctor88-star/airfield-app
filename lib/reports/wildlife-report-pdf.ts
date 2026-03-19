@@ -373,7 +373,49 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
       try {
         const imgWidth = pageWidth - margin * 2
         const imgHeight = imgWidth * (500 / 800) // maintain 800x500 aspect ratio
-        doc.addImage(mapDataUrl, 'PNG', margin, y, imgWidth, imgHeight)
+        const mapImgX = margin
+        const mapImgY = y
+        doc.addImage(mapDataUrl, 'PNG', mapImgX, mapImgY, imgWidth, imgHeight)
+
+        // Draw numbered labels on top of the map at each sighting's position
+        // Convert geo coords to pixel position using Web Mercator at zoom 13
+        const mapZoom = 13
+        const mapPixelW = 800 * 2 // @2x retina
+        const mapPixelH = 500 * 2
+        const scale = Math.pow(2, mapZoom) * 256 / (2 * Math.PI)
+        const centerXpx = scale * (centerLng * Math.PI / 180 + Math.PI)
+        const centerYpx = scale * (Math.PI - Math.log(Math.tan(Math.PI / 4 + centerLat * Math.PI / 360)))
+
+        for (const pt of heatmapPoints) {
+          if (pt.type !== 'sighting' || !pt.display_id) continue
+          const idx = sightingIdxMap.get(pt.display_id)
+          if (idx == null || idx >= 35) continue
+
+          const ptXpx = scale * (pt.lng * Math.PI / 180 + Math.PI)
+          const ptYpx = scale * (Math.PI - Math.log(Math.tan(Math.PI / 4 + pt.lat * Math.PI / 360)))
+          // Offset from center in pixels, then scale to PDF dimensions
+          const relX = (ptXpx - centerXpx) / mapPixelW * imgWidth + imgWidth / 2
+          const relY = (ptYpx - centerYpx) / mapPixelH * imgHeight + imgHeight / 2
+
+          // Only draw if within map bounds
+          if (relX >= 0 && relX <= imgWidth && relY >= 0 && relY <= imgHeight) {
+            const pdfX = mapImgX + relX
+            const pdfY = mapImgY + relY
+            const label = markerLabel(idx)
+            // White circle background
+            doc.setFillColor(255, 255, 255)
+            doc.circle(pdfX, pdfY - 2, 6, 'F')
+            doc.setDrawColor(16, 185, 129)
+            doc.setLineWidth(0.8)
+            doc.circle(pdfX, pdfY - 2, 6, 'S')
+            // Label text
+            doc.setFontSize(6)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(0)
+            doc.text(label, pdfX, pdfY, { align: 'center' })
+          }
+        }
+
         y += imgHeight + 8
       } catch {
         doc.setFontSize(8)
