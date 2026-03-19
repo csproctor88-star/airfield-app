@@ -45,6 +45,12 @@ export interface AnalyticsData {
     evaluated: number
     violations: number
   }
+  // Parking Plans
+  parking: {
+    totalPlans: number
+    createdInPeriod: number
+    activePlan: string | null
+  }
 }
 
 const EMPTY_INSP: InspectionMetrics = { completed: 0, avgMinutes: null, passRate: null }
@@ -58,6 +64,7 @@ const EMPTY: AnalyticsData = {
   qrc: { executionsLast30: 0, avgResponseMinutes: null },
   wildlife: { sightings: 0, strikes: 0, topSpecies: null },
   obstructions: { evaluated: 0, violations: 0 },
+  parking: { totalPlans: 0, createdInPeriod: 0, activePlan: null },
 }
 
 export async function fetchAnalyticsData(baseId: string | null, days = 30): Promise<AnalyticsData> {
@@ -77,6 +84,7 @@ export async function fetchAnalyticsData(baseId: string | null, days = 30): Prom
       qrcData,
       wildlifeData,
       obstructionData,
+      parkingData,
     ] = await Promise.all([
       fetchInspectionAnalytics(supabase, baseId, since),
       fetchCheckAnalytics(supabase, baseId, since),
@@ -85,6 +93,7 @@ export async function fetchAnalyticsData(baseId: string | null, days = 30): Prom
       fetchQrcAnalytics(supabase, baseId, since),
       fetchWildlifeAnalytics(supabase, baseId, since),
       fetchObstructionAnalytics(supabase, baseId, since),
+      fetchParkingAnalytics(supabase, baseId, since),
     ])
 
     return {
@@ -96,6 +105,7 @@ export async function fetchAnalyticsData(baseId: string | null, days = 30): Prom
       qrc: qrcData,
       wildlife: wildlifeData,
       obstructions: obstructionData,
+      parking: parkingData,
     }
   } catch (e) {
     console.error('Analytics fetch failed:', e)
@@ -335,5 +345,29 @@ async function fetchObstructionAnalytics(supabase: any, baseId: string, since: s
   return {
     evaluated: rows.length,
     violations: rows.filter(r => r.has_violation).length,
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchParkingAnalytics(supabase: any, baseId: string, since: string) {
+  const [allPlans, recentPlans] = await Promise.all([
+    supabase
+      .from('parking_plans')
+      .select('id, plan_name, is_active')
+      .eq('base_id', baseId),
+    supabase
+      .from('parking_plans')
+      .select('id')
+      .eq('base_id', baseId)
+      .gte('created_at', since),
+  ])
+
+  const all = (allPlans.data ?? []) as { id: string; plan_name: string; is_active: boolean }[]
+  const active = all.find(p => p.is_active)
+
+  return {
+    totalPlans: all.length,
+    createdInPeriod: (recentPlans.data ?? []).length,
+    activePlan: active?.plan_name || null,
   }
 }

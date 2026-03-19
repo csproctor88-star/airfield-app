@@ -211,6 +211,18 @@ export default function ReportsPage() {
             </StatRow>
           </StyledCard>
 
+          {/* Parking Plans */}
+          <StyledCard accent="#38BDF8">
+            <CardHeader>Parking Plans</CardHeader>
+            <BigNumber value={analytics.parking.totalPlans} label="total plans" />
+            <StatRow label={`Created (${periodLabel})`} value={analytics.parking.createdInPeriod} />
+            {analytics.parking.activePlan && (
+              <div style={{ marginTop: 2, fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)' }}>
+                Active: <span style={{ fontWeight: 600, color: 'var(--color-cyan)' }}>{analytics.parking.activePlan}</span>
+              </div>
+            )}
+          </StyledCard>
+
           {/* Wildlife / BASH */}
           <StyledCard accent="#10B981">
             <CardHeader>Wildlife / BASH</CardHeader>
