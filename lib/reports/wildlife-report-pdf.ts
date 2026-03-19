@@ -26,36 +26,17 @@ function titleCase(str: string): string {
     .replace(/\b\w/g, c => c.toUpperCase())
 }
 
-/** Marker labels: 1-9, then A-Z (up to 35 points) */
-function markerLabel(index: number): string {
-  if (index < 9) return String(index + 1)
-  return String.fromCharCode(65 + index - 9) // A=9, B=10, ...
-}
-
-/** Build Mapbox Static Image with labeled pin markers.
- *  Uses pin-s-{label}+{color}(lng,lat) URL syntax for native label support. */
-async function fetchHeatmapImageDataUrl(
-  points: { lat: number; lng: number; type: string; label?: string }[],
+/** Fetch a plain satellite basemap (no markers) from Mapbox Static API */
+async function fetchBasemapDataUrl(
   centerLat: number,
   centerLng: number,
+  zoom: number,
 ): Promise<string | null> {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   if (!token || token === 'your-mapbox-token-here') return null
-  if (points.length === 0) return null
 
   try {
-    // Build pin overlay strings: pin-s-{label}+{color}(lng,lat)
-    // Mapbox supports labels: 0-9, a-z as single characters on pins
-    // Limit to ~80 markers to keep URL under length limits
-    const pins = points.slice(0, 80).map(p => {
-      const color = p.type === 'strike' ? 'e53e3e' : '10B981'
-      const labelPart = p.label ? `-${p.label.toLowerCase()}` : ''
-      return `pin-s${labelPart}+${color}(${p.lng.toFixed(5)},${p.lat.toFixed(5)})`
-    })
-
-    const overlay = pins.join(',')
-    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${overlay}/${centerLng},${centerLat},13,0/800x500@2x?access_token=${token}&logo=false&attribution=false`
-
+    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${centerLng},${centerLat},${zoom},0/800x500@2x?access_token=${token}&logo=false&attribution=false`
     const res = await fetch(url)
     if (!res.ok) return null
     const blob = await res.blob()
@@ -68,6 +49,33 @@ async function fetchHeatmapImageDataUrl(
   } catch {
     return null
   }
+}
+
+// ── Web Mercator helpers for map pin placement ──
+const MAP_ZOOM = 13
+const MAP_W = 800  // logical pixel width of static image
+const MAP_H = 500
+
+function lngToWorldPx(lng: number, zoom: number): number {
+  return ((lng + 180) / 360) * 256 * Math.pow(2, zoom)
+}
+
+function latToWorldPx(lat: number, zoom: number): number {
+  const sinLat = Math.sin(lat * Math.PI / 180)
+  return (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * 256 * Math.pow(2, zoom)
+}
+
+/** Convert geo coordinate to image pixel offset from top-left of the 800x500 static image */
+function geoToImagePx(
+  lng: number, lat: number,
+  centerLng: number, centerLat: number,
+  zoom: number,
+): { x: number; y: number } {
+  const cx = lngToWorldPx(centerLng, zoom)
+  const cy = latToWorldPx(centerLat, zoom)
+  const px = lngToWorldPx(lng, zoom)
+  const py = latToWorldPx(lat, zoom)
+  return { x: (px - cx) + MAP_W / 2, y: (py - cy) + MAP_H / 2 }
 }
 
 export async function generateWildlifeReportPdf(options: Options): Promise<{ doc: jsPDF; filename: string }> {
@@ -276,7 +284,7 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
       if (y > 620) { doc.addPage(); y = margin }
 
       // Sighting header bar with map pin number
-      const pinLabel = markerLabel(i)
+      const pinLabel = String(i + 1)
       doc.setFillColor(16, 185, 129)
       doc.rect(margin, y - 10, pageWidth - margin * 2, 14, 'F')
       doc.setFontSize(9)
@@ -367,23 +375,63 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
     const sightingCount = heatmapPoints.filter(p => p.type === 'sighting').length
     const strikeCount = heatmapPoints.filter(p => p.type === 'strike').length
 
-    // Assign labels to sighting points for the map
-    const labeledPoints = heatmapPoints.map(p => {
-      let label: string | undefined
-      if (p.display_id && p.type === 'sighting') {
-        const idx = sightingIdxMap.get(p.display_id)
-        if (idx != null && idx < 35) label = markerLabel(idx)
-      }
-      return { lat: p.lat, lng: p.lng, type: p.type, label }
-    })
-
-    const mapDataUrl = await fetchHeatmapImageDataUrl(labeledPoints, centerLat, centerLng)
+    const mapDataUrl = await fetchBasemapDataUrl(centerLat, centerLng, MAP_ZOOM)
     if (mapDataUrl) {
       try {
-        const imgWidth = pageWidth - margin * 2
-        const imgHeight = imgWidth * (500 / 800) // maintain 800x500 aspect ratio
-        doc.addImage(mapDataUrl, 'PNG', margin, y, imgWidth, imgHeight)
-        y += imgHeight + 8
+        const imgWidthPt = pageWidth - margin * 2
+        const imgHeightPt = imgWidthPt * (MAP_H / MAP_W)
+        const mapX = margin
+        const mapY = y
+        doc.addImage(mapDataUrl, 'PNG', mapX, mapY, imgWidthPt, imgHeightPt)
+
+        // Scale factors: image pixels → PDF points
+        const scaleX = imgWidthPt / MAP_W
+        const scaleY = imgHeightPt / MAP_H
+
+        // Draw all pins on top of the basemap
+        for (const pt of heatmapPoints) {
+          const imgPos = geoToImagePx(pt.lng, pt.lat, centerLng, centerLat, MAP_ZOOM)
+          // Skip if outside image bounds
+          if (imgPos.x < 0 || imgPos.x > MAP_W || imgPos.y < 0 || imgPos.y > MAP_H) continue
+
+          const pdfX = mapX + imgPos.x * scaleX
+          const pdfY = mapY + imgPos.y * scaleY
+          const isStrike = pt.type === 'strike'
+
+          // Get label for sightings
+          let label: string | undefined
+          if (!isStrike && pt.display_id) {
+            const idx = sightingIdxMap.get(pt.display_id)
+            if (idx != null) label = String(idx + 1)
+          }
+
+          const radius = label && label.length > 1 ? 7 : 6
+
+          // Colored circle
+          if (isStrike) {
+            doc.setFillColor(239, 68, 68)
+          } else {
+            doc.setFillColor(16, 185, 129)
+          }
+          doc.circle(pdfX, pdfY, radius, 'F')
+
+          // White border
+          doc.setDrawColor(255, 255, 255)
+          doc.setLineWidth(1)
+          doc.circle(pdfX, pdfY, radius, 'S')
+
+          // Label text
+          if (label) {
+            doc.setFontSize(label.length > 1 ? 5.5 : 6.5)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(255, 255, 255)
+            doc.text(label, pdfX, pdfY + (label.length > 1 ? 1.8 : 2), { align: 'center' })
+          }
+        }
+
+        // Reset text color
+        doc.setTextColor(0)
+        y += imgHeightPt + 8
       } catch {
         doc.setFontSize(8)
         doc.text('(Map image could not be rendered)', margin, y)
@@ -420,8 +468,8 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
       doc.text('Map Pin Key:', margin, y)
       y += 10
 
-      const keyBody = sightings.slice(0, 35).map((s, i) => [
-        markerLabel(i),
+      const keyBody = sightings.map((s, i) => [
+        String(i + 1),
         s.display_id,
         s.species_common,
         s.location_text || '—',
