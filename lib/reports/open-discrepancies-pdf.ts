@@ -1,22 +1,20 @@
 import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import type { OpenDiscrepanciesData, PhotoForReport } from './open-discrepancies-data'
+import type { OpenDiscrepanciesData } from './open-discrepancies-data'
 import { formatDiscrepancyType } from './open-discrepancies-data'
 import { formatZuluDateTime, formatZuluDateShort } from '@/lib/utils'
+import {
+  PDF_STATUS_LABELS,
+  BASIC_COLUMNS,
+  ALL_OPTIONAL_COLUMNS,
+  buildDiscrepancyTable,
+  type DiscrepancyRowData,
+} from '@/lib/pdf-config'
 
 interface Options {
   generatedBy: string
   baseName?: string
   baseIcao?: string
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  submitted_to_afm: 'Submitted to AFM',
-  submitted_to_ces: 'Submitted to CES',
-  awaiting_action_by_ces: 'Awaiting CES Action',
-  waiting_for_project: 'Waiting for Project',
-  work_completed_awaiting_verification: 'Awaiting Verification',
-  open: 'Open',
+  selectedColumns?: string[]
 }
 
 export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: Options) {
@@ -27,6 +25,9 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
   const contentWidth = pageWidth - margin * 2
   let y = margin
   let pageNum = 1
+
+  // Default to all columns for backward compatibility
+  const selectedColumns = opts.selectedColumns || [...BASIC_COLUMNS, ...ALL_OPTIONAL_COLUMNS]
 
   function addPageNumber() {
     doc.setFontSize(8)
@@ -123,7 +124,6 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
   y += 3
 
   // ── DISCREPANCY ENTRIES ──
-  // Sort by days open descending (oldest first)
   const sorted = [...data.discrepancies].sort((a, b) => b.days_open - a.days_open)
 
   sectionHeader('ALL OPEN DISCREPANCIES')
@@ -144,145 +144,42 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
     }
   }
 
-  // Render each discrepancy as a table row with inline photo thumbnails
-  const tableBody = sorted.map((d) => {
+  // Map to DiscrepancyRowData
+  const tableRows: DiscrepancyRowData[] = sorted.map((d) => {
     const reporter = d.reporter_rank ? `${d.reporter_rank} ${d.reporter_name}` : d.reporter_name
-    const lastUpdate = d.last_update_at
-      ? formatZuluDateShort(d.last_update_at)
-      : ''
-    return [
-      d.display_id,
-      d.title,
-      formatDiscrepancyType(d.type),
-      d.location_text,
-      d.work_order_number || '',
-      d.assigned_shop || 'Unassigned',
-      STATUS_LABELS[d.current_status] || d.current_status,
-      d.days_open.toString(),
-      reporter,
-      lastUpdate,
-      commentsById[d.id] || '',
-      '', // Photos rendered via didDrawCell
-    ]
+    const lastUpdate = d.last_update_at ? formatZuluDateShort(d.last_update_at) : ''
+    const photos = data.photos[d.id] || []
+
+    return {
+      id: d.id,
+      work_order: d.work_order_number || '',
+      title: d.title,
+      status_label: PDF_STATUS_LABELS[d.current_status] || d.current_status,
+      location: d.location_text,
+      type_label: formatDiscrepancyType(d.type),
+      shop: d.assigned_shop || 'Unassigned',
+      days_open: d.days_open,
+      reported_by: reporter,
+      last_update: lastUpdate,
+      comments: commentsById[d.id] || '',
+      photos,
+    }
   })
 
-  const discPhotos = sorted.map((d) => data.photos[d.id] || [])
-
-  autoTable(doc, {
+  const finalY = buildDiscrepancyTable({
+    doc,
     startY: y,
-    margin: { left: margin, right: margin },
-    head: [['ID', 'Title', 'Type', 'Location', 'W/O #', 'Shop', 'Status', 'Days', 'Reported By', 'Last Update', 'Comments', 'Photos']],
-    body: tableBody,
-    styles: { fontSize: 7, cellPadding: 1.5, textColor: [0, 0, 0] },
-    headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
-    alternateRowStyles: { fillColor: [245, 245, 245] },
-    columnStyles: {
-      0: { cellWidth: 18 },   // ID
-      1: { cellWidth: 28 },   // Title
-      2: { cellWidth: 22 },   // Type
-      3: { cellWidth: 14 },   // Location
-      4: { cellWidth: 16 },   // W/O #
-      5: { cellWidth: 20 },   // Shop
-      6: { cellWidth: 24 },   // Status
-      7: { cellWidth: 10, halign: 'center' },  // Days
-      8: { cellWidth: 20 },   // Reported By
-      9: { cellWidth: 14 },   // Last Update
-      10: { cellWidth: 32, fontSize: 6 },  // Comments
-      11: { cellWidth: 34 },  // Photos
-    },
-    didParseCell: (hookData) => {
-      if (hookData.section !== 'body') return
-      const rowIdx = hookData.row.index
-      const disc = sorted[rowIdx]
-      if (!disc) return
-
-      // Bold + red for >30 days
-      if (disc.days_open > 30 && hookData.column.index === 7) {
-        hookData.cell.styles.textColor = [220, 38, 38]
-        hookData.cell.styles.fontStyle = 'bold'
-      }
-
-      // Set row height for photos (applied to ALL cells so the entire row expands)
-      const photos = discPhotos[rowIdx] || []
-      if (photos.length > 0) {
-        hookData.cell.styles.minCellHeight = photoCellHeight(photos.length, 34)
-      }
-    },
-    didDrawCell: (hookData) => {
-      if (hookData.section === 'body' && hookData.column.index === 11) {
-        const photos = discPhotos[hookData.row.index] || []
-        drawPhotosInCell(doc, photos, hookData.cell.x, hookData.cell.y, hookData.cell.width)
-      }
-    },
+    margin,
+    selectedColumns,
+    rows: tableRows,
+    pageWidth,
   })
-  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6
+  y = finalY + 6
 
   // Footer
   addPageNumber()
 
-  // Return doc + filename (caller decides to save or email)
   const dateStr = now.toISOString().split('T')[0]
   const filename = `${opts.baseIcao ?? 'AIRFIELD'}_Open_Discrepancies_${dateStr}.pdf`
   return { doc, filename }
-}
-
-// ── Photo rendering helper ──
-
-const OD_PHOTO_THUMB_W = 20 // mm
-const OD_PHOTO_THUMB_H = 15 // mm (4:3 ratio)
-const OD_PHOTO_GAP = 1.5 // mm
-const OD_PHOTO_PADDING = 2 // mm
-
-/** Compute the minimum cell height needed to display N photos in a cell of given width. */
-function photoCellHeight(numPhotos: number, cellWidth: number): number {
-  if (numPhotos === 0) return 0
-  const available = cellWidth - OD_PHOTO_PADDING * 2
-  const thumbsPerRow = Math.max(1, Math.floor(available / (OD_PHOTO_THUMB_W + OD_PHOTO_GAP)))
-  const rows = Math.ceil(numPhotos / thumbsPerRow)
-  return OD_PHOTO_PADDING * 2 + rows * OD_PHOTO_THUMB_H + Math.max(0, rows - 1) * OD_PHOTO_GAP
-}
-
-function drawPhotosInCell(
-  doc: jsPDF,
-  photos: PhotoForReport[],
-  cellX: number,
-  cellY: number,
-  cellWidth: number,
-) {
-  if (photos.length === 0) return
-
-  const padding = 2
-  const availableWidth = cellWidth - padding * 2
-  const thumbsPerRow = Math.max(1, Math.floor(availableWidth / (OD_PHOTO_THUMB_W + OD_PHOTO_GAP)))
-  let xOffset = cellX + padding
-  let yOffset = cellY + padding
-
-  for (let i = 0; i < photos.length; i++) {
-    if (i > 0 && i % thumbsPerRow === 0) {
-      yOffset += OD_PHOTO_THUMB_H + OD_PHOTO_GAP
-      xOffset = cellX + padding
-    }
-
-    const photo = photos[i]
-    if (photo.dataUrl) {
-      try {
-        const format = photo.dataUrl.includes('image/png') ? 'PNG' : 'JPEG'
-        doc.addImage(photo.dataUrl, format, xOffset, yOffset, OD_PHOTO_THUMB_W, OD_PHOTO_THUMB_H)
-      } catch {
-        doc.setDrawColor(180)
-        doc.rect(xOffset, yOffset, OD_PHOTO_THUMB_W, OD_PHOTO_THUMB_H)
-        doc.setFontSize(5)
-        doc.setTextColor(150)
-        doc.text('img', xOffset + 2, yOffset + OD_PHOTO_THUMB_H / 2)
-      }
-    } else {
-      doc.setDrawColor(180)
-      doc.rect(xOffset, yOffset, OD_PHOTO_THUMB_W, OD_PHOTO_THUMB_H)
-      doc.setFontSize(5)
-      doc.setTextColor(150)
-      doc.text('img', xOffset + 2, yOffset + OD_PHOTO_THUMB_H / 2)
-    }
-
-    xOffset += OD_PHOTO_THUMB_W + OD_PHOTO_GAP
-  }
 }

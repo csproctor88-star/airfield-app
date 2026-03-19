@@ -10,6 +10,8 @@ import { useInstallation } from '@/lib/installation-context'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
+import PdfTemplateSelector from '@/components/ui/pdf-template-selector'
+import { BASIC_COLUMNS } from '@/lib/pdf-config'
 import { toast } from 'sonner'
 
 export default function DiscrepancyReportPage() {
@@ -31,6 +33,7 @@ export default function DiscrepancyReportPage() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [shopFilter, setShopFilter] = useState('all')
   const [locationFilter, setLocationFilter] = useState('all')
+  const [selectedPdfColumns, setSelectedPdfColumns] = useState<string[]>([...BASIC_COLUMNS])
 
   // Load generator name on mount
   useEffect(() => {
@@ -85,7 +88,7 @@ export default function DiscrepancyReportPage() {
     setLoading(false)
   }
 
-  const pdfOpts = { generatedBy: generatorName, baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao }
+  const pdfOpts = { generatedBy: generatorName, baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao, selectedColumns: selectedPdfColumns }
 
   const handleExportPdf = async () => {
     if (!data) return
@@ -311,6 +314,12 @@ export default function DiscrepancyReportPage() {
               </div>
             )}
           </div>
+
+          {/* PDF Column Picker */}
+          <PdfTemplateSelector
+            selectedColumns={selectedPdfColumns}
+            onColumnsChange={setSelectedPdfColumns}
+          />
 
           {/* Export Buttons */}
           <div style={{ display: 'flex', gap: 8 }}>

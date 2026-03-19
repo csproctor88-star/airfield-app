@@ -10,6 +10,13 @@ import { useInstallation } from '@/lib/installation-context'
 import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import { fetchMapImageDataUrl, fetchSystemMapImageDataUrl, formatZuluDate, formatZuluDateTime } from '@/lib/utils'
 import { fetchSystemFeaturesForFeature } from '@/lib/supabase/infrastructure-features'
+import {
+  PDF_STATUS_LABELS,
+  BASIC_COLUMNS,
+  buildDiscrepancyTable,
+  type DiscrepancyRowData,
+} from '@/lib/pdf-config'
+import PdfTemplateSelector from '@/components/ui/pdf-template-selector'
 import { EditDiscrepancyModal } from '@/components/discrepancies/modals'
 import { Map, List, Pencil, Trash2 } from 'lucide-react'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
@@ -53,6 +60,7 @@ export default function DiscrepanciesPage() {
   const [sendingEmail, setSendingEmail] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
+  const [selectedPdfColumns, setSelectedPdfColumns] = useState<string[]>([...BASIC_COLUMNS])
 
   useEffect(() => {
     async function load() {
@@ -275,26 +283,21 @@ export default function DiscrepanciesPage() {
 
   const handleExportPdf = async () => {
     const { default: jsPDF } = await import('jspdf')
-    const { default: autoTable } = await import('jspdf-autotable')
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' })
     const pageWidth = doc.internal.pageSize.getWidth()
     const pageHeight = doc.internal.pageSize.getHeight()
     const margin = 12
     let y = margin
 
-    // ── Fetch photos + map images for all filtered discrepancies ──
-    const PHOTO_THUMB_W = 20
-    const PHOTO_THUMB_H = 15
-    const PHOTO_GAP = 1.5
-    const PHOTO_PAD = 2
-    const PHOTO_COL_W = 48
-    const photoMap: Record<string, string[]> = {} // discrepancy_id → data URL[]
+    const wantPhotos = selectedPdfColumns.includes('photos')
 
-    if (!usingDemo) {
+    // ── Fetch photos + map images only if photos column is selected ──
+    const photoMap: Record<string, string[]> = {}
+
+    if (wantPhotos && !usingDemo) {
       const supabase = createClient()
       if (supabase) {
         const ids = filtered.map(d => d.id)
-        // Fetch uploaded photos (keyed by discrepancy_id FK) — prefer thumbnails for map popups
         const { data: photoRows } = await supabase
           .from('photos')
           .select('discrepancy_id, storage_path, thumbnail_path')
@@ -334,7 +337,6 @@ export default function DiscrepanciesPage() {
       for (const d of filtered) {
         const featureId = 'infrastructure_feature_id' in d ? (d as DiscrepancyRow).infrastructure_feature_id : null
         if (featureId) {
-          // NAVAID-linked: system overview map
           try {
             const systemFeatures = await fetchSystemFeaturesForFeature(featureId)
             if (systemFeatures.length > 0) {
@@ -362,8 +364,6 @@ export default function DiscrepanciesPage() {
       }
     }
 
-    const hasAnyPhotos = Object.keys(photoMap).length > 0
-
     // Header
     doc.setFontSize(8)
     doc.setTextColor(100)
@@ -388,93 +388,29 @@ export default function DiscrepanciesPage() {
     doc.text(`Total: ${filtered.length} discrepancies`, margin, y)
     y += 7
 
-    // Table columns
-    const headRow = ['ID', 'Title', 'Type', 'Status', 'Location', 'Shop', 'Work Order', 'Days']
-    if (hasAnyPhotos) headRow.push('Photos')
+    // Build row data for shared table builder
+    const tableRows: DiscrepancyRowData[] = filtered.map(d => ({
+      id: d.id,
+      work_order: d.work_order_number || '',
+      title: d.title,
+      status_label: getCurrentStatusLabel(d.current_status),
+      location: d.location_text,
+      type_label: getTypeLabel(d.type),
+      shop: d.assigned_shop || '',
+      days_open: usingDemo ? (d as typeof DEMO_DISCREPANCIES[number]).days_open : daysOpen(d.created_at),
+      reported_by: '',
+      last_update: '',
+      comments: '',
+      photos: photoMap[d.id] || [],
+    }))
 
-    const tableBody = filtered.map(d => {
-      const row = [
-        d.display_id,
-        d.title,
-        getTypeLabel(d.type),
-        getCurrentStatusLabel(d.current_status),
-        d.location_text,
-        d.assigned_shop || '',
-        d.work_order_number || '',
-        String(usingDemo ? (d as typeof DEMO_DISCREPANCIES[number]).days_open : daysOpen(d.created_at)),
-      ]
-      if (hasAnyPhotos) {
-        const count = photoMap[d.id]?.length || 0
-        row.push(count > 0 ? `${count} photo${count > 1 ? 's' : ''}` : '')
-      }
-      return row
-    })
-
-    // Columns: ID(0), Title(1), Type(2), Status(3), Location(4), Shop(5), Work Order(6), Days(7), [Photos(8)]
-    const photoColIdx = hasAnyPhotos ? 8 : -1
-
-    autoTable(doc, {
+    const finalY = buildDiscrepancyTable({
+      doc,
       startY: y,
-      margin: { left: margin, right: margin },
-      head: [headRow],
-      body: tableBody,
-      styles: { fontSize: 7, cellPadding: 1.5, textColor: [0, 0, 0] },
-      headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
-      alternateRowStyles: { fillColor: [245, 245, 245] },
-      columnStyles: {
-        0: { cellWidth: 20 },  // ID
-        1: { cellWidth: 36 },  // Title
-        2: { cellWidth: 24 },  // Type
-        3: { cellWidth: 28 },  // Status
-        4: { cellWidth: 18 },  // Location
-        5: { cellWidth: 24 },  // Shop
-        6: { cellWidth: 18 },  // Work Order
-        7: { cellWidth: 10, halign: 'center' },  // Days
-        ...(hasAnyPhotos ? { 8: { cellWidth: PHOTO_COL_W } } : {}),
-      },
-      didParseCell: (data: { section: string; column: { index: number }; row: { index: number }; cell: { styles: { minCellHeight?: number } } }) => {
-        if (data.section === 'body' && data.column.index === photoColIdx) {
-          const d = filtered[data.row.index]
-          const photos = d ? (photoMap[d.id] || []) : []
-          if (photos.length > 0) {
-            const available = PHOTO_COL_W - PHOTO_PAD * 2
-            const thumbsPerRow = Math.max(1, Math.floor(available / (PHOTO_THUMB_W + PHOTO_GAP)))
-            const rows = Math.ceil(photos.length / thumbsPerRow)
-            const needed = PHOTO_PAD * 2 + rows * PHOTO_THUMB_H + Math.max(0, rows - 1) * PHOTO_GAP
-            data.cell.styles.minCellHeight = Math.max(needed, 8)
-          }
-        }
-      },
-      didDrawCell: (data: { section: string; column: { index: number }; row: { index: number }; cell: { x: number; y: number; width: number } }) => {
-        if (data.section === 'body' && data.column.index === photoColIdx) {
-          const d = filtered[data.row.index]
-          const photos = d ? (photoMap[d.id] || []) : []
-          if (photos.length === 0) return
-
-          const cellX = data.cell.x
-          const cellY = data.cell.y
-          const cellW = data.cell.width
-          const avail = cellW - PHOTO_PAD * 2
-          const thumbsPerRow = Math.max(1, Math.floor(avail / (PHOTO_THUMB_W + PHOTO_GAP)))
-          let xOff = cellX + PHOTO_PAD
-          let yOff = cellY + PHOTO_PAD
-
-          for (let i = 0; i < photos.length; i++) {
-            if (i > 0 && i % thumbsPerRow === 0) {
-              yOff += PHOTO_THUMB_H + PHOTO_GAP
-              xOff = cellX + PHOTO_PAD
-            }
-            try {
-              const fmt = photos[i].includes('image/png') ? 'PNG' : 'JPEG'
-              doc.addImage(photos[i], fmt, xOff, yOff, PHOTO_THUMB_W, PHOTO_THUMB_H)
-            } catch {
-              doc.setDrawColor(180)
-              doc.rect(xOff, yOff, PHOTO_THUMB_W, PHOTO_THUMB_H)
-            }
-            xOff += PHOTO_THUMB_W + PHOTO_GAP
-          }
-        }
-      },
+      margin,
+      selectedColumns: selectedPdfColumns,
+      rows: tableRows,
+      pageWidth,
     })
 
     // Footer — page numbers
@@ -593,6 +529,12 @@ export default function DiscrepanciesPage() {
           )}
         </div>
       </div>
+
+      {/* PDF Column Picker */}
+      <PdfTemplateSelector
+        selectedColumns={selectedPdfColumns}
+        onColumnsChange={setSelectedPdfColumns}
+      />
 
       {/* Row 1: OPEN + > 30 DAYS (larger) */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 6 }}>
