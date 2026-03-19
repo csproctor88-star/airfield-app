@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, ACSI (annual compliance), NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.23.0 | **Build:** Clean | **52 routes** | **204 source files** | **119 migrations**
+**Version:** 2.24.0 | **Build:** Clean | **53 routes** | **197 source files** | **120 migrations**
 
 ## Tech Stack
 
@@ -81,7 +81,7 @@ Key responsive features:
 Real-time operational hub with **Supabase Realtime** push updates — advisory, runway status, BWC, RSC, and last check changes propagate to all connected users instantly. Live clock, Open-Meteo weather with conditions/wind/visibility, advisory system (INFO/CAUTION/WARNING), Active Runway toggle with Open/Suspended/Closed status (color-coded card, persisted to DB with audit log), Current Status panel (RSC/RCR, BWC, Last Check), side-by-side NAVAID status panels with G/Y/R toggles and notes, KPI badge grid (3-col desktop, 2-col mobile) with Shift Checklist dialog for inline completion, quick actions (Begin Inspection, Begin Check, New Discrepancy), user presence tracking (Online/Away/Inactive), installation switcher in header for multi-base users, and expandable activity feed with enriched action labels.
 
 ### Discrepancies (`/discrepancies`)
-Track and resolve airfield issues. 11 discrepancy types (FOD, pavement, lighting, markings, signage, drainage, vegetation, wildlife, equipment, security, other). Full lifecycle: Open → Submitted to AFM → Submitted to CES → Work Completed → Closed/Cancelled. Photo uploads, Mapbox location pinning, notes history with timestamps, work order tracking, linked NOTAMs. **Map view** with severity-colored pins (Common Operating Picture), List/Map toggle, severity legend with counts, expand/collapse.
+Track and resolve airfield issues. 11 discrepancy types (FOD, pavement, lighting, markings, signage, drainage, vegetation, wildlife, equipment, security, other). Full lifecycle: Open → Submitted to AFM → Submitted to CES → Awaiting CES Action → Waiting for Project Design/Execution → Work Completed → Closed/Cancelled. Auto-assign shop on creation from per-base configurable type-to-shop mapping. Photo uploads, Mapbox location pinning, NAVAID system overview map (when linked to Visual NAVAID), notes history with timestamps, work order tracking, linked NOTAMs. **Map view** with severity-colored pins (Common Operating Picture), List/Map toggle, severity legend with counts, shop filter chips. **CES Work Orders page** (`/ces`) — dedicated dashboard for CES-role users with shop tabs, KPIs, priority-sorted work queue.
 
 ### Airfield Checks (`/checks`)
 7 check types in a single unified form:
@@ -114,13 +114,14 @@ Airfield Compliance and Safety Inspection per DAFMAN 13-204v2, Para 5.4.3. Annua
 ### All Inspections (`/inspections/all`)
 Navigation hub accessible from the More menu. Styled cards for each inspection type (Daily Airfield, ACSI, Pre/Post Construction, Joint Monthly) with "Start" and "History" action buttons.
 
-### Reports (`/reports`)
-Five report types with PDF export and email delivery:
+### Reports & Analytics (`/reports`)
+Five report types with PDF export and email delivery, plus a 30-day analytics dashboard:
 - **Daily Operations Summary** — all activity for a date/range (inspections, Visual NAVAID outages, checks, status changes, discrepancies, obstructions, QRC executions, events log)
-- **Open Discrepancies** — current snapshot with area and type breakdowns
+- **Discrepancy Report** — flexible filter-based report builder with 5 filters (Status, Workflow Status, Type, Shop, Location), live preview, "Export All Open" quick button
 - **Discrepancy Trends** — opened vs. closed over 30d/90d/6m/1y with top areas/types
-- **Aging Discrepancies** — open items grouped by age tiers with severity and shop breakdowns
-- **Airfield Lighting Report** — system health status, feature inventory by type/layer, DAFMAN compliance summary, recent outage timeline
+- **Aging Discrepancies** — open items grouped by age tiers with clickable tier/shop filters, export only visible
+- **Airfield Lighting Report** — sortable system health table with expandable component rows, export All Systems / Outages Only / By System
+- **Analytics Dashboard** — 9 metric cards with configurable time frame (7d/30d/90d/6mo/1yr): Airfield Inspections, Lighting Inspections, Airfield Checks, Discrepancies, QRC Executions, Personnel, Obstruction Evaluations, Parking Plans, Wildlife/BASH
 
 ### Obstruction Evaluations (`/obstructions`)
 UFC 3-260-01 Class B imaginary surface analysis with multi-runway support:
@@ -176,6 +177,10 @@ Interactive Mapbox satellite map for digitizing and managing all airfield lighti
 Interactive Mapbox-based parking plan editor for arranging aircraft on aprons with to-scale SVG silhouettes. Aircraft dimensions from the built-in aircraft database drive wingspan-accurate icon rendering via `computeIconScale()` with rotation-invariant 2D distance calculation.
 
 - **Drag-and-drop placement** — Click to place, drag to move aircraft on satellite imagery. Touch support for mobile/tablet
+- **Grouped aircraft list** — sidebar groups aircraft by type with collapsible headers, ADG badge, count badge. Individual spots shown indented
+- **Bulk add** — quantity field (1-50) in aircraft picker, auto-names sequentially ("F-22 #1", "F-22 #2")
+- **Selection highlight** — cyan ring around selected aircraft on map
+- **Right-click / long-press context menu** — Edit Details, Duplicate, Remove directly on silhouettes
 - **Tabbed sidebar** — 4 tabs (Aircraft, Environment, Clearance, Settings) with count badges and responsive mobile bottom sheet
 - **To-scale silhouettes** — SVG aircraft rendered at true wingspan scale with continuous rescaling on zoom/rotate/pitch via Mapbox `addImage` with `pixelRatio: 1`
 - **Parking clearance analysis** — UFC 3-260-01 wingtip clearance calculations with ADG group classification. Violations (red) and warnings (yellow) for insufficient spacing
@@ -240,6 +245,7 @@ airfield-app/
 │       ├── layout.tsx                    # Header + sidebar + bottom nav
 │       ├── page.tsx                      # Dashboard
 │       ├── acsi/                         # ACSI annual compliance (list, form, detail)
+│       ├── ces/page.tsx                   # CES Work Orders dashboard
 │       ├── checks/                       # Check form, history, detail
 │       ├── discrepancies/                # List, create, detail
 │       ├── inspections/                  # Workspace + history, detail, all-inspections hub
@@ -367,10 +373,11 @@ airfield-app/
 | Item | Priority | Notes |
 |------|----------|-------|
 | No test suite | High | No unit or integration tests |
-| 159 `as any` casts | Medium | Across 40 files — Mapbox layer expressions (~28), Supabase row inserts (~70), jsPDF hooks (~11), misc (~50). Regenerate Supabase types to eliminate ~50% |
-| 58 files > 500 lines | Low | Largest: `infrastructure/page.tsx` (4,097), `parking/page.tsx` (3,598), `inspections/page.tsx` (2,749), `base-setup/page.tsx` (2,458) |
+| 165 `as any` casts | Medium | Across 40+ files — Mapbox layer expressions (~28), Supabase row inserts (~70), jsPDF hooks (~11), misc (~56). Regenerate Supabase types to eliminate ~50% |
+| 58 files > 500 lines | Low | Largest: `infrastructure/page.tsx` (4,097), `parking/page.tsx` (3,777), `base-setup/page.tsx` (2,855), `inspections/page.tsx` (2,188) |
 | Map init duplication | Low | 6 Mapbox components share similar init logic |
-| PDF boilerplate duplication | Low | 12 PDF generators share similar header/footer/photo helper patterns |
+| PDF boilerplate duplication | Low | 16 PDF generators share similar header/footer/photo helper patterns |
+| Orphaned file | Low | `lib/acsi-excel.ts` — ACSI Excel export not imported anywhere (may be intended for future use) |
 
 ## Current Status
 
@@ -383,4 +390,4 @@ See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 ## Reference Documents
 
 - [`docs/Glidepath_SRS_v5.0.md`](./docs/Glidepath_SRS_v5.0.md) — Software Requirements Specification
-- [`docs/Airfield_Inspection_Checklist_Template.md`](./docs/Airfield_Inspection_Checklist_Template.md) — ACSI checklist reference (DAFMAN 13-204v2)
+- [`docs/SESSION_HANDOFF_v2.24.0.md`](./docs/SESSION_HANDOFF_v2.24.0.md) — Latest session handoff
