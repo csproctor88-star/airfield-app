@@ -144,6 +144,31 @@ function drawPlaceholder(doc: jsPDF, x: number, y: number) {
   doc.text('img', x + 2, y + PDF_PHOTO.THUMB_H / 2)
 }
 
+// ── PDF Text Sanitizer ──
+// jsPDF's built-in Helvetica lacks many Unicode glyphs. Replace common ones with ASCII equivalents.
+
+export function sanitizePdfText(text: string): string {
+  return text
+    .replace(/\u25BA/g, '>')    // ► BLACK RIGHT-POINTING POINTER
+    .replace(/\u25B6/g, '>')    // ▶ BLACK RIGHT-POINTING TRIANGLE
+    .replace(/\u25C4/g, '<')    // ◄ BLACK LEFT-POINTING POINTER
+    .replace(/\u25C0/g, '<')    // ◀ BLACK LEFT-POINTING TRIANGLE
+    .replace(/\u2190/g, '<-')   // ←
+    .replace(/\u2192/g, '->')   // →
+    .replace(/\u2191/g, '^')    // ↑
+    .replace(/\u2193/g, 'v')    // ↓
+    .replace(/\u21D0/g, '<=')   // ⇐
+    .replace(/\u21D2/g, '=>')   // ⇒
+    .replace(/\u2014/g, '--')   // — em dash
+    .replace(/\u2013/g, '-')    // – en dash
+    .replace(/\u2018/g, "'")    // ' left single quote
+    .replace(/\u2019/g, "'")    // ' right single quote
+    .replace(/\u201C/g, '"')    // " left double quote
+    .replace(/\u201D/g, '"')    // " right double quote
+    .replace(/\u2026/g, '...')  // … ellipsis
+    .replace(/\u2022/g, '*')    // • bullet
+}
+
 // ── Core Table Builder ──
 
 export interface DiscrepancyRowData {
@@ -201,19 +226,20 @@ export function buildDiscrepancyTable(opts: BuildTableOptions): number {
   const hasPhotosCol = orderedCols.includes('photos')
   const photosColIdx = hasPhotosCol ? orderedCols.indexOf('photos') : -1
 
+  const s = sanitizePdfText  // shorthand
   const tableBody = rows.map(row => {
     return orderedCols.map(key => {
       switch (key) {
-        case 'work_order': return row.work_order || ''
-        case 'title': return row.title
-        case 'status': return row.status_label
-        case 'location': return row.location
-        case 'type': return row.type_label ? abbreviateType(row.type_label) : ''
-        case 'shop': return row.shop || 'Unassigned'
+        case 'work_order': return s(row.work_order || '')
+        case 'title': return s(row.title)
+        case 'status': return s(row.status_label)
+        case 'location': return s(row.location)
+        case 'type': return s(row.type_label ? abbreviateType(row.type_label) : '')
+        case 'shop': return s(row.shop || 'Unassigned')
         case 'days_open': return row.days_open != null ? row.days_open.toString() : ''
-        case 'reported_by': return row.reported_by || ''
+        case 'reported_by': return s(row.reported_by || '')
         case 'last_update': return row.last_update || ''
-        case 'comments': return row.comments || ''
+        case 'comments': return s(row.comments || '')
         case 'photos': return '' // rendered via didDrawCell
         default: return ''
       }
