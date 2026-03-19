@@ -177,12 +177,18 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
     headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
     alternateRowStyles: { fillColor: [245, 245, 245] },
     columnStyles: {
-      0: { cellWidth: 16 },
-      1: { cellWidth: 26 },
-      5: { cellWidth: 18 },
-      7: { cellWidth: 10, halign: 'center' },
-      10: { cellWidth: 36, fontSize: 6 },
-      11: { cellWidth: 34 },
+      0: { cellWidth: 18 },   // ID
+      1: { cellWidth: 28 },   // Title
+      2: { cellWidth: 22 },   // Type
+      3: { cellWidth: 14 },   // Location
+      4: { cellWidth: 16 },   // W/O #
+      5: { cellWidth: 20 },   // Shop
+      6: { cellWidth: 24 },   // Status
+      7: { cellWidth: 10, halign: 'center' },  // Days
+      8: { cellWidth: 20 },   // Reported By
+      9: { cellWidth: 14 },   // Last Update
+      10: { cellWidth: 32, fontSize: 6 },  // Comments
+      11: { cellWidth: 34 },  // Photos
     },
     didParseCell: (hookData) => {
       if (hookData.section !== 'body') return

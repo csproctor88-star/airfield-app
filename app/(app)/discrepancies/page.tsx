@@ -410,7 +410,8 @@ export default function DiscrepanciesPage() {
       return row
     })
 
-    const photoColIdx = hasAnyPhotos ? 9 : -1
+    // Columns: ID(0), Title(1), Type(2), Status(3), Location(4), Shop(5), Work Order(6), Days(7), [Photos(8)]
+    const photoColIdx = hasAnyPhotos ? 8 : -1
 
     autoTable(doc, {
       startY: y,
@@ -421,10 +422,15 @@ export default function DiscrepanciesPage() {
       headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
       alternateRowStyles: { fillColor: [245, 245, 245] },
       columnStyles: {
-        0: { cellWidth: 18 },
-        1: { cellWidth: 34 },
-        8: { cellWidth: 12, halign: 'center' },
-        ...(hasAnyPhotos ? { 9: { cellWidth: PHOTO_COL_W } } : {}),
+        0: { cellWidth: 20 },  // ID
+        1: { cellWidth: 36 },  // Title
+        2: { cellWidth: 24 },  // Type
+        3: { cellWidth: 28 },  // Status
+        4: { cellWidth: 18 },  // Location
+        5: { cellWidth: 24 },  // Shop
+        6: { cellWidth: 18 },  // Work Order
+        7: { cellWidth: 10, halign: 'center' },  // Days
+        ...(hasAnyPhotos ? { 8: { cellWidth: PHOTO_COL_W } } : {}),
       },
       didParseCell: (data: { section: string; column: { index: number }; row: { index: number }; cell: { styles: { minCellHeight?: number } } }) => {
         if (data.section === 'body' && data.column.index === photoColIdx) {
