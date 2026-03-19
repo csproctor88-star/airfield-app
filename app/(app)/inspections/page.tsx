@@ -135,8 +135,14 @@ export default function InspectionsPage() {
     })
   }, [])
 
-  // ── Confirmation dialog state ──
+  // ── Confirmation + blocked dialog state ──
   const [confirmStart, setConfirmStart] = useState<FormType | null>(null)
+  const [blockedInfo, setBlockedInfo] = useState<{
+    type: FormType
+    reason: 'completed' | 'in_progress'
+    inspectorName: string | null
+    inspectionId: string | null
+  } | null>(null)
 
   // ── Scroll to top on mount ──
   useEffect(() => {
@@ -682,13 +688,12 @@ export default function InspectionsPage() {
     // Hard guard: refuse to create if one already exists for today
     const existingToday = type === 'airfield' ? todayAirfield : todayLighting
     if (existingToday) {
-      const label = type === 'airfield' ? 'Airfield' : 'Lighting'
-      if (existingToday.status === 'completed') {
-        toast.error(`Today's ${label} Inspection is already complete. Use "Reopen for Editing" from the inspection report if corrections are needed.`)
-      } else {
-        const who = existingToday.inspector_name || 'Another user'
-        toast.error(`${who} already has a ${label} Inspection in progress for today. Coordinate with them to complete it.`)
-      }
+      setBlockedInfo({
+        type,
+        reason: existingToday.status === 'completed' ? 'completed' : 'in_progress',
+        inspectorName: existingToday.inspector_name || null,
+        inspectionId: existingToday.id,
+      })
       return
     }
 
@@ -1881,7 +1886,7 @@ export default function InspectionsPage() {
               setShowHistory(true)
               setTypeFilter('airfield')
             } else if (todayAirfieldByOther) {
-              toast.error(`${todayAirfield?.inspector_name || 'Another user'} has the Airfield Inspection in progress. Coordinate with them.`)
+              setBlockedInfo({ type: 'airfield', reason: 'in_progress', inspectorName: todayAirfield?.inspector_name || null, inspectionId: todayAirfield?.id || null })
             } else {
               setConfirmStart('airfield')
             }
@@ -1943,7 +1948,7 @@ export default function InspectionsPage() {
               setShowHistory(true)
               setTypeFilter('lighting')
             } else if (todayLightingByOther) {
-              toast.error(`${todayLighting?.inspector_name || 'Another user'} has the Lighting Inspection in progress. Coordinate with them.`)
+              setBlockedInfo({ type: 'lighting', reason: 'in_progress', inspectorName: todayLighting?.inspector_name || null, inspectionId: todayLighting?.id || null })
             } else {
               setConfirmStart('lighting')
             }
@@ -2246,6 +2251,100 @@ export default function InspectionsPage() {
           </Link>
         )
       })}
+      {/* ── Blocked Dialog — Inspection Already Exists ── */}
+      {blockedInfo && (() => {
+        const label = blockedInfo.type === 'airfield' ? 'Airfield' : 'Lighting'
+        const isCompleted = blockedInfo.reason === 'completed'
+        return (
+          <div
+            style={{
+              position: 'fixed', inset: 0, zIndex: 9999,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(0,0,0,0.6)', padding: 16,
+            }}
+            onClick={() => setBlockedInfo(null)}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: 'var(--color-bg-surface)',
+                border: `1px solid ${isCompleted ? 'rgba(34,197,94,0.3)' : 'rgba(249,115,22,0.3)'}`,
+                borderRadius: 14, padding: 24,
+                width: '100%', maxWidth: 400,
+                boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+                textAlign: 'center',
+              }}
+            >
+              <div style={{ fontSize: 48, marginBottom: 12 }}>
+                {isCompleted ? '\u2705' : '\uD83D\uDD12'}
+              </div>
+              <div style={{
+                fontSize: 'var(--fs-xl)', fontWeight: 800,
+                color: isCompleted ? '#22C55E' : '#F97316',
+                marginBottom: 10,
+              }}>
+                {isCompleted
+                  ? `${label} Inspection Complete`
+                  : `${label} Inspection In Progress`}
+              </div>
+              <div style={{
+                fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)',
+                lineHeight: 1.6, marginBottom: 20,
+              }}>
+                {isCompleted ? (
+                  <>
+                    Today&apos;s {label} Inspection has already been completed and filed.
+                    Only one {label.toLowerCase()} inspection is allowed per day.
+                    <br /><br />
+                    If corrections are needed, open the inspection report and use
+                    <strong style={{ color: 'var(--color-text-1)' }}> Reopen for Editing</strong>.
+                  </>
+                ) : (
+                  <>
+                    <strong style={{ color: '#F97316' }}>
+                      {blockedInfo.inspectorName || 'Another user'}
+                    </strong>{' '}
+                    currently has the {label} Inspection in progress.
+                    Only one {label.toLowerCase()} inspection can be active per day.
+                    <br /><br />
+                    Please coordinate with them to complete the inspection.
+                  </>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                {isCompleted && blockedInfo.inspectionId && (
+                  <button
+                    onClick={() => {
+                      setBlockedInfo(null)
+                      router.push(`/inspections/${blockedInfo.inspectionId}`)
+                    }}
+                    style={{
+                      flex: 1, padding: '12px 0', borderRadius: 10,
+                      border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.12)',
+                      color: '#22C55E', fontSize: 'var(--fs-md)', fontWeight: 700,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                  >
+                    View Report
+                  </button>
+                )}
+                <button
+                  onClick={() => setBlockedInfo(null)}
+                  style={{
+                    flex: 1, padding: '12px 0', borderRadius: 10,
+                    border: '1px solid var(--color-border)', background: 'transparent',
+                    color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* ── Confirmation Dialog — Start New Inspection ── */}
       {confirmStart && (
         <div
