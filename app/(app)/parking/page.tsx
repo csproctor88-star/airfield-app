@@ -2246,22 +2246,30 @@ export default function ParkingPage() {
   // ── Fly to clearance result ──
 
   const flyToResult = (result: ClearanceResult) => {
+    if (!map.current) return
     const spotA = spotsWithAircraft.find(s => s.id === result.spot_a_id)
-    if (!spotA || !map.current) return
 
-    if (result.spot_b_id) {
-      const spotB = spotsWithAircraft.find(s => s.id === result.spot_b_id)
-      if (spotB) {
-        const lat = (spotA.latitude + spotB.latitude) / 2
-        const lng = (spotA.longitude + spotB.longitude) / 2
-        map.current.flyTo({ center: [lng, lat], zoom: 17 })
+    if (spotA) {
+      if (result.spot_b_id) {
+        const spotB = spotsWithAircraft.find(s => s.id === result.spot_b_id)
+        if (spotB) {
+          const lat = (spotA.latitude + spotB.latitude) / 2
+          const lng = (spotA.longitude + spotB.longitude) / 2
+          map.current.flyTo({ center: [lng, lat], zoom: 17 })
+        }
+      } else if (result.obstacle_id) {
+        const obs = obstacles.find(o => o.id === result.obstacle_id)
+        if (obs) {
+          const lat = (spotA.latitude + obs.latitude) / 2
+          const lng = (spotA.longitude + obs.longitude) / 2
+          map.current.flyTo({ center: [lng, lat], zoom: 17 })
+        }
       }
-    } else if (result.obstacle_id) {
+    } else if (result.obstacle_id && result.spot_b_id) {
+      // Obstacle-to-taxilane: fly to the obstacle
       const obs = obstacles.find(o => o.id === result.obstacle_id)
       if (obs) {
-        const lat = (spotA.latitude + obs.latitude) / 2
-        const lng = (spotA.longitude + obs.longitude) / 2
-        map.current.flyTo({ center: [lng, lat], zoom: 17 })
+        map.current.flyTo({ center: [obs.longitude, obs.latitude], zoom: 17 })
       }
     }
   }

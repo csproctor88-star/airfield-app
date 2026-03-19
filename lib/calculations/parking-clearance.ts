@@ -884,6 +884,84 @@ export function checkApronBoundaryClearance(
   }
 }
 
+// ── Obstacle-to-Taxilane clearance (obstacle inside taxilane envelope) ──
+
+/** Get all representative points for an obstacle shape */
+function getObstaclePoints(obstacle: ParkingObstacle): LatLon[] {
+  const center: LatLon = { lat: obstacle.latitude, lon: obstacle.longitude }
+
+  switch (obstacle.obstacle_type) {
+    case 'building': {
+      const halfW = (obstacle.width_ft || 50) / 2
+      const halfL = (obstacle.length_ft || 50) / 2
+      const rot = obstacle.rotation_deg || 0
+      return [
+        center,
+        offsetPoint(offsetPoint(center, rot, halfL), (rot + 90) % 360, halfW),
+        offsetPoint(offsetPoint(center, rot, halfL), (rot - 90 + 360) % 360, halfW),
+        offsetPoint(offsetPoint(center, (rot + 180) % 360, halfL), (rot - 90 + 360) % 360, halfW),
+        offsetPoint(offsetPoint(center, (rot + 180) % 360, halfL), (rot + 90) % 360, halfW),
+      ]
+    }
+    case 'circle': {
+      // Sample 8 points around the perimeter + center
+      const radius = obstacle.radius_ft || 0
+      const pts: LatLon[] = [center]
+      for (let i = 0; i < 8; i++) {
+        pts.push(offsetPoint(center, i * 45, radius))
+      }
+      return pts
+    }
+    case 'line': {
+      if (!obstacle.line_coords || obstacle.line_coords.length < 2) return [center]
+      return obstacle.line_coords.map(c => ({ lat: c[1], lon: c[0] }))
+    }
+    default:
+      return [center]
+  }
+}
+
+/** Check if an obstacle intrudes into a taxilane clearance envelope */
+export function checkObstacleTaxilaneClearance(
+  obstacle: ParkingObstacle,
+  taxilane: TaxilaneForCheck,
+): ClearanceResult {
+  const { halfWidth, detail } = getTaxilaneEnvelopeHalfWidth(taxilane)
+
+  const obsPts = getObstaclePoints(obstacle)
+
+  // Find minimum distance from any obstacle point to the taxilane centerline
+  let minDistance = Infinity
+  for (const pt of obsPts) {
+    for (let i = 0; i < taxilane.line_coords.length - 1; i++) {
+      const segStart: LatLon = { lat: taxilane.line_coords[i][1], lon: taxilane.line_coords[i][0] }
+      const segEnd: LatLon = { lat: taxilane.line_coords[i + 1][1], lon: taxilane.line_coords[i + 1][0] }
+      const dist = pointToSegmentDistanceFt(pt, segStart, segEnd)
+      if (dist < minDistance) minDistance = dist
+    }
+  }
+
+  let status: ClearanceResult['status'] = 'ok'
+  if (minDistance < halfWidth) {
+    status = 'violation'
+  } else if (minDistance < halfWidth * 1.1) {
+    status = 'warning'
+  }
+
+  return {
+    distance_ft: Math.round(minDistance * 10) / 10,
+    required_ft: Math.round(halfWidth * 10) / 10,
+    status,
+    aircraft_a: obstacle.name || 'Obstacle',
+    aircraft_b: taxilane.name || 'Taxilane',
+    spot_a_id: obstacle.id,   // obstacle ID used as spot_a_id for result tracking
+    obstacle_id: obstacle.id,
+    spot_b_id: taxilane.id,
+    ufc_item: detail.ufc_item,
+    ufc_desc: detail.description,
+  }
+}
+
 // ── Batch violation check ──
 
 export function findAllViolations(
@@ -916,6 +994,15 @@ export function findAllViolations(
     for (const spot of spots) {
       for (const taxilane of taxilanes) {
         const result = checkTaxilaneClearance(spot, taxilane)
+        if (result.status !== 'ok') {
+          results.push(result)
+        }
+      }
+    }
+    // Obstacle-to-taxilane checks
+    for (const obstacle of obstacles) {
+      for (const taxilane of taxilanes) {
+        const result = checkObstacleTaxilaneClearance(obstacle, taxilane)
         if (result.status !== 'ok') {
           results.push(result)
         }
@@ -957,6 +1044,12 @@ export function getAllClearanceResults(
     for (const spot of spots) {
       for (const taxilane of taxilanes) {
         results.push(checkTaxilaneClearance(spot, taxilane))
+      }
+    }
+    // Obstacle-to-taxilane checks
+    for (const obstacle of obstacles) {
+      for (const taxilane of taxilanes) {
+        results.push(checkObstacleTaxilaneClearance(obstacle, taxilane))
       }
     }
   }
