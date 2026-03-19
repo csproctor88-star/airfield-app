@@ -28,7 +28,6 @@ const opsItems: ModuleItem[] = [
 
 // Airfield Management
 const mgmtItems: ModuleItem[] = [
-  { name: 'CES Work Orders', icon: '🔧', color: '#F97316', href: '/ces' },
   { name: 'Discrepancies', icon: '⚠️', color: '#FBBF24', href: '/discrepancies' },
   { name: 'Obstruction Eval Tool', icon: '📍', color: '#F97316', href: '/obstructions' },
   { name: 'Obstruction Database', icon: '🗺️', color: '#F97316', href: '/obstructions/history' },
