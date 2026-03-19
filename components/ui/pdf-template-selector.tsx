@@ -10,34 +10,49 @@ import {
   getDefaultTemplate,
   type PdfReportTemplate,
 } from '@/lib/pdf-config'
-import { Save, Trash2 } from 'lucide-react'
+import { Save, Trash2, X, Download, Mail } from 'lucide-react'
+
+type ActionMode = 'download' | 'email'
 
 interface Props {
-  selectedColumns: string[]
-  onColumnsChange: (cols: string[]) => void
-  disabledColumns?: string[]  // optional columns that cannot be toggled (e.g., aging report disables photos/comments)
+  open: boolean
+  mode: ActionMode
+  onClose: () => void
+  onExport: (columns: string[]) => void
+  exporting?: boolean
+  disabledColumns?: string[]
 }
 
-export default function PdfTemplateSelector({ selectedColumns, onColumnsChange, disabledColumns = [] }: Props) {
+export default function PdfExportDialog({ open, mode, onClose, onExport, exporting = false, disabledColumns = [] }: Props) {
   const [templates, setTemplates] = useState<PdfReportTemplate[]>([])
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([...BASIC_COLUMNS])
   const [activeTemplateName, setActiveTemplateName] = useState<string>('Basic')
   const [saveName, setSaveName] = useState('')
   const [showSave, setShowSave] = useState(false)
 
   useEffect(() => {
-    const loaded = loadPdfTemplates()
-    setTemplates(loaded)
-  }, [])
+    if (open) {
+      const loaded = loadPdfTemplates()
+      setTemplates(loaded)
+      // Load last-used template or default
+      const lastUsed = loaded.find(t => t.name === activeTemplateName) || loaded[0] || getDefaultTemplate()
+      const filtered = lastUsed.columns.filter(c => !disabledColumns.includes(c))
+      setSelectedColumns(Array.from(new Set([...BASIC_COLUMNS, ...filtered])))
+      setActiveTemplateName(lastUsed.name)
+      setShowSave(false)
+      setSaveName('')
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  if (!open) return null
 
   const handleSelectTemplate = (name: string) => {
     setActiveTemplateName(name)
     const tpl = templates.find(t => t.name === name)
     if (tpl) {
-      // Filter out any disabled columns from the template
       const filtered = tpl.columns.filter(c => !disabledColumns.includes(c))
-      // Ensure basic columns are always present
-      const withBasics = Array.from(new Set([...BASIC_COLUMNS, ...filtered]))
-      onColumnsChange(withBasics)
+      setSelectedColumns(Array.from(new Set([...BASIC_COLUMNS, ...filtered])))
     }
   }
 
@@ -46,8 +61,8 @@ export default function PdfTemplateSelector({ selectedColumns, onColumnsChange, 
     const next = selectedColumns.includes(key)
       ? selectedColumns.filter(c => c !== key)
       : [...selectedColumns, key]
-    onColumnsChange(next)
-    setActiveTemplateName('')  // custom config = no named template
+    setSelectedColumns(next)
+    setActiveTemplateName('')
   }
 
   const handleSaveTemplate = () => {
@@ -71,7 +86,7 @@ export default function PdfTemplateSelector({ selectedColumns, onColumnsChange, 
     savePdfTemplates(updated)
     if (activeTemplateName === name) {
       setActiveTemplateName('Basic')
-      onColumnsChange([...BASIC_COLUMNS])
+      setSelectedColumns([...BASIC_COLUMNS])
     }
   }
 
@@ -79,136 +94,200 @@ export default function PdfTemplateSelector({ selectedColumns, onColumnsChange, 
     return COLUMN_DEFS.find(c => c.key === key)?.header || key
   }
 
+  const handleExport = () => {
+    onExport(selectedColumns)
+  }
+
   return (
-    <div style={{
-      background: 'var(--color-bg-inset)',
-      border: '1px solid var(--color-border)',
-      borderRadius: 10,
-      padding: 12,
-      marginBottom: 10,
-    }}>
-      <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
-        PDF Columns
-      </div>
-
-      {/* Template Selector */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
-        {templates.map(t => (
-          <div key={t.name} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <button
-              onClick={() => handleSelectTemplate(t.name)}
-              style={{
-                padding: '4px 10px', borderRadius: 6,
-                border: activeTemplateName === t.name ? '1px solid var(--color-cyan)' : '1px solid var(--color-border)',
-                background: activeTemplateName === t.name ? 'rgba(34,211,238,0.12)' : 'transparent',
-                color: activeTemplateName === t.name ? 'var(--color-cyan)' : 'var(--color-text-2)',
-                fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
-              {t.name}
-            </button>
-            {t.name !== 'Basic' && (
-              <button
-                onClick={() => handleDeleteTemplate(t.name)}
-                style={{
-                  background: 'none', border: 'none', color: 'var(--color-text-3)',
-                  cursor: 'pointer', padding: 2, display: 'flex',
-                }}
-              >
-                <Trash2 size={12} />
-              </button>
-            )}
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(0,0,0,0.6)', padding: 16,
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget && !exporting) onClose() }}
+    >
+      <div style={{
+        background: 'var(--color-bg-surface)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 14,
+        padding: 20,
+        width: '100%',
+        maxWidth: 420,
+        boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--color-text-1)' }}>
+            {mode === 'download' ? 'Export PDF' : 'Email PDF'}
           </div>
-        ))}
-      </div>
-
-      {/* Column Toggles */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-        {BASIC_COLUMNS.map(key => (
-          <label key={key} style={{
-            display: 'flex', alignItems: 'center', gap: 4,
-            fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)',
-            opacity: 0.5, cursor: 'default',
-          }}>
-            <input type="checkbox" checked disabled style={{ accentColor: 'var(--color-cyan)' }} />
-            {getColumnLabel(key)}
-          </label>
-        ))}
-        {ALL_OPTIONAL_COLUMNS.map(key => {
-          const isDisabled = disabledColumns.includes(key)
-          const isChecked = selectedColumns.includes(key)
-          return (
-            <label key={key} style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              fontSize: 'var(--fs-xs)',
-              color: isDisabled ? 'var(--color-text-3)' : 'var(--color-text-2)',
-              opacity: isDisabled ? 0.35 : 1,
-              cursor: isDisabled ? 'default' : 'pointer',
-            }}>
-              <input
-                type="checkbox"
-                checked={isChecked && !isDisabled}
-                disabled={isDisabled}
-                onChange={() => handleToggleColumn(key)}
-                style={{ accentColor: 'var(--color-cyan)' }}
-              />
-              {getColumnLabel(key)}
-            </label>
-          )
-        })}
-      </div>
-
-      {/* Save Template */}
-      {!showSave ? (
-        <button
-          onClick={() => setShowSave(true)}
-          style={{
-            background: 'none', border: 'none', color: 'var(--color-text-3)',
-            fontSize: 'var(--fs-2xs)', cursor: 'pointer', fontFamily: 'inherit',
-            display: 'flex', alignItems: 'center', gap: 4,
-          }}
-        >
-          <Save size={11} /> Save as template
-        </button>
-      ) : (
-        <div style={{ display: 'flex', gap: 6 }}>
-          <input
-            value={saveName}
-            onChange={e => setSaveName(e.target.value)}
-            placeholder="Template name"
-            onKeyDown={e => e.key === 'Enter' && handleSaveTemplate()}
-            style={{
-              flex: 1, padding: '4px 8px', borderRadius: 6,
-              border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
-              color: 'var(--color-text-1)', fontSize: 'var(--fs-xs)', fontFamily: 'inherit',
-            }}
-          />
           <button
-            onClick={handleSaveTemplate}
-            disabled={!saveName.trim()}
+            onClick={onClose}
+            disabled={exporting}
             style={{
-              padding: '4px 10px', borderRadius: 6,
-              border: '1px solid rgba(34,211,238,0.3)', background: 'rgba(34,211,238,0.1)',
-              color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 600,
-              cursor: saveName.trim() ? 'pointer' : 'default', fontFamily: 'inherit',
-              opacity: saveName.trim() ? 1 : 0.5,
+              background: 'none', border: 'none', color: 'var(--color-text-3)',
+              cursor: exporting ? 'default' : 'pointer', padding: 4, display: 'flex',
             }}
           >
-            Save
-          </button>
-          <button
-            onClick={() => { setShowSave(false); setSaveName('') }}
-            style={{
-              padding: '4px 8px', borderRadius: 6,
-              border: '1px solid var(--color-border)', background: 'transparent',
-              color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)',
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            Cancel
+            <X size={18} />
           </button>
         </div>
-      )}
+
+        {/* Templates */}
+        <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+          Templates
+        </div>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
+          {templates.map(t => (
+            <div key={t.name} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <button
+                onClick={() => handleSelectTemplate(t.name)}
+                style={{
+                  padding: '5px 12px', borderRadius: 6,
+                  border: activeTemplateName === t.name ? '1px solid var(--color-cyan)' : '1px solid var(--color-border)',
+                  background: activeTemplateName === t.name ? 'rgba(34,211,238,0.12)' : 'transparent',
+                  color: activeTemplateName === t.name ? 'var(--color-cyan)' : 'var(--color-text-2)',
+                  fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                {t.name}
+              </button>
+              {t.name !== 'Basic' && (
+                <button
+                  onClick={() => handleDeleteTemplate(t.name)}
+                  style={{
+                    background: 'none', border: 'none', color: 'var(--color-text-3)',
+                    cursor: 'pointer', padding: 2, display: 'flex',
+                  }}
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Column Toggles */}
+        <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+          Columns
+        </div>
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px',
+          marginBottom: 12,
+          background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
+          borderRadius: 8, padding: 10,
+        }}>
+          {BASIC_COLUMNS.map(key => (
+            <label key={key} style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)',
+              opacity: 0.5, cursor: 'default',
+            }}>
+              <input type="checkbox" checked disabled style={{ accentColor: 'var(--color-cyan)' }} />
+              {getColumnLabel(key)}
+            </label>
+          ))}
+          {ALL_OPTIONAL_COLUMNS.map(key => {
+            const isDisabled = disabledColumns.includes(key)
+            const isChecked = selectedColumns.includes(key)
+            return (
+              <label key={key} style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                fontSize: 'var(--fs-sm)',
+                color: isDisabled ? 'var(--color-text-3)' : 'var(--color-text-2)',
+                opacity: isDisabled ? 0.35 : 1,
+                cursor: isDisabled ? 'default' : 'pointer',
+              }}>
+                <input
+                  type="checkbox"
+                  checked={isChecked && !isDisabled}
+                  disabled={isDisabled}
+                  onChange={() => handleToggleColumn(key)}
+                  style={{ accentColor: 'var(--color-cyan)' }}
+                />
+                {getColumnLabel(key)}
+              </label>
+            )
+          })}
+        </div>
+
+        {/* Save Template */}
+        {!showSave ? (
+          <button
+            onClick={() => setShowSave(true)}
+            style={{
+              background: 'none', border: 'none', color: 'var(--color-text-3)',
+              fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit',
+              display: 'flex', alignItems: 'center', gap: 4, marginBottom: 16,
+            }}
+          >
+            <Save size={12} /> Save as template
+          </button>
+        ) : (
+          <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+            <input
+              value={saveName}
+              onChange={e => setSaveName(e.target.value)}
+              placeholder="Template name"
+              onKeyDown={e => e.key === 'Enter' && handleSaveTemplate()}
+              style={{
+                flex: 1, padding: '6px 10px', borderRadius: 6,
+                border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+              }}
+            />
+            <button
+              onClick={handleSaveTemplate}
+              disabled={!saveName.trim()}
+              style={{
+                padding: '6px 12px', borderRadius: 6,
+                border: '1px solid rgba(34,211,238,0.3)', background: 'rgba(34,211,238,0.1)',
+                color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600,
+                cursor: saveName.trim() ? 'pointer' : 'default', fontFamily: 'inherit',
+                opacity: saveName.trim() ? 1 : 0.5,
+              }}
+            >
+              Save
+            </button>
+            <button
+              onClick={() => { setShowSave(false); setSaveName('') }}
+              style={{
+                padding: '6px 10px', borderRadius: 6,
+                border: '1px solid var(--color-border)', background: 'transparent',
+                color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {/* Action Button */}
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          style={{
+            width: '100%', padding: '12px 0', borderRadius: 10,
+            border: mode === 'download'
+              ? '1px solid rgba(34,197,94,0.4)'
+              : '1px solid rgba(168,85,247,0.4)',
+            background: mode === 'download'
+              ? 'rgba(34,197,94,0.1)'
+              : 'rgba(168,85,247,0.1)',
+            color: mode === 'download' ? '#22C55E' : '#A855F7',
+            fontSize: 'var(--fs-md)', fontWeight: 700,
+            cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
+            opacity: exporting ? 0.6 : 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}
+        >
+          {mode === 'download' ? <Download size={16} /> : <Mail size={16} />}
+          {exporting
+            ? 'Generating...'
+            : mode === 'download' ? 'Export PDF' : 'Email PDF'}
+        </button>
+      </div>
     </div>
   )
 }

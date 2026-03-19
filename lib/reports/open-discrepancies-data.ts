@@ -243,7 +243,7 @@ export async function fetchOpenDiscrepanciesData(
 
         let dataUrl: string | null = null
         if (row.storage_path.startsWith('data:')) {
-          dataUrl = row.storage_path
+          dataUrl = await compressImageForPdf(row.storage_path, 400, 0.6)
         } else {
           try {
             const { data: urlData } = supabase.storage
@@ -259,7 +259,7 @@ export async function fetchOpenDiscrepanciesData(
                   reader.onerror = reject
                   reader.readAsDataURL(blob)
                 })
-                dataUrl = await compressImageForPdf(raw)
+                dataUrl = await compressImageForPdf(raw, 400, 0.6)
               }
             }
           } catch {

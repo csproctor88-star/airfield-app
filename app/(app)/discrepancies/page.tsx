@@ -8,15 +8,13 @@ import { DEMO_DISCREPANCIES } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
-import { fetchMapImageDataUrl, fetchSystemMapImageDataUrl, formatZuluDate, formatZuluDateTime } from '@/lib/utils'
+import { fetchMapImageDataUrl, fetchSystemMapImageDataUrl, formatZuluDate, formatZuluDateTime, compressImageForPdf } from '@/lib/utils'
 import { fetchSystemFeaturesForFeature } from '@/lib/supabase/infrastructure-features'
 import {
-  PDF_STATUS_LABELS,
-  BASIC_COLUMNS,
   buildDiscrepancyTable,
   type DiscrepancyRowData,
 } from '@/lib/pdf-config'
-import PdfTemplateSelector from '@/components/ui/pdf-template-selector'
+import PdfExportDialog from '@/components/ui/pdf-template-selector'
 import { EditDiscrepancyModal } from '@/components/discrepancies/modals'
 import { Map, List, Pencil, Trash2 } from 'lucide-react'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
@@ -60,7 +58,9 @@ export default function DiscrepanciesPage() {
   const [sendingEmail, setSendingEmail] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
-  const [selectedPdfColumns, setSelectedPdfColumns] = useState<string[]>([...BASIC_COLUMNS])
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false)
+  const [pdfDialogMode, setPdfDialogMode] = useState<'download' | 'email'>('download')
+  const [pdfExporting, setPdfExporting] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -281,7 +281,7 @@ export default function DiscrepanciesPage() {
     await saveWorkbook(wb, `Discrepancies_${dateStr}.xlsx`)
   }
 
-  const handleExportPdf = async () => {
+  const handleExportPdf = async (selectedPdfColumns: string[]) => {
     const { default: jsPDF } = await import('jspdf')
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' })
     const pageWidth = doc.internal.pageSize.getWidth()
@@ -308,19 +308,20 @@ export default function DiscrepanciesPage() {
               let dataUrl: string | null = null
               const imgPath = row.thumbnail_path || row.storage_path
               if (imgPath.startsWith('data:')) {
-                dataUrl = imgPath
+                dataUrl = await compressImageForPdf(imgPath, 400, 0.6)
               } else {
                 const { data: urlData } = supabase.storage.from('photos').getPublicUrl(imgPath)
                 if (urlData?.publicUrl) {
                   const resp = await fetch(urlData.publicUrl)
                   if (resp.ok) {
                     const blob = await resp.blob()
-                    dataUrl = await new Promise<string>((resolve, reject) => {
+                    const raw = await new Promise<string>((resolve, reject) => {
                       const reader = new FileReader()
                       reader.onloadend = () => resolve(reader.result as string)
                       reader.onerror = reject
                       reader.readAsDataURL(blob)
                     })
+                    dataUrl = await compressImageForPdf(raw, 400, 0.6)
                   }
                 }
               }
@@ -428,17 +429,30 @@ export default function DiscrepanciesPage() {
     return { doc, filename }
   }
 
-  const handleDownloadPdf = async () => {
-    const result = await handleExportPdf()
-    if (result) result.doc.save(result.filename)
+  const handleDownloadPdf = () => {
+    setPdfDialogMode('download')
+    setPdfDialogOpen(true)
   }
 
-  const handleEmailPdf = async () => {
-    const result = await handleExportPdf()
+  const handleEmailPdf = () => {
+    setPdfDialogMode('email')
+    setPdfDialogOpen(true)
+  }
+
+  const handlePdfDialogExport = async (columns: string[]) => {
+    setPdfExporting(true)
+    const result = await handleExportPdf(columns)
     if (result) {
-      setEmailPdfData(result)
-      setEmailModalOpen(true)
+      if (pdfDialogMode === 'download') {
+        result.doc.save(result.filename)
+        setPdfDialogOpen(false)
+      } else {
+        setEmailPdfData(result)
+        setPdfDialogOpen(false)
+        setEmailModalOpen(true)
+      }
     }
+    setPdfExporting(false)
   }
 
   const handleSendEmail = async (email: string) => {
@@ -529,12 +543,6 @@ export default function DiscrepanciesPage() {
           )}
         </div>
       </div>
-
-      {/* PDF Column Picker */}
-      <PdfTemplateSelector
-        selectedColumns={selectedPdfColumns}
-        onColumnsChange={setSelectedPdfColumns}
-      />
 
       {/* Row 1: OPEN + > 30 DAYS (larger) */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 6 }}>
@@ -886,6 +894,14 @@ export default function DiscrepanciesPage() {
           onSaved={handleEditSaved}
         />
       )}
+
+      <PdfExportDialog
+        open={pdfDialogOpen}
+        mode={pdfDialogMode}
+        onClose={() => setPdfDialogOpen(false)}
+        onExport={handlePdfDialogExport}
+        exporting={pdfExporting}
+      />
 
       <EmailPdfModal
         open={emailModalOpen}

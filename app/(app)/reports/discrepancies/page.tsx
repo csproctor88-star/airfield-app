@@ -10,8 +10,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
-import PdfTemplateSelector from '@/components/ui/pdf-template-selector'
-import { BASIC_COLUMNS } from '@/lib/pdf-config'
+import PdfExportDialog from '@/components/ui/pdf-template-selector'
 import { toast } from 'sonner'
 
 export default function DiscrepancyReportPage() {
@@ -33,7 +32,8 @@ export default function DiscrepancyReportPage() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [shopFilter, setShopFilter] = useState('all')
   const [locationFilter, setLocationFilter] = useState('all')
-  const [selectedPdfColumns, setSelectedPdfColumns] = useState<string[]>([...BASIC_COLUMNS])
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false)
+  const [pdfDialogMode, setPdfDialogMode] = useState<'download' | 'email'>('download')
 
   // Load generator name on mount
   useEffect(() => {
@@ -88,22 +88,37 @@ export default function DiscrepancyReportPage() {
     setLoading(false)
   }
 
-  const pdfOpts = { generatedBy: generatorName, baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao, selectedColumns: selectedPdfColumns }
+  const makePdfOpts = (columns: string[]) => ({
+    generatedBy: generatorName,
+    baseName: currentInstallation?.name,
+    baseIcao: currentInstallation?.icao,
+    selectedColumns: columns,
+  })
 
-  const handleExportPdf = async () => {
+  const handleExportPdf = () => {
     if (!data) return
-    setExporting(true)
-    const { doc, filename } = generateOpenDiscrepanciesPdf(data, pdfOpts)
-    doc.save(filename)
-    setExporting(false)
+    setPdfDialogMode('download')
+    setPdfDialogOpen(true)
   }
 
-  const handleEmailPdf = async () => {
+  const handleEmailPdf = () => {
+    if (!data) return
+    setPdfDialogMode('email')
+    setPdfDialogOpen(true)
+  }
+
+  const handlePdfDialogExport = async (columns: string[]) => {
     if (!data) return
     setExporting(true)
-    const result = generateOpenDiscrepanciesPdf(data, pdfOpts)
-    setEmailPdfData(result)
-    setEmailModalOpen(true)
+    const result = generateOpenDiscrepanciesPdf(data, makePdfOpts(columns))
+    if (pdfDialogMode === 'download') {
+      result.doc.save(result.filename)
+      setPdfDialogOpen(false)
+    } else {
+      setEmailPdfData(result)
+      setPdfDialogOpen(false)
+      setEmailModalOpen(true)
+    }
     setExporting(false)
   }
 
@@ -121,11 +136,11 @@ export default function DiscrepancyReportPage() {
     setSendingEmail(false)
   }
 
-  // Export all open (quick one-click)
+  // Export all open (quick one-click — uses all columns for backward compat)
   const handleExportAllOpen = async () => {
     setExporting(true)
     const reportData = await fetchOpenDiscrepanciesData(true, installationId, { status: 'open' })
-    const { doc, filename } = generateOpenDiscrepanciesPdf(reportData, pdfOpts)
+    const { doc, filename } = generateOpenDiscrepanciesPdf(reportData, makePdfOpts([]))
     doc.save(filename)
     setExporting(false)
   }
@@ -315,12 +330,6 @@ export default function DiscrepancyReportPage() {
             )}
           </div>
 
-          {/* PDF Column Picker */}
-          <PdfTemplateSelector
-            selectedColumns={selectedPdfColumns}
-            onColumnsChange={setSelectedPdfColumns}
-          />
-
           {/* Export Buttons */}
           <div style={{ display: 'flex', gap: 8 }}>
             <button
@@ -355,6 +364,14 @@ export default function DiscrepancyReportPage() {
           </div>
         </>
       )}
+
+      <PdfExportDialog
+        open={pdfDialogOpen}
+        mode={pdfDialogMode}
+        onClose={() => setPdfDialogOpen(false)}
+        onExport={handlePdfDialogExport}
+        exporting={exporting}
+      />
 
       <EmailPdfModal
         open={emailModalOpen}
