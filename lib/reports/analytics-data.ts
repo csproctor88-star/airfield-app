@@ -36,9 +36,14 @@ export interface AnalyticsData {
   }
   // Wildlife
   wildlife: {
-    sightingsLast30: number
-    strikesLast30: number
+    sightings: number
+    strikes: number
     topSpecies: string | null
+  }
+  // Obstructions
+  obstructions: {
+    evaluated: number
+    violations: number
   }
 }
 
@@ -51,15 +56,16 @@ const EMPTY: AnalyticsData = {
   discrepancies: { currentOpen: 0, avgDaysToClose: null, openedLast30: 0, closedLast30: 0 },
   personnel: { activeToday: 0, avgPerDay: null },
   qrc: { executionsLast30: 0, avgResponseMinutes: null },
-  wildlife: { sightingsLast30: 0, strikesLast30: 0, topSpecies: null },
+  wildlife: { sightings: 0, strikes: 0, topSpecies: null },
+  obstructions: { evaluated: 0, violations: 0 },
 }
 
-export async function fetchAnalyticsData(baseId: string | null): Promise<AnalyticsData> {
+export async function fetchAnalyticsData(baseId: string | null, days = 30): Promise<AnalyticsData> {
   const supabase = createClient()
   if (!supabase || !baseId) return EMPTY
 
   const now = new Date()
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000).toISOString()
+  const since = new Date(now.getTime() - days * 86400000).toISOString()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
 
   try {
@@ -70,13 +76,15 @@ export async function fetchAnalyticsData(baseId: string | null): Promise<Analyti
       personnelData,
       qrcData,
       wildlifeData,
+      obstructionData,
     ] = await Promise.all([
-      fetchInspectionAnalytics(supabase, baseId, thirtyDaysAgo),
-      fetchCheckAnalytics(supabase, baseId, thirtyDaysAgo),
-      fetchDiscrepancyAnalytics(supabase, baseId, thirtyDaysAgo),
-      fetchPersonnelAnalytics(supabase, baseId, todayStart, thirtyDaysAgo),
-      fetchQrcAnalytics(supabase, baseId, thirtyDaysAgo),
-      fetchWildlifeAnalytics(supabase, baseId, thirtyDaysAgo),
+      fetchInspectionAnalytics(supabase, baseId, since),
+      fetchCheckAnalytics(supabase, baseId, since),
+      fetchDiscrepancyAnalytics(supabase, baseId, since),
+      fetchPersonnelAnalytics(supabase, baseId, todayStart, since),
+      fetchQrcAnalytics(supabase, baseId, since),
+      fetchWildlifeAnalytics(supabase, baseId, since),
+      fetchObstructionAnalytics(supabase, baseId, since),
     ])
 
     return {
@@ -87,6 +95,7 @@ export async function fetchAnalyticsData(baseId: string | null): Promise<Analyti
       personnel: personnelData,
       qrc: qrcData,
       wildlife: wildlifeData,
+      obstructions: obstructionData,
     }
   } catch (e) {
     console.error('Analytics fetch failed:', e)
@@ -308,8 +317,23 @@ async function fetchWildlifeAnalytics(supabase: any, baseId: string, since: stri
   const topSpecies = Object.entries(speciesCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null
 
   return {
-    sightingsLast30: sightings.length,
-    strikesLast30: strikes.length,
+    sightings: sightings.length,
+    strikes: strikes.length,
     topSpecies,
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchObstructionAnalytics(supabase: any, baseId: string, since: string) {
+  const { data } = await supabase
+    .from('obstruction_evaluations')
+    .select('has_violation')
+    .eq('base_id', baseId)
+    .gte('created_at', since)
+
+  const rows = (data ?? []) as { has_violation: boolean }[]
+  return {
+    evaluated: rows.length,
+    violations: rows.filter(r => r.has_violation).length,
   }
 }

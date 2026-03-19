@@ -12,88 +12,82 @@ const CHECK_TYPE_LABELS: Record<string, string> = {
 }
 
 const REPORT_CARDS = [
-  {
-    title: 'Daily Operations Summary',
-    description: 'All airfield activity for a selected date or date range.',
-    href: '/reports/daily',
-    icon: FileText,
-    color: '#0EA5E9',
-  },
-  {
-    title: 'Discrepancy Report',
-    description: 'Filtered discrepancy exports — by status, type, shop, or location.',
-    href: '/reports/discrepancies',
-    icon: AlertTriangle,
-    color: '#FBBF24',
-  },
-  {
-    title: 'Discrepancy Trends',
-    description: 'Opened vs closed over time with top areas and types.',
-    href: '/reports/trends',
-    icon: TrendingUp,
-    color: '#8B5CF6',
-  },
-  {
-    title: 'Aging Discrepancies',
-    description: 'Open discrepancies by aging tier and shop with filtered exports.',
-    href: '/reports/aging',
-    icon: Clock,
-    color: '#EF4444',
-  },
-  {
-    title: 'Airfield Lighting Report',
-    description: 'System health, outages, and feature inventory with filtered exports.',
-    href: '/reports/lighting',
-    icon: Lightbulb,
-    color: '#22C55E',
-  },
+  { title: 'Daily Operations Summary', description: 'All activity for a selected date or range.', href: '/reports/daily', icon: FileText, color: '#0EA5E9' },
+  { title: 'Discrepancy Report', description: 'Filtered exports by status, type, shop, or location.', href: '/reports/discrepancies', icon: AlertTriangle, color: '#FBBF24' },
+  { title: 'Discrepancy Trends', description: 'Opened vs closed over time.', href: '/reports/trends', icon: TrendingUp, color: '#8B5CF6' },
+  { title: 'Aging Discrepancies', description: 'By aging tier and shop with filtered exports.', href: '/reports/aging', icon: Clock, color: '#EF4444' },
+  { title: 'Airfield Lighting Report', description: 'System health, outages, feature inventory.', href: '/reports/lighting', icon: Lightbulb, color: '#22C55E' },
+]
+
+const TIME_FRAMES = [
+  { value: 7, label: '7d' },
+  { value: 30, label: '30d' },
+  { value: 90, label: '90d' },
+  { value: 180, label: '6mo' },
+  { value: 365, label: '1yr' },
 ]
 
 export default function ReportsPage() {
   const { installationId } = useInstallation()
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [days, setDays] = useState(30)
 
   useEffect(() => {
-    fetchAnalyticsData(installationId).then(data => {
+    setLoading(true)
+    fetchAnalyticsData(installationId, days).then(data => {
       setAnalytics(data)
       setLoading(false)
     })
-  }, [installationId])
+  }, [installationId, days])
+
+  const periodLabel = TIME_FRAMES.find(t => t.value === days)?.label || `${days}d`
 
   return (
     <div className="page-container">
       <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>Reports & Analytics</div>
 
       {/* Report links */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 20 }}>
         {REPORT_CARDS.map((card) => (
           <Link key={card.href} href={card.href} style={{ textDecoration: 'none', color: 'inherit' }}>
             <div style={{
-              padding: '12px 14px', display: 'flex', gap: 12, alignItems: 'center',
+              padding: '10px 14px', display: 'flex', gap: 10, alignItems: 'center',
               background: 'var(--color-bg-surface)', borderRadius: 8,
               border: `1px solid ${card.color}22`, cursor: 'pointer',
             }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: 8,
-                background: `${card.color}14`, border: `1px solid ${card.color}33`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}>
-                <card.icon size={18} color={card.color} />
-              </div>
+              <card.icon size={18} color={card.color} style={{ flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>{card.title}</div>
-                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', lineHeight: 1.4 }}>{card.description}</div>
+                <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>{card.title}</span>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', marginLeft: 6 }}>{card.description}</span>
               </div>
-              <span style={{ color: 'var(--color-text-4)', fontSize: 'var(--fs-xl)' }}>›</span>
+              <span style={{ color: 'var(--color-text-4)', fontSize: 'var(--fs-lg)' }}>›</span>
             </div>
           </Link>
         ))}
       </div>
 
-      {/* Analytics */}
-      <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 10 }}>
-        30-Day Analytics
+      {/* Analytics header with time frame selector */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--color-text-1)' }}>
+          Analytics
+        </div>
+        <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+          {TIME_FRAMES.map(tf => (
+            <button
+              key={tf.value}
+              onClick={() => setDays(tf.value)}
+              style={{
+                padding: '4px 10px', border: 'none', fontSize: 'var(--fs-xs)', fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit',
+                background: days === tf.value ? 'var(--color-cyan)' : 'transparent',
+                color: days === tf.value ? '#000' : 'var(--color-text-3)',
+              }}
+            >
+              {tf.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
@@ -106,119 +100,194 @@ export default function ReportsPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
 
           {/* Airfield Inspections */}
-          <AnalyticsCard title="Airfield Inspections">
-            <MetricRow label="Completed" value={analytics.airfieldInspections.completed} />
+          <StyledCard accent="#0EA5E9">
+            <CardHeader>Airfield Inspections</CardHeader>
+            <BigNumber value={analytics.airfieldInspections.completed} label="completed" />
             {analytics.airfieldInspections.avgMinutes != null && (
-              <MetricRow label="Avg Time" value={`${analytics.airfieldInspections.avgMinutes} min`} />
+              <StatRow label="Avg Time" value={`${analytics.airfieldInspections.avgMinutes} min`} />
             )}
             {analytics.airfieldInspections.passRate != null && (
-              <MetricRow label="Pass Rate" value={`${analytics.airfieldInspections.passRate}%`} color={analytics.airfieldInspections.passRate >= 90 ? '#22C55E' : '#FBBF24'} />
+              <StatRow label="Pass Rate" value={`${analytics.airfieldInspections.passRate}%`}>
+                <MiniBar pct={analytics.airfieldInspections.passRate} color={analytics.airfieldInspections.passRate >= 90 ? '#22C55E' : '#FBBF24'} />
+              </StatRow>
             )}
-          </AnalyticsCard>
+          </StyledCard>
 
           {/* Lighting Inspections */}
-          <AnalyticsCard title="Lighting Inspections">
-            <MetricRow label="Completed" value={analytics.lightingInspections.completed} />
+          <StyledCard accent="#A78BFA">
+            <CardHeader>Lighting Inspections</CardHeader>
+            <BigNumber value={analytics.lightingInspections.completed} label="completed" />
             {analytics.lightingInspections.avgMinutes != null && (
-              <MetricRow label="Avg Time" value={`${analytics.lightingInspections.avgMinutes} min`} />
+              <StatRow label="Avg Time" value={`${analytics.lightingInspections.avgMinutes} min`} />
             )}
             {analytics.lightingInspections.passRate != null && (
-              <MetricRow label="Pass Rate" value={`${analytics.lightingInspections.passRate}%`} color={analytics.lightingInspections.passRate >= 90 ? '#22C55E' : '#FBBF24'} />
+              <StatRow label="Pass Rate" value={`${analytics.lightingInspections.passRate}%`}>
+                <MiniBar pct={analytics.lightingInspections.passRate} color={analytics.lightingInspections.passRate >= 90 ? '#22C55E' : '#FBBF24'} />
+              </StatRow>
             )}
-          </AnalyticsCard>
+          </StyledCard>
 
           {/* Airfield Checks */}
-          <AnalyticsCard title="Airfield Checks">
-            <MetricRow label="Total" value={analytics.checks.last30Days} />
-            <MetricRow label="Avg / Day" value={analytics.checks.avgPerDay} />
+          <StyledCard accent="#22D3EE">
+            <CardHeader>Airfield Checks</CardHeader>
+            <BigNumber value={analytics.checks.last30Days} label="total" />
+            <StatRow label="Avg / Day" value={analytics.checks.avgPerDay} />
             {analytics.checks.avgCompletionMinutes != null && (
-              <MetricRow label="Avg Time" value={`${analytics.checks.avgCompletionMinutes} min`} />
+              <StatRow label="Avg Time" value={`${analytics.checks.avgCompletionMinutes} min`} />
             )}
-            {analytics.checks.byType.slice(0, 3).map(t => (
-              <MetricRow key={t.type} label={CHECK_TYPE_LABELS[t.type] || t.type} value={t.count} subtle />
-            ))}
-          </AnalyticsCard>
+            {analytics.checks.byType.length > 0 && (
+              <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {analytics.checks.byType.slice(0, 4).map(t => (
+                  <span key={t.type} style={{
+                    fontSize: 'var(--fs-2xs)', padding: '1px 6px', borderRadius: 4,
+                    background: 'rgba(34,211,238,0.08)', color: 'var(--color-text-3)',
+                  }}>
+                    {CHECK_TYPE_LABELS[t.type] || t.type} {t.count}
+                  </span>
+                ))}
+              </div>
+            )}
+          </StyledCard>
 
           {/* Discrepancies */}
-          <AnalyticsCard title="Discrepancies">
-            <MetricRow label="Open" value={analytics.discrepancies.currentOpen} color={analytics.discrepancies.currentOpen > 0 ? '#FBBF24' : '#22C55E'} />
+          <StyledCard accent="#FBBF24">
+            <CardHeader>Discrepancies</CardHeader>
+            <BigNumber value={analytics.discrepancies.currentOpen} label="open" color={analytics.discrepancies.currentOpen > 0 ? '#FBBF24' : '#22C55E'} />
             {analytics.discrepancies.avgDaysToClose != null && (
-              <MetricRow label="Avg Days to Close" value={analytics.discrepancies.avgDaysToClose} color={analytics.discrepancies.avgDaysToClose > 30 ? '#EF4444' : 'var(--color-text-1)'} />
+              <StatRow label="Avg Days to Close" value={analytics.discrepancies.avgDaysToClose} />
             )}
-            <MetricRow label="Opened (30d)" value={analytics.discrepancies.openedLast30} />
-            <MetricRow label="Closed (30d)" value={analytics.discrepancies.closedLast30} />
-            {analytics.discrepancies.openedLast30 > 0 && analytics.discrepancies.closedLast30 > 0 && (
-              <MetricRow
-                label="Net"
-                value={`${analytics.discrepancies.openedLast30 > analytics.discrepancies.closedLast30 ? '+' : ''}${analytics.discrepancies.openedLast30 - analytics.discrepancies.closedLast30}`}
-                color={analytics.discrepancies.openedLast30 > analytics.discrepancies.closedLast30 ? '#EF4444' : '#22C55E'}
-              />
-            )}
-          </AnalyticsCard>
+            <div style={{ display: 'flex', gap: 12, marginTop: 2 }}>
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                Opened <span style={{ fontWeight: 700, color: 'var(--color-text-2)' }}>{analytics.discrepancies.openedLast30}</span>
+              </span>
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                Closed <span style={{ fontWeight: 700, color: 'var(--color-text-2)' }}>{analytics.discrepancies.closedLast30}</span>
+              </span>
+              {(analytics.discrepancies.openedLast30 > 0 || analytics.discrepancies.closedLast30 > 0) && (
+                <span style={{
+                  fontSize: 'var(--fs-xs)', fontWeight: 700,
+                  color: analytics.discrepancies.openedLast30 > analytics.discrepancies.closedLast30 ? '#EF4444' : '#22C55E',
+                }}>
+                  Net {analytics.discrepancies.openedLast30 > analytics.discrepancies.closedLast30 ? '+' : ''}
+                  {analytics.discrepancies.openedLast30 - analytics.discrepancies.closedLast30}
+                </span>
+              )}
+            </div>
+          </StyledCard>
 
           {/* QRC Executions */}
-          <AnalyticsCard title="QRC Executions">
-            <MetricRow label="Executed" value={analytics.qrc.executionsLast30} />
+          <StyledCard accent="#F97316">
+            <CardHeader>QRC Executions</CardHeader>
+            <BigNumber value={analytics.qrc.executionsLast30} label="executed" />
             {analytics.qrc.avgResponseMinutes != null && (
-              <MetricRow label="Avg Response" value={`${analytics.qrc.avgResponseMinutes} min`} />
+              <StatRow label="Avg Response" value={`${analytics.qrc.avgResponseMinutes} min`} />
             )}
-          </AnalyticsCard>
+          </StyledCard>
 
-          {/* Personnel on Airfield */}
-          <AnalyticsCard title="Personnel">
-            <MetricRow label="Active Today" value={analytics.personnel.activeToday} />
+          {/* Personnel */}
+          <StyledCard accent="#64748B">
+            <CardHeader>Personnel on Airfield</CardHeader>
+            <BigNumber value={analytics.personnel.activeToday} label="active today" />
             {analytics.personnel.avgPerDay != null && (
-              <MetricRow label="Avg / Day" value={analytics.personnel.avgPerDay} />
+              <StatRow label="Avg / Day" value={analytics.personnel.avgPerDay} />
             )}
-          </AnalyticsCard>
+          </StyledCard>
+
+          {/* Obstructions */}
+          <StyledCard accent="#F59E0B">
+            <CardHeader>Obstruction Evaluations</CardHeader>
+            <BigNumber value={analytics.obstructions.evaluated} label="evaluated" />
+            <StatRow label="Violations Found" value={analytics.obstructions.violations}>
+              {analytics.obstructions.violations > 0 && (
+                <span style={{
+                  fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '1px 5px', borderRadius: 3,
+                  background: 'rgba(239,68,68,0.12)', color: '#EF4444',
+                }}>
+                  {analytics.obstructions.evaluated > 0
+                    ? `${Math.round((analytics.obstructions.violations / analytics.obstructions.evaluated) * 100)}%`
+                    : '0%'}
+                </span>
+              )}
+            </StatRow>
+          </StyledCard>
 
           {/* Wildlife / BASH */}
-          {(analytics.wildlife.sightingsLast30 > 0 || analytics.wildlife.strikesLast30 > 0) && (
-            <AnalyticsCard title="Wildlife / BASH">
-              <MetricRow label="Sightings" value={analytics.wildlife.sightingsLast30} />
-              <MetricRow label="Strikes" value={analytics.wildlife.strikesLast30} color={analytics.wildlife.strikesLast30 > 0 ? '#EF4444' : 'var(--color-text-1)'} />
-              {analytics.wildlife.topSpecies && (
-                <MetricRow label="Top Species" value={analytics.wildlife.topSpecies} subtle />
-              )}
-            </AnalyticsCard>
-          )}
+          <StyledCard accent="#10B981">
+            <CardHeader>Wildlife / BASH</CardHeader>
+            <div style={{ display: 'flex', gap: 16, marginBottom: 4 }}>
+              <div>
+                <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>{analytics.wildlife.sightings}</div>
+                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-4)', fontWeight: 600 }}>sightings</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: analytics.wildlife.strikes > 0 ? '#EF4444' : 'var(--color-text-1)' }}>{analytics.wildlife.strikes}</div>
+                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-4)', fontWeight: 600 }}>strikes</div>
+              </div>
+            </div>
+            {analytics.wildlife.topSpecies && (
+              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)' }}>
+                Top species: <span style={{ fontWeight: 600, color: 'var(--color-text-2)' }}>{analytics.wildlife.topSpecies}</span>
+              </div>
+            )}
+          </StyledCard>
+
         </div>
       )}
     </div>
   )
 }
 
-// ── Compact card component ──
+// ── Styled card with accent top border ──
 
-function AnalyticsCard({ title, children }: { title: string; children: React.ReactNode }) {
+function StyledCard({ accent, children }: { accent: string; children: React.ReactNode }) {
   return (
-    <div className="card" style={{ padding: '10px 14px' }}>
-      <div style={{
-        fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)',
-        textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6,
-      }}>
-        {title}
-      </div>
+    <div style={{
+      background: 'var(--color-bg-surface)', borderRadius: 10, padding: '12px 14px',
+      border: '1px solid var(--color-border)',
+      borderTop: `3px solid ${accent}`,
+      display: 'flex', flexDirection: 'column', gap: 2,
+    }}>
       {children}
     </div>
   )
 }
 
-function MetricRow({ label, value, color, subtle }: { label: string; value: string | number; color?: string; subtle?: boolean }) {
+function CardHeader({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: subtle ? '1px 0' : '2px 0',
+      fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)',
+      textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2,
     }}>
-      <span style={{ fontSize: subtle ? 'var(--fs-2xs)' : 'var(--fs-sm)', color: subtle ? 'var(--color-text-4)' : 'var(--color-text-2)' }}>
-        {label}
-      </span>
-      <span style={{
-        fontSize: subtle ? 'var(--fs-xs)' : 'var(--fs-md)', fontWeight: 700,
-        color: color || 'var(--color-text-1)',
-      }}>
-        {value}
-      </span>
+      {children}
+    </div>
+  )
+}
+
+function BigNumber({ value, label, color }: { value: number | string; label: string; color?: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 2 }}>
+      <span style={{ fontSize: 'var(--fs-3xl)', fontWeight: 800, color: color || 'var(--color-text-1)', lineHeight: 1 }}>{value}</span>
+      <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-4)', fontWeight: 600 }}>{label}</span>
+    </div>
+  )
+}
+
+function StatRow({ label, value, children }: { label: string; value: string | number; children?: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1px 0' }}>
+      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {children}
+        <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>{value}</span>
+      </div>
+    </div>
+  )
+}
+
+function MiniBar({ pct, color }: { pct: number; color: string }) {
+  return (
+    <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--color-border)', overflow: 'hidden' }}>
+      <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', borderRadius: 2, background: color }} />
     </div>
   )
 }
