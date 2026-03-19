@@ -1,22 +1,22 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, AlertTriangle, Download, Mail, Loader2 } from 'lucide-react'
-import { fetchOpenDiscrepanciesData, formatDiscrepancyType, type OpenDiscrepanciesData } from '@/lib/reports/open-discrepancies-data'
+import { ArrowLeft, Download, Mail, Loader2, Filter } from 'lucide-react'
+import { fetchOpenDiscrepanciesData, formatDiscrepancyType, type OpenDiscrepanciesData, type DiscrepancyReportFilters } from '@/lib/reports/open-discrepancies-data'
 import { generateOpenDiscrepanciesPdf } from '@/lib/reports/open-discrepancies-pdf'
 import { getInspectorName } from '@/lib/supabase/inspections'
 import { useInstallation } from '@/lib/installation-context'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
+import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { toast } from 'sonner'
-import { formatZuluDateTime } from '@/lib/utils'
 
-export default function OpenDiscrepanciesPage() {
+export default function DiscrepancyReportPage() {
   const router = useRouter()
-  const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
+  const { installationId, currentInstallation, defaultPdfEmail, ceShops, areas } = useInstallation()
 
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [data, setData] = useState<OpenDiscrepanciesData | null>(null)
   const [generatorName, setGeneratorName] = useState<string>('Unknown')
   const [exporting, setExporting] = useState(false)
@@ -25,25 +25,69 @@ export default function OpenDiscrepanciesPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
 
+  // Filters
+  const [statusFilter, setStatusFilter] = useState('open')
+  const [currentStatusFilter, setCurrentStatusFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [shopFilter, setShopFilter] = useState('all')
+  const [locationFilter, setLocationFilter] = useState('all')
+
+  // Load generator name on mount
   useEffect(() => {
-    let cancelled = false
-    async function generate() {
-      const [reportData, inspector] = await Promise.all([
-        fetchOpenDiscrepanciesData(true, installationId),
-        getInspectorName(),
-      ])
-      if (cancelled) return
-      setData(reportData)
-      setGeneratorName(inspector.name || 'Unknown')
-      setLoading(false)
-    }
-    generate()
-    return () => { cancelled = true }
+    getInspectorName().then(r => setGeneratorName(r.name || 'Unknown'))
   }, [])
+
+  const filters: DiscrepancyReportFilters = useMemo(() => ({
+    status: statusFilter,
+    currentStatus: currentStatusFilter,
+    type: typeFilter,
+    shop: shopFilter,
+    location: locationFilter,
+  }), [statusFilter, currentStatusFilter, typeFilter, shopFilter, locationFilter])
+
+  // Build a label describing the active filters
+  const filterLabel = useMemo(() => {
+    const parts: string[] = []
+    if (statusFilter !== 'all') {
+      parts.push(statusFilter === 'open' ? 'Open' : statusFilter === 'completed' ? 'Completed' : 'Cancelled')
+    } else {
+      parts.push('All')
+    }
+    if (currentStatusFilter !== 'all') {
+      const opt = CURRENT_STATUS_OPTIONS.find(o => o.value === currentStatusFilter)
+      parts.push(opt?.label || currentStatusFilter)
+    }
+    if (typeFilter !== 'all') {
+      const t = DISCREPANCY_TYPES.find(d => d.value === typeFilter)
+      parts.push(t?.label || typeFilter)
+    }
+    if (shopFilter !== 'all') parts.push(shopFilter)
+    if (locationFilter !== 'all') parts.push(locationFilter)
+    return parts.join(' / ')
+  }, [statusFilter, currentStatusFilter, typeFilter, shopFilter, locationFilter])
+
+  const hasActiveFilters = currentStatusFilter !== 'all' || typeFilter !== 'all' || shopFilter !== 'all' || locationFilter !== 'all' || statusFilter !== 'open'
+
+  const clearFilters = () => {
+    setStatusFilter('open')
+    setCurrentStatusFilter('all')
+    setTypeFilter('all')
+    setShopFilter('all')
+    setLocationFilter('all')
+    setData(null)
+  }
+
+  // Generate report
+  const generateReport = async () => {
+    setLoading(true)
+    const reportData = await fetchOpenDiscrepanciesData(true, installationId, filters)
+    setData(reportData)
+    setLoading(false)
+  }
 
   const pdfOpts = { generatedBy: generatorName, baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao }
 
-  const handleExport = async () => {
+  const handleExportPdf = async () => {
     if (!data) return
     setExporting(true)
     const { doc, filename } = generateOpenDiscrepanciesPdf(data, pdfOpts)
@@ -74,152 +118,234 @@ export default function OpenDiscrepanciesPage() {
     setSendingEmail(false)
   }
 
-  // ── Loading View ──
-  if (loading) {
-    return (
-      <div className="page-container">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <button onClick={() => router.push('/reports')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>
-            <ArrowLeft size={20} />
-          </button>
-          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Discrepancy Report</div>
-        </div>
-        <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
-          <Loader2 size={32} color="var(--color-warning)" style={{ animation: 'spin 1s linear infinite' }} />
-          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', marginTop: 12 }}>Fetching open discrepancy data...</div>
-          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-        </div>
-      </div>
-    )
+  // Export all open (quick one-click)
+  const handleExportAllOpen = async () => {
+    setExporting(true)
+    const reportData = await fetchOpenDiscrepanciesData(true, installationId, { status: 'open' })
+    const { doc, filename } = generateOpenDiscrepanciesPdf(reportData, pdfOpts)
+    doc.save(filename)
+    setExporting(false)
   }
 
-  // ── Preview View ──
-  if (!data) return null
+  // Summary lines from loaded data
+  const summary = data?.summary
 
-  const { summary } = data
-  const areaEntries = Object.entries(summary.byArea).sort((a, b) => b[1] - a[1])
-  const typeEntries = Object.entries(summary.byType).sort((a, b) => b[1] - a[1])
-  const shopEntries = Object.entries(summary.byShop).sort((a, b) => b[1] - a[1])
+  const selectStyle: React.CSSProperties = {
+    width: '100%', padding: '8px 10px', borderRadius: 6,
+    border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+    color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+  }
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)',
+    textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, display: 'block',
+  }
 
   return (
     <div className="page-container">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
         <button onClick={() => router.push('/reports')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>
           <ArrowLeft size={20} />
         </button>
-        <div>
+        <div style={{ flex: 1 }}>
           <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Discrepancy Report</div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>As of {formatZuluDateTime(new Date())}</div>
-        </div>
-      </div>
-
-      {/* Total Count */}
-      <div className="card" style={{ textAlign: 'center', padding: '16px 20px', marginBottom: 12 }}>
-        <AlertTriangle size={28} color="var(--color-warning)" style={{ marginBottom: 8 }} />
-        <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-text-1)' }}>{summary.total}</div>
-        <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>Open Discrepancies</div>
-        {summary.agingOver30 > 0 && (
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-danger)', marginTop: 4, fontWeight: 600 }}>
-            {summary.agingOver30} open &gt; 30 days
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+            {currentInstallation?.name} ({currentInstallation?.icao})
           </div>
-        )}
-        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4 }}>Generated by {generatorName}</div>
-      </div>
-
-      {/* By Area — KPI badges */}
-      <div className="card" style={{ padding: 14, marginBottom: 8 }}>
-        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-          By Area
-        </div>
-        <div className="badge-grid">
-          {areaEntries.map(([area, count]) => (
-            <div key={area} style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
-              background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.15)',
-              borderRadius: 8, padding: '8px 12px', minWidth: 64,
-            }}>
-              <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--color-accent)' }}>{count}</div>
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', marginTop: 2, fontWeight: 600 }}>{area}</div>
-            </div>
-          ))}
         </div>
       </div>
 
-      {/* By Type — KPI badges */}
+      {/* Quick Export */}
+      <button
+        onClick={handleExportAllOpen}
+        disabled={exporting}
+        style={{
+          width: '100%', padding: '12px 0', borderRadius: 8, marginBottom: 14,
+          border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)',
+          color: '#22C55E', fontSize: 'var(--fs-md)', fontWeight: 700,
+          cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
+          opacity: exporting ? 0.7 : 1,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        }}
+      >
+        <Download size={16} />
+        {exporting ? 'Generating...' : 'Export All Open Discrepancies'}
+      </button>
+
+      {/* Filter Card */}
       <div className="card" style={{ padding: 14, marginBottom: 14 }}>
-        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-          By Type
-        </div>
-        <div className="badge-grid">
-          {typeEntries.map(([type, count]) => (
-            <div key={type} style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
-              background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.15)',
-              borderRadius: 8, padding: '8px 12px', minWidth: 64,
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Filter size={14} color="var(--color-text-3)" />
+            <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)' }}>Build Custom Report</span>
+          </div>
+          {hasActiveFilters && (
+            <button onClick={clearFilters} style={{
+              background: 'none', border: 'none', color: 'var(--color-text-3)',
+              fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline',
             }}>
-              <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--color-warning)' }}>{count}</div>
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', marginTop: 2, fontWeight: 600 }}>{formatDiscrepancyType(type)}</div>
-            </div>
-          ))}
+              Reset
+            </button>
+          )}
         </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {/* Status */}
+          <div>
+            <span style={labelStyle}>Status</span>
+            <select style={selectStyle} value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setData(null) }}>
+              <option value="open">Open</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="all">All</option>
+            </select>
+          </div>
+
+          {/* Current Status */}
+          <div>
+            <span style={labelStyle}>Workflow Status</span>
+            <select style={selectStyle} value={currentStatusFilter} onChange={e => { setCurrentStatusFilter(e.target.value); setData(null) }}>
+              <option value="all">All</option>
+              {CURRENT_STATUS_OPTIONS.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Type */}
+          <div>
+            <span style={labelStyle}>Type</span>
+            <select style={selectStyle} value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setData(null) }}>
+              <option value="all">All Types</option>
+              {DISCREPANCY_TYPES.map(t => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Shop */}
+          <div>
+            <span style={labelStyle}>Assigned Shop</span>
+            <select style={selectStyle} value={shopFilter} onChange={e => { setShopFilter(e.target.value); setData(null) }}>
+              <option value="all">All Shops</option>
+              {ceShops.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Location */}
+          <div style={{ gridColumn: 'span 2' }}>
+            <span style={labelStyle}>Location</span>
+            <select style={selectStyle} value={locationFilter} onChange={e => { setLocationFilter(e.target.value); setData(null) }}>
+              <option value="all">All Locations</option>
+              {areas.map(a => (
+                <option key={a} value={a}>{a}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Generate Button */}
+        <button
+          onClick={generateReport}
+          disabled={loading}
+          style={{
+            width: '100%', padding: '10px 0', borderRadius: 8, marginTop: 12,
+            border: '1px solid rgba(34,211,238,0.3)', background: 'rgba(34,211,238,0.08)',
+            color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 700,
+            cursor: loading ? 'default' : 'pointer', fontFamily: 'inherit',
+            opacity: loading ? 0.7 : 1,
+          }}
+        >
+          {loading ? 'Loading...' : 'Generate Report Preview'}
+        </button>
       </div>
 
-      {/* By Shop — KPI badges */}
-      {shopEntries.length > 0 && (
-        <div className="card" style={{ padding: 14, marginBottom: 14 }}>
-          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-            By Shop
-          </div>
-          <div className="badge-grid">
-            {shopEntries.map(([shop, count]) => (
-              <div key={shop} style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.15)',
-                borderRadius: 8, padding: '8px 12px', minWidth: 64,
-              }}>
-                <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: '#F97316' }}>{count}</div>
-                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', marginTop: 2, fontWeight: 600 }}>{shop}</div>
-              </div>
-            ))}
-          </div>
+      {/* Results */}
+      {loading && (
+        <div className="card" style={{ textAlign: 'center', padding: '30px 20px' }}>
+          <Loader2 size={28} color="var(--color-cyan)" style={{ animation: 'spin 1s linear infinite' }} />
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 8 }}>Fetching discrepancies...</div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       )}
 
-      {/* Export Buttons */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button
-          onClick={handleExport}
-          disabled={exporting}
-          style={{
-            flex: 1, padding: '14px 0', borderRadius: 10,
-            border: '1px solid rgba(34,197,94,0.4)',
-            background: 'rgba(34,197,94,0.1)',
-            color: '#22C55E', fontSize: 'var(--fs-xl)', fontWeight: 700,
-            cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
-            opacity: exporting ? 0.7 : 1,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          }}
-        >
-          <Download size={18} />
-          {exporting ? 'Generating PDF...' : 'Export PDF'}
-        </button>
-        <button
-          onClick={handleEmailPdf}
-          disabled={exporting}
-          style={{
-            padding: '14px 18px', borderRadius: 10,
-            border: '1px solid #A78BFA33',
-            background: '#A78BFA14',
-            color: '#A78BFA', fontSize: 'var(--fs-xl)', fontWeight: 700,
-            cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
-            opacity: exporting ? 0.7 : 1,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          }}
-        >
-          <Mail size={18} />
-        </button>
-      </div>
+      {!loading && data && summary && (
+        <>
+          {/* Count + filter label */}
+          <div className="card" style={{ padding: 14, marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 'var(--fs-3xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>{summary.total}</span>
+              <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>discrepancies</span>
+            </div>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+              {filterLabel}
+            </div>
+            {summary.agingOver30 > 0 && (
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-danger)', fontWeight: 600, marginTop: 4 }}>
+                {summary.agingOver30} open &gt; 30 days
+              </div>
+            )}
+          </div>
+
+          {/* Summary lines */}
+          <div className="card" style={{ padding: 14, marginBottom: 10, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
+            {Object.entries(summary.byArea).length > 0 && (
+              <div style={{ marginBottom: 6 }}>
+                <span style={{ fontWeight: 700, color: 'var(--color-text-3)', marginRight: 6 }}>By Area:</span>
+                {Object.entries(summary.byArea).sort((a, b) => b[1] - a[1]).map(([area, count]) => `${area} (${count})`).join(', ')}
+              </div>
+            )}
+            {Object.entries(summary.byType).length > 0 && (
+              <div style={{ marginBottom: 6 }}>
+                <span style={{ fontWeight: 700, color: 'var(--color-text-3)', marginRight: 6 }}>By Type:</span>
+                {Object.entries(summary.byType).sort((a, b) => b[1] - a[1]).map(([type, count]) => `${formatDiscrepancyType(type)} (${count})`).join(', ')}
+              </div>
+            )}
+            {Object.entries(summary.byShop).length > 0 && (
+              <div>
+                <span style={{ fontWeight: 700, color: 'var(--color-text-3)', marginRight: 6 }}>By Shop:</span>
+                {Object.entries(summary.byShop).sort((a, b) => b[1] - a[1]).map(([shop, count]) => `${shop} (${count})`).join(', ')}
+              </div>
+            )}
+          </div>
+
+          {/* Export Buttons */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={handleExportPdf}
+              disabled={exporting || summary.total === 0}
+              style={{
+                flex: 1, padding: '12px 0', borderRadius: 8,
+                border: '1px solid rgba(168,85,247,0.3)', background: 'rgba(168,85,247,0.08)',
+                color: '#A855F7', fontSize: 'var(--fs-md)', fontWeight: 700,
+                cursor: (exporting || summary.total === 0) ? 'default' : 'pointer', fontFamily: 'inherit',
+                opacity: (exporting || summary.total === 0) ? 0.5 : 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}
+            >
+              <Download size={16} />
+              {exporting ? 'Generating...' : 'Export PDF'}
+            </button>
+            <button
+              onClick={handleEmailPdf}
+              disabled={exporting || summary.total === 0}
+              style={{
+                padding: '12px 16px', borderRadius: 8,
+                border: '1px solid rgba(168,85,247,0.3)', background: 'rgba(168,85,247,0.08)',
+                color: '#A855F7', fontSize: 'var(--fs-md)', fontWeight: 700,
+                cursor: (exporting || summary.total === 0) ? 'default' : 'pointer', fontFamily: 'inherit',
+                opacity: (exporting || summary.total === 0) ? 0.5 : 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}
+            >
+              <Mail size={16} />
+            </button>
+          </div>
+        </>
+      )}
 
       <EmailPdfModal
         open={emailModalOpen}
