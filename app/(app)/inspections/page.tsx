@@ -49,7 +49,7 @@ type FormType = 'airfield' | 'lighting'
 
 export default function InspectionsPage() {
   const router = useRouter()
-  const { installationId, runways, areas: installationAreas, facilities } = useInstallation()
+  const { installationId, currentInstallation, runways, areas: installationAreas, facilities } = useInstallation()
 
   // Base coordinates for weather (midpoint of first runway)
   const rwy0 = runways[0]
@@ -121,17 +121,22 @@ export default function InspectionsPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [showHistory, setShowHistory] = useState(false)
 
-  // ── User operating initials ──
+  // ── User operating initials + current user ID ──
   const [userOI, setUserOI] = useState('')
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   useEffect(() => {
     const supabase = createClient()
     if (!supabase) return
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
+      setCurrentUserId(user.id)
       supabase.from('profiles').select('operating_initials').eq('id', user.id).single()
         .then(({ data }) => { if (data?.operating_initials) setUserOI(data.operating_initials) })
     })
   }, [])
+
+  // ── Confirmation dialog state ──
+  const [confirmStart, setConfirmStart] = useState<FormType | null>(null)
 
   // ── Scroll to top on mount ──
   useEffect(() => {
@@ -291,7 +296,8 @@ export default function InspectionsPage() {
         if (dbRow.draft_data) {
           const dd = dbRow.draft_data as unknown as Record<string, unknown>
           const ddResponses = dd.responses as Record<string, unknown> | undefined
-          if (ddResponses && Object.keys(ddResponses).length === 0 && !dd.savedAt) {
+          // Only clean up orphans that belong to the current user
+          if (ddResponses && Object.keys(ddResponses).length === 0 && !dd.savedAt && dbRow.inspector_id === currentUserId) {
             deleteInspection(dbRow.id)
             continue
           }
@@ -351,13 +357,17 @@ export default function InspectionsPage() {
       autoBeginHandled.current = true
       const typeParam = params.get('type') as FormType | null
       if (typeParam && (typeParam === 'airfield' || typeParam === 'lighting')) {
-        // If a draft exists for this type, resume it; otherwise start new
+        // If a draft exists for this type, resume it; otherwise start new (with guard)
         const existingDraft = typeParam === 'airfield' ? airfieldDraft : lightingDraft
         if (existingDraft) {
           setActiveForm(typeParam)
           setShowHistory(false)
         } else {
-          handleBeginNew(typeParam)
+          // Guard: don't auto-start if one exists for today
+          const existingToday = typeParam === 'airfield' ? todayAirfield : todayLighting
+          if (!existingToday) {
+            setConfirmStart(typeParam)
+          }
         }
       } else {
         setActiveForm(null)
@@ -669,6 +679,19 @@ export default function InspectionsPage() {
 
   // ── Begin new inspection of a specific type ──
   const handleBeginNew = async (type: FormType) => {
+    // Hard guard: refuse to create if one already exists for today
+    const existingToday = type === 'airfield' ? todayAirfield : todayLighting
+    if (existingToday) {
+      const label = type === 'airfield' ? 'Airfield' : 'Lighting'
+      if (existingToday.status === 'completed') {
+        toast.error(`Today's ${label} Inspection is already complete. Use "Reopen for Editing" from the inspection report if corrections are needed.`)
+      } else {
+        const who = existingToday.inspector_name || 'Another user'
+        toast.error(`${who} already has a ${label} Inspection in progress for today. Coordinate with them to complete it.`)
+      }
+      return
+    }
+
     const newDraft = createSingleDraft(type)
     if (type === 'airfield') {
       setAirfieldDraft(newDraft)
@@ -1336,23 +1359,40 @@ export default function InspectionsPage() {
   const lightingCount = dailyReports.filter((r) => r.lighting).length
 
   // ── Today's inspection status for KPI badges ──
-  const now = new Date()
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-  const todayAirfieldFiled = useMemo(() => {
-    return liveInspections.some(i =>
+  // "Today" resets at 0600 local (installation timezone) to align with airfield opening
+  const todayStr = useMemo(() => {
+    const tz = currentInstallation?.timezone || 'America/New_York'
+    const localNow = new Date(new Date().toLocaleString('en-US', { timeZone: tz }))
+    // If before 0600, treat as previous day
+    if (localNow.getHours() < 6) {
+      localNow.setDate(localNow.getDate() - 1)
+    }
+    return `${localNow.getFullYear()}-${String(localNow.getMonth() + 1).padStart(2, '0')}-${String(localNow.getDate()).padStart(2, '0')}`
+  }, [currentInstallation?.timezone])
+
+  // Find today's airfield inspection (any status)
+  const todayAirfield = useMemo(() => {
+    return liveInspections.find(i =>
       i.inspection_type === 'airfield' &&
-      i.status === 'completed' &&
       i.inspection_date === todayStr
-    )
+    ) || null
   }, [liveInspections, todayStr])
 
-  const todayLightingFiled = useMemo(() => {
-    return liveInspections.some(i =>
+  const todayAirfieldFiled = todayAirfield?.status === 'completed'
+  const todayAirfieldInProgress = todayAirfield?.status === 'in_progress'
+  const todayAirfieldByOther = todayAirfieldInProgress && todayAirfield?.inspector_id !== currentUserId
+
+  // Find today's lighting inspection (any status)
+  const todayLighting = useMemo(() => {
+    return liveInspections.find(i =>
       i.inspection_type === 'lighting' &&
-      i.status === 'completed' &&
       i.inspection_date === todayStr
-    )
+    ) || null
   }, [liveInspections, todayStr])
+
+  const todayLightingFiled = todayLighting?.status === 'completed'
+  const todayLightingInProgress = todayLighting?.status === 'in_progress'
+  const todayLightingByOther = todayLightingInProgress && todayLighting?.inspector_id !== currentUserId
 
   // ── Don't render until draft state is known ──
   if (!draftLoaded) {
@@ -1838,11 +1878,12 @@ export default function InspectionsPage() {
               setShowHistory(false)
               window.scrollTo(0, 0)
             } else if (todayAirfieldFiled) {
-              // Already filed — go to history
               setShowHistory(true)
               setTypeFilter('airfield')
+            } else if (todayAirfieldByOther) {
+              toast.error(`${todayAirfield?.inspector_name || 'Another user'} has the Airfield Inspection in progress. Coordinate with them.`)
             } else {
-              handleBeginNew('airfield')
+              setConfirmStart('airfield')
             }
           }}
           style={{
@@ -1850,35 +1891,45 @@ export default function InspectionsPage() {
               ? 'rgba(34,197,94,0.08)'
               : airfieldDraft
               ? 'rgba(59,130,246,0.08)'
+              : todayAirfieldByOther
+              ? 'rgba(249,115,22,0.08)'
               : 'var(--color-bg-surface)',
             border: todayAirfieldFiled
               ? '2px solid rgba(34,197,94,0.4)'
               : airfieldDraft
               ? '2px solid rgba(59,130,246,0.4)'
+              : todayAirfieldByOther
+              ? '2px solid rgba(249,115,22,0.4)'
               : '1px solid var(--color-border)',
             borderRadius: 12,
             padding: '16px 12px',
-            cursor: 'pointer',
+            cursor: todayAirfieldByOther ? 'not-allowed' : 'pointer',
             textAlign: 'center',
             fontFamily: 'inherit',
+            opacity: todayAirfieldByOther ? 0.7 : 1,
           }}
         >
           <div style={{ fontSize: 32, marginBottom: 6 }}>
-            {todayAirfieldFiled ? '\u2705' : airfieldDraft ? '\uD83D\uDCDD' : '\u2600\uFE0F'}
+            {todayAirfieldFiled ? '\u2705' : airfieldDraft ? '\uD83D\uDCDD' : todayAirfieldByOther ? '\uD83D\uDD12' : '\u2600\uFE0F'}
           </div>
           <div style={{
             fontSize: 'var(--fs-md)', fontWeight: 700,
-            color: todayAirfieldFiled ? '#22C55E' : airfieldDraft ? '#3B82F6' : 'var(--color-text-1)',
+            color: todayAirfieldFiled ? '#22C55E' : airfieldDraft ? '#3B82F6' : todayAirfieldByOther ? '#F97316' : 'var(--color-text-1)',
           }}>
             Airfield
           </div>
           <div style={{
             fontSize: 'var(--fs-xs)', marginTop: 2,
-            color: todayAirfieldFiled ? '#22C55E' : airfieldDraft ? '#3B82F6' : 'var(--color-text-3)',
+            color: todayAirfieldFiled ? '#22C55E' : airfieldDraft ? '#3B82F6' : todayAirfieldByOther ? '#F97316' : 'var(--color-text-3)',
             fontWeight: 600,
           }}>
-            {todayAirfieldFiled ? 'Complete' : airfieldDraft ? 'In Progress' : 'Start'}
+            {todayAirfieldFiled ? 'Complete' : airfieldDraft ? 'In Progress' : todayAirfieldByOther ? `In Progress` : 'Start'}
           </div>
+          {todayAirfieldByOther && (
+            <div style={{ fontSize: 'var(--fs-2xs)', color: '#F97316', marginTop: 2 }}>
+              {todayAirfield?.inspector_name || 'Another user'}
+            </div>
+          )}
         </button>
 
         {/* Lighting KPI */}
@@ -1891,8 +1942,10 @@ export default function InspectionsPage() {
             } else if (todayLightingFiled) {
               setShowHistory(true)
               setTypeFilter('lighting')
+            } else if (todayLightingByOther) {
+              toast.error(`${todayLighting?.inspector_name || 'Another user'} has the Lighting Inspection in progress. Coordinate with them.`)
             } else {
-              handleBeginNew('lighting')
+              setConfirmStart('lighting')
             }
           }}
           style={{
@@ -1900,35 +1953,45 @@ export default function InspectionsPage() {
               ? 'rgba(34,197,94,0.08)'
               : lightingDraft
               ? 'rgba(59,130,246,0.08)'
+              : todayLightingByOther
+              ? 'rgba(249,115,22,0.08)'
               : 'var(--color-bg-surface)',
             border: todayLightingFiled
               ? '2px solid rgba(34,197,94,0.4)'
               : lightingDraft
               ? '2px solid rgba(59,130,246,0.4)'
+              : todayLightingByOther
+              ? '2px solid rgba(249,115,22,0.4)'
               : '1px solid var(--color-border)',
             borderRadius: 12,
             padding: '16px 12px',
-            cursor: 'pointer',
+            cursor: todayLightingByOther ? 'not-allowed' : 'pointer',
             textAlign: 'center',
             fontFamily: 'inherit',
+            opacity: todayLightingByOther ? 0.7 : 1,
           }}
         >
           <div style={{ fontSize: 32, marginBottom: 6 }}>
-            {todayLightingFiled ? '\u2705' : lightingDraft ? '\uD83D\uDCDD' : '\uD83C\uDF19'}
+            {todayLightingFiled ? '\u2705' : lightingDraft ? '\uD83D\uDCDD' : todayLightingByOther ? '\uD83D\uDD12' : '\uD83C\uDF19'}
           </div>
           <div style={{
             fontSize: 'var(--fs-md)', fontWeight: 700,
-            color: todayLightingFiled ? '#22C55E' : lightingDraft ? '#3B82F6' : 'var(--color-text-1)',
+            color: todayLightingFiled ? '#22C55E' : lightingDraft ? '#3B82F6' : todayLightingByOther ? '#F97316' : 'var(--color-text-1)',
           }}>
             Lighting
           </div>
           <div style={{
             fontSize: 'var(--fs-xs)', marginTop: 2,
-            color: todayLightingFiled ? '#22C55E' : lightingDraft ? '#3B82F6' : 'var(--color-text-3)',
+            color: todayLightingFiled ? '#22C55E' : lightingDraft ? '#3B82F6' : todayLightingByOther ? '#F97316' : 'var(--color-text-3)',
             fontWeight: 600,
           }}>
-            {todayLightingFiled ? 'Complete' : lightingDraft ? 'In Progress' : 'Start'}
+            {todayLightingFiled ? 'Complete' : lightingDraft ? 'In Progress' : todayLightingByOther ? 'In Progress' : 'Start'}
           </div>
+          {todayLightingByOther && (
+            <div style={{ fontSize: 'var(--fs-2xs)', color: '#F97316', marginTop: 2 }}>
+              {todayLighting?.inspector_name || 'Another user'}
+            </div>
+          )}
         </button>
       </div>
 
@@ -2183,6 +2246,67 @@ export default function InspectionsPage() {
           </Link>
         )
       })}
+      {/* ── Confirmation Dialog — Start New Inspection ── */}
+      {confirmStart && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.6)', padding: 16,
+          }}
+          onClick={() => setConfirmStart(null)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--color-bg-surface)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 14, padding: 24,
+              width: '100%', maxWidth: 380,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ fontSize: 40, marginBottom: 12 }}>
+              {confirmStart === 'airfield' ? '\u2600\uFE0F' : '\uD83C\uDF19'}
+            </div>
+            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 8 }}>
+              Start {confirmStart === 'airfield' ? 'Airfield' : 'Lighting'} Inspection?
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginBottom: 20, lineHeight: 1.5 }}>
+              You will be logged on the airfield for the Daily {confirmStart === 'airfield' ? 'Airfield' : 'Lighting'} Inspection. This is the only {confirmStart === 'airfield' ? 'airfield' : 'lighting'} inspection allowed for today.
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setConfirmStart(null)}
+                style={{
+                  flex: 1, padding: '12px 0', borderRadius: 10,
+                  border: '1px solid var(--color-border)', background: 'transparent',
+                  color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const type = confirmStart
+                  setConfirmStart(null)
+                  handleBeginNew(type)
+                }}
+                style={{
+                  flex: 1, padding: '12px 0', borderRadius: 10,
+                  border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.12)',
+                  color: '#22C55E', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Start Inspection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
