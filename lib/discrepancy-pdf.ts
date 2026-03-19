@@ -174,9 +174,10 @@ export async function generateDiscrepancyPdf(input: DiscrepancyPdfInput) {
   }
 
   // -- Location / Map --
+  // Skip pin map when system map is available (NAVAID-linked discrepancies)
   const lat = d.latitude != null ? Number(d.latitude) : null
   const lng = d.longitude != null ? Number(d.longitude) : null
-  if (lat != null && lng != null) {
+  if (lat != null && lng != null && !systemMapDataUrl) {
     checkPageBreak(50)
     y += 2
     doc.setFontSize(10)

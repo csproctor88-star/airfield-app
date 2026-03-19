@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
-import { compressImageForPdf } from '@/lib/utils'
+import { compressImageForPdf, fetchMapImageDataUrl, fetchSystemMapImageDataUrl } from '@/lib/utils'
+import { fetchSystemFeaturesForFeature } from '@/lib/supabase/infrastructure-features'
 
 // ── Types ──
 
@@ -16,6 +17,9 @@ export interface OpenDiscrepancy {
   work_order_number: string | null
   notam_reference: string | null
   reported_by: string
+  latitude: number | null
+  longitude: number | null
+  infrastructure_feature_id: string | null
   photo_count: number
   created_at: string
   updated_at: string
@@ -270,6 +274,35 @@ export async function fetchOpenDiscrepanciesData(
           dataUrl,
         })
       }
+    }
+  }
+
+  // Generate map images for each discrepancy (system map for NAVAID-linked, pin map for others)
+  for (const d of discrepancies) {
+    if (d.infrastructure_feature_id) {
+      // NAVAID-linked: generate system overview map (replaces pin map)
+      try {
+        const systemFeatures = await fetchSystemFeaturesForFeature(d.infrastructure_feature_id)
+        if (systemFeatures.length > 0) {
+          const mapFeatures = systemFeatures
+            .filter(f => f.latitude != null && f.longitude != null)
+            .map(f => ({ latitude: f.latitude, longitude: f.longitude, status: f.status, id: f.id }))
+          const mapUrl = await fetchSystemMapImageDataUrl(mapFeatures, d.infrastructure_feature_id)
+          if (mapUrl) {
+            if (!photos[d.id]) photos[d.id] = []
+            photos[d.id].push({ id: `map-system-${d.id}`, storage_path: '', file_name: 'System Overview', dataUrl: mapUrl })
+          }
+        }
+      } catch { /* skip failed map */ }
+    } else if (d.latitude != null && d.longitude != null) {
+      // Non-NAVAID: generate pin location map
+      try {
+        const mapUrl = await fetchMapImageDataUrl(d.latitude, d.longitude)
+        if (mapUrl) {
+          if (!photos[d.id]) photos[d.id] = []
+          photos[d.id].push({ id: `map-pin-${d.id}`, storage_path: '', file_name: 'Location', dataUrl: mapUrl })
+        }
+      } catch { /* skip failed map */ }
     }
   }
 

@@ -8,7 +8,8 @@ import { DEMO_DISCREPANCIES } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
-import { fetchMapImageDataUrl, formatZuluDate, formatZuluDateTime } from '@/lib/utils'
+import { fetchMapImageDataUrl, fetchSystemMapImageDataUrl, formatZuluDate, formatZuluDateTime } from '@/lib/utils'
+import { fetchSystemFeaturesForFeature } from '@/lib/supabase/infrastructure-features'
 import { EditDiscrepancyModal } from '@/components/discrepancies/modals'
 import { Map, List, Pencil, Trash2 } from 'lucide-react'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
@@ -329,15 +330,33 @@ export default function DiscrepanciesPage() {
         }
       }
 
-      // Fetch Mapbox satellite map images for discrepancies with coordinates
+      // Fetch map images: system overview for NAVAID-linked, pin map for others
       for (const d of filtered) {
-        const lat = 'latitude' in d && d.latitude != null ? Number(d.latitude) : null
-        const lng = 'longitude' in d && d.longitude != null ? Number(d.longitude) : null
-        if (lat != null && lng != null) {
-          const mapDataUrl = await fetchMapImageDataUrl(lat, lng)
-          if (mapDataUrl) {
-            if (!photoMap[d.id]) photoMap[d.id] = []
-            photoMap[d.id].push(mapDataUrl)
+        const featureId = 'infrastructure_feature_id' in d ? (d as DiscrepancyRow).infrastructure_feature_id : null
+        if (featureId) {
+          // NAVAID-linked: system overview map
+          try {
+            const systemFeatures = await fetchSystemFeaturesForFeature(featureId)
+            if (systemFeatures.length > 0) {
+              const mapFeatures = systemFeatures
+                .filter(f => f.latitude != null && f.longitude != null)
+                .map(f => ({ latitude: f.latitude, longitude: f.longitude, status: f.status, id: f.id }))
+              const mapUrl = await fetchSystemMapImageDataUrl(mapFeatures, featureId)
+              if (mapUrl) {
+                if (!photoMap[d.id]) photoMap[d.id] = []
+                photoMap[d.id].push(mapUrl)
+              }
+            }
+          } catch { /* skip */ }
+        } else {
+          const lat = 'latitude' in d && d.latitude != null ? Number(d.latitude) : null
+          const lng = 'longitude' in d && d.longitude != null ? Number(d.longitude) : null
+          if (lat != null && lng != null) {
+            const mapDataUrl = await fetchMapImageDataUrl(lat, lng)
+            if (mapDataUrl) {
+              if (!photoMap[d.id]) photoMap[d.id] = []
+              photoMap[d.id].push(mapDataUrl)
+            }
           }
         }
       }
