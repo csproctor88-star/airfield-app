@@ -53,6 +53,7 @@ export interface OpenDiscrepanciesData {
     total: number
     byArea: Record<string, number>
     byType: Record<string, number>
+    byShop: Record<string, number>
     agingOver30: number
   }
   // Keyed by discrepancy ID, last 3 notes
@@ -80,26 +81,40 @@ export function formatDiscrepancyType(raw: string): string {
 
 // ── Data Fetching ──
 
+export interface DiscrepancyReportFilters {
+  status?: string        // 'open' | 'completed' | 'cancelled' | 'all'
+  currentStatus?: string // specific current_status value or 'all'
+  type?: string          // specific discrepancy type or 'all'
+  shop?: string          // specific shop name or 'all'
+  location?: string      // specific area or 'all'
+}
+
 export async function fetchOpenDiscrepanciesData(
   includeNotes = false,
-  baseId?: string | null
+  baseId?: string | null,
+  filters?: DiscrepancyReportFilters,
 ): Promise<OpenDiscrepanciesData> {
   const supabase = createClient()
   if (!supabase) {
-    return { discrepancies: [], summary: { total: 0, byArea: {}, byType: {}, agingOver30: 0 }, notesHistory: {}, photos: {} }
+    return { discrepancies: [], summary: { total: 0, byArea: {}, byType: {}, byShop: {}, agingOver30: 0 }, notesHistory: {}, photos: {} }
   }
 
   const now = new Date()
 
-  // Fetch open discrepancies with profile join
+  // Fetch discrepancies with profile join
   let discrepancies: OpenDiscrepancy[] = []
 
   let query = supabase
     .from('discrepancies')
     .select('*, profiles:reported_by(name, rank)')
-    .eq('status', 'open')
     .order('created_at', { ascending: true })
 
+  // Apply filters (default to open only for backwards compatibility)
+  const statusFilter = filters?.status || 'open'
+  if (statusFilter !== 'all') query = query.eq('status', statusFilter as any)
+  if (filters?.currentStatus && filters.currentStatus !== 'all') query = query.eq('current_status', filters.currentStatus as any)
+  if (filters?.shop && filters.shop !== 'all') query = query.eq('assigned_shop', filters.shop)
+  if (filters?.location && filters.location !== 'all') query = query.eq('location_text', filters.location)
   if (baseId) query = query.eq('base_id', baseId)
 
   const { data, error } = await query
@@ -118,13 +133,16 @@ export async function fetchOpenDiscrepanciesData(
       }
     }) as OpenDiscrepancy[]
   } else {
-    // Fallback
+    // Fallback (no profile join)
     let fbQuery = supabase
       .from('discrepancies')
       .select('*')
-      .eq('status', 'open')
       .order('created_at', { ascending: true })
 
+    if (statusFilter !== 'all') fbQuery = fbQuery.eq('status', statusFilter as any)
+    if (filters?.currentStatus && filters.currentStatus !== 'all') fbQuery = fbQuery.eq('current_status', filters.currentStatus as any)
+    if (filters?.shop && filters.shop !== 'all') fbQuery = fbQuery.eq('assigned_shop', filters.shop)
+    if (filters?.location && filters.location !== 'all') fbQuery = fbQuery.eq('location_text', filters.location)
     if (baseId) fbQuery = fbQuery.eq('base_id', baseId)
 
     const { data: fb } = await fbQuery
@@ -141,6 +159,13 @@ export async function fetchOpenDiscrepanciesData(
         last_update_notes: null,
       }
     }) as OpenDiscrepancy[]
+  }
+
+  // Client-side type filter (type is stored as comma-separated values)
+  if (filters?.type && filters.type !== 'all') {
+    discrepancies = discrepancies.filter(d =>
+      d.type.split(',').map(t => t.trim()).includes(filters.type!)
+    )
   }
 
   // Fetch latest status update per discrepancy
@@ -251,12 +276,15 @@ export async function fetchOpenDiscrepanciesData(
   // Compute summary stats
   const byArea: Record<string, number> = {}
   const byType: Record<string, number> = {}
+  const byShop: Record<string, number> = {}
   let agingOver30 = 0
 
   for (const d of discrepancies) {
     const area = d.location_text || 'Unknown'
     byArea[area] = (byArea[area] || 0) + 1
     byType[d.type] = (byType[d.type] || 0) + 1
+    const shop = d.assigned_shop || 'Unassigned'
+    byShop[shop] = (byShop[shop] || 0) + 1
     if (d.days_open > 30) agingOver30++
   }
 
@@ -266,6 +294,7 @@ export async function fetchOpenDiscrepanciesData(
       total: discrepancies.length,
       byArea,
       byType,
+      byShop,
       agingOver30,
     },
     notesHistory,

@@ -70,8 +70,18 @@ export function buildFeatureDisplayName(
 
   // Only include label for sign types (where label = sign text). For other features
   // the label is the fixture ID code which shouldn't be in the display name.
+  // Sanitize Unicode arrows to ASCII for PDF compatibility (jsPDF Helvetica lacks these glyphs).
   const isSign = feature.feature_type.endsWith('_sign')
-  if (feature.label && isSign) parts.push(feature.label)
+  if (feature.label && isSign) {
+    const sanitized = feature.label
+      .replace(/\u2190/g, '<-')   // ←
+      .replace(/\u2192/g, '->')   // →
+      .replace(/\u2191/g, '^')    // ↑
+      .replace(/\u2193/g, 'v')    // ↓
+      .replace(/\u21D0/g, '<=')   // ⇐
+      .replace(/\u21D2/g, '=>')   // ⇒
+    parts.push(sanitized)
+  }
   parts.push(typeLabel)
 
   return parts.join(' ')
@@ -120,6 +130,49 @@ export async function fetchInfrastructureFeature(id: string): Promise<Infrastruc
 
   if (error) return null
   return data as InfrastructureFeature
+}
+
+// ── Fetch all features in the same lighting system as a given feature ──
+
+export async function fetchSystemFeaturesForFeature(featureId: string): Promise<InfrastructureFeature[]> {
+  const supabase = createClient()
+  if (!supabase) return []
+
+  // Get the feature to find its system_component_id
+  const { data: feature } = await supabase
+    .from('infrastructure_features')
+    .select('system_component_id, base_id')
+    .eq('id', featureId)
+    .single()
+
+  if (!feature?.system_component_id) return []
+
+  // Get the component to find the system_id
+  const { data: component } = await supabase
+    .from('lighting_system_components')
+    .select('system_id')
+    .eq('id', feature.system_component_id)
+    .single()
+
+  if (!component?.system_id) return []
+
+  // Get ALL components in this system
+  const { data: systemComponents } = await supabase
+    .from('lighting_system_components')
+    .select('id')
+    .eq('system_id', component.system_id)
+
+  if (!systemComponents || systemComponents.length === 0) return []
+
+  const componentIds = systemComponents.map(c => c.id)
+
+  // Fetch all features assigned to any component in this system
+  const { data: features } = await supabase
+    .from('infrastructure_features')
+    .select('*')
+    .in('system_component_id', componentIds)
+
+  return (features ?? []) as InfrastructureFeature[]
 }
 
 // ── Create a single feature ──

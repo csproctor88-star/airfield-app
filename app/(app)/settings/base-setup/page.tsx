@@ -37,7 +37,7 @@ import { fetchBaseSpecies, addBaseSpecies, addBaseSpeciesBulk, removeBaseSpecies
 type SetupTab = 'runways' | 'taxiways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'facilities' | 'templates' | 'shiftchecklist' | 'qrc' | 'lighting' | 'wildlife'
 
 export default function BaseSetupPage() {
-  const { installationId, currentInstallation, runways, areas, ceShops, arffAircraft, userRole } = useInstallation()
+  const { installationId, currentInstallation, runways, areas, ceShops, typeShopMap, arffAircraft, userRole } = useInstallation()
   const [activeTab, setActiveTab] = useState<SetupTab>('runways')
   const [showPreview, setShowPreview] = useState(false)
 
@@ -124,7 +124,7 @@ export default function BaseSetupPage() {
         {activeTab === 'navaids' && <NavaidTab installationId={installationId} />}
         {activeTab === 'areas' && <SimpleListTab title="Airfield Areas" items={areas} tableName="base_areas" fieldName="area_name" installationId={installationId} />}
         {activeTab === 'arff' && <SimpleListTab title="ARFF Aircraft" items={arffAircraft} tableName="base_arff_aircraft" fieldName="aircraft_name" installationId={installationId} />}
-        {activeTab === 'shops' && <ShopsTab shops={ceShops} installationId={installationId} />}
+        {activeTab === 'shops' && <ShopsTab shops={ceShops} typeShopMap={typeShopMap} installationId={installationId} />}
         {activeTab === 'facilities' && <FacilitiesTab installationId={installationId} />}
         {activeTab === 'templates' && <TemplatesTab installationId={installationId} />}
         {activeTab === 'shiftchecklist' && <ShiftChecklistTab installationId={installationId} currentInstallation={currentInstallation} />}
@@ -758,23 +758,31 @@ function SimpleListTab({
 // CE Shops tab
 // ═══════════════════════════════════════════════════════════════
 
-function ShopsTab({ shops, installationId }: { shops: string[]; installationId: string | null }) {
+function ShopsTab({ shops, typeShopMap: initialTypeShopMap, installationId }: { shops: string[]; typeShopMap: Record<string, string>; installationId: string | null }) {
   const [list, setList] = useState<string[]>(shops)
   const [newShop, setNewShop] = useState('')
+  const [typeMap, setTypeMap] = useState<Record<string, string>>(initialTypeShopMap)
 
-  const saveToDb = async (updatedList: string[]) => {
+  const saveShopsToDb = async (updatedList: string[]) => {
     if (!installationId) return
     const supabase = createClient()
     if (!supabase) return
-
     const { error } = await supabase
       .from('bases')
-      .update({ ce_shops: updatedList })
+      .update({ ce_shops: updatedList } as any)
       .eq('id', installationId)
+    if (error) toast.error(`Failed to save: ${error.message}`)
+  }
 
-    if (error) {
-      toast.error(`Failed to save: ${error.message}`)
-    }
+  const saveTypeMapToDb = async (updatedMap: Record<string, string>) => {
+    if (!installationId) return
+    const supabase = createClient()
+    if (!supabase) return
+    const { error } = await supabase
+      .from('bases')
+      .update({ discrepancy_type_shop_map: updatedMap } as any)
+      .eq('id', installationId)
+    if (error) toast.error(`Failed to save mapping: ${error.message}`)
   }
 
   const handleAdd = async () => {
@@ -782,7 +790,7 @@ function ShopsTab({ shops, installationId }: { shops: string[]; installationId: 
     const updated = [...list, newShop.trim()]
     setList(updated)
     setNewShop('')
-    await saveToDb(updated)
+    await saveShopsToDb(updated)
     toast.success(`Added "${newShop.trim()}"`)
   }
 
@@ -790,9 +798,43 @@ function ShopsTab({ shops, installationId }: { shops: string[]; installationId: 
     if (!confirm(`Delete "${shop}"?`)) return
     const updated = list.filter(s => s !== shop)
     setList(updated)
-    await saveToDb(updated)
+    await saveShopsToDb(updated)
+    // Also remove from type map
+    const updatedMap = { ...typeMap }
+    for (const [k, v] of Object.entries(updatedMap)) {
+      if (v === shop) delete updatedMap[k]
+    }
+    setTypeMap(updatedMap)
+    await saveTypeMapToDb(updatedMap)
     toast.success(`Deleted "${shop}"`)
   }
+
+  const handleTypeMapChange = async (typeValue: string, shopName: string) => {
+    const updatedMap = { ...typeMap }
+    if (shopName) {
+      updatedMap[typeValue] = shopName
+    } else {
+      delete updatedMap[typeValue]
+    }
+    setTypeMap(updatedMap)
+    await saveTypeMapToDb(updatedMap)
+    toast.success('Type assignment updated')
+  }
+
+  // Import DISCREPANCY_TYPES for the mapping UI
+  const discTypes = [
+    { value: 'fod_hazard', label: 'FOD Hazard' },
+    { value: 'pavement', label: 'Pavement Deficiency' },
+    { value: 'lighting', label: 'Lighting Outage/Deficiency' },
+    { value: 'marking', label: 'Marking Deficiency' },
+    { value: 'signage', label: 'Signage Deficiency' },
+    { value: 'drainage', label: 'Drainage Issue' },
+    { value: 'vegetation', label: 'Vegetation Encroachment' },
+    { value: 'wildlife', label: 'Wildlife Hazard' },
+    { value: 'obstruction', label: 'Airfield Obstruction' },
+    { value: 'navaid', label: 'NAVAID Deficiency' },
+    { value: 'other', label: 'Other' },
+  ]
 
   return (
     <div>
@@ -841,6 +883,39 @@ function ShopsTab({ shops, installationId }: { shops: string[]; installationId: 
           Save
         </button>
       </div>
+
+      {/* Discrepancy Type → Shop Mapping */}
+      {list.length > 0 && (
+        <div style={{ marginTop: 24 }}>
+          <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
+            Discrepancy Type Assignments
+          </h3>
+          <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 10 }}>
+            When a discrepancy is created, it will auto-assign to the shop mapped here.
+          </p>
+          {discTypes.map(dt => (
+            <div key={dt.value} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+              padding: '6px 0', borderBottom: '1px solid var(--color-border)',
+            }}>
+              <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', flex: '0 0 45%' }}>{dt.label}</span>
+              <select
+                value={typeMap[dt.value] || ''}
+                onChange={e => handleTypeMapChange(dt.value, e.target.value)}
+                style={{
+                  flex: 1, padding: '5px 8px', borderRadius: 6,
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+                  color: typeMap[dt.value] ? 'var(--color-text-1)' : 'var(--color-text-3)',
+                  fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+                }}
+              >
+                <option value="">— Not Assigned —</option>
+                {list.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

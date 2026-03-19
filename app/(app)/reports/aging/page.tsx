@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Clock, Download, Mail, Loader2 } from 'lucide-react'
-import { fetchAgingDiscrepanciesData, type AgingDiscrepanciesData } from '@/lib/reports/aging-discrepancies-data'
+import { ArrowLeft, Download, Mail, Loader2 } from 'lucide-react'
+import { fetchAgingDiscrepanciesData, type AgingDiscrepanciesData, type AgingTier } from '@/lib/reports/aging-discrepancies-data'
 import { generateAgingDiscrepanciesPdf } from '@/lib/reports/aging-discrepancies-pdf'
 import { getInspectorName } from '@/lib/supabase/inspections'
 import { useInstallation } from '@/lib/installation-context'
@@ -11,7 +11,6 @@ import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { toast } from 'sonner'
 import { formatZuluDateTime } from '@/lib/utils'
-
 
 export default function AgingDiscrepanciesPage() {
   const router = useRouter()
@@ -25,6 +24,10 @@ export default function AgingDiscrepanciesPage() {
   const [sendingEmail, setSendingEmail] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
+
+  // Filters — null = show all
+  const [activeTierLabel, setActiveTierLabel] = useState<string | null>(null)
+  const [activeShop, setActiveShop] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -40,22 +43,84 @@ export default function AgingDiscrepanciesPage() {
     }
     generate()
     return () => { cancelled = true }
-  }, [])
+  }, [installationId])
+
+  // Build filtered data for display and export
+  const filteredData = useMemo((): AgingDiscrepanciesData | null => {
+    if (!data) return null
+
+    const filteredTiers: AgingTier[] = data.tiers.map(tier => {
+      // If a tier filter is active and this isn't it, empty the discrepancies
+      if (activeTierLabel && tier.label !== activeTierLabel) {
+        return { ...tier, discrepancies: [] }
+      }
+      // If a shop filter is active, filter discrepancies within the tier
+      if (activeShop) {
+        return {
+          ...tier,
+          discrepancies: tier.discrepancies.filter(d =>
+            activeShop === '__unassigned' ? !d.assigned_shop : d.assigned_shop === activeShop
+          ),
+        }
+      }
+      return tier
+    })
+
+    const allFiltered = filteredTiers.flatMap(t => t.discrepancies)
+    const total = allFiltered.length
+
+    // Recompute summary for filtered set
+    const shopCounts: Record<string, number> = {}
+    let totalDays = 0
+    let oldest: { display_id: string; title: string; days_open: number } | null = null
+
+    for (const d of allFiltered) {
+      const shop = d.assigned_shop || 'Unassigned'
+      shopCounts[shop] = (shopCounts[shop] || 0) + 1
+      totalDays += d.days_open
+      if (!oldest || d.days_open > oldest.days_open) {
+        oldest = { display_id: d.display_id, title: d.title, days_open: d.days_open }
+      }
+    }
+
+    const byShop = Object.entries(shopCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([shop, count]) => ({ shop, count }))
+
+    return {
+      tiers: filteredTiers,
+      summary: {
+        total,
+        byShop,
+        avgDaysOpen: total > 0 ? Math.round(totalDays / total) : null,
+        oldest,
+      },
+    }
+  }, [data, activeTierLabel, activeShop])
+
+  const hasFilters = activeTierLabel !== null || activeShop !== null
+
+  const filterLabel = useMemo(() => {
+    const parts: string[] = []
+    if (activeTierLabel) parts.push(activeTierLabel)
+    if (activeShop) parts.push(activeShop === '__unassigned' ? 'Unassigned' : activeShop)
+    return parts.length > 0 ? parts.join(' / ') : 'All Open Discrepancies'
+  }, [activeTierLabel, activeShop])
 
   const pdfOpts = { generatedBy: generatorName, baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao }
 
   const handleExport = async () => {
-    if (!data) return
+    if (!filteredData) return
     setExporting(true)
-    const { doc, filename } = generateAgingDiscrepanciesPdf(data, pdfOpts)
+    const { doc, filename } = generateAgingDiscrepanciesPdf(filteredData, pdfOpts)
     doc.save(filename)
     setExporting(false)
   }
 
   const handleEmailPdf = async () => {
-    if (!data) return
+    if (!filteredData) return
     setExporting(true)
-    const result = generateAgingDiscrepanciesPdf(data, pdfOpts)
+    const result = generateAgingDiscrepanciesPdf(filteredData, pdfOpts)
     setEmailPdfData(result)
     setEmailModalOpen(true)
     setExporting(false)
@@ -94,11 +159,12 @@ export default function AgingDiscrepanciesPage() {
     )
   }
 
-  // ── Preview View ──
-  if (!data) return null
+  if (!data || !filteredData) return null
 
-  const { tiers, summary } = data
-  const activeTiers = tiers.filter((t) => t.discrepancies.length > 0)
+  const { tiers: allTiers, summary: fullSummary } = data
+  const { tiers: visibleTiers, summary: filteredSummary } = filteredData
+  const activeTiersWithItems = visibleTiers.filter(t => t.discrepancies.length > 0)
+
   return (
     <div className="page-container">
       {/* Header */}
@@ -106,76 +172,113 @@ export default function AgingDiscrepanciesPage() {
         <button onClick={() => router.push('/reports')} style={{ background: 'none', border: 'none', color: 'var(--color-text-2)', cursor: 'pointer', padding: 4 }}>
           <ArrowLeft size={20} />
         </button>
-        <div>
+        <div style={{ flex: 1 }}>
           <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Aging Discrepancies</div>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>As of {formatZuluDateTime(new Date())}</div>
         </div>
+        {hasFilters && (
+          <button onClick={() => { setActiveTierLabel(null); setActiveShop(null) }} style={{
+            background: 'none', border: '1px solid var(--color-border)', borderRadius: 6,
+            padding: '4px 10px', color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)',
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+            Clear Filters
+          </button>
+        )}
       </div>
 
       {/* KPI Row */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
         <div className="kpi-badge" style={{ flex: '1 1 0', maxWidth: 200 }}>
-          <div className="kpi-value" style={{ color: 'var(--color-text-1)' }}>{summary.total}</div>
-          <div className="kpi-label">Total Open</div>
+          <div className="kpi-value" style={{ color: 'var(--color-text-1)' }}>{filteredSummary.total}</div>
+          <div className="kpi-label">{hasFilters ? 'Filtered' : 'Total Open'}</div>
         </div>
-        {summary.avgDaysOpen !== null && (
+        {filteredSummary.avgDaysOpen !== null && (
           <div className="kpi-badge" style={{ flex: '1 1 0', maxWidth: 200 }}>
-            <div className="kpi-value" style={{ color: 'var(--color-warning)' }}>{summary.avgDaysOpen}</div>
+            <div className="kpi-value" style={{ color: 'var(--color-warning)' }}>{filteredSummary.avgDaysOpen}</div>
             <div className="kpi-label">Avg Days</div>
           </div>
         )}
-        {summary.oldest && (
+        {filteredSummary.oldest && (
           <div className="kpi-badge" style={{ flex: '1 1 0', maxWidth: 200 }}>
-            <div className="kpi-value" style={{ color: 'var(--color-danger)' }}>{summary.oldest.days_open}</div>
+            <div className="kpi-value" style={{ color: 'var(--color-danger)' }}>{filteredSummary.oldest.days_open}</div>
             <div className="kpi-label">Oldest</div>
           </div>
         )}
       </div>
 
-      {/* Aging Tier Badges */}
+      {/* Aging Tier Badges — clickable */}
       <div className="card" style={{ padding: 14, marginBottom: 8 }}>
         <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-          By Aging Tier
+          By Aging Tier {activeTierLabel && <span style={{ color: 'var(--color-cyan)', fontWeight: 400 }}>— click to clear</span>}
         </div>
         <div className="badge-grid">
-          {tiers.map((tier) => (
-            <div key={tier.label} style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
-              padding: '8px 14px', borderRadius: 10,
-              background: `${tier.color}14`, border: `1px solid ${tier.color}33`,
-              minWidth: 64, opacity: tier.discrepancies.length === 0 ? 0.4 : 1,
-            }}>
-              <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: tier.color }}>{tier.discrepancies.length}</div>
-              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-2)', fontWeight: 600, textAlign: 'center', marginTop: 2 }}>{tier.label}</div>
-            </div>
-          ))}
+          {allTiers.map((tier) => {
+            const isActive = activeTierLabel === tier.label
+            const count = tier.discrepancies.length
+            return (
+              <div
+                key={tier.label}
+                onClick={() => setActiveTierLabel(isActive ? null : tier.label)}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
+                  background: isActive ? `${tier.color}28` : `${tier.color}14`,
+                  border: isActive ? `2px solid ${tier.color}` : `1px solid ${tier.color}33`,
+                  minWidth: 64, opacity: count === 0 ? 0.4 : 1,
+                  transition: 'border 0.15s, background 0.15s',
+                }}
+              >
+                <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: tier.color }}>{count}</div>
+                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-2)', fontWeight: 600, textAlign: 'center', marginTop: 2 }}>{tier.label}</div>
+              </div>
+            )
+          })}
         </div>
       </div>
 
-      {/* By Shop */}
-      {summary.byShop.length > 0 && (
+      {/* By Shop — clickable */}
+      {fullSummary.byShop.length > 0 && (
         <div className="card" style={{ padding: 14, marginBottom: 14 }}>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-            By Shop
+            By Shop {activeShop && <span style={{ color: 'var(--color-cyan)', fontWeight: 400 }}>— click to clear</span>}
           </div>
           <div className="badge-grid">
-            {summary.byShop.map((s) => (
-              <div key={s.shop} style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                padding: '8px 14px', borderRadius: 10,
-                background: 'var(--color-border)', border: '1px solid rgba(56,189,248,0.15)',
-                minWidth: 64,
-              }}>
-                <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-accent)' }}>{s.count}</div>
-                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-2)', fontWeight: 600, textAlign: 'center', marginTop: 2 }}>{s.shop}</div>
-              </div>
-            ))}
+            {fullSummary.byShop.map((s) => {
+              const isActive = activeShop === s.shop
+              return (
+                <div
+                  key={s.shop}
+                  onClick={() => setActiveShop(isActive ? null : s.shop)}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
+                    background: isActive ? 'rgba(56,189,248,0.15)' : 'var(--color-border)',
+                    border: isActive ? '2px solid var(--color-accent)' : '1px solid rgba(56,189,248,0.15)',
+                    minWidth: 64, transition: 'border 0.15s, background 0.15s',
+                  }}
+                >
+                  <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-accent)' }}>{s.count}</div>
+                  <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-2)', fontWeight: 600, textAlign: 'center', marginTop: 2 }}>{s.shop}</div>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
 
-      {/* Item List per active tier */}
-      {activeTiers.map((tier) => (
+      {/* Filter indicator */}
+      {hasFilters && (
+        <div style={{
+          fontSize: 'var(--fs-xs)', color: 'var(--color-cyan)', fontWeight: 600,
+          marginBottom: 8, padding: '4px 0',
+        }}>
+          Showing: {filterLabel} ({filteredSummary.total} discrepancies)
+        </div>
+      )}
+
+      {/* Item List per visible tier */}
+      {activeTiersWithItems.map((tier) => (
         <div key={tier.label} className="card" style={{ padding: 14, marginBottom: 8 }}>
           <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, color: tier.color }}>
             {tier.label} ({tier.discrepancies.length})
@@ -210,39 +313,45 @@ export default function AgingDiscrepanciesPage() {
         </div>
       ))}
 
+      {filteredSummary.total === 0 && (
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
+          No discrepancies match the selected filters
+        </div>
+      )}
+
       {/* Generated By */}
       <div style={{ textAlign: 'center', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12 }}>
         Generated by {generatorName}
       </div>
 
-      {/* Export Buttons */}
+      {/* Export Buttons — exports filtered view */}
       <div style={{ display: 'flex', gap: 8 }}>
         <button
           onClick={handleExport}
-          disabled={exporting}
+          disabled={exporting || filteredSummary.total === 0}
           style={{
             flex: 1, padding: '14px 0', borderRadius: 10,
             border: '1px solid rgba(34,197,94,0.4)',
             background: 'rgba(34,197,94,0.1)',
             color: '#22C55E', fontSize: 'var(--fs-xl)', fontWeight: 700,
-            cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
-            opacity: exporting ? 0.7 : 1,
+            cursor: (exporting || filteredSummary.total === 0) ? 'default' : 'pointer', fontFamily: 'inherit',
+            opacity: (exporting || filteredSummary.total === 0) ? 0.5 : 1,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}
         >
           <Download size={18} />
-          {exporting ? 'Generating PDF...' : 'Export PDF'}
+          {exporting ? 'Generating PDF...' : hasFilters ? 'Export Filtered PDF' : 'Export PDF'}
         </button>
         <button
           onClick={handleEmailPdf}
-          disabled={exporting}
+          disabled={exporting || filteredSummary.total === 0}
           style={{
             padding: '14px 18px', borderRadius: 10,
             border: '1px solid #A78BFA33',
             background: '#A78BFA14',
             color: '#A78BFA', fontSize: 'var(--fs-xl)', fontWeight: 700,
-            cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
-            opacity: exporting ? 0.7 : 1,
+            cursor: (exporting || filteredSummary.total === 0) ? 'default' : 'pointer', fontFamily: 'inherit',
+            opacity: (exporting || filteredSummary.total === 0) ? 0.5 : 1,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}
         >

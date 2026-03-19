@@ -340,6 +340,9 @@ export default function ParkingPage() {
   const [newPlanDesc, setNewPlanDesc] = useState('')
   const [showAircraftPicker, setShowAircraftPicker] = useState(false)
   const [aircraftSearch, setAircraftSearch] = useState('')
+  const [bulkAddCount, setBulkAddCount] = useState(1)
+  const [contextMenuSpot, setContextMenuSpot] = useState<{ spot: ParkingSpot; x: number; y: number } | null>(null)
+  const contextMenuTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showObstacleMenu, setShowObstacleMenu] = useState(false)
   const [placingAircraft, setPlacingAircraft] = useState<AircraftCharacteristics | null>(null)
   const [placingObstacle, setPlacingObstacle] = useState<ParkingObstacle['obstacle_type'] | null>(null)
@@ -664,28 +667,41 @@ export default function ParkingPage() {
       if (placingAircraft && selectedPlanId && installationId) {
         const ws = parseNum(placingAircraft.wing_span_ft)
         const clearance = getWingtipClearance(ws, apronContext, placingAircraft.aircraft)
+        const acName = placingAircraft.aircraft
 
-        const spot = await createParkingSpot({
-          plan_id: selectedPlanId,
-          base_id: installationId,
-          aircraft_name: placingAircraft.aircraft,
-          longitude: lng,
-          latitude: lat,
-          heading_deg: 0,
-          clearance_ft: clearance,
-          spot_type: 'apron',
-          status: 'available',
-        })
+        // Compute sequential number for this aircraft type
+        const existingCount = spots.filter(s => s.aircraft_name === acName).length
+        const placedSpots: ParkingSpot[] = []
+        const count = bulkAddCount > 1 ? bulkAddCount : 1
 
-        if (spot) {
-          setSpots(prev => [...prev, spot])
-          setEditingSpot(spot)
+        for (let i = 0; i < count; i++) {
+          const seqNum = existingCount + i + 1
+          const offsetLng = i > 0 ? (i * 0.00015) : 0 // slight offset for bulk placement
+          const spot = await createParkingSpot({
+            plan_id: selectedPlanId,
+            base_id: installationId,
+            aircraft_name: acName,
+            spot_name: `${acName} #${seqNum}`,
+            longitude: lng + offsetLng,
+            latitude: lat,
+            heading_deg: 0,
+            clearance_ft: clearance,
+            spot_type: 'apron',
+            status: 'available',
+          })
+          if (spot) placedSpots.push(spot)
+        }
+
+        if (placedSpots.length > 0) {
+          setSpots(prev => [...prev, ...placedSpots])
+          setEditingSpot(placedSpots[placedSpots.length - 1])
           setOpenSections(prev => ({ ...prev, aircraft: true }))
-          toast.success(`Placed ${placingAircraft.aircraft}`)
+          toast.success(`Placed ${placedSpots.length}× ${acName}`)
         } else {
           toast.error('Failed to place aircraft')
         }
         setPlacingAircraft(null)
+        setBulkAddCount(1)
         return
       }
 
@@ -767,7 +783,7 @@ export default function ParkingPage() {
     if (!m || !mapLoaded) return
 
     // Clean up old sources/layers
-    const cleanIds = ['parking-clearance-fill', 'parking-clearance-line', 'parking-obstacles-fill', 'parking-obstacles-line', 'parking-obstacles-points', 'parking-obstacles-labels', 'parking-obstacles-lines-stroke', 'parking-aircraft-symbols', 'parking-aircraft-labels', 'parking-nose-gear-markers', 'parking-nose-gear-labels', 'parking-drag-labels', 'parking-drawing-line-layer', 'parking-drawing-line-dots', 'parking-taxilane-envelope-fill', 'parking-taxilane-envelope-line', 'parking-taxilane-centerline', 'parking-taxilane-labels', 'parking-apron-boundary-fill', 'parking-apron-boundary-line', 'parking-apron-boundary-labels']
+    const cleanIds = ['parking-clearance-fill', 'parking-clearance-line', 'parking-obstacles-fill', 'parking-obstacles-line', 'parking-obstacles-points', 'parking-obstacles-labels', 'parking-obstacles-lines-stroke', 'parking-aircraft-symbols', 'parking-aircraft-selection', 'parking-aircraft-labels', 'parking-nose-gear-markers', 'parking-nose-gear-labels', 'parking-drag-labels', 'parking-drawing-line-layer', 'parking-drawing-line-dots', 'parking-taxilane-envelope-fill', 'parking-taxilane-envelope-line', 'parking-taxilane-centerline', 'parking-taxilane-labels', 'parking-apron-boundary-fill', 'parking-apron-boundary-line', 'parking-apron-boundary-labels']
     for (const id of cleanIds) {
       if (m.getLayer(id)) m.removeLayer(id)
     }
@@ -1087,6 +1103,7 @@ export default function ParkingPage() {
         type: 'Feature',
         properties: {
           spotId: s.id,
+          isSelected: editingSpot?.id === s.id ? 1 : 0,
           name: s.aircraft_name || 'Aircraft',
           wingspan: s.wingspan_ft,
           length: s.length_ft,
@@ -1157,6 +1174,23 @@ export default function ParkingPage() {
           })
         }
 
+        // Selection highlight — cyan ring around selected aircraft
+        if (!m.getLayer('parking-aircraft-selection')) {
+          m.addLayer({
+            id: 'parking-aircraft-selection',
+            type: 'circle',
+            source: 'parking-aircraft',
+            filter: ['==', ['get', 'isSelected'], 1],
+            paint: {
+              'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 8, 14, 14, 16, 22, 18, 36],
+              'circle-color': 'transparent',
+              'circle-stroke-color': '#22D3EE',
+              'circle-stroke-width': 3,
+              'circle-stroke-opacity': 0.8,
+            },
+          }, 'parking-aircraft-symbols')
+        }
+
         // Labels layer on top
         if (!m.getLayer('parking-aircraft-labels')) {
           m.addLayer({
@@ -1213,7 +1247,7 @@ export default function ParkingPage() {
         paint: { 'text-color': '#FFD700', 'text-halo-color': '#000', 'text-halo-width': 1 },
       })
     }
-  }, [mapLoaded, spotsWithAircraft, obstacles, taxilanes, apronBoundaries, allResults, showClearances, apronContext, visibleLayers])
+  }, [mapLoaded, spotsWithAircraft, obstacles, taxilanes, apronBoundaries, allResults, showClearances, apronContext, visibleLayers, editingSpot])
 
   // ── Update icon scale on zoom change ──
   // Images are fixed-size; only the iconScale property needs updating on zoom.
@@ -1557,14 +1591,34 @@ export default function ParkingPage() {
       onMouseDown({ point, lngLat, originalEvent: ev, preventDefault: () => ev.preventDefault() } as any)
     }
     const onCanvasTouchStart = (ev: TouchEvent) => {
-      if (ev.touches.length !== 1) return // only single-finger drag
+      if (ev.touches.length !== 1) return
       const touch = ev.touches[0]
       const rect = canvas.getBoundingClientRect()
       const point = new mapboxgl.Point(touch.clientX - rect.left, touch.clientY - rect.top)
       const lngLat = m.unproject(point)
+
+      // Long-press detection for context menu (500ms hold)
+      if (contextMenuTimerRef.current) clearTimeout(contextMenuTimerRef.current)
+      contextMenuTimerRef.current = setTimeout(() => {
+        if (m.getLayer('parking-aircraft-symbols')) {
+          const box2 = hitBox(point)
+          const features = m.queryRenderedFeatures(box2, { layers: ['parking-aircraft-symbols'] })
+          if (features.length) {
+            const spotId = features[0].properties?.spotId
+            const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
+            if (spot) {
+              setContextMenuSpot({ spot, x: point.x, y: point.y })
+              setEditingSpot(spot)
+              return // don't start drag
+            }
+          }
+        }
+      }, 500)
+
       onMouseDown({ point, lngLat, originalEvent: ev, preventDefault: () => ev.preventDefault() } as any)
     }
     const onTouchMove = (ev: TouchEvent) => {
+      if (contextMenuTimerRef.current) { clearTimeout(contextMenuTimerRef.current); contextMenuTimerRef.current = null }
       if (!isDraggingRef.current || ev.touches.length !== 1) return
       ev.preventDefault() // prevent map pan during drag
       const touch = ev.touches[0]
@@ -1604,6 +1658,23 @@ export default function ParkingPage() {
     m.on('mouseenter', 'parking-obstacles-lines-stroke', onObsEnter)
     m.on('mouseleave', 'parking-obstacles-lines-stroke', onObsLeave)
 
+    // Right-click context menu on aircraft
+    const onContextMenu = (e: mapboxgl.MapMouseEvent) => {
+      if (!m.getLayer('parking-aircraft-symbols')) return
+      const box = hitBox(e.point)
+      const features = m.queryRenderedFeatures(box, { layers: ['parking-aircraft-symbols'] })
+      if (features.length) {
+        const spotId = features[0].properties?.spotId
+        const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
+        if (spot) {
+          e.preventDefault()
+          setContextMenuSpot({ spot, x: e.point.x, y: e.point.y })
+          setEditingSpot(spot)
+        }
+      }
+    }
+    m.on('contextmenu', onContextMenu)
+
     return () => {
       canvas.removeEventListener('mousedown', onCanvasMouseDown)
       canvas.removeEventListener('touchstart', onCanvasTouchStart)
@@ -1619,6 +1690,7 @@ export default function ParkingPage() {
       m.off('mouseleave', 'parking-obstacles-fill', onObsLeave)
       m.off('mouseenter', 'parking-obstacles-labels', onObsEnter)
       m.off('mouseleave', 'parking-obstacles-labels', onObsLeave)
+      m.off('contextmenu', onContextMenu)
       m.off('mouseenter', 'parking-obstacles-lines-stroke', onObsEnter)
       m.off('mouseleave', 'parking-obstacles-lines-stroke', onObsLeave)
     }
@@ -2426,123 +2498,160 @@ export default function ParkingPage() {
                 </p>
               )}
 
-              {spots.map(s => {
-                const ac = allAircraft.find(a => a.aircraft === s.aircraft_name)
-                const ws = ac ? parseNum(ac.wing_span_ft) : 50
-                const adg = getADGFromWingspan(ws)
-                const clearanceDetail = s.clearance_ft != null
-                  ? { clearance_ft: s.clearance_ft, ufc_item: 'Manual', description: 'Override' }
-                  : getWingtipClearanceDetail(ws, apronContext, s.aircraft_name)
-                const clearance = clearanceDetail.clearance_ft
-                const spotViolations = allResults.filter(r =>
-                  (r.spot_a_id === s.id || r.spot_b_id === s.id) && r.status !== 'ok'
-                )
-                const isEditing = editingSpot?.id === s.id
+              {/* Grouped by aircraft type */}
+              {(() => {
+                const groups: Record<string, ParkingSpot[]> = {}
+                for (const s of spots) {
+                  const key = s.aircraft_name || 'Unknown'
+                  if (!groups[key]) groups[key] = []
+                  groups[key].push(s)
+                }
+                const [expandedGroups, setExpandedGroups] = [openSections, setOpenSections] // reuse openSections state
+                return Object.entries(groups).map(([acName, groupSpots]) => {
+                  const ac = allAircraft.find(a => a.aircraft === acName)
+                  const ws = ac ? parseNum(ac.wing_span_ft) : 50
+                  const adg = getADGFromWingspan(ws)
+                  const groupKey = `acgroup_${acName}`
+                  const isGroupOpen = expandedGroups[groupKey] !== false // default open
+                  const groupViolations = allResults.filter(r =>
+                    groupSpots.some(s => s.id === r.spot_a_id || s.id === r.spot_b_id) && r.status !== 'ok'
+                  )
 
-                return (
-                  <div key={s.id}>
-                    {/* Compact row */}
-                    <div
-                      onClick={() => setEditingSpot(isEditing ? null : s)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 6,
-                        padding: isMobile ? '10px 12px' : '4px 8px', cursor: 'pointer',
-                        background: isEditing ? 'var(--color-bg)' : 'transparent',
-                        borderBottom: '1px solid var(--color-border)',
-                        borderLeft: spotViolations.length > 0 ? '3px solid #EF4444' : '3px solid transparent',
-                      }}
-                    >
-                      <span style={{
-                        fontSize: 10, padding: '1px 4px', borderRadius: 3,
-                        background: `${ADG_COLORS[adg]}22`, color: ADG_COLORS[adg],
-                        fontWeight: 600, flexShrink: 0,
-                      }}>
-                        {adg}
-                      </span>
-                      <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 500, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {s.aircraft_name || 'Unknown'}
-                      </span>
-                      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
-                        {s.tail_number || ''}
-                      </span>
-                      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
-                        {clearance}ft {clearanceDetail.ufc_item} &middot; {s.heading_deg}°
-                      </span>
-                      {spotViolations.length > 0 && (
-                        <span style={{ color: '#EF4444', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>!</span>
-                      )}
-                      <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', flexShrink: 0 }}>{isEditing ? '\u25B2' : '\u25BC'}</span>
-                    </div>
-
-                    {/* Expanded edit form below the row */}
-                    {isEditing && (
+                  return (
+                    <div key={acName}>
+                      {/* Group header */}
                       <div
-                        onClick={e => e.stopPropagation()}
-                        style={{ padding: '8px 8px 8px 16px', display: 'flex', flexDirection: 'column', gap: 6, background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}
+                        onClick={() => setExpandedGroups(prev => ({ ...prev, [groupKey]: !isGroupOpen }))}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          padding: isMobile ? '8px 12px' : '5px 8px', cursor: 'pointer',
+                          background: 'var(--color-bg-inset)',
+                          borderBottom: '1px solid var(--color-border)',
+                        }}
                       >
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
-                            Spot Name
-                            <input value={s.spot_name || ''} onChange={e => handleUpdateSpot(s.id, { spot_name: e.target.value })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
-                          </label>
-                          <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
-                            Tail Number
-                            <input value={s.tail_number || ''} onChange={e => handleUpdateSpot(s.id, { tail_number: e.target.value })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
-                          </label>
-                          <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
-                            Callsign
-                            <input value={s.unit_callsign || ''} onChange={e => handleUpdateSpot(s.id, { unit_callsign: e.target.value })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
-                          </label>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
-                            Heading
-                            <input type="range" min={0} max={360} step={1} value={s.heading_deg} onChange={e => handleUpdateSpot(s.id, { heading_deg: Number(e.target.value) })} style={{ width: '100%' }} />
-                          </label>
-                          <input
-                            type="number" min={0} max={360} step={1} value={s.heading_deg}
-                            onChange={e => { const v = Math.min(360, Math.max(0, Number(e.target.value) || 0)); handleUpdateSpot(s.id, { heading_deg: v }) }}
-                            style={{ width: 52, padding: '3px 4px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)', textAlign: 'center' }}
-                          />
-                          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>°</span>
-                        </div>
-                        <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flexShrink: 0 }}>Clearance:</span>
-                          {[null, 10, 15, 25].map(val => (
-                            <button
-                              key={val ?? 'adg'}
-                              onClick={() => handleUpdateSpot(s.id, { clearance_ft: val as any })}
+                        <span style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>{isGroupOpen ? '\u25BC' : '\u25B6'}</span>
+                        <span style={{
+                          fontSize: 10, padding: '1px 4px', borderRadius: 3,
+                          background: `${ADG_COLORS[adg]}22`, color: ADG_COLORS[adg],
+                          fontWeight: 600, flexShrink: 0,
+                        }}>
+                          {adg}
+                        </span>
+                        <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-primary)', flex: 1 }}>
+                          {acName}
+                        </span>
+                        <span style={{
+                          fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '0 6px', borderRadius: 10,
+                          background: 'var(--color-cyan)18', color: 'var(--color-cyan)',
+                        }}>
+                          {groupSpots.length}
+                        </span>
+                        {groupViolations.length > 0 && (
+                          <span style={{ color: '#EF4444', fontSize: 11, fontWeight: 700 }}>!</span>
+                        )}
+                      </div>
+
+                      {/* Individual spots within group */}
+                      {isGroupOpen && groupSpots.map(s => {
+                        const clearanceDetail = s.clearance_ft != null
+                          ? { clearance_ft: s.clearance_ft, ufc_item: 'Manual', description: 'Override' }
+                          : getWingtipClearanceDetail(ws, apronContext, s.aircraft_name)
+                        const clearance = clearanceDetail.clearance_ft
+                        const spotViolations = allResults.filter(r =>
+                          (r.spot_a_id === s.id || r.spot_b_id === s.id) && r.status !== 'ok'
+                        )
+                        const isEditing = editingSpot?.id === s.id
+
+                        return (
+                          <div key={s.id}>
+                            <div
+                              onClick={() => setEditingSpot(isEditing ? null : s)}
                               style={{
-                                padding: '2px 6px', borderRadius: 3, fontSize: 'var(--fs-xs)',
-                                border: '1px solid var(--color-border)',
-                                background: s.clearance_ft === val ? 'var(--color-cyan)22' : 'var(--color-bg-surface)',
-                                color: s.clearance_ft === val ? 'var(--color-cyan)' : 'var(--color-text-secondary)',
-                                cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', gap: 6,
+                                padding: isMobile ? '8px 12px 8px 24px' : '3px 8px 3px 20px', cursor: 'pointer',
+                                background: isEditing ? 'var(--color-bg)' : 'transparent',
+                                borderBottom: '1px solid var(--color-border)',
+                                borderLeft: spotViolations.length > 0 ? '3px solid #EF4444' : '3px solid transparent',
                               }}
                             >
-                              {val ? `${val}ft` : `UFC (${getWingtipClearance(ws, apronContext, s.aircraft_name)}ft)`}
-                            </button>
-                          ))}
-                          <select
-                            value={s.status}
-                            onChange={e => handleUpdateSpot(s.id, { status: e.target.value as ParkingSpot['status'] })}
-                            style={{ marginLeft: 'auto', padding: '2px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
-                          >
-                            <option value="available">Available</option>
-                            <option value="occupied">Occupied</option>
-                            <option value="reserved">Reserved</option>
-                          </select>
-                        </div>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button onClick={() => map.current?.flyTo({ center: [s.longitude, s.latitude], zoom: 17 })} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
-                          <button onClick={() => handleDuplicateSpot(s)} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-cyan)11', border: '1px solid var(--color-cyan)44', color: 'var(--color-cyan)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Duplicate</button>
-                          <button onClick={() => handleDeleteSpot(s.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Remove</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+                              <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 500, color: isEditing ? 'var(--color-cyan)' : 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
+                                {s.spot_name || acName}
+                              </span>
+                              {s.tail_number && (
+                                <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
+                                  {s.tail_number}
+                                </span>
+                              )}
+                              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
+                                {clearance}ft &middot; {s.heading_deg}°
+                              </span>
+                              {spotViolations.length > 0 && (
+                                <span style={{ color: '#EF4444', fontSize: 10, fontWeight: 700 }}>!</span>
+                              )}
+                            </div>
+
+                            {isEditing && (
+                              <div
+                                onClick={e => e.stopPropagation()}
+                                style={{ padding: '8px 8px 8px 20px', display: 'flex', flexDirection: 'column', gap: 6, background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}
+                              >
+                                <div style={{ display: 'flex', gap: 6 }}>
+                                  <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
+                                    Spot Name
+                                    <input value={s.spot_name || ''} onChange={e => handleUpdateSpot(s.id, { spot_name: e.target.value })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                                  </label>
+                                  <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
+                                    Tail #
+                                    <input value={s.tail_number || ''} onChange={e => handleUpdateSpot(s.id, { tail_number: e.target.value })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                                  </label>
+                                  <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
+                                    Callsign
+                                    <input value={s.unit_callsign || ''} onChange={e => handleUpdateSpot(s.id, { unit_callsign: e.target.value })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                                  </label>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
+                                    Heading
+                                    <input type="range" min={0} max={360} step={1} value={s.heading_deg} onChange={e => handleUpdateSpot(s.id, { heading_deg: Number(e.target.value) })} style={{ width: '100%' }} />
+                                  </label>
+                                  <input type="number" min={0} max={360} step={1} value={s.heading_deg}
+                                    onChange={e => { const v = Math.min(360, Math.max(0, Number(e.target.value) || 0)); handleUpdateSpot(s.id, { heading_deg: v }) }}
+                                    style={{ width: 48, padding: '3px 4px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)', textAlign: 'center' }}
+                                  />
+                                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>°</span>
+                                </div>
+                                <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flexShrink: 0 }}>Clearance:</span>
+                                  {[null, 10, 15, 25].map(val => (
+                                    <button key={val ?? 'adg'} onClick={() => handleUpdateSpot(s.id, { clearance_ft: val as any })} style={{
+                                      padding: '2px 6px', borderRadius: 3, fontSize: 'var(--fs-xs)', border: '1px solid var(--color-border)',
+                                      background: s.clearance_ft === val ? 'var(--color-cyan)22' : 'var(--color-bg-surface)',
+                                      color: s.clearance_ft === val ? 'var(--color-cyan)' : 'var(--color-text-secondary)', cursor: 'pointer',
+                                    }}>
+                                      {val ? `${val}ft` : `UFC (${getWingtipClearance(ws, apronContext, s.aircraft_name)}ft)`}
+                                    </button>
+                                  ))}
+                                  <select value={s.status} onChange={e => handleUpdateSpot(s.id, { status: e.target.value as ParkingSpot['status'] })}
+                                    style={{ marginLeft: 'auto', padding: '2px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}>
+                                    <option value="available">Available</option>
+                                    <option value="occupied">Occupied</option>
+                                    <option value="reserved">Reserved</option>
+                                  </select>
+                                </div>
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                  <button onClick={() => map.current?.flyTo({ center: [s.longitude, s.latitude], zoom: 19 })} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
+                                  <button onClick={() => handleDuplicateSpot(s)} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-cyan)11', border: '1px solid var(--color-cyan)44', color: 'var(--color-cyan)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Duplicate</button>
+                                  <button onClick={() => handleDeleteSpot(s.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Remove</button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })
+              })()}
             </div>
           )}
 
@@ -3375,6 +3484,61 @@ export default function ParkingPage() {
         </div>
       )}
 
+      {/* Context Menu — right-click / long-press on aircraft silhouette */}
+      {contextMenuSpot && editingSpot && (
+        <div
+          onClick={() => setContextMenuSpot(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 999 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'absolute',
+              left: Math.min(contextMenuSpot.x, (typeof window !== 'undefined' ? window.innerWidth - 200 : 300)),
+              top: Math.min(contextMenuSpot.y, (typeof window !== 'undefined' ? window.innerHeight - 320 : 400)),
+              width: 180, background: 'var(--color-bg-surface)', borderRadius: 8,
+              border: '1px solid var(--color-border)', overflow: 'hidden',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            }}
+          >
+            <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-cyan)' }}>
+              {editingSpot.spot_name || editingSpot.aircraft_name || 'Aircraft'}
+            </div>
+            {[
+              { label: 'Edit Details', action: () => { setSidebarTab('aircraft'); setContextMenuSpot(null) } },
+              { label: 'Duplicate', action: () => { handleDuplicateSpot(editingSpot); setContextMenuSpot(null) } },
+            ].map(item => (
+              <button
+                key={item.label}
+                onClick={item.action}
+                style={{
+                  display: 'block', width: '100%', padding: '8px 12px', border: 'none',
+                  background: 'transparent', color: 'var(--color-text-primary)',
+                  fontSize: 'var(--fs-sm)', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
+                  borderBottom: '1px solid var(--color-border)',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-bg-inset)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                {item.label}
+              </button>
+            ))}
+            <button
+              onClick={() => { handleDeleteSpot(editingSpot.id); setContextMenuSpot(null); setEditingSpot(null) }}
+              style={{
+                display: 'block', width: '100%', padding: '8px 12px', border: 'none',
+                background: 'transparent', color: '#EF4444',
+                fontSize: 'var(--fs-sm)', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Aircraft Picker Modal */}
       {showAircraftPicker && (
         <div
@@ -3393,9 +3557,24 @@ export default function ParkingPage() {
             }}
           >
             <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)' }}>
-              <h3 style={{ margin: '0 0 8px', fontSize: 'var(--fs-base)', color: 'var(--color-text-primary)' }}>
-                Select Aircraft
-              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <h3 style={{ margin: 0, fontSize: 'var(--fs-base)', color: 'var(--color-text-primary)' }}>
+                  Select Aircraft
+                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>Qty:</span>
+                  <input
+                    type="number" min={1} max={50} value={bulkAddCount}
+                    onChange={e => setBulkAddCount(Math.max(1, Math.min(50, Number(e.target.value) || 1)))}
+                    style={{
+                      width: 48, padding: '3px 4px', borderRadius: 4, textAlign: 'center',
+                      border: '1px solid var(--color-border)', background: 'var(--color-bg)',
+                      color: bulkAddCount > 1 ? 'var(--color-cyan)' : 'var(--color-text-primary)',
+                      fontSize: 'var(--fs-sm)', fontWeight: 700,
+                    }}
+                  />
+                </div>
+              </div>
               <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
                 {(['all', 'military', 'commercial'] as const).map(cat => (
                   <button

@@ -76,6 +76,9 @@ const GROUP_ICONS: Record<string, LucideIcon> = {
 // Admin-only items
 const ADMIN_ITEMS = new Set(['/library', '/users'])
 
+// CES role — limited navigation
+const CES_ALLOWED_ITEMS = new Set(['/ces', '/discrepancies', '/infrastructure', '/settings'])
+
 function getIcon(iconName: string): LucideIcon {
   return ICON_MAP[iconName] || Home
 }
@@ -86,6 +89,7 @@ export function SidebarNav() {
   const { resolvedTheme } = useTheme()
   const expiringNotamCount = useExpiringNotamCount()
   const [canManageUsers, setCanManageUsers] = useState(false)
+  const [isCesRole, setIsCesRole] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [config, setConfig] = useState<SidebarConfig>(DEFAULT_SIDEBAR_CONFIG)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
@@ -118,8 +122,9 @@ export function SidebarNav() {
           .single()
 
         const role = (profile?.role ?? 'read_only') as UserRole
-        const config = USER_ROLES[role]
-        setCanManageUsers(config?.canManageUsers ?? false)
+        const roleConfig = USER_ROLES[role]
+        setCanManageUsers(roleConfig?.canManageUsers ?? false)
+        setIsCesRole(role === 'ces')
       } catch {
         // No auth
       }
@@ -154,6 +159,7 @@ export function SidebarNav() {
 
   function isItemVisible(href: string) {
     if (ADMIN_ITEMS.has(href)) return loaded && canManageUsers
+    if (isCesRole && !CES_ALLOWED_ITEMS.has(href)) return false
     return true
   }
 
@@ -565,7 +571,10 @@ export function SidebarNav() {
 
   // ── Normal sidebar ──
 
-  const activeConfig = config
+  // CES users get a flat list — no collapsible sections
+  const activeConfig = isCesRole
+    ? { pinned: ['/ces', '/discrepancies', '/infrastructure', '/settings'], sections: [] } as SidebarConfig
+    : config
 
   return (
     <nav className={`sidebar-drawer${isOpen ? '' : ' sidebar-collapsed'}`}>

@@ -16,6 +16,7 @@ export type Database = {
           timezone: string
           installation_code: string | null
           ce_shops: string[]
+          discrepancy_type_shop_map: Record<string, string>
           checklist_reset_time: string
           is_active: boolean
           created_at: string
@@ -1031,7 +1032,7 @@ export type UserRole =
 export type ProfileStatus = 'active' | 'deactivated' | 'pending'
 
 export type DiscrepancyStatus = 'open' | 'completed' | 'cancelled'
-export type CurrentStatus = 'submitted_to_afm' | 'submitted_to_ces' | 'awaiting_action_by_ces' | 'work_completed_awaiting_verification'
+export type CurrentStatus = 'submitted_to_afm' | 'submitted_to_ces' | 'awaiting_action_by_ces' | 'waiting_for_project' | 'work_completed_awaiting_verification'
 export type CheckType = 'fod' | 'rsc' | 'ife' | 'ground_emergency' | 'heavy_aircraft' | 'bash' | 'rcr'
 export type InspectionType = 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
 export type NotamStatus = 'draft' | 'active' | 'cancelled' | 'expired'

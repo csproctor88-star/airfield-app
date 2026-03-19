@@ -25,7 +25,7 @@ const InfraFeaturePicker = dynamic(
 
 export default function NewDiscrepancyPage() {
   const router = useRouter()
-  const { installationId, areas: installationAreas, facilities } = useInstallation()
+  const { installationId, areas: installationAreas, facilities, ceShops, typeShopMap } = useInstallation()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [photos, setPhotos] = useState<{ file: File; url: string; name: string }[]>([])
@@ -61,6 +61,7 @@ export default function NewDiscrepancyPage() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [typeDropdownOpen])
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false)
+  const [assignedShop, setAssignedShop] = useState('')
   const [formData, setFormData] = useState({
     title: '',
     location_text: '',
@@ -71,6 +72,37 @@ export default function NewDiscrepancyPage() {
     latitude: null as number | null,
     longitude: null as number | null,
   })
+
+  // Auto-assign shop when types change — use per-base typeShopMap first, fall back to defaultShop
+  useEffect(() => {
+    if (selectedTypes.length === 0) return
+    for (const typeVal of selectedTypes) {
+      // 1. Check per-base type→shop map (configured in Base Setup → CE Shops)
+      const mapped = typeShopMap[typeVal]
+      if (mapped && ceShops.includes(mapped)) {
+        setAssignedShop(mapped)
+        setFormData(p => ({ ...p, current_status: 'submitted_to_ces' }))
+        return
+      }
+      // 2. Fall back to hardcoded defaultShop with fuzzy matching
+      const typeDef = DISCREPANCY_TYPES.find(t => t.value === typeVal)
+      if (!typeDef?.defaultShop) continue
+      const defaultLower = typeDef.defaultShop.toLowerCase()
+      const isCes = defaultLower.includes('ce ')
+      const exact = ceShops.find(s => s === typeDef.defaultShop)
+      if (exact) {
+        setAssignedShop(exact)
+        if (isCes) setFormData(p => ({ ...p, current_status: 'submitted_to_ces' }))
+        return
+      }
+      const partial = ceShops.find(s => s.toLowerCase().includes(defaultLower) || defaultLower.includes(s.toLowerCase()))
+      if (partial) {
+        setAssignedShop(partial)
+        if (isCes) setFormData(p => ({ ...p, current_status: 'submitted_to_ces' }))
+        return
+      }
+    }
+  }, [selectedTypes, ceShops, typeShopMap])
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -148,6 +180,7 @@ export default function NewDiscrepancyPage() {
       longitude: formData.longitude,
       facility_number: formData.facility_number || undefined,
       base_id: installationId,
+      assigned_shop: assignedShop || undefined,
       infrastructure_feature_id: selectedFeatureIds.length > 0 ? selectedFeatureIds[0] : undefined,
     })
 
@@ -298,6 +331,19 @@ export default function NewDiscrepancyPage() {
           <select className="input-dark" value={formData.current_status} onChange={(e) => setFormData((p) => ({ ...p, current_status: e.target.value }))}>
             {CURRENT_STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <span className="section-label">Assigned Shop</span>
+          <select className="input-dark" value={assignedShop} onChange={(e) => setAssignedShop(e.target.value)}>
+            <option value="">Unassigned</option>
+            {ceShops.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          {selectedTypes.length > 0 && assignedShop && (
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+              Auto-assigned based on type
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: 12 }}>

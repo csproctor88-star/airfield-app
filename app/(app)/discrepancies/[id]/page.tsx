@@ -10,12 +10,12 @@ import { useInstallation } from '@/lib/installation-context'
 import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
 import { CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS, DISCREPANCY_TYPES } from '@/lib/constants'
 
-import { fetchInfrastructureFeature, buildFeatureDisplayName, formatFeatureType } from '@/lib/supabase/infrastructure-features'
+import { fetchInfrastructureFeature, fetchSystemFeaturesForFeature, buildFeatureDisplayName, formatFeatureType } from '@/lib/supabase/infrastructure-features'
 import type { InfrastructureFeature } from '@/lib/supabase/types'
 import { EditDiscrepancyModal, StatusUpdateModal, WorkOrderModal, PhotoViewerModal } from '@/components/discrepancies/modals'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
-import { fetchMapImageDataUrl, formatZuluDateTime, compressImageForPdf } from '@/lib/utils'
+import { fetchMapImageDataUrl, fetchSystemMapImageDataUrl, formatZuluDateTime, compressImageForPdf } from '@/lib/utils'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
@@ -44,6 +44,7 @@ export default function DiscrepancyDetailPage() {
   const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
   const [linkedFeature, setLinkedFeature] = useState<InfrastructureFeature | null>(null)
   const [linkedSystemInfo, setLinkedSystemInfo] = useState<{ systemName: string; componentLabel: string } | null>(null)
+  const [systemMapUrl, setSystemMapUrl] = useState<string | null>(null)
   const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
 
   const loadData = useCallback(async () => {
@@ -84,6 +85,17 @@ export default function DiscrepancyDetailPage() {
             }
           }
         }
+
+        // Fetch system map image (all features in the same system, color-coded)
+        fetchSystemFeaturesForFeature(data.infrastructure_feature_id).then(async (systemFeatures) => {
+          if (systemFeatures.length > 0) {
+            const mapFeatures = systemFeatures
+              .filter(f => f.latitude != null && f.longitude != null)
+              .map(f => ({ latitude: f.latitude, longitude: f.longitude, status: f.status, id: f.id }))
+            const mapUrl = await fetchSystemMapImageDataUrl(mapFeatures, data.infrastructure_feature_id!)
+            if (mapUrl) setSystemMapUrl(mapUrl)
+          }
+        })
       }
     }
 
@@ -234,6 +246,7 @@ export default function DiscrepancyDetailPage() {
       discrepancy: d,
       photoDataUrls,
       mapDataUrl,
+      systemMapDataUrl: systemMapUrl,
       baseName: currentInstallation?.name,
       baseIcao: currentInstallation?.icao,
     })
@@ -362,6 +375,34 @@ export default function DiscrepancyDetailPage() {
           >
             View on Infrastructure Map &rarr;
           </Link>
+        </div>
+      )}
+
+      {/* NAVAID System Map — shows all features in the system with linked feature highlighted */}
+      {systemMapUrl && (
+        <div className="card" style={{ marginBottom: 8, padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '10px 12px 6px', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            System Overview
+          </div>
+          <img
+            src={systemMapUrl}
+            alt="NAVAID system overview"
+            style={{ width: '100%', display: 'block' }}
+          />
+          <div style={{ padding: '4px 12px 8px', display: 'flex', gap: 12, fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22C55E', display: 'inline-block' }} />
+              Operational
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444', display: 'inline-block' }} />
+              Inoperative
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#EF4444', display: 'inline-block', border: '2px solid #fff' }} />
+              This Discrepancy
+            </span>
+          </div>
         </div>
       )}
 

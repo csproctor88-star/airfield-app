@@ -203,7 +203,7 @@ export async function updateDiscrepancyStatus(
   }
   if (extraFields?.assigned_shop) updateFields.assigned_shop = extraFields.assigned_shop
   if (extraFields?.resolution_notes) updateFields.resolution_notes = extraFields.resolution_notes
-  if (newStatus === 'resolved') updateFields.resolution_date = new Date().toISOString()
+  if (newStatus === 'completed' || newStatus === 'resolved') updateFields.resolution_date = new Date().toISOString()
 
   const { data: rawData, error } = await supabase
     .from('discrepancies')

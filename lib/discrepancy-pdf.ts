@@ -7,12 +7,13 @@ interface DiscrepancyPdfInput {
   discrepancy: any
   photoDataUrls: string[]
   mapDataUrl: string | null
+  systemMapDataUrl?: string | null
   baseName?: string
   baseIcao?: string
 }
 
 export async function generateDiscrepancyPdf(input: DiscrepancyPdfInput) {
-  const { discrepancy: d, photoDataUrls, mapDataUrl, baseName, baseIcao } = input
+  const { discrepancy: d, photoDataUrls, mapDataUrl, systemMapDataUrl, baseName, baseIcao } = input
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -196,6 +197,28 @@ export async function generateDiscrepancyPdf(input: DiscrepancyPdfInput) {
       } catch {
         y += 4
       }
+    }
+  }
+
+  // -- NAVAID System Map --
+  if (systemMapDataUrl) {
+    checkPageBreak(55)
+    y += 2
+    doc.setFontSize(10)
+    doc.setTextColor(0)
+    doc.setFont('helvetica', 'bold')
+    doc.text('NAVAID SYSTEM OVERVIEW', margin, y)
+    y += 5
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7)
+    doc.setTextColor(100)
+    doc.text('Green = Operational | Red = Inoperative | Large = Linked Feature', margin, y)
+    y += 4
+    try {
+      doc.addImage(systemMapDataUrl, 'PNG', margin, y, contentWidth * 0.7, contentWidth * 0.7 * (400 / 600))
+      y += contentWidth * 0.7 * (400 / 600) + 4
+    } catch {
+      y += 4
     }
   }
 

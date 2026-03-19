@@ -1,97 +1,305 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { FileText, AlertTriangle, TrendingUp, Clock, Lightbulb } from 'lucide-react'
+import { FileText, AlertTriangle, TrendingUp, Clock, Lightbulb, Loader2 } from 'lucide-react'
+import { useInstallation } from '@/lib/installation-context'
+import { fetchAnalyticsData, type AnalyticsData } from '@/lib/reports/analytics-data'
+
+const CHECK_TYPE_LABELS: Record<string, string> = {
+  fod: 'FOD', rsc: 'RSC', rcr: 'RCR', bash: 'BASH',
+  ife: 'IFE', ground_emergency: 'Ground Emergency', heavy_aircraft: 'Heavy Aircraft',
+}
 
 const REPORT_CARDS = [
-  {
-    title: 'Daily Operations Summary',
-    description: 'Consolidated view of all airfield activity for a selected date — inspections, checks, discrepancies, runway status changes, and obstruction evaluations.',
-    href: '/reports/daily',
-    icon: FileText,
-    color: '#0EA5E9',
-  },
-  {
-    title: 'Generate Discrepancy Report',
-    description: 'Point-in-time snapshot of every open discrepancy — aging analysis and assigned shop summary.',
-    href: '/reports/discrepancies',
-    icon: AlertTriangle,
-    color: '#FBBF24',
-  },
-  {
-    title: 'Discrepancy Trends',
-    description: 'Opened vs closed over time — track whether the backlog is growing or shrinking, with top areas and types.',
-    href: '/reports/trends',
-    icon: TrendingUp,
-    color: '#8B5CF6',
-  },
-  {
-    title: 'Aging Discrepancies',
-    description: 'Open discrepancies grouped by aging tier — 0-7, 8-14, 15-30, 31-60, 61-90, and 90+ days with shop breakdown.',
-    href: '/reports/aging',
-    icon: Clock,
-    color: '#EF4444',
-  },
-  {
-    title: 'Airfield Lighting Report',
-    description: 'Overview of airfield lighting system health — feature counts, outage status, and DAFMAN compliance by system.',
-    href: '/reports/lighting',
-    icon: Lightbulb,
-    color: '#22C55E',
-  },
+  { title: 'Daily Operations Summary', description: 'All activity for a selected date or range.', href: '/reports/daily', icon: FileText, color: '#0EA5E9' },
+  { title: 'Discrepancy Report', description: 'Filtered exports by status, type, shop, or location.', href: '/reports/discrepancies', icon: AlertTriangle, color: '#FBBF24' },
+  { title: 'Discrepancy Trends', description: 'Opened vs closed over time.', href: '/reports/trends', icon: TrendingUp, color: '#8B5CF6' },
+  { title: 'Aging Discrepancies', description: 'By aging tier and shop with filtered exports.', href: '/reports/aging', icon: Clock, color: '#EF4444' },
+  { title: 'Airfield Lighting Report', description: 'System health, outages, feature inventory.', href: '/reports/lighting', icon: Lightbulb, color: '#22C55E' },
+]
+
+const TIME_FRAMES = [
+  { value: 7, label: '7d' },
+  { value: 30, label: '30d' },
+  { value: 90, label: '90d' },
+  { value: 180, label: '6mo' },
+  { value: 365, label: '1yr' },
 ]
 
 export default function ReportsPage() {
+  const { installationId } = useInstallation()
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [days, setDays] = useState(30)
+
+  useEffect(() => {
+    setLoading(true)
+    fetchAnalyticsData(installationId, days).then(data => {
+      setAnalytics(data)
+      setLoading(false)
+    })
+  }, [installationId, days])
+
+  const periodLabel = TIME_FRAMES.find(t => t.value === days)?.label || `${days}d`
+
   return (
     <div className="page-container">
-      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>Reports</div>
+      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>Reports & Analytics</div>
 
-      <div className="card-list">
+      {/* Report links */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 20 }}>
         {REPORT_CARDS.map((card) => (
-          <Link
-            key={card.href}
-            href={card.href}
-            style={{ textDecoration: 'none', color: 'inherit' }}
-          >
-            <div
-              className="card"
-              style={{
-                padding: 16,
-                display: 'flex',
-                gap: 14,
-                alignItems: 'flex-start',
-                cursor: 'pointer',
-                border: `1px solid ${card.color}22`,
-              }}
-            >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 10,
-                  background: `${card.color}14`,
-                  border: `1px solid ${card.color}33`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <card.icon size={22} color={card.color} />
+          <Link key={card.href} href={card.href} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div style={{
+              padding: '10px 14px', display: 'flex', gap: 10, alignItems: 'center',
+              background: 'var(--color-bg-surface)', borderRadius: 8,
+              border: `1px solid ${card.color}22`, cursor: 'pointer',
+            }}>
+              <card.icon size={18} color={card.color} style={{ flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>{card.title}</span>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', marginLeft: 6 }}>{card.description}</span>
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
-                  {card.title}
-                </div>
-                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', lineHeight: 1.5 }}>
-                  {card.description}
-                </div>
-              </div>
-              <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-2xl)', alignSelf: 'center' }}>›</span>
+              <span style={{ color: 'var(--color-text-4)', fontSize: 'var(--fs-lg)' }}>›</span>
             </div>
           </Link>
         ))}
       </div>
+
+      {/* Analytics header with time frame selector */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--color-text-1)' }}>
+          Analytics
+        </div>
+        <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+          {TIME_FRAMES.map(tf => (
+            <button
+              key={tf.value}
+              onClick={() => setDays(tf.value)}
+              style={{
+                padding: '4px 10px', border: 'none', fontSize: 'var(--fs-xs)', fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit',
+                background: days === tf.value ? 'var(--color-cyan)' : 'transparent',
+                color: days === tf.value ? '#000' : 'var(--color-text-3)',
+              }}
+            >
+              {tf.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="card" style={{ textAlign: 'center', padding: '30px 20px' }}>
+          <Loader2 size={24} color="var(--color-text-3)" style={{ animation: 'spin 1s linear infinite' }} />
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 8 }}>Loading analytics...</div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+        </div>
+      ) : analytics && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+
+          {/* Airfield Inspections */}
+          <StyledCard accent="#0EA5E9">
+            <CardHeader>Airfield Inspections</CardHeader>
+            <BigNumber value={analytics.airfieldInspections.completed} label="completed" />
+            {analytics.airfieldInspections.avgMinutes != null && (
+              <StatRow label="Avg Time" value={`${analytics.airfieldInspections.avgMinutes} min`} />
+            )}
+            {analytics.airfieldInspections.passRate != null && (
+              <StatRow label="Pass Rate" value={`${analytics.airfieldInspections.passRate}%`}>
+                <MiniBar pct={analytics.airfieldInspections.passRate} color={analytics.airfieldInspections.passRate >= 90 ? '#22C55E' : '#FBBF24'} />
+              </StatRow>
+            )}
+          </StyledCard>
+
+          {/* Lighting Inspections */}
+          <StyledCard accent="#A78BFA">
+            <CardHeader>Lighting Inspections</CardHeader>
+            <BigNumber value={analytics.lightingInspections.completed} label="completed" />
+            {analytics.lightingInspections.avgMinutes != null && (
+              <StatRow label="Avg Time" value={`${analytics.lightingInspections.avgMinutes} min`} />
+            )}
+            {analytics.lightingInspections.passRate != null && (
+              <StatRow label="Pass Rate" value={`${analytics.lightingInspections.passRate}%`}>
+                <MiniBar pct={analytics.lightingInspections.passRate} color={analytics.lightingInspections.passRate >= 90 ? '#22C55E' : '#FBBF24'} />
+              </StatRow>
+            )}
+          </StyledCard>
+
+          {/* Airfield Checks */}
+          <StyledCard accent="#22D3EE">
+            <CardHeader>Airfield Checks</CardHeader>
+            <BigNumber value={analytics.checks.last30Days} label="total" />
+            <StatRow label="Avg / Day" value={analytics.checks.avgPerDay} />
+            {analytics.checks.avgCompletionMinutes != null && (
+              <StatRow label="Avg Time" value={`${analytics.checks.avgCompletionMinutes} min`} />
+            )}
+            {analytics.checks.byType.length > 0 && (
+              <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {analytics.checks.byType.slice(0, 4).map(t => (
+                  <span key={t.type} style={{
+                    fontSize: 'var(--fs-2xs)', padding: '1px 6px', borderRadius: 4,
+                    background: 'rgba(34,211,238,0.08)', color: 'var(--color-text-3)',
+                  }}>
+                    {CHECK_TYPE_LABELS[t.type] || t.type} {t.count}
+                  </span>
+                ))}
+              </div>
+            )}
+          </StyledCard>
+
+          {/* Discrepancies */}
+          <StyledCard accent="#FBBF24">
+            <CardHeader>Discrepancies</CardHeader>
+            <BigNumber value={analytics.discrepancies.currentOpen} label="open" color={analytics.discrepancies.currentOpen > 0 ? '#FBBF24' : '#22C55E'} />
+            {analytics.discrepancies.avgDaysToClose != null && (
+              <StatRow label="Avg Days to Close" value={analytics.discrepancies.avgDaysToClose} />
+            )}
+            <div style={{ display: 'flex', gap: 12, marginTop: 2 }}>
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                Opened <span style={{ fontWeight: 700, color: 'var(--color-text-2)' }}>{analytics.discrepancies.openedLast30}</span>
+              </span>
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                Closed <span style={{ fontWeight: 700, color: 'var(--color-text-2)' }}>{analytics.discrepancies.closedLast30}</span>
+              </span>
+              {(analytics.discrepancies.openedLast30 > 0 || analytics.discrepancies.closedLast30 > 0) && (
+                <span style={{
+                  fontSize: 'var(--fs-xs)', fontWeight: 700,
+                  color: analytics.discrepancies.openedLast30 > analytics.discrepancies.closedLast30 ? '#EF4444' : '#22C55E',
+                }}>
+                  Net {analytics.discrepancies.openedLast30 > analytics.discrepancies.closedLast30 ? '+' : ''}
+                  {analytics.discrepancies.openedLast30 - analytics.discrepancies.closedLast30}
+                </span>
+              )}
+            </div>
+          </StyledCard>
+
+          {/* QRC Executions */}
+          <StyledCard accent="#F97316">
+            <CardHeader>QRC Executions</CardHeader>
+            <BigNumber value={analytics.qrc.executionsLast30} label="executed" />
+            {analytics.qrc.avgResponseMinutes != null && (
+              <StatRow label="Avg Response" value={`${analytics.qrc.avgResponseMinutes} min`} />
+            )}
+          </StyledCard>
+
+          {/* Personnel */}
+          <StyledCard accent="#64748B">
+            <CardHeader>Personnel on Airfield</CardHeader>
+            <BigNumber value={analytics.personnel.activeToday} label="active today" />
+            {analytics.personnel.avgPerDay != null && (
+              <StatRow label="Avg / Day" value={analytics.personnel.avgPerDay} />
+            )}
+          </StyledCard>
+
+          {/* Obstructions */}
+          <StyledCard accent="#F59E0B">
+            <CardHeader>Obstruction Evaluations</CardHeader>
+            <BigNumber value={analytics.obstructions.evaluated} label="evaluated" />
+            <StatRow label="Violations Found" value={analytics.obstructions.violations}>
+              {analytics.obstructions.violations > 0 && (
+                <span style={{
+                  fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '1px 5px', borderRadius: 3,
+                  background: 'rgba(239,68,68,0.12)', color: '#EF4444',
+                }}>
+                  {analytics.obstructions.evaluated > 0
+                    ? `${Math.round((analytics.obstructions.violations / analytics.obstructions.evaluated) * 100)}%`
+                    : '0%'}
+                </span>
+              )}
+            </StatRow>
+          </StyledCard>
+
+          {/* Parking Plans */}
+          <StyledCard accent="#38BDF8">
+            <CardHeader>Parking Plans</CardHeader>
+            <BigNumber value={analytics.parking.totalPlans} label="total plans" />
+            <StatRow label={`Created (${periodLabel})`} value={analytics.parking.createdInPeriod} />
+            {analytics.parking.activePlan && (
+              <div style={{ marginTop: 2, fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)' }}>
+                Active: <span style={{ fontWeight: 600, color: 'var(--color-cyan)' }}>{analytics.parking.activePlan}</span>
+              </div>
+            )}
+          </StyledCard>
+
+          {/* Wildlife / BASH */}
+          <StyledCard accent="#10B981">
+            <CardHeader>Wildlife / BASH</CardHeader>
+            <div style={{ display: 'flex', gap: 16, marginBottom: 4 }}>
+              <div>
+                <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>{analytics.wildlife.sightings}</div>
+                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-4)', fontWeight: 600 }}>sightings</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: analytics.wildlife.strikes > 0 ? '#EF4444' : 'var(--color-text-1)' }}>{analytics.wildlife.strikes}</div>
+                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-4)', fontWeight: 600 }}>strikes</div>
+              </div>
+            </div>
+            {analytics.wildlife.topSpecies && (
+              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)' }}>
+                Top species: <span style={{ fontWeight: 600, color: 'var(--color-text-2)' }}>{analytics.wildlife.topSpecies}</span>
+              </div>
+            )}
+          </StyledCard>
+
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Styled card with accent top border ──
+
+function StyledCard({ accent, children }: { accent: string; children: React.ReactNode }) {
+  return (
+    <div style={{
+      background: 'var(--color-bg-surface)', borderRadius: 10, padding: '12px 14px',
+      border: '1px solid var(--color-border)',
+      borderTop: `3px solid ${accent}`,
+      display: 'flex', flexDirection: 'column', gap: 2,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function CardHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)',
+      textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function BigNumber({ value, label, color }: { value: number | string; label: string; color?: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 2 }}>
+      <span style={{ fontSize: 'var(--fs-3xl)', fontWeight: 800, color: color || 'var(--color-text-1)', lineHeight: 1 }}>{value}</span>
+      <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-4)', fontWeight: 600 }}>{label}</span>
+    </div>
+  )
+}
+
+function StatRow({ label, value, children }: { label: string; value: string | number; children?: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1px 0' }}>
+      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {children}
+        <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>{value}</span>
+      </div>
+    </div>
+  )
+}
+
+function MiniBar({ pct, color }: { pct: number; color: string }) {
+  return (
+    <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--color-border)', overflow: 'hidden' }}>
+      <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', borderRadius: 2, background: color }} />
     </div>
   )
 }

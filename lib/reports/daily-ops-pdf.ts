@@ -27,6 +27,7 @@ const STATUS_LABELS: Record<string, string> = {
   submitted_to_afm: 'Submitted to AFM',
   submitted_to_ces: 'Submitted to CES',
   awaiting_action_by_ces: 'Awaiting CES Action',
+  waiting_for_project: 'Waiting for Project',
   work_completed_awaiting_verification: 'Awaiting Verification',
   open: 'Open',
   completed: 'Completed',
@@ -278,7 +279,8 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
     } else {
       const tableBody = dayData.newDiscrepancies.map((d) => {
         const reporter = d.reporter_rank ? `${d.reporter_rank} ${d.reporter_name}` : d.reporter_name
-        return [d.display_id, d.title, formatDiscrepancyType(d.type), d.location_text, d.assigned_shop || '—', reporter, '']
+        const status = STATUS_LABELS[d.current_status] || d.current_status || ''
+        return [d.display_id, d.title, formatDiscrepancyType(d.type), d.location_text, d.assigned_shop || '—', status, reporter, '']
       })
 
       const discPhotos = dayData.newDiscrepancies.map((d) => data.photos[`discrepancy:${d.id}`] || [])
@@ -286,22 +288,22 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
       autoTable(doc, {
         startY: y,
         margin: { left: margin, right: margin },
-        head: [['ID', 'Title', 'Type', 'Location', 'Shop', 'Reported By', 'Photos']],
+        head: [['ID', 'Title', 'Type', 'Location', 'Shop', 'Status', 'Reported By', 'Photos']],
         body: tableBody,
         styles: { fontSize: 7, cellPadding: 1.5, textColor: [0, 0, 0] },
         headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
         alternateRowStyles: { fillColor: [245, 245, 245] },
-        columnStyles: { 0: { cellWidth: 22 }, 1: { cellWidth: 32 }, 6: { cellWidth: 48 } },
+        columnStyles: { 0: { cellWidth: 20 }, 1: { cellWidth: 28 }, 7: { cellWidth: 44 } },
         didParseCell: (hookData) => {
           if (hookData.section === 'body') {
             const photos = discPhotos[hookData.row.index] || []
             if (photos.length > 0) {
-              hookData.cell.styles.minCellHeight = photoCellHeight(photos.length, 48)
+              hookData.cell.styles.minCellHeight = photoCellHeight(photos.length, 44)
             }
           }
         },
         didDrawCell: (hookData) => {
-          if (hookData.section === 'body' && hookData.column.index === 6) {
+          if (hookData.section === 'body' && hookData.column.index === 7) {
             const photos = discPhotos[hookData.row.index] || []
             drawPhotosInCell(doc, photos, hookData.cell.x, hookData.cell.y, hookData.cell.width)
           }

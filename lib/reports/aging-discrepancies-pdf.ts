@@ -14,6 +14,7 @@ const STATUS_LABELS: Record<string, string> = {
   submitted_to_afm: 'Submitted to AFM',
   submitted_to_ces: 'Submitted to CES',
   awaiting_action_by_ces: 'Awaiting CES Action',
+  waiting_for_project: 'Waiting for Project',
   work_completed_awaiting_verification: 'Awaiting Verification',
   open: 'Open',
 }
@@ -148,17 +149,18 @@ export function generateAgingDiscrepanciesPdf(data: AgingDiscrepanciesData, opts
 
     sectionHeader(`${tier.label.toUpperCase()} (${tier.discrepancies.length})`)
 
+    // Column order: ID, W/O#, Title, Type, Location, Shop, Status, Days, Last Update
     const body = tier.discrepancies.map((d) => {
       const lastUpdate = d.last_update_at
         ? formatZuluDateShort(d.last_update_at)
         : ''
       return [
         d.display_id,
+        d.work_order_number || '',
         d.title,
         formatDiscrepancyType(d.type),
         d.location_text,
         d.assigned_shop || 'Unassigned',
-        d.work_order_number || '',
         STATUS_LABELS[d.current_status] || d.current_status,
         d.days_open.toString(),
         lastUpdate,
@@ -168,15 +170,21 @@ export function generateAgingDiscrepanciesPdf(data: AgingDiscrepanciesData, opts
     autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
-      head: [['ID', 'Title', 'Type', 'Location', 'Shop', 'W/O #', 'Status', 'Days', 'Last Update']],
+      head: [['ID', 'W/O #', 'Title', 'Type', 'Location', 'Shop', 'Status', 'Days', 'Last Update']],
       body,
       styles: { fontSize: 7, cellPadding: 1.5, textColor: [0, 0, 0] },
       headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
       alternateRowStyles: { fillColor: [245, 245, 245] },
       columnStyles: {
-        0: { cellWidth: 18 },
-        1: { cellWidth: 32 },
-        8: { cellWidth: 10, halign: 'center' },
+        0: { cellWidth: 20 },  // ID
+        1: { cellWidth: 20 },  // W/O #
+        2: { cellWidth: 52 },  // Title (widest)
+        3: { cellWidth: 24 },  // Type
+        4: { cellWidth: 18 },  // Location
+        5: { cellWidth: 28 },  // Shop
+        6: { cellWidth: 30 },  // Status
+        7: { cellWidth: 10, halign: 'center' },  // Days
+        8: { cellWidth: 14 },  // Last Update
       },
     })
     y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6

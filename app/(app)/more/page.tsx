@@ -144,6 +144,7 @@ function CollapsibleGroup({ label, icon, items, defaultOpen }: { label: string; 
 export default function MorePage() {
   const [canManageUsers, setCanManageUsers] = useState(false)
   const [isSysAdmin, setIsSysAdmin] = useState(false)
+  const [isCes, setIsCes] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
@@ -175,19 +176,41 @@ export default function MorePage() {
       const config = USER_ROLES[role]
       setCanManageUsers(config?.canManageUsers ?? false)
       setIsSysAdmin(role === 'sys_admin')
+      setIsCes(role === 'ces')
       setLoaded(true)
     }
 
     checkRole()
   }, [])
 
+  const CES_ALLOWED = new Set(['/ces', '/discrepancies', '/infrastructure', '/settings'])
+
   function filterItems(items: ModuleItem[]) {
     if (!loaded) return items.filter(m => !m.adminOnly && !m.sysAdminOnly)
     return items.filter(m => {
       if (m.adminOnly && !canManageUsers) return false
       if (m.sysAdminOnly && !isSysAdmin) return false
+      if (isCes && !CES_ALLOWED.has(m.href)) return false
       return true
     })
+  }
+
+  // CES users get a simplified More page
+  if (isCes) {
+    const cesItems = [...mgmtItems, ...settingsItems].filter(m => CES_ALLOWED.has(m.href))
+    return (
+      <div className="page-container">
+        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>More</div>
+        <div style={{
+          background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+          borderRadius: 12, marginBottom: 12, overflow: 'hidden',
+        }}>
+          {cesItems.map(item => (
+            <NavItem key={item.href} item={item} />
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (

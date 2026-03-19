@@ -14,6 +14,7 @@ const STATUS_LABELS: Record<string, string> = {
   submitted_to_afm: 'Submitted to AFM',
   submitted_to_ces: 'Submitted to CES',
   awaiting_action_by_ces: 'Awaiting CES Action',
+  waiting_for_project: 'Waiting for Project',
   work_completed_awaiting_verification: 'Awaiting Verification',
   open: 'Open',
 }
@@ -109,6 +110,16 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
     doc.text(typeLines, margin, y)
     y += typeLines.length * 4
   }
+
+  // By Shop
+  const shopEntries = Object.entries(data.summary.byShop).sort((a, b) => b[1] - a[1])
+  if (shopEntries.length > 0) {
+    doc.setFontSize(9)
+    const shopText = 'By Shop: ' + shopEntries.map(([s, c]) => `${s} (${c})`).join(', ')
+    const shopLines = doc.splitTextToSize(shopText, contentWidth)
+    doc.text(shopLines, margin, y)
+    y += shopLines.length * 4
+  }
   y += 3
 
   // ── DISCREPANCY ENTRIES ──
@@ -145,6 +156,7 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
       formatDiscrepancyType(d.type),
       d.location_text,
       d.work_order_number || '',
+      d.assigned_shop || 'Unassigned',
       STATUS_LABELS[d.current_status] || d.current_status,
       d.days_open.toString(),
       reporter,
@@ -159,17 +171,18 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
   autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
-    head: [['ID', 'Title', 'Type', 'Location', 'W/O #', 'Status', 'Days', 'Reported By', 'Last Update', 'Comments', 'Photos']],
+    head: [['ID', 'Title', 'Type', 'Location', 'W/O #', 'Shop', 'Status', 'Days', 'Reported By', 'Last Update', 'Comments', 'Photos']],
     body: tableBody,
     styles: { fontSize: 7, cellPadding: 1.5, textColor: [0, 0, 0] },
     headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
     alternateRowStyles: { fillColor: [245, 245, 245] },
     columnStyles: {
-      0: { cellWidth: 18 },
-      1: { cellWidth: 28 },
-      6: { cellWidth: 10, halign: 'center' },
-      9: { cellWidth: 40, fontSize: 6 },
-      10: { cellWidth: 36 },
+      0: { cellWidth: 16 },
+      1: { cellWidth: 26 },
+      5: { cellWidth: 18 },
+      7: { cellWidth: 10, halign: 'center' },
+      10: { cellWidth: 36, fontSize: 6 },
+      11: { cellWidth: 34 },
     },
     didParseCell: (hookData) => {
       if (hookData.section !== 'body') return
@@ -178,7 +191,7 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
       if (!disc) return
 
       // Bold + red for >30 days
-      if (disc.days_open > 30 && hookData.column.index === 6) {
+      if (disc.days_open > 30 && hookData.column.index === 7) {
         hookData.cell.styles.textColor = [220, 38, 38]
         hookData.cell.styles.fontStyle = 'bold'
       }
@@ -186,11 +199,11 @@ export function generateOpenDiscrepanciesPdf(data: OpenDiscrepanciesData, opts: 
       // Set row height for photos (applied to ALL cells so the entire row expands)
       const photos = discPhotos[rowIdx] || []
       if (photos.length > 0) {
-        hookData.cell.styles.minCellHeight = photoCellHeight(photos.length, 36)
+        hookData.cell.styles.minCellHeight = photoCellHeight(photos.length, 34)
       }
     },
     didDrawCell: (hookData) => {
-      if (hookData.section === 'body' && hookData.column.index === 10) {
+      if (hookData.section === 'body' && hookData.column.index === 11) {
         const photos = discPhotos[hookData.row.index] || []
         drawPhotosInCell(doc, photos, hookData.cell.x, hookData.cell.y, hookData.cell.width)
       }

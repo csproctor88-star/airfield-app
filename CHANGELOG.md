@@ -8,8 +8,53 @@ All notable changes to Glidepath.
 - METAR weather API integration (aviationweather.gov)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~159 `as any` casts
-- Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 12 PDF generators
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~165 `as any` casts
+- Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 16 PDF generators
+- Training Management Module (DAF training records)
+- Outage analytics (frequency/duration tracking for lighting systems)
+
+---
+
+## [2.24.0] — 2026-03-18
+
+### Features — CES Work Order Dashboard & Role System
+- **CES Work Orders page** (`/ces`) — dedicated dashboard for CES-role users with shop tabs, 5 KPIs (New/In Work/Project/Verify/Overdue), priority-sorted work queue, recently completed section, inline status update buttons
+- **CES role lockdown** — navigation restricted to CES Work Orders, Discrepancies, Visual NAVAIDs, Settings. Flat sidebar nav (no collapsible dropdowns). Settings limited to Profile, Installation, Appearance, About
+- **CES status restrictions** — In Work / Project / Work Completed buttons only. Resolution notes required for Work Completed and Project statuses with context-aware prompts
+- **"Waiting for Project Design/Execution"** status — new `current_status` value for discrepancies pending project design vs local CES execution. Purple accent throughout workflow UI
+
+### Features — Discrepancy Workflow
+- **Auto-assign shop on creation** from per-base configurable type-to-shop mapping (Base Setup → CE Shops)
+- **Configurable type-to-shop mapping** — "Discrepancy Type Assignments" section in CE Shops tab
+- **Shop filter chips** on discrepancy list page with open counts per shop
+- **Workflow progress bar** in status update modal: AFM → CES → In Work → Project → Verify
+
+### Features — Reports & Analytics
+- **Discrepancy Report** rebuilt as flexible filter-based report builder (5 filters, live preview, "Export All Open" quick button)
+- **Aging Discrepancies** — clickable tier/shop badge filters, export only what's visible
+- **Airfield Lighting Report** redesigned — sortable system health table with expandable component rows, export options (All Systems / Outages Only / By System)
+- **Reports & Analytics hub** — 30-day analytics dashboard with 9 styled metric cards: Airfield/Lighting Inspections (split), Checks, Discrepancies, QRC, Personnel, Obstructions, Parking Plans, Wildlife/BASH
+- **Time frame selector** — 7d / 30d / 90d / 6mo / 1yr for all analytics
+- **Report data realignment** — Shop column and By Shop summary added across all discrepancy report PDFs and page views
+
+### Features — NAVAID System Map
+- **System Overview map** on discrepancy detail page when linked to Visual NAVAID — shows all features in the system (green=operational, red=inop, large marker=linked feature) via Mapbox Static Images API with GeoJSON overlay
+- System map embedded in discrepancy PDF exports
+
+### Features — Parking Module
+- **Grouped aircraft list** — sidebar groups by type with collapsible headers, ADG badge, count badge
+- **Bulk add** — quantity field (1-50) in picker, auto-names "F-22 #1", "F-22 #2"
+- **Selection highlight** — cyan ring around selected aircraft on map
+- **Right-click / long-press context menu** — Edit Details, Duplicate, Remove
+- **Fly To zoom** increased to 19 for tighter aircraft focus
+
+### Bug Fixes
+- Unicode arrows in directional sign labels sanitized for PDF compatibility
+- `resolution_date` now set on `completed` status (was only `resolved`)
+- Aging discrepancies PDF columns reordered (W/O # after ID) with balanced widths
+
+### Database Migrations (+1)
+- `2026031800` — `discrepancy_type_shop_map` JSONB column on `bases` table
 
 ---
 
