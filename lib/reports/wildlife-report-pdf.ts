@@ -33,7 +33,7 @@ function markerLabel(index: number): string {
 }
 
 async function fetchHeatmapImageDataUrl(
-  points: { lat: number; lng: number; weight: number; type: string; label?: string }[],
+  points: { lat: number; lng: number; weight: number; type: string }[],
   centerLat: number,
   centerLng: number,
 ): Promise<string | null> {
@@ -52,8 +52,7 @@ async function fetchHeatmapImageDataUrl(
         geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
         properties: {
           'marker-color': p.type === 'strike' ? '#EF4444' : '#10B981',
-          'marker-size': 'small',
-          ...(p.label ? { 'marker-symbol': p.label } : {}),
+          'marker-size': p.weight >= 5 ? 'medium' : 'small',
         },
       })),
     }
@@ -369,17 +368,7 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
     const sightingCount = heatmapPoints.filter(p => p.type === 'sighting').length
     const strikeCount = heatmapPoints.filter(p => p.type === 'strike').length
 
-    // Assign marker labels based on sighting index
-    const labeledPoints = heatmapPoints.map(p => {
-      let label: string | undefined
-      if (p.display_id && p.type === 'sighting') {
-        const idx = sightingIdxMap.get(p.display_id)
-        if (idx != null && idx < 35) label = markerLabel(idx)
-      }
-      return { ...p, label }
-    })
-
-    const mapDataUrl = await fetchHeatmapImageDataUrl(labeledPoints, centerLat, centerLng)
+    const mapDataUrl = await fetchHeatmapImageDataUrl(heatmapPoints, centerLat, centerLng)
     if (mapDataUrl) {
       try {
         const imgWidth = pageWidth - margin * 2
