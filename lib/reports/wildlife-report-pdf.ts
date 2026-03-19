@@ -378,24 +378,37 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
         doc.addImage(mapDataUrl, 'PNG', mapImgX, mapImgY, imgWidth, imgHeight)
 
         // Draw numbered labels on top of the map at each sighting's position
-        // Convert geo coords to pixel position using Web Mercator at zoom 13
+        // Mapbox static image: 800x500 logical pixels at zoom 13, center = centerLng/centerLat
+        // Web Mercator: world pixel = 256 * 2^zoom total pixels across
         const mapZoom = 13
-        const mapPixelW = 800 * 2 // @2x retina
-        const mapPixelH = 500 * 2
-        const scale = Math.pow(2, mapZoom) * 256 / (2 * Math.PI)
-        const centerXpx = scale * (centerLng * Math.PI / 180 + Math.PI)
-        const centerYpx = scale * (Math.PI - Math.log(Math.tan(Math.PI / 4 + centerLat * Math.PI / 360)))
+        const mapLogicalW = 800  // logical (not retina) pixel width
+        const mapLogicalH = 500
+        const worldSize = 256 * Math.pow(2, mapZoom) // total world pixels at this zoom
+
+        // Convert lng/lat to world pixel coordinates (Web Mercator)
+        const lngToWorldX = (lng: number) => ((lng + 180) / 360) * worldSize
+        const latToWorldY = (lat: number) => {
+          const sinLat = Math.sin(lat * Math.PI / 180)
+          return (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * worldSize
+        }
+
+        const centerWx = lngToWorldX(centerLng)
+        const centerWy = latToWorldY(centerLat)
 
         for (const pt of heatmapPoints) {
           if (pt.type !== 'sighting' || !pt.display_id) continue
           const idx = sightingIdxMap.get(pt.display_id)
           if (idx == null || idx >= 35) continue
 
-          const ptXpx = scale * (pt.lng * Math.PI / 180 + Math.PI)
-          const ptYpx = scale * (Math.PI - Math.log(Math.tan(Math.PI / 4 + pt.lat * Math.PI / 360)))
-          // Offset from center in pixels, then scale to PDF dimensions
-          const relX = (ptXpx - centerXpx) / mapPixelW * imgWidth + imgWidth / 2
-          const relY = (ptYpx - centerYpx) / mapPixelH * imgHeight + imgHeight / 2
+          // World pixel offset from center
+          const ptWx = lngToWorldX(pt.lng)
+          const ptWy = latToWorldY(pt.lat)
+          const dxPx = ptWx - centerWx
+          const dyPx = ptWy - centerWy
+
+          // Convert from map logical pixels to PDF points
+          const relX = (dxPx / mapLogicalW) * imgWidth + imgWidth / 2
+          const relY = (dyPx / mapLogicalH) * imgHeight + imgHeight / 2
 
           // Only draw if within map bounds
           if (relX >= 0 && relX <= imgWidth && relY >= 0 && relY <= imgHeight) {
@@ -404,15 +417,15 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
             const label = markerLabel(idx)
             // White circle background
             doc.setFillColor(255, 255, 255)
-            doc.circle(pdfX, pdfY - 2, 6, 'F')
+            doc.circle(pdfX, pdfY, 6, 'F')
             doc.setDrawColor(16, 185, 129)
             doc.setLineWidth(0.8)
-            doc.circle(pdfX, pdfY - 2, 6, 'S')
+            doc.circle(pdfX, pdfY, 6, 'S')
             // Label text
             doc.setFontSize(6)
             doc.setFont('helvetica', 'bold')
             doc.setTextColor(0)
-            doc.text(label, pdfX, pdfY, { align: 'center' })
+            doc.text(label, pdfX, pdfY + 2, { align: 'center' })
           }
         }
 
