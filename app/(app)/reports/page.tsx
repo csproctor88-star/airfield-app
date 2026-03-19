@@ -103,80 +103,82 @@ export default function ReportsPage() {
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       ) : analytics && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
 
-          {/* Inspections & Checks — side by side */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <AnalyticsCard title="Inspections">
-              <MetricRow label="Completed" value={analytics.inspections.last30Days} />
-              {analytics.inspections.avgCompletionMinutes != null && (
-                <MetricRow label="Avg Completion" value={`${analytics.inspections.avgCompletionMinutes} min`} />
-              )}
-              {analytics.inspections.passRate != null && (
-                <MetricRow label="Item Pass Rate" value={`${analytics.inspections.passRate}%`} color={analytics.inspections.passRate >= 90 ? '#22C55E' : '#FBBF24'} />
-              )}
-            </AnalyticsCard>
-
-            <AnalyticsCard title="Airfield Checks">
-              <MetricRow label="Total" value={analytics.checks.last30Days} />
-              <MetricRow label="Avg / Day" value={analytics.checks.avgPerDay} />
-              {analytics.checks.byType.slice(0, 3).map(t => (
-                <MetricRow key={t.type} label={CHECK_TYPE_LABELS[t.type] || t.type} value={t.count} subtle />
-              ))}
-            </AnalyticsCard>
-          </div>
-
-          {/* Discrepancies — full width */}
-          <AnalyticsCard title="Discrepancies">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-              <MetricRow label="Currently Open" value={analytics.discrepancies.currentOpen} color={analytics.discrepancies.currentOpen > 0 ? '#FBBF24' : '#22C55E'} />
-              {analytics.discrepancies.avgDaysToClose != null && (
-                <MetricRow label="Avg Days to Close" value={analytics.discrepancies.avgDaysToClose} color={analytics.discrepancies.avgDaysToClose > 30 ? '#EF4444' : 'var(--color-text-1)'} />
-              )}
-              <MetricRow label="Opened (30d)" value={analytics.discrepancies.openedLast30} />
-              <MetricRow label="Closed (30d)" value={analytics.discrepancies.closedLast30} />
-            </div>
-            {analytics.discrepancies.openedLast30 > 0 && analytics.discrepancies.closedLast30 > 0 && (
-              <div style={{ marginTop: 6, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-                Net change: <span style={{
-                  fontWeight: 700,
-                  color: analytics.discrepancies.openedLast30 > analytics.discrepancies.closedLast30 ? '#EF4444' : '#22C55E',
-                }}>
-                  {analytics.discrepancies.openedLast30 > analytics.discrepancies.closedLast30 ? '+' : ''}
-                  {analytics.discrepancies.openedLast30 - analytics.discrepancies.closedLast30}
-                </span>
-              </div>
+          {/* Airfield Inspections */}
+          <AnalyticsCard title="Airfield Inspections">
+            <MetricRow label="Completed" value={analytics.airfieldInspections.completed} />
+            {analytics.airfieldInspections.avgMinutes != null && (
+              <MetricRow label="Avg Time" value={`${analytics.airfieldInspections.avgMinutes} min`} />
+            )}
+            {analytics.airfieldInspections.passRate != null && (
+              <MetricRow label="Pass Rate" value={`${analytics.airfieldInspections.passRate}%`} color={analytics.airfieldInspections.passRate >= 90 ? '#22C55E' : '#FBBF24'} />
             )}
           </AnalyticsCard>
 
-          {/* QRC & Personnel — side by side */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <AnalyticsCard title="QRC Executions">
-              <MetricRow label="Executed" value={analytics.qrc.executionsLast30} />
-              {analytics.qrc.avgResponseMinutes != null && (
-                <MetricRow label="Avg Response" value={`${analytics.qrc.avgResponseMinutes} min`} />
-              )}
-            </AnalyticsCard>
+          {/* Lighting Inspections */}
+          <AnalyticsCard title="Lighting Inspections">
+            <MetricRow label="Completed" value={analytics.lightingInspections.completed} />
+            {analytics.lightingInspections.avgMinutes != null && (
+              <MetricRow label="Avg Time" value={`${analytics.lightingInspections.avgMinutes} min`} />
+            )}
+            {analytics.lightingInspections.passRate != null && (
+              <MetricRow label="Pass Rate" value={`${analytics.lightingInspections.passRate}%`} color={analytics.lightingInspections.passRate >= 90 ? '#22C55E' : '#FBBF24'} />
+            )}
+          </AnalyticsCard>
 
-            <AnalyticsCard title="Personnel on Airfield">
-              <MetricRow label="Active Today" value={analytics.personnel.activeToday} />
-              {analytics.personnel.avgPerDay != null && (
-                <MetricRow label="Avg / Day" value={analytics.personnel.avgPerDay} />
-              )}
-            </AnalyticsCard>
-          </div>
+          {/* Airfield Checks */}
+          <AnalyticsCard title="Airfield Checks">
+            <MetricRow label="Total" value={analytics.checks.last30Days} />
+            <MetricRow label="Avg / Day" value={analytics.checks.avgPerDay} />
+            {analytics.checks.avgCompletionMinutes != null && (
+              <MetricRow label="Avg Time" value={`${analytics.checks.avgCompletionMinutes} min`} />
+            )}
+            {analytics.checks.byType.slice(0, 3).map(t => (
+              <MetricRow key={t.type} label={CHECK_TYPE_LABELS[t.type] || t.type} value={t.count} subtle />
+            ))}
+          </AnalyticsCard>
 
-          {/* Wildlife — full width only if there's data */}
+          {/* Discrepancies */}
+          <AnalyticsCard title="Discrepancies">
+            <MetricRow label="Open" value={analytics.discrepancies.currentOpen} color={analytics.discrepancies.currentOpen > 0 ? '#FBBF24' : '#22C55E'} />
+            {analytics.discrepancies.avgDaysToClose != null && (
+              <MetricRow label="Avg Days to Close" value={analytics.discrepancies.avgDaysToClose} color={analytics.discrepancies.avgDaysToClose > 30 ? '#EF4444' : 'var(--color-text-1)'} />
+            )}
+            <MetricRow label="Opened (30d)" value={analytics.discrepancies.openedLast30} />
+            <MetricRow label="Closed (30d)" value={analytics.discrepancies.closedLast30} />
+            {analytics.discrepancies.openedLast30 > 0 && analytics.discrepancies.closedLast30 > 0 && (
+              <MetricRow
+                label="Net"
+                value={`${analytics.discrepancies.openedLast30 > analytics.discrepancies.closedLast30 ? '+' : ''}${analytics.discrepancies.openedLast30 - analytics.discrepancies.closedLast30}`}
+                color={analytics.discrepancies.openedLast30 > analytics.discrepancies.closedLast30 ? '#EF4444' : '#22C55E'}
+              />
+            )}
+          </AnalyticsCard>
+
+          {/* QRC Executions */}
+          <AnalyticsCard title="QRC Executions">
+            <MetricRow label="Executed" value={analytics.qrc.executionsLast30} />
+            {analytics.qrc.avgResponseMinutes != null && (
+              <MetricRow label="Avg Response" value={`${analytics.qrc.avgResponseMinutes} min`} />
+            )}
+          </AnalyticsCard>
+
+          {/* Personnel on Airfield */}
+          <AnalyticsCard title="Personnel">
+            <MetricRow label="Active Today" value={analytics.personnel.activeToday} />
+            {analytics.personnel.avgPerDay != null && (
+              <MetricRow label="Avg / Day" value={analytics.personnel.avgPerDay} />
+            )}
+          </AnalyticsCard>
+
+          {/* Wildlife / BASH */}
           {(analytics.wildlife.sightingsLast30 > 0 || analytics.wildlife.strikesLast30 > 0) && (
             <AnalyticsCard title="Wildlife / BASH">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-                <MetricRow label="Sightings" value={analytics.wildlife.sightingsLast30} />
-                <MetricRow label="Strikes" value={analytics.wildlife.strikesLast30} color={analytics.wildlife.strikesLast30 > 0 ? '#EF4444' : 'var(--color-text-1)'} />
-              </div>
+              <MetricRow label="Sightings" value={analytics.wildlife.sightingsLast30} />
+              <MetricRow label="Strikes" value={analytics.wildlife.strikesLast30} color={analytics.wildlife.strikesLast30 > 0 ? '#EF4444' : 'var(--color-text-1)'} />
               {analytics.wildlife.topSpecies && (
-                <div style={{ marginTop: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-                  Most frequent: <span style={{ fontWeight: 600, color: 'var(--color-text-2)' }}>{analytics.wildlife.topSpecies}</span>
-                </div>
+                <MetricRow label="Top Species" value={analytics.wildlife.topSpecies} subtle />
               )}
             </AnalyticsCard>
           )}

@@ -1,16 +1,20 @@
 import { createClient } from '@/lib/supabase/client'
 
+interface InspectionMetrics {
+  completed: number
+  avgMinutes: number | null
+  passRate: number | null
+}
+
 export interface AnalyticsData {
-  // Inspections
-  inspections: {
-    last30Days: number
-    avgCompletionMinutes: number | null
-    passRate: number | null
-  }
+  // Inspections — split by type
+  airfieldInspections: InspectionMetrics
+  lightingInspections: InspectionMetrics
   // Checks
   checks: {
     last30Days: number
     avgPerDay: number
+    avgCompletionMinutes: number | null
     byType: { type: string; count: number }[]
   }
   // Discrepancies
@@ -38,9 +42,12 @@ export interface AnalyticsData {
   }
 }
 
+const EMPTY_INSP: InspectionMetrics = { completed: 0, avgMinutes: null, passRate: null }
+
 const EMPTY: AnalyticsData = {
-  inspections: { last30Days: 0, avgCompletionMinutes: null, passRate: null },
-  checks: { last30Days: 0, avgPerDay: 0, byType: [] },
+  airfieldInspections: EMPTY_INSP,
+  lightingInspections: EMPTY_INSP,
+  checks: { last30Days: 0, avgPerDay: 0, avgCompletionMinutes: null, byType: [] },
   discrepancies: { currentOpen: 0, avgDaysToClose: null, openedLast30: 0, closedLast30: 0 },
   personnel: { activeToday: 0, avgPerDay: null },
   qrc: { executionsLast30: 0, avgResponseMinutes: null },
@@ -73,7 +80,8 @@ export async function fetchAnalyticsData(baseId: string | null): Promise<Analyti
     ])
 
     return {
-      inspections: inspectionData,
+      airfieldInspections: inspectionData.airfield,
+      lightingInspections: inspectionData.lighting,
       checks: checkData,
       discrepancies: discrepancyData,
       personnel: personnelData,
@@ -90,34 +98,41 @@ export async function fetchAnalyticsData(baseId: string | null): Promise<Analyti
 async function fetchInspectionAnalytics(supabase: any, baseId: string, since: string) {
   const { data } = await supabase
     .from('inspections')
-    .select('created_at, completed_at, passed_count, failed_count, na_count')
+    .select('inspection_type, created_at, completed_at, passed_count, failed_count, na_count')
     .eq('base_id', baseId)
     .eq('status', 'completed')
     .gte('created_at', since)
 
-  const rows = (data ?? []) as { created_at: string; completed_at: string | null; passed_count: number; failed_count: number; na_count: number }[]
+  const rows = (data ?? []) as { inspection_type: string; created_at: string; completed_at: string | null; passed_count: number; failed_count: number; na_count: number }[]
 
-  let totalMinutes = 0
-  let completedWithTime = 0
-  let totalPassed = 0
-  let totalItems = 0
+  function calcMetrics(filtered: typeof rows): InspectionMetrics {
+    let totalMinutes = 0
+    let completedWithTime = 0
+    let totalPassed = 0
+    let totalItems = 0
 
-  for (const r of rows) {
-    if (r.completed_at) {
-      const mins = (new Date(r.completed_at).getTime() - new Date(r.created_at).getTime()) / 60000
-      if (mins > 0 && mins < 1440) { // exclude unreasonable values (>24h)
-        totalMinutes += mins
-        completedWithTime++
+    for (const r of filtered) {
+      if (r.completed_at) {
+        const mins = (new Date(r.completed_at).getTime() - new Date(r.created_at).getTime()) / 60000
+        if (mins > 0 && mins < 1440) {
+          totalMinutes += mins
+          completedWithTime++
+        }
       }
+      totalPassed += r.passed_count || 0
+      totalItems += (r.passed_count || 0) + (r.failed_count || 0) + (r.na_count || 0)
     }
-    totalPassed += r.passed_count || 0
-    totalItems += (r.passed_count || 0) + (r.failed_count || 0) + (r.na_count || 0)
+
+    return {
+      completed: filtered.length,
+      avgMinutes: completedWithTime > 0 ? Math.round(totalMinutes / completedWithTime) : null,
+      passRate: totalItems > 0 ? Math.round((totalPassed / totalItems) * 100) : null,
+    }
   }
 
   return {
-    last30Days: rows.length,
-    avgCompletionMinutes: completedWithTime > 0 ? Math.round(totalMinutes / completedWithTime) : null,
-    passRate: totalItems > 0 ? Math.round((totalPassed / totalItems) * 100) : null,
+    airfield: calcMetrics(rows.filter(r => r.inspection_type === 'airfield')),
+    lighting: calcMetrics(rows.filter(r => r.inspection_type === 'lighting')),
   }
 }
 
@@ -125,20 +140,28 @@ async function fetchInspectionAnalytics(supabase: any, baseId: string, since: st
 async function fetchCheckAnalytics(supabase: any, baseId: string, since: string) {
   const { data } = await supabase
     .from('airfield_checks')
-    .select('check_type, created_at')
+    .select('check_type, created_at, completed_at')
     .eq('base_id', baseId)
     .gte('created_at', since)
 
-  const rows = (data ?? []) as { check_type: string; created_at: string }[]
+  const rows = (data ?? []) as { check_type: string; created_at: string; completed_at: string | null }[]
 
-  // Count by type
   const typeCounts: Record<string, number> = {}
   const dayCounts: Record<string, number> = {}
+  let totalMinutes = 0
+  let completedWithTime = 0
 
   for (const r of rows) {
     typeCounts[r.check_type] = (typeCounts[r.check_type] || 0) + 1
     const day = r.created_at.slice(0, 10)
     dayCounts[day] = (dayCounts[day] || 0) + 1
+    if (r.completed_at) {
+      const mins = (new Date(r.completed_at).getTime() - new Date(r.created_at).getTime()) / 60000
+      if (mins > 0 && mins < 480) { // exclude >8h as unreasonable
+        totalMinutes += mins
+        completedWithTime++
+      }
+    }
   }
 
   const uniqueDays = Object.keys(dayCounts).length
@@ -149,6 +172,7 @@ async function fetchCheckAnalytics(supabase: any, baseId: string, since: string)
   return {
     last30Days: rows.length,
     avgPerDay: uniqueDays > 0 ? Math.round((rows.length / uniqueDays) * 10) / 10 : 0,
+    avgCompletionMinutes: completedWithTime > 0 ? Math.round(totalMinutes / completedWithTime) : null,
     byType,
   }
 }
