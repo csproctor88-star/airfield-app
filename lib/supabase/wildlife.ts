@@ -699,17 +699,17 @@ export async function fetchHeatmapData(
   startDate?: string,
   endDate?: string,
   type?: 'sightings' | 'strikes' | 'all',
-): Promise<{ lat: number; lng: number; weight: number; species: string; type: string }[]> {
+): Promise<{ lat: number; lng: number; weight: number; species: string; type: string; display_id?: string }[]> {
   const supabase = createClient()
   if (!supabase) return []
 
-  const points: { lat: number; lng: number; weight: number; species: string; type: string }[] = []
+  const points: { lat: number; lng: number; weight: number; species: string; type: string; display_id?: string }[] = []
   const fetchType = type || 'all'
 
   if (fetchType === 'all' || fetchType === 'sightings') {
     let query = supabase
       .from('wildlife_sightings')
-      .select('latitude, longitude, count_observed, species_common')
+      .select('latitude, longitude, count_observed, species_common, display_id')
 
     if (baseId) query = query.eq('base_id', baseId)
     if (startDate) query = query.gte('observed_at', startDate)
@@ -725,6 +725,7 @@ export async function fetchHeatmapData(
           weight: d.count_observed ?? 1,
           species: d.species_common ?? 'Unknown',
           type: 'sighting',
+          display_id: d.display_id ?? undefined,
         })
       }
     }
@@ -733,7 +734,7 @@ export async function fetchHeatmapData(
   if (fetchType === 'all' || fetchType === 'strikes') {
     let query = supabase
       .from('wildlife_strikes')
-      .select('latitude, longitude, number_struck, species_common')
+      .select('latitude, longitude, number_struck, species_common, display_id')
 
     if (baseId) query = query.eq('base_id', baseId)
     if (startDate) query = query.gte('strike_date', startDate)
@@ -749,6 +750,7 @@ export async function fetchHeatmapData(
           weight: ((d.number_struck ?? 1) as number) * 3, // weight strikes higher
           species: d.species_common ?? 'Unknown',
           type: 'strike',
+          display_id: d.display_id ?? undefined,
         })
       }
     }

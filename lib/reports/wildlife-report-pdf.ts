@@ -19,8 +19,21 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ]
 
+/** Capitalize first letter of each word, replacing underscores with spaces */
+function titleCase(str: string): string {
+  return str
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+}
+
+/** Marker labels: 1-9, then A-Z (up to 35 points) */
+function markerLabel(index: number): string {
+  if (index < 9) return String(index + 1)
+  return String.fromCharCode(65 + index - 9) // A=9, B=10, ...
+}
+
 async function fetchHeatmapImageDataUrl(
-  points: { lat: number; lng: number; weight: number; type: string }[],
+  points: { lat: number; lng: number; weight: number; type: string; label?: string }[],
   centerLat: number,
   centerLng: number,
 ): Promise<string | null> {
@@ -39,7 +52,8 @@ async function fetchHeatmapImageDataUrl(
         geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
         properties: {
           'marker-color': p.type === 'strike' ? '#EF4444' : '#10B981',
-          'marker-size': p.weight >= 5 ? 'medium' : 'small',
+          'marker-size': 'small',
+          ...(p.label ? { 'marker-symbol': p.label } : {}),
         },
       })),
     }
@@ -82,6 +96,10 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
   const margin = 40
   let y = margin
 
+  // Build a display_id → index map for sightings (for map pin labels)
+  const sightingIdxMap = new Map<string, number>()
+  sightings.forEach((s, i) => { if (s.display_id) sightingIdxMap.set(s.display_id, i) })
+
   // ── Header ──
   doc.setFontSize(16)
   doc.setFont('helvetica', 'bold')
@@ -94,7 +112,7 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
   y += 12
   doc.text(`Report Period: ${monthName} ${yearStr}`, margin, y)
   y += 12
-  doc.text(`Generated: ${formatZuluDateTime(new Date().toISOString())}Z`, margin, y)
+  doc.text(`Generated: ${formatZuluDateTime(new Date().toISOString())}`, margin, y)
   y += 20
 
   // ── Executive Summary ──
@@ -140,7 +158,7 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
       margin: { left: margin, right: margin },
       head: [['Date/Time (Z)', 'BWC', 'Set By', 'Source']],
       body: bwcHistory.map(entry => [
-        formatZuluDateTime(entry.set_at) + 'Z',
+        formatZuluDateTime(entry.set_at),
         entry.bwc_value,
         entry.set_by || '—',
         entry.source || '—',
@@ -201,10 +219,10 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
         s.species_common || 'Unknown',
         s.bwc_at_time || '—',
         s.aircraft_type || '—',
-        s.phase_of_flight?.replace(/_/g, ' ') || '—',
-        s.damage_level || 'none',
+        s.phase_of_flight ? titleCase(s.phase_of_flight) : '—',
+        s.damage_level ? titleCase(s.damage_level) : 'None',
         s.repair_cost ? `$${Number(s.repair_cost).toLocaleString()}` : '—',
-        s.flight_effect?.replace(/_/g, ' ') || 'none',
+        s.flight_effect ? titleCase(s.flight_effect) : 'None',
       ]),
       theme: 'grid',
       headStyles: { fillColor: [239, 68, 68], fontSize: 8, fontStyle: 'bold' },
@@ -256,38 +274,51 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
 
     for (let i = 0; i < sightings.length; i++) {
       const s = sightings[i]
-      // Check if we need a new page (estimate ~120pt per sighting block)
+      // Check if we need a new page (estimate ~100pt per sighting block)
       if (y > 620) { doc.addPage(); y = margin }
 
-      // Sighting header bar
+      // Sighting header bar with map pin number
+      const pinLabel = markerLabel(i)
       doc.setFillColor(16, 185, 129)
       doc.rect(margin, y - 10, pageWidth - margin * 2, 14, 'F')
       doc.setFontSize(9)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(255)
-      doc.text(`${s.display_id} — ${s.species_common}`, margin + 4, y)
+      doc.text(`[${pinLabel}]  ${s.display_id} — ${s.species_common}`, margin + 4, y)
       doc.setTextColor(0)
       y += 10
 
-      // Build detail rows
+      // Weather row (compact, single line)
+      const weatherParts: string[] = []
+      if (s.time_of_day) weatherParts.push(`Time: ${titleCase(s.time_of_day)}`)
+      if (s.sky_condition) weatherParts.push(`Sky: ${titleCase(s.sky_condition)}`)
+      if (s.precipitation) weatherParts.push(`Precip: ${titleCase(s.precipitation)}`)
+      if (s.bwc_at_time) weatherParts.push(`BWC: ${s.bwc_at_time}`)
+
+      if (weatherParts.length > 0) {
+        autoTable(doc, {
+          startY: y,
+          margin: { left: margin, right: margin },
+          body: [[weatherParts.join('    |    ')]],
+          theme: 'plain',
+          bodyStyles: { fontSize: 7, cellPadding: 3, textColor: [100, 116, 139], fontStyle: 'italic' },
+        })
+        y = (doc as any).lastAutoTable.finalY + 2
+      }
+
+      // Build detail rows (without weather, coordinates, airfield zone, scientific name)
       const details: string[][] = [
-        ['Date/Time (Z)', formatZuluDateTime(s.observed_at) + 'Z'],
-        ['Species', `${s.species_common}${s.species_scientific ? ` (${s.species_scientific})` : ''}`],
-        ['Group / Size', `${s.species_group ? s.species_group.charAt(0).toUpperCase() + s.species_group.slice(1) : '—'} / ${s.size_category || '—'}`],
+        ['Date/Time (Z)', formatZuluDateTime(s.observed_at)],
+        ['Species', s.species_common],
+        ['Group / Size', `${s.species_group ? titleCase(s.species_group) : '—'} / ${s.size_category ? titleCase(s.size_category) : '—'}`],
         ['Count Observed', String(s.count_observed)],
-        ['Behavior', s.behavior ? s.behavior.charAt(0).toUpperCase() + s.behavior.slice(1) : '—'],
+        ['Behavior', s.behavior ? titleCase(s.behavior) : '—'],
         ['Location', s.location_text || '—'],
-        ['Airfield Zone', s.airfield_zone || '—'],
-        ['Coordinates', s.latitude && s.longitude ? `${s.latitude.toFixed(6)}, ${s.longitude.toFixed(6)}` : '—'],
-        ['Time of Day', s.time_of_day ? s.time_of_day.charAt(0).toUpperCase() + s.time_of_day.slice(1) : '—'],
-        ['Sky Condition', s.sky_condition ? s.sky_condition.replace(/_/g, ' ') : '—'],
-        ['Precipitation', s.precipitation ? s.precipitation.replace(/_/g, ' ') : '—'],
-        ['BWC at Time', s.bwc_at_time || '—'],
-        ['Action Taken', s.action_taken ? s.action_taken.replace(/_/g, ' ') : 'None'],
+        ['Action Taken', s.action_taken ? titleCase(s.action_taken) : 'None'],
       ]
 
       if (s.action_taken === 'dispersal') {
-        details.push(['Dispersal Method', s.dispersal_method ? s.dispersal_method.replace(/_/g, ' ') : '—'])
+        details.push(['Dispersal Method', s.dispersal_method ? titleCase(s.dispersal_method) : '—'])
         details.push(['Effective', s.dispersal_effective === true ? 'Yes' : s.dispersal_effective === false ? 'No' : '—'])
       }
 
@@ -338,7 +369,17 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
     const sightingCount = heatmapPoints.filter(p => p.type === 'sighting').length
     const strikeCount = heatmapPoints.filter(p => p.type === 'strike').length
 
-    const mapDataUrl = await fetchHeatmapImageDataUrl(heatmapPoints, centerLat, centerLng)
+    // Assign marker labels based on sighting index
+    const labeledPoints = heatmapPoints.map(p => {
+      let label: string | undefined
+      if (p.display_id && p.type === 'sighting') {
+        const idx = sightingIdxMap.get(p.display_id)
+        if (idx != null && idx < 35) label = markerLabel(idx)
+      }
+      return { ...p, label }
+    })
+
+    const mapDataUrl = await fetchHeatmapImageDataUrl(labeledPoints, centerLat, centerLng)
     if (mapDataUrl) {
       try {
         const imgWidth = pageWidth - margin * 2
@@ -372,7 +413,35 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
     doc.setFillColor(239, 68, 68)
     doc.circle(margin + 120, y - 3, 4, 'F')
     doc.text(`Strikes (${strikeCount})`, margin + 129, y)
-    y += 14
+    y += 16
+
+    // Pin-to-report key table (sightings only)
+    if (sightings.length > 0) {
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Map Pin Key:', margin, y)
+      y += 10
+
+      const keyBody = sightings.slice(0, 35).map((s, i) => [
+        markerLabel(i),
+        s.display_id,
+        s.species_common,
+        s.location_text || '—',
+      ])
+
+      autoTable(doc, {
+        startY: y,
+        margin: { left: margin, right: margin },
+        head: [['Pin', 'Report #', 'Species', 'Location']],
+        body: keyBody,
+        theme: 'grid',
+        headStyles: { fillColor: [16, 185, 129], fontSize: 7, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 7 },
+        columnStyles: { 0: { cellWidth: 30, halign: 'center', fontStyle: 'bold' }, 1: { cellWidth: 60 } },
+      })
+
+      y = (doc as any).lastAutoTable.finalY + 10
+    }
 
     doc.setFontSize(7)
     doc.setTextColor(120)
