@@ -214,3 +214,64 @@ export async function fetchMapImageDataUrl(lat: number, lng: number): Promise<st
     return null
   }
 }
+
+/** Fetch a Mapbox static satellite map with NAVAID system features as a GeoJSON overlay.
+ *  Green circles = operational, red = inoperative, larger ringed circle = the linked feature.
+ *  Returns null if Mapbox is not configured or fetch fails. */
+export async function fetchSystemMapImageDataUrl(
+  features: { latitude: number; longitude: number; status: string; id: string }[],
+  linkedFeatureId: string,
+): Promise<string | null> {
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+  if (!token || token === 'your-mapbox-token-here') return null
+  if (features.length === 0) return null
+
+  try {
+    // Build GeoJSON FeatureCollection
+    const geoFeatures: object[] = []
+
+    for (const f of features) {
+      const isLinked = f.id === linkedFeatureId
+      const isInop = f.status === 'inoperative'
+
+      if (isLinked) {
+        // Outer ring for the linked feature — larger, with stroke
+        geoFeatures.push({
+          type: 'Feature',
+          properties: {
+            'marker-color': '#EF4444',
+            'marker-size': 'large',
+            'marker-symbol': 'circle',
+          },
+          geometry: { type: 'Point', coordinates: [f.longitude, f.latitude] },
+        })
+      } else {
+        // Standard dot
+        geoFeatures.push({
+          type: 'Feature',
+          properties: {
+            'marker-color': isInop ? '#EF4444' : '#22C55E',
+            'marker-size': 'small',
+          },
+          geometry: { type: 'Point', coordinates: [f.longitude, f.latitude] },
+        })
+      }
+    }
+
+    const geojson = { type: 'FeatureCollection', features: geoFeatures }
+    const geojsonStr = encodeURIComponent(JSON.stringify(geojson))
+
+    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/geojson(${geojsonStr})/auto/600x400@2x?access_token=${token}&logo=false&attribution=false&padding=30`
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const blob = await res.blob()
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return null
+  }
+}
