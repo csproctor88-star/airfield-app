@@ -429,6 +429,7 @@ export default function ParkingPage() {
   const dragObstacleId = useRef<string | null>(null)
   const isDraggingRef = useRef(false)
   const dragOffsetRef = useRef<{ dLng: number; dLat: number }>({ dLng: 0, dLat: 0 })
+  const dragStartPt = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const silhouetteImagesRef = useRef<Set<string>>(new Set()) // track registered image names
   // ── Derived data ──
 
@@ -1306,10 +1307,10 @@ export default function ParkingPage() {
 
     const onMouseDown = (e: mapboxgl.MapMouseEvent) => {
       // Don't start drag when plan is locked or in placement/drawing mode
-      if (planLockedRef.current) return
       if (isPlacingRef.current) return
 
       const box = hitBox(e.point)
+      dragStartPt.current = { x: e.point.x, y: e.point.y }
 
       // Check aircraft layer first
       if (m.getLayer('parking-aircraft-symbols')) {
@@ -1318,15 +1319,24 @@ export default function ParkingPage() {
           const spotId = acFeatures[0].properties?.spotId
           if (spotId) {
             const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
-            dragOffsetRef.current = spot
-              ? { dLng: spot.longitude - e.lngLat.lng, dLat: spot.latitude - e.lngLat.lat }
-              : { dLng: 0, dLat: 0 }
-            isDraggingRef.current = true
-            dragSpotId.current = spotId
-            dragObstacleId.current = null
-            m.getCanvas().style.cursor = 'grabbing'
-            m.dragPan.disable()
-            e.preventDefault()
+            // Always select the aircraft on mousedown
+            if (spot) {
+              setEditingSpot(spot)
+              setOpenSections(prev => ({ ...prev, aircraft: true }))
+              setSidebarTab('aircraft')
+            }
+            // Only start drag if plan is unlocked
+            if (!planLockedRef.current) {
+              dragOffsetRef.current = spot
+                ? { dLng: spot.longitude - e.lngLat.lng, dLat: spot.latitude - e.lngLat.lat }
+                : { dLng: 0, dLat: 0 }
+              isDraggingRef.current = true
+              dragSpotId.current = spotId
+              dragObstacleId.current = null
+              m.getCanvas().style.cursor = 'grabbing'
+              m.dragPan.disable()
+              e.preventDefault()
+            }
             return
           }
         }
@@ -1586,6 +1596,7 @@ export default function ParkingPage() {
     // Bind mousedown/touchstart on canvas (not specific layer) so we can check multiple layers
     const canvas = m.getCanvas()
     const onCanvasMouseDown = (ev: MouseEvent) => {
+      if (ev.button !== 0) return  // Only handle left-click; right-click → contextmenu handler
       const point = new mapboxgl.Point(ev.offsetX, ev.offsetY)
       const lngLat = m.unproject(point)
       onMouseDown({ point, lngLat, originalEvent: ev, preventDefault: () => ev.preventDefault() } as any)
@@ -2957,7 +2968,7 @@ export default function ParkingPage() {
                         </div>
                         {tlViolations.length > 0 && (
                           <div style={{ fontSize: 'var(--fs-xs)', color: '#EF4444', padding: '2px 0' }}>
-                            {tlViolations.length} aircraft intrude{tlViolations.length === 1 ? 's' : ''} into taxilane envelope
+                            {tlViolations.length} violation{tlViolations.length === 1 ? '' : 's'} in taxilane envelope
                           </div>
                         )}
                         <div style={{ display: 'flex', gap: 4 }}>
