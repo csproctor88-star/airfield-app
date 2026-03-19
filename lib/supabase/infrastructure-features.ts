@@ -70,8 +70,18 @@ export function buildFeatureDisplayName(
 
   // Only include label for sign types (where label = sign text). For other features
   // the label is the fixture ID code which shouldn't be in the display name.
+  // Sanitize Unicode arrows to ASCII for PDF compatibility (jsPDF Helvetica lacks these glyphs).
   const isSign = feature.feature_type.endsWith('_sign')
-  if (feature.label && isSign) parts.push(feature.label)
+  if (feature.label && isSign) {
+    const sanitized = feature.label
+      .replace(/\u2190/g, '<-')   // ←
+      .replace(/\u2192/g, '->')   // →
+      .replace(/\u2191/g, '^')    // ↑
+      .replace(/\u2193/g, 'v')    // ↓
+      .replace(/\u21D0/g, '<=')   // ⇐
+      .replace(/\u21D2/g, '=>')   // ⇒
+    parts.push(sanitized)
+  }
   parts.push(typeLabel)
 
   return parts.join(' ')
