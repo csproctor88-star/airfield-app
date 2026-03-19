@@ -32,8 +32,10 @@ function markerLabel(index: number): string {
   return String.fromCharCode(65 + index - 9) // A=9, B=10, ...
 }
 
+/** Build Mapbox Static Image with labeled pin markers.
+ *  Uses pin-s-{label}+{color}(lng,lat) URL syntax for native label support. */
 async function fetchHeatmapImageDataUrl(
-  points: { lat: number; lng: number; weight: number; type: string }[],
+  points: { lat: number; lng: number; type: string; label?: string }[],
   centerLat: number,
   centerLng: number,
 ): Promise<string | null> {
@@ -42,23 +44,17 @@ async function fetchHeatmapImageDataUrl(
   if (points.length === 0) return null
 
   try {
-    // Build GeoJSON overlay with colored circles — limit to 100 points for URL length
-    const sorted = [...points].sort((a, b) => b.weight - a.weight).slice(0, 100)
+    // Build pin overlay strings: pin-s-{label}+{color}(lng,lat)
+    // Mapbox supports labels: 0-9, a-z as single characters on pins
+    // Limit to ~80 markers to keep URL under length limits
+    const pins = points.slice(0, 80).map(p => {
+      const color = p.type === 'strike' ? 'e53e3e' : '10B981'
+      const labelPart = p.label ? `-${p.label.toLowerCase()}` : ''
+      return `pin-s${labelPart}+${color}(${p.lng.toFixed(5)},${p.lat.toFixed(5)})`
+    })
 
-    const geojson = {
-      type: 'FeatureCollection',
-      features: sorted.map(p => ({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
-        properties: {
-          'marker-color': p.type === 'strike' ? '#EF4444' : '#10B981',
-          'marker-size': p.weight >= 5 ? 'medium' : 'small',
-        },
-      })),
-    }
-
-    const encoded = encodeURIComponent(JSON.stringify(geojson))
-    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/geojson(${encoded})/${centerLng},${centerLat},13,0/800x500@2x?access_token=${token}&logo=false&attribution=false`
+    const overlay = pins.join(',')
+    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${overlay}/${centerLng},${centerLat},13,0/800x500@2x?access_token=${token}&logo=false&attribution=false`
 
     const res = await fetch(url)
     if (!res.ok) return null
@@ -368,67 +364,22 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
     const sightingCount = heatmapPoints.filter(p => p.type === 'sighting').length
     const strikeCount = heatmapPoints.filter(p => p.type === 'strike').length
 
-    const mapDataUrl = await fetchHeatmapImageDataUrl(heatmapPoints, centerLat, centerLng)
+    // Assign labels to sighting points for the map
+    const labeledPoints = heatmapPoints.map(p => {
+      let label: string | undefined
+      if (p.display_id && p.type === 'sighting') {
+        const idx = sightingIdxMap.get(p.display_id)
+        if (idx != null && idx < 35) label = markerLabel(idx)
+      }
+      return { lat: p.lat, lng: p.lng, type: p.type, label }
+    })
+
+    const mapDataUrl = await fetchHeatmapImageDataUrl(labeledPoints, centerLat, centerLng)
     if (mapDataUrl) {
       try {
         const imgWidth = pageWidth - margin * 2
         const imgHeight = imgWidth * (500 / 800) // maintain 800x500 aspect ratio
-        const mapImgX = margin
-        const mapImgY = y
-        doc.addImage(mapDataUrl, 'PNG', mapImgX, mapImgY, imgWidth, imgHeight)
-
-        // Draw numbered labels on top of the map at each sighting's position
-        // Mapbox static image: 800x500 logical pixels at zoom 13, center = centerLng/centerLat
-        // Web Mercator: world pixel = 256 * 2^zoom total pixels across
-        const mapZoom = 13
-        const mapLogicalW = 800  // logical (not retina) pixel width
-        const mapLogicalH = 500
-        const worldSize = 256 * Math.pow(2, mapZoom) // total world pixels at this zoom
-
-        // Convert lng/lat to world pixel coordinates (Web Mercator)
-        const lngToWorldX = (lng: number) => ((lng + 180) / 360) * worldSize
-        const latToWorldY = (lat: number) => {
-          const sinLat = Math.sin(lat * Math.PI / 180)
-          return (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * worldSize
-        }
-
-        const centerWx = lngToWorldX(centerLng)
-        const centerWy = latToWorldY(centerLat)
-
-        for (const pt of heatmapPoints) {
-          if (pt.type !== 'sighting' || !pt.display_id) continue
-          const idx = sightingIdxMap.get(pt.display_id)
-          if (idx == null || idx >= 35) continue
-
-          // World pixel offset from center
-          const ptWx = lngToWorldX(pt.lng)
-          const ptWy = latToWorldY(pt.lat)
-          const dxPx = ptWx - centerWx
-          const dyPx = ptWy - centerWy
-
-          // Convert from map logical pixels to PDF points
-          const relX = (dxPx / mapLogicalW) * imgWidth + imgWidth / 2
-          const relY = (dyPx / mapLogicalH) * imgHeight + imgHeight / 2
-
-          // Only draw if within map bounds
-          if (relX >= 0 && relX <= imgWidth && relY >= 0 && relY <= imgHeight) {
-            const pdfX = mapImgX + relX
-            const pdfY = mapImgY + relY
-            const label = markerLabel(idx)
-            // White circle background
-            doc.setFillColor(255, 255, 255)
-            doc.circle(pdfX, pdfY, 6, 'F')
-            doc.setDrawColor(16, 185, 129)
-            doc.setLineWidth(0.8)
-            doc.circle(pdfX, pdfY, 6, 'S')
-            // Label text
-            doc.setFontSize(6)
-            doc.setFont('helvetica', 'bold')
-            doc.setTextColor(0)
-            doc.text(label, pdfX, pdfY + 2, { align: 'center' })
-          }
-        }
-
+        doc.addImage(mapDataUrl, 'PNG', margin, y, imgWidth, imgHeight)
         y += imgHeight + 8
       } catch {
         doc.setFontSize(8)
