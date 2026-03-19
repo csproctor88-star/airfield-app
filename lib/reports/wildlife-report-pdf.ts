@@ -82,6 +82,9 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
     fetchHeatmapData(baseId, startDate, endDate, 'all'),
   ])
 
+  // Sort sightings chronologically (oldest first) for the report
+  sightings.sort((a, b) => new Date(a.observed_at).getTime() - new Date(b.observed_at).getTime())
+
   const [yearStr, monthStr] = reportMonth.split('-')
   const monthName = MONTH_NAMES[parseInt(monthStr) - 1] || monthStr
   const title = `BASH Monthly Summary — ${monthName} ${yearStr}`
