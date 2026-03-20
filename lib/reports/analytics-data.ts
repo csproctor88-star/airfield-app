@@ -55,6 +55,31 @@ export interface AnalyticsData {
 
 const EMPTY_INSP: InspectionMetrics = { completed: 0, avgMinutes: null, passRate: null }
 
+/** Pair "started" → "completed" activity entries chronologically by detected type.
+ *  Each "started" of a given type pairs with the next "completed" of the same type. */
+function pairStartCompleteByType(
+  entries: { action: string; created_at: string; metadata: any }[],
+  detectType: (details: string) => string | null,
+): { type: string; startedAt: string; completedAt: string }[] {
+  const pairs: { type: string; startedAt: string; completedAt: string }[] = []
+  // Track the most recent unmatched "started" per type
+  const pending: Record<string, string> = {} // type → startedAt
+
+  for (const entry of entries) {
+    const details = (entry.metadata?.details as string) || ''
+    const type = detectType(details)
+    if (!type) continue
+
+    if (entry.action === 'started') {
+      pending[type] = entry.created_at
+    } else if (entry.action === 'completed' && pending[type]) {
+      pairs.push({ type, startedAt: pending[type], completedAt: entry.created_at })
+      delete pending[type]
+    }
+  }
+  return pairs
+}
+
 const EMPTY: AnalyticsData = {
   airfieldInspections: EMPTY_INSP,
   lightingInspections: EMPTY_INSP,
@@ -125,39 +150,27 @@ async function fetchInspectionAnalytics(supabase: any, baseId: string, since: st
 
   const rows = (data ?? []) as { id: string; inspection_type: string; passed_count: number; failed_count: number; na_count: number }[]
 
-  // Fetch activity log start/complete pairs for actual on-airfield time
-  // "started" → "completed" with entity_type='inspection' gives real duration
+  // Fetch activity log start/complete entries for actual on-airfield time
+  // Note: "started" uses installationId as entity_id, "completed" uses the inspection row ID.
+  // So we pair them chronologically by type (detected from metadata.details text).
   const { data: activityRows } = await supabase
     .from('activity_log')
-    .select('action, entity_type, entity_id, created_at, metadata')
+    .select('action, created_at, metadata')
     .eq('base_id', baseId)
     .eq('entity_type', 'inspection')
     .in('action', ['started', 'completed'])
     .gte('created_at', since)
     .order('created_at', { ascending: true })
 
-  // Build a map of entity_id → { startedAt, completedAt }
-  const timingMap = new Map<string, { startedAt: string | null; completedAt: string | null; type: string | null }>()
-  for (const entry of (activityRows ?? []) as { action: string; entity_id: string; created_at: string; metadata: any }[]) {
-    if (!timingMap.has(entry.entity_id)) {
-      timingMap.set(entry.entity_id, { startedAt: null, completedAt: null, type: null })
-    }
-    const rec = timingMap.get(entry.entity_id)!
-    if (entry.action === 'started') {
-      rec.startedAt = entry.created_at
-      // Detect type from activity details
-      const details = entry.metadata?.details as string | undefined
-      if (details?.includes('Airfield')) rec.type = 'airfield'
-      else if (details?.includes('Lighting')) rec.type = 'lighting'
-    } else if (entry.action === 'completed') {
-      rec.completedAt = entry.created_at
-      if (!rec.type) {
-        const details = entry.metadata?.details as string | undefined
-        if (details?.includes('Airfield')) rec.type = 'airfield'
-        else if (details?.includes('Lighting')) rec.type = 'lighting'
-      }
-    }
-  }
+  // Pair started→completed chronologically per type
+  const inspTimings = pairStartCompleteByType(
+    (activityRows ?? []) as { action: string; created_at: string; metadata: any }[],
+    (details: string) => {
+      if (details.includes('Airfield')) return 'airfield'
+      if (details.includes('Lighting')) return 'lighting'
+      return null
+    },
+  )
 
   function calcMetrics(filtered: typeof rows, type: string): InspectionMetrics {
     let totalMinutes = 0
@@ -165,15 +178,14 @@ async function fetchInspectionAnalytics(supabase: any, baseId: string, since: st
     let totalPassed = 0
     let totalItems = 0
 
-    // Compute avg time from activity log pairs
-    timingMap.forEach((rec) => {
-      if (rec.type !== type || !rec.startedAt || !rec.completedAt) return
-      const mins = (new Date(rec.completedAt).getTime() - new Date(rec.startedAt).getTime()) / 60000
-      if (mins > 0 && mins < 1440) { // exclude >24h as unreasonable
+    const pairs = inspTimings.filter(p => p.type === type)
+    for (const pair of pairs) {
+      const mins = (new Date(pair.completedAt).getTime() - new Date(pair.startedAt).getTime()) / 60000
+      if (mins > 0 && mins < 1440) {
         totalMinutes += mins
         completedWithTime++
       }
-    })
+    }
 
     for (const r of filtered) {
       totalPassed += r.passed_count || 0
@@ -213,35 +225,31 @@ async function fetchCheckAnalytics(supabase: any, baseId: string, since: string)
   }
 
   // Use activity log started→completed pairs for actual on-airfield time
+  // Note: "started" uses installationId as entity_id, "completed" uses check ID — pair chronologically
   const { data: activityRows } = await supabase
     .from('activity_log')
-    .select('action, entity_type, entity_id, created_at')
+    .select('action, created_at, metadata')
     .eq('base_id', baseId)
     .eq('entity_type', 'airfield_check')
     .in('action', ['started', 'completed'])
     .gte('created_at', since)
     .order('created_at', { ascending: true })
 
-  const checkTimingMap = new Map<string, { startedAt: string | null; completedAt: string | null }>()
-  for (const entry of (activityRows ?? []) as { action: string; entity_id: string; created_at: string }[]) {
-    if (!checkTimingMap.has(entry.entity_id)) {
-      checkTimingMap.set(entry.entity_id, { startedAt: null, completedAt: null })
-    }
-    const rec = checkTimingMap.get(entry.entity_id)!
-    if (entry.action === 'started') rec.startedAt = entry.created_at
-    else if (entry.action === 'completed') rec.completedAt = entry.created_at
-  }
+  // For checks, all are the same "type" so use a constant
+  const checkTimings = pairStartCompleteByType(
+    (activityRows ?? []) as { action: string; created_at: string; metadata: any }[],
+    () => 'check', // all check entries are the same type
+  )
 
   let totalMinutes = 0
   let completedWithTime = 0
-  checkTimingMap.forEach((rec) => {
-    if (!rec.startedAt || !rec.completedAt) return
-    const mins = (new Date(rec.completedAt).getTime() - new Date(rec.startedAt).getTime()) / 60000
+  for (const pair of checkTimings) {
+    const mins = (new Date(pair.completedAt).getTime() - new Date(pair.startedAt).getTime()) / 60000
     if (mins > 0 && mins < 480) { // exclude >8h as unreasonable
       totalMinutes += mins
       completedWithTime++
     }
-  })
+  }
 
   const uniqueDays = Object.keys(dayCounts).length
   const byType = Object.entries(typeCounts)
