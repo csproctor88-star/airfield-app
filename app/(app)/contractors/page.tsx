@@ -8,6 +8,7 @@ import { CONTRACTOR_STATUS_CONFIG } from '@/lib/constants'
 import { DEMO_CONTRACTORS } from '@/lib/demo-data'
 import { toast } from 'sonner'
 import { formatZuluDate } from '@/lib/utils'
+import { EmptyState } from '@/components/ui/empty-state'
 
 type FilterTab = 'active' | 'all' | 'completed'
 
@@ -319,11 +320,7 @@ export default function ContractorsPage() {
 
       {/* Contractor List */}
       {filtered.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: 24 }}>
-          <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)' }}>
-            {search ? 'No personnel match your search' : filter === 'active' ? 'No active personnel' : 'No personnel found'}
-          </div>
-        </div>
+        <EmptyState message={search ? 'No personnel match your search' : filter === 'active' ? 'No active personnel' : 'No personnel found'} />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {filtered.map(c => {

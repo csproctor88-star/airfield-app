@@ -19,6 +19,9 @@ import { fetchMapImageDataUrl, fetchSystemMapImageDataUrl, formatZuluDateTime, c
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
+import { DetailGrid } from '@/components/ui/detail-grid'
+import { EmptyState } from '@/components/ui/empty-state'
+import { LoadingState } from '@/components/ui/loading-state'
 
 type ModalType = 'edit' | 'status' | 'workorder' | null
 
@@ -159,13 +162,7 @@ export default function DiscrepancyDetailPage() {
   }
 
   if (loading) {
-    return (
-      <div className="page-container">
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>
-          Loading...
-        </div>
-      </div>
-    )
+    return <LoadingState />
   }
 
   // Resolve data source
@@ -178,9 +175,7 @@ export default function DiscrepancyDetailPage() {
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
           ← Back
         </button>
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>
-          Discrepancy not found
-        </div>
+        <EmptyState message="Discrepancy not found" />
       </div>
     )
   }
@@ -270,23 +265,16 @@ export default function DiscrepancyDetailPage() {
 
         <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.6, marginBottom: 12 }}>{d.description}</div>
 
-        <div className="detail-grid-2" style={{ fontSize: 'var(--fs-base)' }}>
-          {([
-            ['Location', (() => { const loc = LOCATION_OPTIONS.find(l => l.value === d.location_text); return loc ? `${loc.emoji} ${loc.label}` : d.location_text })()],
-            ['Type', (() => { return d.type.split(', ').map(v => { const t = DISCREPANCY_TYPES.find(dt => dt.value === v); return t ? `${t.emoji} ${t.label}` : v }).join(', ') })()],
-            ['Current Status', (() => { const cs = (d as typeof d & { current_status?: string }).current_status; return CURRENT_STATUS_OPTIONS.find(o => o.value === cs)?.label || cs || 'N/A' })()],
-            ['Facility #', (d as typeof d & { facility_number?: string | null }).facility_number || '—'],
-            ['Work Order Currently Assigned to', d.assigned_shop || 'Unassigned'],
-            ['NOTAM', (d as typeof d & { notam_reference?: string }).notam_reference || 'None'],
-            ['Days Open', `${daysOpen}`],
-            ['Photos', `${d.photo_count}`],
-          ] as const).map(([label, value], i) => (
-            <div key={i}>
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{label}</div>
-              <div style={{ fontWeight: 500, marginTop: 2 }}>{value}</div>
-            </div>
-          ))}
-        </div>
+        <DetailGrid items={[
+          { label: 'Location', value: (() => { const loc = LOCATION_OPTIONS.find(l => l.value === d.location_text); return loc ? `${loc.emoji} ${loc.label}` : d.location_text })() },
+          { label: 'Type', value: (() => { return d.type.split(', ').map(v => { const t = DISCREPANCY_TYPES.find(dt => dt.value === v); return t ? `${t.emoji} ${t.label}` : v }).join(', ') })() },
+          { label: 'Current Status', value: (() => { const cs = (d as typeof d & { current_status?: string }).current_status; return CURRENT_STATUS_OPTIONS.find(o => o.value === cs)?.label || cs || 'N/A' })() },
+          { label: 'Facility #', value: (d as typeof d & { facility_number?: string | null }).facility_number || '—' },
+          { label: 'Work Order Currently Assigned to', value: d.assigned_shop || 'Unassigned' },
+          { label: 'NOTAM', value: (d as typeof d & { notam_reference?: string }).notam_reference || 'None' },
+          { label: 'Days Open', value: `${daysOpen}` },
+          { label: 'Photos', value: `${d.photo_count}` },
+        ]} />
 
         {'resolution_notes' in d && d.resolution_notes && (
           <div style={{ marginTop: 12, padding: '8px 10px', background: 'color-mix(in srgb, var(--color-green) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-green) 20%, transparent)', borderRadius: 8 }}>

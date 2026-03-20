@@ -18,6 +18,8 @@ import {
   type ShiftChecklistResponse,
 } from '@/lib/supabase/shift-checklist'
 import { formatZuluTime, formatZuluDate } from '@/lib/utils'
+import { EmptyState } from '@/components/ui/empty-state'
+import { LoadingState } from '@/components/ui/loading-state'
 
 type ViewTab = 'today' | 'history'
 
@@ -339,7 +341,7 @@ export default function ShiftChecklistPage() {
           )}
 
           {!loaded ? (
-            <div style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)' }}>Loading...</div>
+            <LoadingState />
           ) : totalCount === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: 32 }}>
               <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)', marginBottom: 8 }}>
@@ -404,9 +406,7 @@ export default function ShiftChecklistPage() {
       {tab === 'history' && !viewingHistory && (
         <div>
           {history.length === 0 ? (
-            <div className="card" style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)' }}>
-              No completed checklists yet.
-            </div>
+            <EmptyState message="No completed checklists yet." />
           ) : (
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
               {history.map((h, i, arr) => {
@@ -560,7 +560,7 @@ export default function ShiftChecklistPage() {
             </div>
 
             {!historyLoaded ? (
-              <div style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)' }}>Loading...</div>
+              <LoadingState />
             ) : (
               <>
                 {renderHistorySection('Day Shift', hDayItems)}

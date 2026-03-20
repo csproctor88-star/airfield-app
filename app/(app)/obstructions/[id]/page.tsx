@@ -9,6 +9,9 @@ import { generateObstructionPdf } from '@/lib/obstruction-pdf'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { formatZuluDateTime, fetchMapImageDataUrl, compressImageForPdf } from '@/lib/utils'
+import { LoadingState } from '@/components/ui/loading-state'
+import { EmptyState } from '@/components/ui/empty-state'
+import { DetailGrid } from '@/components/ui/detail-grid'
 import { toast } from 'sonner'
 
 type SurfaceResult = {
@@ -149,11 +152,7 @@ export default function ObstructionDetailPage() {
   }
 
   if (loading) {
-    return (
-      <div style={{ padding: 16, textAlign: 'center', paddingTop: 60 }}>
-        <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)' }}>Loading evaluation...</div>
-      </div>
-    )
+    return <LoadingState message="Loading evaluation..." />
   }
 
   if (!evaluation) {
@@ -162,10 +161,7 @@ export default function ObstructionDetailPage() {
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
           ← Back
         </button>
-        <div style={{ textAlign: 'center', paddingTop: 40 }}>
-          <div style={{ fontSize: 'var(--fs-5xl)', marginBottom: 8 }}>🔍</div>
-          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)' }}>Evaluation not found</div>
-        </div>
+        <EmptyState message="Evaluation not found" icon="🔍" />
       </div>
     )
   }
@@ -335,44 +331,14 @@ export default function ObstructionDetailPage() {
       {/* Summary Card */}
       <div className="card" style={{ marginBottom: 10 }}>
         <span className="section-label">Obstruction Details</span>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 'var(--fs-base)' }}>
-          <div>
-            <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>Height AGL</span>
-            <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
-              {evaluation.object_height_agl} ft
-            </div>
-          </div>
-          <div>
-            <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>Top Elevation MSL</span>
-            <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
-              {evaluation.obstruction_top_msl?.toFixed(0) ?? '—'} ft
-            </div>
-          </div>
-          <div>
-            <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>Ground Elevation MSL</span>
-            <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
-              {evaluation.object_elevation_msl?.toFixed(0) ?? (currentInstallation?.elevation_msl ?? 580)} ft
-            </div>
-          </div>
-          <div>
-            <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>From Centerline</span>
-            <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
-              {evaluation.distance_from_centerline_ft?.toFixed(0) ?? '—'} ft
-            </div>
-          </div>
-          <div>
-            <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>Coordinates</span>
-            <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 'var(--fs-sm)' }}>
-              {evaluation.latitude?.toFixed(5)}°N, {evaluation.longitude ? Math.abs(evaluation.longitude).toFixed(5) : '—'}°W
-            </div>
-          </div>
-          <div>
-            <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>Runway</span>
-            <div style={{ color: 'var(--color-text-1)', fontWeight: 700 }}>
-              {evaluation.runway_class === 'Army_B' ? 'Army Class B' : `Class ${evaluation.runway_class}`}
-            </div>
-          </div>
-        </div>
+        <DetailGrid gap={8} items={[
+          { label: 'Height AGL', value: <span style={{ fontFamily: 'monospace' }}>{evaluation.object_height_agl} ft</span> },
+          { label: 'Top Elevation MSL', value: <span style={{ fontFamily: 'monospace' }}>{evaluation.obstruction_top_msl?.toFixed(0) ?? '—'} ft</span> },
+          { label: 'Ground Elevation MSL', value: <span style={{ fontFamily: 'monospace' }}>{evaluation.object_elevation_msl?.toFixed(0) ?? (currentInstallation?.elevation_msl ?? 580)} ft</span> },
+          { label: 'From Centerline', value: <span style={{ fontFamily: 'monospace' }}>{evaluation.distance_from_centerline_ft?.toFixed(0) ?? '—'} ft</span> },
+          { label: 'Coordinates', value: <span style={{ fontFamily: 'monospace', fontSize: 'var(--fs-sm)' }}>{evaluation.latitude?.toFixed(5)}°N, {evaluation.longitude ? Math.abs(evaluation.longitude).toFixed(5) : '—'}°W</span> },
+          { label: 'Runway', value: evaluation.runway_class === 'Army_B' ? 'Army Class B' : `Class ${evaluation.runway_class}` },
+        ]} />
 
         {evaluation.notes && (
           <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--color-border)' }}>

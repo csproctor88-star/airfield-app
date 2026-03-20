@@ -23,6 +23,9 @@ import { toast } from 'sonner'
 import type { WaiverStatus, WaiverCoordinationOffice, WaiverCoordinationStatus, WaiverAttachmentType, WaiverReviewRecommendation } from '@/lib/supabase/types'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
+import { LoadingState } from '@/components/ui/loading-state'
+import { EmptyState } from '@/components/ui/empty-state'
+import { DetailGrid } from '@/components/ui/detail-grid'
 import { formatZuluDate, compressImageForPdf } from '@/lib/utils'
 
 type ModalType = 'approve' | 'coordination' | 'review' | 'attachment' | 'status_change' | null
@@ -431,11 +434,7 @@ export default function WaiverDetailPage() {
   const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
 
   if (loading) {
-    return (
-      <div className="page-container">
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>Loading...</div>
-      </div>
-    )
+    return <LoadingState />
   }
 
   const demoData = DEMO_WAIVERS.find(x => x.id === params.id) as WaiverRow | undefined
@@ -526,7 +525,7 @@ export default function WaiverDetailPage() {
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
           &larr; Back
         </button>
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>Waiver not found</div>
+        <EmptyState message="Waiver not found" />
       </div>
     )
   }
@@ -700,36 +699,26 @@ export default function WaiverDetailPage() {
       <div className="card" style={{ marginBottom: 8 }}>
         {sectionHeader('overview', 'Overview')}
         {expandedSections.overview && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            {fieldRow('Classification', classInfo?.label)}
-            {fieldRow('Hazard Rating', hazardConf?.label)}
-            {fieldRow('Action Requested', w.action_requested ? titleCase(w.action_requested) : null)}
-            {fieldRow('Period Valid', w.period_valid)}
-            {fieldRow('Date Submitted', formatDate(w.date_submitted))}
-            {fieldRow('Date Approved', formatDate(w.date_approved))}
-            {fieldRow('Expiration Date', formatDate(w.expiration_date))}
-            {fieldRow('Last Reviewed', formatDate(w.last_reviewed_date))}
-            {fieldRow('Next Review Due', formatDate(w.next_review_due))}
-            {fieldRow('Location', w.location_description)}
-            {fieldRow('Proponent', w.proponent)}
-            {fieldRow('Project Number', w.project_number)}
-            {fieldRow('Program FY', w.program_fy?.toString())}
-            {fieldRow('Estimated Cost', w.estimated_cost ? `$${Number(w.estimated_cost).toLocaleString()}` : null)}
-            {fieldRow('Project Status', w.project_status)}
-            {fieldRow('FAA Case #', w.faa_case_number)}
-            {w.justification && (
-              <div style={{ gridColumn: '1 / -1' }}>
-                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Justification</div>
-                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.5, marginTop: 2 }}>{w.justification}</div>
-              </div>
-            )}
-            {w.corrective_action && (
-              <div style={{ gridColumn: '1 / -1' }}>
-                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Corrective Action</div>
-                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.5, marginTop: 2 }}>{w.corrective_action}</div>
-              </div>
-            )}
-          </div>
+          <DetailGrid items={[
+            { label: 'Classification', value: classInfo?.label },
+            { label: 'Hazard Rating', value: hazardConf?.label },
+            { label: 'Action Requested', value: w.action_requested ? titleCase(w.action_requested) : null },
+            { label: 'Period Valid', value: w.period_valid },
+            { label: 'Date Submitted', value: formatDate(w.date_submitted) },
+            { label: 'Date Approved', value: formatDate(w.date_approved) },
+            { label: 'Expiration Date', value: formatDate(w.expiration_date) },
+            { label: 'Last Reviewed', value: formatDate(w.last_reviewed_date) },
+            { label: 'Next Review Due', value: formatDate(w.next_review_due) },
+            { label: 'Location', value: w.location_description },
+            { label: 'Proponent', value: w.proponent },
+            { label: 'Project Number', value: w.project_number },
+            { label: 'Program FY', value: w.program_fy?.toString() },
+            { label: 'Estimated Cost', value: w.estimated_cost ? `$${Number(w.estimated_cost).toLocaleString()}` : null },
+            { label: 'Project Status', value: w.project_status },
+            { label: 'FAA Case #', value: w.faa_case_number },
+            ...(w.justification ? [{ label: 'Justification', value: w.justification, span: true }] : []),
+            ...(w.corrective_action ? [{ label: 'Corrective Action', value: w.corrective_action, span: true }] : []),
+          ]} />
         )}
       </div>
 

@@ -19,6 +19,8 @@ import {
 } from '@/lib/supabase/qrc'
 import type { QrcTemplate, QrcExecution, QrcStep, QrcStepResponse } from '@/lib/supabase/types'
 import { formatZuluDate, formatZuluDateTime } from '@/lib/utils'
+import { EmptyState } from '@/components/ui/empty-state'
+import { LoadingState } from '@/components/ui/loading-state'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 
@@ -135,7 +137,7 @@ export default function QrcPage() {
       </div>
 
       {!loaded ? (
-        <div className="card" style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)' }}>Loading...</div>
+        <LoadingState />
       ) : tab === 'available' && !activeExecId ? (
         /* Available Templates Grid */
         templates.filter(t => t.is_active).length === 0 ? (
@@ -208,9 +210,7 @@ export default function QrcPage() {
         ) : (
           /* Active Executions List */
           openExecs.length === 0 ? (
-            <div className="card" style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)' }}>
-              No active QRCs. Start one from the Available tab.
-            </div>
+            <EmptyState message="No active QRCs. Start one from the Available tab." />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {openExecs.map(ex => (
@@ -253,7 +253,7 @@ export default function QrcPage() {
         )
       ) : tab === 'history' ? (
         history.length === 0 ? (
-          <div className="card" style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)' }}>No QRC history.</div>
+          <EmptyState message="No QRC history." />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {history.map(ex => (

@@ -16,6 +16,9 @@ import { PhotoViewerModal } from '@/components/discrepancies/modals'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime } from '@/lib/utils'
+import { LoadingState } from '@/components/ui/loading-state'
+import { EmptyState } from '@/components/ui/empty-state'
+import { DetailGrid } from '@/components/ui/detail-grid'
 
 export default function InspectionDetailPage() {
   const params = useParams()
@@ -128,11 +131,7 @@ export default function InspectionDetailPage() {
   }, [usingDemo, params.id])
 
   if (loading) {
-    return (
-      <div className="page-container">
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>Loading...</div>
-      </div>
-    )
+    return <LoadingState />
   }
 
   const hasInProgress = inspections.some((i) => i.status === 'in_progress')
@@ -172,7 +171,7 @@ export default function InspectionDetailPage() {
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
           &larr; Back
         </button>
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>Inspection not found</div>
+        <EmptyState message="Inspection not found" />
       </div>
     )
   }
@@ -979,38 +978,41 @@ export default function InspectionDetailPage() {
 
         {/* Info Grid */}
         <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 'var(--fs-base)', marginBottom: 14,
           padding: '12px', borderRadius: 10, background: 'var(--color-border)', border: '1px solid var(--color-border-mid)',
+          marginBottom: 14,
         }}>
-          <div>
-            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>Filed By</div>
-            <div style={{ fontWeight: 600, color: 'var(--color-accent)' }}>{primary.filed_by_name || primary.inspector_name || 'Unknown'}</div>
-            {primary.filed_at && (
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 1 }}>
-                {formatZuluTime(new Date(primary.filed_at))}Z
-              </div>
-            )}
-          </div>
-          <div>
-            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>Date</div>
-            <div style={{ fontWeight: 500 }}>
-              {primary.completed_at
-                ? formatZuluDateTime(new Date(primary.completed_at))
-                : primary.inspection_date}
-            </div>
-          </div>
-          {primary.weather_conditions && (
-            <div>
-              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>Weather</div>
-              <div style={{ fontWeight: 500 }}>{primary.weather_conditions}</div>
-            </div>
-          )}
-          {primary.temperature_f != null && (
-            <div>
-              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>Temperature</div>
-              <div style={{ fontWeight: 500 }}>{primary.temperature_f}°F</div>
-            </div>
-          )}
+          <DetailGrid
+            columns={2}
+            gap={12}
+            items={[
+              {
+                label: 'Filed By',
+                value: (
+                  <>
+                    <span style={{ color: 'var(--color-accent)' }}>{primary.filed_by_name || primary.inspector_name || 'Unknown'}</span>
+                    {primary.filed_at && (
+                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 1 }}>
+                        {formatZuluTime(new Date(primary.filed_at))}Z
+                      </div>
+                    )}
+                  </>
+                ),
+                color: 'var(--color-accent)',
+              },
+              {
+                label: 'Date',
+                value: primary.completed_at
+                  ? formatZuluDateTime(new Date(primary.completed_at))
+                  : primary.inspection_date,
+              },
+              ...(primary.weather_conditions
+                ? [{ label: 'Weather', value: primary.weather_conditions }]
+                : []),
+              ...(primary.temperature_f != null
+                ? [{ label: 'Temperature', value: `${primary.temperature_f}°F` }]
+                : []),
+            ]}
+          />
         </div>
 
         {/* BWC Value */}

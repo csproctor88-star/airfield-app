@@ -12,6 +12,9 @@ import { fetchCheck, fetchCheckComments, addCheckComment, fetchCheckPhotos, uplo
 import { PhotoViewerModal } from '@/components/discrepancies/modals'
 import { useInstallation } from '@/lib/installation-context'
 import { ActionButton } from '@/components/ui/button'
+import { DetailGrid } from '@/components/ui/detail-grid'
+import { LoadingState } from '@/components/ui/loading-state'
+import { EmptyState } from '@/components/ui/empty-state'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
@@ -149,11 +152,7 @@ export default function CheckDetailPage() {
   }
 
   if (loading) {
-    return (
-      <div className="page-container">
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>Loading...</div>
-      </div>
-    )
+    return <LoadingState />
   }
 
   // Resolve data — use explicit interface for rendering
@@ -171,7 +170,7 @@ export default function CheckDetailPage() {
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
           ← Back
         </button>
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>Check not found</div>
+        <EmptyState message="Check not found" />
       </div>
     )
   }
@@ -250,19 +249,11 @@ export default function CheckDetailPage() {
         )}
 
         {/* Info Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 'var(--fs-base)', marginBottom: 12 }}>
-          <div>
-            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Completed By</div>
-            <div style={{ fontWeight: 600, marginTop: 2, color: 'var(--color-accent)' }}>{completedBy}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Completed At</div>
-            <div style={{ fontWeight: 500, marginTop: 2 }}>
-              {completedAt
-                ? formatZuluDateTime(new Date(completedAt))
-                : 'N/A'}
-            </div>
-          </div>
+        <div style={{ marginBottom: 12 }}>
+          <DetailGrid items={[
+            { label: 'Completed By', value: completedBy, color: 'var(--color-accent)' },
+            { label: 'Completed At', value: completedAt ? formatZuluDateTime(new Date(completedAt)) : 'N/A' },
+          ]} />
         </div>
 
         {/* Areas */}

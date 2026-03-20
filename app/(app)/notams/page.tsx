@@ -9,6 +9,7 @@ import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { toast } from 'sonner'
 import { formatZuluDate, formatZuluTime, formatZuluDateTime } from '@/lib/utils'
+import { EmptyState } from '@/components/ui/empty-state'
 
 type FilterType = 'all' | 'faa' | 'local' | 'active' | 'expired'
 
@@ -596,18 +597,9 @@ export default function NotamsPage() {
           })}
 
           {filtered.length === 0 && !error && (
-            <div
-              style={{
-                textAlign: 'center',
-                padding: 24,
-                color: 'var(--color-text-3)',
-                fontSize: 'var(--fs-md)',
-              }}
-            >
-              {!activeIcao && !isDemoMode
-                ? 'Enter an ICAO code above to fetch NOTAMs.'
-                : 'No NOTAMs match the selected filter.'}
-            </div>
+            <EmptyState message={!activeIcao && !isDemoMode
+              ? 'Enter an ICAO code above to fetch NOTAMs.'
+              : 'No NOTAMs match the selected filter.'} />
           )}
         </div>
       )}

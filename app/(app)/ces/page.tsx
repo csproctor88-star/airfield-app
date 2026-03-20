@@ -9,6 +9,8 @@ import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { DEMO_DISCREPANCIES } from '@/lib/demo-data'
 import { formatZuluDate, formatZuluDateTime } from '@/lib/utils'
+import { EmptyState } from '@/components/ui/empty-state'
+import { LoadingState } from '@/components/ui/loading-state'
 import { StatusUpdateModal } from '@/components/discrepancies/modals'
 import { toast } from 'sonner'
 
@@ -212,9 +214,7 @@ export default function CESDashboardPage() {
       </div>
 
       {loading ? (
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>
-          Loading...
-        </div>
+        <LoadingState />
       ) : (
         <>
           {/* Active Work Queue */}
@@ -223,9 +223,7 @@ export default function CESDashboardPage() {
           </div>
 
           {shopFiltered.length === 0 ? (
-            <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
-              No open work orders{activeShop !== '__all' ? ` for ${activeShop}` : ''}
-            </div>
+            <EmptyState message={`No open work orders${activeShop !== '__all' ? ` for ${activeShop}` : ''}`} />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 20 }}>
               {shopFiltered
