@@ -8,10 +8,60 @@ All notable changes to Glidepath.
 - METAR weather API integration (aviationweather.gov)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~165 `as any` casts
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~169 `as any` casts
 - Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 16 PDF generators
 - Training Management Module (DAF training records)
 - Outage analytics (frequency/duration tracking for lighting systems)
+
+---
+
+## [2.25.0] — 2026-03-19
+
+### Features — Configurable Discrepancy PDF Exports
+- **Shared PDF configuration** (`lib/pdf-config.ts`) — consolidated status labels, type abbreviations, photo helpers, column definitions, and `buildDiscrepancyTable()` core builder used across all 3 discrepancy PDF generators
+- **PDF Export Dialog** (`components/ui/pdf-template-selector.tsx`) — modal dialog with column toggles, named template save/load (localStorage), triggered by PDF/Email buttons on discrepancy list, open discrepancies report, and aging discrepancies report
+- **Basic columns** (W/O#, Title, Status, Location) always included; optional columns (Type, Shop, Days, Reported By, Last Update, Comments, Photos) toggled on/off
+- **Type abbreviation** — "Lighting Outage/Deficiency" → "Lighting", etc.
+- **ID column removed** from all discrepancy exports
+- **Photo compression** — all PDF photo thumbnails compressed to 400px max / 0.6 JPEG quality (down from raw full-resolution), reducing a 69-discrepancy export from 88MB to ~5-10MB
+- **Unicode sanitization** — `sanitizePdfText()` replaces arrows (►, →, ←), smart quotes, em dashes, and other glyphs that cause garbled text in jsPDF's Helvetica font
+
+### Features — Inspection One-Per-Day Enforcement
+- **Hard lock** — only one airfield inspection and one lighting inspection per day per type
+- **0600L daily reset** — "today" determined by installation timezone, resetting at 0600 local to align with airfield opening
+- **In-progress blocking** — if another user has an inspection in progress, the KPI badge shows their name with an orange lock icon; clicking shows a modal explaining who has it and to coordinate with them
+- **Completed blocking** — if today's inspection is already filed, a modal explains it's complete and directs to "Reopen for Editing" from the inspection report, with a "View Report" button linking directly to it
+- **Confirmation dialog** — "Are you sure you want to start an inspection and log yourself on the airfield?" prompt before starting any new inspection
+- **Cross-user draft isolation** — draft sync no longer loads other users' in-progress inspections into the current user's state
+- **Dashboard Quick Actions** — Airfield/Lighting badges now reflect 3 states (not started, in progress with inspector name, completed) using same 0600L reset; always link to `/inspections` instead of bypassing guards with `?action=begin`
+- **URL guard** — `?action=begin` auto-start also checks for existing inspections before allowing
+
+### Features — Parking Module Enhancements
+- **Full editing context menu** — right-click on aircraft shows Spot Name, Tail #, Callsign, Heading slider, Clearance buttons (UFC/10/15/25ft), Status dropdown, Fly To/Duplicate/Remove
+- **Context menu positioning** — uses `clientX/clientY` instead of canvas-relative coordinates for correct placement regardless of sidebar state
+- **Click-to-select** — clicking an aircraft on the map now selects it (cyan ring + panel), not just drag
+- **Right-click fix** — `onCanvasMouseDown` filtered to left-click only so right-click doesn't start drag
+- **Transparent drag mode** — aircraft silhouettes drop to 40% opacity during drag to see nose gear marker and ground features for precise placement
+- **PDF captures current view** — export captures whatever zoom/center/bearing the user is viewing instead of resizing to fixed 1600×900; fullscreen = full-detail export
+- **Obstacle-to-taxilane clearance** — obstacles within taxilane envelopes now flagged as violations per UFC 3-260-01; `checkObstacleTaxilaneClearance()` tests all obstacle shape points against envelope half-width
+- **Violation text** — taxilane violation count changed from "N aircraft intrudes" to "N violation(s)" to include obstacle violations
+
+### Features — BASH Monthly Report Overhaul
+- **Live heatmap capture** — Wildlife Hazard Depiction Map now captures the actual Mapbox GL heatmap (green→cyan→yellow→orange→red density visualization) via off-screen canvas rendering instead of static pin markers
+- **Heatmap density legend** — color ramp bar (Low → High) replaces the misleading sighting/strike dot legend
+- **Sighting detail streamlining** — removed scientific names, Airfield Zone, and Coordinates from sighting cards; weather fields (Time of Day, Sky, Precipitation, BWC) consolidated into compact italic row
+- **Title case values** — all detail fields capitalized ("hazed" → "Hazed", "none" → "None")
+- **Chronological order** — sightings sorted oldest-first (ascending by observed_at)
+- **Double Zulu fix** — removed redundant `+ 'Z'` from 3 timestamp locations (formatZuluDateTime already includes Z)
+- **BWC History source labels** — "bash_check" → "BASH Check", "manual" → "Manual Entry", etc.
+
+### Features — Analytics Accuracy
+- **Inspection avg time** — now uses `created_at → filed_at` from inspection records (actual start-to-file duration) instead of unreliable activity log pairing
+- **Check avg time** — new `started_at` column on `airfield_checks` captures when the user selects a check type; `started_at → completed_at` gives actual on-airfield duration instead of 0 min
+- **Check draft persistence** — `startedAt` included in check draft for cross-device resume
+
+### Database Migrations
+- `2026031900` — add `started_at` column to `airfield_checks`
 
 ---
 

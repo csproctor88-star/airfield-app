@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, ACSI (annual compliance), NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.24.0 | **Build:** Clean | **53 routes** | **197 source files** | **120 migrations**
+**Version:** 2.25.0 | **Build:** Clean | **53 routes** | **199 source files** | **121 migrations**
 
 ## Tech Stack
 
