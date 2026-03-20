@@ -915,6 +915,19 @@ export default function InspectionsPage() {
   // ── Complete & file the current form ──
   const handleComplete = async () => {
     if (!activeForm || !currentDraft || !currentHalf) return
+
+    // Require RSC before completing (RSC auto-passes RCR when RCR not reported)
+    if (!currentHalf.rscCondition) {
+      toast.error('Runway Surface Condition (RSC) must be completed before filing')
+      return
+    }
+
+    // Require BWC for airfield inspections
+    if (activeForm === 'airfield' && !currentHalf.bwcValue) {
+      toast.error('Bird Watch Condition (BWC) must be completed before filing')
+      return
+    }
+
     setSaving(true)
 
     const half = currentHalf
