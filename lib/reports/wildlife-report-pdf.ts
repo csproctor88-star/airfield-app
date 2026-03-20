@@ -26,17 +26,25 @@ function titleCase(str: string): string {
     .replace(/\b\w/g, c => c.toUpperCase())
 }
 
-/** Fetch a plain satellite basemap (no markers) from Mapbox Static API */
-async function fetchBasemapDataUrl(
-  centerLat: number,
-  centerLng: number,
-  zoom: number,
+/** Map image logical dimensions */
+const MAP_W = 800
+const MAP_H = 500
+
+interface MapBounds {
+  west: number; east: number; south: number; north: number
+}
+
+/** Fetch satellite basemap using bounding box (auto-fit to data extent + padding) */
+async function fetchBasemapWithBounds(
+  bounds: MapBounds,
 ): Promise<string | null> {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   if (!token || token === 'your-mapbox-token-here') return null
 
   try {
-    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${centerLng},${centerLat},${zoom},0/800x500@2x?access_token=${token}&logo=false&attribution=false`
+    // Use bbox auto-fit: [west,south,east,north]
+    const bbox = `[${bounds.west},${bounds.south},${bounds.east},${bounds.north}]`
+    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${bbox}/${MAP_W}x${MAP_H}@2x?access_token=${token}&logo=false&attribution=false&padding=20`
     const res = await fetch(url)
     if (!res.ok) return null
     const blob = await res.blob()
@@ -51,31 +59,27 @@ async function fetchBasemapDataUrl(
   }
 }
 
-// ── Web Mercator helpers for map pin placement ──
-const MAP_ZOOM = 13
-const MAP_W = 800  // logical pixel width of static image
-const MAP_H = 500
-
-function lngToWorldPx(lng: number, zoom: number): number {
-  return ((lng + 180) / 360) * 256 * Math.pow(2, zoom)
+/** Compute bounding box from data points with padding */
+function computeBounds(points: { lat: number; lng: number }[]): MapBounds {
+  let west = Infinity, east = -Infinity, south = Infinity, north = -Infinity
+  for (const p of points) {
+    if (p.lng < west) west = p.lng
+    if (p.lng > east) east = p.lng
+    if (p.lat < south) south = p.lat
+    if (p.lat > north) north = p.lat
+  }
+  // Add ~15% padding
+  const lngPad = Math.max((east - west) * 0.15, 0.005)
+  const latPad = Math.max((north - south) * 0.15, 0.003)
+  return { west: west - lngPad, east: east + lngPad, south: south - latPad, north: north + latPad }
 }
 
-function latToWorldPx(lat: number, zoom: number): number {
-  const sinLat = Math.sin(lat * Math.PI / 180)
-  return (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * 256 * Math.pow(2, zoom)
-}
-
-/** Convert geo coordinate to image pixel offset from top-left of the 800x500 static image */
-function geoToImagePx(
-  lng: number, lat: number,
-  centerLng: number, centerLat: number,
-  zoom: number,
-): { x: number; y: number } {
-  const cx = lngToWorldPx(centerLng, zoom)
-  const cy = latToWorldPx(centerLat, zoom)
-  const px = lngToWorldPx(lng, zoom)
-  const py = latToWorldPx(lat, zoom)
-  return { x: (px - cx) + MAP_W / 2, y: (py - cy) + MAP_H / 2 }
+/** Convert geo coordinate to fractional position (0-1) within the bounding box */
+function geoToFraction(lng: number, lat: number, bounds: MapBounds): { fx: number; fy: number } {
+  const fx = (lng - bounds.west) / (bounds.east - bounds.west)
+  // Latitude is inverted (north = top = 0)
+  const fy = 1 - (lat - bounds.south) / (bounds.north - bounds.south)
+  return { fx, fy }
 }
 
 export async function generateWildlifeReportPdf(options: Options): Promise<{ doc: jsPDF; filename: string }> {
@@ -375,7 +379,8 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
     const sightingCount = heatmapPoints.filter(p => p.type === 'sighting').length
     const strikeCount = heatmapPoints.filter(p => p.type === 'strike').length
 
-    const mapDataUrl = await fetchBasemapDataUrl(centerLat, centerLng, MAP_ZOOM)
+    const bounds = computeBounds(heatmapPoints)
+    const mapDataUrl = await fetchBasemapWithBounds(bounds)
     if (mapDataUrl) {
       try {
         const imgWidthPt = pageWidth - margin * 2
@@ -384,18 +389,14 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
         const mapY = y
         doc.addImage(mapDataUrl, 'PNG', mapX, mapY, imgWidthPt, imgHeightPt)
 
-        // Scale factors: image pixels → PDF points
-        const scaleX = imgWidthPt / MAP_W
-        const scaleY = imgHeightPt / MAP_H
-
-        // Draw all pins on top of the basemap
+        // Draw all pins on top of the basemap using bounding box fractions
         for (const pt of heatmapPoints) {
-          const imgPos = geoToImagePx(pt.lng, pt.lat, centerLng, centerLat, MAP_ZOOM)
-          // Skip if outside image bounds
-          if (imgPos.x < 0 || imgPos.x > MAP_W || imgPos.y < 0 || imgPos.y > MAP_H) continue
+          const { fx, fy } = geoToFraction(pt.lng, pt.lat, bounds)
+          // Skip if outside bounds (shouldn't happen but safety check)
+          if (fx < 0 || fx > 1 || fy < 0 || fy > 1) continue
 
-          const pdfX = mapX + imgPos.x * scaleX
-          const pdfY = mapY + imgPos.y * scaleY
+          const pdfX = mapX + fx * imgWidthPt
+          const pdfY = mapY + fy * imgHeightPt
           const isStrike = pt.type === 'strike'
 
           // Get label for sightings
