@@ -479,7 +479,7 @@ export default function DiscrepanciesPage() {
             style={{
               background: 'rgba(168,85,247,0.12)',
               border: '1px solid rgba(168,85,247,0.3)',
-              borderRadius: 8,
+              borderRadius: 'var(--radius-md)',
               padding: '7px 10px',
               color: '#A855F7',
               fontSize: 'var(--fs-base)',
@@ -495,7 +495,7 @@ export default function DiscrepanciesPage() {
             style={{
               background: 'rgba(168,85,247,0.12)',
               border: '1px solid rgba(168,85,247,0.3)',
-              borderRadius: 8,
+              borderRadius: 'var(--radius-md)',
               padding: '7px 10px',
               color: '#A855F7',
               fontSize: 'var(--fs-base)',
@@ -511,7 +511,7 @@ export default function DiscrepanciesPage() {
             style={{
               background: 'rgba(168,85,247,0.12)',
               border: '1px solid rgba(168,85,247,0.3)',
-              borderRadius: 8,
+              borderRadius: 'var(--radius-md)',
               padding: '7px 10px',
               color: '#A855F7',
               fontSize: 'var(--fs-base)',
@@ -529,7 +529,7 @@ export default function DiscrepanciesPage() {
               style={{
                 background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
                 border: 'none',
-                borderRadius: 8,
+                borderRadius: 'var(--radius-md)',
                 padding: '7px 12px',
                 color: '#fff',
                 fontSize: 'var(--fs-base)',
@@ -617,7 +617,7 @@ export default function DiscrepanciesPage() {
                   if (!active) { setFilter('open'); setOver30Only(false); setCurrentStatusFilter(null) }
                 }}
                 style={{
-                  padding: '3px 8px', borderRadius: 5, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                  padding: '3px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
                   cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
                   border: active ? '1.5px solid #F97316' : '1px solid var(--color-border)',
                   background: active ? 'rgba(249,115,22,0.12)' : 'var(--color-bg-inset)',
@@ -631,7 +631,7 @@ export default function DiscrepanciesPage() {
                     fontSize: 'var(--fs-2xs)', fontWeight: 700,
                     background: active ? 'rgba(249,115,22,0.2)' : 'var(--color-border)',
                     color: active ? 'var(--color-orange)' : 'var(--color-text-3)',
-                    padding: '0 4px', borderRadius: 3, minWidth: 16, textAlign: 'center',
+                    padding: '0 4px', borderRadius: 'var(--radius-xs)', minWidth: 16, textAlign: 'center',
                   }}>
                     {count}
                   </span>
@@ -648,7 +648,7 @@ export default function DiscrepanciesPage() {
                 if (!active) { setFilter('open'); setOver30Only(false); setCurrentStatusFilter(null) }
               }}
               style={{
-                padding: '3px 8px', borderRadius: 5, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                padding: '3px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
                 border: shopFilter === '__unassigned' ? '1.5px solid #EF4444' : '1px solid var(--color-border)',
                 background: shopFilter === '__unassigned' ? 'rgba(239,68,68,0.12)' : 'var(--color-bg-inset)',
@@ -670,7 +670,7 @@ export default function DiscrepanciesPage() {
               style={{
                 background: filter === v ? 'rgba(34,211,238,0.12)' : 'transparent',
                 border: `1px solid ${filter === v ? 'rgba(34,211,238,0.3)' : 'var(--color-border)'}`,
-                borderRadius: 5,
+                borderRadius: 'var(--radius-sm)',
                 padding: '4px 8px',
                 color: filter === v ? 'var(--color-cyan)' : 'var(--color-text-3)',
                 fontSize: 'var(--fs-xs)',
@@ -684,7 +684,7 @@ export default function DiscrepanciesPage() {
             </button>
           ))}
         </div>
-        <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+        <div style={{ display: 'flex', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
           <button
             onClick={() => setViewMode('map')}
             title="Map view"
@@ -730,7 +730,7 @@ export default function DiscrepanciesPage() {
           marginBottom: 12,
           background: 'var(--color-search-bg)',
           border: '1px solid var(--color-search-border)',
-          borderRadius: 8,
+          borderRadius: 'var(--radius-md)',
           color: 'var(--color-text-1)',
           fontSize: 'var(--fs-md)',
           fontFamily: 'inherit',
@@ -791,7 +791,7 @@ export default function DiscrepanciesPage() {
                       type="button"
                       onClick={() => setTypeFilter(active ? null : t.value)}
                       style={{
-                        padding: '4px 10px', borderRadius: 6, fontSize: 'var(--fs-xs)', fontWeight: 700,
+                        padding: '4px 10px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 700,
                         cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
                         border: active ? '1.5px solid var(--color-cyan)' : '1px solid var(--color-border)',
                         background: active ? 'rgba(34,211,238,0.12)' : 'var(--color-bg-inset)',
@@ -831,7 +831,7 @@ export default function DiscrepanciesPage() {
                     gap: 8,
                     padding: '8px 10px',
                     background: 'var(--color-bg-surface)',
-                    borderRadius: 8,
+                    borderRadius: 'var(--radius-md)',
                     border: '1px solid var(--color-border)',
                     fontSize: 'var(--fs-sm)',
                   }}

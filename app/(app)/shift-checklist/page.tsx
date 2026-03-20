@@ -190,7 +190,7 @@ export default function ShiftChecklistPage() {
           style={{
             width: 24,
             height: 24,
-            borderRadius: 6,
+            borderRadius: 'var(--radius-sm)',
             border: checked ? 'none' : '2px solid var(--color-border-mid)',
             background: checked ? 'var(--color-success)' : 'transparent',
             cursor: isCompleted ? 'default' : 'pointer',
@@ -228,7 +228,7 @@ export default function ShiftChecklistPage() {
             color: FREQ_COLORS[item.frequency],
             background: `${FREQ_COLORS[item.frequency]}15`,
             padding: '2px 8px',
-            borderRadius: 10,
+            borderRadius: 'var(--radius-md)',
             flexShrink: 0,
           }}>
             {FREQ_LABELS[item.frequency]}
@@ -288,7 +288,7 @@ export default function ShiftChecklistPage() {
               fontSize: 'var(--fs-base)',
               fontWeight: 600,
               padding: '5px 12px',
-              borderRadius: 20,
+              borderRadius: 'var(--radius-full)',
               cursor: 'pointer',
               fontFamily: 'inherit',
             }}
@@ -312,7 +312,7 @@ export default function ShiftChecklistPage() {
               fontSize: 'var(--fs-xs)',
               fontWeight: 700,
               padding: '4px 10px',
-              borderRadius: 10,
+              borderRadius: 'var(--radius-md)',
               background: isCompleted ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
               color: isCompleted ? 'var(--color-success)' : 'var(--color-bwc-mod)',
             }}>
@@ -325,7 +325,7 @@ export default function ShiftChecklistPage() {
             <div style={{ marginBottom: 16 }}>
               <div style={{
                 height: 6,
-                borderRadius: 3,
+                borderRadius: 'var(--radius-xs)',
                 background: 'var(--color-bg-elevated)',
                 overflow: 'hidden',
               }}>
@@ -333,7 +333,7 @@ export default function ShiftChecklistPage() {
                   height: '100%',
                   width: `${(completedCount / totalCount) * 100}%`,
                   background: allComplete ? 'var(--color-success)' : 'var(--color-cyan)',
-                  borderRadius: 3,
+                  borderRadius: 'var(--radius-xs)',
                   transition: 'width 0.3s',
                 }} />
               </div>
@@ -365,7 +365,7 @@ export default function ShiftChecklistPage() {
                     style={{
                       width: '100%',
                       padding: '12px 0',
-                      borderRadius: 8,
+                      borderRadius: 'var(--radius-md)',
                       border: '1px solid var(--color-border-mid)',
                       background: 'transparent',
                       color: 'var(--color-text-2)',
@@ -384,7 +384,7 @@ export default function ShiftChecklistPage() {
                     style={{
                       width: '100%',
                       padding: '12px 0',
-                      borderRadius: 8,
+                      borderRadius: 'var(--radius-md)',
                       border: 'none',
                       background: allComplete ? 'var(--color-success)' : 'var(--color-border)',
                       color: allComplete ? '#fff' : 'var(--color-text-3)',
@@ -448,7 +448,7 @@ export default function ShiftChecklistPage() {
                         fontSize: 'var(--fs-xs)',
                         fontWeight: 700,
                         padding: '3px 8px',
-                        borderRadius: 8,
+                        borderRadius: 'var(--radius-md)',
                         background: h.status === 'completed' ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
                         color: h.status === 'completed' ? 'var(--color-success)' : 'var(--color-bwc-mod)',
                       }}>
@@ -497,7 +497,7 @@ export default function ShiftChecklistPage() {
                       borderBottom: '1px solid var(--color-border)',
                     }}>
                       <div style={{
-                        width: 24, height: 24, borderRadius: 6, flexShrink: 0,
+                        width: 24, height: 24, borderRadius: 'var(--radius-sm)', flexShrink: 0,
                         border: checked ? 'none' : '2px solid var(--color-border-mid)',
                         background: checked ? 'var(--color-success)' : 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -520,7 +520,7 @@ export default function ShiftChecklistPage() {
                       {item.frequency !== 'daily' && (
                         <span style={{
                           fontSize: 'var(--fs-xs)', fontWeight: 700, color: FREQ_COLORS[item.frequency],
-                          background: `${FREQ_COLORS[item.frequency]}15`, padding: '2px 8px', borderRadius: 10,
+                          background: `${FREQ_COLORS[item.frequency]}15`, padding: '2px 8px', borderRadius: 'var(--radius-md)',
                         }}>{FREQ_LABELS[item.frequency]}</span>
                       )}
                     </div>
@@ -551,7 +551,7 @@ export default function ShiftChecklistPage() {
                 )}
               </div>
               <div style={{
-                fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '4px 10px', borderRadius: 10,
+                fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '4px 10px', borderRadius: 'var(--radius-md)',
                 background: viewingHistory.status === 'completed' ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
                 color: viewingHistory.status === 'completed' ? 'var(--color-success)' : 'var(--color-bwc-mod)',
               }}>

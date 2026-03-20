@@ -406,7 +406,7 @@ export default function CheckDetailPage() {
             onClick={handleAddRemark}
             disabled={!remarkText.trim() || savingRemark}
             style={{
-              padding: '0 14px', borderRadius: 8, border: 'none',
+              padding: '0 14px', borderRadius: 'var(--radius-md)', border: 'none',
               background: remarkText.trim() ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-elevated)',
               color: remarkText.trim() ? 'var(--color-cyan-btn-text)' : 'var(--color-text-4)',
               fontSize: 'var(--fs-base)', fontWeight: 700, cursor: remarkText.trim() ? 'pointer' : 'default',
@@ -452,7 +452,7 @@ export default function CheckDetailPage() {
               <div key={idx} style={{
                 padding: '10px 12px', marginBottom: 8,
                 background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.12)',
-                borderRadius: 8,
+                borderRadius: 'var(--radius-md)',
               }}>
                 {((data as Record<string, unknown>).issues as unknown[]).length > 1 && (
                   <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginBottom: 4 }}>
@@ -466,7 +466,7 @@ export default function CheckDetailPage() {
                 )}
                 {issueMapUrl && (
                   <img src={issueMapUrl} alt={`Issue ${idx + 1} location`}
-                    style={{ width: '100%', display: 'block', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginBottom: 4 }} />
+                    style={{ width: '100%', display: 'block', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 4 }} />
                 )}
                 {issue.location && (
                   <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-success)', fontFamily: 'monospace', fontWeight: 600, marginBottom: (photosByIssue[idx]?.length > 0) ? 8 : 0 }}>
@@ -478,7 +478,7 @@ export default function CheckDetailPage() {
                     {photosByIssue[idx].map((p) => (
                       <div
                         key={p.globalIdx}
-                        style={{ position: 'relative', width: 100, height: 100, borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer' }}
+                        style={{ position: 'relative', width: 100, height: 100, borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer' }}
                         onClick={() => setViewerIndex(p.globalIdx)}
                       >
                         <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -489,7 +489,7 @@ export default function CheckDetailPage() {
                 {!!(issue as Record<string, unknown>).log_as_discrepancy && (
                   <div style={{
                     marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '4px 10px', borderRadius: 6,
+                    padding: '4px 10px', borderRadius: 'var(--radius-sm)',
                     background: 'rgba(217, 119, 6, 0.1)', border: '1px solid rgba(217, 119, 6, 0.3)',
                     fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#D97706',
                     textTransform: 'uppercase', letterSpacing: '0.04em',
@@ -532,7 +532,7 @@ export default function CheckDetailPage() {
             {unlinkedPhotos.map((p) => (
               <div
                 key={p.globalIdx}
-                style={{ position: 'relative', width: 140, height: 140, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border-active)', cursor: 'pointer' }}
+                style={{ position: 'relative', width: 140, height: 140, borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border-active)', cursor: 'pointer' }}
                 onClick={() => setViewerIndex(p.globalIdx)}
               >
                 <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -611,7 +611,7 @@ export default function CheckDetailPage() {
           }}
           disabled={generatingPdf}
           style={{
-            flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
+            flex: 1, padding: '12px', borderRadius: 'var(--radius-md)', textAlign: 'center',
             background: '#A78BFA14', border: '1px solid #A78BFA33',
             color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
             fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
@@ -675,7 +675,7 @@ export default function CheckDetailPage() {
           }}
           disabled={generatingPdf}
           style={{
-            padding: '12px 16px', borderRadius: 10, textAlign: 'center',
+            padding: '12px 16px', borderRadius: 'var(--radius-md)', textAlign: 'center',
             background: '#A78BFA14', border: '1px solid #A78BFA33',
             color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
             fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
@@ -688,7 +688,7 @@ export default function CheckDetailPage() {
         <Link
           href="/checks"
           style={{
-            flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
+            flex: 1, padding: '12px', borderRadius: 'var(--radius-md)', textAlign: 'center',
             background: '#22C55E14', border: '1px solid #22C55E33',
             color: 'var(--color-success)', fontSize: 'var(--fs-md)', fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',
@@ -699,7 +699,7 @@ export default function CheckDetailPage() {
         <Link
           href="/checks/history"
           style={{
-            flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
+            flex: 1, padding: '12px', borderRadius: 'var(--radius-md)', textAlign: 'center',
             background: '#22D3EE14', border: '1px solid #22D3EE33',
             color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',

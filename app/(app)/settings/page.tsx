@@ -243,7 +243,7 @@ function ProfileSectionContent() {
             background: 'rgba(56,189,248,0.1)',
             color: 'var(--color-accent)',
             padding: '3px 8px',
-            borderRadius: 4,
+            borderRadius: 'var(--radius-xs)',
             fontSize: 'var(--fs-sm)',
             fontWeight: 700,
             letterSpacing: '0.04em',
@@ -263,7 +263,7 @@ function ProfileSectionContent() {
               placeholder="e.g. JDS"
               maxLength={4}
               style={{
-                width: 80, padding: '8px 10px', borderRadius: 6,
+                width: 80, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
                 background: 'var(--color-bg-elevated)',
                 border: '1px solid var(--color-border)',
                 color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
@@ -276,7 +276,7 @@ function ProfileSectionContent() {
                 onClick={handleSaveOi}
                 disabled={savingOi}
                 style={{
-                  padding: '8px 12px', borderRadius: 6,
+                  padding: '8px 12px', borderRadius: 'var(--radius-sm)',
                   background: 'var(--color-status-pass)', border: 'none',
                   color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
                   cursor: savingOi ? 'default' : 'pointer', fontFamily: 'inherit',
@@ -299,7 +299,7 @@ function ProfileSectionContent() {
               onChange={(e) => setPdfEmail(e.target.value)}
               placeholder="unit.orgbox@mail.mil"
               style={{
-                flex: 1, padding: '8px 10px', borderRadius: 6,
+                flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
                 background: 'var(--color-bg-elevated)',
                 border: '1px solid var(--color-border)',
                 color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
@@ -311,7 +311,7 @@ function ProfileSectionContent() {
                 onClick={handleSaveEmail}
                 disabled={savingEmail}
                 style={{
-                  padding: '8px 12px', borderRadius: 6,
+                  padding: '8px 12px', borderRadius: 'var(--radius-sm)',
                   background: 'var(--color-status-pass)', border: 'none',
                   color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
                   cursor: savingEmail ? 'default' : 'pointer', fontFamily: 'inherit',
@@ -355,7 +355,7 @@ function ThemeSectionContent() {
                 flex: 1,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                 padding: '12px 8px',
-                borderRadius: 10,
+                borderRadius: 'var(--radius-lg)',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
                 border: theme === value
@@ -494,10 +494,10 @@ function InstallationSectionContent() {
             {showDropdown && (
               <div style={{
                 position: 'absolute', top: '100%', left: 0, right: 0,
-                zIndex: 100, marginTop: 4,
+                zIndex: 'var(--z-dropdown)', marginTop: 4,
                 background: 'var(--color-bg-elevated)',
                 border: '1px solid rgba(56,189,248,0.15)',
-                borderRadius: 8,
+                borderRadius: 'var(--radius-base)',
                 maxHeight: 200, overflowY: 'auto',
               }}>
                 <div style={{ padding: 8, borderBottom: '1px solid var(--color-border)' }}>
@@ -589,7 +589,7 @@ function InstallationSectionContent() {
                   flex: 1,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-                  border: 'none', borderRadius: 8, padding: '10px 16px',
+                  border: 'none', borderRadius: 'var(--radius-base)', padding: '10px 16px',
                   color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer',
                   fontFamily: 'inherit',
                   opacity: saving || !newName.trim() ? 0.5 : 1,
@@ -604,7 +604,7 @@ function InstallationSectionContent() {
                 style={{
                   padding: '10px 16px',
                   background: 'var(--color-border)', border: '1px solid var(--color-border-mid)',
-                  borderRadius: 8, color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  borderRadius: 'var(--radius-base)', color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
@@ -630,7 +630,7 @@ function InstallationSectionContent() {
                       style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         padding: '8px 10px',
-                        borderRadius: 6,
+                        borderRadius: 'var(--radius-sm)',
                         background: isCurrent ? 'rgba(56,189,248,0.06)' : 'transparent',
                         border: isCurrent ? '1px solid rgba(56,189,248,0.15)' : '1px solid transparent',
                       }}
@@ -753,7 +753,7 @@ function BaseConfigSectionContent() {
           href="/settings/base-setup"
           style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            padding: '10px 16px', borderRadius: 8,
+            padding: '10px 16px', borderRadius: 'var(--radius-base)',
             background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
             color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',
@@ -772,7 +772,7 @@ function BaseConfigSectionContent() {
           href="/settings/templates"
           style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            padding: '10px 16px', borderRadius: 8,
+            padding: '10px 16px', borderRadius: 'var(--radius-base)',
             background: 'linear-gradient(135deg, #7C3AED, #8B5CF6)',
             color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',
@@ -792,7 +792,7 @@ function BaseConfigSectionContent() {
         </div>
 
         {diagramLoaded && diagramUrl && (
-          <div style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+          <div style={{ borderRadius: 'var(--radius-base)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={diagramUrl}
@@ -817,7 +817,7 @@ function BaseConfigSectionContent() {
             style={{
               flex: 1,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              padding: '10px 16px', borderRadius: 8,
+              padding: '10px 16px', borderRadius: 'var(--radius-base)',
               background: diagramUrl
                 ? 'var(--color-bg-elevated)'
                 : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
@@ -835,7 +835,7 @@ function BaseConfigSectionContent() {
             <button
               onClick={handleRemove}
               style={{
-                padding: '10px 16px', borderRadius: 8,
+                padding: '10px 16px', borderRadius: 'var(--radius-base)',
                 background: 'rgba(239,68,68,0.1)',
                 border: '1px solid rgba(239,68,68,0.3)',
                 color: '#F87171',
@@ -995,7 +995,7 @@ function RegulationsSectionContent() {
           <button
             onClick={toggleFavDefault}
             style={{
-              width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer',
+              width: 40, height: 22, borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
               background: favDefault ? 'var(--color-cyan)' : 'var(--color-progress-track)',
               position: 'relative', transition: 'background 0.2s',
               flexShrink: 0,
@@ -1025,9 +1025,9 @@ function RegulationsSectionContent() {
         {cacheProgress ? (
           <div>
             {/* Progress bar */}
-            <div style={{ height: 4, borderRadius: 2, background: 'var(--color-progress-track)', overflow: 'hidden', marginBottom: 6 }}>
+            <div style={{ height: 4, borderRadius: 'var(--radius-xs)', background: 'var(--color-progress-track)', overflow: 'hidden', marginBottom: 6 }}>
               <div style={{
-                height: '100%', borderRadius: 2,
+                height: '100%', borderRadius: 'var(--radius-xs)',
                 background: cacheProgress.errors > 0
                   ? 'linear-gradient(90deg, var(--color-accent-secondary), #F97316)'
                   : 'var(--color-accent-secondary)',
@@ -1046,7 +1046,7 @@ function RegulationsSectionContent() {
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   background: 'transparent',
                   border: '1px solid rgba(239,68,68,0.3)',
-                  borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
+                  borderRadius: 'var(--radius-sm)', padding: '5px 10px', cursor: 'pointer',
                   color: '#F87171', fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
                 }}
               >
@@ -1067,7 +1067,7 @@ function RegulationsSectionContent() {
                   ? 'transparent' : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
                 border: (cachedCount === totalCount && totalCount > 0)
                   ? '1px solid rgba(52,211,153,0.3)' : 'none',
-                borderRadius: 8, padding: '10px 16px', cursor: 'pointer',
+                borderRadius: 'var(--radius-base)', padding: '10px 16px', cursor: 'pointer',
                 color: (cachedCount === totalCount && totalCount > 0) ? 'var(--color-success)' : '#fff',
                 fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
                 opacity: (cachedCount === totalCount && totalCount > 0) ? 0.8 : 1,
@@ -1084,7 +1084,7 @@ function RegulationsSectionContent() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   background: 'transparent',
                   border: '1px solid rgba(239,68,68,0.3)',
-                  borderRadius: 8, padding: '10px 16px', cursor: 'pointer',
+                  borderRadius: 'var(--radius-base)', padding: '10px 16px', cursor: 'pointer',
                   color: '#F87171', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
                 }}
               >
@@ -1222,7 +1222,7 @@ function StorageSectionContent() {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             background: 'transparent',
             border: '1px solid rgba(239,68,68,0.3)',
-            borderRadius: 8, padding: '10px 16px', cursor: 'pointer',
+            borderRadius: 'var(--radius-base)', padding: '10px 16px', cursor: 'pointer',
             color: '#F87171', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
             opacity: (regCount === 0 && userDocCount === 0) ? 0.4 : 1,
           }}
@@ -1311,7 +1311,7 @@ function SignOutSection() {
         padding: '14px 16px',
         background: 'transparent',
         border: 'none',
-        borderRadius: 8,
+        borderRadius: 'var(--radius-base)',
         cursor: signingOut ? 'not-allowed' : 'pointer',
         color: 'var(--color-danger)',
         fontSize: 'var(--fs-xl)',
@@ -1372,7 +1372,7 @@ function ConfirmDialog({
             style={{
               flex: 1, padding: '10px 16px',
               background: 'var(--color-border)', border: '1px solid var(--color-border-mid)',
-              borderRadius: 8, color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 700,
+              borderRadius: 'var(--radius-base)', color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 700,
               cursor: 'pointer', fontFamily: 'inherit',
             }}
           >
@@ -1383,7 +1383,7 @@ function ConfirmDialog({
             style={{
               flex: 1, padding: '10px 16px',
               background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
-              borderRadius: 8, color: '#F87171', fontSize: 'var(--fs-md)', fontWeight: 700,
+              borderRadius: 'var(--radius-base)', color: '#F87171', fontSize: 'var(--fs-md)', fontWeight: 700,
               cursor: 'pointer', fontFamily: 'inherit',
             }}
           >

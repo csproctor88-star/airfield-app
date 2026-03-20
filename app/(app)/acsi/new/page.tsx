@@ -374,7 +374,7 @@ export default function AcsiFormPage() {
 
   const inputStyle: React.CSSProperties = {
     padding: '10px 14px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     border: '1px solid var(--color-border)',
     background: 'var(--color-bg-input)',
     color: 'var(--color-text-1)',
@@ -398,7 +398,7 @@ export default function AcsiFormPage() {
       {/* Cover fields */}
       <div style={{
         display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 20,
-        padding: '18px 18px', border: '1px solid var(--color-border)', borderRadius: 8, background: 'var(--color-bg-surface)',
+        padding: '18px 18px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-bg-surface)',
       }}>
         <div>
           <label style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)', display: 'block', marginBottom: 6 }}>
@@ -439,7 +439,7 @@ export default function AcsiFormPage() {
       {/* Progress bar */}
       <div style={{
         padding: '12px 16px', marginBottom: 20, border: '1px solid var(--color-border)',
-        borderRadius: 8, background: 'var(--color-bg-surface)',
+        borderRadius: 'var(--radius-md)', background: 'var(--color-bg-surface)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)' }}>
@@ -451,9 +451,9 @@ export default function AcsiFormPage() {
             <span style={{ color: 'var(--color-text-3)', fontWeight: 600 }}>{na} N/A</span>
           </div>
         </div>
-        <div style={{ height: 6, borderRadius: 3, background: 'var(--color-bg-sunken)', overflow: 'hidden' }}>
+        <div style={{ height: 6, borderRadius: 'var(--radius-xs)', background: 'var(--color-bg-sunken)', overflow: 'hidden' }}>
           <div style={{
-            height: '100%', borderRadius: 3, transition: 'width 0.3s',
+            height: '100%', borderRadius: 'var(--radius-xs)', transition: 'width 0.3s',
             width: `${pct}%`,
             background: pct === 100 ? 'var(--color-green)' : 'var(--color-accent)',
           }} />
@@ -555,7 +555,7 @@ export default function AcsiFormPage() {
                     <div key={li.id}>
                       <div style={{
                         display: 'flex', alignItems: 'center', gap: 8, padding: '10px 10px',
-                        borderRadius: 6,
+                        borderRadius: 'var(--radius-sm)',
                         background: draft.responses[li.id] === 'fail'
                           ? 'rgba(239, 68, 68, 0.06)'
                           : liIdx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
@@ -581,7 +581,7 @@ export default function AcsiFormPage() {
                                 onClick={() => handleSetResponse(li.id, active ? null : val)}
                                 style={{
                                   padding: '6px 12px',
-                                  borderRadius: 5,
+                                  borderRadius: 'var(--radius-sm)',
                                   border: active ? 'none' : '1px solid var(--color-border)',
                                   background: active ? bgMap[val] : 'transparent',
                                   color: active ? '#fff' : 'var(--color-text-3)',
@@ -611,7 +611,7 @@ export default function AcsiFormPage() {
                     onClick={handleAddLocalItem}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 6, marginTop: 8,
-                      padding: '8px 14px', borderRadius: 6, border: '1px dashed var(--color-border)',
+                      padding: '8px 14px', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--color-border)',
                       background: 'transparent', color: 'var(--color-text-2)',
                       fontSize: 'var(--fs-sm)', cursor: 'pointer',
                     }}
@@ -637,7 +637,7 @@ export default function AcsiFormPage() {
 
       {/* General Notes */}
       <div style={{
-        marginBottom: 28, border: '1px solid var(--color-border)', borderRadius: 8,
+        marginBottom: 28, border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
         padding: 16, background: 'var(--color-bg-surface)',
       }}>
         <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 8 }}>
@@ -663,7 +663,7 @@ export default function AcsiFormPage() {
           disabled={saving}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '12px 24px', borderRadius: 8,
+            padding: '12px 24px', borderRadius: 'var(--radius-md)',
             border: '1px solid var(--color-border)',
             background: 'var(--color-bg-surface)',
             color: 'var(--color-text-1)',
@@ -678,7 +678,7 @@ export default function AcsiFormPage() {
           disabled={filing}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '12px 24px', borderRadius: 8,
+            padding: '12px 24px', borderRadius: 'var(--radius-md)',
             border: 'none',
             background: 'var(--color-accent)',
             color: '#fff',

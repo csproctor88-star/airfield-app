@@ -324,7 +324,7 @@ export default function LoginActivityDialog() {
             style={{
               width: '100%',
               padding: '10px 0',
-              borderRadius: 8,
+              borderRadius: 'var(--radius-md)',
               border: 'none',
               background: '#06B6D4',
               color: '#fff',

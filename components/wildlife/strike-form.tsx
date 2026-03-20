@@ -266,7 +266,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
   }
 
   const selectStyle: React.CSSProperties = {
-    width: '100%', padding: '8px 10px', borderRadius: 6,
+    width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)',
     border: '1px solid var(--color-border)',
     background: 'var(--color-bg-surface)', color: 'var(--color-text)',
     fontSize: 'var(--fs-base)',
@@ -298,13 +298,13 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
           {selectedSpecies ? (
             <div style={{
               display: 'flex', alignItems: 'center', gap: 10,
-              padding: 8, borderRadius: 8, background: 'var(--color-bg-surface)',
+              padding: 8, borderRadius: 'var(--radius-md)', background: 'var(--color-bg-surface)',
               border: '1px solid var(--color-border)',
             }}>
               <img
                 src={resolveWildlifeImage(selectedSpecies)!}
                 alt={selectedSpecies.common_name}
-                style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }}
+                style={{ width: 44, height: 44, borderRadius: 'var(--radius-md)', objectFit: 'cover', flexShrink: 0 }}
                 onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
               />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -386,7 +386,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
               disabled={gpsLoading}
               style={{
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                padding: '8px 12px', borderRadius: 6,
+                padding: '8px 12px', borderRadius: 'var(--radius-sm)',
                 border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
                 color: latitude ? 'var(--color-danger)' : 'var(--color-text-2)',
                 fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: gpsLoading ? 'wait' : 'pointer',
@@ -405,7 +405,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
               onClick={() => setShowMap(!showMap)}
               style={{
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                padding: '8px 12px', borderRadius: 6,
+                padding: '8px 12px', borderRadius: 'var(--radius-sm)',
                 border: '1px solid var(--color-border)',
                 background: showMap ? 'var(--color-danger)' : 'var(--color-bg-surface)',
                 color: showMap ? '#fff' : 'var(--color-text-2)',
@@ -534,7 +534,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
               <button key={part}
                 onClick={() => togglePart(part, partsStruck, setPartsStruck)}
                 style={{
-                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                  padding: '4px 8px', borderRadius: 'var(--radius-xs)', fontSize: 'var(--fs-xs)', fontWeight: 600,
                   border: '1px solid var(--color-border)', cursor: 'pointer',
                   background: partsStruck.includes(part) ? '#EF444420' : 'var(--color-bg-surface)',
                   color: partsStruck.includes(part) ? 'var(--color-danger)' : 'var(--color-text-2)',
@@ -552,7 +552,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
               <button key={part}
                 onClick={() => togglePart(part, partsDamaged, setPartsDamaged)}
                 style={{
-                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                  padding: '4px 8px', borderRadius: 'var(--radius-xs)', fontSize: 'var(--fs-xs)', fontWeight: 600,
                   border: '1px solid var(--color-border)', cursor: 'pointer',
                   background: partsDamaged.includes(part) ? '#F9731620' : 'var(--color-bg-surface)',
                   color: partsDamaged.includes(part) ? 'var(--color-orange)' : 'var(--color-text-2)',
@@ -632,7 +632,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
           onClick={handleSubmit}
           disabled={saving}
           style={{
-            width: '100%', padding: '12px', borderRadius: 8, border: 'none',
+            width: '100%', padding: '12px', borderRadius: 'var(--radius-md)', border: 'none',
             background: saving ? 'var(--color-text-4)' : 'var(--color-danger)',
             color: '#fff', fontWeight: 800, fontSize: 'var(--fs-md)', cursor: 'pointer',
           }}
@@ -669,7 +669,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
     >
       <div style={{
         width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto',
-        background: 'var(--color-bg)', borderRadius: '16px 16px 0 0',
+        background: 'var(--color-bg)', borderRadius: 'var(--radius-xl) var(--radius-xl) 0 0',
         padding: 20,
       }}>
         {formContent}

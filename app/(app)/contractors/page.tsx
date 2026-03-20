@@ -167,7 +167,7 @@ export default function ContractorsPage() {
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '8px 12px',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     border: '1px solid var(--color-border)',
     background: 'var(--color-bg-surface)',
     color: 'var(--color-text-1)',
@@ -197,7 +197,7 @@ export default function ContractorsPage() {
               fontSize: 'var(--fs-sm)',
               fontWeight: 700,
               padding: '2px 10px',
-              borderRadius: 12,
+              borderRadius: 'var(--radius-lg)',
             }}>
               {activeCount} Active
             </span>
@@ -209,7 +209,7 @@ export default function ContractorsPage() {
             background: showForm ? 'var(--color-border)' : 'var(--color-cyan-btn-bg)',
             color: showForm ? 'var(--color-text-1)' : 'var(--color-cyan-btn-text)',
             border: 'none',
-            borderRadius: 8,
+            borderRadius: 'var(--radius-md)',
             padding: '8px 16px',
             fontWeight: 700,
             fontSize: 'var(--fs-base)',
@@ -274,7 +274,7 @@ export default function ContractorsPage() {
                 background: 'var(--color-cyan-btn-bg)',
                 color: 'var(--color-cyan-btn-text)',
                 border: 'none',
-                borderRadius: 8,
+                borderRadius: 'var(--radius-md)',
                 padding: '8px 20px',
                 fontWeight: 700,
                 fontSize: 'var(--fs-base)',
@@ -299,7 +299,7 @@ export default function ContractorsPage() {
               background: filter === tab ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-surface)',
               color: filter === tab ? 'var(--color-cyan-btn-text)' : 'var(--color-text-2)',
               border: '1px solid var(--color-border)',
-              borderRadius: 8,
+              borderRadius: 'var(--radius-md)',
               padding: '6px 14px',
               fontWeight: 600,
               fontSize: 'var(--fs-sm)',
@@ -375,14 +375,14 @@ export default function ContractorsPage() {
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 10 }}>
                       <button
                         onClick={() => setEditingId(null)}
-                        style={{ background: 'var(--color-border)', color: 'var(--color-text-1)', border: 'none', borderRadius: 8, padding: '6px 14px', fontWeight: 600, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit' }}
+                        style={{ background: 'var(--color-border)', color: 'var(--color-text-1)', border: 'none', borderRadius: 'var(--radius-md)', padding: '6px 14px', fontWeight: 600, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit' }}
                       >
                         Cancel
                       </button>
                       <button
                         onClick={() => handleSaveEdit(c.id)}
                         disabled={saving}
-                        style={{ background: 'var(--color-cyan-btn-bg)', color: 'var(--color-cyan-btn-text)', border: 'none', borderRadius: 8, padding: '6px 14px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, fontFamily: 'inherit' }}
+                        style={{ background: 'var(--color-cyan-btn-bg)', color: 'var(--color-cyan-btn-text)', border: 'none', borderRadius: 'var(--radius-md)', padding: '6px 14px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, fontFamily: 'inherit' }}
                       >
                         Save
                       </button>
@@ -404,7 +404,7 @@ export default function ContractorsPage() {
                             color: cfg.color,
                             background: cfg.bg,
                             padding: '1px 8px',
-                            borderRadius: 8,
+                            borderRadius: 'var(--radius-md)',
                           }}>
                             {cfg.label}
                           </span>
@@ -466,7 +466,7 @@ export default function ContractorsPage() {
                       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                         <button
                           onClick={() => startEdit(c)}
-                          style={{ background: 'var(--color-bg-surface)', color: 'var(--color-cyan)', border: '1px solid var(--color-border)', borderRadius: 8, padding: '6px 12px', fontWeight: 600, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit' }}
+                          style={{ background: 'var(--color-bg-surface)', color: 'var(--color-cyan)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '6px 12px', fontWeight: 600, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit' }}
                         >
                           Edit
                         </button>
@@ -474,7 +474,7 @@ export default function ContractorsPage() {
                           <button
                             onClick={() => handleMarkCompleted(c.id)}
                             disabled={saving}
-                            style={{ background: 'var(--color-success)', color: '#000', border: 'none', borderRadius: 8, padding: '6px 12px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, fontFamily: 'inherit' }}
+                            style={{ background: 'var(--color-success)', color: '#000', border: 'none', borderRadius: 'var(--radius-md)', padding: '6px 12px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, fontFamily: 'inherit' }}
                           >
                             Mark Completed
                           </button>

@@ -231,7 +231,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
   }
 
   const selectStyle: React.CSSProperties = {
-    width: '100%', padding: '8px 10px', borderRadius: 6,
+    width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)',
     border: '1px solid var(--color-border)',
     background: 'var(--color-bg-surface)', color: 'var(--color-text)',
     fontSize: 'var(--fs-base)',
@@ -255,7 +255,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
     <>
           {required && !inline && (
             <div style={{
-              padding: '8px 12px', marginBottom: 12, borderRadius: 8,
+              padding: '8px 12px', marginBottom: 12, borderRadius: 'var(--radius-md)',
               background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
               fontSize: 'var(--fs-sm)', color: 'var(--color-danger)', fontWeight: 600,
             }}>
@@ -277,13 +277,13 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
             {selectedSpecies ? (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 10,
-                padding: 8, borderRadius: 8, background: 'var(--color-bg-surface)',
+                padding: 8, borderRadius: 'var(--radius-md)', background: 'var(--color-bg-surface)',
                 border: '1px solid var(--color-border)',
               }}>
                 <img
                   src={resolveWildlifeImage(selectedSpecies)!}
                   alt={selectedSpecies.common_name}
-                  style={{ width: 52, height: 52, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }}
+                  style={{ width: 52, height: 52, borderRadius: 'var(--radius-md)', objectFit: 'cover', flexShrink: 0 }}
                   onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -294,7 +294,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
                   <div style={{ fontSize: 'var(--fs-xs)', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <span style={{ color: 'var(--color-text-3)' }}>{selectedSpecies.group} · {selectedSpecies.size_category}</span>
                     <span style={{
-                      display: 'inline-block', padding: '1px 6px', borderRadius: 4,
+                      display: 'inline-block', padding: '1px 6px', borderRadius: 'var(--radius-xs)',
                       fontSize: '10px', fontWeight: 700, color: '#fff',
                       background: riskColor(selectedSpecies.strike_risk),
                     }}>
@@ -379,7 +379,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
                 disabled={gpsLoading}
                 style={{
                   flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  padding: '8px 12px', borderRadius: 6,
+                  padding: '8px 12px', borderRadius: 'var(--radius-sm)',
                   border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
                   color: latitude ? 'var(--color-success)' : 'var(--color-text-2)',
                   fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: gpsLoading ? 'wait' : 'pointer',
@@ -398,7 +398,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
                 onClick={() => setShowMap(!showMap)}
                 style={{
                   flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  padding: '8px 12px', borderRadius: 6,
+                  padding: '8px 12px', borderRadius: 'var(--radius-sm)',
                   border: '1px solid var(--color-border)',
                   background: showMap ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-surface)',
                   color: showMap ? 'var(--color-cyan-btn-text)' : 'var(--color-text-2)',
@@ -475,7 +475,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
                     type="button"
                     onClick={() => setActionsTaken(prev => selected ? prev.filter(v => v !== a.value) : [...prev, a.value])}
                     style={{
-                      padding: '6px 14px', borderRadius: 20,
+                      padding: '6px 14px', borderRadius: 'var(--radius-full)',
                       border: selected ? '2px solid var(--color-success)' : '1px solid var(--color-border)',
                       background: selected ? 'rgba(16,185,129,0.15)' : 'var(--color-bg-surface)',
                       color: selected ? 'var(--color-success)' : 'var(--color-text-2)',
@@ -528,7 +528,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
             onClick={handleSubmit}
             disabled={saving || !selectedSpecies}
             style={{
-              width: '100%', padding: '12px', borderRadius: 8, border: 'none',
+              width: '100%', padding: '12px', borderRadius: 'var(--radius-md)', border: 'none',
               background: saving || !selectedSpecies ? 'var(--color-text-4)' : 'var(--color-success)',
               color: '#fff', fontWeight: 800, fontSize: 'var(--fs-md)', cursor: 'pointer',
             }}
@@ -565,7 +565,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
       >
         <div style={{
           width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto',
-          background: 'var(--color-bg)', borderRadius: '16px 16px 0 0',
+          background: 'var(--color-bg)', borderRadius: 'var(--radius-xl) var(--radius-xl) 0 0',
           padding: 20,
         }}>
           {formContent}

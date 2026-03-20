@@ -1445,7 +1445,7 @@ export default function InspectionsPage() {
             <button
               onClick={() => diagramUrl ? setShowDiagram(true) : toast.info('No airfield diagram uploaded — add one in Settings > Base Configuration')}
               style={{
-                background: '#A78BFA14', border: '1px solid #A78BFA33', borderRadius: 8,
+                background: '#A78BFA14', border: '1px solid #A78BFA33', borderRadius: 'var(--radius-md)',
                 padding: '8px 14px', color: 'var(--color-purple)', fontSize: 'var(--fs-base)', fontWeight: 600,
                 fontFamily: 'inherit', cursor: 'pointer',
               }}
@@ -1459,7 +1459,7 @@ export default function InspectionsPage() {
                 window.scrollTo(0, 0)
               }}
               style={{
-                background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 8,
+                background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
                 padding: '8px 14px', color: 'var(--color-text-2)', fontSize: 'var(--fs-base)', fontWeight: 600,
                 fontFamily: 'inherit', cursor: 'pointer',
               }}
@@ -1501,7 +1501,7 @@ export default function InspectionsPage() {
         {/* ── Runway Conditions Card (BWC / RSC / RCR) ── */}
         {currentHalf && (
           <div style={{
-            background: 'var(--color-bg-elevated)', borderRadius: 12, padding: 16, marginBottom: 20,
+            background: 'var(--color-bg-elevated)', borderRadius: 'var(--radius-lg)', padding: 16, marginBottom: 20,
             border: '1px solid var(--color-border)',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -1566,7 +1566,7 @@ export default function InspectionsPage() {
                   toast.success(hasChanges ? 'Conditions updated & pushed to airfield status' : 'Conditions reported (no change from current status)')
                 }}
                 style={{
-                  padding: '6px 14px', borderRadius: 8, fontSize: 'var(--fs-sm)', fontWeight: 700,
+                  padding: '6px 14px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                   cursor: 'pointer', border: 'none', fontFamily: 'inherit',
                   background: 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-cyan))',
                   color: '#FFF',
@@ -1592,7 +1592,7 @@ export default function InspectionsPage() {
                         key={opt}
                         onClick={() => setBwcValue(opt)}
                         style={{
-                          padding: '6px 12px', borderRadius: 6,
+                          padding: '6px 12px', borderRadius: 'var(--radius-sm)',
                           border: `2px solid ${selected ? color : 'var(--color-text-4)'}`,
                           background: selected ? `${color}20` : 'transparent',
                           color: selected ? color : 'var(--color-text-2)',
@@ -1621,7 +1621,7 @@ export default function InspectionsPage() {
                       key={opt}
                       onClick={() => setRscCondition(opt)}
                       style={{
-                        padding: '6px 12px', borderRadius: 6,
+                        padding: '6px 12px', borderRadius: 'var(--radius-sm)',
                         border: `2px solid ${selected ? color : 'var(--color-text-4)'}`,
                         background: selected ? `${color}20` : 'transparent',
                         color: selected ? color : 'var(--color-text-2)',
@@ -1643,7 +1643,7 @@ export default function InspectionsPage() {
                   style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
                 >
                   <div style={{
-                    width: 20, height: 20, borderRadius: 4,
+                    width: 20, height: 20, borderRadius: 'var(--radius-xs)',
                     border: currentHalf.rcrReported ? '2px solid var(--color-cyan, #22D3EE)' : '2px solid var(--color-text-4)',
                     background: currentHalf.rcrReported ? 'var(--color-cyan, #22D3EE)' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1664,7 +1664,7 @@ export default function InspectionsPage() {
                     value={currentHalf.rcrValue || ''}
                     onChange={(e) => setRcrValue(e.target.value)}
                     style={{
-                      width: 100, padding: '6px 10px', borderRadius: 6,
+                      width: 100, padding: '6px 10px', borderRadius: 'var(--radius-sm)',
                       border: '2px solid var(--color-text-4)', background: 'var(--color-bg-surface)',
                       color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit',
                     }}
@@ -1673,7 +1673,7 @@ export default function InspectionsPage() {
                     value={currentHalf.rcrConditionType || ''}
                     onChange={(e) => setRcrConditionType(e.target.value)}
                     style={{
-                      padding: '6px 10px', borderRadius: 6,
+                      padding: '6px 10px', borderRadius: 'var(--radius-sm)',
                       border: '2px solid var(--color-text-4)', background: 'var(--color-bg-surface)',
                       color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit',
                     }}
@@ -1731,7 +1731,7 @@ export default function InspectionsPage() {
                       <button
                         onClick={() => toggle(item.id)}
                         style={{
-                          width: 28, height: 28, minWidth: 28, borderRadius: 6,
+                          width: 28, height: 28, minWidth: 28, borderRadius: 'var(--radius-sm)',
                           border: `2px solid ${borderColor}`, background: bgColor,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           cursor: 'pointer', padding: 0, flexShrink: 0,
@@ -1808,7 +1808,7 @@ export default function InspectionsPage() {
               onClick={() => setShowCompleteConfirm(true)}
               disabled={saving}
               style={{
-                flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
+                flex: 1, padding: '14px 0', borderRadius: 'var(--radius-md)', border: 'none',
                 background: 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-cyan))',
                 color: '#FFF', fontSize: 'var(--fs-xl)', fontWeight: 700,
                 cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
@@ -1822,7 +1822,7 @@ export default function InspectionsPage() {
               onClick={handleSave}
               disabled={saving}
               style={{
-                flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
+                flex: 1, padding: '14px 0', borderRadius: 'var(--radius-md)', border: 'none',
                 background: 'linear-gradient(135deg, #3B82F6, #6366F1)',
                 color: '#FFF', fontSize: 'var(--fs-xl)', fontWeight: 700,
                 cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
@@ -1886,7 +1886,7 @@ export default function InspectionsPage() {
                     handleComplete()
                   }}
                   style={{
-                    flex: 1, padding: '10px 12px', borderRadius: 8, fontSize: 'var(--fs-base)', fontWeight: 700,
+                    flex: 1, padding: '10px 12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-base)', fontWeight: 700,
                     cursor: 'pointer', border: 'none',
                     background: 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-cyan))',
                     color: '#FFF', fontFamily: 'inherit',
@@ -1895,7 +1895,7 @@ export default function InspectionsPage() {
                 <button
                   onClick={() => setShowCompleteConfirm(false)}
                   style={{
-                    flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                    flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                     cursor: 'pointer', border: '1px solid var(--color-border-mid)',
                     background: 'var(--color-bg)', color: 'var(--color-text-2)', fontFamily: 'inherit',
                   }}
@@ -1911,7 +1911,7 @@ export default function InspectionsPage() {
             onClick={() => setShowDiagram(false)}
             onTouchEnd={(e) => { if (e.target === e.currentTarget) setShowDiagram(false) }}
             style={{
-              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 9999,
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 'var(--z-modal)',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               padding: '60px 12px 24px',
               overflowY: 'auto', WebkitOverflowScrolling: 'touch',
@@ -1920,8 +1920,8 @@ export default function InspectionsPage() {
             <button
               onClick={(e) => { e.stopPropagation(); setShowDiagram(false) }}
               style={{
-                position: 'fixed', top: 12, right: 12, zIndex: 10000,
-                background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8,
+                position: 'fixed', top: 12, right: 12, zIndex: 'var(--z-modal-nested)',
+                background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 'var(--radius-md)',
                 padding: '10px 18px', color: '#fff', fontSize: 'var(--fs-xl)', fontWeight: 700, cursor: 'pointer',
                 backdropFilter: 'blur(8px)',
               }}
@@ -1932,7 +1932,7 @@ export default function InspectionsPage() {
               alt="Airfield Diagram"
               onClick={(e) => e.stopPropagation()}
               onTouchEnd={(e) => e.stopPropagation()}
-              style={{ maxWidth: '100%', maxHeight: 'calc(100vh - 100px)', objectFit: 'contain', borderRadius: 8 }}
+              style={{ maxWidth: '100%', maxHeight: 'calc(100vh - 100px)', objectFit: 'contain', borderRadius: 'var(--radius-md)' }}
             />
           </div>
         )}
@@ -1988,7 +1988,7 @@ export default function InspectionsPage() {
               : todayAirfieldByOther
               ? '2px solid rgba(249,115,22,0.4)'
               : '1px solid var(--color-border)',
-            borderRadius: 12,
+            borderRadius: 'var(--radius-lg)',
             padding: '16px 12px',
             cursor: todayAirfieldByOther ? 'not-allowed' : 'pointer',
             textAlign: 'center',
@@ -2050,7 +2050,7 @@ export default function InspectionsPage() {
               : todayLightingByOther
               ? '2px solid rgba(249,115,22,0.4)'
               : '1px solid var(--color-border)',
-            borderRadius: 12,
+            borderRadius: 'var(--radius-lg)',
             padding: '16px 12px',
             cursor: todayLightingByOther ? 'not-allowed' : 'pointer',
             textAlign: 'center',
@@ -2104,7 +2104,7 @@ export default function InspectionsPage() {
               type="button"
               onClick={() => setTypeFilter(active && chip.key !== 'all' ? 'all' : chip.key)}
               style={{
-                padding: '6px 12px', borderRadius: 16, fontSize: 'var(--fs-sm)', fontWeight: 600,
+                padding: '6px 12px', borderRadius: 'var(--radius-xl)', fontSize: 'var(--fs-sm)', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit', border: 'none', whiteSpace: 'nowrap',
                 background: active ? `${chip.color}22` : 'var(--color-bg-elevated)',
                 color: active ? chip.color : 'var(--color-text-3)',
@@ -2198,7 +2198,7 @@ export default function InspectionsPage() {
                 {report.personnel && report.personnel.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
                     {report.personnel.map((p) => (
-                      <span key={p} style={{ fontSize: 'var(--fs-xs)', padding: '2px 6px', borderRadius: 4, background: 'rgba(167,139,250,0.1)', color: 'var(--color-purple)', fontWeight: 600 }}>
+                      <span key={p} style={{ fontSize: 'var(--fs-xs)', padding: '2px 6px', borderRadius: 'var(--radius-xs)', background: 'rgba(167,139,250,0.1)', color: 'var(--color-purple)', fontWeight: 600 }}>
                         {p}
                       </span>
                     ))}
@@ -2222,7 +2222,7 @@ export default function InspectionsPage() {
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
                     {report.bwcValue && (
                       <span style={{
-                        fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                        fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--radius-xs)',
                         color: report.bwcValue === 'LOW' ? 'var(--color-status-pass)' : report.bwcValue === 'MOD' ? 'var(--color-bwc-mod)' : report.bwcValue === 'SEV' ? 'var(--color-orange)' : 'var(--color-danger)',
                         background: report.bwcValue === 'LOW' ? 'rgba(34,197,94,0.1)' : report.bwcValue === 'MOD' ? 'rgba(234,179,8,0.1)' : report.bwcValue === 'SEV' ? 'rgba(249,115,22,0.1)' : 'rgba(239,68,68,0.1)',
                       }}>
@@ -2231,7 +2231,7 @@ export default function InspectionsPage() {
                     )}
                     {report.rscCondition && (
                       <span style={{
-                        fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                        fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--radius-xs)',
                         color: report.rscCondition === 'Dry' ? 'var(--color-status-pass)' : 'var(--color-status-inwork)',
                         background: report.rscCondition === 'Dry' ? 'rgba(34,197,94,0.1)' : 'rgba(59,130,246,0.1)',
                       }}>
@@ -2240,7 +2240,7 @@ export default function InspectionsPage() {
                     )}
                     {report.rcrValue && (
                       <span style={{
-                        fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                        fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--radius-xs)',
                         color: '#8B5CF6',
                         background: 'rgba(139,92,246,0.1)',
                       }}>
@@ -2289,7 +2289,7 @@ export default function InspectionsPage() {
                 <button
                   onClick={() => handleResume(report)}
                   style={{
-                    flex: 1, padding: '8px 0', borderRadius: 6,
+                    flex: 1, padding: '8px 0', borderRadius: 'var(--radius-sm)',
                     border: '1px solid rgba(59,130,246,0.4)', background: 'rgba(59,130,246,0.08)',
                     color: 'var(--color-status-inwork)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                     cursor: 'pointer', fontFamily: 'inherit',
@@ -2305,7 +2305,7 @@ export default function InspectionsPage() {
                     }
                   }}
                   style={{
-                    padding: '8px 16px', borderRadius: 6,
+                    padding: '8px 16px', borderRadius: 'var(--radius-sm)',
                     border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.08)',
                     color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                     cursor: 'pointer', fontFamily: 'inherit',
@@ -2397,7 +2397,7 @@ export default function InspectionsPage() {
                       router.push(`/inspections/${blockedInfo.inspectionId}`)
                     }}
                     style={{
-                      flex: 1, padding: '12px 0', borderRadius: 10,
+                      flex: 1, padding: '12px 0', borderRadius: 'var(--radius-md)',
                       border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.12)',
                       color: 'var(--color-status-pass)', fontSize: 'var(--fs-md)', fontWeight: 700,
                       cursor: 'pointer', fontFamily: 'inherit',
@@ -2409,7 +2409,7 @@ export default function InspectionsPage() {
                 <button
                   onClick={() => setBlockedInfo(null)}
                   style={{
-                    flex: 1, padding: '12px 0', borderRadius: 10,
+                    flex: 1, padding: '12px 0', borderRadius: 'var(--radius-md)',
                     border: '1px solid var(--color-border)', background: 'transparent',
                     color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600,
                     cursor: 'pointer', fontFamily: 'inherit',
@@ -2453,7 +2453,7 @@ export default function InspectionsPage() {
               <button
                 onClick={() => setConfirmStart(null)}
                 style={{
-                  flex: 1, padding: '12px 0', borderRadius: 10,
+                  flex: 1, padding: '12px 0', borderRadius: 'var(--radius-md)',
                   border: '1px solid var(--color-border)', background: 'transparent',
                   color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600,
                   cursor: 'pointer', fontFamily: 'inherit',
@@ -2468,7 +2468,7 @@ export default function InspectionsPage() {
                   handleBeginNew(type)
                 }}
                 style={{
-                  flex: 1, padding: '12px 0', borderRadius: 10,
+                  flex: 1, padding: '12px 0', borderRadius: 'var(--radius-md)',
                   border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.12)',
                   color: 'var(--color-status-pass)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', fontFamily: 'inherit',

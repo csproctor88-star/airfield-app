@@ -333,7 +333,7 @@ export default function AMDashboardPage() {
 
       {/* ===== Last Check Completed ===== */}
       <div className="card" style={{ marginBottom: 16 }}>
-        <div style={{ padding: 12, background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)', textAlign: 'center' }}>
+        <div style={{ padding: 12, background: 'var(--color-bg-inset)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', textAlign: 'center' }}>
           <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4 }}>Last Check Completed</div>
           <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-cyan)' }}>
             {lastCheckType && lastCheckTime
@@ -356,7 +356,7 @@ export default function AMDashboardPage() {
             border: todayAirfieldStatus.status === 'completed' ? '2px solid rgba(34,197,94,0.4)'
               : todayAirfieldStatus.status === 'in_progress' ? '2px solid rgba(59,130,246,0.4)'
               : '1px solid var(--color-border)',
-            borderRadius: 12,
+            borderRadius: 'var(--radius-lg)',
             padding: '14px 16px',
             cursor: 'pointer',
             textDecoration: 'none',
@@ -395,7 +395,7 @@ export default function AMDashboardPage() {
             border: todayLightingStatus.status === 'completed' ? '2px solid rgba(34,197,94,0.4)'
               : todayLightingStatus.status === 'in_progress' ? '2px solid rgba(59,130,246,0.4)'
               : '1px solid var(--color-border)',
-            borderRadius: 12,
+            borderRadius: 'var(--radius-lg)',
             padding: '14px 16px',
             cursor: 'pointer',
             textDecoration: 'none',
@@ -433,7 +433,7 @@ export default function AMDashboardPage() {
             style={{
               background: 'var(--color-bg-surface)',
               border: '1px solid var(--color-border)',
-              borderRadius: 12,
+              borderRadius: 'var(--radius-lg)',
               padding: '14px 16px',
               cursor: 'pointer',
               textDecoration: 'none',
@@ -455,7 +455,7 @@ export default function AMDashboardPage() {
           style={{
             background: 'var(--color-bg-surface)',
             border: '1px solid var(--color-border)',
-            borderRadius: 12,
+            borderRadius: 'var(--radius-lg)',
             padding: '14px 16px',
             cursor: 'pointer',
             display: 'flex',
@@ -475,7 +475,7 @@ export default function AMDashboardPage() {
           style={{
             background: 'var(--color-bg-surface)',
             border: '1px solid var(--color-border)',
-            borderRadius: 12,
+            borderRadius: 'var(--radius-lg)',
             padding: '14px 16px',
             cursor: 'pointer',
             display: 'flex',
@@ -495,7 +495,7 @@ export default function AMDashboardPage() {
           style={{
             background: 'var(--color-bg-surface)',
             border: '1px solid var(--color-border)',
-            borderRadius: 12,
+            borderRadius: 'var(--radius-lg)',
             padding: '14px 16px',
             cursor: 'pointer',
             display: 'flex',
@@ -553,7 +553,7 @@ export default function AMDashboardPage() {
           <button
             onClick={() => setShowTemplatePicker(true)}
             style={{
-              background: 'none', border: '1px solid var(--color-cyan)', borderRadius: 8,
+              background: 'none', border: '1px solid var(--color-cyan)', borderRadius: 'var(--radius-md)',
               padding: '4px 12px', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)',
               fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0,
             }}
@@ -580,7 +580,7 @@ export default function AMDashboardPage() {
             onClick={handleManualSubmit}
             disabled={!manualText.trim() || submitting}
             style={{
-              padding: '0 20px', borderRadius: 8, border: 'none', alignSelf: 'flex-end', height: 40,
+              padding: '0 20px', borderRadius: 'var(--radius-md)', border: 'none', alignSelf: 'flex-end', height: 40,
               background: manualText.trim() ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-elevated)',
               color: manualText.trim() ? 'var(--color-cyan-btn-text)' : 'var(--color-text-4)',
               fontSize: 'var(--fs-md)', fontWeight: 700, cursor: manualText.trim() ? 'pointer' : 'default',
@@ -731,7 +731,7 @@ export default function AMDashboardPage() {
       {/* User Info Popover */}
       {userPopover && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 150 }}
+          style={{ position: 'fixed', inset: 0, zIndex: 'var(--z-modal)' }}
           onClick={() => setUserPopover(null)}
         >
           <div
@@ -741,11 +741,11 @@ export default function AMDashboardPage() {
               top: userPopover.y,
               background: 'var(--color-bg-elevated)',
               border: '1px solid var(--color-border)',
-              borderRadius: 10,
+              borderRadius: 'var(--radius-md)',
               padding: '12px 16px',
               minWidth: 200,
               boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-              zIndex: 151,
+              zIndex: 'var(--z-modal)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -848,7 +848,7 @@ export default function AMDashboardPage() {
                 onClick={handleEditSave}
                 disabled={saving}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', border: 'none',
                   background: saving ? 'rgba(6,182,212,0.5)' : '#06B6D4',
                   color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
@@ -859,7 +859,7 @@ export default function AMDashboardPage() {
               <button
                 onClick={() => setEditingId(null)}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8,
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)',
                   border: '1px solid var(--color-border)', background: 'transparent',
                   color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600,
                   cursor: 'pointer', fontFamily: 'inherit',
@@ -874,7 +874,7 @@ export default function AMDashboardPage() {
                 if (entry) { setEditingId(null); handleDelete(entry) }
               }}
               style={{
-                width: '100%', padding: '8px 0', borderRadius: 8,
+                width: '100%', padding: '8px 0', borderRadius: 'var(--radius-md)',
                 border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)',
                 color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit',
@@ -920,7 +920,7 @@ function PersonnelFormDialog({ installationId, onClose, onSaved }: { installatio
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '8px 12px',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     border: '1px solid var(--color-border)',
     background: 'var(--color-bg-surface)',
     color: 'var(--color-text-1)',
@@ -1031,7 +1031,7 @@ function PersonnelFormDialog({ installationId, onClose, onSaved }: { installatio
             onClick={handleSubmit}
             disabled={saving}
             style={{
-              flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
+              flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', border: 'none',
               background: saving ? 'rgba(6,182,212,0.5)' : '#06B6D4',
               color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
               cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
@@ -1042,7 +1042,7 @@ function PersonnelFormDialog({ installationId, onClose, onSaved }: { installatio
           <button
             onClick={onClose}
             style={{
-              flex: 1, padding: '10px 0', borderRadius: 8,
+              flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)',
               border: '1px solid var(--color-border)', background: 'transparent',
               color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600,
               cursor: 'pointer', fontFamily: 'inherit',
@@ -1168,7 +1168,7 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
           disabled={isCompleted || isSaving}
           onClick={() => handleToggle(item.id, checked)}
           style={{
-            width: 22, height: 22, borderRadius: 5, flexShrink: 0,
+            width: 22, height: 22, borderRadius: 'var(--radius-xs)', flexShrink: 0,
             border: checked ? 'none' : '2px solid var(--color-border-mid)',
             background: checked ? 'var(--color-status-pass)' : 'transparent',
             cursor: isCompleted ? 'default' : 'pointer',
@@ -1193,7 +1193,7 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
         {item.frequency !== 'daily' && (
           <span style={{
             fontSize: 'var(--fs-xs)', fontWeight: 700, color: FREQ_COLORS[item.frequency],
-            background: `${FREQ_COLORS[item.frequency]}15`, padding: '2px 8px', borderRadius: 8,
+            background: `${FREQ_COLORS[item.frequency]}15`, padding: '2px 8px', borderRadius: 'var(--radius-md)',
           }}>{item.frequency.charAt(0).toUpperCase() + item.frequency.slice(1)}</span>
         )}
       </div>
@@ -1235,7 +1235,7 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{
-                fontSize: 'var(--fs-sm)', fontWeight: 700, padding: '3px 10px', borderRadius: 8,
+                fontSize: 'var(--fs-sm)', fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--radius-md)',
                 background: isCompleted ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
                 color: isCompleted ? 'var(--color-status-pass)' : 'var(--color-bwc-mod)',
               }}>{isCompleted ? 'FILED' : 'IN PROGRESS'}</span>
@@ -1246,8 +1246,8 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
           </div>
           {/* Progress bar */}
           {totalCount > 0 && (
-            <div style={{ marginTop: 10, height: 4, borderRadius: 2, background: 'var(--color-bg-elevated)', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${(completedCount / totalCount) * 100}%`, background: allComplete ? 'var(--color-status-pass)' : 'var(--color-cyan)', borderRadius: 2, transition: 'width 0.3s' }} />
+            <div style={{ marginTop: 10, height: 4, borderRadius: 'var(--radius-xs)', background: 'var(--color-bg-elevated)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${(completedCount / totalCount) * 100}%`, background: allComplete ? 'var(--color-status-pass)' : 'var(--color-cyan)', borderRadius: 'var(--radius-xs)', transition: 'width 0.3s' }} />
             </div>
           )}
         </div>
@@ -1274,14 +1274,14 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
           <div style={{ padding: '12px 20px', borderTop: '1px solid var(--color-border)', flexShrink: 0 }}>
             {isCompleted ? (
               <button onClick={handleReopen} style={{
-                width: '100%', padding: '10px 0', borderRadius: 8,
+                width: '100%', padding: '10px 0', borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--color-border-mid)', background: 'transparent',
                 color: 'var(--color-text-2)', fontWeight: 700, fontSize: 'var(--fs-base)',
                 cursor: 'pointer', fontFamily: 'inherit',
               }}>Reopen Checklist</button>
             ) : (
               <button disabled={!allComplete || completing} onClick={handleComplete} style={{
-                width: '100%', padding: '10px 0', borderRadius: 8, border: 'none',
+                width: '100%', padding: '10px 0', borderRadius: 'var(--radius-md)', border: 'none',
                 background: allComplete ? 'var(--color-status-pass)' : 'var(--color-border)',
                 color: allComplete ? '#fff' : 'var(--color-text-3)',
                 fontWeight: 700, fontSize: 'var(--fs-base)',
@@ -1459,7 +1459,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
 
     return (
       <div key={step.id} style={{
-        padding: '8px 10px', marginBottom: 6, borderRadius: 8,
+        padding: '8px 10px', marginBottom: 6, borderRadius: 'var(--radius-md)',
         border: '1px solid var(--color-border)',
         background: checked ? 'rgba(34,197,94,0.04)' : 'transparent',
       }}>
@@ -1474,7 +1474,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                   cursor: 'pointer', padding: 0, fontFamily: 'inherit', textAlign: 'left', width: '100%',
                 }}>
                   <span style={{
-                    width: 22, height: 22, borderRadius: 5, flexShrink: 0,
+                    width: 22, height: 22, borderRadius: 'var(--radius-xs)', flexShrink: 0,
                     border: checked ? 'none' : '2px solid var(--color-border-mid)',
                     background: checked ? 'var(--color-status-pass)' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1505,7 +1505,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                       cursor: 'pointer', padding: '3px 0', fontFamily: 'inherit', textAlign: 'left', width: '100%',
                     }}>
                       <span style={{
-                        width: 18, height: 18, borderRadius: 3, flexShrink: 0,
+                        width: 18, height: 18, borderRadius: 'var(--radius-xs)', flexShrink: 0,
                         border: agencyChecked ? 'none' : '2px solid var(--color-border-mid)',
                         background: agencyChecked ? 'var(--color-status-pass)' : 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1537,7 +1537,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                     style={{ width: 100, fontSize: 'var(--fs-sm)', textAlign: 'center' }} />
                   <button onClick={() => handleFieldChange(step.id, zuluNow())} style={{
                     background: 'rgba(34,211,238,0.1)', border: '1px solid var(--color-cyan)',
-                    borderRadius: 6, padding: '4px 10px', color: 'var(--color-cyan)',
+                    borderRadius: 'var(--radius-sm)', padding: '4px 10px', color: 'var(--color-cyan)',
                     fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                   }}>Now (Z)</button>
                 </div>
@@ -1580,7 +1580,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                 {activeExec && (
                   <span style={{
                     fontSize: 'var(--fs-base)', fontWeight: 800, color: '#0F172A',
-                    background: '#67E8F9', padding: '3px 10px', borderRadius: 6,
+                    background: '#67E8F9', padding: '3px 10px', borderRadius: 'var(--radius-sm)',
                   }}>QRC-{activeExec.qrc_number}</span>
                 )}
                 <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
@@ -1609,7 +1609,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
               {/* Warning note */}
               {activeTemplate.notes && (
                 <div style={{
-                  padding: '6px 10px', borderRadius: 6, marginBottom: 10,
+                  padding: '6px 10px', borderRadius: 'var(--radius-sm)', marginBottom: 10,
                   background: 'rgba(239,68,68,0.08)', fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-danger)',
                 }}>{activeTemplate.notes}</div>
               )}
@@ -1624,7 +1624,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
               {/* SCN Form — data entry at top for quick capture */}
               {activeTemplate.has_scn_form && activeTemplate.scn_fields && (
                 <div style={{
-                  padding: 14, borderRadius: 10, marginBottom: 12,
+                  padding: 14, borderRadius: 'var(--radius-md)', marginBottom: 12,
                   background: 'var(--color-bg-surface)', border: '1px solid rgba(34,211,238,0.2)',
                 }}>
                   <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-cyan)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -1664,10 +1664,10 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                     <button key={ex.id} onClick={() => setActiveExecId(ex.id)} style={{
                       display: 'flex', alignItems: 'center', gap: 8, width: '100%',
                       background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)',
-                      borderRadius: 8, padding: '8px 12px', cursor: 'pointer', fontFamily: 'inherit',
+                      borderRadius: 'var(--radius-md)', padding: '8px 12px', cursor: 'pointer', fontFamily: 'inherit',
                       textAlign: 'left', marginBottom: 4,
                     }}>
-                      <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: '#0F172A', background: '#67E8F9', padding: '2px 8px', borderRadius: 5 }}>QRC-{ex.qrc_number}</span>
+                      <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: '#0F172A', background: '#67E8F9', padding: '2px 8px', borderRadius: 'var(--radius-xs)' }}>QRC-{ex.qrc_number}</span>
                       <span style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', flex: 1 }}>{ex.title}</span>
                     </button>
                   ))}
@@ -1679,10 +1679,10 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                   <button key={tmpl.id} onClick={() => handleStart(tmpl)} disabled={starting === tmpl.id}
                     style={{
                       background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-                      borderRadius: 8, padding: '8px 10px', cursor: 'pointer',
+                      borderRadius: 'var(--radius-md)', padding: '8px 10px', cursor: 'pointer',
                       fontFamily: 'inherit', textAlign: 'left',
                     }}>
-                    <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: '#0F172A', background: '#67E8F9', padding: '2px 8px', borderRadius: 5 }}>
+                    <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: '#0F172A', background: '#67E8F9', padding: '2px 8px', borderRadius: 'var(--radius-xs)' }}>
                       {tmpl.qrc_number}
                     </span>
                     <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', marginTop: 4, lineHeight: 1.3 }}>
@@ -1710,12 +1710,12 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                   style={{ width: '100%', marginBottom: 8, fontSize: 'var(--fs-sm)' }} />
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={handleClose} disabled={closing} style={{
-                    flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
+                    flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', border: 'none',
                     background: 'var(--color-status-pass)', color: '#fff', fontWeight: 700,
                     fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
                   }}>{closing ? 'Closing...' : 'Confirm Close'}</button>
                   <button onClick={() => setShowCloseConfirm(false)} style={{
-                    padding: '10px 14px', borderRadius: 8, border: '1px solid var(--color-border)',
+                    padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
                     background: 'transparent', color: 'var(--color-text-2)', fontWeight: 700,
                     fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
                   }}>Cancel</button>
@@ -1724,12 +1724,12 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
             ) : (
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => setShowCloseConfirm(true)} style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', border: 'none',
                   background: 'var(--color-status-pass)', color: '#fff', fontWeight: 700,
                   fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
                 }}>Close QRC</button>
                 <button onClick={handleCancel} style={{
-                  padding: '10px 14px', borderRadius: 8,
+                  padding: '10px 14px', borderRadius: 'var(--radius-md)',
                   border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.06)',
                   color: 'var(--color-danger)', fontWeight: 700, fontSize: 'var(--fs-base)',
                   cursor: 'pointer', fontFamily: 'inherit',

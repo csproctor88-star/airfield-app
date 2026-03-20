@@ -40,13 +40,13 @@ export default function EmailPdfModal({ open, onClose, onSend, sending, filename
   return (
     <div
       className="modal-overlay"
-      style={{ zIndex: 1000 }}
+      style={{ zIndex: 'var(--z-modal)' }}
       onClick={(e) => { if (e.target === e.currentTarget && !sending) onClose() }}
     >
       <div
         style={{
           background: 'var(--color-bg-surface-solid, #1a1a2e)',
-          borderRadius: 16, width: '100%', maxWidth: 400,
+          borderRadius: 'var(--radius-xl)', width: '100%', maxWidth: 400,
           padding: 24, border: '1px solid var(--color-border-mid, #333)',
         }}
         onClick={(e) => e.stopPropagation()}
@@ -86,7 +86,7 @@ export default function EmailPdfModal({ open, onClose, onSend, sending, filename
           disabled={sending}
           onKeyDown={(e) => { if (e.key === 'Enter' && !sending) handleSend() }}
           style={{
-            width: '100%', padding: '10px 12px', borderRadius: 8,
+            width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-md)',
             background: 'var(--color-bg-surface, #fff)',
             border: error ? '1px solid var(--color-danger)' : '1px solid var(--color-border, #444)',
             color: 'var(--color-text-1, #000)', fontSize: 'var(--fs-md, 15px)',
@@ -103,7 +103,7 @@ export default function EmailPdfModal({ open, onClose, onSend, sending, filename
             onClick={onClose}
             disabled={sending}
             style={{
-              flex: 1, padding: '10px', borderRadius: 10, textAlign: 'center',
+              flex: 1, padding: '10px', borderRadius: 'var(--radius-md)', textAlign: 'center',
               background: 'transparent', border: '1px solid var(--color-border, #444)',
               color: 'var(--color-text-2, #ccc)', fontSize: 'var(--fs-md, 15px)',
               fontWeight: 600, fontFamily: 'inherit', cursor: sending ? 'default' : 'pointer',
@@ -116,7 +116,7 @@ export default function EmailPdfModal({ open, onClose, onSend, sending, filename
             onClick={handleSend}
             disabled={sending || !email.trim()}
             style={{
-              flex: 1, padding: '10px', borderRadius: 10, textAlign: 'center',
+              flex: 1, padding: '10px', borderRadius: 'var(--radius-md)', textAlign: 'center',
               background: sending || !email.trim() ? '#A78BFA33' : 'var(--color-purple)',
               border: '1px solid #A78BFA55',
               color: '#fff', fontSize: 'var(--fs-md, 15px)', fontWeight: 700,

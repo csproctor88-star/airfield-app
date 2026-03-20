@@ -225,7 +225,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '8px 12px',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-md)',
     border: '1px solid var(--color-border)',
     background: 'var(--color-bg-surface)',
     color: 'var(--color-text-1)',
@@ -317,7 +317,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
                     <div
                       key={i}
                       style={{
-                        padding: '10px 12px', marginBottom: 6, borderRadius: 8,
+                        padding: '10px 12px', marginBottom: 6, borderRadius: 'var(--radius-md)',
                         border: '2px solid var(--color-cyan)', background: 'var(--color-bg-surface)',
                       }}
                     >
@@ -347,7 +347,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
                         <button
                           onClick={applyEdit}
                           style={{
-                            padding: '6px 14px', borderRadius: 6, border: 'none',
+                            padding: '6px 14px', borderRadius: 'var(--radius-sm)', border: 'none',
                             background: 'var(--color-cyan-btn-bg)', color: 'var(--color-cyan-btn-text)',
                             fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                           }}
@@ -357,7 +357,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
                         <button
                           onClick={cancelEdit}
                           style={{
-                            padding: '6px 14px', borderRadius: 6,
+                            padding: '6px 14px', borderRadius: 'var(--radius-sm)',
                             border: '1px solid var(--color-border)', background: 'transparent',
                             color: 'var(--color-text-2)', fontSize: 'var(--fs-sm)', fontWeight: 600,
                             cursor: 'pointer', fontFamily: 'inherit',
@@ -380,7 +380,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
                         onClick={() => setSelectedTemplate(t)}
                         style={{
                           flex: 1, display: 'block', textAlign: 'left',
-                          padding: '10px 12px', borderRadius: 8,
+                          padding: '10px 12px', borderRadius: 'var(--radius-md)',
                           border: '1px solid var(--color-border)', cursor: 'pointer',
                           background: 'var(--color-bg-surface)', fontFamily: 'inherit',
                           color: 'var(--color-text-1)',
@@ -400,7 +400,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
                             title="Edit template"
                             style={{
                               background: 'none', border: 'none', cursor: 'pointer',
-                              color: 'var(--color-text-3)', padding: 4, borderRadius: 4,
+                              color: 'var(--color-text-3)', padding: 4, borderRadius: 'var(--radius-xs)',
                             }}
                           >
                             <Pencil size={14} />
@@ -410,7 +410,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
                             title="Delete template"
                             style={{
                               background: 'none', border: 'none', cursor: 'pointer',
-                              color: 'var(--color-text-4)', padding: 4, borderRadius: 4,
+                              color: 'var(--color-text-4)', padding: 4, borderRadius: 'var(--radius-xs)',
                             }}
                           >
                             <Trash2 size={14} />
@@ -425,7 +425,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
                     onClick={addTemplate}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                      width: '100%', padding: '10px 12px', marginTop: 4, borderRadius: 8,
+                      width: '100%', padding: '10px 12px', marginTop: 4, borderRadius: 'var(--radius-md)',
                       border: '1px dashed var(--color-border)', cursor: 'pointer',
                       background: 'transparent', fontFamily: 'inherit',
                       color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', fontWeight: 600,
@@ -452,7 +452,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
                               key={opt}
                               onClick={() => handleToggle(f.key, opt)}
                               style={{
-                                padding: '6px 14px', borderRadius: 8, fontFamily: 'inherit',
+                                padding: '6px 14px', borderRadius: 'var(--radius-md)', fontFamily: 'inherit',
                                 fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer',
                                 border: active ? '1px solid var(--color-cyan)' : '1px solid var(--color-border)',
                                 background: active ? 'rgba(34,211,238,0.12)' : 'var(--color-bg-surface)',
@@ -483,7 +483,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
               </div>
 
               {/* Preview */}
-              <div style={{ marginTop: 16, padding: 12, borderRadius: 8, background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.15)' }}>
+              <div style={{ marginTop: 16, padding: 12, borderRadius: 'var(--radius-md)', background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.15)' }}>
                 <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-cyan)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Preview
                 </div>
@@ -505,7 +505,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
                   onClick={handleSaveTemplates}
                   disabled={saving}
                   style={{
-                    padding: '8px 16px', borderRadius: 8, border: 'none',
+                    padding: '8px 16px', borderRadius: 'var(--radius-md)', border: 'none',
                     background: 'var(--color-success)', color: '#fff',
                     fontSize: 'var(--fs-sm)', fontWeight: 700,
                     cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
@@ -522,7 +522,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
                 title="Reset to default templates"
                 style={{
                   display: 'flex', alignItems: 'center', gap: 4,
-                  padding: '6px 10px', borderRadius: 6,
+                  padding: '6px 10px', borderRadius: 'var(--radius-sm)',
                   border: '1px solid var(--color-border)', background: 'transparent',
                   color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)', fontWeight: 600,
                   cursor: 'pointer', fontFamily: 'inherit',
@@ -541,7 +541,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
                   onClick={handleSubmit}
                   disabled={submitting}
                   style={{
-                    padding: '8px 20px', borderRadius: 8, border: 'none',
+                    padding: '8px 20px', borderRadius: 'var(--radius-md)', border: 'none',
                     background: submitting ? 'rgba(6,182,212,0.5)' : 'var(--color-cyan-btn-bg)', color: 'var(--color-cyan-btn-text)',
                     fontSize: 'var(--fs-base)', fontWeight: 700,
                     cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
@@ -552,7 +552,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
                 <button
                   onClick={onClose}
                   style={{
-                    padding: '8px 20px', borderRadius: 8,
+                    padding: '8px 20px', borderRadius: 'var(--radius-md)',
                     border: '1px solid var(--color-border)', background: 'transparent',
                     color: 'var(--color-text-2)', fontSize: 'var(--fs-base)', fontWeight: 600,
                     cursor: 'pointer', fontFamily: 'inherit',
@@ -565,7 +565,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
               <button
                 onClick={onClose}
                 style={{
-                  padding: '8px 20px', borderRadius: 8,
+                  padding: '8px 20px', borderRadius: 'var(--radius-md)',
                   border: '1px solid var(--color-border)', background: 'transparent',
                   color: 'var(--color-text-2)', fontSize: 'var(--fs-base)', fontWeight: 600,
                   cursor: 'pointer', fontFamily: 'inherit',

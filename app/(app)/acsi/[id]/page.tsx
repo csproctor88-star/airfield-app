@@ -175,7 +175,7 @@ export default function AcsiDetailPage() {
                 disabled={exporting}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '8px 14px', borderRadius: 6, border: '1px solid var(--color-border)',
+                  padding: '8px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)',
                   background: 'transparent', color: 'var(--color-text-2)',
                   fontSize: 'var(--fs-sm)', fontWeight: 500, cursor: 'pointer',
                   opacity: exporting ? 0.5 : 1,
@@ -187,7 +187,7 @@ export default function AcsiDetailPage() {
                 onClick={handleEmailPdf}
                 disabled={exporting}
                 style={{
-                  padding: '12px 16px', borderRadius: 10, textAlign: 'center',
+                  padding: '12px 16px', borderRadius: 'var(--radius-md)', textAlign: 'center',
                   background: 'color-mix(in srgb, var(--color-purple) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-purple) 20%, transparent)',
                   color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   fontFamily: 'inherit', cursor: exporting ? 'default' : 'pointer',
@@ -202,7 +202,7 @@ export default function AcsiDetailPage() {
           {canEdit && (
             <Link href={`/acsi/new?resume=${insp.id}`} style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '8px 14px', borderRadius: 6, border: '1px solid var(--color-accent)',
+              padding: '8px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-accent)',
               background: 'transparent', color: 'var(--color-accent)', textDecoration: 'none',
               fontSize: 'var(--fs-sm)', fontWeight: 600,
             }}>
@@ -215,7 +215,7 @@ export default function AcsiDetailPage() {
               disabled={actionLoading}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '8px 14px', borderRadius: 6, border: '1px solid var(--color-red)',
+                padding: '8px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-red)',
                 background: 'transparent', color: 'var(--color-red)',
                 fontSize: 'var(--fs-sm)', fontWeight: 500, cursor: 'pointer',
                 opacity: actionLoading ? 0.5 : 1,
@@ -237,7 +237,7 @@ export default function AcsiDetailPage() {
           { label: 'Completion', value: `${pct}%`, color: 'var(--color-accent)' },
         ].map(kpi => (
           <div key={kpi.label} style={{
-            padding: '12px 20px', borderRadius: 8, border: '1px solid var(--color-border)',
+            padding: '12px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
             background: 'var(--color-bg-surface)', textAlign: 'center', minWidth: 90,
           }}>
             <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: kpi.color }}>{kpi.value}</div>
@@ -259,7 +259,7 @@ export default function AcsiDetailPage() {
 
           return (
             <div key={section.id} style={{
-              border: '1px solid var(--color-border)', borderRadius: 8,
+              border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
               overflow: 'hidden', background: 'var(--color-bg-surface)',
             }}>
               <button
@@ -297,7 +297,7 @@ export default function AcsiDetailPage() {
                       <div style={{
                         display: 'flex', alignItems: 'flex-start', gap: 10,
                         padding: '10px 8px',
-                        borderRadius: 6,
+                        borderRadius: 'var(--radius-sm)',
                         background: item.response === 'fail'
                           ? 'rgba(239, 68, 68, 0.06)'
                           : idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
@@ -323,7 +323,7 @@ export default function AcsiDetailPage() {
                           <div key={di} style={{
                             margin: '4px 0 8px 54px', padding: '8px 12px',
                             background: 'rgba(239, 68, 68, 0.04)',
-                            border: '1px solid rgba(239, 68, 68, 0.15)', borderRadius: 6,
+                            border: '1px solid rgba(239, 68, 68, 0.15)', borderRadius: 'var(--radius-sm)',
                             fontSize: 'var(--fs-sm)',
                           }}>
                             {discs.length > 1 && (
@@ -376,7 +376,7 @@ export default function AcsiDetailPage() {
       {/* Inspection Team */}
       {insp.inspection_team && insp.inspection_team.length > 0 && (
         <div style={{
-          marginBottom: 20, border: '1px solid var(--color-border)', borderRadius: 8,
+          marginBottom: 20, border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
           padding: 16, background: 'var(--color-bg-surface)',
         }}>
           <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 600, marginBottom: 10, color: 'var(--color-text-1)' }}>
@@ -395,7 +395,7 @@ export default function AcsiDetailPage() {
       {/* Risk Management Certification */}
       {insp.risk_cert_signatures && insp.risk_cert_signatures.length > 0 && (
         <div style={{
-          marginBottom: 20, border: '1px solid var(--color-border)', borderRadius: 8,
+          marginBottom: 20, border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
           padding: 16, background: 'var(--color-bg-surface)',
         }}>
           <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 600, marginBottom: 10, color: 'var(--color-text-1)' }}>
@@ -420,7 +420,7 @@ export default function AcsiDetailPage() {
       {/* Notes */}
       {insp.notes && (
         <div style={{
-          border: '1px solid var(--color-border)', borderRadius: 8,
+          border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
           padding: 16, background: 'var(--color-bg-surface)',
         }}>
           <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 600, marginBottom: 8, color: 'var(--color-text-1)' }}>Notes</div>

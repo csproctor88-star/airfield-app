@@ -149,7 +149,7 @@ export default function InspectionDetailPage() {
           <button
             onClick={() => router.push('/inspections?view=history')}
             style={{
-              padding: '10px 20px', borderRadius: 8, border: 'none',
+              padding: '10px 20px', borderRadius: 'var(--radius-md)', border: 'none',
               background: 'linear-gradient(135deg, var(--color-blue), #6366F1)',
               color: '#FFF', fontSize: 'var(--fs-md)', fontWeight: 700,
               cursor: 'pointer', fontFamily: 'inherit',
@@ -505,7 +505,7 @@ export default function InspectionDetailPage() {
             <div
               onClick={() => openPhotoViewer(photos, idx)}
               style={{
-                width: 56, height: 56, borderRadius: 6, overflow: 'hidden', cursor: 'pointer',
+                width: 56, height: 56, borderRadius: 'var(--radius-sm)', overflow: 'hidden', cursor: 'pointer',
                 border: '1px solid rgba(239,68,68,0.3)',
               }}
             >
@@ -569,7 +569,7 @@ export default function InspectionDetailPage() {
           className="card"
           style={{
             marginBottom: 8,
-            borderRadius: 12,
+            borderRadius: 'var(--radius-lg)',
             borderLeft: `3px solid ${borderColor}`,
             padding: '14px 14px 10px',
           }}
@@ -581,7 +581,7 @@ export default function InspectionDetailPage() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {failCount > 0 && (
-                <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-red)', background: 'rgba(239,68,68,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-red)', background: 'rgba(239,68,68,0.1)', padding: '2px 6px', borderRadius: 'var(--radius-xs)' }}>
                   {failCount} fail
                 </span>
               )}
@@ -659,7 +659,7 @@ export default function InspectionDetailPage() {
                           <div key={di} style={{
                             padding: '6px 8px', marginBottom: 4,
                             background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.12)',
-                            borderRadius: 6,
+                            borderRadius: 'var(--radius-sm)',
                           }}>
                             {item.discrepancies!.length > 1 && (
                               <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-red)', marginBottom: 3 }}>
@@ -704,7 +704,7 @@ export default function InspectionDetailPage() {
                             )}
                             {discMapUrl && (
                               <img src={discMapUrl} alt={`Discrepancy ${di + 1} location`}
-                                style={{ width: '100%', maxWidth: 400, height: 140, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginTop: 4 }} />
+                                style={{ width: '100%', maxWidth: 400, height: 140, objectFit: 'cover', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.08)', marginTop: 4 }} />
                             )}
                             {disc.location && (
                               <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -796,7 +796,7 @@ export default function InspectionDetailPage() {
                             {item.notes ? (
                               <div style={{
                                 flex: 1, fontSize: 'var(--fs-sm)', color: 'var(--color-amber)', fontStyle: 'italic',
-                                padding: '4px 8px', background: 'rgba(251,191,36,0.06)', borderRadius: 4,
+                                padding: '4px 8px', background: 'rgba(251,191,36,0.06)', borderRadius: 'var(--radius-xs)',
                               }}>
                                 {item.notes}
                               </div>
@@ -824,7 +824,7 @@ export default function InspectionDetailPage() {
                           <div style={{ marginTop: 4 }}>
                             {mapUrl && (
                               <img src={mapUrl} alt="Fail item location"
-                                style={{ width: '100%', maxWidth: 400, height: 140, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginBottom: 3 }} />
+                                style={{ width: '100%', maxWidth: 400, height: 140, objectFit: 'cover', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 3 }} />
                             )}
                             <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
                               Location: {loc.lat.toFixed(5)}, {loc.lon.toFixed(5)}
@@ -900,7 +900,7 @@ export default function InspectionDetailPage() {
       <div
         className="card"
         style={{
-          marginBottom: 10, borderRadius: 12, overflow: 'hidden',
+          marginBottom: 10, borderRadius: 'var(--radius-lg)', overflow: 'hidden',
           borderTop: `3px solid ${topBorderColor}`,
           padding: '16px 14px',
         }}
@@ -917,7 +917,7 @@ export default function InspectionDetailPage() {
           <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
             {allInspections.map((insp: { id: string; display_id: string }) => (
               <span key={insp.id} style={{
-                fontSize: 'var(--fs-sm)', fontFamily: 'monospace', padding: '3px 8px', borderRadius: 6,
+                fontSize: 'var(--fs-sm)', fontFamily: 'monospace', padding: '3px 8px', borderRadius: 'var(--radius-sm)',
                 background: 'var(--color-border)', color: 'var(--color-text-2)',
               }}>
                 {insp.display_id}
@@ -930,7 +930,7 @@ export default function InspectionDetailPage() {
         {isSpecialType && (
           <div style={{
             marginBottom: 12, fontSize: 'var(--fs-sm)', fontFamily: 'monospace', padding: '3px 8px',
-            borderRadius: 6, background: 'var(--color-border)', color: 'var(--color-text-2)',
+            borderRadius: 'var(--radius-sm)', background: 'var(--color-border)', color: 'var(--color-text-2)',
             display: 'inline-block',
           }}>
             {primary.display_id}
@@ -942,7 +942,7 @@ export default function InspectionDetailPage() {
           {isSpecialType ? (
             <div style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              padding: '5px 12px', borderRadius: 8,
+              padding: '5px 12px', borderRadius: 'var(--radius-md)',
               background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
             }}>
               <span style={{ fontSize: 'var(--fs-lg)' }}>{primary.inspection_type === 'construction_meeting' ? '🏗️' : '📋'}</span>
@@ -955,7 +955,7 @@ export default function InspectionDetailPage() {
               {airfieldInsp && (
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '5px 12px', borderRadius: 8,
+                  padding: '5px 12px', borderRadius: 'var(--radius-md)',
                   background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)',
                 }}>
                   <span style={{ fontSize: 'var(--fs-lg)' }}>📋</span>
@@ -965,7 +965,7 @@ export default function InspectionDetailPage() {
               {lightingInsp && (
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '5px 12px', borderRadius: 8,
+                  padding: '5px 12px', borderRadius: 'var(--radius-md)',
                   background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)',
                 }}>
                   <span style={{ fontSize: 'var(--fs-lg)' }}>💡</span>
@@ -978,7 +978,7 @@ export default function InspectionDetailPage() {
 
         {/* Info Grid */}
         <div style={{
-          padding: '12px', borderRadius: 10, background: 'var(--color-border)', border: '1px solid var(--color-border-mid)',
+          padding: '12px', borderRadius: 'var(--radius-md)', background: 'var(--color-border)', border: '1px solid var(--color-border-mid)',
           marginBottom: 14,
         }}>
           <DetailGrid
@@ -1026,7 +1026,7 @@ export default function InspectionDetailPage() {
                 Bird Watch Condition
               </div>
               <span style={{
-                padding: '4px 14px', borderRadius: 8, fontSize: 'var(--fs-base)', fontWeight: 800,
+                padding: '4px 14px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-base)', fontWeight: 800,
                 color: bwcColor, background: bwcBg, border: `1px solid ${bwcColor}33`,
               }}>
                 {bwc}
@@ -1041,14 +1041,14 @@ export default function InspectionDetailPage() {
         <>
           {/* Personnel */}
           {primary.personnel && primary.personnel.length > 0 && (
-            <div className="card" style={{ marginBottom: 10, borderRadius: 12, padding: '14px' }}>
+            <div className="card" style={{ marginBottom: 10, borderRadius: 'var(--radius-lg)', padding: '14px' }}>
               <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
                 Personnel / Offices Present
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {primary.personnel.map((person: string) => (
                   <span key={person} style={{
-                    fontSize: 'var(--fs-base)', padding: '5px 12px', borderRadius: 8, fontWeight: 600,
+                    fontSize: 'var(--fs-base)', padding: '5px 12px', borderRadius: 'var(--radius-md)', fontWeight: 600,
                     background: 'rgba(167,139,250,0.1)', color: 'var(--color-purple)',
                     border: '1px solid rgba(167,139,250,0.2)',
                   }}>
@@ -1061,7 +1061,7 @@ export default function InspectionDetailPage() {
 
           {/* Comments */}
           {(primary.notes || (canEdit && editingNotes) || canEdit) && (
-            <div className="card" style={{ marginBottom: 10, borderRadius: 12, padding: '14px' }}>
+            <div className="card" style={{ marginBottom: 10, borderRadius: 'var(--radius-lg)', padding: '14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                   Comments
@@ -1121,7 +1121,7 @@ export default function InspectionDetailPage() {
 
           {/* General photos for special types */}
           {(generalPhotos.length > 0 || canEdit) && (
-            <div className="card" style={{ marginBottom: 10, borderRadius: 12, padding: '14px' }}>
+            <div className="card" style={{ marginBottom: 10, borderRadius: 'var(--radius-lg)', padding: '14px' }}>
               <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
                 Photos ({generalPhotos.length})
               </div>
@@ -1131,7 +1131,7 @@ export default function InspectionDetailPage() {
                     <div
                       onClick={() => openPhotoViewer(generalPhotos, idx)}
                       style={{
-                        width: 72, height: 72, borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
+                        width: 72, height: 72, borderRadius: 'var(--radius-md)', overflow: 'hidden', cursor: 'pointer',
                         border: '1px solid var(--color-border-mid)',
                       }}
                     >
@@ -1185,13 +1185,13 @@ export default function InspectionDetailPage() {
       ) : (
         <>
           {/* ═══ Results Card ═══ */}
-          <div className="card" style={{ marginBottom: 10, borderRadius: 12, padding: '14px 14px 16px' }}>
+          <div className="card" style={{ marginBottom: 10, borderRadius: 'var(--radius-lg)', padding: '14px 14px 16px' }}>
             <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
               {isDaily ? 'Combined Results' : 'Results'}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
               <div style={{
-                textAlign: 'center', padding: '10px 6px', borderRadius: 10,
+                textAlign: 'center', padding: '10px 6px', borderRadius: 'var(--radius-md)',
                 background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
               }}>
                 <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-green)' }}>{totalPassed}</div>
@@ -1200,7 +1200,7 @@ export default function InspectionDetailPage() {
               <button
                 onClick={() => totalFailed > 0 && setShowFailedItems((p) => !p)}
                 style={{
-                  textAlign: 'center', padding: '10px 6px', borderRadius: 10,
+                  textAlign: 'center', padding: '10px 6px', borderRadius: 'var(--radius-md)',
                   background: showFailedItems ? 'rgba(239,68,68,0.18)' : 'rgba(239,68,68,0.08)',
                   border: `1px solid ${showFailedItems ? 'rgba(239,68,68,0.5)' : 'rgba(239,68,68,0.2)'}`,
                   cursor: totalFailed > 0 ? 'pointer' : 'default',
@@ -1212,14 +1212,14 @@ export default function InspectionDetailPage() {
                 <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.05em', marginTop: 2 }}>FAIL {totalFailed > 0 ? (showFailedItems ? '▴' : '▾') : ''}</div>
               </button>
               <div style={{
-                textAlign: 'center', padding: '10px 6px', borderRadius: 10,
+                textAlign: 'center', padding: '10px 6px', borderRadius: 'var(--radius-md)',
                 background: 'rgba(100,116,139,0.08)', border: '1px solid rgba(100,116,139,0.2)',
               }}>
                 <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-text-3)' }}>{totalNa}</div>
                 <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.05em', marginTop: 2 }}>N/A</div>
               </div>
               <div style={{
-                textAlign: 'center', padding: '10px 6px', borderRadius: 10,
+                textAlign: 'center', padding: '10px 6px', borderRadius: 'var(--radius-md)',
                 background: 'var(--color-border)', border: '1px solid var(--color-border-active)',
               }}>
                 <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-accent)' }}>{totalItems}</div>
@@ -1238,9 +1238,9 @@ export default function InspectionDetailPage() {
                   {complianceRate}%
                 </span>
               </div>
-              <div style={{ height: 6, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ height: 6, background: 'var(--color-border)', borderRadius: 'var(--radius-xs)', overflow: 'hidden' }}>
                 <div style={{
-                  height: '100%', borderRadius: 3, transition: 'width 0.5s ease',
+                  height: '100%', borderRadius: 'var(--radius-xs)', transition: 'width 0.5s ease',
                   width: `${complianceRate}%`,
                   background: complianceRate >= 95
                     ? 'linear-gradient(90deg, var(--color-green), var(--color-green))'
@@ -1254,7 +1254,7 @@ export default function InspectionDetailPage() {
 
           {/* Combined Failed Items — toggled by Fail button */}
           {showFailedItems && allFailedItems.length > 0 && (
-            <div className="card" style={{ marginBottom: 10, borderRadius: 12, borderLeft: '3px solid var(--color-red)', padding: '14px' }}>
+            <div className="card" style={{ marginBottom: 10, borderRadius: 'var(--radius-lg)', borderLeft: '3px solid var(--color-red)', padding: '14px' }}>
               <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-red)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
                 Failed Items ({allFailedItems.length})
               </div>
@@ -1271,7 +1271,7 @@ export default function InspectionDetailPage() {
                     {item.section}
                     {isDaily && (
                       <span style={{
-                        fontSize: 'var(--fs-xs)', fontWeight: 600, padding: '1px 6px', borderRadius: 4,
+                        fontSize: 'var(--fs-xs)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--radius-xs)',
                         color: item.fromType === 'airfield' ? 'var(--color-green)' : 'var(--color-amber)',
                         background: item.fromType === 'airfield' ? 'rgba(52,211,153,0.1)' : 'rgba(251,191,36,0.1)',
                       }}>
@@ -1294,7 +1294,7 @@ export default function InspectionDetailPage() {
                         <div key={di} style={{
                           padding: '8px 10px', marginBottom: 6,
                           background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.12)',
-                          borderRadius: 6,
+                          borderRadius: 'var(--radius-sm)',
                         }}>
                           {item.discrepancies!.length > 1 && (
                             <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-red)', marginBottom: 4 }}>
@@ -1311,7 +1311,7 @@ export default function InspectionDetailPage() {
                           )}
                           {discMapUrl && (
                             <img src={discMapUrl} alt={`Discrepancy ${di + 1} location`}
-                              style={{ width: '100%', maxWidth: 400, height: 140, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginTop: 4 }} />
+                              style={{ width: '100%', maxWidth: 400, height: 140, objectFit: 'cover', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.08)', marginTop: 4 }} />
                           )}
                           {disc.location && (
                             <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-green)', fontFamily: 'monospace', marginTop: 4 }}>
@@ -1345,7 +1345,7 @@ export default function InspectionDetailPage() {
                       {item.notes && (
                         <div style={{
                           fontSize: 'var(--fs-base)', color: 'var(--color-amber)', marginTop: 4, fontStyle: 'italic',
-                          padding: '4px 8px', background: 'rgba(251,191,36,0.06)', borderRadius: 4,
+                          padding: '4px 8px', background: 'rgba(251,191,36,0.06)', borderRadius: 'var(--radius-xs)',
                         }}>
                           {item.notes}
                         </div>
@@ -1380,7 +1380,7 @@ export default function InspectionDetailPage() {
                   }))}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    width: '100%', margin: '14px 0 8px', padding: '12px 14px', borderRadius: 12,
+                    width: '100%', margin: '14px 0 8px', padding: '12px 14px', borderRadius: 'var(--radius-lg)',
                     background: `${bgAlpha}0.06)`, border: `1px solid ${bgAlpha}0.2)`,
                     cursor: 'pointer', fontFamily: 'inherit',
                     transition: 'all 0.2s ease',
@@ -1394,7 +1394,7 @@ export default function InspectionDetailPage() {
                     {insp.inspection_type === 'airfield' ? 'Airfield Inspection' : 'Lighting Inspection'}
                     <span style={{
                       fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-3)', marginLeft: 2,
-                      background: 'var(--color-border)', padding: '2px 8px', borderRadius: 6,
+                      background: 'var(--color-border)', padding: '2px 8px', borderRadius: 'var(--radius-sm)',
                     }}>
                       {insp.passed_count}/{insp.total_items}
                       {insp.failed_count > 0 && <span style={{ color: 'var(--color-red)', marginLeft: 4 }}>{insp.failed_count} fail</span>}
@@ -1424,7 +1424,7 @@ export default function InspectionDetailPage() {
                     {renderInspectionSections(insp)}
 
                     {insp.notes && (
-                      <div className="card" style={{ marginBottom: 10, borderRadius: 12, padding: '14px' }}>
+                      <div className="card" style={{ marginBottom: 10, borderRadius: 'var(--radius-lg)', padding: '14px' }}>
                         <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
                           {isDaily ? `${insp.inspection_type === 'airfield' ? 'Airfield' : 'Lighting'} Notes` : 'Notes'}
                         </div>
@@ -1445,7 +1445,7 @@ export default function InspectionDetailPage() {
           onClick={handleExportPdf}
           disabled={generatingPdf}
           style={{
-            flex: 1, padding: '12px', borderRadius: 12, textAlign: 'center',
+            flex: 1, padding: '12px', borderRadius: 'var(--radius-lg)', textAlign: 'center',
             background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
             color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
             fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
@@ -1458,7 +1458,7 @@ export default function InspectionDetailPage() {
           onClick={handleEmailPdf}
           disabled={generatingPdf}
           style={{
-            padding: '12px 16px', borderRadius: 12, textAlign: 'center',
+            padding: '12px 16px', borderRadius: 'var(--radius-lg)', textAlign: 'center',
             background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
             color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
             fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
@@ -1471,7 +1471,7 @@ export default function InspectionDetailPage() {
         <Link
           href="/inspections?view=history"
           style={{
-            flex: 1, padding: '12px', borderRadius: 12, textAlign: 'center',
+            flex: 1, padding: '12px', borderRadius: 'var(--radius-lg)', textAlign: 'center',
             background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
             color: 'var(--color-green)', fontSize: 'var(--fs-md)', fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',

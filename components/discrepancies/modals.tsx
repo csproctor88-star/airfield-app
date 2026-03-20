@@ -22,14 +22,14 @@ function ModalOverlay({ title, onClose, children }: { title: string; onClose: ()
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 1000, display: 'flex',
+        position: 'fixed', inset: 0, zIndex: 'var(--z-modal)', display: 'flex',
         alignItems: 'flex-end', justifyContent: 'center',
         background: 'var(--color-overlay)', padding: 0,
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{
-        background: 'var(--color-bg-surface-solid)', borderRadius: '16px 16px 0 0', width: '100%', maxWidth: 480,
+        background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-xl) var(--radius-xl) 0 0', width: '100%', maxWidth: 480,
         maxHeight: '85vh', overflow: 'auto', padding: 20, border: '1px solid var(--color-border-mid)',
         borderBottom: 'none',
       }}>
@@ -267,14 +267,14 @@ export function EditDiscrepancyModal({
             style={{
               display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
               fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 700,
-              width: '100%', padding: '10px 12px', borderRadius: 8,
+              width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-md)',
               border: showFeaturePicker ? '2px solid var(--color-cyan-bright)' : '2px solid var(--color-text-4)',
               background: showFeaturePicker ? 'rgba(34,211,238,0.08)' : 'transparent',
               color: showFeaturePicker ? 'var(--color-cyan-bright)' : 'var(--color-text-2)',
             }}
           >
             <span style={{
-              width: 20, height: 20, borderRadius: 5, flexShrink: 0,
+              width: 20, height: 20, borderRadius: 'var(--radius-sm)', flexShrink: 0,
               border: showFeaturePicker ? '2px solid var(--color-cyan-bright)' : '2px solid var(--color-text-3)',
               background: showFeaturePicker ? 'var(--color-cyan-bright)' : 'transparent',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -284,7 +284,7 @@ export function EditDiscrepancyModal({
             </span>
             Link to Visual NAVAID
             {selectedFeatureIds.length > 0 && (
-              <span style={{ fontSize: 'var(--fs-xs)', background: 'rgba(34,211,238,0.2)', color: 'var(--color-cyan-bright)', padding: '1px 6px', borderRadius: 4 }}>
+              <span style={{ fontSize: 'var(--fs-xs)', background: 'rgba(34,211,238,0.2)', color: 'var(--color-cyan-bright)', padding: '1px 6px', borderRadius: 'var(--radius-xs)' }}>
                 {selectedFeatureIds.length} selected
               </span>
             )}
@@ -323,7 +323,7 @@ export function EditDiscrepancyModal({
         disabled={gpsLoading}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          width: '100%', padding: '10px 16px', marginBottom: 12, borderRadius: 8,
+          width: '100%', padding: '10px 16px', marginBottom: 12, borderRadius: 'var(--radius-md)',
           border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
           color: 'var(--color-accent)', fontSize: 'var(--fs-md)', fontWeight: 600,
           cursor: gpsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
@@ -552,7 +552,7 @@ export function StatusUpdateModal({
                   <button key={s} type="button" onClick={() => setNewStatus(active ? '' : s)} style={{
                     background: active ? `${cfg?.color || 'var(--color-text-3)'}22` : 'transparent',
                     border: `1px solid ${active ? cfg?.color || 'var(--color-text-3)' : 'var(--color-text-4)'}`,
-                    borderRadius: 6, padding: '6px 12px', fontSize: 'var(--fs-base)', fontWeight: 600,
+                    borderRadius: 'var(--radius-sm)', padding: '6px 12px', fontSize: 'var(--fs-base)', fontWeight: 600,
                     color: cfg?.color || 'var(--color-text-3)', cursor: 'pointer', fontFamily: 'inherit',
                   }}>
                     {cfg?.label || s}
@@ -578,7 +578,7 @@ export function StatusUpdateModal({
               const color = o.value === 'work_completed_awaiting_verification' ? 'var(--color-green)' : 'var(--color-amber)'
               return (
                 <button key={o.value} type="button" onClick={() => setCurrentStatus(o.value)} style={{
-                  flex: 1, padding: '8px 12px', borderRadius: 6, fontSize: 'var(--fs-base)', fontWeight: 600,
+                  flex: 1, padding: '8px 12px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-base)', fontWeight: 600,
                   cursor: 'pointer', fontFamily: 'inherit',
                   background: active ? `${color}18` : 'transparent',
                   border: `1.5px solid ${active ? color : 'var(--color-text-4)'}`,
@@ -625,7 +625,7 @@ export function StatusUpdateModal({
             : 'Describe the work performed, parts used, etc...'
         return (
           <div style={{
-            marginBottom: 12, padding: 10, borderRadius: 8,
+            marginBottom: 12, padding: 10, borderRadius: 'var(--radius-md)',
             background: `${accentColor}0.06)`, border: `1px solid ${accentColor}0.2)`,
           }}>
             <FieldLabel>
@@ -737,11 +737,11 @@ export function PhotoViewerModal({
       {photos.length > 1 && (
         <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>
           <button type="button" onClick={() => setIndex((i) => (i - 1 + photos.length) % photos.length)}
-            style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-mid)', borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 'var(--fs-xl)', cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-mid)', borderRadius: 'var(--radius-md)', padding: '8px 16px', color: '#fff', fontSize: 'var(--fs-xl)', cursor: 'pointer', fontFamily: 'inherit' }}>
             ← Prev
           </button>
           <button type="button" onClick={() => setIndex((i) => (i + 1) % photos.length)}
-            style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-mid)', borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 'var(--fs-xl)', cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-mid)', borderRadius: 'var(--radius-md)', padding: '8px 16px', color: '#fff', fontSize: 'var(--fs-xl)', cursor: 'pointer', fontFamily: 'inherit' }}>
             Next →
           </button>
         </div>

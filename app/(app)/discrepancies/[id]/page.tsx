@@ -277,7 +277,7 @@ export default function DiscrepancyDetailPage() {
         ]} />
 
         {'resolution_notes' in d && d.resolution_notes && (
-          <div style={{ marginTop: 12, padding: '8px 10px', background: 'color-mix(in srgb, var(--color-green) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-green) 20%, transparent)', borderRadius: 8 }}>
+          <div style={{ marginTop: 12, padding: '8px 10px', background: 'color-mix(in srgb, var(--color-green) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-green) 20%, transparent)', borderRadius: 'var(--radius-md)' }}>
             <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-green)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Resolution Notes</div>
             <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>{d.resolution_notes as string}</div>
           </div>
@@ -339,7 +339,7 @@ export default function DiscrepancyDetailPage() {
               fontSize: 'var(--fs-xs)',
               fontWeight: 700,
               padding: '1px 6px',
-              borderRadius: 4,
+              borderRadius: 'var(--radius-xs)',
               background: linkedFeature.status === 'inoperative' ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)',
               color: linkedFeature.status === 'inoperative' ? 'var(--color-red)' : 'var(--color-green)',
             }}>
@@ -400,7 +400,7 @@ export default function DiscrepancyDetailPage() {
           {allPhotos.map((p, i) => (
             <div
               key={i}
-              style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border-active)', cursor: 'pointer' }}
+              style={{ position: 'relative', width: 64, height: 64, borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border-active)', cursor: 'pointer' }}
               onClick={() => setViewerIndex(i)}
             >
               <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

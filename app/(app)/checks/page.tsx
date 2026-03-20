@@ -681,7 +681,7 @@ export default function AirfieldChecksPage() {
               type="button"
               onClick={handleResumeDraft}
               style={{
-                flex: 1, padding: '12px', borderRadius: 8,
+                flex: 1, padding: '12px', borderRadius: 'var(--radius-md)',
                 border: '1.5px solid var(--color-success)',
                 background: 'rgba(34, 197, 94, 0.1)',
                 color: 'var(--color-success)', fontSize: 'var(--fs-base)', fontWeight: 700,
@@ -694,7 +694,7 @@ export default function AirfieldChecksPage() {
               type="button"
               onClick={handleDiscardDraft}
               style={{
-                flex: 1, padding: '12px', borderRadius: 8,
+                flex: 1, padding: '12px', borderRadius: 'var(--radius-md)',
                 border: '1.5px solid rgba(239, 68, 68, 0.5)',
                 background: 'rgba(239, 68, 68, 0.08)',
                 color: 'var(--color-danger)', fontSize: 'var(--fs-base)', fontWeight: 700,
@@ -756,7 +756,7 @@ export default function AirfieldChecksPage() {
 
         {typeConfig && (
           <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 8, height: 8, borderRadius: 4, background: typeConfig.color }} />
+            <div style={{ width: 8, height: 8, borderRadius: 'var(--radius-xs)', background: typeConfig.color }} />
             <span style={{ fontSize: 'var(--fs-base)', color: typeConfig.color, fontWeight: 600 }}>{typeConfig.label}</span>
           </div>
         )}
@@ -776,7 +776,7 @@ export default function AirfieldChecksPage() {
                 href={`/checks/${rc.id}`}
                 style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '10px 12px', marginBottom: 4, borderRadius: 8,
+                  padding: '10px 12px', marginBottom: 4, borderRadius: 'var(--radius-md)',
                   background: 'var(--color-bg-surface-solid)', border: '1px solid var(--color-border-mid)',
                   textDecoration: 'none', color: 'inherit',
                 }}
@@ -824,7 +824,7 @@ export default function AirfieldChecksPage() {
                       type="button"
                       onClick={() => setRscCondition(c)}
                       style={{
-                        flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-lg)', fontWeight: 700,
+                        flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-lg)', fontWeight: 700,
                         cursor: 'pointer', fontFamily: 'inherit',
                         border: rscCondition === c
                           ? `1.5px solid ${c === 'Dry' ? 'var(--color-success)' : 'var(--color-accent)'}`
@@ -848,13 +848,13 @@ export default function AirfieldChecksPage() {
                 onClick={() => setReportRcr(!reportRcr)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-                  borderRadius: 8, cursor: 'pointer',
+                  borderRadius: 'var(--radius-md)', cursor: 'pointer',
                   background: reportRcr ? 'rgba(34,211,238,0.08)' : 'var(--color-bg-elevated)',
                   border: reportRcr ? '1.5px solid var(--color-cyan)' : '1.5px solid var(--color-border-mid)',
                 }}
               >
                 <div style={{
-                  width: 20, height: 20, borderRadius: 4,
+                  width: 20, height: 20, borderRadius: 'var(--radius-xs)',
                   border: reportRcr ? '2px solid var(--color-cyan)' : '2px solid var(--color-text-4)',
                   background: reportRcr ? 'var(--color-cyan)' : 'transparent',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -869,7 +869,7 @@ export default function AirfieldChecksPage() {
 
               {/* RCR inputs (shown when toggle is on) */}
               {reportRcr && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '10px 12px', borderRadius: 8, background: 'rgba(34,211,238,0.04)', border: '1px solid rgba(34,211,238,0.12)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '10px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(34,211,238,0.04)', border: '1px solid rgba(34,211,238,0.12)' }}>
                   <div>
                     <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>RWY RCR</div>
                     <input
@@ -915,7 +915,7 @@ export default function AirfieldChecksPage() {
                         type="button"
                         onClick={() => setBashCondition(code)}
                         style={{
-                          flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-sm)', fontWeight: 700,
+                          flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                           cursor: 'pointer', fontFamily: 'inherit',
                           border: active ? `1.5px solid ${colors[code]}` : '1.5px solid var(--color-border-mid)',
                           background: active ? bgColors[code] : 'var(--color-bg-elevated)',
@@ -953,7 +953,7 @@ export default function AirfieldChecksPage() {
                     onClick={addRemark}
                     disabled={!remarkText.trim()}
                     style={{
-                      padding: '8px 20px', borderRadius: 8, border: 'none',
+                      padding: '8px 20px', borderRadius: 'var(--radius-md)', border: 'none',
                       background: remarkText.trim() ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-elevated)',
                       color: remarkText.trim() ? 'var(--color-cyan-btn-text)' : 'var(--color-text-4)',
                       fontSize: 'var(--fs-base)', fontWeight: 700, cursor: remarkText.trim() ? 'pointer' : 'default',
@@ -1013,7 +1013,7 @@ export default function AirfieldChecksPage() {
                         onClick={() => toggleAction(action)}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
-                          borderRadius: 6, border: checked ? '1.5px solid var(--color-success)' : '1.5px solid var(--color-border-mid)',
+                          borderRadius: 'var(--radius-sm)', border: checked ? '1.5px solid var(--color-success)' : '1.5px solid var(--color-border-mid)',
                           cursor: 'pointer', fontFamily: 'inherit',
                           fontSize: 'var(--fs-base)', textAlign: 'left',
                           background: checked ? 'rgba(34,197,94,0.07)' : 'var(--color-bg-elevated)',
@@ -1021,7 +1021,7 @@ export default function AirfieldChecksPage() {
                         }}
                       >
                         <span style={{
-                          width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                          width: 18, height: 18, borderRadius: 'var(--radius-xs)', flexShrink: 0,
                           border: checked ? '2px solid var(--color-success)' : '2px solid var(--color-text-4)',
                           background: checked ? 'rgba(34,197,94,0.13)' : 'transparent',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1063,7 +1063,7 @@ export default function AirfieldChecksPage() {
                         onClick={() => toggleAction(action)}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
-                          borderRadius: 6, border: checked ? '1.5px solid var(--color-success)' : '1.5px solid var(--color-border-mid)',
+                          borderRadius: 'var(--radius-sm)', border: checked ? '1.5px solid var(--color-success)' : '1.5px solid var(--color-border-mid)',
                           cursor: 'pointer', fontFamily: 'inherit',
                           fontSize: 'var(--fs-base)', textAlign: 'left',
                           background: checked ? 'rgba(34,197,94,0.07)' : 'var(--color-bg-elevated)',
@@ -1071,7 +1071,7 @@ export default function AirfieldChecksPage() {
                         }}
                       >
                         <span style={{
-                          width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                          width: 18, height: 18, borderRadius: 'var(--radius-xs)', flexShrink: 0,
                           border: checked ? '2px solid var(--color-success)' : '2px solid var(--color-text-4)',
                           background: checked ? 'rgba(34,197,94,0.13)' : 'transparent',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1114,7 +1114,7 @@ export default function AirfieldChecksPage() {
           type="button"
           onClick={() => diagramUrl ? setShowDiagram(true) : toast.info('No airfield diagram uploaded — add one in Settings > Base Configuration')}
           style={{
-            width: '100%', padding: '12px', marginBottom: 8, borderRadius: 10,
+            width: '100%', padding: '12px', marginBottom: 8, borderRadius: 'var(--radius-md)',
             border: '1px dashed var(--color-text-4)', background: 'var(--color-bg-surface-solid)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600, fontFamily: 'inherit',
@@ -1154,7 +1154,7 @@ export default function AirfieldChecksPage() {
                 onClick={addRemark}
                 disabled={!remarkText.trim()}
                 style={{
-                  padding: '8px 20px', borderRadius: 8, border: 'none',
+                  padding: '8px 20px', borderRadius: 'var(--radius-md)', border: 'none',
                   background: remarkText.trim() ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-elevated)',
                   color: remarkText.trim() ? 'var(--color-cyan-btn-text)' : 'var(--color-text-4)',
                   fontSize: 'var(--fs-base)', fontWeight: 700, cursor: remarkText.trim() ? 'pointer' : 'default',
@@ -1207,7 +1207,7 @@ export default function AirfieldChecksPage() {
             }
           }}
           style={{
-            width: '100%', padding: '12px 14px', marginBottom: 8, borderRadius: 10,
+            width: '100%', padding: '12px 14px', marginBottom: 8, borderRadius: 'var(--radius-md)',
             display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
             fontFamily: 'inherit', fontSize: 'var(--fs-lg)', fontWeight: 700,
             border: issueFound ? '2px solid var(--color-danger)' : '2px solid var(--color-text-4)',
@@ -1216,7 +1216,7 @@ export default function AirfieldChecksPage() {
           }}
         >
           <span style={{
-            width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+            width: 22, height: 22, borderRadius: 'var(--radius-sm)', flexShrink: 0,
             border: issueFound ? '2px solid var(--color-danger)' : '2px solid var(--color-text-3)',
             background: issueFound ? 'var(--color-danger)' : 'transparent',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1234,7 +1234,7 @@ export default function AirfieldChecksPage() {
           {bashFormSaved ? (
             <div style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
-              borderRadius: 8, background: 'rgba(16,185,129,0.08)',
+              borderRadius: 'var(--radius-md)', background: 'rgba(16,185,129,0.08)',
               border: '1px solid rgba(16,185,129,0.3)',
             }}>
               <span style={{ fontSize: 20 }}>✓</span>
@@ -1255,7 +1255,7 @@ export default function AirfieldChecksPage() {
                   type="button"
                   onClick={() => setBashFormType('sighting')}
                   style={{
-                    flex: 1, padding: '10px', borderRadius: 8, fontWeight: 700,
+                    flex: 1, padding: '10px', borderRadius: 'var(--radius-md)', fontWeight: 700,
                     fontSize: 'var(--fs-md)', fontFamily: 'inherit', cursor: 'pointer',
                     border: bashFormType === 'sighting' ? '2px solid #10B981' : '2px solid var(--color-text-4)',
                     background: bashFormType === 'sighting' ? 'rgba(16,185,129,0.08)' : 'var(--color-bg-surface)',
@@ -1268,7 +1268,7 @@ export default function AirfieldChecksPage() {
                   type="button"
                   onClick={() => setBashFormType('strike')}
                   style={{
-                    flex: 1, padding: '10px', borderRadius: 8, fontWeight: 700,
+                    flex: 1, padding: '10px', borderRadius: 'var(--radius-md)', fontWeight: 700,
                     fontSize: 'var(--fs-md)', fontFamily: 'inherit', cursor: 'pointer',
                     border: bashFormType === 'strike' ? '2px solid var(--color-danger)' : '2px solid var(--color-text-4)',
                     background: bashFormType === 'strike' ? 'rgba(239,68,68,0.08)' : 'var(--color-bg-surface)',
@@ -1280,7 +1280,7 @@ export default function AirfieldChecksPage() {
               </div>
 
               <div style={{
-                padding: '8px 12px', marginBottom: 12, borderRadius: 8,
+                padding: '8px 12px', marginBottom: 12, borderRadius: 'var(--radius-md)',
                 background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
                 fontSize: 'var(--fs-sm)', color: 'var(--color-danger)', fontWeight: 600,
               }}>
@@ -1351,7 +1351,7 @@ export default function AirfieldChecksPage() {
             onClick={handleSaveDraft}
             disabled={draftSaving}
             style={{
-              width: '100%', padding: '14px', borderRadius: 10,
+              width: '100%', padding: '14px', borderRadius: 'var(--radius-md)',
               border: '1.5px solid rgba(59,130,246,0.5)',
               background: 'rgba(59,130,246,0.08)',
               color: 'var(--color-accent)', fontSize: 'var(--fs-xl)', fontWeight: 700,
@@ -1379,7 +1379,7 @@ export default function AirfieldChecksPage() {
           style={{
             width: '100%', opacity: saving ? 0.7 : 1,
             background: 'var(--color-success)', fontSize: 'var(--fs-xl)', fontWeight: 800,
-            padding: '14px', borderRadius: 10,
+            padding: '14px', borderRadius: 'var(--radius-md)',
           }}
         >
           {saving ? 'Saving...' : '✓ Complete Check'}
@@ -1399,7 +1399,7 @@ export default function AirfieldChecksPage() {
           onClick={() => setShowDiagram(false)}
           onTouchEnd={(e) => { if (e.target === e.currentTarget) setShowDiagram(false) }}
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 9999,
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 'var(--z-modal)',
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
             padding: '60px 12px 24px',
             overflowY: 'auto', WebkitOverflowScrolling: 'touch',
@@ -1408,8 +1408,8 @@ export default function AirfieldChecksPage() {
           <button
             onClick={(e) => { e.stopPropagation(); setShowDiagram(false) }}
             style={{
-              position: 'fixed', top: 12, right: 12, zIndex: 10000,
-              background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8,
+              position: 'fixed', top: 12, right: 12, zIndex: 'var(--z-modal-nested)',
+              background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 'var(--radius-md)',
               padding: '10px 18px', color: '#fff', fontSize: 'var(--fs-xl)', fontWeight: 700, cursor: 'pointer',
               backdropFilter: 'blur(8px)',
             }}
@@ -1420,7 +1420,7 @@ export default function AirfieldChecksPage() {
             alt="Airfield Diagram"
             onClick={(e) => e.stopPropagation()}
             onTouchEnd={(e) => e.stopPropagation()}
-            style={{ maxWidth: '100%', maxHeight: 'calc(100vh - 100px)', objectFit: 'contain', borderRadius: 8 }}
+            style={{ maxWidth: '100%', maxHeight: 'calc(100vh - 100px)', objectFit: 'contain', borderRadius: 'var(--radius-md)' }}
           />
         </div>
       )}

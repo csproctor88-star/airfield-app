@@ -119,7 +119,7 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
       `}</style>
       <div style={{
         width: '96vw', maxWidth: 960, height: '90vh', maxHeight: 800,
-        background: 'var(--color-bg)', borderRadius: 16,
+        background: 'var(--color-bg)', borderRadius: 'var(--radius-xl)',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
         {/* Header */}
@@ -138,7 +138,7 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{
-                flex: '1 1 200px', minWidth: 0, padding: '10px 12px', borderRadius: 8,
+                flex: '1 1 200px', minWidth: 0, padding: '10px 12px', borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--color-border)',
                 background: 'var(--color-bg-surface)', color: 'var(--color-text)',
                 fontSize: 'var(--fs-base)',
@@ -149,7 +149,7 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
                 <button
                   onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
                   style={{
-                    padding: '6px 12px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                    padding: '6px 12px', borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
                     fontSize: 'var(--fs-sm)', fontWeight: 700, whiteSpace: 'nowrap',
                     background: showFavoritesOnly ? 'var(--color-amber)' : 'var(--color-bg-surface)',
                     color: showFavoritesOnly ? '#000' : 'var(--color-amber)',
@@ -163,7 +163,7 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
                   key={g.key}
                   onClick={() => setActiveGroup(g.key)}
                   style={{
-                    padding: '6px 12px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                    padding: '6px 12px', borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
                     fontSize: 'var(--fs-sm)', fontWeight: 700, whiteSpace: 'nowrap',
                     background: activeGroup === g.key ? 'var(--color-cyan)' : 'var(--color-bg-surface)',
                     color: activeGroup === g.key ? '#000' : 'var(--color-text-2)',
@@ -225,7 +225,7 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
                 onClick={() => onSelect(sp)}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  padding: 6, borderRadius: 10,
+                  padding: 6, borderRadius: 'var(--radius-md)',
                   border: isFav ? '1.5px solid var(--color-amber)' : '1px solid var(--color-border)',
                   background: 'var(--color-bg-surface)', cursor: 'pointer',
                   textAlign: 'center', color: 'var(--color-text)',
@@ -233,7 +233,7 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
                 }}
               >
                 <div style={{
-                  width: '100%', aspectRatio: '4/3', borderRadius: 8, overflow: 'hidden',
+                  width: '100%', aspectRatio: '4/3', borderRadius: 'var(--radius-md)', overflow: 'hidden',
                   background: 'var(--color-bg)', marginBottom: 4, position: 'relative',
                 }}>
                   <img

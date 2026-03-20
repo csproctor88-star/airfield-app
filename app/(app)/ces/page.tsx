@@ -129,7 +129,7 @@ export default function CESDashboardPage() {
           href="/discrepancies"
           style={{
             background: 'rgba(34,211,238,0.12)', border: '1px solid rgba(34,211,238,0.3)',
-            borderRadius: 8, padding: '7px 12px', color: 'var(--color-cyan)',
+            borderRadius: 'var(--radius-md)', padding: '7px 12px', color: 'var(--color-cyan)',
             fontSize: 'var(--fs-base)', fontWeight: 700, textDecoration: 'none',
           }}
         >
@@ -143,7 +143,7 @@ export default function CESDashboardPage() {
           type="button"
           onClick={() => setActiveShop('__all')}
           style={{
-            padding: '5px 12px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 700,
+            padding: '5px 12px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-sm)', fontWeight: 700,
             cursor: 'pointer', fontFamily: 'inherit',
             border: activeShop === '__all' ? '1.5px solid var(--color-cyan)' : '1px solid var(--color-border)',
             background: activeShop === '__all' ? 'rgba(34,211,238,0.12)' : 'transparent',
@@ -155,7 +155,7 @@ export default function CESDashboardPage() {
             marginLeft: 6, fontSize: 'var(--fs-xs)', fontWeight: 600,
             background: activeShop === '__all' ? 'rgba(34,211,238,0.2)' : 'var(--color-border)',
             color: activeShop === '__all' ? 'var(--color-cyan)' : 'var(--color-text-3)',
-            padding: '0 5px', borderRadius: 3,
+            padding: '0 5px', borderRadius: 'var(--radius-xs)',
           }}>
             {cesItems.length}
           </span>
@@ -169,7 +169,7 @@ export default function CESDashboardPage() {
               type="button"
               onClick={() => setActiveShop(active ? '__all' : shop)}
               style={{
-                padding: '5px 12px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 700,
+                padding: '5px 12px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                 cursor: 'pointer', fontFamily: 'inherit',
                 border: active ? '1.5px solid var(--color-orange)' : '1px solid var(--color-border)',
                 background: active ? 'rgba(249,115,22,0.12)' : 'transparent',
@@ -182,7 +182,7 @@ export default function CESDashboardPage() {
                   marginLeft: 6, fontSize: 'var(--fs-xs)', fontWeight: 600,
                   background: active ? 'rgba(249,115,22,0.2)' : 'var(--color-border)',
                   color: active ? 'var(--color-orange)' : 'var(--color-text-3)',
-                  padding: '0 5px', borderRadius: 3,
+                  padding: '0 5px', borderRadius: 'var(--radius-xs)',
                 }}>
                   {count}
                 </span>
@@ -247,7 +247,7 @@ export default function CESDashboardPage() {
                       style={{
                         display: 'flex', alignItems: 'center', gap: 8,
                         padding: '10px 12px', background: 'var(--color-bg-surface)',
-                        borderRadius: 8, border: `1px solid ${days > 30 ? 'rgba(239,68,68,0.3)' : 'var(--color-border)'}`,
+                        borderRadius: 'var(--radius-md)', border: `1px solid ${days > 30 ? 'rgba(239,68,68,0.3)' : 'var(--color-border)'}`,
                         fontSize: 'var(--fs-sm)',
                       }}
                     >
@@ -272,7 +272,7 @@ export default function CESDashboardPage() {
                             {d.title}
                           </span>
                           <span style={{
-                            fontSize: 'var(--fs-xs)', fontWeight: 600, padding: '1px 6px', borderRadius: 4,
+                            fontSize: 'var(--fs-xs)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--radius-xs)',
                             background: `${statusColor}18`, color: statusColor, flexShrink: 0,
                           }}>
                             {CURRENT_STATUS_LABELS[d.current_status] || d.current_status}
@@ -299,7 +299,7 @@ export default function CESDashboardPage() {
                         onClick={() => setStatusModal(d)}
                         style={{
                           background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.3)',
-                          borderRadius: 6, padding: '4px 10px', color: 'var(--color-cyan)',
+                          borderRadius: 'var(--radius-sm)', padding: '4px 10px', color: 'var(--color-cyan)',
                           fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                           flexShrink: 0, whiteSpace: 'nowrap',
                         }}
@@ -326,7 +326,7 @@ export default function CESDashboardPage() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
                       padding: '6px 10px', background: 'var(--color-bg-surface)',
-                      borderRadius: 6, border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)',
                       fontSize: 'var(--fs-xs)', textDecoration: 'none', color: 'inherit',
                     }}
                   >

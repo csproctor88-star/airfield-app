@@ -101,13 +101,13 @@ export default function PdfExportDialog({ open, mode, onClose, onExport, exporti
   return (
     <div
       className="modal-overlay"
-      style={{ zIndex: 9999 }}
+      style={{ zIndex: 'var(--z-modal)' }}
       onClick={(e) => { if (e.target === e.currentTarget && !exporting) onClose() }}
     >
       <div style={{
         background: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
-        borderRadius: 14,
+        borderRadius: 'var(--radius-lg)',
         padding: 20,
         width: '100%',
         maxWidth: 420,
@@ -140,7 +140,7 @@ export default function PdfExportDialog({ open, mode, onClose, onExport, exporti
               <button
                 onClick={() => handleSelectTemplate(t.name)}
                 style={{
-                  padding: '5px 12px', borderRadius: 6,
+                  padding: '5px 12px', borderRadius: 'var(--radius-sm)',
                   border: activeTemplateName === t.name ? '1px solid var(--color-cyan)' : '1px solid var(--color-border)',
                   background: activeTemplateName === t.name ? 'rgba(34,211,238,0.12)' : 'transparent',
                   color: activeTemplateName === t.name ? 'var(--color-cyan)' : 'var(--color-text-2)',
@@ -172,7 +172,7 @@ export default function PdfExportDialog({ open, mode, onClose, onExport, exporti
           display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px',
           marginBottom: 12,
           background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
-          borderRadius: 8, padding: 10,
+          borderRadius: 'var(--radius-md)', padding: 10,
         }}>
           {BASIC_COLUMNS.map(key => (
             <label key={key} style={{
@@ -228,7 +228,7 @@ export default function PdfExportDialog({ open, mode, onClose, onExport, exporti
               placeholder="Template name"
               onKeyDown={e => e.key === 'Enter' && handleSaveTemplate()}
               style={{
-                flex: 1, padding: '6px 10px', borderRadius: 6,
+                flex: 1, padding: '6px 10px', borderRadius: 'var(--radius-sm)',
                 border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
                 color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
               }}
@@ -237,7 +237,7 @@ export default function PdfExportDialog({ open, mode, onClose, onExport, exporti
               onClick={handleSaveTemplate}
               disabled={!saveName.trim()}
               style={{
-                padding: '6px 12px', borderRadius: 6,
+                padding: '6px 12px', borderRadius: 'var(--radius-sm)',
                 border: '1px solid rgba(34,211,238,0.3)', background: 'rgba(34,211,238,0.1)',
                 color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600,
                 cursor: saveName.trim() ? 'pointer' : 'default', fontFamily: 'inherit',
@@ -249,7 +249,7 @@ export default function PdfExportDialog({ open, mode, onClose, onExport, exporti
             <button
               onClick={() => { setShowSave(false); setSaveName('') }}
               style={{
-                padding: '6px 10px', borderRadius: 6,
+                padding: '6px 10px', borderRadius: 'var(--radius-sm)',
                 border: '1px solid var(--color-border)', background: 'transparent',
                 color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)',
                 cursor: 'pointer', fontFamily: 'inherit',
@@ -265,7 +265,7 @@ export default function PdfExportDialog({ open, mode, onClose, onExport, exporti
           onClick={handleExport}
           disabled={exporting}
           style={{
-            width: '100%', padding: '12px 0', borderRadius: 10,
+            width: '100%', padding: '12px 0', borderRadius: 'var(--radius-md)',
             border: mode === 'download'
               ? '1px solid rgba(34,197,94,0.4)'
               : '1px solid rgba(168,85,247,0.4)',

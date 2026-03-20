@@ -178,7 +178,7 @@ export default function AnnualReviewYearPage() {
           &larr; Waivers
         </Link>
         <button onClick={handleExport}
-          style={{ background: 'color-mix(in srgb, var(--color-green) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-green) 20%, transparent)', borderRadius: 8, padding: '6px 10px', color: 'var(--color-green)', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+          style={{ background: 'color-mix(in srgb, var(--color-green) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-green) 20%, transparent)', borderRadius: 'var(--radius-md)', padding: '6px 10px', color: 'var(--color-green)', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
           Export Year Review
         </button>
       </div>
@@ -186,12 +186,12 @@ export default function AnnualReviewYearPage() {
       {/* Year Header with Nav */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, justifyContent: 'center' }}>
         <button onClick={() => { router.push(`/waivers/annual-review/${year - 1}`); setKpiFilter(null) }}
-          style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '6px 10px', color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', cursor: 'pointer', fontFamily: 'inherit' }}>
+          style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', padding: '6px 10px', color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', cursor: 'pointer', fontFamily: 'inherit' }}>
           &larr;
         </button>
         <span style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{year} Review</span>
         <button onClick={() => { router.push(`/waivers/annual-review/${year + 1}`); setKpiFilter(null) }} disabled={year >= currentYear}
-          style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '6px 10px', color: year >= currentYear ? 'var(--color-text-4)' : 'var(--color-text-2)', fontSize: 'var(--fs-md)', cursor: 'pointer', fontFamily: 'inherit' }}>
+          style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', padding: '6px 10px', color: year >= currentYear ? 'var(--color-text-4)' : 'var(--color-text-2)', fontSize: 'var(--fs-md)', cursor: 'pointer', fontFamily: 'inherit' }}>
           &rarr;
         </button>
       </div>
@@ -271,12 +271,12 @@ export default function AnnualReviewYearPage() {
                 {isExpanded && (
                   <div style={{ marginTop: 12, borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
                     {reviewed && (
-                      <div style={{ marginBottom: 8, padding: '6px 8px', background: 'color-mix(in srgb, var(--color-green) 7%, transparent)', borderRadius: 6, fontSize: 'var(--fs-sm)', color: 'var(--color-green)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ marginBottom: 8, padding: '6px 8px', background: 'color-mix(in srgb, var(--color-green) 7%, transparent)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-sm)', color: 'var(--color-green)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span>Reviewed for {year}</span>
                         <button
                           onClick={() => review && handleDeleteReview(review.id, w.id)}
                           disabled={saving === w.id}
-                          style={{ background: 'color-mix(in srgb, var(--color-red) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-red) 20%, transparent)', borderRadius: 4, padding: '2px 8px', color: 'var(--color-red)', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                          style={{ background: 'color-mix(in srgb, var(--color-red) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-red) 20%, transparent)', borderRadius: 'var(--radius-xs)', padding: '2px 8px', color: 'var(--color-red)', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
                         >
                           Remove Review
                         </button>
@@ -337,7 +337,7 @@ export default function AnnualReviewYearPage() {
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                       <Link href={`/waivers/${w.id}`}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', color: 'var(--color-text-2)', fontSize: 'var(--fs-base)', fontWeight: 600, textDecoration: 'none' }}>
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 10, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', color: 'var(--color-text-2)', fontSize: 'var(--fs-base)', fontWeight: 600, textDecoration: 'none' }}>
                         View Detail
                       </Link>
                       {!reviewed && (

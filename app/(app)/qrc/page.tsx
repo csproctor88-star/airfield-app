@@ -124,7 +124,7 @@ export default function QrcPage() {
             key={t.key}
             onClick={() => { setTab(t.key); setActiveExecId(null) }}
             style={{
-              padding: '8px 16px', borderRadius: 8, fontFamily: 'inherit',
+              padding: '8px 16px', borderRadius: 'var(--radius-md)', fontFamily: 'inherit',
               border: tab === t.key ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
               cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700,
               background: tab === t.key ? 'rgba(56,189,248,0.12)' : 'var(--color-bg-inset)',
@@ -157,7 +157,7 @@ export default function QrcPage() {
                 style={{
                   background: 'var(--color-bg-surface)',
                   border: '1px solid var(--color-border)',
-                  borderRadius: 12,
+                  borderRadius: 'var(--radius-lg)',
                   padding: '14px 16px',
                   cursor: 'pointer',
                   textAlign: 'left',
@@ -169,7 +169,7 @@ export default function QrcPage() {
                   <span style={{
                     fontSize: 'var(--fs-base)', fontWeight: 800,
                     color: 'var(--color-bg-surface)', background: 'var(--color-orange)',
-                    padding: '3px 10px', borderRadius: 6, minWidth: 48, textAlign: 'center',
+                    padding: '3px 10px', borderRadius: 'var(--radius-sm)', minWidth: 48, textAlign: 'center',
                   }}>
                     QRC-{tmpl.qrc_number}
                   </span>
@@ -220,7 +220,7 @@ export default function QrcPage() {
                   style={{
                     background: 'var(--color-bg-surface)',
                     border: '1px solid rgba(234,179,8,0.3)',
-                    borderRadius: 10,
+                    borderRadius: 'var(--radius-md)',
                     padding: '12px 16px',
                     cursor: 'pointer',
                     textAlign: 'left',
@@ -233,7 +233,7 @@ export default function QrcPage() {
                   <span style={{
                     fontSize: 'var(--fs-base)', fontWeight: 800,
                     color: 'var(--color-bg-surface)', background: 'var(--color-orange)',
-                    padding: '3px 10px', borderRadius: 6,
+                    padding: '3px 10px', borderRadius: 'var(--radius-sm)',
                   }}>QRC-{ex.qrc_number}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>{ex.title}</div>
@@ -243,7 +243,7 @@ export default function QrcPage() {
                     </div>
                   </div>
                   <span style={{
-                    fontSize: 'var(--fs-sm)', fontWeight: 700, padding: '3px 10px', borderRadius: 8,
+                    fontSize: 'var(--fs-sm)', fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--radius-md)',
                     background: 'rgba(234,179,8,0.12)', color: 'var(--color-amber)',
                   }}>OPEN</span>
                 </button>
@@ -263,7 +263,7 @@ export default function QrcPage() {
                 style={{
                   background: 'var(--color-bg-surface)',
                   border: '1px solid var(--color-border)',
-                  borderRadius: 10,
+                  borderRadius: 'var(--radius-md)',
                   padding: '12px 16px',
                   cursor: 'pointer',
                   textAlign: 'left',
@@ -276,7 +276,7 @@ export default function QrcPage() {
                 <span style={{
                   fontSize: 'var(--fs-base)', fontWeight: 800,
                   color: '#fff', background: ex.status === 'open' ? '#D97706' : 'var(--color-green)',
-                  padding: '3px 10px', borderRadius: 6,
+                  padding: '3px 10px', borderRadius: 'var(--radius-sm)',
                 }}>QRC-{ex.qrc_number}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>{ex.title}</div>
@@ -286,7 +286,7 @@ export default function QrcPage() {
                   </div>
                 </div>
                 <span style={{
-                  fontSize: 'var(--fs-sm)', fontWeight: 700, padding: '3px 10px', borderRadius: 8,
+                  fontSize: 'var(--fs-sm)', fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--radius-md)',
                   background: ex.status === 'open' ? 'rgba(234,179,8,0.12)' : 'rgba(34,197,94,0.12)',
                   color: ex.status === 'open' ? 'var(--color-amber)' : 'var(--color-green)',
                 }}>{ex.status === 'open' ? 'OPEN' : 'CLOSED'}</span>
@@ -522,7 +522,7 @@ function QrcExecutionView({
         <div style={{
           display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 12px',
           background: checked ? 'rgba(34,197,94,0.04)' : 'transparent',
-          borderRadius: 8, border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
         }}>
           {/* Step number */}
           <span style={{
@@ -544,7 +544,7 @@ function QrcExecutionView({
                   }}
                 >
                   <span style={{
-                    width: 24, height: 24, borderRadius: 5, flexShrink: 0,
+                    width: 24, height: 24, borderRadius: 'var(--radius-sm)', flexShrink: 0,
                     border: checked ? 'none' : '2px solid var(--color-border-mid)',
                     background: checked ? 'var(--color-green)' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -586,7 +586,7 @@ function QrcExecutionView({
                         }}
                       >
                         <span style={{
-                          width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                          width: 20, height: 20, borderRadius: 'var(--radius-xs)', flexShrink: 0,
                           border: agencyChecked ? 'none' : '2px solid var(--color-border-mid)',
                           background: agencyChecked ? 'var(--color-green)' : 'transparent',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -642,7 +642,7 @@ function QrcExecutionView({
                       onClick={() => handleFieldChange(step.id, zuluNow())}
                       style={{
                         background: 'rgba(34,211,238,0.1)', border: '1px solid var(--color-cyan)',
-                        borderRadius: 6, padding: '5px 12px', color: 'var(--color-cyan)',
+                        borderRadius: 'var(--radius-sm)', padding: '5px 12px', color: 'var(--color-cyan)',
                         fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                       }}
                     >Now (Z)</button>
@@ -690,7 +690,7 @@ function QrcExecutionView({
             <span style={{
               fontSize: 'var(--fs-lg)', fontWeight: 800,
               color: '#fff', background: isClosed ? 'var(--color-green)' : '#D97706',
-              padding: '4px 12px', borderRadius: 6,
+              padding: '4px 12px', borderRadius: 'var(--radius-sm)',
             }}>QRC-{execution.qrc_number}</span>
             <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
               {execution.title}
@@ -704,7 +704,7 @@ function QrcExecutionView({
           </div>
         </div>
         <span style={{
-          fontSize: 'var(--fs-sm)', fontWeight: 700, padding: '3px 10px', borderRadius: 8,
+          fontSize: 'var(--fs-sm)', fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--radius-md)',
           background: isClosed ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
           color: isClosed ? 'var(--color-green)' : 'var(--color-amber)',
         }}>{isClosed ? 'CLOSED' : 'OPEN'}</span>
@@ -713,7 +713,7 @@ function QrcExecutionView({
       {/* Warning note */}
       {template?.notes && (
         <div style={{
-          padding: '8px 12px', borderRadius: 8, marginBottom: 12,
+          padding: '8px 12px', borderRadius: 'var(--radius-md)', marginBottom: 12,
           background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
           fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-red)',
         }}>
@@ -750,7 +750,7 @@ function QrcExecutionView({
       {/* SCN Form — data entry at top for quick capture */}
       {template?.has_scn_form && template.scn_fields && (
         <div style={{
-          padding: 16, borderRadius: 10, marginBottom: 16,
+          padding: 16, borderRadius: 'var(--radius-md)', marginBottom: 16,
           background: 'var(--color-bg-surface)', border: '1px solid rgba(34,211,238,0.2)',
         }}>
           <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-cyan)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -794,7 +794,7 @@ function QrcExecutionView({
       {/* Annual Review Section */}
       {template && (
         <div style={{
-          padding: 14, borderRadius: 10, marginBottom: 16,
+          padding: 14, borderRadius: 'var(--radius-md)', marginBottom: 16,
           background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -803,7 +803,7 @@ function QrcExecutionView({
             </div>
             {template.last_reviewed_at ? (
               <span style={{
-                fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 8px', borderRadius: 6,
+                fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-sm)',
                 background: isReviewOverdue(template.last_reviewed_at) ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)',
                 color: isReviewOverdue(template.last_reviewed_at) ? 'var(--color-red)' : 'var(--color-green)',
               }}>
@@ -811,7 +811,7 @@ function QrcExecutionView({
               </span>
             ) : (
               <span style={{
-                fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 8px', borderRadius: 6,
+                fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-sm)',
                 background: 'rgba(239,68,68,0.12)', color: 'var(--color-red)',
               }}>NEVER REVIEWED</span>
             )}
@@ -842,7 +842,7 @@ function QrcExecutionView({
                   onClick={handleReview}
                   disabled={reviewing}
                   style={{
-                    flex: 1, padding: '8px 0', borderRadius: 8, border: 'none',
+                    flex: 1, padding: '8px 0', borderRadius: 'var(--radius-md)', border: 'none',
                     background: 'var(--color-cyan)', color: '#fff', fontWeight: 700,
                     fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
                   }}
@@ -850,7 +850,7 @@ function QrcExecutionView({
                 <button
                   onClick={() => setShowReview(false)}
                   style={{
-                    padding: '8px 14px', borderRadius: 8, border: '1px solid var(--color-border)',
+                    padding: '8px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
                     background: 'transparent', color: 'var(--color-text-2)', fontWeight: 700,
                     fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
                   }}
@@ -861,7 +861,7 @@ function QrcExecutionView({
             <button
               onClick={() => setShowReview(true)}
               style={{
-                padding: '6px 14px', borderRadius: 8,
+                padding: '6px 14px', borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--color-cyan)', background: 'rgba(34,211,238,0.06)',
                 color: 'var(--color-cyan)', fontWeight: 700, fontSize: 'var(--fs-sm)',
                 cursor: 'pointer', fontFamily: 'inherit',
@@ -875,7 +875,7 @@ function QrcExecutionView({
       {!isClosed ? (
         showCloseConfirm ? (
           <div style={{
-            padding: 16, borderRadius: 10,
+            padding: 16, borderRadius: 'var(--radius-md)',
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
           }}>
             <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
@@ -893,7 +893,7 @@ function QrcExecutionView({
                 onClick={handleClose}
                 disabled={closing}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', border: 'none',
                   background: 'var(--color-green)', color: '#fff', fontWeight: 700,
                   fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
                 }}
@@ -901,7 +901,7 @@ function QrcExecutionView({
               <button
                 onClick={() => setShowCloseConfirm(false)}
                 style={{
-                  padding: '10px 16px', borderRadius: 8,
+                  padding: '10px 16px', borderRadius: 'var(--radius-md)',
                   border: '1px solid var(--color-border)', background: 'transparent',
                   color: 'var(--color-text-2)', fontWeight: 700, fontSize: 'var(--fs-base)',
                   cursor: 'pointer', fontFamily: 'inherit',
@@ -914,7 +914,7 @@ function QrcExecutionView({
             <button
               onClick={() => setShowCloseConfirm(true)}
               style={{
-                flex: 1, padding: '12px 0', borderRadius: 8, border: 'none',
+                flex: 1, padding: '12px 0', borderRadius: 'var(--radius-md)', border: 'none',
                 background: 'var(--color-green)', color: '#fff', fontWeight: 700,
                 fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
               }}
@@ -922,7 +922,7 @@ function QrcExecutionView({
             <button
               onClick={handleCancel}
               style={{
-                padding: '12px 16px', borderRadius: 8,
+                padding: '12px 16px', borderRadius: 'var(--radius-md)',
                 border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.06)',
                 color: 'var(--color-red)', fontWeight: 700, fontSize: 'var(--fs-base)',
                 cursor: 'pointer', fontFamily: 'inherit',
@@ -934,7 +934,7 @@ function QrcExecutionView({
         <button
           onClick={handleReopen}
           style={{
-            width: '100%', padding: '10px 0', borderRadius: 8,
+            width: '100%', padding: '10px 0', borderRadius: 'var(--radius-md)',
             border: '1px solid var(--color-border-mid)', background: 'transparent',
             color: 'var(--color-text-2)', fontWeight: 700, fontSize: 'var(--fs-base)',
             cursor: 'pointer', fontFamily: 'inherit',
@@ -949,7 +949,7 @@ function QrcExecutionView({
             onClick={handleExportPdf}
             disabled={generatingPdf}
             style={{
-              flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
+              flex: 1, padding: '12px', borderRadius: 'var(--radius-md)', textAlign: 'center',
               background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
               color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
               fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
@@ -962,7 +962,7 @@ function QrcExecutionView({
             onClick={handleEmailPdf}
             disabled={generatingPdf}
             style={{
-              padding: '12px 16px', borderRadius: 10, textAlign: 'center',
+              padding: '12px 16px', borderRadius: 'var(--radius-md)', textAlign: 'center',
               background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
               color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
               fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',

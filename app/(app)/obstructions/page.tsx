@@ -572,7 +572,7 @@ function ObstructionsContent() {
           width: '100%',
           marginTop: 8,
           padding: '10px 16px',
-          borderRadius: 8,
+          borderRadius: 'var(--radius-md)',
           border: '1px solid var(--color-border-active)',
           background: 'var(--color-border)',
           color: 'var(--color-accent)',
@@ -713,7 +713,7 @@ function ObstructionsContent() {
                   style={{
                     width: 64,
                     height: 64,
-                    borderRadius: 8,
+                    borderRadius: 'var(--radius-md)',
                     overflow: 'hidden',
                     border: '1px solid var(--color-border-active)',
                     flexShrink: 0,
@@ -824,13 +824,13 @@ function ObstructionsContent() {
                 marginTop: 4,
               }}
             >
-              <div style={{ background: 'var(--color-bg-inset)', borderRadius: 6, padding: '6px 8px' }}>
+              <div style={{ background: 'var(--color-bg-inset)', borderRadius: 'var(--radius-sm)', padding: '6px 8px' }}>
                 <div style={{ color: 'var(--color-text-3)', marginBottom: 2 }}>Total Obstruction Height MSL</div>
                 <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
                   {multiAnalysis.obstructionTopMSL.toFixed(0)} ft MSL
                 </div>
               </div>
-              <div style={{ background: 'var(--color-bg-inset)', borderRadius: 6, padding: '6px 8px' }}>
+              <div style={{ background: 'var(--color-bg-inset)', borderRadius: 'var(--radius-sm)', padding: '6px 8px' }}>
                 <div style={{ color: 'var(--color-text-3)', marginBottom: 2 }}>Max Allowable</div>
                 <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
                   {multiAnalysis.controllingSurface
@@ -838,7 +838,7 @@ function ObstructionsContent() {
                     : 'N/A'}
                 </div>
               </div>
-              <div style={{ background: 'var(--color-bg-inset)', borderRadius: 6, padding: '6px 8px' }}>
+              <div style={{ background: 'var(--color-bg-inset)', borderRadius: 'var(--radius-sm)', padding: '6px 8px' }}>
                 <div style={{ color: 'var(--color-text-3)', marginBottom: 2 }}>CL Distance</div>
                 <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
                   {pointInfo?.distFromCenterline.toFixed(0) ?? '—'} ft
@@ -862,7 +862,7 @@ function ObstructionsContent() {
                   style={{
                     background: showVerify ? 'var(--color-accent)' : 'var(--color-border)',
                     border: `1px solid ${showVerify ? 'var(--color-accent)' : 'var(--color-border-active)'}`,
-                    borderRadius: 6,
+                    borderRadius: 'var(--radius-sm)',
                     padding: '3px 8px',
                     color: showVerify ? '#fff' : 'var(--color-text-2)',
                     fontSize: 'var(--fs-xs)',
@@ -885,7 +885,7 @@ function ObstructionsContent() {
                       style={{
                         background: 'var(--color-bg-inset)',
                         border: `1px solid ${s.violated ? 'rgba(239,68,68,0.3)' : isLandUseZone ? `${s.color}33` : 'var(--color-border)'}`,
-                        borderRadius: 8,
+                        borderRadius: 'var(--radius-md)',
                         padding: 10,
                         marginBottom: 6,
                       }}
@@ -895,7 +895,7 @@ function ObstructionsContent() {
                           style={{
                             width: 8,
                             height: 8,
-                            borderRadius: 2,
+                            borderRadius: 'var(--radius-xs)',
                             background: s.color,
                             flexShrink: 0,
                           }}
@@ -909,7 +909,7 @@ function ObstructionsContent() {
                               fontSize: 'var(--fs-xs)',
                               fontWeight: 800,
                               padding: '2px 6px',
-                              borderRadius: 4,
+                              borderRadius: 'var(--radius-xs)',
                               background: `${s.color}22`,
                               color: s.color,
                             }}
@@ -922,7 +922,7 @@ function ObstructionsContent() {
                               fontSize: 'var(--fs-xs)',
                               fontWeight: 800,
                               padding: '2px 6px',
-                              borderRadius: 4,
+                              borderRadius: 'var(--radius-xs)',
                               background: s.violated ? '#EF444422' : '#22C55E22',
                               color: s.violated ? 'var(--color-danger)' : 'var(--color-status-pass)',
                             }}
@@ -953,7 +953,7 @@ function ObstructionsContent() {
                                 padding: '6px 8px',
                                 background: 'var(--color-bg-surface)',
                                 border: '1px solid var(--color-border)',
-                                borderRadius: 6,
+                                borderRadius: 'var(--radius-sm)',
                               }}
                             >
                               <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 3 }}>
@@ -1000,7 +1000,7 @@ function ObstructionsContent() {
                           marginBottom: 2,
                         }}
                       >
-                        <span style={{ width: 6, height: 6, borderRadius: 2, background: s.color, opacity: 0.3, flexShrink: 0 }} />
+                        <span style={{ width: 6, height: 6, borderRadius: 'var(--radius-xs)', background: s.color, opacity: 0.3, flexShrink: 0 }} />
                         {s.surfaceName}
                       </div>
                     ))}
@@ -1023,18 +1023,18 @@ function ObstructionsContent() {
                     style={{
                       background: 'var(--color-bg-inset)',
                       border: `1px solid ${r.violated ? 'rgba(245,158,11,0.3)' : 'var(--color-border)'}`,
-                      borderRadius: 8,
+                      borderRadius: 'var(--radius-md)',
                       padding: 10,
                       marginBottom: 6,
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 2, background: r.color, flexShrink: 0 }} />
+                      <span style={{ width: 8, height: 8, borderRadius: 'var(--radius-xs)', background: r.color, flexShrink: 0 }} />
                       <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)', flex: 1 }}>
                         {r.surfaceName}
                       </span>
                       <span style={{
-                        fontSize: 'var(--fs-xs)', fontWeight: 800, padding: '2px 6px', borderRadius: 4,
+                        fontSize: 'var(--fs-xs)', fontWeight: 800, padding: '2px 6px', borderRadius: 'var(--radius-xs)',
                         background: r.violated ? '#F59E0B22' : '#22C55E22',
                         color: r.violated ? '#F59E0B' : 'var(--color-status-pass)',
                       }}>
@@ -1065,7 +1065,7 @@ function ObstructionsContent() {
                           display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 4, marginBottom: 2,
                         }}
                       >
-                        <span style={{ width: 6, height: 6, borderRadius: 2, background: r.color, opacity: 0.3, flexShrink: 0 }} />
+                        <span style={{ width: 6, height: 6, borderRadius: 'var(--radius-xs)', background: r.color, opacity: 0.3, flexShrink: 0 }} />
                         {r.surfaceName} ({r.distanceFromCenterlineFt} ft from CL)
                       </div>
                     ))}
@@ -1093,7 +1093,7 @@ function ObstructionsContent() {
                   style={{
                     background: 'rgba(239, 68, 68, 0.06)',
                     border: '1px solid rgba(239, 68, 68, 0.15)',
-                    borderRadius: 6,
+                    borderRadius: 'var(--radius-sm)',
                     padding: '8px 10px',
                     marginBottom: 6,
                   }}
