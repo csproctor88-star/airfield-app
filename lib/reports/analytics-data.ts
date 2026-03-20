@@ -197,29 +197,51 @@ async function fetchInspectionAnalytics(supabase: any, baseId: string, since: st
 async function fetchCheckAnalytics(supabase: any, baseId: string, since: string) {
   const { data } = await supabase
     .from('airfield_checks')
-    .select('check_type, created_at, completed_at')
+    .select('check_type, created_at')
     .eq('base_id', baseId)
     .gte('created_at', since)
 
-  const rows = (data ?? []) as { check_type: string; created_at: string; completed_at: string | null }[]
+  const rows = (data ?? []) as { check_type: string; created_at: string }[]
 
   const typeCounts: Record<string, number> = {}
   const dayCounts: Record<string, number> = {}
-  let totalMinutes = 0
-  let completedWithTime = 0
 
   for (const r of rows) {
     typeCounts[r.check_type] = (typeCounts[r.check_type] || 0) + 1
     const day = r.created_at.slice(0, 10)
     dayCounts[day] = (dayCounts[day] || 0) + 1
-    if (r.completed_at) {
-      const mins = (new Date(r.completed_at).getTime() - new Date(r.created_at).getTime()) / 60000
-      if (mins > 0 && mins < 480) { // exclude >8h as unreasonable
-        totalMinutes += mins
-        completedWithTime++
-      }
-    }
   }
+
+  // Use activity log started→completed pairs for actual on-airfield time
+  const { data: activityRows } = await supabase
+    .from('activity_log')
+    .select('action, entity_type, entity_id, created_at')
+    .eq('base_id', baseId)
+    .eq('entity_type', 'airfield_check')
+    .in('action', ['started', 'completed'])
+    .gte('created_at', since)
+    .order('created_at', { ascending: true })
+
+  const checkTimingMap = new Map<string, { startedAt: string | null; completedAt: string | null }>()
+  for (const entry of (activityRows ?? []) as { action: string; entity_id: string; created_at: string }[]) {
+    if (!checkTimingMap.has(entry.entity_id)) {
+      checkTimingMap.set(entry.entity_id, { startedAt: null, completedAt: null })
+    }
+    const rec = checkTimingMap.get(entry.entity_id)!
+    if (entry.action === 'started') rec.startedAt = entry.created_at
+    else if (entry.action === 'completed') rec.completedAt = entry.created_at
+  }
+
+  let totalMinutes = 0
+  let completedWithTime = 0
+  checkTimingMap.forEach((rec) => {
+    if (!rec.startedAt || !rec.completedAt) return
+    const mins = (new Date(rec.completedAt).getTime() - new Date(rec.startedAt).getTime()) / 60000
+    if (mins > 0 && mins < 480) { // exclude >8h as unreasonable
+      totalMinutes += mins
+      completedWithTime++
+    }
+  })
 
   const uniqueDays = Object.keys(dayCounts).length
   const byType = Object.entries(typeCounts)
