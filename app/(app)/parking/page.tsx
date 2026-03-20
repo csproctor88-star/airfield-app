@@ -1797,22 +1797,14 @@ export default function ParkingPage() {
     let mapDataUrl: string | null = null
 
     if (m) {
-      const prevCenter = m.getCenter()
-      const prevZoom = m.getZoom()
       const prevPitch = m.getPitch()
-      const prevBearing = m.getBearing()
 
-      const container = m.getContainer()
-      const prevWidth = container.style.width
-      const prevHeight = container.style.height
-      const prevPosition = container.style.position
-      container.style.position = 'fixed'
-      container.style.width = '1600px'
-      container.style.height = '900px'
-      m.resize()
+      // Flatten pitch for clean top-down capture, keep current zoom/center/bearing
+      if (prevPitch > 0) {
+        m.jumpTo({ pitch: 0 })
+      }
 
-      m.jumpTo({ pitch: 0 })
-
+      // Wait for tiles to load at current view
       await new Promise<void>(resolve => {
         const onIdle = () => { m.off('idle', onIdle); resolve() }
         m.on('idle', onIdle)
@@ -1823,11 +1815,10 @@ export default function ParkingPage() {
 
       mapDataUrl = m.getCanvas().toDataURL('image/jpeg', 0.9)
 
-      container.style.width = prevWidth
-      container.style.height = prevHeight
-      container.style.position = prevPosition
-      m.resize()
-      m.jumpTo({ center: prevCenter, zoom: prevZoom, pitch: prevPitch, bearing: prevBearing })
+      // Restore pitch if changed
+      if (prevPitch > 0) {
+        m.jumpTo({ pitch: prevPitch })
+      }
     }
 
     return generateParkingPdf({
