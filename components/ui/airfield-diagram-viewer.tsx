@@ -46,11 +46,12 @@ export function AirfieldDiagramButton() {
 
       {open && (
         <div
+          className="modal-overlay"
           onClick={() => setOpen(false)}
           onTouchEnd={(e) => { if (e.target === e.currentTarget) setOpen(false) }}
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 9999,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            flexDirection: 'column',
+            background: 'rgba(0,0,0,0.95)', zIndex: 9999,
             padding: '60px 12px 24px',
             overflowY: 'auto', WebkitOverflowScrolling: 'touch',
           }}

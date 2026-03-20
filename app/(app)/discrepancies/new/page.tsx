@@ -227,7 +227,7 @@ export default function NewDiscrepancyPage() {
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
           ← Back
         </button>
-        <button onClick={() => router.push('/discrepancies')} style={{ background: '#FBBF2414', border: '1px solid #FBBF2433', borderRadius: 8, padding: '6px 12px', color: '#FBBF24', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+        <button onClick={() => router.push('/discrepancies')} style={{ background: 'color-mix(in srgb, var(--color-amber) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-amber) 20%, transparent)', borderRadius: 8, padding: '6px 12px', color: 'var(--color-amber)', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
           ⚠️ View All Discrepancies
         </button>
       </div>
@@ -300,7 +300,7 @@ export default function NewDiscrepancyPage() {
                       fontSize: 'var(--fs-lg)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
                     }}
                   >
-                    <span style={{ width: 20, height: 20, borderRadius: 4, border: `2px solid ${selected ? 'var(--color-cyan)' : 'var(--color-text-3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fs-md)', flexShrink: 0, background: selected ? '#22D3EE22' : 'transparent', color: 'var(--color-cyan)' }}>
+                    <span style={{ width: 20, height: 20, borderRadius: 4, border: `2px solid ${selected ? 'var(--color-cyan)' : 'var(--color-text-3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fs-md)', flexShrink: 0, background: selected ? 'color-mix(in srgb, var(--color-cyan-bright) 13%, transparent)' : 'transparent', color: 'var(--color-cyan)' }}>
                       {selected ? '✓' : ''}
                     </span>
                     <span>{t.emoji} {t.label}</span>
@@ -379,15 +379,15 @@ export default function NewDiscrepancyPage() {
                 display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
                 fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 700,
                 width: '100%', padding: '10px 12px', borderRadius: 8,
-                border: showFeaturePicker ? '2px solid #22D3EE' : '2px solid var(--color-text-4)',
-                background: showFeaturePicker ? 'rgba(34,211,238,0.08)' : 'transparent',
-                color: showFeaturePicker ? '#22D3EE' : 'var(--color-text-2)',
+                border: showFeaturePicker ? '2px solid var(--color-cyan-bright)' : '2px solid var(--color-text-4)',
+                background: showFeaturePicker ? 'color-mix(in srgb, var(--color-cyan-bright) 8%, transparent)' : 'transparent',
+                color: showFeaturePicker ? 'var(--color-cyan-bright)' : 'var(--color-text-2)',
               }}
             >
               <span style={{
                 width: 20, height: 20, borderRadius: 5, flexShrink: 0,
-                border: showFeaturePicker ? '2px solid #22D3EE' : '2px solid var(--color-text-3)',
-                background: showFeaturePicker ? '#22D3EE' : 'transparent',
+                border: showFeaturePicker ? '2px solid var(--color-cyan-bright)' : '2px solid var(--color-text-3)',
+                background: showFeaturePicker ? 'var(--color-cyan-bright)' : 'transparent',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 14, fontWeight: 800, color: '#000',
               }}>
@@ -395,7 +395,7 @@ export default function NewDiscrepancyPage() {
               </span>
               Link to Visual NAVAID
               {selectedFeatureIds.length > 0 && (
-                <span style={{ fontSize: 'var(--fs-xs)', background: 'rgba(34,211,238,0.2)', color: '#22D3EE', padding: '1px 6px', borderRadius: 4 }}>
+                <span style={{ fontSize: 'var(--fs-xs)', background: 'color-mix(in srgb, var(--color-cyan-bright) 20%, transparent)', color: 'var(--color-cyan-bright)', padding: '1px 6px', borderRadius: 4 }}>
                   {selectedFeatureIds.length} selected
                 </span>
               )}

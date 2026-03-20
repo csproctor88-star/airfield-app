@@ -28,9 +28,9 @@ import { formatZuluDate, compressImageForPdf } from '@/lib/utils'
 type ModalType = 'approve' | 'coordination' | 'review' | 'attachment' | 'status_change' | null
 
 const STATUS_CHANGE_CONFIG: Record<string, { title: string; description: string; buttonLabel: string; buttonColor: string; tag: string }> = {
-  completed: { title: 'Close Waiver', description: 'This waiver will be marked as closed, indicating it is no longer valid or open.', buttonLabel: 'Close Waiver', buttonColor: '#22C55E', tag: 'Closure' },
-  expired: { title: 'Mark Waiver Expired', description: 'This waiver will be moved from active to expired.', buttonLabel: 'Mark Expired', buttonColor: '#F59E0B', tag: 'Expired' },
-  active: { title: 'Reactivate Waiver', description: 'This waiver will be moved back to active status.', buttonLabel: 'Reactivate', buttonColor: '#8B5CF6', tag: 'Reactivated' },
+  completed: { title: 'Close Waiver', description: 'This waiver will be marked as closed, indicating it is no longer valid or open.', buttonLabel: 'Close Waiver', buttonColor: 'var(--color-green)', tag: 'Closure' },
+  expired: { title: 'Mark Waiver Expired', description: 'This waiver will be moved from active to expired.', buttonLabel: 'Mark Expired', buttonColor: 'var(--color-amber)', tag: 'Expired' },
+  active: { title: 'Reactivate Waiver', description: 'This waiver will be moved back to active status.', buttonLabel: 'Reactivate', buttonColor: 'var(--color-purple)', tag: 'Reactivated' },
 }
 
 export default function WaiverDetailPage() {
@@ -578,8 +578,8 @@ export default function WaiverDetailPage() {
             onClick={handleExportPdf}
             disabled={exporting}
             style={{
-              background: '#10B98114', border: '1px solid #10B98133', borderRadius: 8, padding: '6px 12px',
-              color: '#10B981', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+              background: 'color-mix(in srgb, var(--color-green) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-green) 20%, transparent)', borderRadius: 8, padding: '6px 12px',
+              color: 'var(--color-green)', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
               opacity: exporting ? 0.6 : 1,
             }}
           >
@@ -590,8 +590,8 @@ export default function WaiverDetailPage() {
             disabled={exporting}
             style={{
               padding: '12px 16px', borderRadius: 10, textAlign: 'center',
-              background: '#A78BFA14', border: '1px solid #A78BFA33',
-              color: '#A78BFA', fontSize: 'var(--fs-md)', fontWeight: 700,
+              background: 'color-mix(in srgb, var(--color-purple) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-purple) 20%, transparent)',
+              color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
               fontFamily: 'inherit', cursor: exporting ? 'default' : 'pointer',
               opacity: exporting ? 0.7 : 1,
             }}
@@ -603,8 +603,8 @@ export default function WaiverDetailPage() {
             <Link
               href={`/waivers/${params.id}/edit`}
               style={{
-                background: '#3B82F614', border: '1px solid #3B82F633', borderRadius: 8, padding: '6px 12px',
-                color: '#3B82F6', fontSize: 'var(--fs-base)', fontWeight: 600, textDecoration: 'none',
+                background: 'color-mix(in srgb, var(--color-blue) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-blue) 20%, transparent)', borderRadius: 8, padding: '6px 12px',
+                color: 'var(--color-blue)', fontSize: 'var(--fs-base)', fontWeight: 600, textDecoration: 'none',
               }}
             >
               Edit
@@ -622,7 +622,7 @@ export default function WaiverDetailPage() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
-          {classInfo && <Badge label={`${classInfo.emoji} ${classInfo.label}`} color="#64748B" />}
+          {classInfo && <Badge label={`${classInfo.emoji} ${classInfo.label}`} color="var(--color-text-3)" />}
           {hazardConf && <Badge label={hazardConf.label} color={hazardConf.color} bg={hazardConf.bg} />}
         </div>
         <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.6 }}>{w.description}</div>
@@ -755,7 +755,7 @@ export default function WaiverDetailPage() {
               alt="Waiver location on map"
               style={{ width: '100%', display: 'block', borderRadius: '0 0 10px 10px' }}
             />
-            <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-sm)', color: '#F59E0B', fontFamily: 'monospace', fontWeight: 600 }}>
+            <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-sm)', color: 'var(--color-amber)', fontFamily: 'monospace', fontWeight: 600 }}>
               {lat!.toFixed(5)}, {lng!.toFixed(5)}
             </div>
           </div>
@@ -775,7 +775,7 @@ export default function WaiverDetailPage() {
                 return (
                   <div key={c.id || i} style={{ padding: '8px 10px', background: 'var(--color-bg-elevated)', borderRadius: 8, border: '1px solid var(--color-border)', marginBottom: 6 }}>
                     <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
-                      <Badge label={sourceInfo?.label || c.criteria_source} color="#3B82F6" />
+                      <Badge label={sourceInfo?.label || c.criteria_source} color="var(--color-blue)" />
                       {c.reference && <span style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)' }}>{c.reference}</span>}
                     </div>
                     {c.description && <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', lineHeight: 1.4 }}>{c.description}</div>}
@@ -784,8 +784,8 @@ export default function WaiverDetailPage() {
               })
             )}
             {w.risk_assessment_summary && (
-              <div style={{ marginTop: 8, padding: '8px 10px', background: '#F59E0B11', border: '1px solid #F59E0B33', borderRadius: 8 }}>
-                <div style={{ fontSize: 'var(--fs-xs)', color: '#F59E0B', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Risk Assessment Summary</div>
+              <div style={{ marginTop: 8, padding: '8px 10px', background: 'color-mix(in srgb, var(--color-amber) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-amber) 20%, transparent)', borderRadius: 8 }}>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-amber)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Risk Assessment Summary</div>
                 <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>{w.risk_assessment_summary}</div>
               </div>
             )}
@@ -808,7 +808,7 @@ export default function WaiverDetailPage() {
             ) : (
               demoCoordination.map((c, i) => {
                 const officeInfo = WAIVER_COORDINATION_OFFICES.find(o => o.value === c.office)
-                const statusColor = c.status === 'concur' ? '#10B981' : c.status === 'non_concur' ? '#EF4444' : '#F59E0B'
+                const statusColor = c.status === 'concur' ? 'var(--color-green)' : c.status === 'non_concur' ? 'var(--color-red)' : 'var(--color-amber)'
                 return (
                   <div key={c.id || i} style={{ padding: '8px 0', borderBottom: i < demoCoordination.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -830,7 +830,7 @@ export default function WaiverDetailPage() {
                         </button>
                         <button
                           onClick={() => handleDeleteCoordination(c.id)}
-                          style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
+                          style={{ background: 'none', border: 'none', color: 'var(--color-red)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
                         >
                           Delete
                         </button>
@@ -888,7 +888,7 @@ export default function WaiverDetailPage() {
                         }}
                         style={{
                           marginLeft: 8, padding: '5px 12px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 600,
-                          background: '#3B82F614', border: '1px solid #3B82F633', color: '#3B82F6',
+                          background: 'color-mix(in srgb, var(--color-blue) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-blue) 20%, transparent)', color: 'var(--color-blue)',
                           cursor: attachmentUrls[a.id] ? 'pointer' : 'default', fontFamily: 'inherit',
                           opacity: attachmentUrls[a.id] ? 1 : 0.5, flexShrink: 0,
                         }}
@@ -925,7 +925,7 @@ export default function WaiverDetailPage() {
             ) : (
               demoReviews.map((r, i) => {
                 const recInfo = WAIVER_REVIEW_RECOMMENDATIONS.find(rec => rec.value === r.recommendation)
-                const recColor = r.recommendation === 'retain' ? '#10B981' : r.recommendation === 'cancel' ? '#EF4444' : '#F59E0B'
+                const recColor = r.recommendation === 'retain' ? 'var(--color-green)' : r.recommendation === 'cancel' ? 'var(--color-red)' : 'var(--color-amber)'
                 return (
                   <div key={r.id || i} style={{ padding: '8px 10px', background: 'var(--color-bg-elevated)', borderRadius: 8, border: '1px solid var(--color-border)', marginBottom: 6 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
@@ -935,7 +935,7 @@ export default function WaiverDetailPage() {
                         <button
                           onClick={() => handleDeleteReview(r.id, w.id, r.review_year)}
                           disabled={actionLoading}
-                          style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
+                          style={{ background: 'none', border: 'none', color: 'var(--color-red)', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
                         >
                           Remove
                         </button>
@@ -982,7 +982,7 @@ export default function WaiverDetailPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
         {w.status === 'draft' && (
           <>
-            <ActionButton color="#3B82F6" onClick={() => handleStatusChange('pending')} disabled={actionLoading}>
+            <ActionButton color="var(--color-blue)" onClick={() => handleStatusChange('pending')} disabled={actionLoading}>
               Submit for Review
             </ActionButton>
             <ActionButton color="#EF4444" onClick={handleDelete} disabled={actionLoading}>
@@ -1062,7 +1062,7 @@ export default function WaiverDetailPage() {
         )}
 
         {w.status === 'cancelled' && allowedTransitions.includes('draft') && (
-          <ActionButton color="#3B82F6" onClick={() => handleStatusChange('draft')} disabled={actionLoading}>
+          <ActionButton color="var(--color-blue)" onClick={() => handleStatusChange('draft')} disabled={actionLoading}>
             Re-open as Draft
           </ActionButton>
         )}
@@ -1071,7 +1071,7 @@ export default function WaiverDetailPage() {
       {/* Admin Actions */}
       {isAdmin && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
-          <ActionButton color="#3B82F6" onClick={() => router.push(`/waivers/${params.id}/edit`)} disabled={actionLoading}>
+          <ActionButton color="var(--color-blue)" onClick={() => router.push(`/waivers/${params.id}/edit`)} disabled={actionLoading}>
             Edit Waiver
           </ActionButton>
           <ActionButton color="#EF4444" onClick={handleDelete} disabled={actionLoading}>
@@ -1084,7 +1084,7 @@ export default function WaiverDetailPage() {
 
       {/* Approve Modal */}
       {activeModal === 'approve' && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div className="modal-overlay">
           <div style={{ background: 'var(--color-bg-surface)', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)' }}>
             <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, marginBottom: 12 }}>Approve Waiver</div>
             <div style={{ marginBottom: 12 }}>
@@ -1119,7 +1119,7 @@ export default function WaiverDetailPage() {
         const config = STATUS_CHANGE_CONFIG[statusChangeTarget]
         if (!config) return null
         return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div className="modal-overlay">
             <div style={{ background: 'var(--color-bg-surface)', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)' }}>
               <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, marginBottom: 4 }}>{config.title}</div>
               <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', marginBottom: 12, lineHeight: 1.5 }}>
@@ -1150,7 +1150,7 @@ export default function WaiverDetailPage() {
 
       {/* Coordination Modal */}
       {activeModal === 'coordination' && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div className="modal-overlay">
           <div style={{ background: 'var(--color-bg-surface)', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, marginBottom: 12 }}>{editingCoordId ? 'Edit Coordination' : 'Add Coordination'}</div>
             <div style={{ marginBottom: 12 }}>
@@ -1174,9 +1174,9 @@ export default function WaiverDetailPage() {
                   <button key={s} type="button" onClick={() => setCoordStatus(s)}
                     style={{
                       flex: 1, padding: '8px 4px', borderRadius: 6, fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                      background: coordStatus === s ? (s === 'concur' ? '#10B98122' : s === 'non_concur' ? '#EF444422' : '#F59E0B22') : 'transparent',
-                      border: `1px solid ${coordStatus === s ? (s === 'concur' ? '#10B981' : s === 'non_concur' ? '#EF4444' : '#F59E0B') : 'var(--color-border)'}`,
-                      color: coordStatus === s ? (s === 'concur' ? '#10B981' : s === 'non_concur' ? '#EF4444' : '#F59E0B') : 'var(--color-text-3)',
+                      background: coordStatus === s ? (s === 'concur' ? 'color-mix(in srgb, var(--color-green) 13%, transparent)' : s === 'non_concur' ? 'color-mix(in srgb, var(--color-red) 13%, transparent)' : 'color-mix(in srgb, var(--color-amber) 13%, transparent)') : 'transparent',
+                      border: `1px solid ${coordStatus === s ? (s === 'concur' ? 'var(--color-green)' : s === 'non_concur' ? 'var(--color-red)' : 'var(--color-amber)') : 'var(--color-border)'}`,
+                      color: coordStatus === s ? (s === 'concur' ? 'var(--color-green)' : s === 'non_concur' ? 'var(--color-red)' : 'var(--color-amber)') : 'var(--color-text-3)',
                     }}
                   >
                     {s === 'non_concur' ? 'Non-Concur' : s.charAt(0).toUpperCase() + s.slice(1)}
@@ -1202,7 +1202,7 @@ export default function WaiverDetailPage() {
 
       {/* Review Modal */}
       {activeModal === 'review' && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div className="modal-overlay">
           <div style={{ background: 'var(--color-bg-surface)', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, marginBottom: 12 }}>{new Date().getFullYear()} Annual Review</div>
             <div style={{ marginBottom: 12 }}>
@@ -1259,9 +1259,10 @@ export default function WaiverDetailPage() {
         if (!currentUrl) return null
         return (
           <div
+            className="modal-overlay"
             style={{
-              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 200,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(0,0,0,0.92)', zIndex: 200,
+              flexDirection: 'column',
               touchAction: 'pan-y', cursor: 'pointer',
             }}
             onClick={() => { if (!didSwipe.current) setFullscreenPhoto(false) }}
@@ -1320,7 +1321,7 @@ export default function WaiverDetailPage() {
 
       {/* Attachment Modal */}
       {activeModal === 'attachment' && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div className="modal-overlay">
           <div style={{ background: 'var(--color-bg-surface)', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)' }}>
             <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, marginBottom: 12 }}>Upload Attachment</div>
             <div style={{ marginBottom: 12 }}>

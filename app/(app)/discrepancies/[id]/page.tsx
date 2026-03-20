@@ -289,8 +289,8 @@ export default function DiscrepancyDetailPage() {
         </div>
 
         {'resolution_notes' in d && d.resolution_notes && (
-          <div style={{ marginTop: 12, padding: '8px 10px', background: '#22C55E11', border: '1px solid #22C55E33', borderRadius: 8 }}>
-            <div style={{ fontSize: 'var(--fs-xs)', color: '#22C55E', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Resolution Notes</div>
+          <div style={{ marginTop: 12, padding: '8px 10px', background: 'color-mix(in srgb, var(--color-green) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-green) 20%, transparent)', borderRadius: 8 }}>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-green)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Resolution Notes</div>
             <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>{d.resolution_notes as string}</div>
           </div>
         )}
@@ -331,7 +331,7 @@ export default function DiscrepancyDetailPage() {
             alt="Discrepancy location on map"
             style={{ width: '100%', display: 'block', borderRadius: '0 0 10px 10px' }}
           />
-          <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-sm)', color: '#34D399', fontFamily: 'monospace', fontWeight: 600 }}>
+          <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-sm)', color: 'var(--color-green)', fontFamily: 'monospace', fontWeight: 600 }}>
             {lat!.toFixed(5)}, {lng!.toFixed(5)}
           </div>
         </div>
@@ -353,7 +353,7 @@ export default function DiscrepancyDetailPage() {
               padding: '1px 6px',
               borderRadius: 4,
               background: linkedFeature.status === 'inoperative' ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)',
-              color: linkedFeature.status === 'inoperative' ? '#EF4444' : '#22C55E',
+              color: linkedFeature.status === 'inoperative' ? 'var(--color-red)' : 'var(--color-green)',
             }}>
               {linkedFeature.status === 'inoperative' ? 'INOP' : 'OP'}
             </span>
@@ -391,15 +391,15 @@ export default function DiscrepancyDetailPage() {
           />
           <div style={{ padding: '4px 12px 8px', display: 'flex', gap: 12, fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22C55E', display: 'inline-block' }} />
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-green)', display: 'inline-block' }} />
               Operational
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444', display: 'inline-block' }} />
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-red)', display: 'inline-block' }} />
               Inoperative
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#EF4444', display: 'inline-block', border: '2px solid #fff' }} />
+              <span style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--color-red)', display: 'inline-block', border: '2px solid #fff' }} />
               This Discrepancy
             </span>
           </div>

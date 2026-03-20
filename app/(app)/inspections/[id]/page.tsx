@@ -143,7 +143,7 @@ export default function InspectionDetailPage() {
           &larr; Back
         </button>
         <div className="card" style={{ textAlign: 'center', padding: 24 }}>
-          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: '#3B82F6', marginBottom: 8 }}>Inspection In Progress</div>
+          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-blue)', marginBottom: 8 }}>Inspection In Progress</div>
           <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', marginBottom: 16, lineHeight: 1.5 }}>
             This inspection has not been filed yet. You can resume it from the inspections page.
           </div>
@@ -151,7 +151,7 @@ export default function InspectionDetailPage() {
             onClick={() => router.push('/inspections?view=history')}
             style={{
               padding: '10px 20px', borderRadius: 8, border: 'none',
-              background: 'linear-gradient(135deg, #3B82F6, #6366F1)',
+              background: 'linear-gradient(135deg, var(--color-blue), #6366F1)',
               color: '#FFF', fontSize: 'var(--fs-md)', fontWeight: 700,
               cursor: 'pointer', fontFamily: 'inherit',
             }}
@@ -212,10 +212,10 @@ export default function InspectionDetailPage() {
   )
 
   // Color helpers
-  const typeColor = isSpecialType ? '#A78BFA' : '#22D3EE'
+  const typeColor = isSpecialType ? 'var(--color-purple)' : 'var(--color-cyan-bright)'
   const topBorderColor = isSpecialType
-    ? '#A78BFA'
-    : airfieldInsp && lightingInsp ? 'var(--color-cyan)' : airfieldInsp ? '#34D399' : '#FBBF24'
+    ? 'var(--color-purple)'
+    : airfieldInsp && lightingInsp ? 'var(--color-cyan)' : airfieldInsp ? 'var(--color-green)' : 'var(--color-amber)'
 
   const preparePdf = async () => {
     const bi: PdfBaseInfo | undefined = currentInstallation
@@ -522,7 +522,7 @@ export default function InspectionDetailPage() {
                 style={{
                   position: 'absolute', top: -6, right: -6,
                   width: 18, height: 18, borderRadius: '50%',
-                  background: '#EF4444', border: '2px solid var(--color-bg-surface)',
+                  background: 'var(--color-red)', border: '2px solid var(--color-bg-surface)',
                   color: '#fff', fontSize: 10, fontWeight: 700,
                   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   padding: 0, lineHeight: 1,
@@ -562,7 +562,7 @@ export default function InspectionDetailPage() {
       const failCount = sectionItems.filter((i) => i.response === 'fail').length
       const sectionTotal = sectionItems.length
       const sectionProgress = sectionTotal > 0 ? (passCount / sectionTotal) * 100 : 0
-      const borderColor = failCount > 0 ? '#EF4444' : passCount === sectionTotal ? '#22C55E' : 'var(--color-border)'
+      const borderColor = failCount > 0 ? 'var(--color-red)' : passCount === sectionTotal ? 'var(--color-green)' : 'var(--color-border)'
 
       return (
         <div
@@ -577,12 +577,12 @@ export default function InspectionDetailPage() {
         >
           {/* Section header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-            <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: failCount > 0 ? '#FBBF24' : passCount === sectionTotal ? '#22C55E' : 'var(--color-text-2)' }}>
+            <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: failCount > 0 ? 'var(--color-amber)' : passCount === sectionTotal ? 'var(--color-green)' : 'var(--color-text-2)' }}>
               {sectionTitle}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {failCount > 0 && (
-                <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EF4444', background: 'rgba(239,68,68,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-red)', background: 'rgba(239,68,68,0.1)', padding: '2px 6px', borderRadius: 4 }}>
                   {failCount} fail
                 </span>
               )}
@@ -597,15 +597,15 @@ export default function InspectionDetailPage() {
             <div style={{
               height: '100%', borderRadius: 2,
               width: `${sectionProgress}%`,
-              background: failCount > 0 ? '#FBBF24' : '#22C55E',
+              background: failCount > 0 ? 'var(--color-amber)' : 'var(--color-green)',
               transition: 'width 0.3s ease',
             }} />
           </div>
 
           {/* Items */}
           {sectionItems.map((item, idx) => {
-            const color = item.response === 'pass' ? '#22C55E'
-              : item.response === 'fail' ? '#EF4444'
+            const color = item.response === 'pass' ? 'var(--color-green)'
+              : item.response === 'fail' ? 'var(--color-red)'
               : item.response === 'na' ? 'var(--color-text-3)' : 'var(--color-text-4)'
             const symbol = item.response === 'pass' ? '\u2713'
               : item.response === 'fail' ? '\u2717'
@@ -618,7 +618,7 @@ export default function InspectionDetailPage() {
                   display: 'flex', alignItems: 'flex-start', gap: 8,
                   padding: isFail ? '6px 0 6px 8px' : '5px 0',
                   borderBottom: idx < sectionItems.length - 1 ? '1px solid rgba(30,41,59,0.4)' : 'none',
-                  borderLeft: isFail ? '2px solid #EF4444' : '2px solid transparent',
+                  borderLeft: isFail ? '2px solid var(--color-red)' : '2px solid transparent',
                   marginLeft: isFail ? -2 : 0,
                   background: isFail ? 'rgba(239,68,68,0.03)' : 'transparent',
                   borderRadius: isFail ? 4 : 0,
@@ -663,7 +663,7 @@ export default function InspectionDetailPage() {
                             borderRadius: 6,
                           }}>
                             {item.discrepancies!.length > 1 && (
-                              <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EF4444', marginBottom: 3 }}>
+                              <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-red)', marginBottom: 3 }}>
                                 Discrepancy {di + 1} of {item.discrepancies!.length}
                               </div>
                             )}
@@ -678,7 +678,7 @@ export default function InspectionDetailPage() {
                                   autoFocus
                                 />
                                 <div style={{ display: 'flex', gap: 4 }}>
-                                  <ActionButton color="#10B981" onClick={() => handleSaveDiscComment(inspection.id, item.id, di, discCommentText)} disabled={actionLoading}>
+                                  <ActionButton color="var(--color-green)" onClick={() => handleSaveDiscComment(inspection.id, item.id, di, discCommentText)} disabled={actionLoading}>
                                     {actionLoading ? 'Saving...' : 'Save'}
                                   </ActionButton>
                                   <ActionButton color="#9CA3AF" onClick={() => setEditingDiscComment(null)}>Cancel</ActionButton>
@@ -687,7 +687,7 @@ export default function InspectionDetailPage() {
                             ) : (
                               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
                                 {disc.comment ? (
-                                  <div style={{ flex: 1, fontSize: 'var(--fs-sm)', color: '#FBBF24', fontStyle: 'italic', lineHeight: 1.4 }}>
+                                  <div style={{ flex: 1, fontSize: 'var(--fs-sm)', color: 'var(--color-amber)', fontStyle: 'italic', lineHeight: 1.4 }}>
                                     {disc.comment}
                                   </div>
                                 ) : canEdit ? (
@@ -696,7 +696,7 @@ export default function InspectionDetailPage() {
                                 {canEdit && (
                                   <button
                                     onClick={() => { setDiscCommentText(disc.comment || ''); setEditingDiscComment(editKey(di)) }}
-                                    style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0, flexShrink: 0 }}
+                                    style={{ background: 'none', border: 'none', color: 'var(--color-blue)', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0, flexShrink: 0 }}
                                   >
                                     Edit
                                   </button>
@@ -713,11 +713,11 @@ export default function InspectionDetailPage() {
                                 {canEdit && (
                                   <>
                                     <button onClick={() => handleSetCurrentLocation(inspection.id, item.id, di)}
-                                      style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                                      style={{ background: 'none', border: 'none', color: 'var(--color-blue)', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
                                       Update
                                     </button>
                                     <button onClick={() => handleClearLocation(inspection.id, item.id, di)}
-                                      style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                                      style={{ background: 'none', border: 'none', color: 'var(--color-red)', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
                                       Remove
                                     </button>
                                   </>
@@ -726,7 +726,7 @@ export default function InspectionDetailPage() {
                             )}
                             {!disc.location && canEdit && (
                               <button onClick={() => handleSetCurrentLocation(inspection.id, item.id, di)}
-                                style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', padding: 0, marginTop: 2 }}>
+                                style={{ background: 'none', border: 'none', color: 'var(--color-blue)', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', padding: 0, marginTop: 2 }}>
                                 + Add Location
                               </button>
                             )}
@@ -734,7 +734,7 @@ export default function InspectionDetailPage() {
                             {canEdit && (
                               <label style={{
                                 display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4,
-                                fontSize: 'var(--fs-xs)', color: '#3B82F6', cursor: 'pointer', fontWeight: 600,
+                                fontSize: 'var(--fs-xs)', color: 'var(--color-blue)', cursor: 'pointer', fontWeight: 600,
                               }}>
                                 + Add Photo
                                 <input
@@ -786,7 +786,7 @@ export default function InspectionDetailPage() {
                               autoFocus
                             />
                             <div style={{ display: 'flex', gap: 4 }}>
-                              <ActionButton color="#10B981" onClick={() => handleSaveLegacyNote(inspection.id, item.id, discCommentText)} disabled={actionLoading}>
+                              <ActionButton color="var(--color-green)" onClick={() => handleSaveLegacyNote(inspection.id, item.id, discCommentText)} disabled={actionLoading}>
                                 {actionLoading ? 'Saving...' : 'Save'}
                               </ActionButton>
                               <ActionButton color="#9CA3AF" onClick={() => setEditingDiscComment(null)}>Cancel</ActionButton>
@@ -796,7 +796,7 @@ export default function InspectionDetailPage() {
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, marginTop: item.notes ? 4 : 0 }}>
                             {item.notes ? (
                               <div style={{
-                                flex: 1, fontSize: 'var(--fs-sm)', color: '#FBBF24', fontStyle: 'italic',
+                                flex: 1, fontSize: 'var(--fs-sm)', color: 'var(--color-amber)', fontStyle: 'italic',
                                 padding: '4px 8px', background: 'rgba(251,191,36,0.06)', borderRadius: 4,
                               }}>
                                 {item.notes}
@@ -807,7 +807,7 @@ export default function InspectionDetailPage() {
                             {canEdit && (
                               <button
                                 onClick={() => { setDiscCommentText(item.notes || ''); setEditingDiscComment(`note-${item.id}`) }}
-                                style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0, flexShrink: 0, marginTop: 4 }}
+                                style={{ background: 'none', border: 'none', color: 'var(--color-blue)', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0, flexShrink: 0, marginTop: 4 }}
                               >
                                 Edit
                               </button>
@@ -832,11 +832,11 @@ export default function InspectionDetailPage() {
                               {canEdit && (
                                 <>
                                   <button onClick={() => handleSetCurrentLocation(inspection.id, item.id)}
-                                    style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                                    style={{ background: 'none', border: 'none', color: 'var(--color-blue)', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
                                     Update
                                   </button>
                                   <button onClick={() => handleClearLocation(inspection.id, item.id)}
-                                    style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                                    style={{ background: 'none', border: 'none', color: 'var(--color-red)', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
                                     Remove
                                   </button>
                                 </>
@@ -847,7 +847,7 @@ export default function InspectionDetailPage() {
                       })()}
                       {isFail && !item.location && canEdit && (
                         <button onClick={() => handleSetCurrentLocation(inspection.id, item.id)}
-                          style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', padding: 0, marginTop: 4 }}>
+                          style={{ background: 'none', border: 'none', color: 'var(--color-blue)', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit', padding: 0, marginTop: 4 }}>
                           + Add Location
                         </button>
                       )}
@@ -855,7 +855,7 @@ export default function InspectionDetailPage() {
                       {isFail && canEdit && (
                         <label style={{
                           display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4,
-                          fontSize: 'var(--fs-xs)', color: '#3B82F6', cursor: 'pointer', fontWeight: 600,
+                          fontSize: 'var(--fs-xs)', color: 'var(--color-blue)', cursor: 'pointer', fontWeight: 600,
                         }}>
                           + Add Photo
                           <input
@@ -910,7 +910,7 @@ export default function InspectionDetailPage() {
           <span style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: typeColor }}>
             {isSpecialType ? specialLabel : isDaily ? 'Airfield Inspection Report' : primary.display_id}
           </span>
-          <Badge label="COMPLETED" color="#22C55E" />
+          <Badge label="COMPLETED" color="var(--color-green)" />
         </div>
 
         {/* Display IDs for daily report */}
@@ -947,7 +947,7 @@ export default function InspectionDetailPage() {
               background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
             }}>
               <span style={{ fontSize: 'var(--fs-lg)' }}>{primary.inspection_type === 'construction_meeting' ? '🏗️' : '📋'}</span>
-              <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: '#A78BFA' }}>
+              <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-purple)' }}>
                 {primary.inspection_type === 'construction_meeting' ? 'Construction Meeting' : 'Joint Monthly'}
               </span>
             </div>
@@ -960,7 +960,7 @@ export default function InspectionDetailPage() {
                   background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)',
                 }}>
                   <span style={{ fontSize: 'var(--fs-lg)' }}>📋</span>
-                  <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: '#34D399' }}>Airfield</span>
+                  <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-green)' }}>Airfield</span>
                 </div>
               )}
               {lightingInsp && (
@@ -970,7 +970,7 @@ export default function InspectionDetailPage() {
                   background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)',
                 }}>
                   <span style={{ fontSize: 'var(--fs-lg)' }}>💡</span>
-                  <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: '#FBBF24' }}>Lighting</span>
+                  <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-amber)' }}>Lighting</span>
                 </div>
               )}
             </>
@@ -1016,7 +1016,7 @@ export default function InspectionDetailPage() {
         {/* BWC Value */}
         {(airfieldInsp?.bwc_value || primary.bwc_value) && (() => {
           const bwc = airfieldInsp?.bwc_value || primary.bwc_value
-          const bwcColor = bwc === 'LOW' ? '#22C55E' : bwc === 'MOD' ? '#EAB308' : bwc === 'SEV' ? '#F97316' : '#EF4444'
+          const bwcColor = bwc === 'LOW' ? 'var(--color-green)' : bwc === 'MOD' ? '#EAB308' : bwc === 'SEV' ? 'var(--color-orange)' : 'var(--color-red)'
           const bwcBg = bwc === 'LOW' ? 'rgba(34,197,94,0.12)' : bwc === 'MOD' ? 'rgba(234,179,8,0.12)' : bwc === 'SEV' ? 'rgba(249,115,22,0.12)' : 'rgba(239,68,68,0.12)'
           return (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1047,7 +1047,7 @@ export default function InspectionDetailPage() {
                 {primary.personnel.map((person: string) => (
                   <span key={person} style={{
                     fontSize: 'var(--fs-base)', padding: '5px 12px', borderRadius: 8, fontWeight: 600,
-                    background: 'rgba(167,139,250,0.1)', color: '#A78BFA',
+                    background: 'rgba(167,139,250,0.1)', color: 'var(--color-purple)',
                     border: '1px solid rgba(167,139,250,0.2)',
                   }}>
                     {person}
@@ -1067,7 +1067,7 @@ export default function InspectionDetailPage() {
                 {canEdit && !editingNotes && (
                   <button
                     onClick={() => { setNotesText(primary.notes || ''); setEditingNotes(true) }}
-                    style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--color-blue)', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
                   >
                     Edit
                   </button>
@@ -1084,7 +1084,7 @@ export default function InspectionDetailPage() {
                   />
                   <div style={{ display: 'flex', gap: 6 }}>
                     <ActionButton
-                      color="#10B981"
+                      color="var(--color-green)"
                       onClick={async () => {
                         if (usingDemo) {
                           toast.success('Notes updated (demo mode)')
@@ -1145,7 +1145,7 @@ export default function InspectionDetailPage() {
                         style={{
                           position: 'absolute', top: -6, right: -6,
                           width: 18, height: 18, borderRadius: '50%',
-                          background: '#EF4444', border: '2px solid var(--color-bg-surface)',
+                          background: 'var(--color-red)', border: '2px solid var(--color-bg-surface)',
                           color: '#fff', fontSize: 10, fontWeight: 700,
                           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                           padding: 0, lineHeight: 1,
@@ -1161,7 +1161,7 @@ export default function InspectionDetailPage() {
               {canEdit && (
                 <label style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 8,
-                  fontSize: 'var(--fs-xs)', color: '#3B82F6', cursor: 'pointer', fontWeight: 600,
+                  fontSize: 'var(--fs-xs)', color: 'var(--color-blue)', cursor: 'pointer', fontWeight: 600,
                 }}>
                   + Add Photo
                   <input
@@ -1192,7 +1192,7 @@ export default function InspectionDetailPage() {
                 textAlign: 'center', padding: '10px 6px', borderRadius: 10,
                 background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
               }}>
-                <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: '#22C55E' }}>{totalPassed}</div>
+                <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-green)' }}>{totalPassed}</div>
                 <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.05em', marginTop: 2 }}>PASS</div>
               </div>
               <button
@@ -1206,7 +1206,7 @@ export default function InspectionDetailPage() {
                   boxShadow: totalFailed > 0 ? '0 0 8px rgba(239,68,68,0.15)' : 'none',
                 }}
               >
-                <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: '#EF4444' }}>{totalFailed}</div>
+                <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-red)' }}>{totalFailed}</div>
                 <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.05em', marginTop: 2 }}>FAIL {totalFailed > 0 ? (showFailedItems ? '▴' : '▾') : ''}</div>
               </button>
               <div style={{
@@ -1231,7 +1231,7 @@ export default function InspectionDetailPage() {
                 <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600 }}>Compliance Rate</span>
                 <span style={{
                   fontSize: 'var(--fs-md)', fontWeight: 800,
-                  color: complianceRate >= 95 ? '#22C55E' : complianceRate >= 80 ? '#FBBF24' : '#EF4444',
+                  color: complianceRate >= 95 ? 'var(--color-green)' : complianceRate >= 80 ? 'var(--color-amber)' : 'var(--color-red)',
                 }}>
                   {complianceRate}%
                 </span>
@@ -1241,10 +1241,10 @@ export default function InspectionDetailPage() {
                   height: '100%', borderRadius: 3, transition: 'width 0.5s ease',
                   width: `${complianceRate}%`,
                   background: complianceRate >= 95
-                    ? 'linear-gradient(90deg, #22C55E, #34D399)'
+                    ? 'linear-gradient(90deg, var(--color-green), var(--color-green))'
                     : complianceRate >= 80
-                    ? 'linear-gradient(90deg, #EAB308, #FBBF24)'
-                    : 'linear-gradient(90deg, #DC2626, #EF4444)',
+                    ? 'linear-gradient(90deg, #EAB308, var(--color-amber))'
+                    : 'linear-gradient(90deg, var(--color-red), var(--color-red))',
                 }} />
               </div>
             </div>
@@ -1252,8 +1252,8 @@ export default function InspectionDetailPage() {
 
           {/* Combined Failed Items — toggled by Fail button */}
           {showFailedItems && allFailedItems.length > 0 && (
-            <div className="card" style={{ marginBottom: 10, borderRadius: 12, borderLeft: '3px solid #EF4444', padding: '14px' }}>
-              <div style={{ fontSize: 'var(--fs-2xs)', color: '#EF4444', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+            <div className="card" style={{ marginBottom: 10, borderRadius: 12, borderLeft: '3px solid var(--color-red)', padding: '14px' }}>
+              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-red)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
                 Failed Items ({allFailedItems.length})
               </div>
               {allFailedItems.map((item, idx) => (
@@ -1270,7 +1270,7 @@ export default function InspectionDetailPage() {
                     {isDaily && (
                       <span style={{
                         fontSize: 'var(--fs-xs)', fontWeight: 600, padding: '1px 6px', borderRadius: 4,
-                        color: item.fromType === 'airfield' ? '#34D399' : '#FBBF24',
+                        color: item.fromType === 'airfield' ? 'var(--color-green)' : 'var(--color-amber)',
                         background: item.fromType === 'airfield' ? 'rgba(52,211,153,0.1)' : 'rgba(251,191,36,0.1)',
                       }}>
                         {item.fromType === 'airfield' ? 'Airfield' : 'Lighting'}
@@ -1295,13 +1295,13 @@ export default function InspectionDetailPage() {
                           borderRadius: 6,
                         }}>
                           {item.discrepancies!.length > 1 && (
-                            <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EF4444', marginBottom: 4 }}>
+                            <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-red)', marginBottom: 4 }}>
                               Discrepancy {di + 1} of {item.discrepancies!.length}
                             </div>
                           )}
                           {disc.comment && (
                             <div style={{
-                              fontSize: 'var(--fs-base)', color: '#FBBF24', fontStyle: 'italic',
+                              fontSize: 'var(--fs-base)', color: 'var(--color-amber)', fontStyle: 'italic',
                               padding: '2px 0', lineHeight: 1.4,
                             }}>
                               {disc.comment}
@@ -1312,7 +1312,7 @@ export default function InspectionDetailPage() {
                               style={{ width: '100%', maxWidth: 400, height: 140, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginTop: 4 }} />
                           )}
                           {disc.location && (
-                            <div style={{ fontSize: 'var(--fs-sm)', color: '#34D399', fontFamily: 'monospace', marginTop: 4 }}>
+                            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-green)', fontFamily: 'monospace', marginTop: 4 }}>
                               {disc.location.lat.toFixed(5)}, {disc.location.lon.toFixed(5)}
                             </div>
                           )}
@@ -1342,7 +1342,7 @@ export default function InspectionDetailPage() {
                     <>
                       {item.notes && (
                         <div style={{
-                          fontSize: 'var(--fs-base)', color: '#FBBF24', marginTop: 4, fontStyle: 'italic',
+                          fontSize: 'var(--fs-base)', color: 'var(--color-amber)', marginTop: 4, fontStyle: 'italic',
                           padding: '4px 8px', background: 'rgba(251,191,36,0.06)', borderRadius: 4,
                         }}>
                           {item.notes}
@@ -1365,7 +1365,7 @@ export default function InspectionDetailPage() {
             const completedTime = insp.completed_at
               ? formatZuluTime(new Date(insp.completed_at)) + 'Z'
               : null
-            const color = insp.inspection_type === 'airfield' ? '#34D399' : '#FBBF24'
+            const color = insp.inspection_type === 'airfield' ? 'var(--color-green)' : 'var(--color-amber)'
             const bgAlpha = insp.inspection_type === 'airfield' ? 'rgba(52,211,153,' : 'rgba(251,191,36,'
 
             return (
@@ -1395,7 +1395,7 @@ export default function InspectionDetailPage() {
                       background: 'var(--color-border)', padding: '2px 8px', borderRadius: 6,
                     }}>
                       {insp.passed_count}/{insp.total_items}
-                      {insp.failed_count > 0 && <span style={{ color: '#EF4444', marginLeft: 4 }}>{insp.failed_count} fail</span>}
+                      {insp.failed_count > 0 && <span style={{ color: 'var(--color-red)', marginLeft: 4 }}>{insp.failed_count} fail</span>}
                     </span>
                   </div>
                   <span style={{
@@ -1444,8 +1444,8 @@ export default function InspectionDetailPage() {
           disabled={generatingPdf}
           style={{
             flex: 1, padding: '12px', borderRadius: 12, textAlign: 'center',
-            background: '#A78BFA14', border: '1px solid #A78BFA33',
-            color: '#A78BFA', fontSize: 'var(--fs-md)', fontWeight: 700,
+            background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
+            color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
             fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
             opacity: generatingPdf ? 0.7 : 1,
           }}
@@ -1457,8 +1457,8 @@ export default function InspectionDetailPage() {
           disabled={generatingPdf}
           style={{
             padding: '12px 16px', borderRadius: 12, textAlign: 'center',
-            background: '#A78BFA14', border: '1px solid #A78BFA33',
-            color: '#A78BFA', fontSize: 'var(--fs-md)', fontWeight: 700,
+            background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
+            color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
             fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
             opacity: generatingPdf ? 0.7 : 1,
           }}
@@ -1470,8 +1470,8 @@ export default function InspectionDetailPage() {
           href="/inspections?view=history"
           style={{
             flex: 1, padding: '12px', borderRadius: 12, textAlign: 'center',
-            background: '#22C55E14', border: '1px solid #22C55E33',
-            color: '#22C55E', fontSize: 'var(--fs-md)', fontWeight: 700,
+            background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
+            color: 'var(--color-green)', fontSize: 'var(--fs-md)', fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',
           }}
         >
@@ -1484,7 +1484,7 @@ export default function InspectionDetailPage() {
         <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12, marginTop: 8, display: 'flex', gap: 8 }}>
           {canEdit && (
             <ActionButton
-              color="#3B82F6"
+              color="var(--color-blue)"
               onClick={() => { setNotesText(primary.notes || ''); setEditingNotes(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
             >
               Edit Notes
@@ -1492,7 +1492,7 @@ export default function InspectionDetailPage() {
           )}
           {canEdit && primary.status === 'completed' && (
             <ActionButton
-              color="#F59E0B"
+              color="var(--color-amber)"
               onClick={async () => {
                 if (usingDemo) {
                   toast.success('Inspection reopened (demo mode)')
@@ -1521,7 +1521,7 @@ export default function InspectionDetailPage() {
           )}
           {isAdmin && (
             <ActionButton
-              color="#EF4444"
+              color="var(--color-red)"
               onClick={async () => {
                 if (usingDemo) {
                   toast.success('Inspection deleted (demo mode)')

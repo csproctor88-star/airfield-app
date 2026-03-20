@@ -257,10 +257,10 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
       {/* Photo viewer modal */}
       {viewerIndex !== null && photoUrls.length > 0 && (
         <div
+          className="modal-overlay"
           style={{
-            position: 'fixed', inset: 0, zIndex: 1000, display: 'flex',
-            flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(0,0,0,0.9)', padding: 16,
+            flexDirection: 'column',
+            background: 'rgba(0,0,0,0.9)',
           }}
           onClick={(e) => { if (e.target === e.currentTarget) setViewerIndex(null) }}
         >

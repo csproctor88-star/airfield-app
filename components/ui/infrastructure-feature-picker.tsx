@@ -335,7 +335,7 @@ export function InfrastructureFeaturePicker({
           <div style={{
             position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)',
             background: 'rgba(4, 7, 12, 0.88)', borderRadius: 6,
-            padding: '4px 10px', fontSize: 'var(--fs-sm)', color: '#94A3B8',
+            padding: '4px 10px', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)',
             fontWeight: 600, whiteSpace: 'nowrap',
           }}>
             Tap features to mark inoperative
@@ -348,7 +348,7 @@ export function InfrastructureFeaturePicker({
             position: 'absolute', bottom: 8, left: 8,
             background: 'rgba(4, 7, 12, 0.88)', borderRadius: 6,
             padding: '4px 8px', fontSize: 'var(--fs-sm)',
-            color: selectedCount > 0 ? '#22D3EE' : 'var(--color-text-3)',
+            color: selectedCount > 0 ? 'var(--color-cyan-bright)' : 'var(--color-text-3)',
             fontWeight: 600,
           }}>
             {selectedCount} of {totalFiltered} feature{totalFiltered !== 1 ? 's' : ''} selected
@@ -364,15 +364,15 @@ export function InfrastructureFeaturePicker({
             fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)',
           }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22C55E', display: 'inline-block' }} />
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-green)', display: 'inline-block' }} />
               OK
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444', display: 'inline-block' }} />
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-red)', display: 'inline-block' }} />
               Inop
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <span style={{ width: 10, height: 10, borderRadius: '50%', border: '2px solid #22D3EE', display: 'inline-block', boxSizing: 'border-box' }} />
+              <span style={{ width: 10, height: 10, borderRadius: '50%', border: '2px solid var(--color-cyan-bright)', display: 'inline-block', boxSizing: 'border-box' }} />
               Selected
             </span>
           </div>

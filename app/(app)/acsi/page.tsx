@@ -91,9 +91,9 @@ export default function AcsiListPage() {
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
         {[
           { label: 'Total', value: totalCount, color: 'var(--color-text-1)' },
-          { label: 'Completed', value: completedCount, color: '#10B981' },
-          { label: 'In Progress', value: inProgressCount, color: '#3B82F6' },
-          { label: 'Drafts', value: draftCount, color: '#9CA3AF' },
+          { label: 'Completed', value: completedCount, color: 'var(--color-green)' },
+          { label: 'In Progress', value: inProgressCount, color: 'var(--color-blue)' },
+          { label: 'Drafts', value: draftCount, color: 'var(--color-text-3)' },
         ].map(kpi => (
           <div key={kpi.label} style={{
             padding: '12px 20px',
@@ -226,9 +226,9 @@ export default function AcsiListPage() {
 
                   {/* Counts */}
                   <div style={{ display: 'flex', gap: 6, fontSize: 'var(--fs-xs)' }}>
-                    <span style={{ color: '#10B981', fontWeight: 600 }}>{insp.passed_count}P</span>
-                    <span style={{ color: '#EF4444', fontWeight: 600 }}>{insp.failed_count}F</span>
-                    <span style={{ color: '#6B7280', fontWeight: 600 }}>{insp.na_count}NA</span>
+                    <span style={{ color: 'var(--color-green)', fontWeight: 600 }}>{insp.passed_count}P</span>
+                    <span style={{ color: 'var(--color-red)', fontWeight: 600 }}>{insp.failed_count}F</span>
+                    <span style={{ color: 'var(--color-text-3)', fontWeight: 600 }}>{insp.na_count}NA</span>
                   </div>
 
                   {/* Status badge */}

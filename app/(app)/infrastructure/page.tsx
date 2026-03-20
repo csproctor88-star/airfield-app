@@ -2529,9 +2529,9 @@ export default function InfrastructureMapPage() {
               style={{
                 padding: '8px 16px',
                 borderRadius: 8,
-                border: editMode ? '2px solid #10B981' : '1px solid var(--color-border)',
+                border: editMode ? '2px solid var(--color-success)' : '1px solid var(--color-border)',
                 background: editMode ? 'rgba(16, 185, 129, 0.15)' : 'var(--color-bg-surface)',
-                color: editMode ? '#10B981' : 'var(--color-text-2)',
+                color: editMode ? 'var(--color-success)' : 'var(--color-text-2)',
                 fontSize: 'var(--fs-sm)',
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -2544,9 +2544,9 @@ export default function InfrastructureMapPage() {
               style={{
                 padding: '8px 16px',
                 borderRadius: 8,
-                border: auditMode ? '2px solid #22D3EE' : '1px solid var(--color-border)',
+                border: auditMode ? '2px solid var(--color-cyan)' : '1px solid var(--color-border)',
                 background: auditMode ? 'rgba(6, 182, 212, 0.15)' : 'var(--color-bg-surface)',
-                color: auditMode ? '#22D3EE' : 'var(--color-text-2)',
+                color: auditMode ? 'var(--color-cyan)' : 'var(--color-text-2)',
                 fontSize: 'var(--fs-sm)',
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -2720,19 +2720,19 @@ export default function InfrastructureMapPage() {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: '#F97316' }}>Import Features</span>
-              <button onClick={() => setKmlImportOpen(false)} style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: 14, cursor: 'pointer' }}>✕</button>
+              <button onClick={() => setKmlImportOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--color-text-3)', fontSize: 14, cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div style={{ fontSize: 9, color: '#64748B' }}>
+            <div style={{ fontSize: 9, color: 'var(--color-text-3)' }}>
               Accepts KML, CSV, GeoJSON, or DXF files. Per-row values override defaults below.
             </div>
 
             <div>
-              <div style={{ fontSize: 10, color: '#94A3B8', marginBottom: 2 }}>Default Feature Type</div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginBottom: 2 }}>Default Feature Type</div>
               <select
                 value={kmlFeatureType}
                 onChange={(e) => setKmlFeatureType(e.target.value as InfrastructureFeatureType)}
-                style={{ width: '100%', padding: '4px 6px', borderRadius: 4, border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(30,41,59,0.9)', color: '#E2E8F0', fontSize: 11 }}
+                style={{ width: '100%', padding: '4px 6px', borderRadius: 4, border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(30,41,59,0.9)', color: 'var(--color-text-1)', fontSize: 11 }}
               >
                 {FEATURE_TYPE_OPTIONS.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -2741,17 +2741,17 @@ export default function InfrastructureMapPage() {
             </div>
 
             <div>
-              <div style={{ fontSize: 10, color: '#94A3B8', marginBottom: 2 }}>Layer (optional)</div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginBottom: 2 }}>Layer (optional)</div>
               <input
                 value={kmlLayer}
                 onChange={(e) => setKmlLayer(e.target.value)}
                 placeholder="e.g. RWY 01/19"
-                style={{ width: '100%', padding: '4px 6px', borderRadius: 4, border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(30,41,59,0.9)', color: '#E2E8F0', fontSize: 11, boxSizing: 'border-box', outline: 'none' }}
+                style={{ width: '100%', padding: '4px 6px', borderRadius: 4, border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(30,41,59,0.9)', color: 'var(--color-text-1)', fontSize: 11, boxSizing: 'border-box', outline: 'none' }}
               />
             </div>
 
             <div>
-              <div style={{ fontSize: 10, color: '#94A3B8', marginBottom: 2 }}>Rotation: {kmlRotation}°</div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginBottom: 2 }}>Rotation: {kmlRotation}°</div>
               <input
                 type="range"
                 min={0}
@@ -2814,7 +2814,7 @@ export default function InfrastructureMapPage() {
             justifyContent: 'center',
             maxWidth: 'calc(100% - 28px)',
           }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#10B981', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-success)', whiteSpace: 'nowrap' }}>
               EDIT MODE
             </div>
 
@@ -2826,7 +2826,7 @@ export default function InfrastructureMapPage() {
                 border: '1px solid rgba(148, 163, 184, 0.2)',
                 borderRadius: 6,
                 padding: '5px 8px',
-                color: '#E2E8F0',
+                color: 'var(--color-text-1)',
                 fontSize: 12,
                 cursor: 'pointer',
               }}
@@ -2864,7 +2864,7 @@ export default function InfrastructureMapPage() {
                 borderRadius: 6,
                 border: bulkShiftOpen ? '1px solid rgba(168,85,247,0.5)' : '1px solid rgba(148,163,184,0.2)',
                 background: bulkShiftOpen ? 'rgba(168,85,247,0.2)' : 'transparent',
-                color: bulkShiftOpen ? '#A855F7' : '#94A3B8',
+                color: bulkShiftOpen ? '#A855F7' : 'var(--color-text-3)',
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -2886,7 +2886,7 @@ export default function InfrastructureMapPage() {
                 borderRadius: 6,
                 border: boxSelectActive ? '1px solid rgba(168,85,247,0.5)' : '1px solid rgba(148,163,184,0.2)',
                 background: boxSelectActive ? 'rgba(168,85,247,0.2)' : 'transparent',
-                color: boxSelectActive ? '#A855F7' : '#94A3B8',
+                color: boxSelectActive ? '#A855F7' : 'var(--color-text-3)',
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -2908,7 +2908,7 @@ export default function InfrastructureMapPage() {
                 borderRadius: 6,
                 border: freeMoveActive ? '1px solid rgba(245,158,11,0.5)' : '1px solid rgba(148,163,184,0.2)',
                 background: freeMoveActive ? 'rgba(245,158,11,0.2)' : 'transparent',
-                color: freeMoveActive ? '#F59E0B' : '#94A3B8',
+                color: freeMoveActive ? 'var(--color-warning)' : 'var(--color-text-3)',
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -2932,7 +2932,7 @@ export default function InfrastructureMapPage() {
                     borderRadius: 6,
                     border: active ? '1px solid rgba(251,191,36,0.5)' : '1px solid rgba(148,163,184,0.2)',
                     background: active ? 'rgba(251,191,36,0.2)' : 'transparent',
-                    color: active ? '#FBBF24' : '#94A3B8',
+                    color: active ? 'var(--color-warning)' : 'var(--color-text-3)',
                     fontSize: 11,
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -2965,11 +2965,11 @@ export default function InfrastructureMapPage() {
                     textAlign: 'center',
                   }}
                 />
-                <span style={{ fontSize: 10, color: '#94A3B8' }}>°</span>
+                <span style={{ fontSize: 10, color: 'var(--color-text-3)' }}>°</span>
               </div>
             )}
 
-            <div style={{ fontSize: 11, color: '#94A3B8', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 11, color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>
               {saving || shifting ? 'Saving...' : barPlacement ? `Tap map to place ${BAR_SPECS[barPlacement.type].label}` : freeMoveActive ? 'Tap features to grab' : 'Tap map to place'}
             </div>
           </div>
@@ -2991,7 +2991,7 @@ export default function InfrastructureMapPage() {
             alignItems: 'center',
             gap: 10,
           }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#F59E0B' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-warning)' }}>
               {pendingMoves.size} moved
             </div>
             <button
@@ -3001,7 +3001,7 @@ export default function InfrastructureMapPage() {
                 padding: '5px 14px',
                 borderRadius: 6,
                 border: 'none',
-                background: '#10B981',
+                background: 'var(--color-success)',
                 color: 'white',
                 fontSize: 12,
                 fontWeight: 600,
@@ -3018,7 +3018,7 @@ export default function InfrastructureMapPage() {
                 borderRadius: 6,
                 border: '1px solid rgba(148,163,184,0.3)',
                 background: 'transparent',
-                color: '#94A3B8',
+                color: 'var(--color-text-3)',
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -3051,7 +3051,7 @@ export default function InfrastructureMapPage() {
 
             {/* Layer selector */}
             <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Layer</div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 4 }}>Layer</div>
               <select
                 value={shiftLayer}
                 onChange={e => setShiftLayer(e.target.value)}
@@ -3061,7 +3061,7 @@ export default function InfrastructureMapPage() {
                   border: '1px solid rgba(148, 163, 184, 0.2)',
                   borderRadius: 6,
                   padding: '6px 8px',
-                  color: '#E2E8F0',
+                  color: 'var(--color-text-1)',
                   fontSize: 12,
                   cursor: 'pointer',
                 }}
@@ -3075,7 +3075,7 @@ export default function InfrastructureMapPage() {
 
             {/* Distance */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Distance (feet)</div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 4 }}>Distance (feet)</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 {[1, 2, 5, 10, 20, 50].map(ft => (
                   <button
@@ -3087,7 +3087,7 @@ export default function InfrastructureMapPage() {
                       borderRadius: 5,
                       border: shiftFeet === ft ? '1px solid #A855F7' : '1px solid rgba(148,163,184,0.15)',
                       background: shiftFeet === ft ? 'rgba(168,85,247,0.2)' : 'transparent',
-                      color: shiftFeet === ft ? '#C084FC' : '#94A3B8',
+                      color: shiftFeet === ft ? '#C084FC' : 'var(--color-text-3)',
                       fontSize: 11,
                       fontWeight: 600,
                       cursor: 'pointer',
@@ -3114,7 +3114,7 @@ export default function InfrastructureMapPage() {
               <button onClick={() => handleBulkShift('W')} disabled={shifting} style={dirBtnStyle}>W</button>
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 10, color: '#64748B',
+                fontSize: 10, color: 'var(--color-text-3)',
               }}>
                 {shiftFeet}ft
               </div>
@@ -3158,7 +3158,7 @@ export default function InfrastructureMapPage() {
                 onClick={() => setSelectedIds(new Set())}
                 style={{
                   padding: '2px 8px', borderRadius: 4, border: '1px solid rgba(148,163,184,0.2)',
-                  background: 'transparent', color: '#94A3B8', fontSize: 11, cursor: 'pointer',
+                  background: 'transparent', color: 'var(--color-text-3)', fontSize: 11, cursor: 'pointer',
                 }}
               >
                 Clear
@@ -3166,7 +3166,7 @@ export default function InfrastructureMapPage() {
             </div>
 
             {/* Shift controls */}
-            <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Shift selected</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 4 }}>Shift selected</div>
             <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
               {[1, 2, 5, 10, 20, 50].map(ft => (
                 <button
@@ -3176,7 +3176,7 @@ export default function InfrastructureMapPage() {
                     flex: 1, padding: '4px 0', borderRadius: 5,
                     border: shiftFeet === ft ? '1px solid #A855F7' : '1px solid rgba(148,163,184,0.15)',
                     background: shiftFeet === ft ? 'rgba(168,85,247,0.2)' : 'transparent',
-                    color: shiftFeet === ft ? '#C084FC' : '#94A3B8',
+                    color: shiftFeet === ft ? '#C084FC' : 'var(--color-text-3)',
                     fontSize: 11, fontWeight: 600, cursor: 'pointer',
                   }}
                 >
@@ -3195,7 +3195,7 @@ export default function InfrastructureMapPage() {
               <button onClick={() => handleSelectionShift('N')} disabled={shifting} style={dirBtnStyle}>N</button>
               <div />
               <button onClick={() => handleSelectionShift('W')} disabled={shifting} style={dirBtnStyle}>W</button>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#64748B' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--color-text-3)' }}>
                 {shiftFeet}ft
               </div>
               <button onClick={() => handleSelectionShift('E')} disabled={shifting} style={dirBtnStyle}>E</button>
@@ -3206,7 +3206,7 @@ export default function InfrastructureMapPage() {
 
             {/* Re-layer controls */}
             <div style={{ borderTop: '1px solid rgba(148,163,184,0.15)', paddingTop: 10 }}>
-              <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Re-layer selected</div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 4 }}>Re-layer selected</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <input
                   type="text"
@@ -3216,7 +3216,7 @@ export default function InfrastructureMapPage() {
                   style={{
                     flex: 1, padding: '6px 8px', borderRadius: 6,
                     border: '1px solid rgba(148,163,184,0.2)',
-                    background: 'rgba(30, 41, 59, 0.9)', color: '#E2E8F0',
+                    background: 'rgba(30, 41, 59, 0.9)', color: 'var(--color-text-1)',
                     fontSize: 12, outline: 'none',
                   }}
                 />
@@ -3227,7 +3227,7 @@ export default function InfrastructureMapPage() {
                     padding: '6px 14px', borderRadius: 6,
                     border: '1px solid rgba(168,85,247,0.3)',
                     background: relayerName.trim() ? 'rgba(168,85,247,0.2)' : 'transparent',
-                    color: relayerName.trim() ? '#C084FC' : '#64748B',
+                    color: relayerName.trim() ? '#C084FC' : 'var(--color-text-3)',
                     fontSize: 12, fontWeight: 600, cursor: relayerName.trim() ? 'pointer' : 'default',
                     whiteSpace: 'nowrap',
                   }}
@@ -3246,7 +3246,7 @@ export default function InfrastructureMapPage() {
                         padding: '2px 8px', borderRadius: 4,
                         border: '1px solid rgba(148,163,184,0.15)',
                         background: relayerName === layer ? 'rgba(168,85,247,0.15)' : 'transparent',
-                        color: '#94A3B8', fontSize: 10, cursor: 'pointer',
+                        color: 'var(--color-text-3)', fontSize: 10, cursor: 'pointer',
                       }}
                     >
                       {layer}
@@ -3258,7 +3258,7 @@ export default function InfrastructureMapPage() {
 
             {/* Assign to component */}
             <div style={{ borderTop: '1px solid rgba(148,163,184,0.15)', paddingTop: 10, marginTop: 10 }}>
-              <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Assign to component</div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 4 }}>Assign to component</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <select
                   value={assignCompId}
@@ -3266,7 +3266,7 @@ export default function InfrastructureMapPage() {
                   style={{
                     flex: 1, padding: '6px 8px', borderRadius: 6,
                     border: '1px solid rgba(148,163,184,0.2)',
-                    background: 'rgba(30, 41, 59, 0.9)', color: '#E2E8F0',
+                    background: 'rgba(30, 41, 59, 0.9)', color: 'var(--color-text-1)',
                     fontSize: 11, outline: 'none', fontFamily: 'inherit',
                   }}
                 >
@@ -3308,7 +3308,7 @@ export default function InfrastructureMapPage() {
                   borderRadius: 6,
                   border: '1px solid rgba(56,189,248,0.3)',
                   background: selectedIds.size >= 2 ? 'rgba(56,189,248,0.15)' : 'transparent',
-                  color: selectedIds.size >= 2 ? '#38BDF8' : '#64748B',
+                  color: selectedIds.size >= 2 ? 'var(--color-accent)' : 'var(--color-text-3)',
                   fontSize: 12,
                   fontWeight: 600,
                   cursor: selectedIds.size >= 2 ? 'pointer' : 'default',
@@ -3317,14 +3317,14 @@ export default function InfrastructureMapPage() {
               >
                 {linkingBar ? 'Linking...' : `Link ${selectedIds.size} as Bar`}
               </button>
-              <div style={{ fontSize: 10, color: '#64748B', marginTop: 3 }}>
+              <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginTop: 3 }}>
                 Groups selected lights so outage tracking knows they belong to the same bar position
               </div>
             </div>
 
             {/* Re-type selected */}
             <div style={{ borderTop: '1px solid rgba(148,163,184,0.15)', paddingTop: 10, marginTop: 10 }}>
-              <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 4 }}>Re-type selected</div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 4 }}>Re-type selected</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <select
                   value={retypeName}
@@ -3332,7 +3332,7 @@ export default function InfrastructureMapPage() {
                   style={{
                     flex: 1, padding: '6px 8px', borderRadius: 6,
                     border: '1px solid rgba(148,163,184,0.2)',
-                    background: 'rgba(30, 41, 59, 0.9)', color: '#E2E8F0',
+                    background: 'rgba(30, 41, 59, 0.9)', color: 'var(--color-text-1)',
                     fontSize: 11, outline: 'none', fontFamily: 'inherit',
                   }}
                 >
@@ -3348,7 +3348,7 @@ export default function InfrastructureMapPage() {
                     padding: '6px 14px', borderRadius: 6,
                     border: '1px solid rgba(168,85,247,0.3)',
                     background: retypeName ? 'rgba(168,85,247,0.2)' : 'transparent',
-                    color: retypeName ? '#C084FC' : '#64748B',
+                    color: retypeName ? '#C084FC' : 'var(--color-text-3)',
                     fontSize: 12, fontWeight: 600, cursor: retypeName ? 'pointer' : 'default',
                     whiteSpace: 'nowrap',
                   }}
@@ -3369,7 +3369,7 @@ export default function InfrastructureMapPage() {
                   borderRadius: 6,
                   border: '1px solid rgba(239, 68, 68, 0.3)',
                   background: 'rgba(239, 68, 68, 0.15)',
-                  color: '#EF4444',
+                  color: 'var(--color-danger)',
                   fontSize: 12,
                   fontWeight: 600,
                   cursor: deletingSelected ? 'wait' : 'pointer',
@@ -3397,7 +3397,7 @@ export default function InfrastructureMapPage() {
               border: '1px solid rgba(148, 163, 184, 0.2)',
               borderRadius: 8,
               padding: '6px 12px',
-              color: '#E2E8F0',
+              color: 'var(--color-text-1)',
               fontSize: 'var(--fs-sm)',
               fontWeight: 600,
               cursor: 'pointer',
@@ -3416,7 +3416,7 @@ export default function InfrastructureMapPage() {
               border: '1px solid rgba(148, 163, 184, 0.2)',
               borderRadius: 8,
               padding: '6px 10px',
-              color: '#E2E8F0',
+              color: 'var(--color-text-1)',
               fontSize: 16,
               cursor: 'pointer',
               display: 'flex',
@@ -3433,7 +3433,7 @@ export default function InfrastructureMapPage() {
               border: trackingLocation ? '1px solid rgba(59, 130, 246, 0.5)' : '1px solid rgba(148, 163, 184, 0.2)',
               borderRadius: 8,
               padding: '6px 10px',
-              color: trackingLocation ? '#3B82F6' : '#E2E8F0',
+              color: trackingLocation ? '#3B82F6' : 'var(--color-text-1)',
               fontSize: 14,
               cursor: 'pointer',
               display: 'flex',
@@ -3469,14 +3469,14 @@ export default function InfrastructureMapPage() {
                 marginBottom: 0,
                 cursor: 'pointer',
                 fontSize: 11,
-                color: showOutagesOnly ? '#EF4444' : '#94A3B8',
+                color: showOutagesOnly ? 'var(--color-danger)' : 'var(--color-text-3)',
                 fontWeight: showOutagesOnly ? 700 : 400,
               }}>
                 <input
                   type="checkbox"
                   checked={showOutagesOnly}
                   onChange={() => setShowOutagesOnly(prev => !prev)}
-                  style={{ accentColor: '#EF4444' }}
+                  style={{ accentColor: 'var(--color-danger)' }}
                 />
                 Show outages only ({dbFeatures.filter(f => f.status === 'inoperative').length})
               </label>
@@ -3492,14 +3492,14 @@ export default function InfrastructureMapPage() {
                 borderBottom: '1px solid rgba(148, 163, 184, 0.15)',
                 cursor: 'pointer',
                 fontSize: 11,
-                color: colorByHealth ? '#F59E0B' : '#94A3B8',
+                color: colorByHealth ? 'var(--color-warning)' : 'var(--color-text-3)',
                 fontWeight: colorByHealth ? 700 : 400,
               }}>
                 <input
                   type="checkbox"
                   checked={colorByHealth}
                   onChange={() => setColorByHealth(prev => !prev)}
-                  style={{ accentColor: '#F59E0B' }}
+                  style={{ accentColor: 'var(--color-warning)' }}
                 />
                 Color by health
               </label>
@@ -3525,14 +3525,14 @@ export default function InfrastructureMapPage() {
                     }}
                     onClick={() => setExpandedGroups(prev => ({ ...prev, [groupName]: !prev[groupName] }))}
                   >
-                    <span style={{ fontSize: 9, color: '#64748B', width: 10, textAlign: 'center' }}>
+                    <span style={{ fontSize: 9, color: 'var(--color-text-3)', width: 10, textAlign: 'center' }}>
                       {expanded ? '▼' : '▶'}
                     </span>
                     <span
                       style={{
                         fontSize: 11,
                         fontWeight: 700,
-                        color: noneVisible ? '#475569' : '#94A3B8',
+                        color: noneVisible ? 'var(--color-text-4)' : 'var(--color-text-3)',
                         flex: 1,
                         textTransform: 'uppercase',
                         letterSpacing: '0.04em',
@@ -3541,7 +3541,7 @@ export default function InfrastructureMapPage() {
                       {groupName}
                     </span>
                     <span
-                      style={{ fontSize: 10, color: '#64748B', cursor: 'pointer', padding: '0 2px' }}
+                      style={{ fontSize: 10, color: 'var(--color-text-3)', cursor: 'pointer', padding: '0 2px' }}
                       onClick={(e) => {
                         e.stopPropagation()
                         const newVal = !allVisible
@@ -3625,8 +3625,8 @@ export default function InfrastructureMapPage() {
                           background: layer.color, border: '1px solid rgba(0,0,0,0.3)', flexShrink: 0,
                         }} />
                       )}
-                      <span style={{ color: '#E2E8F0', fontSize: 12, flex: 1 }}>{layer.label}</span>
-                      <span style={{ color: '#64748B', fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>
+                      <span style={{ color: 'var(--color-text-1)', fontSize: 12, flex: 1 }}>{layer.label}</span>
+                      <span style={{ color: 'var(--color-text-3)', fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>
                         {featureCounts[layer.key]}
                       </span>
                     </label>
@@ -3643,7 +3643,7 @@ export default function InfrastructureMapPage() {
                   paddingTop: 8,
                   fontSize: 11,
                   fontWeight: 700,
-                  color: '#94A3B8',
+                  color: 'var(--color-text-3)',
                   marginBottom: 4,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
@@ -3669,13 +3669,13 @@ export default function InfrastructureMapPage() {
                           }}
                           onClick={() => setExpandedLocGroups(prev => ({ ...prev, [areaKey]: !areaExpanded }))}
                         >
-                          <span style={{ fontSize: 8, color: '#64748B', width: 10, textAlign: 'center' }}>
+                          <span style={{ fontSize: 8, color: 'var(--color-text-3)', width: 10, textAlign: 'center' }}>
                             {areaExpanded ? '▼' : '▶'}
                           </span>
                           <span style={{
                             fontSize: 10,
                             fontWeight: 700,
-                            color: '#CBD5E1',
+                            color: 'var(--color-text-2)',
                             flex: 1,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -3686,7 +3686,7 @@ export default function InfrastructureMapPage() {
                             {area.label}
                           </span>
                           <span
-                            style={{ fontSize: 9, color: '#64748B', cursor: 'pointer', padding: '0 2px' }}
+                            style={{ fontSize: 9, color: 'var(--color-text-3)', cursor: 'pointer', padding: '0 2px' }}
                             onClick={(e) => {
                               e.stopPropagation()
                               const newVal = !areaAllVisible
@@ -3717,13 +3717,13 @@ export default function InfrastructureMapPage() {
                                 }}
                                 onClick={() => setExpandedLocGroups(prev => ({ ...prev, [`sys:${sys.id}`]: !sysExpanded }))}
                               >
-                                <span style={{ fontSize: 8, color: '#64748B', width: 10, textAlign: 'center' }}>
+                                <span style={{ fontSize: 8, color: 'var(--color-text-3)', width: 10, textAlign: 'center' }}>
                                   {sysExpanded ? '▼' : '▶'}
                                 </span>
                                 <span style={{
                                   fontSize: 10,
                                   fontWeight: 600,
-                                  color: '#94A3B8',
+                                  color: 'var(--color-text-3)',
                                   flex: 1,
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
@@ -3732,7 +3732,7 @@ export default function InfrastructureMapPage() {
                                   {sys.name}
                                 </span>
                                 <span
-                                  style={{ fontSize: 9, color: '#64748B', cursor: 'pointer', padding: '0 2px' }}
+                                  style={{ fontSize: 9, color: 'var(--color-text-3)', cursor: 'pointer', padding: '0 2px' }}
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     const newVal = !sysAllVisible
@@ -3771,13 +3771,13 @@ export default function InfrastructureMapPage() {
                                     />
                                     <span style={{
                                       width: 8, height: 8, borderRadius: 2,
-                                      background: isVisible ? '#64748B' : 'transparent',
-                                      border: '1px solid #64748B', flexShrink: 0,
+                                      background: isVisible ? 'var(--color-text-3)' : 'transparent',
+                                      border: '1px solid var(--color-text-3)', flexShrink: 0,
                                     }} />
-                                    <span style={{ color: '#CBD5E1', fontSize: 11, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span style={{ color: 'var(--color-text-2)', fontSize: 11, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                       {comp.label}
                                     </span>
-                                    <span style={{ color: '#64748B', fontSize: 10, fontVariantNumeric: 'tabular-nums' }}>
+                                    <span style={{ color: 'var(--color-text-3)', fontSize: 10, fontVariantNumeric: 'tabular-nums' }}>
                                       {comp.count}
                                     </span>
                                   </label>
@@ -3802,20 +3802,20 @@ export default function InfrastructureMapPage() {
                         }}
                         onClick={() => setExpandedLocGroups(prev => ({ ...prev, '__unassigned': !prev['__unassigned'] }))}
                       >
-                        <span style={{ fontSize: 8, color: '#64748B', width: 10, textAlign: 'center' }}>
+                        <span style={{ fontSize: 8, color: 'var(--color-text-3)', width: 10, textAlign: 'center' }}>
                           {expandedLocGroups['__unassigned'] ? '▼' : '▶'}
                         </span>
                         <span style={{
                           fontSize: 10,
                           fontWeight: 700,
-                          color: '#64748B',
+                          color: 'var(--color-text-3)',
                           flex: 1,
                           fontStyle: 'italic',
                         }}>
                           Unassigned
                         </span>
                         <span
-                          style={{ fontSize: 9, color: '#64748B', cursor: 'pointer', padding: '0 2px' }}
+                          style={{ fontSize: 9, color: 'var(--color-text-3)', cursor: 'pointer', padding: '0 2px' }}
                           onClick={(e) => {
                             e.stopPropagation()
                             const allVisible = systemLegendGroups.unassignedLayers.every(([n]) => visibleSourceLayers[`layer:${n}`] !== false)
@@ -3854,13 +3854,13 @@ export default function InfrastructureMapPage() {
                             />
                             <span style={{
                               width: 8, height: 8, borderRadius: 2,
-                              background: isVisible ? '#64748B' : 'transparent',
-                              border: '1px solid #64748B', flexShrink: 0,
+                              background: isVisible ? 'var(--color-text-3)' : 'transparent',
+                              border: '1px solid var(--color-text-3)', flexShrink: 0,
                             }} />
-                            <span style={{ color: '#CBD5E1', fontSize: 11, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <span style={{ color: 'var(--color-text-2)', fontSize: 11, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {layerName}
                             </span>
-                            <span style={{ color: '#64748B', fontSize: 10, fontVariantNumeric: 'tabular-nums' }}>
+                            <span style={{ color: 'var(--color-text-3)', fontSize: 10, fontVariantNumeric: 'tabular-nums' }}>
                               {count}
                             </span>
                           </label>
@@ -3880,7 +3880,7 @@ export default function InfrastructureMapPage() {
               alignItems: 'center',
               justifyContent: 'space-between',
               fontSize: 11,
-              color: '#94A3B8',
+              color: 'var(--color-text-3)',
             }}>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button
@@ -3890,7 +3890,7 @@ export default function InfrastructureMapPage() {
                   }}
                   style={{
                     background: 'none', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 4,
-                    color: '#94A3B8', fontSize: 10, padding: '2px 6px', cursor: 'pointer',
+                    color: 'var(--color-text-3)', fontSize: 10, padding: '2px 6px', cursor: 'pointer',
                   }}
                 >
                   Show All
@@ -3907,7 +3907,7 @@ export default function InfrastructureMapPage() {
                   }}
                   style={{
                     background: 'none', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 4,
-                    color: '#94A3B8', fontSize: 10, padding: '2px 6px', cursor: 'pointer',
+                    color: 'var(--color-text-3)', fontSize: 10, padding: '2px 6px', cursor: 'pointer',
                   }}
                 >
                   Hide All
@@ -3929,7 +3929,7 @@ export default function InfrastructureMapPage() {
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
         }
         .infrastructure-map-popup .mapboxgl-popup-close-button {
-          color: #94A3B8 !important;
+          color: var(--color-text-3) !important;
           font-size: 16px !important;
           right: 4px !important;
           top: 4px !important;
@@ -3942,15 +3942,8 @@ export default function InfrastructureMapPage() {
       {/* Outage Alert Dialog */}
       {outageAlert && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'rgba(0,0,0,0.6)',
-          }}
+          className="modal-overlay"
+          style={{ zIndex: 9999 }}
           onClick={() => setOutageAlert(null)}
         >
           <div
@@ -3969,7 +3962,7 @@ export default function InfrastructureMapPage() {
           >
             {outageAlert.exceeded.length > 0 && (
               <>
-                <div style={{ color: '#EF4444', fontWeight: 700, fontSize: 16, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ color: 'var(--color-danger)', fontWeight: 700, fontSize: 16, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 20 }}>{'\u26D4'}</span> OUTAGE EXCEEDS ALLOWABLE LIMIT
                 </div>
                 {outageAlert.exceeded.map((cs, i) => (
@@ -3984,10 +3977,10 @@ export default function InfrastructureMapPage() {
                       )}
                     </div>
                     {cs.hasAdjacentViolation && (
-                      <div style={{ color: '#EF4444', fontSize: 13, marginTop: 2 }}>Adjacent lamp violation detected</div>
+                      <div style={{ color: 'var(--color-danger)', fontSize: 13, marginTop: 2 }}>Adjacent lamp violation detected</div>
                     )}
                     {cs.hasConsecutiveViolation && (
-                      <div style={{ color: '#EF4444', fontSize: 13, marginTop: 2 }}>Consecutive lamp violation ({cs.allowableConsecutive} max)</div>
+                      <div style={{ color: 'var(--color-danger)', fontSize: 13, marginTop: 2 }}>Consecutive lamp violation ({cs.allowableConsecutive} max)</div>
                     )}
                     <div style={{ marginTop: 10, fontWeight: 600, fontSize: 13, color: 'var(--color-text-1, #E2E8F0)' }}>
                       REQUIRED ACTIONS:
@@ -4032,7 +4025,7 @@ export default function InfrastructureMapPage() {
                       )}
                     </div>
                     {cs.requiredActions.systemShutoff && (
-                      <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(239,68,68,0.12)', borderRadius: 6, color: '#EF4444', fontWeight: 600, fontSize: 13 }}>
+                      <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(239,68,68,0.12)', borderRadius: 6, color: 'var(--color-danger)', fontWeight: 600, fontSize: 13 }}>
                         SYSTEM SHUTOFF MAY BE REQUIRED
                         <div style={{ fontWeight: 400, fontSize: 12, marginTop: 2 }}>
                           Waiver: Installation Commander (&le;24hr) / MAJCOM/A3 (&gt;24hr)
@@ -4046,7 +4039,7 @@ export default function InfrastructureMapPage() {
             )}
             {outageAlert.approaching.length > 0 && (
               <>
-                <div style={{ color: '#F59E0B', fontWeight: 700, fontSize: 15, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ color: 'var(--color-warning)', fontWeight: 700, fontSize: 15, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 18 }}>{'\u26A0'}</span> APPROACHING OUTAGE LIMIT
                 </div>
                 {outageAlert.approaching.map((cs, i) => (
@@ -4054,7 +4047,7 @@ export default function InfrastructureMapPage() {
                     <div style={{ color: 'var(--color-text-1, #E2E8F0)', fontWeight: 600, marginBottom: 2 }}>
                       {outageAlert.systemName} &mdash; {cs.componentLabel}
                     </div>
-                    <div style={{ color: '#F59E0B', fontSize: 13 }}>
+                    <div style={{ color: 'var(--color-warning)', fontSize: 13 }}>
                       {cs.inoperativeCount}/{cs.totalCount} out ({cs.outagePct}%) &mdash;{' '}
                       {cs.allowablePct != null
                         ? `${Math.round(cs.allowablePct - cs.outagePct)}% remaining`

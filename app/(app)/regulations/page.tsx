@@ -514,7 +514,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                       background: 'transparent',
                       border: '1px solid rgba(239,68,68,0.3)',
                       borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
-                      color: '#F87171', fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
+                      color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -532,7 +532,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                       border: cachedCount === regulations.length
                         ? '1px solid rgba(52,211,153,0.3)' : 'none',
                       borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
-                      color: cachedCount === regulations.length ? '#34D399' : '#fff',
+                      color: cachedCount === regulations.length ? 'var(--color-success)' : '#fff',
                       fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
                       whiteSpace: 'nowrap',
                       opacity: cachedCount === regulations.length ? 0.8 : 1,
@@ -562,7 +562,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                   <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
                     <span>{cacheProgress.done} of {cacheProgress.total} downloaded</span>
                     {cacheProgress.errors > 0 && (
-                      <span style={{ color: '#F97316' }}>{cacheProgress.errors} unavailable</span>
+                      <span style={{ color: 'var(--color-orange)' }}>{cacheProgress.errors} unavailable</span>
                     )}
                   </div>
                 </div>
@@ -582,7 +582,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                       background: 'transparent',
                       border: '1px solid rgba(239,68,68,0.25)',
                       borderRadius: 6, padding: '4px 10px', cursor: clearing ? 'not-allowed' : 'pointer',
-                      color: '#F87171', fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
+                      color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
                       whiteSpace: 'nowrap',
                       opacity: clearing ? 0.5 : 1,
                     }}
@@ -654,7 +654,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
             onClick={() => setShowAddModal(true)}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 4,
-              background: 'linear-gradient(135deg, #059669, #10B981)',
+              background: 'linear-gradient(135deg, #059669, var(--color-success))',
               border: 'none', borderRadius: 6, padding: '5px 12px',
               color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
               fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap',
@@ -842,7 +842,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                           display: 'inline-flex', alignItems: 'center', gap: 6,
                           background: 'transparent',
                           border: '1px solid rgba(239,68,68,0.25)',
-                          color: '#F87171', fontSize: 'var(--fs-base)', fontWeight: 700,
+                          color: 'var(--color-danger)', fontSize: 'var(--fs-base)', fontWeight: 700,
                           padding: '6px 14px', borderRadius: 6,
                           cursor: 'pointer', fontFamily: 'inherit',
                           marginLeft: 'auto',
@@ -865,9 +865,9 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 10 }}>
-                        <AlertTriangle size={14} color="#F87171" style={{ flexShrink: 0, marginTop: 1 }} />
+                        <AlertTriangle size={14} color="var(--color-danger)" style={{ flexShrink: 0, marginTop: 1 }} />
                         <div>
-                          <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: '#F87171', marginBottom: 2 }}>
+                          <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-danger)', marginBottom: 2 }}>
                             Delete this reference?
                           </div>
                           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>
@@ -891,7 +891,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                           disabled={deletingRegId === reg.reg_id}
                           style={{
                             padding: '5px 14px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 700,
-                            background: deletingRegId === reg.reg_id ? '#7F1D1D' : '#DC2626',
+                            background: deletingRegId === reg.reg_id ? '#7F1D1D' : 'var(--color-danger)',
                             border: 'none', color: '#fff', cursor: deletingRegId === reg.reg_id ? 'not-allowed' : 'pointer',
                             fontFamily: 'inherit', opacity: deletingRegId === reg.reg_id ? 0.6 : 1,
                           }}
@@ -1061,11 +1061,11 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
 
   return (
     <div
+      className="modal-overlay"
       style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        background: 'var(--color-overlay)', backdropFilter: 'blur(4px)',
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        alignItems: 'flex-start',
         padding: '40px 16px', overflowY: 'auto',
+        backdropFilter: 'blur(4px)',
       }}
       onClick={onClose}
     >
@@ -1093,7 +1093,7 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
           <div style={{
             padding: '8px 12px', marginBottom: 12, borderRadius: 6,
             background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-            color: '#F87171', fontSize: 'var(--fs-base)', fontWeight: 600,
+            color: 'var(--color-danger)', fontSize: 'var(--fs-base)', fontWeight: 600,
           }}>
             {error}
           </div>
@@ -1279,7 +1279,7 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
             disabled={saving}
             style={{
               padding: '8px 20px', borderRadius: 6, fontSize: 'var(--fs-md)', fontWeight: 700,
-              background: saving ? '#064E3B' : 'linear-gradient(135deg, #059669, #10B981)',
+              background: saving ? '#064E3B' : 'linear-gradient(135deg, #059669, var(--color-success))',
               border: 'none', color: '#fff',
               cursor: saving ? 'not-allowed' : 'pointer',
               fontFamily: 'inherit',
@@ -1470,7 +1470,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
         <div style={{
           padding: '8px 12px', marginBottom: 12, borderRadius: 6,
           background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-          color: '#F87171', fontSize: 'var(--fs-base)', fontWeight: 600,
+          color: 'var(--color-danger)', fontSize: 'var(--fs-base)', fontWeight: 600,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
           <span>{error}</span>
@@ -1478,7 +1478,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
             onClick={() => setError(null)}
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}
           >
-            <X size={12} color="#F87171" />
+            <X size={12} color="var(--color-danger)" />
           </button>
         </div>
       )}
@@ -1530,7 +1530,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
                     background: doc.status === 'failed'
                       ? 'rgba(239,68,68,0.15)' : 'rgba(253,230,138,0.15)',
                     color: doc.status === 'failed'
-                      ? '#F87171' : '#FDE68A',
+                      ? 'var(--color-danger)' : '#FDE68A',
                     padding: '2px 6px', borderRadius: 4, whiteSpace: 'nowrap',
                   }}>
                     {doc.status === 'failed' ? 'FAILED' : 'PROCESSING'}
@@ -1569,7 +1569,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
               <div style={{
                 marginTop: 6, padding: '6px 8px', borderRadius: 6,
                 background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.12)',
-                fontSize: 'var(--fs-sm)', color: '#F87171', lineHeight: 1.4,
+                fontSize: 'var(--fs-sm)', color: 'var(--color-danger)', lineHeight: 1.4,
               }}>
                 Text extraction failed — the file may be scanned or image-based.
                 You can still view the document, but search won&apos;t be available.
@@ -1599,7 +1599,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   background: 'transparent',
                   border: '1px solid var(--color-border-active)',
-                  color: isCached ? '#F87171' : 'var(--color-text-2)',
+                  color: isCached ? 'var(--color-danger)' : 'var(--color-text-2)',
                   fontSize: 'var(--fs-sm)', fontWeight: 700,
                   padding: '4px 10px', borderRadius: 5,
                   cursor: isCaching ? 'not-allowed' : 'pointer',
@@ -1618,7 +1618,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   background: 'transparent',
                   border: '1px solid rgba(239,68,68,0.2)',
-                  color: '#F87171',
+                  color: 'var(--color-danger)',
                   fontSize: 'var(--fs-sm)', fontWeight: 700,
                   padding: '4px 10px', borderRadius: 5,
                   cursor: isDeleting ? 'not-allowed' : 'pointer',

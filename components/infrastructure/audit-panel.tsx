@@ -93,7 +93,7 @@ function EditableLabel({
           border: '1px solid var(--color-cyan)',
           borderRadius: 4,
           padding: '2px 6px',
-          color: '#E2E8F0',
+          color: 'var(--color-text-1)',
           fontSize: 11,
           outline: 'none',
         }}
@@ -114,7 +114,7 @@ function EditableLabel({
         display: 'inline-block',
       }}
     >
-      {value || <span style={{ color: '#475569', fontStyle: 'italic' }}>no label</span>}
+      {value || <span style={{ color: 'var(--color-border)', fontStyle: 'italic' }}>no label</span>}
     </span>
   )
 }
@@ -168,7 +168,7 @@ function PrefixForm({
             border: '1px solid rgba(6, 182, 212, 0.4)',
             borderRadius: 4,
             padding: '3px 6px',
-            color: '#E2E8F0',
+            color: 'var(--color-text-1)',
             fontSize: 11,
             outline: 'none',
           }}
@@ -181,7 +181,7 @@ function PrefixForm({
             borderRadius: 4,
             border: '1px solid rgba(6, 182, 212, 0.3)',
             background: prefix.trim() ? 'rgba(6, 182, 212, 0.2)' : 'transparent',
-            color: prefix.trim() ? '#22D3EE' : '#475569',
+            color: prefix.trim() ? 'var(--color-cyan-bright)' : 'var(--color-border)',
             fontSize: 10,
             fontWeight: 600,
             cursor: prefix.trim() ? 'pointer' : 'default',
@@ -197,7 +197,7 @@ function PrefixForm({
             borderRadius: 4,
             border: '1px solid rgba(148,163,184,0.2)',
             background: 'transparent',
-            color: '#64748B',
+            color: 'var(--color-text-3)',
             fontSize: 10,
             cursor: 'pointer',
           }}
@@ -207,18 +207,18 @@ function PrefixForm({
       </div>
       {/* Sequential numbering option */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 10, color: '#94A3B8' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 10, color: 'var(--color-text-3)' }}>
           <input
             type="checkbox"
             checked={sequential}
             onChange={() => setSequential(prev => !prev)}
-            style={{ accentColor: '#22D3EE' }}
+            style={{ accentColor: 'var(--color-cyan-bright)' }}
           />
           Append sequential #
         </label>
         {sequential && (
           <>
-            <span style={{ fontSize: 10, color: '#64748B' }}>start at</span>
+            <span style={{ fontSize: 10, color: 'var(--color-text-3)' }}>start at</span>
             <input
               type="number"
               min={1}
@@ -230,7 +230,7 @@ function PrefixForm({
                 border: '1px solid rgba(148,163,184,0.2)',
                 borderRadius: 4,
                 padding: '2px 4px',
-                color: '#E2E8F0',
+                color: 'var(--color-text-1)',
                 fontSize: 10,
                 textAlign: 'center',
                 outline: 'none',
@@ -240,7 +240,7 @@ function PrefixForm({
         )}
       </div>
       {sequential && prefix.trim() && (
-        <div style={{ fontSize: 9, color: '#64748B', marginTop: 2, paddingLeft: 2 }}>
+        <div style={{ fontSize: 9, color: 'var(--color-text-3)', marginTop: 2, paddingLeft: 2 }}>
           Preview: &quot;{prefix.trim()} {startAt}&quot; ... &quot;{prefix.trim()} {startAt + featureCount - 1}&quot;
         </div>
       )}
@@ -304,7 +304,7 @@ function FixtureIdForm({
             border: '1px solid rgba(168, 85, 247, 0.4)',
             borderRadius: 4,
             padding: '3px 6px',
-            color: '#E2E8F0',
+            color: 'var(--color-text-1)',
             fontSize: 11,
             outline: 'none',
           }}
@@ -317,7 +317,7 @@ function FixtureIdForm({
             borderRadius: 4,
             border: '1px solid rgba(168, 85, 247, 0.3)',
             background: customPrefix.trim() ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
-            color: customPrefix.trim() ? '#C084FC' : '#475569',
+            color: customPrefix.trim() ? 'var(--color-purple)' : 'var(--color-border)',
             fontSize: 10,
             fontWeight: 600,
             cursor: customPrefix.trim() ? 'pointer' : 'default',
@@ -333,7 +333,7 @@ function FixtureIdForm({
             borderRadius: 4,
             border: '1px solid rgba(148,163,184,0.2)',
             background: 'transparent',
-            color: '#64748B',
+            color: 'var(--color-text-3)',
             fontSize: 10,
             cursor: 'pointer',
           }}
@@ -343,9 +343,9 @@ function FixtureIdForm({
       </div>
       {customPrefix.trim() && previewLines.length > 0 && (
         <div style={{ marginTop: 4 }}>
-          <div style={{ fontSize: 9, color: '#64748B', marginBottom: 2 }}>Preview:</div>
+          <div style={{ fontSize: 9, color: 'var(--color-text-3)', marginBottom: 2 }}>Preview:</div>
           {previewLines.map((line, i) => (
-            <div key={i} style={{ fontSize: 9, color: '#94A3B8', paddingLeft: 2 }}>{line}</div>
+            <div key={i} style={{ fontSize: 9, color: 'var(--color-text-3)', paddingLeft: 2 }}>{line}</div>
           ))}
         </div>
       )}
@@ -669,10 +669,10 @@ export default function AuditPanel({
           flexShrink: 0,
         }}
       >
-        <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: '#22D3EE', flex: 1 }}>
+        <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-cyan-bright)', flex: 1 }}>
           Audit Mode
         </span>
-        <span style={{ fontSize: 10, color: '#64748B' }}>
+        <span style={{ fontSize: 10, color: 'var(--color-text-3)' }}>
           {totalFiltered} feature{totalFiltered !== 1 ? 's' : ''}
         </span>
         <button
@@ -680,7 +680,7 @@ export default function AuditPanel({
           style={{
             background: 'transparent',
             border: 'none',
-            color: '#64748B',
+            color: 'var(--color-text-3)',
             fontSize: 16,
             cursor: 'pointer',
             padding: '2px 4px',
@@ -703,7 +703,7 @@ export default function AuditPanel({
             border: '1px solid rgba(148, 163, 184, 0.2)',
             borderRadius: 6,
             padding: '6px 10px',
-            color: '#E2E8F0',
+            color: 'var(--color-text-1)',
             fontSize: 11,
             outline: 'none',
           }}
@@ -721,7 +721,7 @@ export default function AuditPanel({
             borderRadius: 6,
             border: '1px solid rgba(168, 85, 247, 0.3)',
             background: 'rgba(168, 85, 247, 0.1)',
-            color: '#C084FC',
+            color: 'var(--color-purple)',
             fontSize: 11,
             fontWeight: 600,
             cursor: features.length > 0 ? 'pointer' : 'default',
@@ -748,7 +748,7 @@ export default function AuditPanel({
               borderRadius: 6,
               border: '1px solid rgba(56, 189, 248, 0.3)',
               background: 'rgba(56, 189, 248, 0.1)',
-              color: '#38BDF8',
+              color: 'var(--color-cyan)',
               fontSize: 11,
               fontWeight: 600,
               cursor: 'pointer',
@@ -771,7 +771,7 @@ export default function AuditPanel({
               borderRadius: 6,
               border: barGroupsOpen ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid rgba(148, 163, 184, 0.15)',
               background: barGroupsOpen ? 'rgba(56, 189, 248, 0.1)' : 'transparent',
-              color: barGroupsOpen ? '#38BDF8' : '#94A3B8',
+              color: barGroupsOpen ? 'var(--color-cyan)' : 'var(--color-text-3)',
               fontSize: 11,
               fontWeight: 600,
               cursor: 'pointer',
@@ -810,14 +810,14 @@ export default function AuditPanel({
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                       <span style={{
                         width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-                        background: inopCount >= 3 ? '#EF4444' : inopCount > 0 ? '#F59E0B' : '#22C55E',
+                        background: inopCount >= 3 ? 'var(--color-red)' : inopCount > 0 ? 'var(--color-amber)' : 'var(--color-green)',
                       }} />
                       <span style={{ fontWeight: 600, color: 'var(--color-text-1)', flex: 1 }}>
                         {bg.currentBlock || `Bar ${bg.groupId.slice(0, 6)}`}
                       </span>
                       <span style={{ color: 'var(--color-text-3)', fontSize: 10 }}>
                         {bg.lights.length} lights
-                        {inopCount > 0 && <span style={{ color: inopCount >= 3 ? '#EF4444' : '#F59E0B', marginLeft: 4 }}>{inopCount} inop</span>}
+                        {inopCount > 0 && <span style={{ color: inopCount >= 3 ? 'var(--color-red)' : 'var(--color-amber)', marginLeft: 4 }}>{inopCount} inop</span>}
                       </span>
                     </div>
                     <div style={{ color: 'var(--color-text-3)', fontSize: 10, marginBottom: 4 }}>
@@ -832,7 +832,7 @@ export default function AuditPanel({
                         style={{
                           flex: 1, padding: '3px 6px', borderRadius: 4,
                           border: '1px solid rgba(148, 163, 184, 0.2)',
-                          background: 'rgba(30, 41, 59, 0.9)', color: '#E2E8F0',
+                          background: 'rgba(30, 41, 59, 0.9)', color: 'var(--color-text-1)',
                           fontSize: 10, outline: 'none',
                         }}
                       />
@@ -859,7 +859,7 @@ export default function AuditPanel({
                           padding: '3px 8px', borderRadius: 4,
                           border: '1px solid rgba(56, 189, 248, 0.3)',
                           background: inputVal.trim() ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
-                          color: inputVal.trim() ? '#38BDF8' : '#64748B',
+                          color: inputVal.trim() ? 'var(--color-cyan)' : 'var(--color-text-3)',
                           fontSize: 10, fontWeight: 600,
                           cursor: inputVal.trim() ? 'pointer' : 'default',
                           opacity: isRenaming ? 0.6 : 1,
@@ -886,7 +886,7 @@ export default function AuditPanel({
             borderRadius: 6,
             border: bulkAssignOpen ? '1px solid rgba(6, 182, 212, 0.4)' : '1px solid rgba(148, 163, 184, 0.15)',
             background: bulkAssignOpen ? 'rgba(6, 182, 212, 0.1)' : 'transparent',
-            color: bulkAssignOpen ? '#22D3EE' : '#94A3B8',
+            color: bulkAssignOpen ? 'var(--color-cyan-bright)' : 'var(--color-text-3)',
             fontSize: 11,
             fontWeight: 600,
             cursor: 'pointer',
@@ -907,22 +907,22 @@ export default function AuditPanel({
             flexDirection: 'column',
             gap: 6,
           }}>
-            <div style={{ fontSize: 10, color: '#64748B', marginBottom: 2 }}>
+            <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginBottom: 2 }}>
               Filter features by layer + type, then assign to a component
             </div>
 
             {/* Layer filter */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 10, color: '#94A3B8', width: 40, flexShrink: 0 }}>Layer</span>
+              <span style={{ fontSize: 10, color: 'var(--color-text-3)', width: 40, flexShrink: 0 }}>Layer</span>
               <select
                 value={baLayer}
                 onChange={(e) => setBaLayer(e.target.value)}
                 style={{
                   flex: 1,
-                  background: '#0F172A',
+                  background: 'var(--color-bg-base)',
                   border: '1px solid rgba(148,163,184,0.2)',
                   borderRadius: 4,
-                  color: '#E2E8F0',
+                  color: 'var(--color-text-1)',
                   fontSize: 10,
                   padding: '4px 6px',
                 }}
@@ -936,16 +936,16 @@ export default function AuditPanel({
 
             {/* Type filter */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 10, color: '#94A3B8', width: 40, flexShrink: 0 }}>Type</span>
+              <span style={{ fontSize: 10, color: 'var(--color-text-3)', width: 40, flexShrink: 0 }}>Type</span>
               <select
                 value={baType}
                 onChange={(e) => setBaType(e.target.value)}
                 style={{
                   flex: 1,
-                  background: '#0F172A',
+                  background: 'var(--color-bg-base)',
                   border: '1px solid rgba(148,163,184,0.2)',
                   borderRadius: 4,
-                  color: '#E2E8F0',
+                  color: 'var(--color-text-1)',
                   fontSize: 10,
                   padding: '4px 6px',
                 }}
@@ -959,10 +959,10 @@ export default function AuditPanel({
 
             {/* Match count */}
             {(baLayer || baType) && (
-              <div style={{ fontSize: 10, color: baMatchedFeatures.length > 0 ? '#22D3EE' : '#64748B', fontWeight: 600 }}>
+              <div style={{ fontSize: 10, color: baMatchedFeatures.length > 0 ? 'var(--color-cyan-bright)' : 'var(--color-text-3)', fontWeight: 600 }}>
                 {baMatchedFeatures.length} feature{baMatchedFeatures.length !== 1 ? 's' : ''} matched
                 {baMatchedFeatures.length > 0 && (
-                  <span style={{ fontWeight: 400, color: '#64748B' }}>
+                  <span style={{ fontWeight: 400, color: 'var(--color-text-3)' }}>
                     {' '}({baMatchedFeatures.filter(f => f.system_component_id).length} already assigned)
                   </span>
                 )}
@@ -971,16 +971,16 @@ export default function AuditPanel({
 
             {/* Component selector */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 10, color: '#94A3B8', width: 40, flexShrink: 0 }}>Assign</span>
+              <span style={{ fontSize: 10, color: 'var(--color-text-3)', width: 40, flexShrink: 0 }}>Assign</span>
               <select
                 value={baComponentId}
                 onChange={(e) => setBaComponentId(e.target.value)}
                 style={{
                   flex: 1,
-                  background: '#0F172A',
+                  background: 'var(--color-bg-base)',
                   border: '1px solid rgba(148,163,184,0.2)',
                   borderRadius: 4,
-                  color: '#E2E8F0',
+                  color: 'var(--color-text-1)',
                   fontSize: 10,
                   padding: '4px 6px',
                 }}
@@ -1007,7 +1007,7 @@ export default function AuditPanel({
                 background: baComponentId && baMatchedFeatures.length > 0
                   ? 'rgba(6, 182, 212, 0.2)' : 'transparent',
                 color: baComponentId && baMatchedFeatures.length > 0
-                  ? '#22D3EE' : '#475569',
+                  ? 'var(--color-cyan-bright)' : 'var(--color-border)',
                 fontSize: 11,
                 fontWeight: 600,
                 cursor: baComponentId && baMatchedFeatures.length > 0 ? 'pointer' : 'default',
@@ -1028,7 +1028,7 @@ export default function AuditPanel({
             borderRadius: 6,
             border: bulkRetypeOpen ? '1px solid rgba(249, 115, 22, 0.4)' : '1px solid rgba(148, 163, 184, 0.15)',
             background: bulkRetypeOpen ? 'rgba(249, 115, 22, 0.1)' : 'transparent',
-            color: bulkRetypeOpen ? '#F97316' : '#94A3B8',
+            color: bulkRetypeOpen ? 'var(--color-orange)' : 'var(--color-text-3)',
             fontSize: 11,
             fontWeight: 600,
             cursor: 'pointer',
@@ -1049,22 +1049,22 @@ export default function AuditPanel({
             flexDirection: 'column',
             gap: 6,
           }}>
-            <div style={{ fontSize: 10, color: '#64748B', marginBottom: 2 }}>
+            <div style={{ fontSize: 10, color: 'var(--color-text-3)', marginBottom: 2 }}>
               Filter features by layer + current type, then change to a new type
             </div>
 
             {/* Layer filter */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 10, color: '#94A3B8', width: 40, flexShrink: 0 }}>Layer</span>
+              <span style={{ fontSize: 10, color: 'var(--color-text-3)', width: 40, flexShrink: 0 }}>Layer</span>
               <select
                 value={brLayer}
                 onChange={(e) => setBrLayer(e.target.value)}
                 style={{
                   flex: 1,
-                  background: '#0F172A',
+                  background: 'var(--color-bg-base)',
                   border: '1px solid rgba(148,163,184,0.2)',
                   borderRadius: 4,
-                  color: '#E2E8F0',
+                  color: 'var(--color-text-1)',
                   fontSize: 10,
                   padding: '4px 6px',
                 }}
@@ -1078,16 +1078,16 @@ export default function AuditPanel({
 
             {/* Current Type filter */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 10, color: '#94A3B8', width: 40, flexShrink: 0 }}>From</span>
+              <span style={{ fontSize: 10, color: 'var(--color-text-3)', width: 40, flexShrink: 0 }}>From</span>
               <select
                 value={brCurrentType}
                 onChange={(e) => setBrCurrentType(e.target.value)}
                 style={{
                   flex: 1,
-                  background: '#0F172A',
+                  background: 'var(--color-bg-base)',
                   border: '1px solid rgba(148,163,184,0.2)',
                   borderRadius: 4,
-                  color: '#E2E8F0',
+                  color: 'var(--color-text-1)',
                   fontSize: 10,
                   padding: '4px 6px',
                 }}
@@ -1101,23 +1101,23 @@ export default function AuditPanel({
 
             {/* Match count */}
             {(brLayer || brCurrentType) && (
-              <div style={{ fontSize: 10, color: brMatchedFeatures.length > 0 ? '#F97316' : '#64748B', fontWeight: 600 }}>
+              <div style={{ fontSize: 10, color: brMatchedFeatures.length > 0 ? 'var(--color-orange)' : 'var(--color-text-3)', fontWeight: 600 }}>
                 {brMatchedFeatures.length} feature{brMatchedFeatures.length !== 1 ? 's' : ''} matched
               </div>
             )}
 
             {/* New Type selector */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 10, color: '#94A3B8', width: 40, flexShrink: 0 }}>To</span>
+              <span style={{ fontSize: 10, color: 'var(--color-text-3)', width: 40, flexShrink: 0 }}>To</span>
               <select
                 value={brNewType}
                 onChange={(e) => setBrNewType(e.target.value)}
                 style={{
                   flex: 1,
-                  background: '#0F172A',
+                  background: 'var(--color-bg-base)',
                   border: '1px solid rgba(148,163,184,0.2)',
                   borderRadius: 4,
-                  color: '#E2E8F0',
+                  color: 'var(--color-text-1)',
                   fontSize: 10,
                   padding: '4px 6px',
                 }}
@@ -1140,7 +1140,7 @@ export default function AuditPanel({
                 background: brNewType && brMatchedFeatures.length > 0
                   ? 'rgba(249, 115, 22, 0.2)' : 'transparent',
                 color: brNewType && brMatchedFeatures.length > 0
-                  ? '#F97316' : '#475569',
+                  ? 'var(--color-orange)' : 'var(--color-border)',
                 fontSize: 11,
                 fontWeight: 600,
                 cursor: brNewType && brMatchedFeatures.length > 0 ? 'pointer' : 'default',
@@ -1176,13 +1176,13 @@ export default function AuditPanel({
                   borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
                 }}
               >
-                <span style={{ fontSize: 9, color: '#64748B', width: 10, textAlign: 'center' }}>
+                <span style={{ fontSize: 9, color: 'var(--color-text-3)', width: 10, textAlign: 'center' }}>
                   {sysExpanded ? '▼' : '▶'}
                 </span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', flex: 1, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-3)', flex: 1, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   {system.name}
                 </span>
-                <span style={{ fontSize: 10, color: '#64748B' }}>
+                <span style={{ fontSize: 10, color: 'var(--color-text-3)' }}>
                   {systemFeatureCount}
                 </span>
               </div>
@@ -1206,7 +1206,7 @@ export default function AuditPanel({
                     >
                       <span
                         onClick={() => toggleComponent(comp.id)}
-                        style={{ fontSize: 9, color: '#64748B', width: 10, textAlign: 'center' }}
+                        style={{ fontSize: 9, color: 'var(--color-text-3)', width: 10, textAlign: 'center' }}
                       >
                         {compExpanded ? '▼' : '▶'}
                       </span>
@@ -1217,11 +1217,11 @@ export default function AuditPanel({
                             onComponentGroupClick(comp.id, compFeatures.map(f => f.id))
                           }
                         }}
-                        style={{ fontSize: 11, fontWeight: 600, color: '#CBD5E1', flex: 1, cursor: 'pointer' }}
+                        style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-3)', flex: 1, cursor: 'pointer' }}
                       >
                         {comp.label}
                       </span>
-                      <span style={{ fontSize: 10, color: '#64748B', marginRight: 4 }}>
+                      <span style={{ fontSize: 10, color: 'var(--color-text-3)', marginRight: 4 }}>
                         {compFeatures.length}
                       </span>
                       <button
@@ -1236,7 +1236,7 @@ export default function AuditPanel({
                         style={{
                           background: 'transparent',
                           border: 'none',
-                          color: '#64748B',
+                          color: 'var(--color-text-3)',
                           fontSize: 12,
                           cursor: 'pointer',
                           padding: '0 2px',
@@ -1254,7 +1254,7 @@ export default function AuditPanel({
                           background: prefixTarget === comp.id ? 'rgba(6, 182, 212, 0.2)' : 'transparent',
                           border: prefixTarget === comp.id ? '1px solid rgba(6, 182, 212, 0.3)' : '1px solid transparent',
                           borderRadius: 4,
-                          color: prefixTarget === comp.id ? '#22D3EE' : '#64748B',
+                          color: prefixTarget === comp.id ? 'var(--color-cyan-bright)' : 'var(--color-text-3)',
                           fontSize: 10,
                           cursor: 'pointer',
                           padding: '1px 5px',
@@ -1273,7 +1273,7 @@ export default function AuditPanel({
                           background: fixtureIdTarget === comp.id ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
                           border: fixtureIdTarget === comp.id ? '1px solid rgba(168, 85, 247, 0.3)' : '1px solid transparent',
                           borderRadius: 4,
-                          color: fixtureIdTarget === comp.id ? '#C084FC' : '#64748B',
+                          color: fixtureIdTarget === comp.id ? 'var(--color-purple)' : 'var(--color-text-3)',
                           fontSize: 10,
                           cursor: 'pointer',
                           padding: '1px 5px',
@@ -1295,7 +1295,7 @@ export default function AuditPanel({
                           background: 'transparent',
                           border: '1px solid transparent',
                           borderRadius: 4,
-                          color: '#64748B',
+                          color: 'var(--color-text-3)',
                           fontSize: 10,
                           cursor: 'pointer',
                           padding: '1px 5px',
@@ -1340,7 +1340,7 @@ export default function AuditPanel({
                             padding: '3px 0 3px 24px',
                             cursor: 'pointer',
                             fontSize: 11,
-                            color: '#94A3B8',
+                            color: 'var(--color-text-3)',
                             borderLeft: `2px solid ${TYPE_COLORS[f.feature_type] || '#475569'}`,
                             marginLeft: 4,
                           }}
@@ -1351,12 +1351,12 @@ export default function AuditPanel({
                               width: 6,
                               height: 6,
                               borderRadius: '50%',
-                              background: f.status === 'inoperative' ? '#EF4444' : '#22C55E',
+                              background: f.status === 'inoperative' ? 'var(--color-red)' : 'var(--color-green)',
                               flexShrink: 0,
                             }}
                           />
                           {/* Type */}
-                          <span style={{ fontSize: 10, color: '#64748B', minWidth: 50, flexShrink: 0 }}>
+                          <span style={{ fontSize: 10, color: 'var(--color-text-3)', minWidth: 50, flexShrink: 0 }}>
                             {formatFeatureType(f.feature_type).split(' ').slice(-1)[0]}
                           </span>
                           {/* Sign text (editable, signs only) */}
@@ -1369,8 +1369,8 @@ export default function AuditPanel({
                             </span>
                           )}
                           {/* Fixture ID */}
-                          <span style={{ flex: 1, fontSize: 9, color: '#64748B', fontFamily: 'monospace', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {f.block || <span style={{ color: '#475569', fontStyle: 'italic' }}>no ID</span>}
+                          <span style={{ flex: 1, fontSize: 9, color: 'var(--color-text-3)', fontFamily: 'monospace', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {f.block || <span style={{ color: 'var(--color-border)', fontStyle: 'italic' }}>no ID</span>}
                           </span>
                           {/* Reassign button */}
                           {reassigning === f.id ? (
@@ -1385,10 +1385,10 @@ export default function AuditPanel({
                               onBlur={() => setReassigning(null)}
                               onClick={(e) => e.stopPropagation()}
                               style={{
-                                background: '#0F172A',
+                                background: 'var(--color-bg-base)',
                                 border: '1px solid rgba(6, 182, 212, 0.4)',
                                 borderRadius: 4,
-                                color: '#E2E8F0',
+                                color: 'var(--color-text-1)',
                                 fontSize: 10,
                                 padding: '2px 4px',
                                 maxWidth: 140,
@@ -1410,7 +1410,7 @@ export default function AuditPanel({
                               style={{
                                 background: 'transparent',
                                 border: 'none',
-                                color: '#475569',
+                                color: 'var(--color-border)',
                                 fontSize: 10,
                                 cursor: 'pointer',
                                 padding: '0 2px',
@@ -1443,13 +1443,13 @@ export default function AuditPanel({
                 borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
               }}
             >
-              <span style={{ fontSize: 9, color: '#64748B', width: 10, textAlign: 'center' }}>
+              <span style={{ fontSize: 9, color: 'var(--color-text-3)', width: 10, textAlign: 'center' }}>
                 {expandedSystems['__unassigned'] !== false ? '▼' : '▶'}
               </span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#F59E0B', flex: 1, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-amber)', flex: 1, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 Unassigned
               </span>
-              <span style={{ fontSize: 10, color: '#F59E0B' }}>
+              <span style={{ fontSize: 10, color: 'var(--color-amber)' }}>
                 {unassigned.length}
               </span>
             </div>
@@ -1471,13 +1471,13 @@ export default function AuditPanel({
                           cursor: 'pointer',
                         }}
                       >
-                        <span style={{ fontSize: 9, color: '#64748B', width: 10, textAlign: 'center' }}>
+                        <span style={{ fontSize: 9, color: 'var(--color-text-3)', width: 10, textAlign: 'center' }}>
                           {expandedComponents[`unassigned:${layer}`] !== false ? '▼' : '▶'}
                         </span>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: '#CBD5E1', flex: 1 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-3)', flex: 1 }}>
                           {layer}
                         </span>
-                        <span style={{ fontSize: 10, color: '#64748B' }}>{layerFeatures.length}</span>
+                        <span style={{ fontSize: 10, color: 'var(--color-text-3)' }}>{layerFeatures.length}</span>
                       </div>
 
                       {expandedComponents[`unassigned:${layer}`] !== false && layerFeatures
@@ -1493,7 +1493,7 @@ export default function AuditPanel({
                               padding: '3px 0 3px 24px',
                               cursor: 'pointer',
                               fontSize: 11,
-                              color: '#94A3B8',
+                              color: 'var(--color-text-3)',
                               borderLeft: `2px solid ${TYPE_COLORS[f.feature_type] || '#475569'}`,
                               marginLeft: 4,
                             }}
@@ -1503,11 +1503,11 @@ export default function AuditPanel({
                                 width: 6,
                                 height: 6,
                                 borderRadius: '50%',
-                                background: f.status === 'inoperative' ? '#EF4444' : '#22C55E',
+                                background: f.status === 'inoperative' ? 'var(--color-red)' : 'var(--color-green)',
                                 flexShrink: 0,
                               }}
                             />
-                            <span style={{ fontSize: 10, color: '#64748B', minWidth: 70, flexShrink: 0 }}>
+                            <span style={{ fontSize: 10, color: 'var(--color-text-3)', minWidth: 70, flexShrink: 0 }}>
                               {formatFeatureType(f.feature_type)}
                             </span>
                             {/* Sign text (editable, signs only) */}
@@ -1520,8 +1520,8 @@ export default function AuditPanel({
                               </span>
                             )}
                             {/* Fixture ID */}
-                            <span style={{ flex: 1, fontSize: 9, color: '#64748B', fontFamily: 'monospace', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {f.block || <span style={{ color: '#475569', fontStyle: 'italic' }}>no ID</span>}
+                            <span style={{ flex: 1, fontSize: 9, color: 'var(--color-text-3)', fontFamily: 'monospace', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {f.block || <span style={{ color: 'var(--color-border)', fontStyle: 'italic' }}>no ID</span>}
                             </span>
                             {/* Assign to component */}
                             {reassigning === f.id ? (
@@ -1536,10 +1536,10 @@ export default function AuditPanel({
                                 onBlur={() => setReassigning(null)}
                                 onClick={(e) => e.stopPropagation()}
                                 style={{
-                                  background: '#0F172A',
+                                  background: 'var(--color-bg-base)',
                                   border: '1px solid rgba(6, 182, 212, 0.4)',
                                   borderRadius: 4,
-                                  color: '#E2E8F0',
+                                  color: 'var(--color-text-1)',
                                   fontSize: 10,
                                   padding: '2px 4px',
                                   maxWidth: 140,
@@ -1562,7 +1562,7 @@ export default function AuditPanel({
                                   background: 'rgba(245, 158, 11, 0.15)',
                                   border: '1px solid rgba(245, 158, 11, 0.3)',
                                   borderRadius: 4,
-                                  color: '#F59E0B',
+                                  color: 'var(--color-amber)',
                                   fontSize: 9,
                                   cursor: 'pointer',
                                   padding: '1px 6px',
@@ -1583,7 +1583,7 @@ export default function AuditPanel({
         )}
 
         {totalFiltered === 0 && (
-          <div style={{ textAlign: 'center', color: '#475569', fontSize: 12, padding: '40px 0' }}>
+          <div style={{ textAlign: 'center', color: 'var(--color-border)', fontSize: 12, padding: '40px 0' }}>
             {searchText ? 'No features match filter' : 'No features found'}
           </div>
         )}

@@ -238,7 +238,7 @@ export default function CheckDetailPage() {
           <span style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>
             {displayId}
           </span>
-          <Badge label="COMPLETED" color="#22C55E" />
+          <Badge label="COMPLETED" color="var(--color-success)" />
         </div>
 
         {/* Check Type */}
@@ -270,7 +270,7 @@ export default function CheckDetailPage() {
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Areas Checked</div>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {checkAreas.map((area) => (
-              <Badge key={area} label={area} color="#22D3EE" />
+              <Badge key={area} label={area} color="var(--color-cyan)" />
             ))}
           </div>
         </div>
@@ -281,7 +281,7 @@ export default function CheckDetailPage() {
             <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Runway Surface Condition</div>
             <Badge
               label={data.condition as string}
-              color={(data.condition as string) === 'Dry' ? '#22C55E' : '#3B82F6'}
+              color={(data.condition as string) === 'Dry' ? 'var(--color-success)' : 'var(--color-status-inwork)'}
             />
             {!!data.rcr_reported && (
               <div style={{ marginTop: 10 }}>
@@ -316,10 +316,10 @@ export default function CheckDetailPage() {
                 <Badge
                   label={data.condition_code as string}
                   color={
-                    data.condition_code === 'LOW' ? '#22C55E'
-                    : data.condition_code === 'MODERATE' ? '#EAB308'
-                    : data.condition_code === 'PROHIBITED' ? '#DC2626'
-                    : '#EF4444'
+                    data.condition_code === 'LOW' ? 'var(--color-success)'
+                    : data.condition_code === 'MODERATE' ? 'var(--color-bwc-mod)'
+                    : data.condition_code === 'PROHIBITED' ? 'var(--color-danger)'
+                    : 'var(--color-danger)'
                   }
                 />
               )}
@@ -360,7 +360,7 @@ export default function CheckDetailPage() {
                 <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Actions Completed</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                   {(data.actions as string[]).map((action, i) => (
-                    <div key={i} style={{ fontSize: 'var(--fs-sm)', color: '#22C55E', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div key={i} style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span>✓</span> {action}
                     </div>
                   ))}
@@ -383,7 +383,7 @@ export default function CheckDetailPage() {
         {checkTypeStr === 'heavy_aircraft' && !!data.aircraft_type && (
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Aircraft Type / MDS</div>
-            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: '#8B5CF6' }}>{data.aircraft_type as string}</div>
+            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-purple)' }}>{data.aircraft_type as string}</div>
           </div>
         )}
       </div>
@@ -450,7 +450,7 @@ export default function CheckDetailPage() {
       {/* Multi-issue display (new format) or legacy pinned location */}
       {Array.isArray((data as Record<string, unknown>).issues) && ((data as Record<string, unknown>).issues as { comment: string; location: { lat: number; lon: number } | null }[]).length > 0 ? (
         <div className="card" style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 'var(--fs-xs)', color: '#EF4444', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-danger)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
             Issues Found ({((data as Record<string, unknown>).issues as { comment: string; location: { lat: number; lon: number } | null }[]).length})
           </div>
           {((data as Record<string, unknown>).issues as { comment: string; location: { lat: number; lon: number } | null }[]).map((issue, idx) => {
@@ -464,7 +464,7 @@ export default function CheckDetailPage() {
                 borderRadius: 8,
               }}>
                 {((data as Record<string, unknown>).issues as unknown[]).length > 1 && (
-                  <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EF4444', marginBottom: 4 }}>
+                  <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginBottom: 4 }}>
                     Issue {idx + 1} of {((data as Record<string, unknown>).issues as unknown[]).length}
                   </div>
                 )}
@@ -478,7 +478,7 @@ export default function CheckDetailPage() {
                     style={{ width: '100%', display: 'block', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginBottom: 4 }} />
                 )}
                 {issue.location && (
-                  <div style={{ fontSize: 'var(--fs-sm)', color: '#34D399', fontFamily: 'monospace', fontWeight: 600, marginBottom: (photosByIssue[idx]?.length > 0) ? 8 : 0 }}>
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-success)', fontFamily: 'monospace', fontWeight: 600, marginBottom: (photosByIssue[idx]?.length > 0) ? 8 : 0 }}>
                     {issue.location.lat.toFixed(5)}, {issue.location.lon.toFixed(5)}
                   </div>
                 )}
@@ -525,7 +525,7 @@ export default function CheckDetailPage() {
             alt="Check location on map"
             style={{ width: '100%', display: 'block', borderRadius: '0 0 10px 10px' }}
           />
-          <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-sm)', color: '#34D399', fontFamily: 'monospace', fontWeight: 600 }}>
+          <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-sm)', color: 'var(--color-success)', fontFamily: 'monospace', fontWeight: 600 }}>
             {checkLat!.toFixed(5)}, {checkLng!.toFixed(5)}
           </div>
         </div>
@@ -622,7 +622,7 @@ export default function CheckDetailPage() {
           style={{
             flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
             background: '#A78BFA14', border: '1px solid #A78BFA33',
-            color: '#A78BFA', fontSize: 'var(--fs-md)', fontWeight: 700,
+            color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
             fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
             opacity: generatingPdf ? 0.7 : 1,
           }}
@@ -686,7 +686,7 @@ export default function CheckDetailPage() {
           style={{
             padding: '12px 16px', borderRadius: 10, textAlign: 'center',
             background: '#A78BFA14', border: '1px solid #A78BFA33',
-            color: '#A78BFA', fontSize: 'var(--fs-md)', fontWeight: 700,
+            color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
             fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
             opacity: generatingPdf ? 0.7 : 1,
           }}
@@ -699,7 +699,7 @@ export default function CheckDetailPage() {
           style={{
             flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
             background: '#22C55E14', border: '1px solid #22C55E33',
-            color: '#22C55E', fontSize: 'var(--fs-md)', fontWeight: 700,
+            color: 'var(--color-success)', fontSize: 'var(--fs-md)', fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',
           }}
         >

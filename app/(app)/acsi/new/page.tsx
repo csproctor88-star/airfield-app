@@ -446,16 +446,16 @@ export default function AcsiFormPage() {
             Progress: {answered}/{total} ({pct}%)
           </span>
           <div style={{ display: 'flex', gap: 10, fontSize: 'var(--fs-xs)' }}>
-            <span style={{ color: '#10B981', fontWeight: 600 }}>{passed} Pass</span>
-            <span style={{ color: '#EF4444', fontWeight: 600 }}>{failed} Fail</span>
-            <span style={{ color: '#6B7280', fontWeight: 600 }}>{na} N/A</span>
+            <span style={{ color: 'var(--color-green)', fontWeight: 600 }}>{passed} Pass</span>
+            <span style={{ color: 'var(--color-red)', fontWeight: 600 }}>{failed} Fail</span>
+            <span style={{ color: 'var(--color-text-3)', fontWeight: 600 }}>{na} N/A</span>
           </div>
         </div>
         <div style={{ height: 6, borderRadius: 3, background: 'var(--color-bg-sunken)', overflow: 'hidden' }}>
           <div style={{
             height: '100%', borderRadius: 3, transition: 'width 0.3s',
             width: `${pct}%`,
-            background: pct === 100 ? '#10B981' : 'var(--color-accent)',
+            background: pct === 100 ? 'var(--color-green)' : 'var(--color-accent)',
           }} />
         </div>
       </div>
@@ -573,7 +573,7 @@ export default function AcsiFormPage() {
                         <div style={{ display: 'flex', gap: 4 }}>
                           {(['pass', 'fail', 'na'] as const).map(val => {
                             const active = draft.responses[li.id] === val
-                            const bgMap = { pass: '#10B981', fail: '#EF4444', na: '#6B7280' }
+                            const bgMap = { pass: 'var(--color-green)', fail: 'var(--color-red)', na: 'var(--color-text-3)' }
                             const labels = { pass: 'Y', fail: 'N', na: 'N/A' }
                             return (
                               <button

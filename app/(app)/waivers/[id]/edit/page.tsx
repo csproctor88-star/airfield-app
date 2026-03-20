@@ -403,7 +403,7 @@ export default function EditWaiverPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)' }}>Criteria #{i + 1}</span>
                   {criteria.length > 1 && (
-                    <button type="button" onClick={() => removeCriteria(i)} style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>Remove</button>
+                    <button type="button" onClick={() => removeCriteria(i)} style={{ background: 'none', border: 'none', color: 'var(--color-red)', fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>Remove</button>
                   )}
                 </div>
                 <div style={{ marginBottom: 8 }}>
@@ -608,7 +608,7 @@ export default function EditWaiverPage() {
                       }}
                       style={{
                         padding: '5px 12px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 600,
-                        background: '#3B82F614', border: '1px solid #3B82F633', color: '#3B82F6',
+                        background: 'color-mix(in srgb, var(--color-blue) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-blue) 20%, transparent)', color: 'var(--color-blue)',
                         cursor: attachmentUrls[a.id] ? 'pointer' : 'default', fontFamily: 'inherit',
                         opacity: attachmentUrls[a.id] ? 1 : 0.5,
                       }}
@@ -622,7 +622,7 @@ export default function EditWaiverPage() {
                       disabled={deletingAttachId === a.id}
                       style={{
                         padding: '5px 12px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 600,
-                        background: '#EF444414', border: '1px solid #EF444433', color: '#EF4444',
+                        background: 'color-mix(in srgb, var(--color-red) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-red) 20%, transparent)', color: 'var(--color-red)',
                         cursor: 'pointer', fontFamily: 'inherit',
                         opacity: deletingAttachId === a.id ? 0.5 : 1,
                       }}
@@ -661,7 +661,7 @@ export default function EditWaiverPage() {
 
       {/* Attachment Upload Modal */}
       {showAttachModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div className="modal-overlay">
           <div style={{ background: 'var(--color-bg-surface)', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)' }}>
             <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, marginBottom: 12 }}>Upload Attachment</div>
             <div style={{ marginBottom: 12 }}>

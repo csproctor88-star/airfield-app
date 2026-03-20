@@ -268,15 +268,15 @@ export function EditDiscrepancyModal({
               display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
               fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 700,
               width: '100%', padding: '10px 12px', borderRadius: 8,
-              border: showFeaturePicker ? '2px solid #22D3EE' : '2px solid var(--color-text-4)',
+              border: showFeaturePicker ? '2px solid var(--color-cyan-bright)' : '2px solid var(--color-text-4)',
               background: showFeaturePicker ? 'rgba(34,211,238,0.08)' : 'transparent',
-              color: showFeaturePicker ? '#22D3EE' : 'var(--color-text-2)',
+              color: showFeaturePicker ? 'var(--color-cyan-bright)' : 'var(--color-text-2)',
             }}
           >
             <span style={{
               width: 20, height: 20, borderRadius: 5, flexShrink: 0,
-              border: showFeaturePicker ? '2px solid #22D3EE' : '2px solid var(--color-text-3)',
-              background: showFeaturePicker ? '#22D3EE' : 'transparent',
+              border: showFeaturePicker ? '2px solid var(--color-cyan-bright)' : '2px solid var(--color-text-3)',
+              background: showFeaturePicker ? 'var(--color-cyan-bright)' : 'transparent',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 14, fontWeight: 800, color: '#000',
             }}>
@@ -284,7 +284,7 @@ export function EditDiscrepancyModal({
             </span>
             Link to Visual NAVAID
             {selectedFeatureIds.length > 0 && (
-              <span style={{ fontSize: 'var(--fs-xs)', background: 'rgba(34,211,238,0.2)', color: '#22D3EE', padding: '1px 6px', borderRadius: 4 }}>
+              <span style={{ fontSize: 'var(--fs-xs)', background: 'rgba(34,211,238,0.2)', color: 'var(--color-cyan-bright)', padding: '1px 6px', borderRadius: 4 }}>
                 {selectedFeatureIds.length} selected
               </span>
             )}
@@ -348,9 +348,9 @@ export function EditDiscrepancyModal({
 const WORKFLOW_STEPS = [
   { value: 'submitted_to_afm', short: 'AFM', color: '#3B82F6' },
   { value: 'submitted_to_ces', short: 'CES', color: '#F97316' },
-  { value: 'awaiting_action_by_ces', short: 'In Work', color: '#FBBF24' },
+  { value: 'awaiting_action_by_ces', short: 'In Work', color: 'var(--color-amber)' },
   { value: 'waiting_for_project', short: 'Project', color: '#A78BFA' },
-  { value: 'work_completed_awaiting_verification', short: 'Verify', color: '#22C55E' },
+  { value: 'work_completed_awaiting_verification', short: 'Verify', color: 'var(--color-green)' },
 ] as const
 
 function WorkflowProgressBar({ currentStatus }: { currentStatus: string }) {
@@ -360,7 +360,7 @@ function WorkflowProgressBar({ currentStatus }: { currentStatus: string }) {
       {WORKFLOW_STEPS.map((step, i) => {
         const isActive = i === activeIdx
         const isPast = i < activeIdx
-        const stepColor = isActive ? step.color : isPast ? '#10B981' : 'var(--color-text-4)'
+        const stepColor = isActive ? step.color : isPast ? 'var(--color-green)' : 'var(--color-text-4)'
         return (
           <div key={step.value} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
             <div style={{
@@ -369,7 +369,7 @@ function WorkflowProgressBar({ currentStatus }: { currentStatus: string }) {
               <div style={{
                 width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center',
                 justifyContent: 'center', fontSize: 'var(--fs-xs)', fontWeight: 800,
-                background: isActive ? stepColor : isPast ? '#10B981' : 'transparent',
+                background: isActive ? stepColor : isPast ? 'var(--color-green)' : 'transparent',
                 border: `2px solid ${stepColor}`,
                 color: isActive || isPast ? '#fff' : stepColor,
               }}>
@@ -382,7 +382,7 @@ function WorkflowProgressBar({ currentStatus }: { currentStatus: string }) {
             {i < WORKFLOW_STEPS.length - 1 && (
               <div style={{
                 height: 2, flex: '0 0 12px',
-                background: i < activeIdx ? '#10B981' : 'var(--color-text-4)',
+                background: i < activeIdx ? 'var(--color-green)' : 'var(--color-text-4)',
               }} />
             )}
           </div>
@@ -537,7 +537,7 @@ export function StatusUpdateModal({
         <>
           <div style={{ marginBottom: 12 }}>
             <FieldLabel>Open / Closed</FieldLabel>
-            <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: STATUS_CONFIG[discrepancy.status as keyof typeof STATUS_CONFIG]?.color || '#94A3B8' }}>
+            <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: STATUS_CONFIG[discrepancy.status as keyof typeof STATUS_CONFIG]?.color || 'var(--color-text-3)' }}>
               {STATUS_CONFIG[discrepancy.status as keyof typeof STATUS_CONFIG]?.label || discrepancy.status}
             </div>
           </div>
@@ -550,10 +550,10 @@ export function StatusUpdateModal({
                 const active = s === newStatus
                 return (
                   <button key={s} type="button" onClick={() => setNewStatus(active ? '' : s)} style={{
-                    background: active ? `${cfg?.color || '#64748B'}22` : 'transparent',
+                    background: active ? `${cfg?.color || 'var(--color-text-3)'}22` : 'transparent',
                     border: `1px solid ${active ? cfg?.color || 'var(--color-text-3)' : 'var(--color-text-4)'}`,
                     borderRadius: 6, padding: '6px 12px', fontSize: 'var(--fs-base)', fontWeight: 600,
-                    color: cfg?.color || '#94A3B8', cursor: 'pointer', fontFamily: 'inherit',
+                    color: cfg?.color || 'var(--color-text-3)', cursor: 'pointer', fontFamily: 'inherit',
                   }}>
                     {cfg?.label || s}
                   </button>
@@ -575,7 +575,7 @@ export function StatusUpdateModal({
               { value: 'work_completed_awaiting_verification', label: 'Work Completed' },
             ].map(o => {
               const active = currentStatus === o.value
-              const color = o.value === 'work_completed_awaiting_verification' ? '#22C55E' : '#FBBF24'
+              const color = o.value === 'work_completed_awaiting_verification' ? 'var(--color-green)' : 'var(--color-amber)'
               return (
                 <button key={o.value} type="button" onClick={() => setCurrentStatus(o.value)} style={{
                   flex: 1, padding: '8px 12px', borderRadius: 6, fontSize: 'var(--fs-base)', fontWeight: 600,
@@ -630,7 +630,7 @@ export function StatusUpdateModal({
           }}>
             <FieldLabel>
               {label}
-              <span style={{ color: '#EF4444', marginLeft: 4 }}>*</span>
+              <span style={{ color: 'var(--color-red)', marginLeft: 4 }}>*</span>
             </FieldLabel>
             <textarea className="input-dark" rows={3} style={{ resize: 'vertical' }}
               placeholder={placeholder}
@@ -716,10 +716,10 @@ export function PhotoViewerModal({
 
   return (
     <div
+      className="modal-overlay"
       style={{
-        position: 'fixed', inset: 0, zIndex: 1000, display: 'flex',
-        flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(0,0,0,0.9)', padding: 16,
+        flexDirection: 'column',
+        background: 'rgba(0,0,0,0.9)',
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >

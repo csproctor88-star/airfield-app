@@ -389,7 +389,7 @@ export default function NewWaiverPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)' }}>Criteria #{i + 1}</span>
                   {criteria.length > 1 && (
-                    <button type="button" onClick={() => removeCriteria(i)} style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+                    <button type="button" onClick={() => removeCriteria(i)} style={{ background: 'none', border: 'none', color: 'var(--color-red)', fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
                       Remove
                     </button>
                   )}
@@ -665,7 +665,7 @@ export default function NewWaiverPage() {
                   <button
                     type="button"
                     onClick={() => removeAttachment(i)}
-                    style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', padding: '2px 8px', fontFamily: 'inherit', flexShrink: 0 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--color-red)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', padding: '2px 8px', fontFamily: 'inherit', flexShrink: 0 }}
                   >
                     Remove
                   </button>
@@ -694,11 +694,11 @@ export default function NewWaiverPage() {
           onClick={() => handleSubmit('draft')}
           disabled={saving}
           style={{
-            background: '#9CA3AF14',
-            border: '1px solid #9CA3AF33',
+            background: 'color-mix(in srgb, var(--color-text-3) 8%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--color-text-3) 20%, transparent)',
             borderRadius: 8,
             padding: '12px',
-            color: '#9CA3AF',
+            color: 'var(--color-text-3)',
             fontSize: 'var(--fs-md)',
             fontWeight: 700,
             cursor: 'pointer',
@@ -721,7 +721,7 @@ export default function NewWaiverPage() {
 
       {/* Attachment Upload Modal */}
       {showAttachModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div className="modal-overlay">
           <div style={{ background: 'var(--color-bg-surface)', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)' }}>
             <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, marginBottom: 12 }}>Add Attachment</div>
             <div style={{ marginBottom: 12 }}>

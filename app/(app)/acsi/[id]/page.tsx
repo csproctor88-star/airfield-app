@@ -136,9 +136,9 @@ export default function AcsiDetailPage() {
   }
 
   const responseBadge = (response: string | null) => {
-    if (response === 'pass') return <span style={{ color: '#10B981', fontWeight: 600 }}>Y</span>
-    if (response === 'fail') return <span style={{ color: '#EF4444', fontWeight: 600 }}>N</span>
-    if (response === 'na') return <span style={{ color: '#6B7280', fontWeight: 600 }}>N/A</span>
+    if (response === 'pass') return <span style={{ color: 'var(--color-green)', fontWeight: 600 }}>Y</span>
+    if (response === 'fail') return <span style={{ color: 'var(--color-red)', fontWeight: 600 }}>N</span>
+    if (response === 'na') return <span style={{ color: 'var(--color-text-3)', fontWeight: 600 }}>N/A</span>
     return <span style={{ color: 'var(--color-text-3)' }}>—</span>
   }
 
@@ -188,8 +188,8 @@ export default function AcsiDetailPage() {
                 disabled={exporting}
                 style={{
                   padding: '12px 16px', borderRadius: 10, textAlign: 'center',
-                  background: '#A78BFA14', border: '1px solid #A78BFA33',
-                  color: '#A78BFA', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  background: 'color-mix(in srgb, var(--color-purple) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-purple) 20%, transparent)',
+                  color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   fontFamily: 'inherit', cursor: exporting ? 'default' : 'pointer',
                   opacity: exporting ? 0.7 : 1,
                 }}
@@ -215,8 +215,8 @@ export default function AcsiDetailPage() {
               disabled={actionLoading}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '8px 14px', borderRadius: 6, border: '1px solid #EF4444',
-                background: 'transparent', color: '#EF4444',
+                padding: '8px 14px', borderRadius: 6, border: '1px solid var(--color-red)',
+                background: 'transparent', color: 'var(--color-red)',
                 fontSize: 'var(--fs-sm)', fontWeight: 500, cursor: 'pointer',
                 opacity: actionLoading ? 0.5 : 1,
               }}
@@ -231,9 +231,9 @@ export default function AcsiDetailPage() {
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
         {[
           { label: 'Total Items', value: insp.total_items, color: 'var(--color-text-1)' },
-          { label: 'Passed', value: computedPassed, color: '#10B981' },
-          { label: 'Failed', value: computedFailed, color: '#EF4444' },
-          { label: 'N/A', value: computedNa, color: '#6B7280' },
+          { label: 'Passed', value: computedPassed, color: 'var(--color-green)' },
+          { label: 'Failed', value: computedFailed, color: 'var(--color-red)' },
+          { label: 'N/A', value: computedNa, color: 'var(--color-text-3)' },
           { label: 'Completion', value: `${pct}%`, color: 'var(--color-accent)' },
         ].map(kpi => (
           <div key={kpi.label} style={{
@@ -277,15 +277,15 @@ export default function AcsiDetailPage() {
                 <div style={{ flex: 1 }}>
                   <div style={{
                     fontWeight: 600, fontSize: 'var(--fs-base)',
-                    color: allDone ? '#10B981' : 'var(--color-text-1)',
+                    color: allDone ? 'var(--color-green)' : 'var(--color-text-1)',
                   }}>
                     Section {section.number} — {section.title}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, fontSize: 'var(--fs-xs)' }}>
-                  <span style={{ color: '#10B981', fontWeight: 600 }}>{passCount} Y</span>
-                  <span style={{ color: '#EF4444', fontWeight: 600 }}>{failCount} N</span>
-                  <span style={{ color: '#6B7280', fontWeight: 600 }}>{naCount} NA</span>
+                  <span style={{ color: 'var(--color-green)', fontWeight: 600 }}>{passCount} Y</span>
+                  <span style={{ color: 'var(--color-red)', fontWeight: 600 }}>{failCount} N</span>
+                  <span style={{ color: 'var(--color-text-3)', fontWeight: 600 }}>{naCount} NA</span>
                   <span style={{ color: 'var(--color-text-3)', fontWeight: 600 }}>({answered}/{sectionItems.length})</span>
                 </div>
               </button>
@@ -327,7 +327,7 @@ export default function AcsiDetailPage() {
                             fontSize: 'var(--fs-sm)',
                           }}>
                             {discs.length > 1 && (
-                              <div style={{ fontWeight: 700, color: '#EF4444', fontSize: 'var(--fs-xs)', marginBottom: 4 }}>
+                              <div style={{ fontWeight: 700, color: 'var(--color-red)', fontSize: 'var(--fs-xs)', marginBottom: 4 }}>
                                 Discrepancy {di + 1} of {discs.length}
                               </div>
                             )}

@@ -19,11 +19,11 @@ const CURRENT_STATUS_LABELS: Record<string, string> = Object.fromEntries(
 )
 
 const CURRENT_STATUS_COLORS: Record<string, string> = {
-  submitted_to_afm: '#3B82F6',
-  submitted_to_ces: '#F97316',
-  awaiting_action_by_ces: '#FBBF24',
-  waiting_for_project: '#A78BFA',
-  work_completed_awaiting_verification: '#22C55E',
+  submitted_to_afm: 'var(--color-status-inwork)',
+  submitted_to_ces: 'var(--color-orange)',
+  awaiting_action_by_ces: 'var(--color-warning)',
+  waiting_for_project: 'var(--color-purple)',
+  work_completed_awaiting_verification: 'var(--color-success)',
 }
 
 export default function CESDashboardPage() {
@@ -169,9 +169,9 @@ export default function CESDashboardPage() {
               style={{
                 padding: '5px 12px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 700,
                 cursor: 'pointer', fontFamily: 'inherit',
-                border: active ? '1.5px solid #F97316' : '1px solid var(--color-border)',
+                border: active ? '1.5px solid var(--color-orange)' : '1px solid var(--color-border)',
                 background: active ? 'rgba(249,115,22,0.12)' : 'transparent',
-                color: active ? '#F97316' : 'var(--color-text-2)',
+                color: active ? 'var(--color-orange)' : 'var(--color-text-2)',
               }}
             >
               {shop}
@@ -179,7 +179,7 @@ export default function CESDashboardPage() {
                 <span style={{
                   marginLeft: 6, fontSize: 'var(--fs-xs)', fontWeight: 600,
                   background: active ? 'rgba(249,115,22,0.2)' : 'var(--color-border)',
-                  color: active ? '#F97316' : 'var(--color-text-3)',
+                  color: active ? 'var(--color-orange)' : 'var(--color-text-3)',
                   padding: '0 5px', borderRadius: 3,
                 }}>
                   {count}
@@ -193,11 +193,11 @@ export default function CESDashboardPage() {
       {/* KPI badges */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: 16 }}>
         {[
-          { label: 'NEW', value: submittedCount, color: '#F97316', desc: 'Submitted to CES' },
-          { label: 'IN WORK', value: inWorkCount, color: '#FBBF24', desc: 'Awaiting action' },
-          { label: 'PROJECT', value: projectCount, color: '#A78BFA', desc: 'Waiting for project' },
-          { label: 'VERIFY', value: awaitingVerifyCount, color: '#22C55E', desc: 'Awaiting AFM verification' },
-          { label: 'OVERDUE', value: overdueCount, color: overdueCount > 0 ? '#EF4444' : '#34D399', desc: '> 30 days open' },
+          { label: 'NEW', value: submittedCount, color: 'var(--color-orange)', desc: 'Submitted to CES' },
+          { label: 'IN WORK', value: inWorkCount, color: 'var(--color-warning)', desc: 'Awaiting action' },
+          { label: 'PROJECT', value: projectCount, color: 'var(--color-purple)', desc: 'Waiting for project' },
+          { label: 'VERIFY', value: awaitingVerifyCount, color: 'var(--color-success)', desc: 'Awaiting AFM verification' },
+          { label: 'OVERDUE', value: overdueCount, color: overdueCount > 0 ? 'var(--color-danger)' : 'var(--color-success)', desc: '> 30 days open' },
         ].map(kpi => (
           <div key={kpi.label} className="card" style={{ textAlign: 'center', padding: '10px 6px' }}>
             <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -242,7 +242,7 @@ export default function CESDashboardPage() {
                 })
                 .map(d => {
                   const days = daysOpen(d.created_at)
-                  const statusColor = CURRENT_STATUS_COLORS[d.current_status] || '#94A3B8'
+                  const statusColor = CURRENT_STATUS_COLORS[d.current_status] || 'var(--color-text-3)'
                   return (
                     <div
                       key={d.id}
@@ -287,7 +287,7 @@ export default function CESDashboardPage() {
                             <span style={{ fontWeight: 600 }}>{d.assigned_shop}</span>
                           )}
                           <span style={{
-                            color: days > 30 ? '#EF4444' : 'var(--color-text-3)',
+                            color: days > 30 ? 'var(--color-danger)' : 'var(--color-text-3)',
                             fontWeight: days > 30 ? 700 : 400,
                           }}>
                             {days}d open
@@ -332,7 +332,7 @@ export default function CESDashboardPage() {
                       fontSize: 'var(--fs-xs)', textDecoration: 'none', color: 'inherit',
                     }}
                   >
-                    <span style={{ fontWeight: 700, color: '#10B981', fontFamily: 'monospace', flexShrink: 0 }}>
+                    <span style={{ fontWeight: 700, color: 'var(--color-success)', fontFamily: 'monospace', flexShrink: 0 }}>
                       {d.work_order_number || d.display_id}
                     </span>
                     <span style={{ fontWeight: 600, color: 'var(--color-text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>

@@ -166,7 +166,7 @@ export default function QrcPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                   <span style={{
                     fontSize: 'var(--fs-base)', fontWeight: 800,
-                    color: '#1E293B', background: '#F97316',
+                    color: 'var(--color-bg-surface)', background: 'var(--color-orange)',
                     padding: '3px 10px', borderRadius: 6, minWidth: 48, textAlign: 'center',
                   }}>
                     QRC-{tmpl.qrc_number}
@@ -182,12 +182,12 @@ export default function QrcPage() {
                   {tmpl.last_reviewed_at ? (
                     <span style={{
                       fontSize: 'var(--fs-xs)', fontWeight: 600,
-                      color: isReviewOverdue(tmpl.last_reviewed_at) ? '#EF4444' : '#22C55E',
+                      color: isReviewOverdue(tmpl.last_reviewed_at) ? 'var(--color-red)' : 'var(--color-green)',
                     }}>
                       {isReviewOverdue(tmpl.last_reviewed_at) ? 'Review overdue' : `Reviewed ${formatReviewDate(tmpl.last_reviewed_at)}`}
                     </span>
                   ) : (
-                    <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: '#EF4444' }}>
+                    <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-red)' }}>
                       Never reviewed
                     </span>
                   )}
@@ -232,7 +232,7 @@ export default function QrcPage() {
                 >
                   <span style={{
                     fontSize: 'var(--fs-base)', fontWeight: 800,
-                    color: '#1E293B', background: '#F97316',
+                    color: 'var(--color-bg-surface)', background: 'var(--color-orange)',
                     padding: '3px 10px', borderRadius: 6,
                   }}>QRC-{ex.qrc_number}</span>
                   <div style={{ flex: 1 }}>
@@ -244,7 +244,7 @@ export default function QrcPage() {
                   </div>
                   <span style={{
                     fontSize: 'var(--fs-sm)', fontWeight: 700, padding: '3px 10px', borderRadius: 8,
-                    background: 'rgba(234,179,8,0.12)', color: '#EAB308',
+                    background: 'rgba(234,179,8,0.12)', color: 'var(--color-amber)',
                   }}>OPEN</span>
                 </button>
               ))}
@@ -275,7 +275,7 @@ export default function QrcPage() {
               >
                 <span style={{
                   fontSize: 'var(--fs-base)', fontWeight: 800,
-                  color: '#fff', background: ex.status === 'open' ? '#D97706' : '#16A34A',
+                  color: '#fff', background: ex.status === 'open' ? '#D97706' : 'var(--color-green)',
                   padding: '3px 10px', borderRadius: 6,
                 }}>QRC-{ex.qrc_number}</span>
                 <div style={{ flex: 1 }}>
@@ -288,7 +288,7 @@ export default function QrcPage() {
                 <span style={{
                   fontSize: 'var(--fs-sm)', fontWeight: 700, padding: '3px 10px', borderRadius: 8,
                   background: ex.status === 'open' ? 'rgba(234,179,8,0.12)' : 'rgba(34,197,94,0.12)',
-                  color: ex.status === 'open' ? '#EAB308' : '#22C55E',
+                  color: ex.status === 'open' ? 'var(--color-amber)' : 'var(--color-green)',
                 }}>{ex.status === 'open' ? 'OPEN' : 'CLOSED'}</span>
               </button>
             ))}
@@ -546,7 +546,7 @@ function QrcExecutionView({
                   <span style={{
                     width: 24, height: 24, borderRadius: 5, flexShrink: 0,
                     border: checked ? 'none' : '2px solid var(--color-border-mid)',
-                    background: checked ? '#22C55E' : 'transparent',
+                    background: checked ? 'var(--color-green)' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     {checked && <span style={{ color: '#fff', fontSize: 14, fontWeight: 800 }}>&#10003;</span>}
@@ -588,7 +588,7 @@ function QrcExecutionView({
                         <span style={{
                           width: 20, height: 20, borderRadius: 4, flexShrink: 0,
                           border: agencyChecked ? 'none' : '2px solid var(--color-border-mid)',
-                          background: agencyChecked ? '#22C55E' : 'transparent',
+                          background: agencyChecked ? 'var(--color-green)' : 'transparent',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>
                           {agencyChecked && <span style={{ color: '#fff', fontSize: 11, fontWeight: 800 }}>&#10003;</span>}
@@ -689,7 +689,7 @@ function QrcExecutionView({
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{
               fontSize: 'var(--fs-lg)', fontWeight: 800,
-              color: '#fff', background: isClosed ? '#16A34A' : '#D97706',
+              color: '#fff', background: isClosed ? 'var(--color-green)' : '#D97706',
               padding: '4px 12px', borderRadius: 6,
             }}>QRC-{execution.qrc_number}</span>
             <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
@@ -706,7 +706,7 @@ function QrcExecutionView({
         <span style={{
           fontSize: 'var(--fs-sm)', fontWeight: 700, padding: '3px 10px', borderRadius: 8,
           background: isClosed ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
-          color: isClosed ? '#22C55E' : '#EAB308',
+          color: isClosed ? 'var(--color-green)' : 'var(--color-amber)',
         }}>{isClosed ? 'CLOSED' : 'OPEN'}</span>
       </div>
 
@@ -715,7 +715,7 @@ function QrcExecutionView({
         <div style={{
           padding: '8px 12px', borderRadius: 8, marginBottom: 12,
           background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-          fontSize: 'var(--fs-sm)', fontWeight: 600, color: '#EF4444',
+          fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-red)',
         }}>
           {template.notes}
         </div>
@@ -734,7 +734,7 @@ function QrcExecutionView({
         <div style={{ height: 4, borderRadius: 2, background: 'var(--color-bg-elevated)', overflow: 'hidden' }}>
           <div style={{
             height: '100%', width: `${progress}%`,
-            background: progress === 100 ? '#22C55E' : 'var(--color-cyan)',
+            background: progress === 100 ? 'var(--color-green)' : 'var(--color-cyan)',
             borderRadius: 2, transition: 'width 0.3s',
           }} />
         </div>
@@ -805,14 +805,14 @@ function QrcExecutionView({
               <span style={{
                 fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 8px', borderRadius: 6,
                 background: isReviewOverdue(template.last_reviewed_at) ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)',
-                color: isReviewOverdue(template.last_reviewed_at) ? '#EF4444' : '#22C55E',
+                color: isReviewOverdue(template.last_reviewed_at) ? 'var(--color-red)' : 'var(--color-green)',
               }}>
                 {isReviewOverdue(template.last_reviewed_at) ? 'OVERDUE' : 'CURRENT'}
               </span>
             ) : (
               <span style={{
                 fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 8px', borderRadius: 6,
-                background: 'rgba(239,68,68,0.12)', color: '#EF4444',
+                background: 'rgba(239,68,68,0.12)', color: 'var(--color-red)',
               }}>NEVER REVIEWED</span>
             )}
           </div>
@@ -894,7 +894,7 @@ function QrcExecutionView({
                 disabled={closing}
                 style={{
                   flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
-                  background: '#22C55E', color: '#fff', fontWeight: 700,
+                  background: 'var(--color-green)', color: '#fff', fontWeight: 700,
                   fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >{closing ? 'Closing...' : 'Confirm Close'}</button>
@@ -915,7 +915,7 @@ function QrcExecutionView({
               onClick={() => setShowCloseConfirm(true)}
               style={{
                 flex: 1, padding: '12px 0', borderRadius: 8, border: 'none',
-                background: '#22C55E', color: '#fff', fontWeight: 700,
+                background: 'var(--color-green)', color: '#fff', fontWeight: 700,
                 fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
               }}
             >Close QRC</button>
@@ -924,7 +924,7 @@ function QrcExecutionView({
               style={{
                 padding: '12px 16px', borderRadius: 8,
                 border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.06)',
-                color: '#EF4444', fontWeight: 700, fontSize: 'var(--fs-base)',
+                color: 'var(--color-red)', fontWeight: 700, fontSize: 'var(--fs-base)',
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
             >Cancel QRC</button>
@@ -950,8 +950,8 @@ function QrcExecutionView({
             disabled={generatingPdf}
             style={{
               flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
-              background: '#A78BFA14', border: '1px solid #A78BFA33',
-              color: '#A78BFA', fontSize: 'var(--fs-md)', fontWeight: 700,
+              background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
+              color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
               fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
               opacity: generatingPdf ? 0.7 : 1,
             }}
@@ -963,8 +963,8 @@ function QrcExecutionView({
             disabled={generatingPdf}
             style={{
               padding: '12px 16px', borderRadius: 10, textAlign: 'center',
-              background: '#A78BFA14', border: '1px solid #A78BFA33',
-              color: '#A78BFA', fontSize: 'var(--fs-md)', fontWeight: 700,
+              background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
+              color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
               fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
               opacity: generatingPdf ? 0.7 : 1,
             }}

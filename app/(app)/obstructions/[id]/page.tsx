@@ -213,8 +213,8 @@ export default function ObstructionDetailPage() {
             fontWeight: 800,
             padding: '2px 8px',
             borderRadius: 4,
-            background: evaluation.has_violation ? '#EF444422' : '#22C55E22',
-            color: evaluation.has_violation ? '#EF4444' : '#22C55E',
+            background: evaluation.has_violation ? 'color-mix(in srgb, var(--color-red) 13%, transparent)' : 'color-mix(in srgb, var(--color-green) 13%, transparent)',
+            color: evaluation.has_violation ? 'var(--color-red)' : 'var(--color-green)',
           }}
         >
           {evaluation.has_violation ? 'VIOLATION' : 'CLEAR'}
@@ -225,8 +225,8 @@ export default function ObstructionDetailPage() {
           disabled={exporting}
           style={{
             padding: '4px 12px', borderRadius: 6,
-            background: '#A78BFA14', border: '1px solid #A78BFA33',
-            color: '#A78BFA', fontSize: 'var(--fs-base)', fontWeight: 700,
+            background: 'color-mix(in srgb, var(--color-purple) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-purple) 20%, transparent)',
+            color: 'var(--color-purple)', fontSize: 'var(--fs-base)', fontWeight: 700,
             cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
             opacity: exporting ? 0.6 : 1,
           }}
@@ -239,8 +239,8 @@ export default function ObstructionDetailPage() {
           disabled={exporting}
           style={{
             padding: '4px 12px', borderRadius: 6,
-            background: '#A78BFA14', border: '1px solid #A78BFA33',
-            color: '#A78BFA', fontSize: 'var(--fs-base)', fontWeight: 700,
+            background: 'color-mix(in srgb, var(--color-purple) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-purple) 20%, transparent)',
+            color: 'var(--color-purple)', fontSize: 'var(--fs-base)', fontWeight: 700,
             cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
             opacity: exporting ? 0.7 : 1,
           }}
@@ -326,7 +326,7 @@ export default function ObstructionDetailPage() {
             alt="Obstruction location on map"
             style={{ width: '100%', display: 'block', borderRadius: '0 0 10px 10px' }}
           />
-          <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-sm)', color: '#34D399', fontFamily: 'monospace', fontWeight: 600 }}>
+          <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-sm)', color: 'var(--color-green)', fontFamily: 'monospace', fontWeight: 600 }}>
             {evaluation.latitude!.toFixed(5)}, {evaluation.longitude!.toFixed(5)}
           </div>
         </div>
@@ -464,8 +464,8 @@ export default function ObstructionDetailPage() {
                       fontWeight: 800,
                       padding: '2px 6px',
                       borderRadius: 4,
-                      background: s.violated ? '#EF444422' : '#22C55E22',
-                      color: s.violated ? '#EF4444' : '#22C55E',
+                      background: s.violated ? 'color-mix(in srgb, var(--color-red) 13%, transparent)' : 'color-mix(in srgb, var(--color-green) 13%, transparent)',
+                      color: s.violated ? 'var(--color-red)' : 'var(--color-green)',
                     }}
                   >
                     {s.violated ? `VIOLATION (${s.penetrationFt.toFixed(1)} ft)` : 'CLEAR'}
@@ -490,7 +490,7 @@ export default function ObstructionDetailPage() {
                     </div>
                   )}
                   {s.violated && (
-                    <div style={{ fontSize: 'var(--fs-sm)', color: '#EF4444', marginTop: 2 }}>
+                    <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-red)', marginTop: 2 }}>
                       Penetration: {s.penetrationFt.toFixed(1)} ft above allowable height
                     </div>
                   )}
@@ -542,10 +542,10 @@ export default function ObstructionDetailPage() {
             background: 'rgba(239, 68, 68, 0.04)',
           }}
         >
-          <span className="section-label" style={{ color: '#EF4444' }}>
+          <span className="section-label" style={{ color: 'var(--color-red)' }}>
             Required Actions
           </span>
-          <div style={{ fontSize: 'var(--fs-base)', color: '#EF4444', fontWeight: 700, marginBottom: 8 }}>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-red)', fontWeight: 700, marginBottom: 8 }}>
             OBSTRUCTION VIOLATION DETECTED — The following actions are required:
           </div>
           <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.6, paddingLeft: 8 }}>
@@ -576,7 +576,7 @@ export default function ObstructionDetailPage() {
           style={{
             background: 'none',
             border: 'none',
-            color: '#EF4444',
+            color: 'var(--color-red)',
             fontSize: 'var(--fs-base)',
             fontWeight: 600,
             cursor: 'pointer',
@@ -664,7 +664,7 @@ export default function ObstructionDetailPage() {
                   padding: '10px 16px',
                   borderRadius: 8,
                   border: 'none',
-                  background: '#EF4444',
+                  background: 'var(--color-red)',
                   color: '#fff',
                   fontSize: 'var(--fs-md)',
                   fontWeight: 600,
