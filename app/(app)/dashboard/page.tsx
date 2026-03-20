@@ -137,8 +137,8 @@ export default function AMDashboardPage() {
   const [lastCheckTime, setLastCheckTime] = useState<string | null>(null)
 
   // ── Today's inspection status ──
-  const [todayAirfieldDone, setTodayAirfieldDone] = useState(false)
-  const [todayLightingDone, setTodayLightingDone] = useState(false)
+  const [todayAirfieldStatus, setTodayAirfieldStatus] = useState<{ status: 'none' | 'in_progress' | 'completed'; inspector?: string }>({ status: 'none' })
+  const [todayLightingStatus, setTodayLightingStatus] = useState<{ status: 'none' | 'in_progress' | 'completed'; inspector?: string }>({ status: 'none' })
 
   // ── Lighting system health summary ──
   const [lightingHealthSummary, setLightingHealthSummary] = useState<{
@@ -197,20 +197,25 @@ export default function AMDashboardPage() {
 
   useEffect(() => { loadLastCheck() }, [loadLastCheck])
 
-  // --- Load Today's Inspection Status ---
+  // --- Load Today's Inspection Status (0600L reset) ---
   useEffect(() => {
     if (!installationId) return
-    const now = new Date()
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    const tz = currentInstallation?.timezone || 'America/New_York'
+    const localNow = new Date(new Date().toLocaleString('en-US', { timeZone: tz }))
+    if (localNow.getHours() < 6) localNow.setDate(localNow.getDate() - 1)
+    const todayStr = `${localNow.getFullYear()}-${String(localNow.getMonth() + 1).padStart(2, '0')}-${String(localNow.getDate()).padStart(2, '0')}`
+
     fetchInspections(installationId).then((inspections) => {
-      setTodayAirfieldDone(inspections.some(i =>
-        i.inspection_type === 'airfield' && i.status === 'completed' && i.inspection_date === todayStr
-      ))
-      setTodayLightingDone(inspections.some(i =>
-        i.inspection_type === 'lighting' && i.status === 'completed' && i.inspection_date === todayStr
-      ))
+      const todayAF = inspections.find(i => i.inspection_type === 'airfield' && i.inspection_date === todayStr)
+      const todayLT = inspections.find(i => i.inspection_type === 'lighting' && i.inspection_date === todayStr)
+      setTodayAirfieldStatus(todayAF
+        ? { status: todayAF.status as 'in_progress' | 'completed', inspector: todayAF.inspector_name || undefined }
+        : { status: 'none' })
+      setTodayLightingStatus(todayLT
+        ? { status: todayLT.status as 'in_progress' | 'completed', inspector: todayLT.inspector_name || undefined }
+        : { status: 'none' })
     })
-  }, [installationId])
+  }, [installationId, currentInstallation?.timezone])
 
   // Realtime: auto-refresh activity feed on new entries
   useEffect(() => {
@@ -343,44 +348,82 @@ export default function AMDashboardPage() {
       <div className="kpi-grid" style={{ marginBottom: 20 }}>
         {/* Inspection badges — first row */}
         <Link
-          href={todayAirfieldDone ? '/inspections' : '/inspections?action=begin&type=airfield'}
+          href="/inspections"
           style={{
-            background: todayAirfieldDone ? 'rgba(34,197,94,0.08)' : 'var(--color-bg-surface)',
-            border: todayAirfieldDone ? '2px solid rgba(34,197,94,0.4)' : '1px solid var(--color-border)',
+            background: todayAirfieldStatus.status === 'completed' ? 'rgba(34,197,94,0.08)'
+              : todayAirfieldStatus.status === 'in_progress' ? 'rgba(59,130,246,0.08)'
+              : 'var(--color-bg-surface)',
+            border: todayAirfieldStatus.status === 'completed' ? '2px solid rgba(34,197,94,0.4)'
+              : todayAirfieldStatus.status === 'in_progress' ? '2px solid rgba(59,130,246,0.4)'
+              : '1px solid var(--color-border)',
             borderRadius: 12,
             padding: '14px 16px',
             cursor: 'pointer',
             textDecoration: 'none',
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 10,
+            gap: 4,
           }}
         >
-          <span style={{ fontSize: 'var(--fs-5xl)' }}>{todayAirfieldDone ? '\u2705' : '\u2600\uFE0F'}</span>
-          <span style={{ fontSize: 'var(--fs-xl)', color: todayAirfieldDone ? '#22C55E' : 'var(--color-cyan)', letterSpacing: '0.04em', fontWeight: 700 }}>
-            Airfield Inspection
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 'var(--fs-5xl)' }}>
+              {todayAirfieldStatus.status === 'completed' ? '\u2705' : todayAirfieldStatus.status === 'in_progress' ? '\uD83D\uDCDD' : '\u2600\uFE0F'}
+            </span>
+            <span style={{
+              fontSize: 'var(--fs-xl)', letterSpacing: '0.04em', fontWeight: 700,
+              color: todayAirfieldStatus.status === 'completed' ? '#22C55E'
+                : todayAirfieldStatus.status === 'in_progress' ? '#3B82F6'
+                : 'var(--color-cyan)',
+            }}>
+              Airfield Inspection
+            </span>
+          </div>
+          {todayAirfieldStatus.status !== 'none' && (
+            <span style={{ fontSize: 'var(--fs-xs)', color: todayAirfieldStatus.status === 'completed' ? '#22C55E' : '#3B82F6', fontWeight: 600 }}>
+              {todayAirfieldStatus.status === 'completed' ? 'Complete' : `In Progress${todayAirfieldStatus.inspector ? ` — ${todayAirfieldStatus.inspector}` : ''}`}
+            </span>
+          )}
         </Link>
         <Link
-          href={todayLightingDone ? '/inspections' : '/inspections?action=begin&type=lighting'}
+          href="/inspections"
           style={{
-            background: todayLightingDone ? 'rgba(34,197,94,0.08)' : 'var(--color-bg-surface)',
-            border: todayLightingDone ? '2px solid rgba(34,197,94,0.4)' : '1px solid var(--color-border)',
+            background: todayLightingStatus.status === 'completed' ? 'rgba(34,197,94,0.08)'
+              : todayLightingStatus.status === 'in_progress' ? 'rgba(59,130,246,0.08)'
+              : 'var(--color-bg-surface)',
+            border: todayLightingStatus.status === 'completed' ? '2px solid rgba(34,197,94,0.4)'
+              : todayLightingStatus.status === 'in_progress' ? '2px solid rgba(59,130,246,0.4)'
+              : '1px solid var(--color-border)',
             borderRadius: 12,
             padding: '14px 16px',
             cursor: 'pointer',
             textDecoration: 'none',
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 10,
+            gap: 4,
           }}
         >
-          <span style={{ fontSize: 'var(--fs-5xl)' }}>{todayLightingDone ? '\u2705' : '\uD83C\uDF19'}</span>
-          <span style={{ fontSize: 'var(--fs-xl)', color: todayLightingDone ? '#22C55E' : 'var(--color-cyan)', letterSpacing: '0.04em', fontWeight: 700 }}>
-            Lighting Inspection
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 'var(--fs-5xl)' }}>
+              {todayLightingStatus.status === 'completed' ? '\u2705' : todayLightingStatus.status === 'in_progress' ? '\uD83D\uDCDD' : '\uD83C\uDF19'}
+            </span>
+            <span style={{
+              fontSize: 'var(--fs-xl)', letterSpacing: '0.04em', fontWeight: 700,
+              color: todayLightingStatus.status === 'completed' ? '#22C55E'
+                : todayLightingStatus.status === 'in_progress' ? '#3B82F6'
+                : 'var(--color-cyan)',
+            }}>
+              Lighting Inspection
+            </span>
+          </div>
+          {todayLightingStatus.status !== 'none' && (
+            <span style={{ fontSize: 'var(--fs-xs)', color: todayLightingStatus.status === 'completed' ? '#22C55E' : '#3B82F6', fontWeight: 600 }}>
+              {todayLightingStatus.status === 'completed' ? 'Complete' : `In Progress${todayLightingStatus.inspector ? ` — ${todayLightingStatus.inspector}` : ''}`}
+            </span>
+          )}
         </Link>
         {/* Other quick actions */}
         {QUICK_ACTIONS.map((q) => (

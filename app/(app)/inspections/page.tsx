@@ -299,11 +299,14 @@ export default function InspectionsPage() {
         const type = dbRow.inspection_type as FormType
         if (type !== 'airfield' && type !== 'lighting') continue
 
+        // Only load/sync drafts that belong to the current user — skip other users' inspections
+        if (dbRow.inspector_id && dbRow.inspector_id !== currentUserId) continue
+
         if (dbRow.draft_data) {
           const dd = dbRow.draft_data as unknown as Record<string, unknown>
           const ddResponses = dd.responses as Record<string, unknown> | undefined
-          // Only clean up orphans that belong to the current user
-          if (ddResponses && Object.keys(ddResponses).length === 0 && !dd.savedAt && dbRow.inspector_id === currentUserId) {
+          // Clean up orphans (empty, unsaved)
+          if (ddResponses && Object.keys(ddResponses).length === 0 && !dd.savedAt) {
             deleteInspection(dbRow.id)
             continue
           }
@@ -329,6 +332,7 @@ export default function InspectionsPage() {
             toast.info(`${type === 'airfield' ? 'Airfield' : 'Lighting'} draft loaded from server`)
           }
         } else if (dbRow.items && dbRow.items.length > 0) {
+          // Only reconstruct drafts from this user's data
           const half = itemsToDraftHalf(
             dbRow.items, dbRow.id,
             dbRow.inspector_name, dbRow.inspector_id || null,
