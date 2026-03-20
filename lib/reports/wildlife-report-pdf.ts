@@ -26,43 +26,124 @@ function titleCase(str: string): string {
     .replace(/\b\w/g, c => c.toUpperCase())
 }
 
-/** Fetch satellite basemap with GeoJSON marker overlay (Mapbox places pins perfectly) */
-async function fetchMapWithMarkers(
-  points: { lat: number; lng: number; type: string }[],
+/** Render a heatmap using a temporary Mapbox GL instance and capture the canvas.
+ *  Creates a hidden map, adds the heatmap layer, waits for render, captures, and destroys. */
+async function captureHeatmapImage(
+  points: { lat: number; lng: number; weight: number; type: string }[],
   centerLat: number,
   centerLng: number,
 ): Promise<string | null> {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   if (!token || token === 'your-mapbox-token-here') return null
   if (points.length === 0) return null
+  if (typeof document === 'undefined') return null
 
-  try {
-    const geojson = {
-      type: 'FeatureCollection',
-      features: points.slice(0, 100).map(p => ({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
-        properties: {
-          'marker-color': p.type === 'strike' ? '#EF4444' : '#10B981',
-          'marker-size': 'small',
-        },
-      })),
+  const mapboxgl = (await import('mapbox-gl')).default
+  mapboxgl.accessToken = token
+
+  return new Promise<string | null>((resolve) => {
+    // Create an off-screen container
+    const container = document.createElement('div')
+    container.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1200px;height:750px;'
+    document.body.appendChild(container)
+
+    // Compute bounds to fit all points with padding
+    let west = Infinity, east = -Infinity, south = Infinity, north = -Infinity
+    for (const p of points) {
+      if (p.lng < west) west = p.lng
+      if (p.lng > east) east = p.lng
+      if (p.lat < south) south = p.lat
+      if (p.lat > north) north = p.lat
+    }
+    const lngPad = Math.max((east - west) * 0.2, 0.008)
+    const latPad = Math.max((north - south) * 0.2, 0.005)
+
+    const m = new mapboxgl.Map({
+      container,
+      style: 'mapbox://styles/mapbox/satellite-v9',
+      center: [centerLng, centerLat],
+      zoom: 12,
+      pitch: 0,
+      bearing: 0,
+      attributionControl: false,
+      preserveDrawingBuffer: true,
+    })
+
+    const cleanup = () => {
+      try { m.remove() } catch { /* ignore */ }
+      try { document.body.removeChild(container) } catch { /* ignore */ }
     }
 
-    const encoded = encodeURIComponent(JSON.stringify(geojson))
-    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/geojson(${encoded})/${centerLng},${centerLat},13,0/800x500@2x?access_token=${token}&logo=false&attribution=false`
-    const res = await fetch(url)
-    if (!res.ok) return null
-    const blob = await res.blob()
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onloadend = () => resolve(reader.result as string)
-      reader.onerror = reject
-      reader.readAsDataURL(blob)
+    // Timeout safety — don't hang forever
+    const timeout = setTimeout(() => { cleanup(); resolve(null) }, 15000)
+
+    m.on('load', () => {
+      // Fit to data bounds (zoomed out to show full heatmap spread)
+      m.fitBounds(
+        [[west - lngPad, south - latPad], [east + lngPad, north + latPad]],
+        { padding: 40, duration: 0 },
+      )
+
+      // Add heatmap source + layer (same config as app)
+      const geojson: GeoJSON.FeatureCollection = {
+        type: 'FeatureCollection',
+        features: points.map(p => ({
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
+          properties: { weight: p.weight, type: p.type },
+        })),
+      }
+
+      m.addSource('wildlife-heat', { type: 'geojson', data: geojson })
+      m.addLayer({
+        id: 'wildlife-heat-layer',
+        type: 'heatmap',
+        source: 'wildlife-heat',
+        paint: {
+          'heatmap-weight': ['get', 'weight'],
+          'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 10, 1, 18, 3],
+          'heatmap-color': [
+            'interpolate', ['linear'], ['heatmap-density'],
+            0, 'rgba(0,0,0,0)',
+            0.1, '#10B981',
+            0.3, '#22D3EE',
+            0.5, '#FBBF24',
+            0.7, '#F97316',
+            1, '#EF4444',
+          ],
+          'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 10, 15, 18, 30],
+          'heatmap-opacity': 0.7,
+        },
+      })
+
+      // Wait for the map to finish rendering
+      const onIdle = async () => {
+        m.off('idle', onIdle)
+        // Extra frame to ensure heatmap is painted
+        await new Promise(r => requestAnimationFrame(r))
+        await new Promise(r => requestAnimationFrame(r))
+
+        try {
+          const dataUrl = m.getCanvas().toDataURL('image/jpeg', 0.85)
+          clearTimeout(timeout)
+          cleanup()
+          resolve(dataUrl)
+        } catch {
+          clearTimeout(timeout)
+          cleanup()
+          resolve(null)
+        }
+      }
+      m.on('idle', onIdle)
+      m.triggerRepaint()
     })
-  } catch {
-    return null
-  }
+
+    m.on('error', () => {
+      clearTimeout(timeout)
+      cleanup()
+      resolve(null)
+    })
+  })
 }
 
 export async function generateWildlifeReportPdf(options: Options): Promise<{ doc: jsPDF; filename: string }> {
@@ -357,12 +438,12 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
     const sightingCount = heatmapPoints.filter(p => p.type === 'sighting').length
     const strikeCount = heatmapPoints.filter(p => p.type === 'strike').length
 
-    const mapDataUrl = await fetchMapWithMarkers(heatmapPoints, centerLat, centerLng)
+    const mapDataUrl = await captureHeatmapImage(heatmapPoints, centerLat, centerLng)
     if (mapDataUrl) {
       try {
         const imgWidthPt = pageWidth - margin * 2
-        const imgHeightPt = imgWidthPt * (500 / 800)
-        doc.addImage(mapDataUrl, 'PNG', margin, y, imgWidthPt, imgHeightPt)
+        const imgHeightPt = imgWidthPt * (750 / 1200) // match capture container aspect ratio
+        doc.addImage(mapDataUrl, 'JPEG', margin, y, imgWidthPt, imgHeightPt)
         y += imgHeightPt + 8
       } catch {
         doc.setFontSize(8)
