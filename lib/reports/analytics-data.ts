@@ -115,29 +115,67 @@ export async function fetchAnalyticsData(baseId: string | null, days = 30): Prom
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function fetchInspectionAnalytics(supabase: any, baseId: string, since: string) {
+  // Fetch completed inspections for pass rate + counts
   const { data } = await supabase
     .from('inspections')
-    .select('inspection_type, created_at, completed_at, passed_count, failed_count, na_count')
+    .select('id, inspection_type, passed_count, failed_count, na_count')
     .eq('base_id', baseId)
     .eq('status', 'completed')
     .gte('created_at', since)
 
-  const rows = (data ?? []) as { inspection_type: string; created_at: string; completed_at: string | null; passed_count: number; failed_count: number; na_count: number }[]
+  const rows = (data ?? []) as { id: string; inspection_type: string; passed_count: number; failed_count: number; na_count: number }[]
 
-  function calcMetrics(filtered: typeof rows): InspectionMetrics {
+  // Fetch activity log start/complete pairs for actual on-airfield time
+  // "started" → "completed" with entity_type='inspection' gives real duration
+  const { data: activityRows } = await supabase
+    .from('activity_log')
+    .select('action, entity_type, entity_id, created_at, metadata')
+    .eq('base_id', baseId)
+    .eq('entity_type', 'inspection')
+    .in('action', ['started', 'completed'])
+    .gte('created_at', since)
+    .order('created_at', { ascending: true })
+
+  // Build a map of entity_id → { startedAt, completedAt }
+  const timingMap = new Map<string, { startedAt: string | null; completedAt: string | null; type: string | null }>()
+  for (const entry of (activityRows ?? []) as { action: string; entity_id: string; created_at: string; metadata: any }[]) {
+    if (!timingMap.has(entry.entity_id)) {
+      timingMap.set(entry.entity_id, { startedAt: null, completedAt: null, type: null })
+    }
+    const rec = timingMap.get(entry.entity_id)!
+    if (entry.action === 'started') {
+      rec.startedAt = entry.created_at
+      // Detect type from activity details
+      const details = entry.metadata?.details as string | undefined
+      if (details?.includes('Airfield')) rec.type = 'airfield'
+      else if (details?.includes('Lighting')) rec.type = 'lighting'
+    } else if (entry.action === 'completed') {
+      rec.completedAt = entry.created_at
+      if (!rec.type) {
+        const details = entry.metadata?.details as string | undefined
+        if (details?.includes('Airfield')) rec.type = 'airfield'
+        else if (details?.includes('Lighting')) rec.type = 'lighting'
+      }
+    }
+  }
+
+  function calcMetrics(filtered: typeof rows, type: string): InspectionMetrics {
     let totalMinutes = 0
     let completedWithTime = 0
     let totalPassed = 0
     let totalItems = 0
 
-    for (const r of filtered) {
-      if (r.completed_at) {
-        const mins = (new Date(r.completed_at).getTime() - new Date(r.created_at).getTime()) / 60000
-        if (mins > 0 && mins < 1440) {
-          totalMinutes += mins
-          completedWithTime++
-        }
+    // Compute avg time from activity log pairs
+    timingMap.forEach((rec) => {
+      if (rec.type !== type || !rec.startedAt || !rec.completedAt) return
+      const mins = (new Date(rec.completedAt).getTime() - new Date(rec.startedAt).getTime()) / 60000
+      if (mins > 0 && mins < 1440) { // exclude >24h as unreasonable
+        totalMinutes += mins
+        completedWithTime++
       }
+    })
+
+    for (const r of filtered) {
       totalPassed += r.passed_count || 0
       totalItems += (r.passed_count || 0) + (r.failed_count || 0) + (r.na_count || 0)
     }
@@ -150,8 +188,8 @@ async function fetchInspectionAnalytics(supabase: any, baseId: string, since: st
   }
 
   return {
-    airfield: calcMetrics(rows.filter(r => r.inspection_type === 'airfield')),
-    lighting: calcMetrics(rows.filter(r => r.inspection_type === 'lighting')),
+    airfield: calcMetrics(rows.filter(r => r.inspection_type === 'airfield'), 'airfield'),
+    lighting: calcMetrics(rows.filter(r => r.inspection_type === 'lighting'), 'lighting'),
   }
 }
 
