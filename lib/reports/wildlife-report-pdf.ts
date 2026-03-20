@@ -86,7 +86,7 @@ async function fetchBasemap(cLng: number, cLat: number, zoom: number): Promise<s
   if (!token || token === 'your-mapbox-token-here') return null
 
   try {
-    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${cLng},${cLat},${zoom},0/${MAP_W}x${MAP_H}@2x?access_token=${token}&logo=false&attribution=false`
+    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${cLng},${cLat},${zoom},0/${MAP_W}x${MAP_H}?access_token=${token}&logo=false&attribution=false`
     const res = await fetch(url)
     if (!res.ok) return null
     const blob = await res.blob()
