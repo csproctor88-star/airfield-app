@@ -277,7 +277,7 @@ function ProfileSectionContent() {
                 disabled={savingOi}
                 style={{
                   padding: '8px 12px', borderRadius: 6,
-                  background: '#22C55E', border: 'none',
+                  background: 'var(--color-status-pass)', border: 'none',
                   color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
                   cursor: savingOi ? 'default' : 'pointer', fontFamily: 'inherit',
                   opacity: savingOi ? 0.7 : 1,
@@ -312,7 +312,7 @@ function ProfileSectionContent() {
                 disabled={savingEmail}
                 style={{
                   padding: '8px 12px', borderRadius: 6,
-                  background: '#22C55E', border: 'none',
+                  background: 'var(--color-status-pass)', border: 'none',
                   color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
                   cursor: savingEmail ? 'default' : 'pointer', fontFamily: 'inherit',
                   opacity: savingEmail ? 0.7 : 1,
@@ -1038,7 +1038,7 @@ function RegulationsSectionContent() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
                 {cacheProgress.done} of {cacheProgress.total} downloaded
-                {cacheProgress.errors > 0 && <span style={{ color: '#F97316', marginLeft: 8 }}>{cacheProgress.errors} unavailable</span>}
+                {cacheProgress.errors > 0 && <span style={{ color: 'var(--color-orange)', marginLeft: 8 }}>{cacheProgress.errors} unavailable</span>}
               </div>
               <button
                 onClick={() => { cacheAbortRef.current = true }}
@@ -1068,7 +1068,7 @@ function RegulationsSectionContent() {
                 border: (cachedCount === totalCount && totalCount > 0)
                   ? '1px solid rgba(52,211,153,0.3)' : 'none',
                 borderRadius: 8, padding: '10px 16px', cursor: 'pointer',
-                color: (cachedCount === totalCount && totalCount > 0) ? '#34D399' : '#fff',
+                color: (cachedCount === totalCount && totalCount > 0) ? 'var(--color-success)' : '#fff',
                 fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
                 opacity: (cachedCount === totalCount && totalCount > 0) ? 0.8 : 1,
               }}
@@ -1313,7 +1313,7 @@ function SignOutSection() {
         border: 'none',
         borderRadius: 8,
         cursor: signingOut ? 'not-allowed' : 'pointer',
-        color: '#EF4444',
+        color: 'var(--color-danger)',
         fontSize: 'var(--fs-xl)',
         fontWeight: 700,
         fontFamily: 'inherit',
@@ -1349,12 +1349,8 @@ function ConfirmDialog({
 }) {
   return (
     <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        background: 'var(--color-overlay)', backdropFilter: 'blur(4px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '16px',
-      }}
+      className="modal-overlay"
+      style={{ backdropFilter: 'blur(4px)' }}
       onClick={onCancel}
     >
       <div

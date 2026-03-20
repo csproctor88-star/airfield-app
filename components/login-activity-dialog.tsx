@@ -207,16 +207,7 @@ export default function LoginActivityDialog() {
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 200,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 16,
-        background: 'rgba(0,0,0,0.6)',
-      }}
+      className="modal-overlay"
       onClick={() => setOpen(false)}
     >
       <div

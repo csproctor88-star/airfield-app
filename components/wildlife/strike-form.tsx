@@ -287,7 +287,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
     <>
         {!inline && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: '#EF4444' }}>{isEdit ? 'Edit Strike Report' : 'Report Wildlife Strike'}</div>
+          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-danger)' }}>{isEdit ? 'Edit Strike Report' : 'Report Wildlife Strike'}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: 'var(--color-text-3)' }}>×</button>
         </div>
         )}
@@ -388,7 +388,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 padding: '8px 12px', borderRadius: 6,
                 border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
-                color: latitude ? '#EF4444' : 'var(--color-text-2)',
+                color: latitude ? 'var(--color-danger)' : 'var(--color-text-2)',
                 fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: gpsLoading ? 'wait' : 'pointer',
                 opacity: gpsLoading ? 0.6 : 1,
               }}
@@ -407,7 +407,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 padding: '8px 12px', borderRadius: 6,
                 border: '1px solid var(--color-border)',
-                background: showMap ? '#EF4444' : 'var(--color-bg-surface)',
+                background: showMap ? 'var(--color-danger)' : 'var(--color-bg-surface)',
                 color: showMap ? '#fff' : 'var(--color-text-2)',
                 fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer',
               }}
@@ -420,7 +420,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
             </button>
           </div>
           {latitude != null && longitude != null && !showMap && (
-            <div style={{ fontSize: 'var(--fs-xs)', color: '#EF4444', fontFamily: 'monospace' }}>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-danger)', fontFamily: 'monospace' }}>
               {latitude.toFixed(5)}, {longitude.toFixed(5)}
             </div>
           )}
@@ -537,7 +537,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
                   padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
                   border: '1px solid var(--color-border)', cursor: 'pointer',
                   background: partsStruck.includes(part) ? '#EF444420' : 'var(--color-bg-surface)',
-                  color: partsStruck.includes(part) ? '#EF4444' : 'var(--color-text-2)',
+                  color: partsStruck.includes(part) ? 'var(--color-danger)' : 'var(--color-text-2)',
                 }}
               >
                 {formatPartLabel(part)}
@@ -555,7 +555,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
                   padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
                   border: '1px solid var(--color-border)', cursor: 'pointer',
                   background: partsDamaged.includes(part) ? '#F9731620' : 'var(--color-bg-surface)',
-                  color: partsDamaged.includes(part) ? '#F97316' : 'var(--color-text-2)',
+                  color: partsDamaged.includes(part) ? 'var(--color-orange)' : 'var(--color-text-2)',
                 }}
               >
                 {formatPartLabel(part)}
@@ -633,7 +633,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
           disabled={saving}
           style={{
             width: '100%', padding: '12px', borderRadius: 8, border: 'none',
-            background: saving ? 'var(--color-text-4)' : '#EF4444',
+            background: saving ? 'var(--color-text-4)' : 'var(--color-danger)',
             color: '#fff', fontWeight: 800, fontSize: 'var(--fs-md)', cursor: 'pointer',
           }}
         >
@@ -662,11 +662,11 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
 
   return (
     <>
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200, display: 'flex',
-      alignItems: 'flex-end', justifyContent: 'center',
-      background: 'rgba(0,0,0,0.5)',
-    }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    <div
+      className="modal-overlay"
+      style={{ alignItems: 'flex-end', padding: 0 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
       <div style={{
         width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto',
         background: 'var(--color-bg)', borderRadius: '16px 16px 0 0',

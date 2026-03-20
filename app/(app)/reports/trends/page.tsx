@@ -167,15 +167,15 @@ export default function DiscrepancyTrendsPage() {
       {/* KPI Row */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
         <div className="kpi-badge" style={{ flex: '1 1 0', maxWidth: 200 }}>
-          <div className="kpi-value" style={{ color: '#EF4444' }}>{summary.totalOpened}</div>
+          <div className="kpi-value" style={{ color: 'var(--color-danger)' }}>{summary.totalOpened}</div>
           <div className="kpi-label">Opened</div>
         </div>
         <div className="kpi-badge" style={{ flex: '1 1 0', maxWidth: 200 }}>
-          <div className="kpi-value" style={{ color: '#22C55E' }}>{summary.totalClosed}</div>
+          <div className="kpi-value" style={{ color: 'var(--color-status-pass)' }}>{summary.totalClosed}</div>
           <div className="kpi-label">Closed</div>
         </div>
         <div className="kpi-badge" style={{ flex: '1 1 0', maxWidth: 200 }}>
-          <div className="kpi-value" style={{ color: summary.net > 0 ? '#EF4444' : summary.net < 0 ? '#22C55E' : '#94A3B8' }}>
+          <div className="kpi-value" style={{ color: summary.net > 0 ? 'var(--color-danger)' : summary.net < 0 ? 'var(--color-status-pass)' : '#94A3B8' }}>
             {summary.net >= 0 ? '+' : ''}{summary.net}
           </div>
           <div className="kpi-label">Net</div>
@@ -200,19 +200,19 @@ export default function DiscrepancyTrendsPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
                 <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)' }}>{b.label}</span>
                 <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-                  <span style={{ color: '#EF4444' }}>{b.opened}</span>
+                  <span style={{ color: 'var(--color-danger)' }}>{b.opened}</span>
                   {' / '}
-                  <span style={{ color: '#22C55E' }}>{b.closed}</span>
+                  <span style={{ color: 'var(--color-status-pass)' }}>{b.closed}</span>
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 3, height: 6 }}>
                 <div style={{
                   width: `${(b.opened / maxVal) * 100}%`,
-                  background: '#EF4444', borderRadius: 3, minWidth: b.opened > 0 ? 4 : 0,
+                  background: 'var(--color-danger)', borderRadius: 3, minWidth: b.opened > 0 ? 4 : 0,
                 }} />
                 <div style={{
                   width: `${(b.closed / maxVal) * 100}%`,
-                  background: '#22C55E', borderRadius: 3, minWidth: b.closed > 0 ? 4 : 0,
+                  background: 'var(--color-status-pass)', borderRadius: 3, minWidth: b.closed > 0 ? 4 : 0,
                 }} />
               </div>
             </div>
@@ -220,11 +220,11 @@ export default function DiscrepancyTrendsPage() {
         })}
         <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <div style={{ width: 8, height: 8, borderRadius: 2, background: '#EF4444' }} />
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--color-danger)' }} />
             <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)' }}>Opened</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <div style={{ width: 8, height: 8, borderRadius: 2, background: '#22C55E' }} />
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--color-status-pass)' }} />
             <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)' }}>Closed</span>
           </div>
         </div>
@@ -288,7 +288,7 @@ export default function DiscrepancyTrendsPage() {
             flex: 1, padding: '14px 0', borderRadius: 10,
             border: '1px solid rgba(34,197,94,0.4)',
             background: 'rgba(34,197,94,0.1)',
-            color: '#22C55E', fontSize: 'var(--fs-xl)', fontWeight: 700,
+            color: 'var(--color-status-pass)', fontSize: 'var(--fs-xl)', fontWeight: 700,
             cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
             opacity: exporting ? 0.7 : 1,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -304,7 +304,7 @@ export default function DiscrepancyTrendsPage() {
             padding: '14px 18px', borderRadius: 10,
             border: '1px solid #A78BFA33',
             background: '#A78BFA14',
-            color: '#A78BFA', fontSize: 'var(--fs-xl)', fontWeight: 700,
+            color: 'var(--color-purple)', fontSize: 'var(--fs-xl)', fontWeight: 700,
             cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
             opacity: exporting ? 0.7 : 1,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,

@@ -244,10 +244,10 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
 
   const riskColor = (risk: string) => {
     switch (risk) {
-      case 'critical': return '#EF4444'
-      case 'high': return '#F97316'
-      case 'medium': return '#FBBF24'
-      default: return '#10B981'
+      case 'critical': return 'var(--color-danger)'
+      case 'high': return 'var(--color-orange)'
+      case 'medium': return 'var(--color-warning)'
+      default: return 'var(--color-success)'
     }
   }
 
@@ -257,7 +257,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
             <div style={{
               padding: '8px 12px', marginBottom: 12, borderRadius: 8,
               background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
-              fontSize: 'var(--fs-sm)', color: '#EF4444', fontWeight: 600,
+              fontSize: 'var(--fs-sm)', color: 'var(--color-danger)', fontWeight: 600,
             }}>
               BASH issue found — log the wildlife sighting before continuing.
             </div>
@@ -381,7 +381,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
                   flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   padding: '8px 12px', borderRadius: 6,
                   border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
-                  color: latitude ? '#10B981' : 'var(--color-text-2)',
+                  color: latitude ? 'var(--color-success)' : 'var(--color-text-2)',
                   fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: gpsLoading ? 'wait' : 'pointer',
                   opacity: gpsLoading ? 0.6 : 1,
                 }}
@@ -413,7 +413,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
               </button>
             </div>
             {latitude != null && longitude != null && !showMap && (
-              <div style={{ fontSize: 'var(--fs-xs)', color: '#10B981', fontFamily: 'monospace' }}>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-success)', fontFamily: 'monospace' }}>
                 {latitude.toFixed(5)}, {longitude.toFixed(5)}
               </div>
             )}
@@ -476,9 +476,9 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
                     onClick={() => setActionsTaken(prev => selected ? prev.filter(v => v !== a.value) : [...prev, a.value])}
                     style={{
                       padding: '6px 14px', borderRadius: 20,
-                      border: selected ? '2px solid #10B981' : '1px solid var(--color-border)',
+                      border: selected ? '2px solid var(--color-success)' : '1px solid var(--color-border)',
                       background: selected ? 'rgba(16,185,129,0.15)' : 'var(--color-bg-surface)',
-                      color: selected ? '#10B981' : 'var(--color-text-2)',
+                      color: selected ? 'var(--color-success)' : 'var(--color-text-2)',
                       fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer',
                     }}
                   >
@@ -529,7 +529,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
             disabled={saving || !selectedSpecies}
             style={{
               width: '100%', padding: '12px', borderRadius: 8, border: 'none',
-              background: saving || !selectedSpecies ? 'var(--color-text-4)' : '#10B981',
+              background: saving || !selectedSpecies ? 'var(--color-text-4)' : 'var(--color-success)',
               color: '#fff', fontWeight: 800, fontSize: 'var(--fs-md)', cursor: 'pointer',
             }}
           >
@@ -558,11 +558,11 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
 
   return (
     <>
-      <div style={{
-        position: 'fixed', inset: 0, zIndex: 200, display: 'flex',
-        alignItems: 'flex-end', justifyContent: 'center',
-        background: 'rgba(0,0,0,0.5)',
-      }} onClick={e => { if (e.target === e.currentTarget && !required) onClose() }}>
+      <div
+        className="modal-overlay"
+        style={{ alignItems: 'flex-end', padding: 0 }}
+        onClick={e => { if (e.target === e.currentTarget && !required) onClose() }}
+      >
         <div style={{
           width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto',
           background: 'var(--color-bg)', borderRadius: '16px 16px 0 0',

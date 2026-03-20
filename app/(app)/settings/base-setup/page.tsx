@@ -1266,9 +1266,9 @@ function DashboardPreview({
   }, [installationId])
 
   const STATUS_COLORS: Record<string, string> = {
-    green: '#34D399',
-    yellow: '#FBBF24',
-    red: '#EF4444',
+    green: 'var(--color-success)',
+    yellow: 'var(--color-warning)',
+    red: 'var(--color-danger)',
   }
 
   if (loading) {
@@ -1442,7 +1442,7 @@ const FREQ_OPTIONS: { value: FrequencyType; label: string }[] = [
   { value: 'monthly', label: 'Monthly' },
 ]
 
-const FREQ_TAG_COLORS: Record<string, string> = { daily: '#22D3EE', weekly: '#A78BFA', monthly: '#F59E0B' }
+const FREQ_TAG_COLORS: Record<string, string> = { daily: 'var(--color-cyan)', weekly: 'var(--color-purple)', monthly: '#F59E0B' }
 
 function ShiftChecklistTab({ installationId, currentInstallation }: { installationId: string | null; currentInstallation: any }) {
   const [items, setItems] = useState<ShiftChecklistItem[]>([])
@@ -1608,10 +1608,10 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
                     }}>{item.frequency.charAt(0).toUpperCase() + item.frequency.slice(1)}</span>
                     <button onClick={() => handleToggleActive(item)} title={item.is_active ? 'Disable' : 'Enable'} style={{
                       background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                      fontSize: 'var(--fs-xs)', fontWeight: 600, color: item.is_active ? '#22C55E' : 'var(--color-text-4)',
+                      fontSize: 'var(--fs-xs)', fontWeight: 600, color: item.is_active ? 'var(--color-status-pass)' : 'var(--color-text-4)',
                     }}>{item.is_active ? 'Active' : 'Inactive'}</button>
                     <button onClick={() => startEdit(item)} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600 }}>Edit</button>
-                    <button onClick={() => handleDelete(item.id, item.label)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600 }}>Delete</button>
+                    <button onClick={() => handleDelete(item.id, item.label)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600 }}>Delete</button>
                   </div>
                 )}
               </div>
@@ -1920,11 +1920,7 @@ function SeedPickerDialog({
   }
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 16, background: 'rgba(0,0,0,0.6)',
-    }} onClick={onClose}>
+    <div className="modal-overlay" style={{ padding: 16 }} onClick={onClose}>
       <div className="card" style={{ width: '100%', maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column', padding: 0 }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
           <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>Add QRC Templates</div>
@@ -2044,11 +2040,7 @@ function EditQrcDialog({
   }
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 16, background: 'rgba(0,0,0,0.6)',
-    }} onClick={onClose}>
+    <div className="modal-overlay" style={{ padding: 16 }} onClick={onClose}>
       <div className="card" style={{ width: '100%', maxWidth: 560, maxHeight: '85vh', display: 'flex', flexDirection: 'column', padding: 0 }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
           <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
@@ -2613,10 +2605,10 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
 
   const riskColor = (risk: string) => {
     switch (risk) {
-      case 'critical': return '#EF4444'
-      case 'high': return '#F97316'
-      case 'medium': return '#FBBF24'
-      default: return '#10B981'
+      case 'critical': return 'var(--color-danger)'
+      case 'high': return 'var(--color-orange)'
+      case 'medium': return 'var(--color-warning)'
+      default: return 'var(--color-success)'
     }
   }
 
@@ -2725,16 +2717,16 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
         <span>{filtered.length} species {search && `matching "${search}"`}</span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444', display: 'inline-block' }} /> Critical
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-danger)', display: 'inline-block' }} /> Critical
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#F97316', display: 'inline-block' }} /> High
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-orange)', display: 'inline-block' }} /> High
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#FBBF24', display: 'inline-block' }} /> Med
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-warning)', display: 'inline-block' }} /> Med
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} /> Low
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-success)', display: 'inline-block' }} /> Low
           </span>
         </div>
       </div>
@@ -2767,7 +2759,7 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 padding: 6, borderRadius: 10,
-                border: inBase ? '2px solid #10B981' : '1px solid var(--color-border)',
+                border: inBase ? '2px solid var(--color-success)' : '1px solid var(--color-border)',
                 background: inBase ? 'rgba(16,185,129,0.08)' : 'var(--color-bg-surface)',
                 cursor: isAdding ? 'wait' : 'pointer',
                 textAlign: 'center', color: 'var(--color-text)',
@@ -2779,7 +2771,7 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
               {inBase && (
                 <div style={{
                   position: 'absolute', top: 4, left: 4, width: 20, height: 20,
-                  borderRadius: '50%', background: '#10B981',
+                  borderRadius: '50%', background: 'var(--color-success)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 12, color: '#fff', fontWeight: 700, zIndex: 1,
                 }}>&#10003;</div>
@@ -2793,7 +2785,7 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
                     background: 'rgba(0,0,0,0.5)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 14, lineHeight: 1, cursor: 'pointer',
-                    color: favoriteNames.has(sp.common_name) ? '#FBBF24' : 'rgba(255,255,255,0.5)',
+                    color: favoriteNames.has(sp.common_name) ? 'var(--color-warning)' : 'rgba(255,255,255,0.5)',
                   }}
                   title={favoriteNames.has(sp.common_name) ? 'Remove from favorites' : 'Add to favorites'}
                 >&#9733;</div>

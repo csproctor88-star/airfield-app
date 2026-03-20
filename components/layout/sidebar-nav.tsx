@@ -306,7 +306,7 @@ export function SidebarNav() {
             <span style={{
               position: 'absolute', top: -4, right: -6,
               width: isOpen ? 16 : 14, height: isOpen ? 16 : 14,
-              borderRadius: '50%', background: '#EF4444', color: '#fff',
+              borderRadius: '50%', background: 'var(--color-danger)', color: '#fff',
               fontSize: 9, fontWeight: 800,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               lineHeight: 1, boxShadow: '0 0 6px rgba(239,68,68,0.5)',
@@ -317,7 +317,7 @@ export function SidebarNav() {
         </span>
         {isOpen && <span style={{ flex: 1 }}>{def.name}</span>}
         {isOpen && href === '/notams' && expiringNotamCount > 0 && (
-          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EF4444', marginLeft: 'auto' }}>
+          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginLeft: 'auto' }}>
             {expiringNotamCount} expiring
           </span>
         )}

@@ -801,7 +801,7 @@ function ObstructionsContent() {
                   style={{
                     fontSize: 'var(--fs-lg)',
                     fontWeight: 800,
-                    color: multiAnalysis.hasViolation ? '#EF4444' : '#22C55E',
+                    color: multiAnalysis.hasViolation ? 'var(--color-danger)' : 'var(--color-status-pass)',
                   }}
                 >
                   {multiAnalysis.hasViolation ? 'VIOLATION DETECTED' : 'NO VIOLATION'}
@@ -924,7 +924,7 @@ function ObstructionsContent() {
                               padding: '2px 6px',
                               borderRadius: 4,
                               background: s.violated ? '#EF444422' : '#22C55E22',
-                              color: s.violated ? '#EF4444' : '#22C55E',
+                              color: s.violated ? 'var(--color-danger)' : 'var(--color-status-pass)',
                             }}
                           >
                             {s.violated ? `VIOLATION (${s.penetrationFt.toFixed(1)} ft)` : 'CLEAR'}
@@ -1036,7 +1036,7 @@ function ObstructionsContent() {
                       <span style={{
                         fontSize: 'var(--fs-xs)', fontWeight: 800, padding: '2px 6px', borderRadius: 4,
                         background: r.violated ? '#F59E0B22' : '#22C55E22',
-                        color: r.violated ? '#F59E0B' : '#22C55E',
+                        color: r.violated ? '#F59E0B' : 'var(--color-status-pass)',
                       }}>
                         {r.violated ? 'WITHIN OFA' : 'CLEAR'}
                       </span>
@@ -1084,7 +1084,7 @@ function ObstructionsContent() {
                 background: 'rgba(239, 68, 68, 0.04)',
               }}
             >
-              <span className="section-label" style={{ color: '#EF4444' }}>
+              <span className="section-label" style={{ color: 'var(--color-danger)' }}>
                 Applicable UFC References
               </span>
               {multiAnalysis.violatedSurfaces.map((vs, i) => (

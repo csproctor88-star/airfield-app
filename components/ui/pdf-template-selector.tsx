@@ -100,11 +100,8 @@ export default function PdfExportDialog({ open, mode, onClose, onExport, exporti
 
   return (
     <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(0,0,0,0.6)', padding: 16,
-      }}
+      className="modal-overlay"
+      style={{ zIndex: 9999 }}
       onClick={(e) => { if (e.target === e.currentTarget && !exporting) onClose() }}
     >
       <div style={{
@@ -275,7 +272,7 @@ export default function PdfExportDialog({ open, mode, onClose, onExport, exporti
             background: mode === 'download'
               ? 'rgba(34,197,94,0.1)'
               : 'rgba(168,85,247,0.1)',
-            color: mode === 'download' ? '#22C55E' : '#A855F7',
+            color: mode === 'download' ? 'var(--color-status-pass)' : '#A855F7',
             fontSize: 'var(--fs-md)', fontWeight: 700,
             cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
             opacity: exporting ? 0.6 : 1,

@@ -24,8 +24,8 @@ export function Badge({ label, color, bg }: BadgeProps) {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  open: '#3B82F6',
-  completed: '#10B981',
+  open: 'var(--color-status-inwork)',
+  completed: 'var(--color-success)',
   cancelled: '#9CA3AF',
 }
 

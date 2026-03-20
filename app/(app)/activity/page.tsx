@@ -410,7 +410,7 @@ export default function ActivityPage() {
           disabled={exporting || entries.length === 0}
           style={{
             background: '#A78BFA14', border: '1px solid #A78BFA33', borderRadius: 8,
-            padding: '6px 12px', color: '#A78BFA', fontSize: 'var(--fs-base)', fontWeight: 600,
+            padding: '6px 12px', color: 'var(--color-purple)', fontSize: 'var(--fs-base)', fontWeight: 600,
             cursor: exporting || entries.length === 0 ? 'default' : 'pointer',
             fontFamily: 'inherit', opacity: exporting || entries.length === 0 ? 0.5 : 1,
           }}
@@ -654,14 +654,14 @@ export default function ActivityPage() {
                           <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleEdit(a) }}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: '#3B82F6' }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: 'var(--color-status-inwork)' }}
                               title="Edit entry"
                             >
                               Edit
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleDelete(a) }}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: '#EF4444', marginLeft: 2 }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: 'var(--color-danger)', marginLeft: 2 }}
                               title="Delete entry"
                             >
                               Del
@@ -719,11 +719,8 @@ export default function ActivityPage() {
       {/* Edit Entry Modal */}
       {editingId && (
         <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 200,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 16, background: 'rgba(0,0,0,0.6)',
-          }}
+          className="modal-overlay"
+          style={{ padding: 16 }}
           onClick={() => setEditingId(null)}
         >
           <div
@@ -830,7 +827,7 @@ export default function ActivityPage() {
               style={{
                 width: '100%', padding: '8px 0', borderRadius: 8,
                 border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)',
-                color: '#EF4444', fontSize: 'var(--fs-sm)', fontWeight: 600,
+                color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
