@@ -29,6 +29,7 @@ export interface CheckDraft {
   notifiedAgencies: string[]
   heavyAircraftType: string
   savedAt: string
+  startedAt: string | null
   dbRowId: string | null
 }
 
@@ -52,6 +53,7 @@ export function createEmptyCheckDraft(): CheckDraft {
     notifiedAgencies: [],
     heavyAircraftType: '',
     savedAt: '',
+    startedAt: null,
     dbRowId: null,
   }
 }

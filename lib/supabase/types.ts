@@ -200,6 +200,7 @@ export type Database = {
           data: Record<string, unknown>
           completed_by: string | null
           completed_at: string | null
+          started_at: string | null
           latitude: number | null
           longitude: number | null
           photo_count: number

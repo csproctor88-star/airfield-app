@@ -26,6 +26,7 @@ export type CheckRow = {
   data: Record<string, unknown>
   completed_by: string | null
   completed_at: string | null
+  started_at: string | null
   latitude: number | null
   longitude: number | null
   photo_count: number
@@ -55,6 +56,7 @@ export async function createCheck(input: {
   latitude?: number | null
   longitude?: number | null
   base_id?: string | null
+  started_at?: string | null
 }): Promise<{ data: CheckRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -70,6 +72,7 @@ export async function createCheck(input: {
     data: input.data,
     completed_by: input.completed_by,
     completed_at: now.toISOString(),
+    started_at: input.started_at ?? null,
     latitude: input.latitude ?? null,
     longitude: input.longitude ?? null,
   }

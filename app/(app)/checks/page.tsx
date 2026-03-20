@@ -51,6 +51,7 @@ export default function AirfieldChecksPage() {
   const [showDiagram, setShowDiagram] = useState(false)
   // ── Check lifecycle state ──
   const [checkStarted, setCheckStarted] = useState(false)
+  const [checkStartedAt, setCheckStartedAt] = useState<string | null>(null)
   const [userOI, setUserOI] = useState('')
   const [showResumePrompt, setShowResumePrompt] = useState(false)
   const [pendingDraft, setPendingDraft] = useState<CheckDraft | null>(null)
@@ -149,6 +150,7 @@ export default function AirfieldChecksPage() {
     if (pendingDraft) {
       hydrateFormFromDraft(pendingDraft)
       setCheckStarted(true)
+      setCheckStartedAt(pendingDraft.startedAt || new Date().toISOString())
     }
     setShowResumePrompt(false)
     setPendingDraft(null)
@@ -317,7 +319,7 @@ export default function AirfieldChecksPage() {
       checkType, areas, issueFound, issues, remarks, remarkText,
       rscCondition, reportRcr, rcrValue, rcrConditionType, bashCondition,
       aircraftType, callsign, emergencyNature, checkedActions, notifiedAgencies,
-      heavyAircraftType, savedAt: '', dbRowId: draftDbRowId,
+      heavyAircraftType, savedAt: '', startedAt: checkStartedAt, dbRowId: draftDbRowId,
     }
 
     const { data: saved, error } = await saveCheckDraftToDb({
@@ -348,11 +350,11 @@ export default function AirfieldChecksPage() {
     checkType, areas, issueFound, issues, remarks, remarkText,
     rscCondition, reportRcr, rcrValue, rcrConditionType, bashCondition,
     aircraftType, callsign, emergencyNature, checkedActions, notifiedAgencies,
-    heavyAircraftType, savedAt: '', dbRowId: draftDbRowId,
+    heavyAircraftType, savedAt: '', startedAt: checkStartedAt, dbRowId: draftDbRowId,
   }), [checkType, areas, issueFound, issues, remarks, remarkText,
     rscCondition, reportRcr, rcrValue, rcrConditionType, bashCondition,
     aircraftType, callsign, emergencyNature, checkedActions, notifiedAgencies,
-    heavyAircraftType, draftDbRowId])
+    heavyAircraftType, checkStartedAt, draftDbRowId])
 
   // Keep a ref to the latest snapshot for beforeunload (can't use state in event handlers)
   const draftSnapshotRef = useRef<CheckDraft | null>(null)
@@ -508,6 +510,7 @@ export default function AirfieldChecksPage() {
       latitude: lat,
       longitude: lng,
       base_id: installationId,
+      started_at: checkStartedAt,
     })
 
     if (error || !created) {
@@ -610,6 +613,7 @@ export default function AirfieldChecksPage() {
     )
 
     setCheckStarted(false)
+    setCheckStartedAt(null)
     setSaving(false)
     const summary = discCreated > 0
       ? `Check ${created.display_id} filed — ${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'} logged`
@@ -727,6 +731,7 @@ export default function AirfieldChecksPage() {
             // Log "on the AFLD" when check starts
             if (newType && !checkStarted) {
               setCheckStarted(true)
+              setCheckStartedAt(new Date().toISOString())
               const oiStr = userOI ? `/${userOI}` : ''
               const checkLabel = CHECK_TYPE_CONFIG[newType as keyof typeof CHECK_TYPE_CONFIG]?.label?.toUpperCase() || newType.toUpperCase()
               logActivity(
