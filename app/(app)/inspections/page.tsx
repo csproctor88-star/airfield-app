@@ -16,7 +16,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { fetchInspections, createInspection, saveInspectionDraft, fileInspection, fetchDailyGroup, getInspectorName, deleteInspection, type InspectionRow } from '@/lib/supabase/inspections'
 import { logActivity } from '@/lib/supabase/activity'
-import { updateAirfieldStatus } from '@/lib/supabase/airfield-status'
+import { fetchAirfieldStatus, updateAirfieldStatus } from '@/lib/supabase/airfield-status'
 import { useInstallation } from '@/lib/installation-context'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort } from '@/lib/utils'
 import { fetchCurrentWeather } from '@/lib/weather'
@@ -1498,8 +1498,203 @@ export default function InspectionsPage() {
           </div>
         </div>
 
+        {/* ── Runway Conditions Card (BWC / RSC / RCR) ── */}
+        {currentHalf && (
+          <div style={{
+            background: 'var(--color-bg-elevated)', borderRadius: 12, padding: 16, marginBottom: 20,
+            border: '1px solid var(--color-border)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                Runway Conditions
+              </div>
+              <button
+                onClick={async () => {
+                  const half = currentHalf
+                  if (!half.rscCondition && !(activeForm === 'airfield' && half.bwcValue)) {
+                    toast.error('Select at least RSC or BWC before pushing to status')
+                    return
+                  }
+
+                  // Fetch current status to detect changes
+                  const currentStatus = await fetchAirfieldStatus(installationId)
+                  const rscChanged = half.rscCondition && half.rscCondition !== currentStatus?.rsc_condition
+                  const bwcChanged = half.bwcValue && half.bwcValue !== currentStatus?.bwc_value
+                  const rcrChanged = half.rcrReported && half.rcrValue &&
+                    (half.rcrValue !== currentStatus?.rcr_touchdown || (half.rcrConditionType || null) !== (currentStatus?.rcr_condition || null))
+                  const rcrCleared = half.rscCondition && !half.rcrReported && currentStatus?.rcr_touchdown
+                  const hasChanges = rscChanged || bwcChanged || rcrChanged || rcrCleared
+
+                  // Only update airfield status if something changed
+                  if (hasChanges) {
+                    const nowIso = new Date().toISOString()
+                    const batch: Record<string, unknown> = {}
+                    if (half.bwcValue) {
+                      batch.bwc_value = half.bwcValue
+                      batch.bwc_updated_at = nowIso
+                    }
+                    if (half.rscCondition) {
+                      batch.rsc_condition = half.rscCondition
+                      batch.rsc_updated_at = nowIso
+                    }
+                    if (half.rcrReported && half.rcrValue) {
+                      batch.rcr_touchdown = half.rcrValue
+                      batch.rcr_condition = half.rcrConditionType || null
+                      batch.rcr_updated_at = nowIso
+                    } else if (half.rscCondition && !half.rcrReported) {
+                      batch.rcr_touchdown = null
+                      batch.rcr_midpoint = null
+                      batch.rcr_rollout = null
+                      batch.rcr_condition = null
+                      batch.rcr_updated_at = null
+                    }
+                    if (Object.keys(batch).length > 0) {
+                      await updateAirfieldStatus(batch as any, installationId)
+                    }
+                    if (typeof window !== 'undefined') window.dispatchEvent(new Event('glidepath:local-status-update'))
+                  }
+
+                  // Always log activity with reported conditions
+                  const oiStr = userOI ? `/${userOI}` : ''
+                  const parts: string[] = []
+                  if (half.rscCondition) parts.push(`RSC/${half.rscCondition.toUpperCase()}`)
+                  if (half.rcrReported && half.rcrValue) parts.push(`RCR/${half.rcrValue}`)
+                  if (half.bwcValue) parts.push(`BWC/${half.bwcValue.toUpperCase()}`)
+                  const details = `AFLD3${oiStr} advises ${parts.join(', ')}`
+                  logActivity('updated', 'airfield_status', installationId || crypto.randomUUID(), undefined, { details }, installationId)
+
+                  toast.success(hasChanges ? 'Conditions updated & pushed to airfield status' : 'Conditions reported (no change from current status)')
+                }}
+                style={{
+                  padding: '6px 14px', borderRadius: 8, fontSize: 'var(--fs-sm)', fontWeight: 700,
+                  cursor: 'pointer', border: 'none', fontFamily: 'inherit',
+                  background: 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-cyan))',
+                  color: '#FFF',
+                }}
+              >
+                Push to Status
+              </button>
+            </div>
+
+            {/* BWC — airfield only */}
+            {activeForm === 'airfield' && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)', marginBottom: 6 }}>
+                  Bird Watch Condition (BWC)
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {BWC_OPTIONS.map((opt) => {
+                    const selected = currentHalf.bwcValue === opt
+                    const colorMap: Record<string, string> = { LOW: '#22C55E', MOD: '#EAB308', SEV: '#F97316', PROHIB: '#EF4444' }
+                    const color = colorMap[opt] || 'var(--color-text-2)'
+                    return (
+                      <button
+                        key={opt}
+                        onClick={() => setBwcValue(opt)}
+                        style={{
+                          padding: '6px 12px', borderRadius: 6,
+                          border: `2px solid ${selected ? color : 'var(--color-text-4)'}`,
+                          background: selected ? `${color}20` : 'transparent',
+                          color: selected ? color : 'var(--color-text-2)',
+                          fontSize: 'var(--fs-base)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                        }}
+                      >
+                        {opt}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* RSC */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)', marginBottom: 6 }}>
+                Runway Surface Condition (RSC)
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {RSC_CONDITIONS.map((opt) => {
+                  const selected = currentHalf.rscCondition === opt
+                  const color = opt === 'Dry' ? '#22C55E' : '#3B82F6'
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => setRscCondition(opt)}
+                      style={{
+                        padding: '6px 12px', borderRadius: 6,
+                        border: `2px solid ${selected ? color : 'var(--color-text-4)'}`,
+                        background: selected ? `${color}20` : 'transparent',
+                        color: selected ? color : 'var(--color-text-2)',
+                        fontSize: 'var(--fs-base)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >
+                      {opt}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* RCR */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                <div
+                  onClick={toggleRcrReported}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+                >
+                  <div style={{
+                    width: 20, height: 20, borderRadius: 4,
+                    border: currentHalf.rcrReported ? '2px solid var(--color-cyan, #22D3EE)' : '2px solid var(--color-text-4)',
+                    background: currentHalf.rcrReported ? 'var(--color-cyan, #22D3EE)' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 14, color: 'var(--color-bg-surface-solid, #0F172A)', fontWeight: 700,
+                  }}>
+                    {currentHalf.rcrReported && '\u2713'}
+                  </div>
+                  <span style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: currentHalf.rcrReported ? 'var(--color-cyan, #22D3EE)' : 'var(--color-text-2)' }}>
+                    Report RCR
+                  </span>
+                </div>
+              </div>
+              {currentHalf.rcrReported && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <input
+                    type="number"
+                    placeholder="RCR value"
+                    value={currentHalf.rcrValue || ''}
+                    onChange={(e) => setRcrValue(e.target.value)}
+                    style={{
+                      width: 100, padding: '6px 10px', borderRadius: 6,
+                      border: '2px solid var(--color-text-4)', background: 'var(--color-bg-surface)',
+                      color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit',
+                    }}
+                  />
+                  <select
+                    value={currentHalf.rcrConditionType || ''}
+                    onChange={(e) => setRcrConditionType(e.target.value)}
+                    style={{
+                      padding: '6px 10px', borderRadius: 6,
+                      border: '2px solid var(--color-text-4)', background: 'var(--color-bg-surface)',
+                      color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit',
+                    }}
+                  >
+                    <option value="">Condition type...</option>
+                    {RCR_CONDITION_TYPES.map((ct) => (
+                      <option key={ct.value} value={ct.value}>{ct.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ── Sections & Items ── */}
         {visibleSections.map((section) => {
+          // Skip sections that only contain BWC/RSC/RCR (rendered in top card)
+          const nonConditionItems = section.items.filter(i => i.type !== 'bwc' && i.type !== 'rsc' && i.type !== 'rcr')
+          if (nonConditionItems.length === 0) return null
+
           const done = sectionDoneCount(section)
           const sectionComplete = done === section.items.length
 
@@ -1519,136 +1714,8 @@ export default function InspectionsPage() {
               )}
 
               {section.items.map((item) => {
-                // BWC item
-                if (item.type === 'bwc') {
-                  return (
-                    <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--color-bg-elevated)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', fontWeight: 600, minWidth: 22 }}>{item.itemNumber}.</span>
-                        <span style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: '18px' }}>{item.item}</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: 6, paddingLeft: 30 }}>
-                        {BWC_OPTIONS.map((opt) => {
-                          const selected = currentHalf?.bwcValue === opt
-                          const colorMap: Record<string, string> = { LOW: '#22C55E', MOD: '#EAB308', SEV: '#F97316', PROHIB: '#EF4444' }
-                          const color = colorMap[opt] || 'var(--color-text-2)'
-                          return (
-                            <button
-                              key={opt}
-                              onClick={() => setBwcValue(opt)}
-                              style={{
-                                padding: '6px 12px', borderRadius: 6,
-                                border: `2px solid ${selected ? color : 'var(--color-text-4)'}`,
-                                background: selected ? `${color}20` : 'transparent',
-                                color: selected ? color : 'var(--color-text-2)',
-                                fontSize: 'var(--fs-base)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                              }}
-                            >
-                              {opt}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )
-                }
-
-                // RSC item
-                if (item.type === 'rsc') {
-                  return (
-                    <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--color-bg-elevated)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', fontWeight: 600, minWidth: 22 }}>{item.itemNumber}.</span>
-                        <span style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: '18px' }}>{item.item}</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: 6, paddingLeft: 30 }}>
-                        {RSC_CONDITIONS.map((opt) => {
-                          const selected = currentHalf?.rscCondition === opt
-                          const color = opt === 'Dry' ? '#22C55E' : '#3B82F6'
-                          return (
-                            <button
-                              key={opt}
-                              onClick={() => setRscCondition(opt)}
-                              style={{
-                                padding: '6px 12px', borderRadius: 6,
-                                border: `2px solid ${selected ? color : 'var(--color-text-4)'}`,
-                                background: selected ? `${color}20` : 'transparent',
-                                color: selected ? color : 'var(--color-text-2)',
-                                fontSize: 'var(--fs-base)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                              }}
-                            >
-                              {opt === 'Dry' ? '\u2600\uFE0F' : '\uD83D\uDCA7'} {opt}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )
-                }
-
-                // RCR item
-                if (item.type === 'rcr') {
-                  const rcrOn = currentHalf?.rcrReported ?? false
-                  return (
-                    <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--color-bg-elevated)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', fontWeight: 600, minWidth: 22 }}>{item.itemNumber}.</span>
-                        <span style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: '18px' }}>{item.item}</span>
-                      </div>
-                      <div
-                        onClick={toggleRcrReported}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', marginLeft: 30,
-                          borderRadius: 8, cursor: 'pointer',
-                          background: rcrOn ? 'rgba(34,211,238,0.08)' : 'var(--color-bg-elevated)',
-                          border: rcrOn ? '1.5px solid var(--color-cyan, #22D3EE)' : '1.5px solid var(--color-text-4)',
-                        }}
-                      >
-                        <div style={{
-                          width: 20, height: 20, borderRadius: 4,
-                          border: rcrOn ? '2px solid var(--color-cyan, #22D3EE)' : '2px solid var(--color-text-4)',
-                          background: rcrOn ? 'var(--color-cyan, #22D3EE)' : 'transparent',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 14, color: 'var(--color-bg-surface-solid, #0F172A)', fontWeight: 700,
-                        }}>
-                          {rcrOn && '\u2713'}
-                        </div>
-                        <span style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: rcrOn ? 'var(--color-cyan, #22D3EE)' : 'var(--color-text-2)' }}>
-                          Report RCR
-                        </span>
-                      </div>
-                      {rcrOn && (
-                        <div style={{ display: 'flex', gap: 8, paddingLeft: 30, flexWrap: 'wrap', marginTop: 8 }}>
-                          <input
-                            type="number"
-                            placeholder="RCR value"
-                            value={currentHalf?.rcrValue || ''}
-                            onChange={(e) => setRcrValue(e.target.value)}
-                            style={{
-                              width: 100, padding: '6px 10px', borderRadius: 6,
-                              border: '2px solid var(--color-text-4)', background: 'var(--color-bg-surface)',
-                              color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit',
-                            }}
-                          />
-                          <select
-                            value={currentHalf?.rcrConditionType || ''}
-                            onChange={(e) => setRcrConditionType(e.target.value)}
-                            style={{
-                              padding: '6px 10px', borderRadius: 6,
-                              border: '2px solid var(--color-text-4)', background: 'var(--color-bg-surface)',
-                              color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit',
-                            }}
-                          >
-                            <option value="">Condition type...</option>
-                            {RCR_CONDITION_TYPES.map((ct) => (
-                              <option key={ct.value} value={ct.value}>{ct.label}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                    </div>
-                  )
-                }
+                // Skip BWC/RSC/RCR — rendered in top card
+                if (item.type === 'bwc' || item.type === 'rsc' || item.type === 'rcr') return null
 
                 // Standard pass/fail/na item
                 const state = currentHalf?.responses[item.id] ?? 'pass'

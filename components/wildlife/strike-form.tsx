@@ -63,7 +63,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
     return null
   })
   const [showPicker, setShowPicker] = useState(false)
-  const [numberStruck, setNumberStruck] = useState(initialData?.number_struck ?? 1)
+  const [numberStruck, setNumberStruck] = useState<number | ''>(initialData?.number_struck ?? 1)
   const [numberSeen, setNumberSeen] = useState<number | null>(initialData?.number_seen ?? null)
   const [locationText, setLocationText] = useState(initialData?.location_text ?? '')
   const [timeOfDay, setTimeOfDay] = useState(initialData?.time_of_day ?? '')
@@ -189,7 +189,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
         species_scientific: selectedSpecies?.scientific_name ?? null,
         species_group: selectedSpecies?.group ?? null,
         size_category: selectedSpecies?.size_category ?? null,
-        number_struck: numberStruck,
+        number_struck: numberStruck || 1,
         number_seen: numberSeen,
         latitude, longitude,
         location_text: locationText || null,
@@ -228,7 +228,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
       species_scientific: selectedSpecies?.scientific_name ?? null,
       species_group: selectedSpecies?.group ?? null,
       size_category: selectedSpecies?.size_category ?? null,
-      number_struck: numberStruck,
+      number_struck: numberStruck || 1,
       number_seen: numberSeen,
       latitude, longitude,
       location_text: locationText || null,
@@ -336,7 +336,10 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
           <div>
             <label style={labelStyle}># Struck</label>
             <input type="number" min={1} value={numberStruck}
-              onChange={e => setNumberStruck(Math.max(1, parseInt(e.target.value) || 1))}
+              onChange={e => {
+                const v = e.target.value
+                setNumberStruck(v === '' ? '' : Math.max(1, parseInt(v) || 1))
+              }}
               style={selectStyle} />
           </div>
           <div>

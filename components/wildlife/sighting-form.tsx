@@ -62,7 +62,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
     return null
   })
   const [showPicker, setShowPicker] = useState(false)
-  const [countObserved, setCountObserved] = useState(initialData?.count_observed ?? 1)
+  const [countObserved, setCountObserved] = useState<number | ''>(initialData?.count_observed ?? 1)
   const [behavior, setBehavior] = useState(initialData?.behavior ?? '')
   const [locationText, setLocationText] = useState(initialData?.location_text ?? '')
   const [airfieldZone, setAirfieldZone] = useState(initialData?.airfield_zone ?? '')
@@ -175,7 +175,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
         species_scientific: selectedSpecies.scientific_name,
         species_group: selectedSpecies.group,
         size_category: selectedSpecies.size_category,
-        count_observed: countObserved,
+        count_observed: countObserved || 1,
         behavior: behavior || null,
         latitude,
         longitude,
@@ -203,7 +203,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
       species_scientific: selectedSpecies.scientific_name,
       species_group: selectedSpecies.group,
       size_category: selectedSpecies.size_category,
-      count_observed: countObserved,
+      count_observed: countObserved || 1,
       behavior: behavior || null,
       latitude,
       longitude,
@@ -344,7 +344,10 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
               <label style={labelStyle}>Count *</label>
               <input
                 type="number" min={1} value={countObserved}
-                onChange={e => setCountObserved(Math.max(1, parseInt(e.target.value) || 1))}
+                onChange={e => {
+                  const v = e.target.value
+                  setCountObserved(v === '' ? '' : Math.max(1, parseInt(v) || 1))
+                }}
                 style={selectStyle}
               />
             </div>
