@@ -367,10 +367,8 @@ export default function WildlifePage() {
                       <button
                         onClick={() => isSighting ? handleEditSighting(entry.id) : handleEditStrike(entry.id)}
                         title="Edit"
-                        style={{
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          color: 'var(--color-text-4)', fontSize: 14, padding: 4,
-                        }}
+                        className="btn-ghost"
+                        style={{ color: 'var(--color-text-4)', fontSize: 14, padding: 4 }}
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -380,10 +378,8 @@ export default function WildlifePage() {
                       <button
                         onClick={() => isSighting ? handleDeleteSighting(entry.id) : handleDeleteStrike(entry.id)}
                         title="Delete"
-                        style={{
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          color: 'var(--color-text-4)', fontSize: 16, padding: 4,
-                        }}
+                        className="btn-ghost"
+                        style={{ color: 'var(--color-text-4)', fontSize: 16, padding: 4 }}
                       >
                         ×
                       </button>

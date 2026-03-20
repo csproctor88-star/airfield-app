@@ -1183,7 +1183,7 @@ function TemplatesTab({ installationId }: { installationId: string | null }) {
           style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             padding: '10px 16px', borderRadius: 'var(--radius-base)',
-            background: 'linear-gradient(135deg, #7C3AED, #8B5CF6)',
+            background: 'var(--color-purple)',
             color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',
           }}
@@ -1442,7 +1442,7 @@ const FREQ_OPTIONS: { value: FrequencyType; label: string }[] = [
   { value: 'monthly', label: 'Monthly' },
 ]
 
-const FREQ_TAG_COLORS: Record<string, string> = { daily: 'var(--color-cyan)', weekly: 'var(--color-purple)', monthly: '#F59E0B' }
+const FREQ_TAG_COLORS: Record<string, string> = { daily: 'var(--color-cyan)', weekly: 'var(--color-purple)', monthly: 'var(--color-warning)' }
 
 function ShiftChecklistTab({ installationId, currentInstallation }: { installationId: string | null; currentInstallation: any }) {
   const [items, setItems] = useState<ShiftChecklistItem[]>([])
@@ -1836,7 +1836,7 @@ function QrcTemplatesTab({ installationId }: { installationId: string | null }) 
             }}>
               <span style={{
                 fontSize: 'var(--fs-xs)', fontWeight: 800,
-                color: '#fff', background: t.is_active ? '#D97706' : 'var(--color-text-4)',
+                color: '#fff', background: t.is_active ? 'var(--color-warning)' : 'var(--color-text-4)',
                 padding: '2px 6px', borderRadius: 'var(--radius-xs)', minWidth: 32, textAlign: 'center',
               }}>{t.qrc_number}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -1868,7 +1868,7 @@ function QrcTemplatesTab({ installationId }: { installationId: string | null }) 
                     <button onClick={() => { setMenuOpen(null); handleToggle(t.id, t.is_active) }} style={{
                       display: 'block', width: '100%', padding: '8px 14px', background: 'none', border: 'none',
                       textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)',
-                      fontWeight: 600, color: t.is_active ? '#EAB308' : 'var(--color-success)',
+                      fontWeight: 600, color: t.is_active ? 'var(--color-warning)' : 'var(--color-success)',
                     }}>{t.is_active ? 'Disable' : 'Enable'}</button>
                     <div style={{ height: 1, background: 'var(--color-border)' }} />
                     <button onClick={() => { setMenuOpen(null); handleDelete(t.id) }} style={{
@@ -1949,7 +1949,7 @@ function SeedPickerDialog({
                     background: seedSelected.has(q.qrc_number) ? 'var(--color-cyan)' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>{seedSelected.has(q.qrc_number) && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>&#10003;</span>}</span>
-                  <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#fff', background: '#D97706', padding: '1px 5px', borderRadius: 'var(--radius-xs)' }}>{q.qrc_number}</span>
+                  <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#fff', background: 'var(--color-warning)', padding: '1px 5px', borderRadius: 'var(--radius-xs)' }}>{q.qrc_number}</span>
                   <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', flex: 1 }}>{q.title}</span>
                 </button>
               ))}
@@ -2379,7 +2379,7 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
                 {SYSTEM_TYPE_LABELS[sys.system_type] || sys.system_type}
               </span>
               {sys.is_precision && (
-                <span style={{ fontSize: 'var(--fs-xs)', color: '#F59E0B', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 'var(--radius-xs)' }}>PRECISION</span>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-warning)', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 'var(--radius-xs)' }}>PRECISION</span>
               )}
               <button onClick={(e) => { e.stopPropagation(); handleDeleteSystem(sys) }} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xl)', padding: '0 4px' }}>&times;</button>
             </div>

@@ -270,18 +270,8 @@ export default function ContractorsPage() {
             <button
               onClick={handleCreate}
               disabled={saving}
-              style={{
-                background: 'var(--color-cyan-btn-bg)',
-                color: 'var(--color-cyan-btn-text)',
-                border: 'none',
-                borderRadius: 'var(--radius-md)',
-                padding: '8px 20px',
-                fontWeight: 700,
-                fontSize: 'var(--fs-base)',
-                cursor: saving ? 'not-allowed' : 'pointer',
-                opacity: saving ? 0.6 : 1,
-                fontFamily: 'inherit',
-              }}
+              className="btn-accent"
+              style={{ padding: '8px 20px', width: 'auto', opacity: saving ? 0.6 : 1 }}
             >
               {saving ? 'Saving...' : 'Add Personnel'}
             </button>
@@ -375,14 +365,16 @@ export default function ContractorsPage() {
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 10 }}>
                       <button
                         onClick={() => setEditingId(null)}
-                        style={{ background: 'var(--color-border)', color: 'var(--color-text-1)', border: 'none', borderRadius: 'var(--radius-md)', padding: '6px 14px', fontWeight: 600, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit' }}
+                        className="btn-secondary"
+                        style={{ padding: '6px 14px', fontSize: 'var(--fs-sm)' }}
                       >
                         Cancel
                       </button>
                       <button
                         onClick={() => handleSaveEdit(c.id)}
                         disabled={saving}
-                        style={{ background: 'var(--color-cyan-btn-bg)', color: 'var(--color-cyan-btn-text)', border: 'none', borderRadius: 'var(--radius-md)', padding: '6px 14px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, fontFamily: 'inherit' }}
+                        className="btn-accent"
+                        style={{ padding: '6px 14px', fontSize: 'var(--fs-sm)', opacity: saving ? 0.6 : 1 }}
                       >
                         Save
                       </button>
@@ -466,7 +458,8 @@ export default function ContractorsPage() {
                       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                         <button
                           onClick={() => startEdit(c)}
-                          style={{ background: 'var(--color-bg-surface)', color: 'var(--color-cyan)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '6px 12px', fontWeight: 600, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit' }}
+                          className="btn-secondary"
+                          style={{ padding: '6px 12px', fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)' }}
                         >
                           Edit
                         </button>

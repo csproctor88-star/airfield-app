@@ -522,7 +522,7 @@ export default function WaiverDetailPage() {
   if (!w) {
     return (
       <div className="page-container">
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} className="btn-ghost" style={{ color: 'var(--color-cyan)', padding: 0, marginBottom: 12 }}>
           &larr; Back
         </button>
         <EmptyState message="Waiver not found" />
@@ -569,7 +569,7 @@ export default function WaiverDetailPage() {
   return (
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} className="btn-ghost" style={{ color: 'var(--color-cyan)', padding: 0 }}>
           &larr; Back
         </button>
         <div style={{ display: 'flex', gap: 6 }}>
@@ -813,7 +813,7 @@ export default function WaiverDetailPage() {
                         <Badge label={c.status === 'non_concur' ? 'Non-Concur' : titleCase(c.status)} color={statusColor} />
                         <button
                           onClick={() => handleEditCoordination(c)}
-                          style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', padding: '2px 4px', fontFamily: 'inherit' }}
+                          className="btn-ghost" style={{ color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', padding: '2px 4px' }}
                         >
                           Edit
                         </button>

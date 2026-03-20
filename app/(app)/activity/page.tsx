@@ -402,7 +402,7 @@ export default function ActivityPage() {
   return (
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} className="btn-ghost" style={{ color: 'var(--color-cyan)', padding: 0 }}>
           &larr; Back
         </button>
         <button
@@ -775,7 +775,7 @@ export default function ActivityPage() {
                 <span className="section-label" style={{ marginBottom: 0 }}>Details</span>
                 <button
                   onClick={() => setShowEditTemplatePicker(true)}
-                  style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+                  className="btn-ghost" style={{ color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', padding: 0 }}
                 >
                   Use Template
                 </button>

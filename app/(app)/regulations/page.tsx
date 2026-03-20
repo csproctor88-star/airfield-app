@@ -118,7 +118,7 @@ export default function RegulationsPage() {
                 ? '1px solid var(--color-accent-secondary)'
                 : '1px solid rgba(14,165,233,0.2)',
               borderRadius: 'var(--radius-md)',
-              color: tab === t.key ? '#fff' : 'var(--color-text-3)',
+              color: tab === t.key ? 'var(--color-text-1)' : 'var(--color-text-3)',
               fontSize: 'var(--fs-md)',
               fontWeight: 700,
               fontFamily: 'inherit',
@@ -441,11 +441,11 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
               background: showFavoritesOnly ? 'rgba(250,204,21,0.10)' : 'transparent',
               border: `1px solid ${showFavoritesOnly ? 'rgba(250,204,21,0.30)' : 'var(--color-border-mid)'}`,
               borderRadius: 'var(--radius-sm)', padding: '6px 10px', cursor: 'pointer',
-              color: showFavoritesOnly ? '#FACC15' : 'var(--color-text-2)',
+              color: showFavoritesOnly ? 'var(--color-amber)' : 'var(--color-text-2)',
               fontSize: 'var(--fs-base)', fontWeight: 700, fontFamily: 'inherit',
             }}
           >
-            <Star size={12} fill={showFavoritesOnly ? '#FACC15' : 'none'} />
+            <Star size={12} fill={showFavoritesOnly ? 'var(--color-amber)' : 'none'} />
             Favorites{favorites.size > 0 ? ` (${favorites.size})` : ''}
           </button>
 
@@ -481,13 +481,13 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                 onClick={toggleFavDefault}
                 style={{
                   width: 36, height: 20, borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer',
-                  background: loadFavoritesDefault() ? '#FACC15' : 'var(--color-text-4)',
+                  background: loadFavoritesDefault() ? 'var(--color-amber)' : 'var(--color-text-4)',
                   position: 'relative', transition: 'background 0.2s',
                 }}
               >
                 <span style={{
                   position: 'absolute', top: 2, width: 16, height: 16,
-                  borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
+                  borderRadius: '50%', background: 'var(--color-text-1)', transition: 'left 0.2s',
                   left: loadFavoritesDefault() ? 18 : 2,
                 }} />
               </button>
@@ -532,7 +532,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                       border: cachedCount === regulations.length
                         ? '1px solid rgba(52,211,153,0.3)' : 'none',
                       borderRadius: 'var(--radius-sm)', padding: '5px 10px', cursor: 'pointer',
-                      color: cachedCount === regulations.length ? 'var(--color-success)' : '#fff',
+                      color: cachedCount === regulations.length ? 'var(--color-success)' : 'var(--color-text-1)',
                       fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
                       whiteSpace: 'nowrap',
                       opacity: cachedCount === regulations.length ? 0.8 : 1,
@@ -553,7 +553,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                     <div style={{
                       height: '100%', borderRadius: 'var(--radius-xs)',
                       background: cacheProgress.errors > 0
-                        ? 'linear-gradient(90deg, var(--color-accent-secondary), #F97316)'
+                        ? 'linear-gradient(90deg, var(--color-accent-secondary), var(--color-orange))'
                         : 'var(--color-accent-secondary)',
                       width: `${Math.round((cacheProgress.done / cacheProgress.total) * 100)}%`,
                       transition: 'width 0.3s',
@@ -656,7 +656,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
               display: 'inline-flex', alignItems: 'center', gap: 4,
               background: 'linear-gradient(135deg, #059669, var(--color-success))',
               border: 'none', borderRadius: 'var(--radius-sm)', padding: '5px 12px',
-              color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
+              color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontWeight: 700,
               fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap',
             }}
           >
@@ -713,8 +713,8 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                 >
                   <Star
                     size={18}
-                    color={isFav ? '#FACC15' : 'var(--color-text-3)'}
-                    fill={isFav ? '#FACC15' : 'none'}
+                    color={isFav ? 'var(--color-amber)' : 'var(--color-text-3)'}
+                    fill={isFav ? 'var(--color-amber)' : 'none'}
                   />
                 </button>
               </div>
@@ -794,7 +794,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 6,
                         background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-                        color: '#fff', fontSize: 'var(--fs-base)', fontWeight: 700,
+                        color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', fontWeight: 700,
                         padding: '6px 14px', borderRadius: 'var(--radius-sm)', textDecoration: 'none',
                         border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                       }}
@@ -892,7 +892,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                           style={{
                             padding: '5px 14px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                             background: deletingRegId === reg.reg_id ? '#7F1D1D' : 'var(--color-danger)',
-                            border: 'none', color: '#fff', cursor: deletingRegId === reg.reg_id ? 'not-allowed' : 'pointer',
+                            border: 'none', color: 'var(--color-text-1)', cursor: deletingRegId === reg.reg_id ? 'not-allowed' : 'pointer',
                             fontFamily: 'inherit', opacity: deletingRegId === reg.reg_id ? 0.6 : 1,
                           }}
                         >
@@ -1280,7 +1280,7 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
             style={{
               padding: '8px 20px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-md)', fontWeight: 700,
               background: saving ? '#064E3B' : 'linear-gradient(135deg, #059669, var(--color-success))',
-              border: 'none', color: '#fff',
+              border: 'none', color: 'var(--color-text-1)',
               cursor: saving ? 'not-allowed' : 'pointer',
               fontFamily: 'inherit',
               opacity: saving ? 0.7 : 1,
@@ -1447,7 +1447,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             background: uploading ? 'var(--color-bg-elevated)' : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-            color: '#fff', fontSize: 'var(--fs-base)', fontWeight: 700,
+            color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', fontWeight: 700,
             padding: '6px 14px', borderRadius: 'var(--radius-sm)',
             cursor: uploading ? 'not-allowed' : 'pointer',
             opacity: uploading ? 0.6 : 1,
@@ -1530,7 +1530,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
                     background: doc.status === 'failed'
                       ? 'rgba(239,68,68,0.15)' : 'rgba(253,230,138,0.15)',
                     color: doc.status === 'failed'
-                      ? 'var(--color-danger)' : '#FDE68A',
+                      ? 'var(--color-danger)' : 'var(--color-amber)',
                     padding: '2px 6px', borderRadius: 'var(--radius-xs)', whiteSpace: 'nowrap',
                   }}>
                     {doc.status === 'failed' ? 'FAILED' : 'PROCESSING'}
@@ -1583,7 +1583,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-                  color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                  color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                   padding: '5px 10px', borderRadius: 'var(--radius-sm)',
                   border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                 }}

@@ -138,7 +138,7 @@ export default function InspectionDetailPage() {
   if (hasInProgress && !usingDemo) {
     return (
       <div className="page-container">
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} className="btn-ghost" style={{ color: 'var(--color-cyan)', padding: 0, marginBottom: 12 }}>
           &larr; Back
         </button>
         <div className="card" style={{ textAlign: 'center', padding: 24 }}>
@@ -168,7 +168,7 @@ export default function InspectionDetailPage() {
   if (allInspections.length === 0) {
     return (
       <div className="page-container">
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} className="btn-ghost" style={{ color: 'var(--color-cyan)', padding: 0, marginBottom: 12 }}>
           &larr; Back
         </button>
         <EmptyState message="Inspection not found" />
@@ -885,7 +885,7 @@ export default function InspectionDetailPage() {
     <div style={{ padding: '8px 16px 100px' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} className="btn-ghost" style={{ color: 'var(--color-cyan)', padding: 0 }}>
           &larr; Back
         </button>
         <Link

@@ -35,9 +35,8 @@ function ModalOverlay({ title, onClose, children }: { title: string; onClose: ()
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>{title}</span>
-          <button type="button" onClick={onClose} style={{
-            background: 'none', border: 'none', color: 'var(--color-text-3)', fontSize: 'var(--fs-3xl)',
-            cursor: 'pointer', padding: 0, lineHeight: 1,
+          <button type="button" onClick={onClose} className="btn-ghost" style={{
+            color: 'var(--color-text-3)', fontSize: 'var(--fs-3xl)', padding: 0, lineHeight: 1,
           }}>×</button>
         </div>
         {children}
@@ -723,9 +722,9 @@ export function PhotoViewerModal({
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <button type="button" onClick={onClose} style={{
-        position: 'absolute', top: 12, right: 16, background: 'none',
-        border: 'none', color: '#fff', fontSize: 'var(--fs-5xl)', cursor: 'pointer', zIndex: 10,
+      <button type="button" onClick={onClose} className="btn-ghost" style={{
+        position: 'absolute', top: 12, right: 16,
+        color: '#fff', fontSize: 'var(--fs-5xl)', padding: 0, zIndex: 10,
       }}>×</button>
 
       <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 8, textAlign: 'center' }}>

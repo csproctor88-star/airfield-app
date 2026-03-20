@@ -103,8 +103,8 @@ export default function DiscrepancyTrendsPage() {
               onClick={() => setPeriod(p.value)}
               style={{
                 flex: 1, padding: '10px 0', border: 'none',
-                background: period === p.value ? '#8B5CF6' : 'transparent',
-                color: period === p.value ? '#FFF' : 'var(--color-text-2)',
+                background: period === p.value ? 'var(--color-purple)' : 'transparent',
+                color: period === p.value ? '#fff' : 'var(--color-text-2)',
                 fontSize: 'var(--fs-base)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
@@ -117,8 +117,8 @@ export default function DiscrepancyTrendsPage() {
           onClick={handleGenerate}
           style={{
             width: '100%', padding: '14px 0', borderRadius: 10, border: 'none',
-            background: 'linear-gradient(135deg, #8B5CF6, #A78BFA)',
-            color: '#FFF', fontSize: 'var(--fs-xl)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+            background: 'var(--color-purple)',
+            color: '#fff', fontSize: 'var(--fs-xl)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
           }}
         >
           Generate Report
@@ -138,7 +138,7 @@ export default function DiscrepancyTrendsPage() {
           <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Discrepancy Trends</div>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
-          <Loader2 size={32} color="#8B5CF6" style={{ animation: 'spin 1s linear infinite' }} />
+          <Loader2 size={32} color="var(--color-purple)" style={{ animation: 'spin 1s linear infinite' }} />
           <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', marginTop: 12 }}>Analyzing discrepancy trends...</div>
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
@@ -175,7 +175,7 @@ export default function DiscrepancyTrendsPage() {
           <div className="kpi-label">Closed</div>
         </div>
         <div className="kpi-badge" style={{ flex: '1 1 0', maxWidth: 200 }}>
-          <div className="kpi-value" style={{ color: summary.net > 0 ? 'var(--color-danger)' : summary.net < 0 ? 'var(--color-status-pass)' : '#94A3B8' }}>
+          <div className="kpi-value" style={{ color: summary.net > 0 ? 'var(--color-danger)' : summary.net < 0 ? 'var(--color-status-pass)' : 'var(--color-text-3)' }}>
             {summary.net >= 0 ? '+' : ''}{summary.net}
           </div>
           <div className="kpi-label">Net</div>
@@ -245,7 +245,7 @@ export default function DiscrepancyTrendsPage() {
                 minWidth: 64,
               }}>
                 <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-purple)' }}>{a.count}</div>
-                <div style={{ fontSize: 'var(--fs-2xs)', color: '#94A3B8', fontWeight: 600, textAlign: 'center', marginTop: 2 }}>{a.area}</div>
+                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 600, textAlign: 'center', marginTop: 2 }}>{a.area}</div>
               </div>
             ))}
           </div>
@@ -267,7 +267,7 @@ export default function DiscrepancyTrendsPage() {
                 minWidth: 64,
               }}>
                 <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-purple)' }}>{t.count}</div>
-                <div style={{ fontSize: 'var(--fs-2xs)', color: '#94A3B8', fontWeight: 600, textAlign: 'center', marginTop: 2 }}>{formatDiscrepancyType(t.type)}</div>
+                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 600, textAlign: 'center', marginTop: 2 }}>{formatDiscrepancyType(t.type)}</div>
               </div>
             ))}
           </div>

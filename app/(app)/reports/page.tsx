@@ -12,9 +12,9 @@ const CHECK_TYPE_LABELS: Record<string, string> = {
 }
 
 const REPORT_CARDS = [
-  { title: 'Daily Operations Summary', description: 'All activity for a selected date or range.', href: '/reports/daily', icon: FileText, color: '#0EA5E9' },
+  { title: 'Daily Operations Summary', description: 'All activity for a selected date or range.', href: '/reports/daily', icon: FileText, color: 'var(--color-cyan)' },
   { title: 'Discrepancy Report', description: 'Filtered exports by status, type, shop, or location.', href: '/reports/discrepancies', icon: AlertTriangle, color: 'var(--color-warning)' },
-  { title: 'Discrepancy Trends', description: 'Opened vs closed over time.', href: '/reports/trends', icon: TrendingUp, color: '#8B5CF6' },
+  { title: 'Discrepancy Trends', description: 'Opened vs closed over time.', href: '/reports/trends', icon: TrendingUp, color: 'var(--color-purple)' },
   { title: 'Aging Discrepancies', description: 'By aging tier and shop with filtered exports.', href: '/reports/aging', icon: Clock, color: 'var(--color-danger)' },
   { title: 'Airfield Lighting Report', description: 'System health, outages, feature inventory.', href: '/reports/lighting', icon: Lightbulb, color: 'var(--color-status-pass)' },
 ]
@@ -100,7 +100,7 @@ export default function ReportsPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
 
           {/* Airfield Inspections */}
-          <StyledCard accent="#0EA5E9">
+          <StyledCard accent="var(--color-cyan)">
             <CardHeader>Airfield Inspections</CardHeader>
             <BigNumber value={analytics.airfieldInspections.completed} label="completed" />
             {analytics.airfieldInspections.avgMinutes != null && (
@@ -185,7 +185,7 @@ export default function ReportsPage() {
           </StyledCard>
 
           {/* Personnel */}
-          <StyledCard accent="#64748B">
+          <StyledCard accent="var(--color-text-3)">
             <CardHeader>Personnel on Airfield</CardHeader>
             <BigNumber value={analytics.personnel.activeToday} label="active today" />
             {analytics.personnel.avgPerDay != null && (
@@ -194,7 +194,7 @@ export default function ReportsPage() {
           </StyledCard>
 
           {/* Obstructions */}
-          <StyledCard accent="#F59E0B">
+          <StyledCard accent="var(--color-warning)">
             <CardHeader>Obstruction Evaluations</CardHeader>
             <BigNumber value={analytics.obstructions.evaluated} label="evaluated" />
             <StatRow label="Violations Found" value={analytics.obstructions.violations}>
@@ -212,7 +212,7 @@ export default function ReportsPage() {
           </StyledCard>
 
           {/* Parking Plans */}
-          <StyledCard accent="#38BDF8">
+          <StyledCard accent="var(--color-accent)">
             <CardHeader>Parking Plans</CardHeader>
             <BigNumber value={analytics.parking.totalPlans} label="total plans" />
             <StatRow label={`Created (${periodLabel})`} value={analytics.parking.createdInPeriod} />
