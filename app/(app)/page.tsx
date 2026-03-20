@@ -488,11 +488,9 @@ export default function HomePage() {
       {/* Advisory dialog (add or edit) */}
       {advisoryDialogOpen && (
         <div
+          className="modal-overlay"
           onClick={() => setAdvisoryDialogOpen(false)}
-          style={{
-            position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}
+          style={{ padding: 24 }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -657,11 +655,9 @@ export default function HomePage() {
       {/* NAVAID status dialog */}
       {navaidDialog && (
         <div
+          className="modal-overlay"
           onClick={() => setNavaidDialog(null)}
-          style={{
-            position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}
+          style={{ padding: 24 }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -757,11 +753,9 @@ export default function HomePage() {
       {/* Confirmation dialog for runway changes */}
       {confirmDialog && (
         <div
+          className="modal-overlay"
           onClick={() => setConfirmDialog(null)}
-          style={{
-            position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}
+          style={{ padding: 24 }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -816,11 +810,9 @@ export default function HomePage() {
       {/* RSC dialog */}
       {rscDialogOpen && (
         <div
+          className="modal-overlay"
           onClick={() => setRscDialogOpen(false)}
-          style={{
-            position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}
+          style={{ padding: 24 }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -893,11 +885,9 @@ export default function HomePage() {
       {/* BWC dialog */}
       {bwcDialogOpen && (
         <div
+          className="modal-overlay"
           onClick={() => setBwcDialogOpen(false)}
-          style={{
-            position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}
+          style={{ padding: 24 }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1148,11 +1138,9 @@ export default function HomePage() {
       {/* ARFF Aircraft Readiness Dialog */}
       {arffDialog && (
         <div
+          className="modal-overlay"
           onClick={() => setArffDialog(null)}
-          style={{
-            position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}
+          style={{ padding: 24 }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1168,7 +1156,7 @@ export default function HomePage() {
               {([
                 { key: 'optimum', label: 'Optimum', color: 'var(--color-success)', hex: '#34D399' },
                 { key: 'reduced', label: 'Reduced', color: 'var(--color-warning)', hex: '#FBBF24' },
-                { key: 'critical', label: 'Critical', color: '#f97316', hex: '#f97316' },
+                { key: 'critical', label: 'Critical', color: 'var(--color-orange)', hex: '#f97316' },
                 { key: 'inadequate', label: 'Inadequate', color: 'var(--color-danger)', hex: '#EF4444' },
               ] as const).map(({ key, label, color, hex }) => {
                 const selected = arffDialog.selectedStatus === key
@@ -1204,7 +1192,7 @@ export default function HomePage() {
               const hasChanges = arffDialog.selectedStatus !== currentReadiness || arffDialog.notes.trim() !== ''
               const ARFF_SEL_COLORS: Record<string, string> = {
                 optimum: 'var(--color-success)', reduced: 'var(--color-warning)',
-                critical: '#f97316', inadequate: 'var(--color-danger)',
+                critical: 'var(--color-orange)', inadequate: 'var(--color-danger)',
               }
               const selColor = ARFF_SEL_COLORS[arffDialog.selectedStatus]
               return (
@@ -1393,7 +1381,7 @@ export default function HomePage() {
             const ARFF_COLORS: Record<string, { color: string; bg: string; border: string }> = {
               optimum: { color: 'var(--color-success)', bg: 'rgba(52,211,153,0.08)', border: 'rgba(52,211,153,0.2)' },
               reduced: { color: 'var(--color-warning)', bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.2)' },
-              critical: { color: '#f97316', bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.2)' },
+              critical: { color: 'var(--color-orange)', bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.2)' },
               inadequate: { color: 'var(--color-danger)', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.2)' },
             }
             const c = ARFF_COLORS[readiness]
@@ -1601,7 +1589,7 @@ export default function HomePage() {
                     }}
                     style={{
                       background: 'rgba(34,197,94,0.15)',
-                      color: '#22C55E',
+                      color: 'var(--color-status-pass)',
                       border: '1px solid rgba(34,197,94,0.4)',
                       borderRadius: 8,
                       padding: '6px 12px',
@@ -1671,8 +1659,9 @@ export default function HomePage() {
       {/* Construction/Closures edit dialog */}
       {editingConstruction && (
         <div
+          className="modal-overlay"
           onClick={() => setEditingConstruction(false)}
-          style={{ position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+          style={{ padding: 24 }}
         >
           <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 24, width: '100%', maxWidth: 440, border: '1px solid var(--color-border-mid)' }}>
             <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>Construction / Closures</div>
@@ -1706,8 +1695,9 @@ export default function HomePage() {
       {/* Miscellaneous Info edit dialog */}
       {editingMisc && (
         <div
+          className="modal-overlay"
           onClick={() => setEditingMisc(false)}
-          style={{ position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+          style={{ padding: 24 }}
         >
           <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 24, width: '100%', maxWidth: 440, border: '1px solid var(--color-border-mid)' }}>
             <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>Miscellaneous Info</div>

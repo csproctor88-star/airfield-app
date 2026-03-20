@@ -373,15 +373,15 @@ export default function AMDashboardPage() {
             </span>
             <span style={{
               fontSize: 'var(--fs-xl)', letterSpacing: '0.04em', fontWeight: 700,
-              color: todayAirfieldStatus.status === 'completed' ? '#22C55E'
-                : todayAirfieldStatus.status === 'in_progress' ? '#3B82F6'
+              color: todayAirfieldStatus.status === 'completed' ? 'var(--color-status-pass)'
+                : todayAirfieldStatus.status === 'in_progress' ? 'var(--color-status-inwork)'
                 : 'var(--color-cyan)',
             }}>
               Airfield Inspection
             </span>
           </div>
           {todayAirfieldStatus.status !== 'none' && (
-            <span style={{ fontSize: 'var(--fs-xs)', color: todayAirfieldStatus.status === 'completed' ? '#22C55E' : '#3B82F6', fontWeight: 600 }}>
+            <span style={{ fontSize: 'var(--fs-xs)', color: todayAirfieldStatus.status === 'completed' ? 'var(--color-status-pass)' : 'var(--color-status-inwork)', fontWeight: 600 }}>
               {todayAirfieldStatus.status === 'completed' ? 'Complete' : `In Progress${todayAirfieldStatus.inspector ? ` — ${todayAirfieldStatus.inspector}` : ''}`}
             </span>
           )}
@@ -412,15 +412,15 @@ export default function AMDashboardPage() {
             </span>
             <span style={{
               fontSize: 'var(--fs-xl)', letterSpacing: '0.04em', fontWeight: 700,
-              color: todayLightingStatus.status === 'completed' ? '#22C55E'
-                : todayLightingStatus.status === 'in_progress' ? '#3B82F6'
+              color: todayLightingStatus.status === 'completed' ? 'var(--color-status-pass)'
+                : todayLightingStatus.status === 'in_progress' ? 'var(--color-status-inwork)'
                 : 'var(--color-cyan)',
             }}>
               Lighting Inspection
             </span>
           </div>
           {todayLightingStatus.status !== 'none' && (
-            <span style={{ fontSize: 'var(--fs-xs)', color: todayLightingStatus.status === 'completed' ? '#22C55E' : '#3B82F6', fontWeight: 600 }}>
+            <span style={{ fontSize: 'var(--fs-xs)', color: todayLightingStatus.status === 'completed' ? 'var(--color-status-pass)' : 'var(--color-status-inwork)', fontWeight: 600 }}>
               {todayLightingStatus.status === 'completed' ? 'Complete' : `In Progress${todayLightingStatus.inspector ? ` — ${todayLightingStatus.inspector}` : ''}`}
             </span>
           )}
@@ -506,7 +506,7 @@ export default function AMDashboardPage() {
           }}
         >
           <span style={{ fontSize: 'var(--fs-5xl)' }}>⚡</span>
-          <span style={{ fontSize: 'var(--fs-xl)', color: '#EAB308', letterSpacing: '0.04em', fontWeight: 700 }}>
+          <span style={{ fontSize: 'var(--fs-xl)', color: 'var(--color-bwc-mod)', letterSpacing: '0.04em', fontWeight: 700 }}>
             QRC
           </span>
         </button>
@@ -707,14 +707,14 @@ export default function AMDashboardPage() {
                     <td style={{ padding: '6px 8px', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleEdit(a) }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: '#3B82F6' }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: 'var(--color-status-inwork)' }}
                         title="Edit entry"
                       >
                         Edit
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(a) }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: '#EF4444', marginLeft: 2 }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: 'var(--color-danger)', marginLeft: 2 }}
                         title="Delete entry"
                       >
                         Del
@@ -769,11 +769,7 @@ export default function AMDashboardPage() {
       {/* ===== Edit Entry Modal ===== */}
       {editingId && (
         <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 200,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 16, background: 'rgba(0,0,0,0.6)',
-          }}
+          className="modal-overlay"
           onClick={() => setEditingId(null)}
         >
           <div
@@ -880,7 +876,7 @@ export default function AMDashboardPage() {
               style={{
                 width: '100%', padding: '8px 0', borderRadius: 8,
                 border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)',
-                color: '#EF4444', fontSize: 'var(--fs-sm)', fontWeight: 600,
+                color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
@@ -971,11 +967,7 @@ function PersonnelFormDialog({ installationId, onClose, onSaved }: { installatio
 
   return (
     <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 200,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 16, background: 'rgba(0,0,0,0.6)',
-      }}
+      className="modal-overlay"
       onClick={onClose}
     >
       <div
@@ -1178,7 +1170,7 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
           style={{
             width: 22, height: 22, borderRadius: 5, flexShrink: 0,
             border: checked ? 'none' : '2px solid var(--color-border-mid)',
-            background: checked ? '#22C55E' : 'transparent',
+            background: checked ? 'var(--color-status-pass)' : 'transparent',
             cursor: isCompleted ? 'default' : 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
@@ -1215,7 +1207,7 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
           <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
-          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: done === sectionItems.length ? '#22C55E' : 'var(--color-text-3)' }}>{done}/{sectionItems.length}</div>
+          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: done === sectionItems.length ? 'var(--color-status-pass)' : 'var(--color-text-3)' }}>{done}/{sectionItems.length}</div>
         </div>
         {sectionItems.map(renderItem)}
       </div>
@@ -1226,11 +1218,7 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
 
   return (
     <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 200,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 16, background: 'rgba(0,0,0,0.6)',
-      }}
+      className="modal-overlay"
       onClick={onClose}
     >
       <div
@@ -1249,7 +1237,7 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
               <span style={{
                 fontSize: 'var(--fs-sm)', fontWeight: 700, padding: '3px 10px', borderRadius: 8,
                 background: isCompleted ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
-                color: isCompleted ? '#22C55E' : '#EAB308',
+                color: isCompleted ? 'var(--color-status-pass)' : 'var(--color-bwc-mod)',
               }}>{isCompleted ? 'FILED' : 'IN PROGRESS'}</span>
               <Link href="/shift-checklist" onClick={onClose} style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontWeight: 600, textDecoration: 'none' }}>
                 Full Page →
@@ -1259,7 +1247,7 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
           {/* Progress bar */}
           {totalCount > 0 && (
             <div style={{ marginTop: 10, height: 4, borderRadius: 2, background: 'var(--color-bg-elevated)', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${(completedCount / totalCount) * 100}%`, background: allComplete ? '#22C55E' : 'var(--color-cyan)', borderRadius: 2, transition: 'width 0.3s' }} />
+              <div style={{ height: '100%', width: `${(completedCount / totalCount) * 100}%`, background: allComplete ? 'var(--color-status-pass)' : 'var(--color-cyan)', borderRadius: 2, transition: 'width 0.3s' }} />
             </div>
           )}
         </div>
@@ -1294,7 +1282,7 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
             ) : (
               <button disabled={!allComplete || completing} onClick={handleComplete} style={{
                 width: '100%', padding: '10px 0', borderRadius: 8, border: 'none',
-                background: allComplete ? '#22C55E' : 'var(--color-border)',
+                background: allComplete ? 'var(--color-status-pass)' : 'var(--color-border)',
                 color: allComplete ? '#fff' : 'var(--color-text-3)',
                 fontWeight: 700, fontSize: 'var(--fs-base)',
                 cursor: allComplete ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
@@ -1488,7 +1476,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                   <span style={{
                     width: 22, height: 22, borderRadius: 5, flexShrink: 0,
                     border: checked ? 'none' : '2px solid var(--color-border-mid)',
-                    background: checked ? '#22C55E' : 'transparent',
+                    background: checked ? 'var(--color-status-pass)' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>{checked && <span style={{ color: '#fff', fontSize: 12, fontWeight: 800 }}>&#10003;</span>}</span>
                   <span style={{
@@ -1519,7 +1507,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                       <span style={{
                         width: 18, height: 18, borderRadius: 3, flexShrink: 0,
                         border: agencyChecked ? 'none' : '2px solid var(--color-border-mid)',
-                        background: agencyChecked ? '#22C55E' : 'transparent',
+                        background: agencyChecked ? 'var(--color-status-pass)' : 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>{agencyChecked && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>&#10003;</span>}</span>
                       <span style={{ fontSize: 'var(--fs-sm)', color: agencyChecked ? 'var(--color-text-3)' : 'var(--color-text-1)', textDecoration: agencyChecked ? 'line-through' : 'none' }}>{agency}</span>
@@ -1570,11 +1558,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
 
   return (
     <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 200,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 16, background: 'rgba(0,0,0,0.6)',
-      }}
+      className="modal-overlay"
       onClick={onClose}
     >
       <div
@@ -1626,7 +1610,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
               {activeTemplate.notes && (
                 <div style={{
                   padding: '6px 10px', borderRadius: 6, marginBottom: 10,
-                  background: 'rgba(239,68,68,0.08)', fontSize: 'var(--fs-xs)', fontWeight: 600, color: '#EF4444',
+                  background: 'rgba(239,68,68,0.08)', fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-danger)',
                 }}>{activeTemplate.notes}</div>
               )}
 
@@ -1675,7 +1659,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
             <>
               {openExecs.length > 0 && (
                 <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EAB308', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Active</div>
+                  <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-bwc-mod)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Active</div>
                   {openExecs.map(ex => (
                     <button key={ex.id} onClick={() => setActiveExecId(ex.id)} style={{
                       display: 'flex', alignItems: 'center', gap: 8, width: '100%',
@@ -1727,7 +1711,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={handleClose} disabled={closing} style={{
                     flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
-                    background: '#22C55E', color: '#fff', fontWeight: 700,
+                    background: 'var(--color-status-pass)', color: '#fff', fontWeight: 700,
                     fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
                   }}>{closing ? 'Closing...' : 'Confirm Close'}</button>
                   <button onClick={() => setShowCloseConfirm(false)} style={{
@@ -1741,13 +1725,13 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => setShowCloseConfirm(true)} style={{
                   flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
-                  background: '#22C55E', color: '#fff', fontWeight: 700,
+                  background: 'var(--color-status-pass)', color: '#fff', fontWeight: 700,
                   fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
                 }}>Close QRC</button>
                 <button onClick={handleCancel} style={{
                   padding: '10px 14px', borderRadius: 8,
                   border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.06)',
-                  color: '#EF4444', fontWeight: 700, fontSize: 'var(--fs-base)',
+                  color: 'var(--color-danger)', fontWeight: 700, fontSize: 'var(--fs-base)',
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}>Cancel</button>
               </div>

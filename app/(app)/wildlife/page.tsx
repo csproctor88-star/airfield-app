@@ -154,7 +154,7 @@ export default function WildlifePage() {
             onClick={() => setShowSightingForm(true)}
             style={{
               padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: '#10B981', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-base)',
+              background: 'var(--color-success)', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-base)',
             }}
           >
             + Sighting
@@ -163,7 +163,7 @@ export default function WildlifePage() {
             onClick={() => setShowStrikeForm(true)}
             style={{
               padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: '#EF4444', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-base)',
+              background: 'var(--color-danger)', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-base)',
             }}
           >
             + Strike
@@ -329,7 +329,7 @@ export default function WildlifePage() {
                         <span style={{
                           fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '1px 6px', borderRadius: 4,
                           background: isSighting ? '#10B98120' : '#EF444420',
-                          color: isSighting ? '#10B981' : '#EF4444',
+                          color: isSighting ? 'var(--color-success)' : 'var(--color-danger)',
                         }}>
                           {isSighting ? 'SIGHTING' : 'STRIKE'}
                         </span>

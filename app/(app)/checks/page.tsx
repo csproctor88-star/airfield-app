@@ -697,7 +697,7 @@ export default function AirfieldChecksPage() {
                 flex: 1, padding: '12px', borderRadius: 8,
                 border: '1.5px solid rgba(239, 68, 68, 0.5)',
                 background: 'rgba(239, 68, 68, 0.08)',
-                color: '#EF4444', fontSize: 'var(--fs-base)', fontWeight: 700,
+                color: 'var(--color-danger)', fontSize: 'var(--fs-base)', fontWeight: 700,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
@@ -1270,9 +1270,9 @@ export default function AirfieldChecksPage() {
                   style={{
                     flex: 1, padding: '10px', borderRadius: 8, fontWeight: 700,
                     fontSize: 'var(--fs-md)', fontFamily: 'inherit', cursor: 'pointer',
-                    border: bashFormType === 'strike' ? '2px solid #EF4444' : '2px solid var(--color-text-4)',
+                    border: bashFormType === 'strike' ? '2px solid var(--color-danger)' : '2px solid var(--color-text-4)',
                     background: bashFormType === 'strike' ? 'rgba(239,68,68,0.08)' : 'var(--color-bg-surface)',
-                    color: bashFormType === 'strike' ? '#EF4444' : 'var(--color-text-2)',
+                    color: bashFormType === 'strike' ? 'var(--color-danger)' : 'var(--color-text-2)',
                   }}
                 >
                   Wildlife Strike
@@ -1282,7 +1282,7 @@ export default function AirfieldChecksPage() {
               <div style={{
                 padding: '8px 12px', marginBottom: 12, borderRadius: 8,
                 background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
-                fontSize: 'var(--fs-sm)', color: '#EF4444', fontWeight: 600,
+                fontSize: 'var(--fs-sm)', color: 'var(--color-danger)', fontWeight: 600,
               }}>
                 Complete the {bashFormType} form below before submitting the check.
               </div>

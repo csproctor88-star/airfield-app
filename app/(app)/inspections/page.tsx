@@ -1482,7 +1482,7 @@ export default function InspectionsPage() {
           <div
             style={{
               width: 44, height: 44, borderRadius: '50%',
-              background: `conic-gradient(#22C55E ${progress * 3.6}deg, var(--color-bg-elevated) ${progress * 3.6}deg)`,
+              background: `conic-gradient(var(--color-status-pass) ${progress * 3.6}deg, var(--color-bg-elevated) ${progress * 3.6}deg)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}
           >
@@ -1585,7 +1585,7 @@ export default function InspectionsPage() {
                 <div style={{ display: 'flex', gap: 6 }}>
                   {BWC_OPTIONS.map((opt) => {
                     const selected = currentHalf.bwcValue === opt
-                    const colorMap: Record<string, string> = { LOW: '#22C55E', MOD: '#EAB308', SEV: '#F97316', PROHIB: '#EF4444' }
+                    const colorMap: Record<string, string> = { LOW: 'var(--color-status-pass)', MOD: 'var(--color-bwc-mod)', SEV: 'var(--color-orange)', PROHIB: 'var(--color-danger)' }
                     const color = colorMap[opt] || 'var(--color-text-2)'
                     return (
                       <button
@@ -1615,7 +1615,7 @@ export default function InspectionsPage() {
               <div style={{ display: 'flex', gap: 6 }}>
                 {RSC_CONDITIONS.map((opt) => {
                   const selected = currentHalf.rscCondition === opt
-                  const color = opt === 'Dry' ? '#22C55E' : '#3B82F6'
+                  const color = opt === 'Dry' ? 'var(--color-status-pass)' : 'var(--color-status-inwork)'
                   return (
                     <button
                       key={opt}
@@ -1701,7 +1701,7 @@ export default function InspectionsPage() {
           return (
             <div key={section.id} style={{ marginBottom: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: sectionComplete ? '#22C55E' : 'var(--color-text-2)' }}>
+                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: sectionComplete ? 'var(--color-status-pass)' : 'var(--color-text-2)' }}>
                   {section.title}
                 </div>
                 <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{done}/{section.items.length}</div>
@@ -1719,7 +1719,7 @@ export default function InspectionsPage() {
 
                 // Standard pass/fail/na item
                 const state = currentHalf?.responses[item.id] ?? 'pass'
-                const borderColor = state === 'pass' ? '#22C55E' : state === 'fail' ? '#EF4444' : state === 'na' ? 'var(--color-text-3)' : 'var(--color-text-4)'
+                const borderColor = state === 'pass' ? 'var(--color-status-pass)' : state === 'fail' ? 'var(--color-danger)' : state === 'na' ? 'var(--color-text-3)' : 'var(--color-text-4)'
                 const bgColor = state === 'pass' ? 'rgba(34,197,94,0.1)' : state === 'fail' ? 'rgba(239,68,68,0.1)' : state === 'na' ? 'rgba(100,116,139,0.1)' : 'transparent'
 
                 return (
@@ -1736,7 +1736,7 @@ export default function InspectionsPage() {
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           cursor: 'pointer', padding: 0, flexShrink: 0,
                           fontSize: state === 'na' ? 9 : 14, fontWeight: 700,
-                          color: state === 'pass' ? '#22C55E' : state === 'fail' ? '#EF4444' : state === 'na' ? 'var(--color-text-3)' : 'transparent',
+                          color: state === 'pass' ? 'var(--color-status-pass)' : state === 'fail' ? 'var(--color-danger)' : state === 'na' ? 'var(--color-text-3)' : 'transparent',
                           fontFamily: 'inherit',
                         }}
                       >
@@ -1843,7 +1843,7 @@ export default function InspectionsPage() {
               }
             }}
             style={{
-              background: 'transparent', border: 'none', color: '#EF4444',
+              background: 'transparent', border: 'none', color: 'var(--color-danger)',
               fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
               padding: '8px 16px',
             }}
@@ -1858,11 +1858,9 @@ export default function InspectionsPage() {
         {/* ── Complete Confirmation Dialog ── */}
         {showCompleteConfirm && (
           <div
+            className="modal-overlay"
             onClick={() => setShowCompleteConfirm(false)}
-            style={{
-              position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-            }}
+            style={{ padding: 24 }}
           >
             <div
               onClick={(e) => e.stopPropagation()}
@@ -2003,19 +2001,19 @@ export default function InspectionsPage() {
           </div>
           <div style={{
             fontSize: 'var(--fs-md)', fontWeight: 700,
-            color: todayAirfieldFiled ? '#22C55E' : airfieldDraft ? '#3B82F6' : todayAirfieldByOther ? '#F97316' : 'var(--color-text-1)',
+            color: todayAirfieldFiled ? 'var(--color-status-pass)' : airfieldDraft ? 'var(--color-status-inwork)' : todayAirfieldByOther ? 'var(--color-orange)' : 'var(--color-text-1)',
           }}>
             Airfield
           </div>
           <div style={{
             fontSize: 'var(--fs-xs)', marginTop: 2,
-            color: todayAirfieldFiled ? '#22C55E' : airfieldDraft ? '#3B82F6' : todayAirfieldByOther ? '#F97316' : 'var(--color-text-3)',
+            color: todayAirfieldFiled ? 'var(--color-status-pass)' : airfieldDraft ? 'var(--color-status-inwork)' : todayAirfieldByOther ? 'var(--color-orange)' : 'var(--color-text-3)',
             fontWeight: 600,
           }}>
             {todayAirfieldFiled ? 'Complete' : airfieldDraft ? 'In Progress' : todayAirfieldByOther ? `In Progress` : 'Start'}
           </div>
           {todayAirfieldByOther && (
-            <div style={{ fontSize: 'var(--fs-2xs)', color: '#F97316', marginTop: 2 }}>
+            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-orange)', marginTop: 2 }}>
               {todayAirfield?.inspector_name || 'Another user'}
             </div>
           )}
@@ -2065,19 +2063,19 @@ export default function InspectionsPage() {
           </div>
           <div style={{
             fontSize: 'var(--fs-md)', fontWeight: 700,
-            color: todayLightingFiled ? '#22C55E' : lightingDraft ? '#3B82F6' : todayLightingByOther ? '#F97316' : 'var(--color-text-1)',
+            color: todayLightingFiled ? 'var(--color-status-pass)' : lightingDraft ? 'var(--color-status-inwork)' : todayLightingByOther ? 'var(--color-orange)' : 'var(--color-text-1)',
           }}>
             Lighting
           </div>
           <div style={{
             fontSize: 'var(--fs-xs)', marginTop: 2,
-            color: todayLightingFiled ? '#22C55E' : lightingDraft ? '#3B82F6' : todayLightingByOther ? '#F97316' : 'var(--color-text-3)',
+            color: todayLightingFiled ? 'var(--color-status-pass)' : lightingDraft ? 'var(--color-status-inwork)' : todayLightingByOther ? 'var(--color-orange)' : 'var(--color-text-3)',
             fontWeight: 600,
           }}>
             {todayLightingFiled ? 'Complete' : lightingDraft ? 'In Progress' : todayLightingByOther ? 'In Progress' : 'Start'}
           </div>
           {todayLightingByOther && (
-            <div style={{ fontSize: 'var(--fs-2xs)', color: '#F97316', marginTop: 2 }}>
+            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-orange)', marginTop: 2 }}>
               {todayLighting?.inspector_name || 'Another user'}
             </div>
           )}
@@ -2096,8 +2094,8 @@ export default function InspectionsPage() {
       <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
         {[
           { key: 'all', label: `All (${dailyReports.length})`, color: 'var(--color-cyan)' },
-          { key: 'airfield', label: `Airfield (${airfieldCount})`, color: '#34D399' },
-          { key: 'lighting', label: `Lighting (${lightingCount})`, color: '#FBBF24' },
+          { key: 'airfield', label: `Airfield (${airfieldCount})`, color: 'var(--color-success)' },
+          { key: 'lighting', label: `Lighting (${lightingCount})`, color: 'var(--color-warning)' },
         ].map((chip) => {
           const active = typeFilter === chip.key
           return (
@@ -2152,7 +2150,7 @@ export default function InspectionsPage() {
           : report.inspectionType === 'joint_monthly'
           ? 'Joint Monthly Airfield Inspection'
           : ''
-        const cardBorderColor = isInProgress ? '#3B82F6' : isSpecialType ? '#A78BFA' : isDaily ? 'var(--color-cyan)' : report.airfield ? '#34D399' : '#FBBF24'
+        const cardBorderColor = isInProgress ? 'var(--color-status-inwork)' : isSpecialType ? 'var(--color-purple)' : isDaily ? 'var(--color-cyan)' : report.airfield ? 'var(--color-success)' : 'var(--color-warning)'
 
         const cardContent = (
           <>
@@ -2163,25 +2161,25 @@ export default function InspectionsPage() {
                     {specialLabel}
                   </span>
                 ) : isDaily ? (
-                  <span style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: isInProgress ? '#3B82F6' : 'var(--color-cyan)' }}>
+                  <span style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: isInProgress ? 'var(--color-status-inwork)' : 'var(--color-cyan)' }}>
                     Airfield Inspection Report
                   </span>
                 ) : (
-                  <span style={{ fontSize: 'var(--fs-md)', fontWeight: 800, fontFamily: 'monospace', color: isInProgress ? '#3B82F6' : 'var(--color-cyan)' }}>
+                  <span style={{ fontSize: 'var(--fs-md)', fontWeight: 800, fontFamily: 'monospace', color: isInProgress ? 'var(--color-status-inwork)' : 'var(--color-cyan)' }}>
                     {displayIds[0]}
                   </span>
                 )}
               </div>
               <div style={{ display: 'flex', gap: 4 }}>
                 {isInProgress && (
-                  <Badge label="In Progress" color="#3B82F6" />
+                  <Badge label="In Progress" color="var(--color-status-inwork)" />
                 )}
                 {isSpecialType ? (
-                  <Badge label={report.inspectionType === 'construction_meeting' ? 'Construction' : 'Joint Monthly'} color="#A78BFA" />
+                  <Badge label={report.inspectionType === 'construction_meeting' ? 'Construction' : 'Joint Monthly'} color="var(--color-purple)" />
                 ) : (
                   <>
-                    {report.airfield && <Badge label="Airfield" color="#34D399" />}
-                    {report.lighting && <Badge label="Lighting" color="#FBBF24" />}
+                    {report.airfield && <Badge label="Airfield" color="var(--color-success)" />}
+                    {report.lighting && <Badge label="Lighting" color="var(--color-warning)" />}
                   </>
                 )}
               </div>
@@ -2210,9 +2208,9 @@ export default function InspectionsPage() {
             ) : (
               <>
                 <div style={{ display: 'flex', gap: 8, marginBottom: 6, fontSize: 'var(--fs-base)' }}>
-                  <span style={{ color: '#22C55E', fontWeight: 700 }}>{report.totalPassed} Pass</span>
+                  <span style={{ color: 'var(--color-status-pass)', fontWeight: 700 }}>{report.totalPassed} Pass</span>
                   {report.totalFailed > 0 && (
-                    <span style={{ color: '#EF4444', fontWeight: 700 }}>{report.totalFailed} Fail</span>
+                    <span style={{ color: 'var(--color-danger)', fontWeight: 700 }}>{report.totalFailed} Fail</span>
                   )}
                   {report.totalNa > 0 && (
                     <span style={{ color: 'var(--color-text-3)', fontWeight: 600 }}>{report.totalNa} N/A</span>
@@ -2225,7 +2223,7 @@ export default function InspectionsPage() {
                     {report.bwcValue && (
                       <span style={{
                         fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-                        color: report.bwcValue === 'LOW' ? '#22C55E' : report.bwcValue === 'MOD' ? '#EAB308' : report.bwcValue === 'SEV' ? '#F97316' : '#EF4444',
+                        color: report.bwcValue === 'LOW' ? 'var(--color-status-pass)' : report.bwcValue === 'MOD' ? 'var(--color-bwc-mod)' : report.bwcValue === 'SEV' ? 'var(--color-orange)' : 'var(--color-danger)',
                         background: report.bwcValue === 'LOW' ? 'rgba(34,197,94,0.1)' : report.bwcValue === 'MOD' ? 'rgba(234,179,8,0.1)' : report.bwcValue === 'SEV' ? 'rgba(249,115,22,0.1)' : 'rgba(239,68,68,0.1)',
                       }}>
                         BWC: {report.bwcValue}
@@ -2234,7 +2232,7 @@ export default function InspectionsPage() {
                     {report.rscCondition && (
                       <span style={{
                         fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-                        color: report.rscCondition === 'Dry' ? '#22C55E' : '#3B82F6',
+                        color: report.rscCondition === 'Dry' ? 'var(--color-status-pass)' : 'var(--color-status-inwork)',
                         background: report.rscCondition === 'Dry' ? 'rgba(34,197,94,0.1)' : 'rgba(59,130,246,0.1)',
                       }}>
                         RSC: {report.rscCondition}
@@ -2293,7 +2291,7 @@ export default function InspectionsPage() {
                   style={{
                     flex: 1, padding: '8px 0', borderRadius: 6,
                     border: '1px solid rgba(59,130,246,0.4)', background: 'rgba(59,130,246,0.08)',
-                    color: '#3B82F6', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                    color: 'var(--color-status-inwork)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                     cursor: 'pointer', fontFamily: 'inherit',
                   }}
                 >
@@ -2309,7 +2307,7 @@ export default function InspectionsPage() {
                   style={{
                     padding: '8px 16px', borderRadius: 6,
                     border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.08)',
-                    color: '#EF4444', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                    color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                     cursor: 'pointer', fontFamily: 'inherit',
                   }}
                 >
@@ -2341,11 +2339,7 @@ export default function InspectionsPage() {
         const isCompleted = blockedInfo.reason === 'completed'
         return (
           <div
-            style={{
-              position: 'fixed', inset: 0, zIndex: 9999,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(0,0,0,0.6)', padding: 16,
-            }}
+            className="modal-overlay"
             onClick={() => setBlockedInfo(null)}
           >
             <div
@@ -2364,7 +2358,7 @@ export default function InspectionsPage() {
               </div>
               <div style={{
                 fontSize: 'var(--fs-xl)', fontWeight: 800,
-                color: isCompleted ? '#22C55E' : '#F97316',
+                color: isCompleted ? 'var(--color-status-pass)' : 'var(--color-orange)',
                 marginBottom: 10,
               }}>
                 {isCompleted
@@ -2385,7 +2379,7 @@ export default function InspectionsPage() {
                   </>
                 ) : (
                   <>
-                    <strong style={{ color: '#F97316' }}>
+                    <strong style={{ color: 'var(--color-orange)' }}>
                       {blockedInfo.inspectorName || 'Another user'}
                     </strong>{' '}
                     currently has the {label} Inspection in progress.
@@ -2405,7 +2399,7 @@ export default function InspectionsPage() {
                     style={{
                       flex: 1, padding: '12px 0', borderRadius: 10,
                       border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.12)',
-                      color: '#22C55E', fontSize: 'var(--fs-md)', fontWeight: 700,
+                      color: 'var(--color-status-pass)', fontSize: 'var(--fs-md)', fontWeight: 700,
                       cursor: 'pointer', fontFamily: 'inherit',
                     }}
                   >
@@ -2432,11 +2426,7 @@ export default function InspectionsPage() {
       {/* ── Confirmation Dialog — Start New Inspection ── */}
       {confirmStart && (
         <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 9999,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(0,0,0,0.6)', padding: 16,
-          }}
+          className="modal-overlay"
           onClick={() => setConfirmStart(null)}
         >
           <div
@@ -2480,7 +2470,7 @@ export default function InspectionsPage() {
                 style={{
                   flex: 1, padding: '12px 0', borderRadius: 10,
                   border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.12)',
-                  color: '#22C55E', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  color: 'var(--color-status-pass)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >

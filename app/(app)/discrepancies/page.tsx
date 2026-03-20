@@ -34,9 +34,9 @@ const FILTER_LABELS: Record<string, string> = {
 type KpiKey = 'afm' | 'ces' | 'amops'
 
 const KPI_DEFS: { key: KpiKey; label: string; color: string; match: (cs: string) => boolean }[] = [
-  { key: 'afm', label: 'AFM', color: '#3B82F6', match: (cs) => cs === 'submitted_to_afm' },
-  { key: 'ces', label: 'CES', color: '#F97316', match: (cs) => cs === 'submitted_to_ces' || cs === 'awaiting_action_by_ces' || cs === 'waiting_for_project' },
-  { key: 'amops', label: 'AMOPS', color: '#22C55E', match: (cs) => cs === 'work_completed_awaiting_verification' },
+  { key: 'afm', label: 'AFM', color: 'var(--color-status-inwork)', match: (cs) => cs === 'submitted_to_afm' },
+  { key: 'ces', label: 'CES', color: 'var(--color-orange)', match: (cs) => cs === 'submitted_to_ces' || cs === 'awaiting_action_by_ces' || cs === 'waiting_for_project' },
+  { key: 'amops', label: 'AMOPS', color: 'var(--color-status-pass)', match: (cs) => cs === 'work_completed_awaiting_verification' },
 ]
 
 export default function DiscrepanciesPage() {
@@ -547,9 +547,9 @@ export default function DiscrepanciesPage() {
       {/* Row 1: OPEN + > 30 DAYS (larger) */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 6 }}>
         {[
-          { label: 'OPEN', value: openCount, color: '#FBBF24', active: filter === 'open' && !over30Only && !currentStatusFilter,
+          { label: 'OPEN', value: openCount, color: 'var(--color-warning)', active: filter === 'open' && !over30Only && !currentStatusFilter,
             onClick: () => { setFilter('open'); setOver30Only(false); setCurrentStatusFilter(null) } },
-          { label: '> 30 DAYS', value: over30Count, color: over30Count > 0 ? '#EF4444' : '#34D399', active: over30Only,
+          { label: '> 30 DAYS', value: over30Count, color: over30Count > 0 ? 'var(--color-danger)' : 'var(--color-success)', active: over30Only,
             onClick: () => { setFilter('open'); setOver30Only(!over30Only); setCurrentStatusFilter(null) } },
         ].map((k) => (
           <div
@@ -621,7 +621,7 @@ export default function DiscrepanciesPage() {
                   cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
                   border: active ? '1.5px solid #F97316' : '1px solid var(--color-border)',
                   background: active ? 'rgba(249,115,22,0.12)' : 'var(--color-bg-inset)',
-                  color: active ? '#F97316' : 'var(--color-text-2)',
+                  color: active ? 'var(--color-orange)' : 'var(--color-text-2)',
                   display: 'flex', alignItems: 'center', gap: 4,
                 }}
               >
@@ -630,7 +630,7 @@ export default function DiscrepanciesPage() {
                   <span style={{
                     fontSize: 'var(--fs-2xs)', fontWeight: 700,
                     background: active ? 'rgba(249,115,22,0.2)' : 'var(--color-border)',
-                    color: active ? '#F97316' : 'var(--color-text-3)',
+                    color: active ? 'var(--color-orange)' : 'var(--color-text-3)',
                     padding: '0 4px', borderRadius: 3, minWidth: 16, textAlign: 'center',
                   }}>
                     {count}
@@ -652,7 +652,7 @@ export default function DiscrepanciesPage() {
                 cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
                 border: shopFilter === '__unassigned' ? '1.5px solid #EF4444' : '1px solid var(--color-border)',
                 background: shopFilter === '__unassigned' ? 'rgba(239,68,68,0.12)' : 'var(--color-bg-inset)',
-                color: shopFilter === '__unassigned' ? '#EF4444' : 'var(--color-text-3)',
+                color: shopFilter === '__unassigned' ? 'var(--color-danger)' : 'var(--color-text-3)',
               }}
             >
               Unassigned
