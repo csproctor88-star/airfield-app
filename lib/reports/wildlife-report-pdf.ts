@@ -435,9 +435,6 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
     )
     y += 12
 
-    const sightingCount = heatmapPoints.filter(p => p.type === 'sighting').length
-    const strikeCount = heatmapPoints.filter(p => p.type === 'strike').length
-
     const mapDataUrl = await captureHeatmapImage(heatmapPoints, centerLat, centerLng)
     if (mapDataUrl) {
       try {
@@ -456,22 +453,32 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
       y += 12
     }
 
-    // Legend
+    // Heatmap density legend
     doc.setFontSize(8)
     doc.setFont('helvetica', 'bold')
-    doc.text('Legend:', margin, y)
-    y += 10
-
-    // Green dot — sightings
-    doc.setFillColor(16, 185, 129)
-    doc.circle(margin + 5, y - 3, 4, 'F')
+    doc.text('Density:', margin, y)
     doc.setFont('helvetica', 'normal')
-    doc.text(`Sightings (${sightingCount})`, margin + 14, y)
 
-    // Red dot — strikes
-    doc.setFillColor(239, 68, 68)
-    doc.circle(margin + 120, y - 3, 4, 'F')
-    doc.text(`Strikes (${strikeCount})`, margin + 129, y)
+    // Draw color ramp: green → cyan → yellow → orange → red
+    const rampColors: [number, number, number][] = [
+      [16, 185, 129],   // green (low)
+      [34, 211, 238],   // cyan
+      [251, 191, 36],   // yellow
+      [249, 115, 22],   // orange
+      [239, 68, 68],    // red (high)
+    ]
+    const rampX = margin + 48
+    const rampW = 120
+    const segW = rampW / rampColors.length
+    for (let i = 0; i < rampColors.length; i++) {
+      doc.setFillColor(rampColors[i][0], rampColors[i][1], rampColors[i][2])
+      doc.rect(rampX + i * segW, y - 6, segW, 8, 'F')
+    }
+    doc.setFontSize(6)
+    doc.setTextColor(100)
+    doc.text('Low', rampX, y + 6)
+    doc.text('High', rampX + rampW - 12, y + 6)
+    doc.setTextColor(0)
     y += 14
 
     doc.setFontSize(7)
