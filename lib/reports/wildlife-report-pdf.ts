@@ -30,21 +30,63 @@ function titleCase(str: string): string {
 const MAP_W = 800
 const MAP_H = 500
 
-interface MapBounds {
-  west: number; east: number; south: number; north: number
+// ── Web Mercator helpers ──
+
+function lngToMercX(lng: number, zoom: number): number {
+  return ((lng + 180) / 360) * 256 * Math.pow(2, zoom)
 }
 
-/** Fetch satellite basemap using bounding box (auto-fit to data extent + padding) */
-async function fetchBasemapWithBounds(
-  bounds: MapBounds,
-): Promise<string | null> {
+function latToMercY(lat: number, zoom: number): number {
+  const latRad = lat * Math.PI / 180
+  return (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * 256 * Math.pow(2, zoom)
+}
+
+/** Compute center + zoom that fits all points in the 800x500 image with padding */
+function fitPointsToView(points: { lat: number; lng: number }[]): { cLng: number; cLat: number; zoom: number } {
+  let west = Infinity, east = -Infinity, south = Infinity, north = -Infinity
+  for (const p of points) {
+    if (p.lng < west) west = p.lng
+    if (p.lng > east) east = p.lng
+    if (p.lat < south) south = p.lat
+    if (p.lat > north) north = p.lat
+  }
+
+  const cLng = (west + east) / 2
+
+  // Find zoom that fits both dimensions with padding (40px each side)
+  const padW = MAP_W - 80 // usable width after padding
+  const padH = MAP_H - 80
+
+  let zoom = 20
+  for (let z = 20; z >= 1; z--) {
+    const x1 = lngToMercX(west, z)
+    const x2 = lngToMercX(east, z)
+    const y1 = latToMercY(north, z) // north = smaller Y in Mercator
+    const y2 = latToMercY(south, z)
+    if (Math.abs(x2 - x1) <= padW && Math.abs(y2 - y1) <= padH) {
+      zoom = z
+      break
+    }
+  }
+
+  // Compute center lat in Mercator space (midpoint of Mercator Y, then invert)
+  const my1 = latToMercY(south, zoom)
+  const my2 = latToMercY(north, zoom)
+  const midMercY = (my1 + my2) / 2
+  // Invert Mercator Y to lat
+  const n = Math.PI - 2 * Math.PI * midMercY / (256 * Math.pow(2, zoom))
+  const cLat = 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)))
+
+  return { cLng, cLat, zoom }
+}
+
+/** Fetch satellite basemap with explicit center/zoom */
+async function fetchBasemap(cLng: number, cLat: number, zoom: number): Promise<string | null> {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   if (!token || token === 'your-mapbox-token-here') return null
 
   try {
-    // Use bbox auto-fit: [west,south,east,north]
-    const bbox = `[${bounds.west},${bounds.south},${bounds.east},${bounds.north}]`
-    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${bbox}/${MAP_W}x${MAP_H}@2x?access_token=${token}&logo=false&attribution=false`
+    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${cLng},${cLat},${zoom},0/${MAP_W}x${MAP_H}@2x?access_token=${token}&logo=false&attribution=false`
     const res = await fetch(url)
     if (!res.ok) return null
     const blob = await res.blob()
@@ -59,37 +101,13 @@ async function fetchBasemapWithBounds(
   }
 }
 
-/** Compute bounding box from data points with padding */
-function computeBounds(points: { lat: number; lng: number }[]): MapBounds {
-  let west = Infinity, east = -Infinity, south = Infinity, north = -Infinity
-  for (const p of points) {
-    if (p.lng < west) west = p.lng
-    if (p.lng > east) east = p.lng
-    if (p.lat < south) south = p.lat
-    if (p.lat > north) north = p.lat
-  }
-  // Add ~15% padding
-  const lngPad = Math.max((east - west) * 0.15, 0.005)
-  const latPad = Math.max((north - south) * 0.15, 0.003)
-  return { west: west - lngPad, east: east + lngPad, south: south - latPad, north: north + latPad }
-}
-
-/** Convert latitude to Mercator Y (used by Mapbox for rendering) */
-function latToMercatorY(lat: number): number {
-  const sinLat = Math.sin(lat * Math.PI / 180)
-  return Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)
-}
-
-/** Convert geo coordinate to fractional position (0-1) within the bounding box.
- *  Longitude is linear; latitude uses Mercator Y to match Mapbox projection. */
-function geoToFraction(lng: number, lat: number, bounds: MapBounds): { fx: number; fy: number } {
-  const fx = (lng - bounds.west) / (bounds.east - bounds.west)
-  // Use Mercator Y for latitude to match Mapbox's projection
-  const mercSouth = latToMercatorY(bounds.south)
-  const mercNorth = latToMercatorY(bounds.north)
-  const mercPt = latToMercatorY(lat)
-  const fy = 1 - (mercPt - mercSouth) / (mercNorth - mercSouth)
-  return { fx, fy }
+/** Convert geo coordinate to image pixel position for a given center/zoom */
+function geoToImagePx(lng: number, lat: number, cLng: number, cLat: number, zoom: number): { x: number; y: number } {
+  const cx = lngToMercX(cLng, zoom)
+  const cy = latToMercY(cLat, zoom)
+  const px = lngToMercX(lng, zoom)
+  const py = latToMercY(lat, zoom)
+  return { x: (px - cx) + MAP_W / 2, y: (py - cy) + MAP_H / 2 }
 }
 
 export async function generateWildlifeReportPdf(options: Options): Promise<{ doc: jsPDF; filename: string }> {
@@ -389,8 +407,8 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
     const sightingCount = heatmapPoints.filter(p => p.type === 'sighting').length
     const strikeCount = heatmapPoints.filter(p => p.type === 'strike').length
 
-    const bounds = computeBounds(heatmapPoints)
-    const mapDataUrl = await fetchBasemapWithBounds(bounds)
+    const view = fitPointsToView(heatmapPoints)
+    const mapDataUrl = await fetchBasemap(view.cLng, view.cLat, view.zoom)
     if (mapDataUrl) {
       try {
         const imgWidthPt = pageWidth - margin * 2
@@ -399,14 +417,17 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
         const mapY = y
         doc.addImage(mapDataUrl, 'PNG', mapX, mapY, imgWidthPt, imgHeightPt)
 
-        // Draw all pins on top of the basemap using bounding box fractions
-        for (const pt of heatmapPoints) {
-          const { fx, fy } = geoToFraction(pt.lng, pt.lat, bounds)
-          // Skip if outside bounds (shouldn't happen but safety check)
-          if (fx < 0 || fx > 1 || fy < 0 || fy > 1) continue
+        // Scale: image pixels → PDF points
+        const sx = imgWidthPt / MAP_W
+        const sy = imgHeightPt / MAP_H
 
-          const pdfX = mapX + fx * imgWidthPt
-          const pdfY = mapY + fy * imgHeightPt
+        // Draw all pins on top of the basemap
+        for (const pt of heatmapPoints) {
+          const imgPos = geoToImagePx(pt.lng, pt.lat, view.cLng, view.cLat, view.zoom)
+          if (imgPos.x < 0 || imgPos.x > MAP_W || imgPos.y < 0 || imgPos.y > MAP_H) continue
+
+          const pdfX = mapX + imgPos.x * sx
+          const pdfY = mapY + imgPos.y * sy
           const isStrike = pt.type === 'strike'
 
           // Get label for sightings
