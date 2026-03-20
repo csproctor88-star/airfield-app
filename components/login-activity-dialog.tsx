@@ -17,33 +17,55 @@ type ActivityEntry = {
   metadata: Record<string, unknown> | null
 }
 
-function formatAction(action: string, entityType: string, displayId?: string): string {
+function formatAction(action: string, entityType: string, displayId?: string | null, metadata?: Record<string, unknown> | null): string {
+  // If metadata has a formatted details string, use it directly as the action
+  if (metadata?.details && typeof metadata.details === 'string') {
+    return metadata.details as string
+  }
+
   const typeLabel: Record<string, string> = {
     discrepancy: 'Discrepancy',
-    check: 'Check',
+    check: 'Airfield Check',
+    airfield_check: 'Airfield Check',
     inspection: 'Inspection',
     obstruction_evaluation: 'Obstruction Eval',
     manual: 'Manual Entry',
-    airfield_status: 'Runway',
-    waiver: 'Waiver',
+    airfield_status: 'Airfield Status',
+    arff_status: 'ARFF Status',
     navaid: 'NAVAID',
+    navaid_status: 'NAVAID Status',
+    waiver: 'Waiver',
+    wildlife_sighting: 'Wildlife Sighting',
+    wildlife_strike: 'Wildlife Strike',
+    qrc: 'QRC',
+    contractor: 'Personnel',
+    parking_plan: 'Parking Plan',
   }
-  const entity = typeLabel[entityType] || entityType
+  const entity = typeLabel[entityType] || entityType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   const id = displayId ? ` ${displayId}` : ''
   const actionLabel: Record<string, string> = {
     created: 'Created',
     updated: 'Updated',
     deleted: 'Deleted',
     completed: 'Completed',
+    started: 'Started',
+    saved: 'Saved',
+    resumed: 'Resumed',
+    opened: 'Opened',
+    closed: 'Closed',
     status_updated: 'Status Changed',
     noted: 'Logged',
+    logged_personnel: 'Logged',
+    personnel_off_airfield: 'Completed',
   }
-  return `${actionLabel[action] || action} ${entity}${id}`
+  return `${actionLabel[action] || action.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} ${entity}${id}`
 }
 
 function buildDetails(entry: ActivityEntry): string {
   const meta = entry.metadata
   if (!meta) return ''
+  // If details was used as the action column, don't repeat it
+  if (meta.details && typeof meta.details === 'string') return ''
   if (meta.notes) return meta.notes as string
   if (meta.status) return `Status: ${meta.status}`
   if (meta.changes) {
@@ -289,7 +311,7 @@ export default function LoginActivityDialog() {
                         <td style={cellStyle}>{timeZ}</td>
                         <td style={cellStyle}>{userName}</td>
                         <td style={cellStyle}>
-                          {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined)}
+                          {formatAction(a.action, a.entity_type, a.entity_display_id, a.metadata)}
                         </td>
                         <td style={{ ...cellStyle, whiteSpace: 'normal', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {details}
