@@ -223,6 +223,15 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
     doc.text('Bird Watch Condition History', margin, y)
     y += 14
 
+    const SOURCE_LABELS: Record<string, string> = {
+      bash_check: 'BASH Check',
+      inspection: 'Inspection',
+      manual: 'Manual Entry',
+      dashboard: 'Dashboard',
+      sighting: 'Wildlife Sighting',
+      strike: 'Wildlife Strike',
+    }
+
     autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
@@ -231,7 +240,7 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
         formatZuluDateTime(entry.set_at),
         entry.bwc_value,
         entry.set_by || '—',
-        entry.source || '—',
+        entry.source ? (SOURCE_LABELS[entry.source] || titleCase(entry.source)) : '—',
       ]),
       theme: 'grid',
       headStyles: { fillColor: [59, 130, 246], fontSize: 9, fontStyle: 'bold' },
