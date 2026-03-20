@@ -1335,6 +1335,10 @@ export default function ParkingPage() {
               dragObstacleId.current = null
               m.getCanvas().style.cursor = 'grabbing'
               m.dragPan.disable()
+              // Make silhouette semi-transparent during drag to see nose gear + ground
+              if (m.getLayer('parking-aircraft-symbols')) {
+                m.setPaintProperty('parking-aircraft-symbols', 'icon-opacity', 0.4)
+              }
               e.preventDefault()
             }
             return
@@ -1563,6 +1567,10 @@ export default function ParkingPage() {
         m.dragPan.enable()
         m.getCanvas().style.cursor = ''
         removeDragLabels()
+        // Restore full opacity after drag
+        if (m.getLayer('parking-aircraft-symbols')) {
+          m.setPaintProperty('parking-aircraft-symbols', 'icon-opacity', 1)
+        }
         setSpots(prev => prev.map(s => s.id === sid ? { ...s, longitude: lng, latitude: lat } : s))
         await updateParkingSpot(sid, { longitude: lng, latitude: lat })
         return
@@ -1679,7 +1687,8 @@ export default function ParkingPage() {
         const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
         if (spot) {
           e.preventDefault()
-          setContextMenuSpot({ spot, x: e.point.x, y: e.point.y })
+          const oe = e.originalEvent as MouseEvent
+          setContextMenuSpot({ spot, x: oe.clientX, y: oe.clientY })
           setEditingSpot(spot)
         }
       }
@@ -3504,59 +3513,109 @@ export default function ParkingPage() {
       )}
 
       {/* Context Menu — right-click / long-press on aircraft silhouette */}
-      {contextMenuSpot && editingSpot && (
-        <div
-          onClick={() => setContextMenuSpot(null)}
-          style={{ position: 'fixed', inset: 0, zIndex: 999 }}
-        >
+      {contextMenuSpot && editingSpot && (() => {
+        const s = editingSpot
+        const swa = spotsWithAircraft.find(sw => sw.id === s.id)
+        const ws = swa?.wingspan_ft ?? 0
+        const ctxInputStyle: React.CSSProperties = { width: '100%', padding: '4px 6px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }
+        const ctxLabelStyle: React.CSSProperties = { fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)', display: 'block', marginBottom: 2 }
+        return (
           <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              position: 'absolute',
-              left: Math.min(contextMenuSpot.x, (typeof window !== 'undefined' ? window.innerWidth - 200 : 300)),
-              top: Math.min(contextMenuSpot.y, (typeof window !== 'undefined' ? window.innerHeight - 320 : 400)),
-              width: 180, background: 'var(--color-bg-surface)', borderRadius: 8,
-              border: '1px solid var(--color-border)', overflow: 'hidden',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-            }}
+            onClick={() => setContextMenuSpot(null)}
+            style={{ position: 'fixed', inset: 0, zIndex: 999 }}
           >
-            <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-cyan)' }}>
-              {editingSpot.spot_name || editingSpot.aircraft_name || 'Aircraft'}
-            </div>
-            {[
-              { label: 'Edit Details', action: () => { setSidebarTab('aircraft'); setContextMenuSpot(null) } },
-              { label: 'Duplicate', action: () => { handleDuplicateSpot(editingSpot); setContextMenuSpot(null) } },
-            ].map(item => (
-              <button
-                key={item.label}
-                onClick={item.action}
-                style={{
-                  display: 'block', width: '100%', padding: '8px 12px', border: 'none',
-                  background: 'transparent', color: 'var(--color-text-primary)',
-                  fontSize: 'var(--fs-sm)', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
-                  borderBottom: '1px solid var(--color-border)',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-bg-inset)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-              >
-                {item.label}
-              </button>
-            ))}
-            <button
-              onClick={() => { handleDeleteSpot(editingSpot.id); setContextMenuSpot(null); setEditingSpot(null) }}
+            <div
+              onClick={e => e.stopPropagation()}
               style={{
-                display: 'block', width: '100%', padding: '8px 12px', border: 'none',
-                background: 'transparent', color: '#EF4444',
-                fontSize: 'var(--fs-sm)', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
+                position: 'fixed',
+                left: Math.min(contextMenuSpot.x, (typeof window !== 'undefined' ? window.innerWidth - 260 : 300)),
+                top: Math.min(contextMenuSpot.y, (typeof window !== 'undefined' ? window.innerHeight - 380 : 400)),
+                width: 250, background: 'var(--color-bg-surface)', borderRadius: 10,
+                border: '1px solid var(--color-border)', overflow: 'hidden',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
-              Remove
-            </button>
+              {/* Header */}
+              <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-cyan)' }}>
+                {s.aircraft_name || 'Aircraft'}
+              </div>
+
+              <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {/* Spot Name / Tail # / Callsign */}
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <label style={{ flex: 1 }}>
+                    <span style={ctxLabelStyle}>Spot Name</span>
+                    <input value={s.spot_name || ''} onChange={e => handleUpdateSpot(s.id, { spot_name: e.target.value })} style={ctxInputStyle} />
+                  </label>
+                  <label style={{ flex: 1 }}>
+                    <span style={ctxLabelStyle}>Tail #</span>
+                    <input value={s.tail_number || ''} onChange={e => handleUpdateSpot(s.id, { tail_number: e.target.value })} style={ctxInputStyle} />
+                  </label>
+                </div>
+                <label>
+                  <span style={ctxLabelStyle}>Callsign</span>
+                  <input value={s.unit_callsign || ''} onChange={e => handleUpdateSpot(s.id, { unit_callsign: e.target.value })} style={ctxInputStyle} />
+                </label>
+
+                {/* Heading */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ ...ctxLabelStyle, marginBottom: 0, flexShrink: 0 }}>Heading</span>
+                  <input type="range" min={0} max={360} step={1} value={s.heading_deg} onChange={e => handleUpdateSpot(s.id, { heading_deg: Number(e.target.value) })} style={{ flex: 1 }} />
+                  <input type="number" min={0} max={360} step={1} value={s.heading_deg}
+                    onChange={e => { const v = Math.min(360, Math.max(0, Number(e.target.value) || 0)); handleUpdateSpot(s.id, { heading_deg: v }) }}
+                    style={{ width: 40, padding: '2px 4px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)', textAlign: 'center' }}
+                  />
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>°</span>
+                </div>
+
+                {/* Clearance */}
+                <div style={{ display: 'flex', gap: 3, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)', flexShrink: 0 }}>Clearance:</span>
+                  {[null, 10, 15, 25].map(val => (
+                    <button key={val ?? 'adg'} onClick={() => handleUpdateSpot(s.id, { clearance_ft: val as any })} style={{
+                      padding: '2px 5px', borderRadius: 3, fontSize: 'var(--fs-2xs)', border: '1px solid var(--color-border)',
+                      background: s.clearance_ft === val ? 'var(--color-cyan)22' : 'var(--color-bg-inset)',
+                      color: s.clearance_ft === val ? 'var(--color-cyan)' : 'var(--color-text-secondary)', cursor: 'pointer',
+                    }}>
+                      {val ? `${val}ft` : `UFC (${getWingtipClearance(ws, apronContext, s.aircraft_name)}ft)`}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Status */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)' }}>Status:</span>
+                  <select value={s.status} onChange={e => handleUpdateSpot(s.id, { status: e.target.value as ParkingSpot['status'] })}
+                    style={{ flex: 1, padding: '3px 6px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>
+                    <option value="available">Available</option>
+                    <option value="occupied">Occupied</option>
+                    <option value="reserved">Reserved</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div style={{ display: 'flex', gap: 0, borderTop: '1px solid var(--color-border)' }}>
+                <button onClick={() => { map.current?.flyTo({ center: [s.longitude, s.latitude], zoom: 19 }); setContextMenuSpot(null) }}
+                  style={{ flex: 1, padding: '8px 0', border: 'none', borderRight: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-bg-inset)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                  Fly To
+                </button>
+                <button onClick={() => { handleDuplicateSpot(s); setContextMenuSpot(null) }}
+                  style={{ flex: 1, padding: '8px 0', border: 'none', borderRight: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-bg-inset)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                  Duplicate
+                </button>
+                <button onClick={() => { handleDeleteSpot(s.id); setContextMenuSpot(null); setEditingSpot(null) }}
+                  style={{ flex: 1, padding: '8px 0', border: 'none', background: 'transparent', color: '#EF4444', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                  Remove
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Aircraft Picker Modal */}
       {showAircraftPicker && (
