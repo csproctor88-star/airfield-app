@@ -89,10 +89,6 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
   const margin = 40
   let y = margin
 
-  // Build a display_id → index map for sightings (for map pin labels)
-  const sightingIdxMap = new Map<string, number>()
-  sightings.forEach((s, i) => { if (s.display_id) sightingIdxMap.set(s.display_id, i) })
-
   // ── Header ──
   doc.setFontSize(16)
   doc.setFont('helvetica', 'bold')
@@ -270,14 +266,13 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
       // Check if we need a new page (estimate ~100pt per sighting block)
       if (y > 620) { doc.addPage(); y = margin }
 
-      // Sighting header bar with map pin number
-      const pinLabel = String(i + 1)
+      // Sighting header bar
       doc.setFillColor(16, 185, 129)
       doc.rect(margin, y - 10, pageWidth - margin * 2, 14, 'F')
       doc.setFontSize(9)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(255)
-      doc.text(`[${pinLabel}]  ${s.display_id} — ${s.species_common}`, margin + 4, y)
+      doc.text(`${s.display_id} — ${s.species_common}`, margin + 4, y)
       doc.setTextColor(0)
       y += 10
 
@@ -396,35 +391,7 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
     doc.setFillColor(239, 68, 68)
     doc.circle(margin + 120, y - 3, 4, 'F')
     doc.text(`Strikes (${strikeCount})`, margin + 129, y)
-    y += 16
-
-    // Pin-to-report key table (sightings only)
-    if (sightings.length > 0) {
-      doc.setFontSize(8)
-      doc.setFont('helvetica', 'bold')
-      doc.text('Map Pin Key:', margin, y)
-      y += 10
-
-      const keyBody = sightings.map((s, i) => [
-        String(i + 1),
-        s.display_id,
-        s.species_common,
-        s.location_text || '—',
-      ])
-
-      autoTable(doc, {
-        startY: y,
-        margin: { left: margin, right: margin },
-        head: [['Pin', 'Report #', 'Species', 'Location']],
-        body: keyBody,
-        theme: 'grid',
-        headStyles: { fillColor: [16, 185, 129], fontSize: 7, fontStyle: 'bold' },
-        bodyStyles: { fontSize: 7 },
-        columnStyles: { 0: { cellWidth: 30, halign: 'center', fontStyle: 'bold' }, 1: { cellWidth: 60 } },
-      })
-
-      y = (doc as any).lastAutoTable.finalY + 10
-    }
+    y += 14
 
     doc.setFontSize(7)
     doc.setTextColor(120)
