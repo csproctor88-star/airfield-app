@@ -44,7 +44,7 @@ async function fetchBasemapWithBounds(
   try {
     // Use bbox auto-fit: [west,south,east,north]
     const bbox = `[${bounds.west},${bounds.south},${bounds.east},${bounds.north}]`
-    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${bbox}/${MAP_W}x${MAP_H}@2x?access_token=${token}&logo=false&attribution=false&padding=20`
+    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${bbox}/${MAP_W}x${MAP_H}@2x?access_token=${token}&logo=false&attribution=false`
     const res = await fetch(url)
     if (!res.ok) return null
     const blob = await res.blob()
@@ -74,11 +74,21 @@ function computeBounds(points: { lat: number; lng: number }[]): MapBounds {
   return { west: west - lngPad, east: east + lngPad, south: south - latPad, north: north + latPad }
 }
 
-/** Convert geo coordinate to fractional position (0-1) within the bounding box */
+/** Convert latitude to Mercator Y (used by Mapbox for rendering) */
+function latToMercatorY(lat: number): number {
+  const sinLat = Math.sin(lat * Math.PI / 180)
+  return Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)
+}
+
+/** Convert geo coordinate to fractional position (0-1) within the bounding box.
+ *  Longitude is linear; latitude uses Mercator Y to match Mapbox projection. */
 function geoToFraction(lng: number, lat: number, bounds: MapBounds): { fx: number; fy: number } {
   const fx = (lng - bounds.west) / (bounds.east - bounds.west)
-  // Latitude is inverted (north = top = 0)
-  const fy = 1 - (lat - bounds.south) / (bounds.north - bounds.south)
+  // Use Mercator Y for latitude to match Mapbox's projection
+  const mercSouth = latToMercatorY(bounds.south)
+  const mercNorth = latToMercatorY(bounds.north)
+  const mercPt = latToMercatorY(lat)
+  const fy = 1 - (mercPt - mercSouth) / (mercNorth - mercSouth)
   return { fx, fy }
 }
 
