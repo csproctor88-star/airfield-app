@@ -15,6 +15,34 @@ All notable changes to Glidepath.
 
 ---
 
+## [2.26.0] — 2026-03-20
+
+### UI Revamp — Design Token System
+- **CSS design tokens** — extracted hardcoded colors, radii, z-index, and spacing into CSS custom properties across all 63 modified files
+- **Reusable UI components** — `PageHeader`, `EmptyState`, `LoadingState`, `DetailGrid`, `ConfirmDialog` extracted and applied across pages
+- **Badge component fix** — properly handles CSS variable values for background/color props
+- **Light mode contrast** — fixed multiple contrast issues across dark/light themes
+
+### Bug Fixes
+- **QRC number badge readability** — fixed dark mode text invisible on orange badges (hardcoded `#fff`)
+- **Sidebar double-highlighting** — `/obstructions/history` no longer also highlights `/obstructions` (more-specific-route detection)
+- **Reports time period selector** — fixed black text on cyan background in light mode (now `#fff`)
+- **Analytics avg times** — exclude sub-1-minute entries (instant file/complete) from average calculations
+- **NAVAID status sync from inspections** — marking a light failed in inspection now calls `updateFeatureStatus()` to mark it inoperative on the Visual NAVAIDs page
+- **Discrepancy detail duplicate maps** — pinned location map hidden when system overview map is shown
+- **Discrepancy titles natural language** — auto-generated titles from inspection failures now use `formatFeatureType()` with location context (e.g., "TWY B Edge Light Out of Service" instead of "TWY_B_EDGELIGHTS — Inoperative")
+- **One-per-day timezone fix** — inspection date now uses installation timezone with 0600L reset consistently, fixing guard bypass when browser timezone differs
+- **Personnel card overflow** — fixed scaling at narrow widths with flex-wrap and overflow hidden
+
+### Access Control
+- **Inspection Resume/Delete restricted** — only the inspector who created an in-progress inspection can Resume or Delete it
+
+### Wording Changes
+- **"Out of Service"** replaces "Inoperative" / "marked inoperative" in all auto-generated discrepancy titles and comments
+- **Singular feature names** — "TWY B Edge Light" instead of "TWY B Edge Lights" for single-feature discrepancies
+
+---
+
 ## [2.25.0] — 2026-03-19
 
 ### Features — Configurable Discrepancy PDF Exports
