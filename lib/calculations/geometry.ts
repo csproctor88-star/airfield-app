@@ -574,12 +574,12 @@ export function generateAPZPolygons(rwy: RunwayGeometry): {
 // Elevation API
 // ---------------------------------------------------------------------------
 
-/** Fetch ground elevation (feet MSL) from the Open-Elevation API. */
+/** Fetch ground elevation (feet MSL) via server-side proxy to Open-Elevation API. */
 export async function fetchElevation(point: LatLon): Promise<number | null> {
   try {
     const res = await fetch(
-      `https://api.open-elevation.com/api/v1/lookup?locations=${point.lat},${point.lon}`,
-      { signal: AbortSignal.timeout(8000) },
+      `/api/elevation?lat=${point.lat}&lon=${point.lon}`,
+      { signal: AbortSignal.timeout(12000) },
     )
     if (!res.ok) return null
     const data = await res.json()

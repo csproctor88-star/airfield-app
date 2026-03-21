@@ -257,7 +257,7 @@ function ObstructionsContent() {
     if (elev) {
       toast.success(`Elevation: ${elev.toFixed(0)} ft MSL`)
     } else {
-      toast(`Using airfield elevation (${airfieldElevMSL} ft MSL)`, { description: 'Open-Elevation API unavailable' })
+      toast(`Using airfield elevation (${airfieldElevMSL} ft MSL)`, { description: 'Elevation API unavailable' })
     }
   }, [getAllRunways, findClosestRunway, airfieldElevMSL, runwayClass])
 

@@ -1,6 +1,7 @@
 -- ============================================================
 -- Clone Selfridge → Demo AFB
 -- Run in Supabase SQL Editor (one-time operation)
+-- To reset: DELETE FROM bases WHERE name = 'Demo AFB';
 -- ============================================================
 
 DO $$
@@ -9,8 +10,6 @@ DECLARE
   new_base_id UUID := gen_random_uuid();
   demo_user_id UUID;
   src_base RECORD;
-  -- ID mapping temp tables
-  r RECORD;
 BEGIN
 
   -- ── 0. Find demo user ──
@@ -40,11 +39,11 @@ BEGIN
   RAISE NOTICE 'Created Demo AFB with id: %', new_base_id;
 
   -- ── 2. Base runways ──
-  INSERT INTO base_runways (base_id, runway_id, length_ft, width_ft, surface_type, runway_class,
+  INSERT INTO base_runways (base_id, runway_id, length_ft, width_ft, surface, runway_class,
     end1_designator, end1_latitude, end1_longitude, end1_heading, end1_approach_lighting, end1_elevation_msl,
     end2_designator, end2_latitude, end2_longitude, end2_heading, end2_approach_lighting, end2_elevation_msl,
     true_heading)
-  SELECT new_base_id, runway_id, length_ft, width_ft, surface_type, runway_class,
+  SELECT new_base_id, runway_id, length_ft, width_ft, surface, runway_class,
     end1_designator, end1_latitude, end1_longitude, end1_heading, end1_approach_lighting, end1_elevation_msl,
     end2_designator, end2_latitude, end2_longitude, end2_heading, end2_approach_lighting, end2_elevation_msl,
     true_heading
@@ -60,10 +59,7 @@ BEGIN
   SELECT new_base_id, area_name, sort_order
   FROM base_areas WHERE base_id = src_base_id;
 
-  -- ── 5. CE shops ──
-  INSERT INTO base_ce_shops (base_id, shop_name, sort_order)
-  SELECT new_base_id, shop_name, sort_order
-  FROM base_ce_shops WHERE base_id = src_base_id;
+  -- ── 5. CE shops — stored as ce_shops TEXT[] on bases, already copied above ──
 
   -- ── 6. ARFF aircraft ──
   INSERT INTO base_arff_aircraft (base_id, aircraft_name, sort_order)
@@ -78,33 +74,23 @@ BEGIN
   FROM base_taxiways WHERE base_id = src_base_id;
 
   -- ── 8. Base facilities ──
-  INSERT INTO base_facilities (base_id, facility_number, facility_name)
-  SELECT new_base_id, facility_number, facility_name
+  INSERT INTO base_facilities (base_id, facility_number, description, sort_order)
+  SELECT new_base_id, facility_number, description, sort_order
   FROM base_facilities WHERE base_id = src_base_id;
 
   -- ── 9. Wildlife species ──
-  INSERT INTO base_wildlife_species (base_id, common_name, scientific_name, is_favorite)
-  SELECT new_base_id, common_name, scientific_name, is_favorite
+  INSERT INTO base_wildlife_species (base_id, species_common, is_favorite)
+  SELECT new_base_id, species_common, is_favorite
   FROM base_wildlife_species WHERE base_id = src_base_id;
 
-  -- ── 10. Inspection templates (3-level hierarchy) ──
-  -- Use temp tables to map old IDs → new IDs
+  -- ── 10. Inspection templates (3-level hierarchy with ID mapping) ──
   CREATE TEMP TABLE _template_map (old_id UUID, new_id UUID) ON COMMIT DROP;
   CREATE TEMP TABLE _section_map (old_id UUID, new_id UUID) ON COMMIT DROP;
 
   -- Templates
-  FOR r IN SELECT * FROM base_inspection_templates WHERE base_id = src_base_id LOOP
-    INSERT INTO base_inspection_templates (base_id, template_type)
-    VALUES (new_base_id, r.template_type)
-    RETURNING id INTO STRICT r.id;
-    -- r.id is now the new ID; we need old ID too
-  END LOOP;
-
-  -- Actually, let's do this properly with explicit mapping
-  TRUNCATE _template_map;
   INSERT INTO _template_map (old_id, new_id)
-  SELECT old.id, gen_random_uuid()
-  FROM base_inspection_templates old WHERE old.base_id = src_base_id;
+  SELECT id, gen_random_uuid()
+  FROM base_inspection_templates WHERE base_id = src_base_id;
 
   INSERT INTO base_inspection_templates (id, base_id, template_type)
   SELECT m.new_id, new_base_id, t.template_type
@@ -124,9 +110,9 @@ BEGIN
   JOIN _template_map tm ON tm.old_id = s.template_id
   JOIN _section_map sm ON sm.old_id = s.id;
 
-  -- Items
-  INSERT INTO base_inspection_items (section_id, item_id, label, sort_order)
-  SELECT sm.new_id, i.item_id, i.label, i.sort_order
+  -- Items (item_key, item_number, item_text — NOT item_id/label)
+  INSERT INTO base_inspection_items (section_id, item_key, item_number, item_text, item_type, sort_order)
+  SELECT sm.new_id, i.item_key, i.item_number, i.item_text, i.item_type, i.sort_order
   FROM base_inspection_items i
   JOIN _section_map sm ON sm.old_id = i.section_id;
 
@@ -142,7 +128,7 @@ BEGIN
   FROM lighting_systems ls
   JOIN _system_map sm ON sm.old_id = ls.id;
 
-  -- Components
+  -- Components (requires_notam, requires_system_shutoff — NOT action_*)
   INSERT INTO _component_map (old_id, new_id)
   SELECT c.id, gen_random_uuid()
   FROM lighting_system_components c
@@ -150,10 +136,12 @@ BEGIN
 
   INSERT INTO lighting_system_components (id, system_id, component_type, label, total_count,
     allowable_outage_pct, allowable_outage_count, allowable_outage_consecutive, allowable_no_adjacent,
-    action_maintenance, action_notam, action_close_runway, notes)
+    requires_notam, requires_ce_notification, requires_system_shutoff, requires_terps_notification,
+    is_zero_tolerance, allowable_outage_text, q_code, notam_text_template, sort_order)
   SELECT cm.new_id, sm.new_id, c.component_type, c.label, c.total_count,
     c.allowable_outage_pct, c.allowable_outage_count, c.allowable_outage_consecutive, c.allowable_no_adjacent,
-    c.action_maintenance, c.action_notam, c.action_close_runway, c.notes
+    c.requires_notam, c.requires_ce_notification, c.requires_system_shutoff, c.requires_terps_notification,
+    c.is_zero_tolerance, c.allowable_outage_text, c.q_code, c.notam_text_template, c.sort_order
   FROM lighting_system_components c
   JOIN _system_map sm ON sm.old_id = c.system_id
   JOIN _component_map cm ON cm.old_id = c.id;
@@ -170,7 +158,7 @@ BEGIN
     system_component_id)
   SELECT fm.new_id, new_base_id, f.feature_type, f.longitude, f.latitude,
     f.rotation, f.layer, f.block, f.label, f.notes, f.source, f.status, f.status_changed_at,
-    cm.new_id  -- mapped component ID (NULL if no component)
+    cm.new_id
   FROM infrastructure_features f
   JOIN _feature_map fm ON fm.old_id = f.id
   LEFT JOIN _component_map cm ON cm.old_id = f.system_component_id
@@ -199,28 +187,33 @@ BEGIN
   FROM shift_checklist_items WHERE base_id = src_base_id;
 
   -- ── 15. Inspection item → system links ──
-  -- Map new items to new systems
   INSERT INTO inspection_item_system_links (item_id, system_id)
   SELECT new_items.id, sm.new_id
   FROM inspection_item_system_links isl
   JOIN base_inspection_items old_items ON old_items.id = isl.item_id
   JOIN _section_map secm ON secm.old_id = old_items.section_id
   JOIN base_inspection_items new_items ON new_items.section_id = secm.new_id
-    AND new_items.item_id = old_items.item_id
+    AND new_items.item_key = old_items.item_key
   JOIN _system_map sm ON sm.old_id = isl.system_id;
 
   -- ── 16. Seed airfield status row ──
-  INSERT INTO airfield_status (base_id, advisory_level, advisory_text, runway_status, bwc, rsc, rcr)
-  SELECT new_base_id, advisory_level, advisory_text, runway_status, bwc, rsc, rcr
+  INSERT INTO airfield_status (base_id, advisory_type, advisory_text, runway_status)
+  SELECT new_base_id, advisory_type, advisory_text, runway_status
   FROM airfield_status WHERE base_id = src_base_id
   LIMIT 1;
 
+  -- If no source row exists, create a default
+  IF NOT FOUND THEN
+    INSERT INTO airfield_status (base_id, runway_status) VALUES (new_base_id, 'open');
+  END IF;
+
   -- ── 17. Copy recent discrepancies (last 20) ──
+  -- Use 'DEMO-' prefix on display_id to avoid unique constraint conflicts
   INSERT INTO discrepancies (base_id, display_id, title, description, type, status,
-    current_status, severity, location, area, work_order_number, shop, facility_number,
+    current_status, severity, location_text, work_order_number, assigned_shop, facility_number,
     reported_by, created_at)
-  SELECT new_base_id, display_id, title, description, type, status,
-    current_status, severity, location, area, work_order_number, shop, facility_number,
+  SELECT new_base_id, 'DEMO-' || display_id, title, description, type, status,
+    current_status, severity, location_text, work_order_number, assigned_shop, facility_number,
     demo_user_id, created_at
   FROM discrepancies
   WHERE base_id = src_base_id
