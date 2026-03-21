@@ -849,12 +849,6 @@ export default function DiscrepanciesPage() {
                     <span style={{ fontWeight: 600, color: 'var(--color-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                       {d.title}
                     </span>
-                    <StatusBadge status={d.status} />
-                    <span style={{ color: 'var(--color-text-3)', flexShrink: 0 }}>{d.location_text}</span>
-                    <span style={{ color: 'var(--color-text-3)', flexShrink: 0 }}>{d.assigned_shop || 'Unassigned'}</span>
-                    <span style={{ color: days > 30 ? 'var(--color-danger)' : 'var(--color-text-3)', fontWeight: days > 30 ? 700 : 400, flexShrink: 0 }}>
-                      {days}d
-                    </span>
                   </Link>
                   {!usingDemo && !isCes && (
                     <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
