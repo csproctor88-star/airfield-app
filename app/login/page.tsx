@@ -584,6 +584,59 @@ export default function LoginPage() {
           </div>
         </div>
 
+        {/* Demo Access */}
+        {mode === 'signin' && (
+          <div style={{
+            marginTop: 12, padding: '14px 20px',
+            background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--color-border)',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 8 }}>
+              Want to explore the app first?
+            </div>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={async () => {
+                setError(null)
+                setSuccess(null)
+                setLoading(true)
+                try {
+                  const supabase = createClient()
+                  if (!supabase) { router.push('/'); return }
+                  const { data, error: authErr } = await supabase.auth.signInWithPassword({
+                    email: 'demo@glidepathops.com',
+                    password: 'DemoGlidepath2026!',
+                  })
+                  if (authErr) {
+                    setError('Demo login unavailable. Please try again later.')
+                    return
+                  }
+                  if (data?.user) {
+                    await supabase.from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', data.user.id)
+                  }
+                  router.push('/')
+                  router.refresh()
+                } catch {
+                  setError('Demo login unavailable. Please try again later.')
+                } finally {
+                  setLoading(false)
+                }
+              }}
+              style={{
+                width: '100%', padding: '10px 16px', borderRadius: 'var(--radius-md)',
+                background: 'transparent', border: '1px solid var(--color-cyan)44',
+                color: 'var(--color-cyan)', fontSize: 'var(--fs-base)', fontWeight: 600,
+                cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.7 : 1,
+                fontFamily: 'inherit',
+              }}
+            >
+              {loading ? 'Signing in...' : 'Try Demo (Read-Only)'}
+            </button>
+          </div>
+        )}
+
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: 24 }}>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-4)' }}>
