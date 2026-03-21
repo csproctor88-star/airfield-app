@@ -150,7 +150,9 @@ export function SidebarNav() {
 
   function isActive(href: string) {
     if (href === '/') return pathname === '/'
-    return pathname.startsWith(href)
+    // Exact match or pathname starts with href followed by /
+    // This prevents /obstructions from matching /obstructions/history
+    return pathname === href || pathname.startsWith(href + '/')
   }
 
   function toggleGroup(label: string) {
