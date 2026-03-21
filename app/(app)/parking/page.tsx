@@ -357,7 +357,7 @@ export default function ParkingPage() {
   const [aircraftCategoryFilter, setAircraftCategoryFilter] = useState<'all' | 'military' | 'commercial'>('all')
   const [editingTaxilane, setEditingTaxilane] = useState<ParkingTaxilane | null>(null)
   const [editingBoundary, setEditingBoundary] = useState<ParkingApronBoundary | null>(null)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [clearanceFilter, setClearanceFilter] = useState<'all' | 'violations' | 'warnings' | 'ok'>('all')
   const [favoriteAircraft, setFavoriteAircraft] = useState<string[]>(() => {
@@ -1749,7 +1749,7 @@ export default function ParkingPage() {
   // Resize map when sidebar collapses/expands or fullscreen toggles
   useEffect(() => {
     setTimeout(() => map.current?.resize(), 200)
-  }, [sidebarCollapsed, isFullscreen])
+  }, [isFullscreen])
 
   // ── Plan actions ──
 
@@ -3220,18 +3220,7 @@ export default function ParkingPage() {
       display: 'flex', height: isFullscreen ? '100vh' : 'calc(100vh - 60px)', overflow: 'hidden', background: 'var(--color-bg)',
       ...(isFullscreen ? { position: 'fixed', inset: 0, zIndex: 9999 } : {}),
     }}>
-      {/* ── Desktop Left Sidebar ── */}
-      {!isFullscreen && !isMobile && (
-      <div style={{
-        width: sidebarCollapsed ? 0 : 320, flexShrink: 0, display: 'flex', flexDirection: 'column',
-        borderRight: sidebarCollapsed ? 'none' : '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
-        overflow: 'hidden', transition: 'width 0.15s ease',
-      }}>
-        {sidebarContent()}
-      </div>
-      )}
-
-      {/* ── Map + overlay area ── */}
+      {/* ── Map + overlay area (full width) ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Placement mode indicator — above map */}
         {(placingAircraft || placingObstacle || drawingLineObsId || drawingTaxilaneId || drawingBoundaryId || drawingObsType) && (
@@ -3285,6 +3274,18 @@ export default function ParkingPage() {
 
         <div style={{ flex: 1, minHeight: 0, position: 'relative', paddingBottom: isMobile && !isFullscreen ? 48 : 0 }}>
           <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+          {/* ── Floating panel — top right, desktop only ── */}
+          {!isMobile && !sidebarCollapsed && (
+            <div style={{
+              position: 'absolute', top: 10, right: 10, zIndex: 10,
+              width: 340, maxHeight: 'calc(100vh - 140px)',
+              display: 'flex', flexDirection: 'column',
+              background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+              borderRadius: 8, boxShadow: '0 4px 24px rgba(0,0,0,0.5)', overflow: 'hidden',
+            }}>
+              {sidebarContent()}
+            </div>
+          )}
           {/* Ruler readout — bottom left when active */}
           {ruler.active && ruler.points.length >= 2 && (
             <div style={{
@@ -3300,15 +3301,16 @@ export default function ParkingPage() {
           )}
           {/* Map controls — top left */}
           <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 5, display: 'flex', gap: 4 }}>
-            {!isFullscreen && !isMobile && (
+            {!isMobile && (
               <button
                 onClick={() => setSidebarCollapsed(c => !c)}
                 title={sidebarCollapsed ? 'Show panel' : 'Hide panel'}
                 style={{
                   padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
-                  background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-                  color: 'var(--color-text-primary)', cursor: 'pointer',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                  background: sidebarCollapsed ? 'var(--color-bg-surface)' : 'var(--color-cyan)11',
+                  border: `1px solid ${sidebarCollapsed ? 'var(--color-border)' : 'var(--color-cyan)44'}`,
+                  color: sidebarCollapsed ? 'var(--color-text-primary)' : 'var(--color-cyan)',
+                  cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
                 }}
               >
                 {sidebarCollapsed ? '\u25B6 Panel' : '\u25C0 Hide'}
@@ -3373,7 +3375,7 @@ export default function ParkingPage() {
           </div>
 
           {/* Floating toolbar — visible when sidebar is hidden, fullscreen, or mobile */}
-          {(sidebarCollapsed || isFullscreen || isMobile) && selectedPlanId && (
+          {(sidebarCollapsed || isMobile) && selectedPlanId && (
             <div style={{
               position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 5,
               display: 'flex', gap: 4, padding: '6px 10px', borderRadius: 6,
@@ -3446,7 +3448,7 @@ export default function ParkingPage() {
           )}
 
           {/* Violation summary — bottom right when panel hidden or fullscreen (desktop only) */}
-          {!isMobile && (sidebarCollapsed || isFullscreen) && (violations.length > 0 || warnings.length > 0) && (
+          {!isMobile && sidebarCollapsed && (violations.length > 0 || warnings.length > 0) && (
             <div style={{
               position: 'absolute', bottom: 24, right: 10, zIndex: 5,
               padding: '6px 12px', borderRadius: 6,
