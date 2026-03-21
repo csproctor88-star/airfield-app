@@ -153,8 +153,8 @@ export default function WildlifePage() {
           <button
             onClick={() => setShowSightingForm(true)}
             style={{
-              padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: '#10B981', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-base)',
+              padding: '8px 14px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer',
+              background: 'var(--color-success)', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-base)',
             }}
           >
             + Sighting
@@ -162,8 +162,8 @@ export default function WildlifePage() {
           <button
             onClick={() => setShowStrikeForm(true)}
             style={{
-              padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: '#EF4444', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-base)',
+              padding: '8px 14px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer',
+              background: 'var(--color-danger)', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-base)',
             }}
           >
             + Strike
@@ -247,7 +247,7 @@ export default function WildlifePage() {
               value={filterType}
               onChange={e => setFilterType(e.target.value as EntryType)}
               style={{
-                padding: '6px 10px', borderRadius: 6,
+                padding: '6px 10px', borderRadius: 'var(--radius-sm)',
                 border: '1px solid var(--color-border)',
                 background: 'var(--color-bg-surface)', color: 'var(--color-text)',
                 fontSize: 'var(--fs-base)',
@@ -261,7 +261,7 @@ export default function WildlifePage() {
               value={filterDays}
               onChange={e => setFilterDays(Number(e.target.value))}
               style={{
-                padding: '6px 10px', borderRadius: 6,
+                padding: '6px 10px', borderRadius: 'var(--radius-sm)',
                 border: '1px solid var(--color-border)',
                 background: 'var(--color-bg-surface)', color: 'var(--color-text)',
                 fontSize: 'var(--fs-base)',
@@ -280,7 +280,7 @@ export default function WildlifePage() {
           ) : timeline.length === 0 ? (
             <div style={{
               textAlign: 'center', padding: 40, color: 'var(--color-text-3)',
-              background: 'var(--color-bg-surface)', borderRadius: 12,
+              background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-lg)',
               border: '1px solid var(--color-border)',
             }}>
               <div style={{ fontSize: 'var(--fs-3xl)', marginBottom: 8 }}>🦅</div>
@@ -289,7 +289,7 @@ export default function WildlifePage() {
             </div>
           ) : (
             <div style={{
-              background: 'var(--color-bg-surface)', borderRadius: 12,
+              background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-lg)',
               border: '1px solid var(--color-border)', overflow: 'hidden',
             }}>
               {timeline.map(entry => {
@@ -311,7 +311,7 @@ export default function WildlifePage() {
                   >
                     {/* Type badge */}
                     <div style={{
-                      width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+                      width: 36, height: 36, borderRadius: 'var(--radius-md)', flexShrink: 0,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 18,
                       background: isSighting ? '#10B98115' : '#EF444415',
@@ -327,15 +327,15 @@ export default function WildlifePage() {
                           {entry.count}x {entry.species}
                         </span>
                         <span style={{
-                          fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '1px 6px', borderRadius: 4,
+                          fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-xs)',
                           background: isSighting ? '#10B98120' : '#EF444420',
-                          color: isSighting ? '#10B981' : '#EF4444',
+                          color: isSighting ? 'var(--color-success)' : 'var(--color-danger)',
                         }}>
                           {isSighting ? 'SIGHTING' : 'STRIKE'}
                         </span>
                         {actionLabel && (
                           <span style={{
-                            fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '1px 6px', borderRadius: 4,
+                            fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-xs)',
                             background: '#F59E0B20', color: '#F59E0B',
                           }}>
                             {actionLabel}
@@ -343,7 +343,7 @@ export default function WildlifePage() {
                         )}
                         {damageConfig && entry.damage !== 'none' && (
                           <span style={{
-                            fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '1px 6px', borderRadius: 4,
+                            fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-xs)',
                             background: `${damageConfig.color}20`, color: damageConfig.color,
                           }}>
                             DMG: {damageConfig.label}
@@ -367,10 +367,8 @@ export default function WildlifePage() {
                       <button
                         onClick={() => isSighting ? handleEditSighting(entry.id) : handleEditStrike(entry.id)}
                         title="Edit"
-                        style={{
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          color: 'var(--color-text-4)', fontSize: 14, padding: 4,
-                        }}
+                        className="btn-ghost"
+                        style={{ color: 'var(--color-text-4)', fontSize: 14, padding: 4 }}
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -380,10 +378,8 @@ export default function WildlifePage() {
                       <button
                         onClick={() => isSighting ? handleDeleteSighting(entry.id) : handleDeleteStrike(entry.id)}
                         title="Delete"
-                        style={{
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          color: 'var(--color-text-4)', fontSize: 16, padding: 4,
-                        }}
+                        className="btn-ghost"
+                        style={{ color: 'var(--color-text-4)', fontSize: 16, padding: 4 }}
                       >
                         ×
                       </button>

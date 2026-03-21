@@ -181,7 +181,7 @@ export default function DiscrepancyReportPage() {
         style={{
           width: '100%', padding: '12px 0', borderRadius: 8, marginBottom: 14,
           border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)',
-          color: '#22C55E', fontSize: 'var(--fs-md)', fontWeight: 700,
+          color: 'var(--color-status-pass)', fontSize: 'var(--fs-md)', fontWeight: 700,
           cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
           opacity: exporting ? 0.7 : 1,
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,

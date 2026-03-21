@@ -138,7 +138,7 @@ export default function LightingReportPage() {
           <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Airfield Lighting Report</div>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
-          <Loader2 size={32} color="#22C55E" style={{ animation: 'spin 1s linear infinite' }} />
+          <Loader2 size={32} color="var(--color-status-pass)" style={{ animation: 'spin 1s linear infinite' }} />
           <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', marginTop: 12 }}>Fetching lighting system data...</div>
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
@@ -184,13 +184,13 @@ export default function LightingReportPage() {
           <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 600 }}>TOTAL</div>
         </div>
         <div className="card" style={{ flex: 1, padding: '10px 14px', textAlign: 'center' }}>
-          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: data.totalInoperative > 0 ? '#EF4444' : '#22C55E' }}>
+          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: data.totalInoperative > 0 ? 'var(--color-danger)' : 'var(--color-status-pass)' }}>
             {data.totalInoperative}
           </div>
           <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 600 }}>INOP ({inopPct}%)</div>
         </div>
         <div className="card" style={{ flex: 1, padding: '10px 14px', textAlign: 'center' }}>
-          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: outageCount > 0 ? '#F97316' : '#22C55E' }}>
+          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: outageCount > 0 ? 'var(--color-orange)' : 'var(--color-status-pass)' }}>
             {outageCount}
           </div>
           <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 600 }}>SYSTEMS W/ OUTAGES</div>
@@ -261,7 +261,7 @@ export default function LightingReportPage() {
                   </span>
                   <span style={{
                     textAlign: 'center', fontWeight: 700,
-                    color: h.inoperativeFeatures > 0 ? '#EF4444' : 'var(--color-text-3)',
+                    color: h.inoperativeFeatures > 0 ? 'var(--color-danger)' : 'var(--color-text-3)',
                   }}>
                     {h.inoperativeFeatures}
                   </span>
@@ -285,14 +285,14 @@ export default function LightingReportPage() {
                         <span style={{ color: 'var(--color-text-2)' }}>{c.componentLabel}</span>
                         <span style={{ display: 'flex', gap: 12, flexShrink: 0 }}>
                           <span style={{
-                            color: c.inoperativeCount > 0 ? '#EF4444' : 'var(--color-text-3)',
+                            color: c.inoperativeCount > 0 ? 'var(--color-danger)' : 'var(--color-text-3)',
                             fontWeight: c.inoperativeCount > 0 ? 700 : 400,
                           }}>
                             {c.inoperativeCount}/{c.totalCount}
                           </span>
                           <span style={{
                             fontSize: 'var(--fs-2xs)', fontWeight: 600,
-                            color: c.isExceeded ? '#EF4444' : c.isApproaching ? '#FBBF24' : '#22C55E',
+                            color: c.isExceeded ? 'var(--color-danger)' : c.isApproaching ? 'var(--color-warning)' : 'var(--color-status-pass)',
                           }}>
                             {c.isExceeded ? 'EXCEEDED' : c.isApproaching ? 'APPROACHING' : 'OK'}
                           </span>
@@ -326,7 +326,7 @@ export default function LightingReportPage() {
               <span style={{ color: 'var(--color-text-1)' }}>{formatFeatureType(type)}</span>
               <span style={{ display: 'flex', gap: 12, flexShrink: 0 }}>
                 {counts.inop > 0 && (
-                  <span style={{ color: '#EF4444', fontWeight: 700, fontSize: 'var(--fs-xs)' }}>
+                  <span style={{ color: 'var(--color-danger)', fontWeight: 700, fontSize: 'var(--fs-xs)' }}>
                     {counts.inop} inop
                   </span>
                 )}
@@ -357,7 +357,7 @@ export default function LightingReportPage() {
           <ExportRow
             label="Outages Only"
             desc={`${outageCount} system${outageCount !== 1 ? 's' : ''} with inoperative features`}
-            color="#EF4444"
+            color="var(--color-danger)"
             onPdf={() => handleExportPdf('outages')}
             onEmail={() => handleEmailPdf('outages')}
             exporting={exporting}

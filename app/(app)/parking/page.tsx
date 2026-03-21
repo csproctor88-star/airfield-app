@@ -2346,7 +2346,7 @@ export default function ParkingPage() {
           </span>
         )}
         {badge && (
-          <span style={{ fontSize: 10, padding: '0 5px', borderRadius: 8, marginLeft: 'auto', background: `${color || '#EF4444'}22`, color: color || '#EF4444', fontWeight: 700 }}>
+          <span style={{ fontSize: 10, padding: '0 5px', borderRadius: 8, marginLeft: 'auto', background: `${color || 'var(--color-danger)'}22`, color: color || 'var(--color-danger)', fontWeight: 700 }}>
             {badge}
           </span>
         )}
@@ -2380,7 +2380,7 @@ export default function ParkingPage() {
               <span style={{
                 fontSize: 10, padding: '1px 6px', borderRadius: 3,
                 background: selectedPlan.is_active ? '#22C55E22' : 'var(--color-bg)',
-                color: selectedPlan.is_active ? '#22C55E' : 'var(--color-text-secondary)',
+                color: selectedPlan.is_active ? 'var(--color-success)' : 'var(--color-text-secondary)',
                 border: `1px solid ${selectedPlan.is_active ? '#22C55E44' : 'var(--color-border)'}`,
               }}>
                 {selectedPlan.is_active ? 'Active' : 'Draft'}
@@ -2438,7 +2438,7 @@ export default function ParkingPage() {
               onClick={() => setShowNewPlan(true)}
               style={{
                 padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                background: 'var(--color-cyan)', color: '#000', border: 'none',
+                background: 'var(--color-cyan)', color: '#fff', border: 'none',
                 cursor: 'pointer', fontWeight: 600,
               }}
             >
@@ -2448,9 +2448,9 @@ export default function ParkingPage() {
           {selectedPlan && (
             <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
               {!selectedPlan.is_active && (
-                <button onClick={handleSetActive} style={{ flex: 1, padding: '3px 6px', borderRadius: 3, background: '#22C55E22', border: '1px solid #22C55E44', color: '#22C55E', cursor: 'pointer', fontSize: 10 }}>Set Active</button>
+                <button onClick={handleSetActive} style={{ flex: 1, padding: '3px 6px', borderRadius: 3, background: '#22C55E22', border: '1px solid #22C55E44', color: 'var(--color-success)', cursor: 'pointer', fontSize: 10 }}>Set Active</button>
               )}
-              <button onClick={handleDeletePlan} style={{ padding: '3px 6px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 10 }}>Delete</button>
+              <button onClick={handleDeletePlan} style={{ padding: '3px 6px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 10 }}>Delete</button>
             </div>
           )}
         </div>
@@ -2459,8 +2459,8 @@ export default function ParkingPage() {
         <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
           {([
             { key: 'aircraft' as const, label: 'Aircraft', count: spots.length, color: 'var(--color-cyan)' },
-            { key: 'environment' as const, label: 'Environment', count: obstacles.length + taxilanes.length + apronBoundaries.length, color: '#F97316' },
-            { key: 'clearance' as const, label: 'Clearance', count: violations.length + warnings.length, color: violations.length > 0 ? '#EF4444' : '#F59E0B' },
+            { key: 'environment' as const, label: 'Environment', count: obstacles.length + taxilanes.length + apronBoundaries.length, color: 'var(--color-orange)' },
+            { key: 'clearance' as const, label: 'Clearance', count: violations.length + warnings.length, color: violations.length > 0 ? 'var(--color-danger)' : 'var(--color-warning)' },
             { key: 'settings' as const, label: 'Settings', color: 'var(--color-text-secondary)' },
           ] as const).map(tab => (
             <button
@@ -2566,7 +2566,7 @@ export default function ParkingPage() {
                           {groupSpots.length}
                         </span>
                         {groupViolations.length > 0 && (
-                          <span style={{ color: '#EF4444', fontSize: 11, fontWeight: 700 }}>!</span>
+                          <span style={{ color: 'var(--color-danger)', fontSize: 11, fontWeight: 700 }}>!</span>
                         )}
                       </div>
 
@@ -2590,7 +2590,7 @@ export default function ParkingPage() {
                                 padding: isMobile ? '8px 12px 8px 24px' : '3px 8px 3px 20px', cursor: 'pointer',
                                 background: isEditing ? 'var(--color-bg)' : 'transparent',
                                 borderBottom: '1px solid var(--color-border)',
-                                borderLeft: spotViolations.length > 0 ? '3px solid #EF4444' : '3px solid transparent',
+                                borderLeft: spotViolations.length > 0 ? '3px solid var(--color-danger)' : '3px solid transparent',
                               }}
                             >
                               <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 500, color: isEditing ? 'var(--color-cyan)' : 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
@@ -2605,7 +2605,7 @@ export default function ParkingPage() {
                                 {clearance}ft &middot; {s.heading_deg}°
                               </span>
                               {spotViolations.length > 0 && (
-                                <span style={{ color: '#EF4444', fontSize: 10, fontWeight: 700 }}>!</span>
+                                <span style={{ color: 'var(--color-danger)', fontSize: 10, fontWeight: 700 }}>!</span>
                               )}
                             </div>
 
@@ -2660,7 +2660,7 @@ export default function ParkingPage() {
                                 <div style={{ display: 'flex', gap: 4 }}>
                                   <button onClick={() => map.current?.flyTo({ center: [s.longitude, s.latitude], zoom: 19 })} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
                                   <button onClick={() => handleDuplicateSpot(s)} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-cyan)11', border: '1px solid var(--color-cyan)44', color: 'var(--color-cyan)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Duplicate</button>
-                                  <button onClick={() => handleDeleteSpot(s.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Remove</button>
+                                  <button onClick={() => handleDeleteSpot(s.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Remove</button>
                                 </div>
                               </div>
                             )}
@@ -2688,7 +2688,7 @@ export default function ParkingPage() {
                     padding: isMobile ? '8px 12px' : '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
                     background: obstaclesLocked ? '#F9731622' : '#22C55E22',
                     border: `1px solid ${obstaclesLocked ? '#F9731644' : '#22C55E44'}`,
-                    color: obstaclesLocked ? '#F97316' : '#22C55E',
+                    color: obstaclesLocked ? 'var(--color-orange)' : 'var(--color-success)',
                     cursor: 'pointer', flex: 1,
                   }}
                 >
@@ -2722,8 +2722,8 @@ export default function ParkingPage() {
                     style={{
                       padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                       background: placingObstacle === type ? '#F5730622' : 'var(--color-bg)',
-                      border: `1px solid ${placingObstacle === type ? '#F97316' : 'var(--color-border)'}`,
-                      color: placingObstacle === type ? '#F97316' : 'var(--color-text-secondary)',
+                      border: `1px solid ${placingObstacle === type ? 'var(--color-orange)' : 'var(--color-border)'}`,
+                      color: placingObstacle === type ? 'var(--color-orange)' : 'var(--color-text-secondary)',
                       cursor: 'pointer', textTransform: 'capitalize',
                     }}
                   >
@@ -2749,12 +2749,12 @@ export default function ParkingPage() {
                       style={{
                         display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px',
                         cursor: 'pointer', background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)',
-                        fontSize: 'var(--fs-xs)', fontWeight: 600, color: '#F97316', textTransform: 'capitalize',
+                        fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-orange)', textTransform: 'capitalize',
                       }}
                     >
                       <span style={{ fontSize: 10 }}>{groupOpen ? '\u25BC' : '\u25B6'}</span>
                       {obsType}s
-                      <span style={{ fontSize: 10, padding: '0 5px', borderRadius: 8, background: '#F9731622', color: '#F97316' }}>{group.length}</span>
+                      <span style={{ fontSize: 10, padding: '0 5px', borderRadius: 8, background: '#F9731622', color: 'var(--color-orange)' }}>{group.length}</span>
                     </div>
                     {groupOpen && group.map(obs => {
                 const isEditing = editingObstacle?.id === obs.id
@@ -2829,7 +2829,7 @@ export default function ParkingPage() {
                         )}
                         <div style={{ display: 'flex', gap: 4 }}>
                           <button onClick={() => map.current?.flyTo({ center: [obs.longitude, obs.latitude], zoom: 17 })} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
-                          <button onClick={() => handleDeleteObstacle(obs.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
+                          <button onClick={() => handleDeleteObstacle(obs.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
                         </div>
                       </div>
                     )}
@@ -2853,7 +2853,7 @@ export default function ParkingPage() {
                   style={{
                     padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                     background: '#3B82F611', border: '1px dashed #3B82F6',
-                    color: '#3B82F6', cursor: selectedPlanId ? 'pointer' : 'not-allowed',
+                    color: 'var(--color-status-inwork)', cursor: selectedPlanId ? 'pointer' : 'not-allowed',
                     opacity: selectedPlanId ? 1 : 0.5,
                   }}
                 >
@@ -2865,7 +2865,7 @@ export default function ParkingPage() {
                   style={{
                     padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                     background: '#8B5CF611', border: '1px dashed #8B5CF6',
-                    color: '#8B5CF6', cursor: selectedPlanId ? 'pointer' : 'not-allowed',
+                    color: 'var(--color-purple)', cursor: selectedPlanId ? 'pointer' : 'not-allowed',
                     opacity: selectedPlanId ? 1 : 0.5,
                   }}
                 >
@@ -2877,7 +2877,7 @@ export default function ParkingPage() {
                   style={{
                     padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                     background: '#10B98111', border: '1px dashed #10B981',
-                    color: '#10B981', cursor: selectedPlanId ? 'pointer' : 'not-allowed',
+                    color: 'var(--color-success)', cursor: selectedPlanId ? 'pointer' : 'not-allowed',
                     opacity: selectedPlanId ? 1 : 0.5,
                   }}
                 >
@@ -2907,13 +2907,13 @@ export default function ParkingPage() {
                         padding: isMobile ? '10px 12px' : '4px 8px', cursor: 'pointer',
                         background: isEditing ? 'var(--color-bg)' : 'transparent',
                         borderBottom: '1px solid var(--color-border)',
-                        borderLeft: `3px solid ${tlViolations.length > 0 ? '#EF4444' : tl.taxilane_type === 'peripheral' ? '#8B5CF6' : '#3B82F6'}`,
+                        borderLeft: `3px solid ${tlViolations.length > 0 ? 'var(--color-danger)' : tl.taxilane_type === 'peripheral' ? 'var(--color-purple)' : 'var(--color-status-inwork)'}`,
                       }}
                     >
                       <span style={{
                         fontSize: 10, padding: '1px 4px', borderRadius: 3,
                         background: tl.taxilane_type === 'peripheral' ? '#8B5CF622' : '#3B82F622',
-                        color: tl.taxilane_type === 'peripheral' ? '#8B5CF6' : '#3B82F6',
+                        color: tl.taxilane_type === 'peripheral' ? 'var(--color-purple)' : 'var(--color-status-inwork)',
                         textTransform: 'capitalize', flexShrink: 0,
                       }}>
                         {tl.taxilane_type}
@@ -2925,7 +2925,7 @@ export default function ParkingPage() {
                         {detail.ufc_item} &middot; {Math.round(halfWidth)}ft env
                       </span>
                       {tlViolations.length > 0 && (
-                        <span style={{ color: '#EF4444', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>!</span>
+                        <span style={{ color: 'var(--color-danger)', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>!</span>
                       )}
                       <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', flexShrink: 0 }}>{isEditing ? '\u25B2' : '\u25BC'}</span>
                     </div>
@@ -2967,13 +2967,13 @@ export default function ParkingPage() {
                           Envelope: 0.5 × {tl.design_wingspan_ft || 100}ft + {detail.clearance_ft}ft ({detail.ufc_item}) = {Math.round(halfWidth)}ft half-width
                         </div>
                         {tlViolations.length > 0 && (
-                          <div style={{ fontSize: 'var(--fs-xs)', color: '#EF4444', padding: '2px 0' }}>
+                          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-danger)', padding: '2px 0' }}>
                             {tlViolations.length} violation{tlViolations.length === 1 ? '' : 's'} in taxilane envelope
                           </div>
                         )}
                         <div style={{ display: 'flex', gap: 4 }}>
                           <button onClick={() => { if (tl.line_coords?.length > 0) map.current?.flyTo({ center: tl.line_coords[0] as [number, number], zoom: 17 }) }} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
-                          <button onClick={() => handleDeleteTaxilane(tl.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
+                          <button onClick={() => handleDeleteTaxilane(tl.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
                         </div>
                       </div>
                     )}
@@ -2983,12 +2983,12 @@ export default function ParkingPage() {
 
               {/* Apron boundary list */}
               {apronBoundaries.length > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', fontSize: 'var(--fs-xs)', color: '#10B981', fontWeight: 600, padding: '6px 8px 2px', marginTop: taxilanes.length > 0 ? 4 : 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', fontSize: 'var(--fs-xs)', color: 'var(--color-success)', fontWeight: 600, padding: '6px 8px 2px', marginTop: taxilanes.length > 0 ? 4 : 0 }}>
                   <span style={{ flex: 1 }}>Apron Boundaries</span>
                   <button
                     onClick={() => toggleLayerVisibility('boundaries')}
                     title={visibleLayers.boundaries ? 'Hide on map' : 'Show on map'}
-                    style={{ padding: '0 4px', border: 'none', cursor: 'pointer', background: 'transparent', fontSize: 12, color: visibleLayers.boundaries ? '#10B981' : 'var(--color-text-secondary)', opacity: visibleLayers.boundaries ? 1 : 0.4 }}
+                    style={{ padding: '0 4px', border: 'none', cursor: 'pointer', background: 'transparent', fontSize: 12, color: visibleLayers.boundaries ? 'var(--color-success)' : 'var(--color-text-secondary)', opacity: visibleLayers.boundaries ? 1 : 0.4 }}
                   >
                     {visibleLayers.boundaries ? '\u25C9' : '\u25CB'}
                   </button>
@@ -3005,12 +3005,12 @@ export default function ParkingPage() {
                         padding: isMobile ? '10px 12px' : '4px 8px', cursor: 'pointer',
                         background: isEditing ? 'var(--color-bg)' : 'transparent',
                         borderBottom: '1px solid var(--color-border)',
-                        borderLeft: '3px solid #10B981',
+                        borderLeft: '3px solid var(--color-success)',
                       }}
                     >
                       <span style={{
                         fontSize: 10, padding: '1px 4px', borderRadius: 3,
-                        background: '#10B98122', color: '#10B981', flexShrink: 0,
+                        background: '#10B98122', color: 'var(--color-success)', flexShrink: 0,
                       }}>
                         boundary
                       </span>
@@ -3034,7 +3034,7 @@ export default function ParkingPage() {
                         </label>
                         <div style={{ display: 'flex', gap: 4 }}>
                           <button onClick={() => { if (ab.polygon_coords?.length > 0) map.current?.flyTo({ center: ab.polygon_coords[0] as [number, number], zoom: 17 }) }} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
-                          <button onClick={() => handleDeleteBoundary(ab.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: '#EF4444', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
+                          <button onClick={() => handleDeleteBoundary(ab.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
                         </div>
                       </div>
                     )}
@@ -3073,7 +3073,7 @@ export default function ParkingPage() {
                         flex: 1, padding: '2px 4px', borderRadius: 3, fontSize: 10,
                         border: `1px solid ${clearanceFilter === f ? (f === 'violations' ? '#EF444444' : f === 'warnings' ? '#F59E0B44' : f === 'ok' ? '#22C55E44' : 'var(--color-border)') : 'var(--color-border)'}`,
                         background: clearanceFilter === f ? (f === 'violations' ? '#EF444422' : f === 'warnings' ? '#F59E0B22' : f === 'ok' ? '#22C55E22' : 'var(--color-bg)') : 'var(--color-bg)',
-                        color: clearanceFilter === f ? (f === 'violations' ? '#EF4444' : f === 'warnings' ? '#F59E0B' : f === 'ok' ? '#22C55E' : 'var(--color-text-primary)') : 'var(--color-text-secondary)',
+                        color: clearanceFilter === f ? (f === 'violations' ? 'var(--color-danger)' : f === 'warnings' ? 'var(--color-warning)' : f === 'ok' ? 'var(--color-success)' : 'var(--color-text-primary)') : 'var(--color-text-secondary)',
                         cursor: 'pointer', textTransform: 'capitalize',
                       }}
                     >
@@ -3111,9 +3111,9 @@ export default function ParkingPage() {
                   <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
                     {r.distance_ft.toFixed(1)}ft / {r.required_ft}ft
                   </span>
-                  {r.status === 'violation' && <span style={{ fontSize: 'var(--fs-xs)', color: '#EF4444', fontWeight: 600, flexShrink: 0 }}>VIOLATION</span>}
-                  {r.status === 'warning' && <span style={{ fontSize: 'var(--fs-xs)', color: '#F59E0B', fontWeight: 600, flexShrink: 0 }}>WARNING</span>}
-                  {r.status === 'ok' && <span style={{ fontSize: 'var(--fs-xs)', color: '#22C55E', flexShrink: 0 }}>OK</span>}
+                  {r.status === 'violation' && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-danger)', fontWeight: 600, flexShrink: 0 }}>VIOLATION</span>}
+                  {r.status === 'warning' && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-warning)', fontWeight: 600, flexShrink: 0 }}>WARNING</span>}
+                  {r.status === 'ok' && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-success)', flexShrink: 0 }}>OK</span>}
                   <span style={{ fontSize: 10, color: 'var(--color-text-tertiary, #6B7280)', whiteSpace: 'nowrap', flexShrink: 0 }}>
                     {r.ufc_item}
                   </span>
@@ -3149,7 +3149,7 @@ export default function ParkingPage() {
                     flex: 1, padding: isMobile ? '10px 8px' : '6px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                     background: planLocked ? '#EF444422' : '#22C55E22',
                     border: `1px solid ${planLocked ? '#EF444444' : '#22C55E44'}`,
-                    color: planLocked ? '#EF4444' : '#22C55E',
+                    color: planLocked ? 'var(--color-danger)' : 'var(--color-success)',
                     cursor: 'pointer', fontWeight: 600,
                   }}
                 >
@@ -3161,7 +3161,7 @@ export default function ParkingPage() {
                     flex: 1, padding: isMobile ? '10px 8px' : '6px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                     background: obstaclesLocked ? '#F9731622' : '#22C55E22',
                     border: `1px solid ${obstaclesLocked ? '#F9731644' : '#22C55E44'}`,
-                    color: obstaclesLocked ? '#F97316' : '#22C55E',
+                    color: obstaclesLocked ? 'var(--color-orange)' : 'var(--color-success)',
                     cursor: 'pointer', fontWeight: 600,
                   }}
                 >
@@ -3241,7 +3241,7 @@ export default function ParkingPage() {
             borderBottom: `1px solid ${drawingTaxilaneId ? (drawingTaxilaneType === 'peripheral' ? '#8B5CF644' : '#3B82F644') : drawingBoundaryId ? '#10B98144' : '#F59E0B44'}`,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             fontSize: 'var(--fs-sm)',
-            color: drawingTaxilaneId ? (drawingTaxilaneType === 'peripheral' ? '#8B5CF6' : '#3B82F6') : drawingBoundaryId ? '#10B981' : drawingObsType ? '#F97316' : '#F59E0B',
+            color: drawingTaxilaneId ? (drawingTaxilaneType === 'peripheral' ? 'var(--color-purple)' : 'var(--color-status-inwork)') : drawingBoundaryId ? 'var(--color-success)' : drawingObsType ? 'var(--color-orange)' : 'var(--color-warning)',
             flexShrink: 0,
           }}>
             <span>
@@ -3258,13 +3258,13 @@ export default function ParkingPage() {
             </span>
             <div style={{ display: 'flex', gap: 6 }}>
               {drawingTaxilaneId && (
-                <button onClick={handleFinishTaxilane} style={{ background: drawingTaxilaneType === 'peripheral' ? '#8B5CF6' : '#3B82F6', border: 'none', color: '#FFF', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 600, fontSize: 'var(--fs-xs)' }}>Finish</button>
+                <button onClick={handleFinishTaxilane} style={{ background: drawingTaxilaneType === 'peripheral' ? 'var(--color-purple)' : 'var(--color-status-inwork)', border: 'none', color: 'var(--color-text-1)', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 600, fontSize: 'var(--fs-xs)' }}>Finish</button>
               )}
               {drawingBoundaryId && (
-                <button onClick={handleFinishBoundary} style={{ background: '#10B981', border: 'none', color: '#FFF', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 600, fontSize: 'var(--fs-xs)' }}>Finish</button>
+                <button onClick={handleFinishBoundary} style={{ background: 'var(--color-success)', border: 'none', color: 'var(--color-text-1)', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 600, fontSize: 'var(--fs-xs)' }}>Finish</button>
               )}
               {drawingLineObsId && (
-                <button onClick={handleFinishLine} style={{ background: '#F97316', border: 'none', color: '#000', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 600, fontSize: 'var(--fs-xs)' }}>Finish</button>
+                <button onClick={handleFinishLine} style={{ background: 'var(--color-orange)', border: 'none', color: '#000', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 600, fontSize: 'var(--fs-xs)' }}>Finish</button>
               )}
               <button
                 onClick={() => {
@@ -3321,7 +3321,7 @@ export default function ParkingPage() {
                 padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
                 background: isFullscreen ? 'rgba(0,0,0,0.7)' : 'var(--color-bg-surface)',
                 border: `1px solid ${isFullscreen ? 'rgba(255,255,255,0.4)' : 'var(--color-border)'}`,
-                color: isFullscreen ? '#FFF' : 'var(--color-text-primary)',
+                color: isFullscreen ? 'var(--color-text-1)' : 'var(--color-text-primary)',
                 cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
               }}
             >
@@ -3397,8 +3397,8 @@ export default function ParkingPage() {
                   style={{
                     padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                     background: placingObstacle === type ? '#F9731622' : 'transparent',
-                    border: `1px solid ${placingObstacle === type ? '#F97316' : 'var(--color-border)'}`,
-                    color: placingObstacle === type ? '#F97316' : 'var(--color-text-secondary)',
+                    border: `1px solid ${placingObstacle === type ? 'var(--color-orange)' : 'var(--color-border)'}`,
+                    color: placingObstacle === type ? 'var(--color-orange)' : 'var(--color-text-secondary)',
                     cursor: 'pointer', textTransform: 'capitalize',
                   }}
                 >
@@ -3412,7 +3412,7 @@ export default function ParkingPage() {
                 style={{
                   padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                   background: '#3B82F611', border: '1px solid #3B82F644',
-                  color: '#3B82F6', cursor: 'pointer',
+                  color: 'var(--color-status-inwork)', cursor: 'pointer',
                 }}
               >
                 Taxilane
@@ -3423,7 +3423,7 @@ export default function ParkingPage() {
                 style={{
                   padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                   background: '#10B98111', border: '1px solid #10B98144',
-                  color: '#10B981', cursor: 'pointer',
+                  color: 'var(--color-success)', cursor: 'pointer',
                 }}
               >
                 Boundary
@@ -3436,7 +3436,7 @@ export default function ParkingPage() {
                   padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                   background: planLocked ? '#EF444422' : '#22C55E22',
                   border: `1px solid ${planLocked ? '#EF444444' : '#22C55E44'}`,
-                  color: planLocked ? '#EF4444' : '#22C55E',
+                  color: planLocked ? 'var(--color-danger)' : 'var(--color-success)',
                   cursor: 'pointer',
                 }}
               >
@@ -3454,8 +3454,8 @@ export default function ParkingPage() {
               boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
               display: 'flex', gap: 8, fontSize: 'var(--fs-xs)', fontWeight: 600,
             }}>
-              {violations.length > 0 && <span style={{ color: '#EF4444' }}>{violations.length} Violation{violations.length !== 1 ? 's' : ''}</span>}
-              {warnings.length > 0 && <span style={{ color: '#F59E0B' }}>{warnings.length} Warning{warnings.length !== 1 ? 's' : ''}</span>}
+              {violations.length > 0 && <span style={{ color: 'var(--color-danger)' }}>{violations.length} Violation{violations.length !== 1 ? 's' : ''}</span>}
+              {warnings.length > 0 && <span style={{ color: 'var(--color-warning)' }}>{warnings.length} Warning{warnings.length !== 1 ? 's' : ''}</span>}
             </div>
           )}
         </div>
@@ -3490,8 +3490,8 @@ export default function ParkingPage() {
               {selectedPlan?.plan_name || 'No Plan'}
             </span>
             <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>{spots.length} AC</span>
-            {violations.length > 0 && <span style={{ fontSize: 'var(--fs-xs)', color: '#EF4444', fontWeight: 600 }}>{violations.length} Viol</span>}
-            {warnings.length > 0 && <span style={{ fontSize: 'var(--fs-xs)', color: '#F59E0B', fontWeight: 600 }}>{warnings.length} Warn</span>}
+            {violations.length > 0 && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-danger)', fontWeight: 600 }}>{violations.length} Viol</span>}
+            {warnings.length > 0 && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-warning)', fontWeight: 600 }}>{warnings.length} Warn</span>}
             <span style={{ fontSize: 14, color: 'var(--color-text-secondary)', transform: sheetExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>&#9650;</span>
           </div>
           {/* Expandable content */}
@@ -3598,7 +3598,7 @@ export default function ParkingPage() {
                   Duplicate
                 </button>
                 <button onClick={() => { handleDeleteSpot(s.id); setContextMenuSpot(null); setEditingSpot(null) }}
-                  style={{ flex: 1, padding: '8px 0', border: 'none', background: 'transparent', color: '#EF4444', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit' }}
+                  style={{ flex: 1, padding: '8px 0', border: 'none', background: 'transparent', color: 'var(--color-danger)', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit' }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                   Remove
                 </button>
@@ -3612,10 +3612,7 @@ export default function ParkingPage() {
       {showAircraftPicker && (
         <div
           onClick={() => setShowAircraftPicker(false)}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
+          className="modal-overlay"
         >
           <div
             onClick={e => e.stopPropagation()}
@@ -3692,7 +3689,7 @@ export default function ParkingPage() {
                       title={isFav ? 'Remove from favorites' : 'Add to favorites'}
                       style={{
                         padding: '8px 4px 8px 12px', border: 'none', background: 'transparent',
-                        cursor: 'pointer', fontSize: 16, color: isFav ? '#F59E0B' : 'var(--color-text-secondary)',
+                        cursor: 'pointer', fontSize: 16, color: isFav ? 'var(--color-warning)' : 'var(--color-text-secondary)',
                         opacity: isFav ? 1 : 0.3, flexShrink: 0,
                       }}
                     >
@@ -3732,7 +3729,7 @@ export default function ParkingPage() {
                       <span style={{
                         fontSize: 10, padding: '1px 6px', borderRadius: 3,
                         background: ac.category === 'military' ? '#22C55E22' : '#3B82F622',
-                        color: ac.category === 'military' ? '#22C55E' : '#3B82F6',
+                        color: ac.category === 'military' ? 'var(--color-success)' : 'var(--color-status-inwork)',
                         textTransform: 'capitalize',
                       }}>
                         {ac.category}
@@ -3755,10 +3752,7 @@ export default function ParkingPage() {
       {showNewPlan && (
         <div
           onClick={() => setShowNewPlan(false)}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
+          className="modal-overlay"
         >
           <div
             onClick={e => e.stopPropagation()}

@@ -67,7 +67,7 @@ export function AcsiSection({
           <div style={{
             fontSize: 'var(--fs-lg)',
             fontWeight: 600,
-            color: allDone ? '#10B981' : 'var(--color-text-1)',
+            color: allDone ? 'var(--color-green)' : 'var(--color-text-1)',
           }}>
             Section {number} — {title}
           </div>
@@ -76,13 +76,13 @@ export function AcsiSection({
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
-          <span style={{ fontSize: 'var(--fs-xs)', color: '#10B981', fontWeight: 600 }}>{passCount} Y</span>
-          <span style={{ fontSize: 'var(--fs-xs)', color: '#EF4444', fontWeight: 600 }}>{failCount} N</span>
-          <span style={{ fontSize: 'var(--fs-xs)', color: '#6B7280', fontWeight: 600 }}>{naCount} NA</span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-green)', fontWeight: 600 }}>{passCount} Y</span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-red)', fontWeight: 600 }}>{failCount} N</span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600 }}>{naCount} NA</span>
           <span style={{
             fontSize: 'var(--fs-sm)',
             fontWeight: 600,
-            color: allDone ? '#10B981' : 'var(--color-text-2)',
+            color: allDone ? 'var(--color-green)' : 'var(--color-text-2)',
           }}>
             {answered}/{totalItems}
           </span>
@@ -118,7 +118,7 @@ export function AcsiSection({
                   padding: '4px 12px', borderRadius: 6,
                   border: '1px solid rgba(16, 185, 129, 0.3)',
                   background: 'rgba(16, 185, 129, 0.1)',
-                  color: '#10B981',
+                  color: 'var(--color-green)',
                   fontSize: 'var(--fs-xs)', fontWeight: 700,
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}

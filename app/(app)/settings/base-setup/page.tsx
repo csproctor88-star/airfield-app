@@ -94,7 +94,7 @@ export default function BaseSetupPage() {
               onClick={() => { setActiveTab(tab.key); window.scrollTo(0, 0) }}
               style={{
                 padding: '8px 16px',
-                borderRadius: 8,
+                borderRadius: 'var(--radius-base)',
                 border: isActive ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
                 cursor: 'pointer',
                 fontSize: 'var(--fs-md)',
@@ -116,7 +116,7 @@ export default function BaseSetupPage() {
         marginTop: 16,
         background: 'var(--color-surface-1)',
         border: '1px solid var(--color-border)',
-        borderRadius: 10,
+        borderRadius: 'var(--radius-lg)',
         padding: 16,
       }}>
         {activeTab === 'runways' && <RunwayTab runways={runways} installationId={installationId} />}
@@ -140,7 +140,7 @@ export default function BaseSetupPage() {
           marginTop: 16,
           width: '100%',
           padding: '12px 16px',
-          borderRadius: 10,
+          borderRadius: 'var(--radius-lg)',
           border: showPreview ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
           cursor: 'pointer',
           fontSize: 'var(--fs-lg)',
@@ -257,7 +257,7 @@ function RunwayTab({
 
   const fieldStyle = {
     padding: '8px 10px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     border: '1px solid var(--color-border)',
     background: 'var(--color-bg-inset)',
     color: 'var(--color-text-1)',
@@ -279,7 +279,7 @@ function RunwayTab({
         <div key={rwy.id} style={{
           padding: 12,
           background: 'var(--color-bg-inset)',
-          borderRadius: 8,
+          borderRadius: 'var(--radius-base)',
           marginBottom: 8,
           display: 'flex',
           alignItems: 'flex-start',
@@ -318,7 +318,7 @@ function RunwayTab({
         <div style={{
           padding: 14,
           background: 'var(--color-bg-inset)',
-          borderRadius: 8,
+          borderRadius: 'var(--radius-base)',
           marginTop: 8,
           display: 'flex',
           flexDirection: 'column',
@@ -410,7 +410,7 @@ function RunwayTab({
               disabled={saving || !newRunway.runway_id.trim()}
               style={{
                 flex: 1,
-                padding: '10px 16px', borderRadius: 8, border: 'none',
+                padding: '10px 16px', borderRadius: 'var(--radius-base)', border: 'none',
                 background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
                 color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
                 cursor: saving ? 'wait' : 'pointer', fontFamily: 'inherit',
@@ -422,7 +422,7 @@ function RunwayTab({
             <button
               onClick={() => setAdding(false)}
               style={{
-                padding: '10px 16px', borderRadius: 8,
+                padding: '10px 16px', borderRadius: 'var(--radius-base)',
                 border: '1px solid var(--color-border)',
                 background: 'var(--color-bg-inset)',
                 color: 'var(--color-text-2)',
@@ -440,7 +440,7 @@ function RunwayTab({
           style={{
             marginTop: 8,
             padding: '10px 14px',
-            borderRadius: 8,
+            borderRadius: 'var(--radius-base)',
             border: '1px dashed var(--color-border)',
             background: 'none',
             color: 'var(--color-accent)',
@@ -621,7 +621,7 @@ function NavaidTab({ installationId }: { installationId: string | null }) {
           onKeyDown={e => e.key === 'Enter' && handleAdd()}
           placeholder="Add NAVAID (e.g. ILS 01, TACAN, ASR-9)..."
           style={{
-            flex: 1, padding: '8px 10px', borderRadius: 6,
+            flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
             border: '1px solid var(--color-border)',
             background: 'var(--color-bg-inset)',
             color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
@@ -631,7 +631,7 @@ function NavaidTab({ installationId }: { installationId: string | null }) {
           onClick={handleAdd}
           disabled={!newItem.trim()}
           style={{
-            padding: '8px 16px', borderRadius: 6, border: 'none',
+            padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
             background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
             color: '#fff',
             cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
@@ -730,7 +730,7 @@ function SimpleListTab({
           onKeyDown={e => e.key === 'Enter' && handleAdd()}
           placeholder={`Add ${title.toLowerCase().replace(/s$/, '')}...`}
           style={{
-            flex: 1, padding: '8px 10px', borderRadius: 6,
+            flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
             border: '1px solid var(--color-border)',
             background: 'var(--color-bg-inset)',
             color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
@@ -740,7 +740,7 @@ function SimpleListTab({
           onClick={handleAdd}
           disabled={!newItem.trim()}
           style={{
-            padding: '8px 16px', borderRadius: 6, border: 'none',
+            padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
             background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
             color: '#fff',
             cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
@@ -863,7 +863,7 @@ function ShopsTab({ shops, typeShopMap: initialTypeShopMap, installationId }: { 
           onKeyDown={e => e.key === 'Enter' && handleAdd()}
           placeholder="Add CE shop..."
           style={{
-            flex: 1, padding: '8px 10px', borderRadius: 6,
+            flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
             border: '1px solid var(--color-border)',
             background: 'var(--color-bg-inset)',
             color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
@@ -873,7 +873,7 @@ function ShopsTab({ shops, typeShopMap: initialTypeShopMap, installationId }: { 
           onClick={handleAdd}
           disabled={!newShop.trim()}
           style={{
-            padding: '8px 16px', borderRadius: 6, border: 'none',
+            padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
             background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
             color: '#fff',
             cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
@@ -903,7 +903,7 @@ function ShopsTab({ shops, typeShopMap: initialTypeShopMap, installationId }: { 
                 value={typeMap[dt.value] || ''}
                 onChange={e => handleTypeMapChange(dt.value, e.target.value)}
                 style={{
-                  flex: 1, padding: '5px 8px', borderRadius: 6,
+                  flex: 1, padding: '5px 8px', borderRadius: 'var(--radius-sm)',
                   border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
                   color: typeMap[dt.value] ? 'var(--color-text-1)' : 'var(--color-text-3)',
                   fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
@@ -1057,7 +1057,7 @@ function FacilitiesTab({ installationId }: { installationId: string | null }) {
           onKeyDown={e => e.key === 'Enter' && handleAdd()}
           placeholder="Facility #"
           style={{
-            width: 100, padding: '8px 10px', borderRadius: 6,
+            width: 100, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
             border: '1px solid var(--color-border)',
             background: 'var(--color-bg-inset)',
             color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
@@ -1070,7 +1070,7 @@ function FacilitiesTab({ installationId }: { installationId: string | null }) {
           onKeyDown={e => e.key === 'Enter' && handleAdd()}
           placeholder="Description..."
           style={{
-            flex: 1, padding: '8px 10px', borderRadius: 6,
+            flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
             border: '1px solid var(--color-border)',
             background: 'var(--color-bg-inset)',
             color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
@@ -1080,7 +1080,7 @@ function FacilitiesTab({ installationId }: { installationId: string | null }) {
           onClick={handleAdd}
           disabled={!newNumber.trim() || !newDesc.trim()}
           style={{
-            padding: '8px 16px', borderRadius: 6, border: 'none',
+            padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
             background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
             color: '#fff',
             cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
@@ -1097,7 +1097,7 @@ function FacilitiesTab({ installationId }: { installationId: string | null }) {
         onClick={() => fileRef.current?.click()}
         disabled={importing}
         style={{
-          marginTop: 12, width: '100%', padding: '10px 16px', borderRadius: 8,
+          marginTop: 12, width: '100%', padding: '10px 16px', borderRadius: 'var(--radius-base)',
           border: '2px dashed var(--color-border)',
           background: 'transparent', color: 'var(--color-text-2)',
           fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
@@ -1182,8 +1182,8 @@ function TemplatesTab({ installationId }: { installationId: string | null }) {
           href="/settings/templates"
           style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            padding: '10px 16px', borderRadius: 8,
-            background: 'linear-gradient(135deg, #7C3AED, #8B5CF6)',
+            padding: '10px 16px', borderRadius: 'var(--radius-base)',
+            background: 'var(--color-purple)',
             color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',
           }}
@@ -1195,7 +1195,7 @@ function TemplatesTab({ installationId }: { installationId: string | null }) {
             onClick={handleCloneDefaults}
             disabled={cloning}
             style={{
-              padding: '10px 16px', borderRadius: 8,
+              padding: '10px 16px', borderRadius: 'var(--radius-base)',
               border: 'none',
               background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
               color: '#fff',
@@ -1266,9 +1266,9 @@ function DashboardPreview({
   }, [installationId])
 
   const STATUS_COLORS: Record<string, string> = {
-    green: '#34D399',
-    yellow: '#FBBF24',
-    red: '#EF4444',
+    green: 'var(--color-success)',
+    yellow: 'var(--color-warning)',
+    red: 'var(--color-danger)',
   }
 
   if (loading) {
@@ -1283,7 +1283,7 @@ function DashboardPreview({
     <div style={{
       marginTop: 16,
       border: '2px solid var(--color-accent)',
-      borderRadius: 12,
+      borderRadius: 'var(--radius-xl)',
       overflow: 'hidden',
     }}>
       {/* Preview header */}
@@ -1322,7 +1322,7 @@ function DashboardPreview({
           </div>
           {navaidStatuses.length === 0 ? (
             <div style={{
-              padding: 12, borderRadius: 8,
+              padding: 12, borderRadius: 'var(--radius-base)',
               border: '1px dashed var(--color-border)',
               color: 'var(--color-text-3)', fontSize: 'var(--fs-base)', textAlign: 'center',
             }}>
@@ -1333,7 +1333,7 @@ function DashboardPreview({
               {navaidStatuses.map(n => (
                 <div key={n.id} style={{
                   padding: '8px 10px',
-                  borderRadius: 8,
+                  borderRadius: 'var(--radius-base)',
                   background: `${STATUS_COLORS[n.status]}15`,
                   border: `1px solid ${STATUS_COLORS[n.status]}40`,
                   textAlign: 'center',
@@ -1364,7 +1364,7 @@ function DashboardPreview({
           </div>
           {areas.length === 0 ? (
             <div style={{
-              padding: 12, borderRadius: 8,
+              padding: 12, borderRadius: 'var(--radius-base)',
               border: '1px dashed var(--color-border)',
               color: 'var(--color-text-3)', fontSize: 'var(--fs-base)', textAlign: 'center',
             }}>
@@ -1375,7 +1375,7 @@ function DashboardPreview({
               {areas.map(a => (
                 <span key={a} style={{
                   padding: '4px 10px',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm)',
                   background: 'var(--color-bg-inset)',
                   border: '1px solid var(--color-border)',
                   fontSize: 'var(--fs-base)',
@@ -1399,7 +1399,7 @@ function DashboardPreview({
           {templateStatus && (
             <div style={{ display: 'flex', gap: 12 }}>
               <div style={{
-                flex: 1, padding: 10, borderRadius: 8,
+                flex: 1, padding: 10, borderRadius: 'var(--radius-base)',
                 background: templateStatus.airfield > 0 ? 'rgba(52,211,153,0.08)' : 'rgba(239,68,68,0.08)',
                 border: `1px solid ${templateStatus.airfield > 0 ? 'rgba(52,211,153,0.3)' : 'rgba(239,68,68,0.3)'}`,
                 textAlign: 'center',
@@ -1410,7 +1410,7 @@ function DashboardPreview({
                 <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>Airfield items</div>
               </div>
               <div style={{
-                flex: 1, padding: 10, borderRadius: 8,
+                flex: 1, padding: 10, borderRadius: 'var(--radius-base)',
                 background: templateStatus.lighting > 0 ? 'rgba(52,211,153,0.08)' : 'rgba(239,68,68,0.08)',
                 border: `1px solid ${templateStatus.lighting > 0 ? 'rgba(52,211,153,0.3)' : 'rgba(239,68,68,0.3)'}`,
                 textAlign: 'center',
@@ -1442,7 +1442,7 @@ const FREQ_OPTIONS: { value: FrequencyType; label: string }[] = [
   { value: 'monthly', label: 'Monthly' },
 ]
 
-const FREQ_TAG_COLORS: Record<string, string> = { daily: '#22D3EE', weekly: '#A78BFA', monthly: '#F59E0B' }
+const FREQ_TAG_COLORS: Record<string, string> = { daily: 'var(--color-cyan)', weekly: 'var(--color-purple)', monthly: 'var(--color-warning)' }
 
 function ShiftChecklistTab({ installationId, currentInstallation }: { installationId: string | null; currentInstallation: any }) {
   const [items, setItems] = useState<ShiftChecklistItem[]>([])
@@ -1557,7 +1557,7 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
 
   const inputStyle: React.CSSProperties = {
     padding: '8px 10px',
-    borderRadius: 6,
+    borderRadius: 'var(--radius-sm)',
     border: '1px solid var(--color-border)',
     background: 'var(--color-bg-surface)',
     color: 'var(--color-text-1)',
@@ -1576,7 +1576,7 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
         {list.length === 0 ? (
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', padding: '8px 0' }}>No items configured.</div>
         ) : (
-          <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, overflow: 'hidden' }}>
+          <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-base)', overflow: 'hidden' }}>
             {list.map((item, i) => (
               <div key={item.id}>
                 {editingId === item.id ? (
@@ -1592,7 +1592,7 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
                     </div>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                       <button onClick={() => setEditingId(null)} style={{ background: 'none', border: 'none', color: 'var(--color-text-3)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)' }}>Cancel</button>
-                      <button onClick={handleUpdate} disabled={saving || !editLabel.trim()} style={{ background: 'var(--color-cyan)', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit' }}>Save</button>
+                      <button onClick={handleUpdate} disabled={saving || !editLabel.trim()} style={{ background: 'var(--color-cyan)', color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)', padding: '6px 14px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit' }}>Save</button>
                     </div>
                   </div>
                 ) : (
@@ -1604,14 +1604,14 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
                     <div style={{ flex: 1, minWidth: 0, fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)' }}>{item.label}</div>
                     <span style={{
                       fontSize: 'var(--fs-xs)', fontWeight: 700, color: FREQ_TAG_COLORS[item.frequency],
-                      background: `${FREQ_TAG_COLORS[item.frequency]}15`, padding: '2px 8px', borderRadius: 10, flexShrink: 0,
+                      background: `${FREQ_TAG_COLORS[item.frequency]}15`, padding: '2px 8px', borderRadius: 'var(--radius-lg)', flexShrink: 0,
                     }}>{item.frequency.charAt(0).toUpperCase() + item.frequency.slice(1)}</span>
                     <button onClick={() => handleToggleActive(item)} title={item.is_active ? 'Disable' : 'Enable'} style={{
                       background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                      fontSize: 'var(--fs-xs)', fontWeight: 600, color: item.is_active ? '#22C55E' : 'var(--color-text-4)',
+                      fontSize: 'var(--fs-xs)', fontWeight: 600, color: item.is_active ? 'var(--color-status-pass)' : 'var(--color-text-4)',
                     }}>{item.is_active ? 'Active' : 'Inactive'}</button>
                     <button onClick={() => startEdit(item)} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600 }}>Edit</button>
-                    <button onClick={() => handleDelete(item.id, item.label)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600 }}>Delete</button>
+                    <button onClick={() => handleDelete(item.id, item.label)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600 }}>Delete</button>
                   </div>
                 )}
               </div>
@@ -1631,7 +1631,7 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
       {/* Reset Time Configuration */}
       <div style={{
         background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)',
-        borderRadius: 8, padding: 14, marginBottom: 16,
+        borderRadius: 'var(--radius-base)', padding: 14, marginBottom: 16,
         display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
       }}>
         <div style={{ flex: 1, minWidth: 180 }}>
@@ -1663,13 +1663,13 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Configure items for day and swing shift checklists.</div>
         </div>
         <button onClick={() => setShowForm(!showForm)} style={{
-          background: 'var(--color-cyan)', color: '#fff', border: 'none', borderRadius: 8,
+          background: 'var(--color-cyan)', color: '#fff', border: 'none', borderRadius: 'var(--radius-base)',
           padding: '8px 16px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
         }}>{showForm ? 'Cancel' : '+ Add Item'}</button>
       </div>
 
       {showForm && (
-        <div style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)', borderRadius: 8, padding: 14, marginBottom: 16 }}>
+        <div style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-base)', padding: 14, marginBottom: 16 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8, marginBottom: 8 }}>
             <input value={formLabel} onChange={e => setFormLabel(e.target.value)} placeholder="Checklist item label" style={inputStyle} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -1682,7 +1682,7 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
             </div>
           </div>
           <button onClick={handleCreate} disabled={saving || !formLabel.trim()} style={{
-            width: '100%', padding: '8px 0', borderRadius: 6, border: 'none',
+            width: '100%', padding: '8px 0', borderRadius: 'var(--radius-sm)', border: 'none',
             background: formLabel.trim() ? 'var(--color-cyan)' : 'var(--color-border)',
             color: formLabel.trim() ? '#000' : 'var(--color-text-3)',
             fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: formLabel.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
@@ -1779,7 +1779,7 @@ function QrcTemplatesTab({ installationId }: { installationId: string | null }) 
   }
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '8px 10px', borderRadius: 6,
+    width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)',
     border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
     color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
   }
@@ -1792,7 +1792,7 @@ function QrcTemplatesTab({ installationId }: { installationId: string | null }) 
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Configure Quick Reaction Checklists for this base.</div>
         </div>
         <button onClick={openSeedPicker} style={{
-          background: 'var(--color-cyan)', color: '#fff', border: 'none', borderRadius: 8,
+          background: 'var(--color-cyan)', color: '#fff', border: 'none', borderRadius: 'var(--radius-base)',
           padding: '8px 16px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
         }}>+ Add from Defaults</button>
       </div>
@@ -1830,14 +1830,14 @@ function QrcTemplatesTab({ installationId }: { installationId: string | null }) 
           {templates.map(t => (
             <div key={t.id} style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
-              background: 'var(--color-bg-elevated)', borderRadius: 8,
+              background: 'var(--color-bg-elevated)', borderRadius: 'var(--radius-base)',
               border: '1px solid var(--color-border)',
               opacity: t.is_active ? 1 : 0.5,
             }}>
               <span style={{
                 fontSize: 'var(--fs-xs)', fontWeight: 800,
                 color: '#fff', background: t.is_active ? '#D97706' : 'var(--color-text-4)',
-                padding: '2px 6px', borderRadius: 4, minWidth: 32, textAlign: 'center',
+                padding: '2px 6px', borderRadius: 'var(--radius-xs)', minWidth: 32, textAlign: 'center',
               }}>{t.qrc_number}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)' }}>{t.title}</div>
@@ -1848,16 +1848,16 @@ function QrcTemplatesTab({ installationId }: { installationId: string | null }) 
                 <button
                   onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === t.id ? null : t.id) }}
                   style={{
-                    background: 'none', border: '1px solid var(--color-border)', borderRadius: 6,
+                    background: 'none', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)',
                     padding: '3px 10px', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer',
                     color: 'var(--color-text-2)', fontFamily: 'inherit',
                   }}
                 >&#x22EE;</button>
                 {menuOpen === t.id && (
                   <div style={{
-                    position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 20,
+                    position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 'var(--z-dropdown)',
                     background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-                    borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.3)', minWidth: 140,
+                    borderRadius: 'var(--radius-base)', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', minWidth: 140,
                     overflow: 'hidden',
                   }}>
                     <button onClick={() => { setMenuOpen(null); setEditingTemplate(t) }} style={{
@@ -1868,7 +1868,7 @@ function QrcTemplatesTab({ installationId }: { installationId: string | null }) 
                     <button onClick={() => { setMenuOpen(null); handleToggle(t.id, t.is_active) }} style={{
                       display: 'block', width: '100%', padding: '8px 14px', background: 'none', border: 'none',
                       textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)',
-                      fontWeight: 600, color: t.is_active ? '#EAB308' : 'var(--color-success)',
+                      fontWeight: 600, color: t.is_active ? 'var(--color-warning)' : 'var(--color-success)',
                     }}>{t.is_active ? 'Disable' : 'Enable'}</button>
                     <div style={{ height: 1, background: 'var(--color-border)' }} />
                     <button onClick={() => { setMenuOpen(null); handleDelete(t.id) }} style={{
@@ -1920,11 +1920,7 @@ function SeedPickerDialog({
   }
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 16, background: 'rgba(0,0,0,0.6)',
-    }} onClick={onClose}>
+    <div className="modal-overlay" style={{ padding: 16 }} onClick={onClose}>
       <div className="card" style={{ width: '100%', maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column', padding: 0 }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
           <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>Add QRC Templates</div>
@@ -1948,12 +1944,12 @@ function SeedPickerDialog({
                   textAlign: 'left', borderBottom: '1px solid var(--color-border)',
                 }}>
                   <span style={{
-                    width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                    width: 18, height: 18, borderRadius: 'var(--radius-xs)', flexShrink: 0,
                     border: seedSelected.has(q.qrc_number) ? 'none' : '2px solid var(--color-border-mid)',
                     background: seedSelected.has(q.qrc_number) ? 'var(--color-cyan)' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>{seedSelected.has(q.qrc_number) && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>&#10003;</span>}</span>
-                  <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#fff', background: '#D97706', padding: '1px 5px', borderRadius: 4 }}>{q.qrc_number}</span>
+                  <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#fff', background: '#D97706', padding: '1px 5px', borderRadius: 'var(--radius-xs)' }}>{q.qrc_number}</span>
                   <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', flex: 1 }}>{q.title}</span>
                 </button>
               ))}
@@ -1962,13 +1958,13 @@ function SeedPickerDialog({
         </div>
         <div style={{ padding: '12px 20px', borderTop: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', gap: 8 }}>
           <button onClick={onSeed} disabled={seeding || seedSelected.size === 0} style={{
-            flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
+            flex: 1, padding: '10px 0', borderRadius: 'var(--radius-base)', border: 'none',
             background: seedSelected.size > 0 ? 'var(--color-cyan)' : 'var(--color-border)',
             color: seedSelected.size > 0 ? '#000' : 'var(--color-text-3)',
             fontWeight: 700, fontSize: 'var(--fs-base)', cursor: seedSelected.size > 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
           }}>{seeding ? 'Adding...' : `Add ${seedSelected.size} QRC${seedSelected.size !== 1 ? 's' : ''}`}</button>
           <button onClick={onClose} style={{
-            padding: '10px 16px', borderRadius: 8, border: '1px solid var(--color-border)',
+            padding: '10px 16px', borderRadius: 'var(--radius-base)', border: '1px solid var(--color-border)',
             background: 'transparent', color: 'var(--color-text-2)', fontWeight: 700,
             fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
           }}>Cancel</button>
@@ -2044,11 +2040,7 @@ function EditQrcDialog({
   }
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 16, background: 'rgba(0,0,0,0.6)',
-    }} onClick={onClose}>
+    <div className="modal-overlay" style={{ padding: 16 }} onClick={onClose}>
       <div className="card" style={{ width: '100%', maxWidth: 560, maxHeight: '85vh', display: 'flex', flexDirection: 'column', padding: 0 }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
           <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
@@ -2075,7 +2067,7 @@ function EditQrcDialog({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <label style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>Steps ({steps.length})</label>
             <button onClick={() => setAddingStep(true)} style={{
-              background: 'none', border: '1px solid var(--color-cyan)', borderRadius: 6,
+              background: 'none', border: '1px solid var(--color-cyan)', borderRadius: 'var(--radius-sm)',
               padding: '2px 10px', color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)',
               fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
             }}>+ Add Step</button>
@@ -2119,11 +2111,11 @@ function EditQrcDialog({
               <button onClick={handleAddStep} disabled={!newStepLabel.trim()} style={{
                 background: newStepLabel.trim() ? 'var(--color-cyan)' : 'var(--color-border)',
                 color: newStepLabel.trim() ? '#000' : 'var(--color-text-3)',
-                border: 'none', borderRadius: 6, padding: '4px 12px',
+                border: 'none', borderRadius: 'var(--radius-sm)', padding: '4px 12px',
                 fontWeight: 700, fontSize: 'var(--fs-xs)', cursor: newStepLabel.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
               }}>Add</button>
               <button onClick={() => { setAddingStep(false); setNewStepLabel('') }} style={{
-                background: 'none', border: '1px solid var(--color-border)', borderRadius: 6,
+                background: 'none', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)',
                 padding: '4px 10px', color: 'var(--color-text-2)', fontSize: 'var(--fs-xs)',
                 fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
               }}>Cancel</button>
@@ -2132,12 +2124,12 @@ function EditQrcDialog({
         </div>
         <div style={{ padding: '12px 20px', borderTop: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', gap: 8 }}>
           <button onClick={handleSave} disabled={saving} style={{
-            flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
+            flex: 1, padding: '10px 0', borderRadius: 'var(--radius-base)', border: 'none',
             background: 'var(--color-cyan)', color: '#fff', fontWeight: 700,
             fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
           }}>{saving ? 'Saving...' : 'Save Changes'}</button>
           <button onClick={onClose} style={{
-            padding: '10px 16px', borderRadius: 8, border: '1px solid var(--color-border)',
+            padding: '10px 16px', borderRadius: 'var(--radius-base)', border: '1px solid var(--color-border)',
             background: 'transparent', color: 'var(--color-text-2)', fontWeight: 700,
             fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
           }}>Cancel</button>
@@ -2358,7 +2350,7 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
         const comps = compsMap[sys.id] || []
         const isLoadingC = loadingComps[sys.id]
         return (
-          <div key={sys.id} style={{ border: '1px solid var(--color-border)', borderRadius: 8, marginBottom: 8, overflow: 'hidden' }}>
+          <div key={sys.id} style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-base)', marginBottom: 8, overflow: 'hidden' }}>
             <div
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: isExp ? 'rgba(56,189,248,0.06)' : 'transparent', cursor: 'pointer' }}
               onClick={() => handleExpand(sys.id)}
@@ -2371,10 +2363,10 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
                     onChange={e => setEditNameValue(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handleSaveSystemName(sys.id); if (e.key === 'Escape') setEditingSystemName(null) }}
                     autoFocus
-                    style={{ flex: 1, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)', color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontWeight: 600, fontFamily: 'inherit' }}
+                    style={{ flex: 1, padding: '4px 8px', borderRadius: 'var(--radius-xs)', border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)', color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontWeight: 600, fontFamily: 'inherit' }}
                   />
-                  <button onClick={() => handleSaveSystemName(sys.id)} style={{ background: 'var(--color-cyan)', border: 'none', color: '#fff', padding: '3px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Save</button>
-                  <button onClick={() => setEditingSystemName(null)} style={{ background: 'none', border: '1px solid var(--color-border)', color: 'var(--color-text-3)', padding: '3px 6px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Cancel</button>
+                  <button onClick={() => handleSaveSystemName(sys.id)} style={{ background: 'var(--color-cyan)', border: 'none', color: '#fff', padding: '3px 8px', borderRadius: 'var(--radius-xs)', cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Save</button>
+                  <button onClick={() => setEditingSystemName(null)} style={{ background: 'none', border: '1px solid var(--color-border)', color: 'var(--color-text-3)', padding: '3px 6px', borderRadius: 'var(--radius-xs)', cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Cancel</button>
                 </div>
               ) : (
                 <span
@@ -2383,11 +2375,11 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
                   title="Click to rename"
                 >{sys.name}</span>
               )}
-              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', background: 'var(--color-bg-inset)', padding: '2px 8px', borderRadius: 4 }}>
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', background: 'var(--color-bg-inset)', padding: '2px 8px', borderRadius: 'var(--radius-xs)' }}>
                 {SYSTEM_TYPE_LABELS[sys.system_type] || sys.system_type}
               </span>
               {sys.is_precision && (
-                <span style={{ fontSize: 'var(--fs-xs)', color: '#F59E0B', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 4 }}>PRECISION</span>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-warning)', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 'var(--radius-xs)' }}>PRECISION</span>
               )}
               <button onClick={(e) => { e.stopPropagation(); handleDeleteSystem(sys) }} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xl)', padding: '0 4px' }}>&times;</button>
             </div>
@@ -2405,10 +2397,10 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
                         onKeyDown={e => { if (e.key === 'Enter') handleSaveRunway(sys.id); if (e.key === 'Escape') setEditingRunway(null) }}
                         placeholder="e.g. RWY 01/19, TWY A"
                         autoFocus
-                        style={{ flex: 1, padding: '3px 8px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }}
+                        style={{ flex: 1, padding: '3px 8px', borderRadius: 'var(--radius-xs)', border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }}
                       />
-                      <button onClick={() => handleSaveRunway(sys.id)} style={{ background: 'var(--color-cyan)', border: 'none', color: '#fff', padding: '3px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Save</button>
-                      <button onClick={() => setEditingRunway(null)} style={{ background: 'none', border: '1px solid var(--color-border)', color: 'var(--color-text-3)', padding: '3px 6px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Cancel</button>
+                      <button onClick={() => handleSaveRunway(sys.id)} style={{ background: 'var(--color-cyan)', border: 'none', color: '#fff', padding: '3px 8px', borderRadius: 'var(--radius-xs)', cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Save</button>
+                      <button onClick={() => setEditingRunway(null)} style={{ background: 'none', border: '1px solid var(--color-border)', color: 'var(--color-text-3)', padding: '3px 6px', borderRadius: 'var(--radius-xs)', cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>Cancel</button>
                     </div>
                   ) : (
                     <span
@@ -2435,7 +2427,7 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
                           {(compFeatureCounts[comp.id] || 0) > 0 && (
                             <button onClick={() => handleUnlinkAll(comp.id, comp.label, sys.id)}
                               disabled={assigning}
-                              style={{ background: 'none', border: '1px solid rgba(239,68,68,0.3)', color: 'var(--color-danger)', padding: '2px 6px', borderRadius: 4, cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', opacity: assigning ? 0.5 : 1 }}
+                              style={{ background: 'none', border: '1px solid rgba(239,68,68,0.3)', color: 'var(--color-danger)', padding: '2px 6px', borderRadius: 'var(--radius-xs)', cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', opacity: assigning ? 0.5 : 1 }}
                               title="Unlink all features from this component">
                               Unlink
                             </button>
@@ -2449,7 +2441,7 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
                     ))}
 
                     {cloning === sys.id ? (
-                      <div style={{ marginTop: 8, padding: 10, background: 'var(--color-bg-inset)', borderRadius: 8 }}>
+                      <div style={{ marginTop: 8, padding: 10, background: 'var(--color-bg-inset)', borderRadius: 'var(--radius-base)' }}>
                         <div style={{ fontWeight: 600, fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', marginBottom: 8 }}>
                           Clone from DAFMAN Table A3.1 &mdash; {SYSTEM_TYPE_LABELS[sys.system_type] || sys.system_type}
                         </div>
@@ -2465,18 +2457,18 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
                         {templatesList.length === 0 && <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>No templates found for this system type.</p>}
                         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                           <button onClick={handleClone} disabled={saving || templatesList.length === 0}
-                            style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit', opacity: saving ? 0.5 : 1 }}>
+                            style={{ padding: '6px 14px', borderRadius: 'var(--radius-sm)', border: 'none', background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit', opacity: saving ? 0.5 : 1 }}>
                             {saving ? 'Cloning...' : 'Clone Components'}
                           </button>
                           <button onClick={() => { setCloning(null); setTemplatesList([]) }}
-                            style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontWeight: 600, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                            style={{ padding: '6px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontWeight: 600, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit' }}>
                             Cancel
                           </button>
                         </div>
                       </div>
                     ) : (
                       <button onClick={() => handleStartClone(sys.id, sys.system_type)}
-                        style={{ marginTop: 8, padding: '6px 12px', borderRadius: 6, border: '1px dashed var(--color-border)', background: 'transparent', color: 'var(--color-accent)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        style={{ marginTop: 8, padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--color-border)', background: 'transparent', color: 'var(--color-accent)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                         + Clone from DAFMAN Templates
                       </button>
                     )}
@@ -2489,13 +2481,13 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
       })}
 
       {adding ? (
-        <div style={{ marginTop: 8, padding: 12, background: 'var(--color-bg-inset)', borderRadius: 8 }}>
+        <div style={{ marginTop: 8, padding: 12, background: 'var(--color-bg-inset)', borderRadius: 'var(--radius-base)' }}>
           <div style={{ fontWeight: 600, fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', marginBottom: 8 }}>New Lighting System</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div>
               <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>System Type</label>
               <select value={newSystemType} onChange={(e) => { setNewSystemType(e.target.value); setNewName('') }}
-                style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontFamily: 'inherit' }}>
+                style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontFamily: 'inherit' }}>
                 <option value="">Select type...</option>
                 {SYSTEM_TYPES.map((t) => <option key={t} value={t}>{SYSTEM_TYPE_LABELS[t]}</option>)}
               </select>
@@ -2503,12 +2495,12 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
             <div>
               <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>Runway/Taxiway</label>
               <input value={newRunwayOrTaxiway} onChange={(e) => { setNewRunwayOrTaxiway(e.target.value.toUpperCase()); setNewName('') }} placeholder="e.g. RWY 01/19, TWY A"
-                style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-md)' }} />
+                style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-md)' }} />
             </div>
             <div>
               <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>System Name</label>
               <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. ALSF-1 RWY 19"
-                style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-md)' }} />
+                style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-md)' }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <input type="checkbox" id="is-precision-new" checked={newIsPrecision} onChange={(e) => setNewIsPrecision(e.target.checked)} />
@@ -2516,11 +2508,11 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
               <button onClick={handleAddSystem} disabled={saving || !newSystemType || !newName.trim()}
-                style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-md)', cursor: 'pointer', fontFamily: 'inherit', opacity: saving || !newSystemType || !newName.trim() ? 0.5 : 1 }}>
+                style={{ padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none', background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-md)', cursor: 'pointer', fontFamily: 'inherit', opacity: saving || !newSystemType || !newName.trim() ? 0.5 : 1 }}>
                 {saving ? 'Creating...' : 'Create System'}
               </button>
               <button onClick={() => { setAdding(false); setNewSystemType(''); setNewName(''); setNewRunwayOrTaxiway(''); setNewIsPrecision(false) }}
-                style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontWeight: 600, fontSize: 'var(--fs-md)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                style={{ padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontWeight: 600, fontSize: 'var(--fs-md)', cursor: 'pointer', fontFamily: 'inherit' }}>
                 Cancel
               </button>
             </div>
@@ -2528,7 +2520,7 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
         </div>
       ) : (
         <button onClick={() => setAdding(true)}
-          style={{ marginTop: 8, width: '100%', padding: '10px 16px', borderRadius: 8, border: '1px dashed var(--color-border)', background: 'transparent', color: 'var(--color-accent)', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+          style={{ marginTop: 8, width: '100%', padding: '10px 16px', borderRadius: 'var(--radius-base)', border: '1px dashed var(--color-border)', background: 'transparent', color: 'var(--color-accent)', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
           + Add Lighting System
         </button>
       )}
@@ -2613,10 +2605,10 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
 
   const riskColor = (risk: string) => {
     switch (risk) {
-      case 'critical': return '#EF4444'
-      case 'high': return '#F97316'
-      case 'medium': return '#FBBF24'
-      default: return '#10B981'
+      case 'critical': return 'var(--color-danger)'
+      case 'high': return 'var(--color-orange)'
+      case 'medium': return 'var(--color-warning)'
+      default: return 'var(--color-success)'
     }
   }
 
@@ -2675,7 +2667,7 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
           onClick={addAllFiltered}
           disabled={adding === 'bulk'}
           style={{
-            padding: '6px 14px', borderRadius: 8, border: '1px solid var(--color-border)',
+            padding: '6px 14px', borderRadius: 'var(--radius-base)', border: '1px solid var(--color-border)',
             background: 'var(--color-bg-surface)', color: 'var(--color-text-2)',
             fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer',
           }}
@@ -2693,7 +2685,7 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
           value={search}
           onChange={e => setSearch(e.target.value)}
           style={{
-            flex: '1 1 200px', minWidth: 0, padding: '10px 12px', borderRadius: 8,
+            flex: '1 1 200px', minWidth: 0, padding: '10px 12px', borderRadius: 'var(--radius-base)',
             border: '1px solid var(--color-border)',
             background: 'var(--color-bg-surface)', color: 'var(--color-text)',
             fontSize: 'var(--fs-base)',
@@ -2705,7 +2697,7 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
               key={g.key}
               onClick={() => setActiveGroup(g.key)}
               style={{
-                padding: '6px 12px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                padding: '6px 12px', borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
                 fontSize: 'var(--fs-sm)', fontWeight: 700, whiteSpace: 'nowrap',
                 background: activeGroup === g.key ? 'var(--color-cyan)' : 'var(--color-bg-surface)',
                 color: activeGroup === g.key ? '#000' : 'var(--color-text-2)',
@@ -2725,16 +2717,16 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
         <span>{filtered.length} species {search && `matching "${search}"`}</span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444', display: 'inline-block' }} /> Critical
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-danger)', display: 'inline-block' }} /> Critical
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#F97316', display: 'inline-block' }} /> High
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-orange)', display: 'inline-block' }} /> High
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#FBBF24', display: 'inline-block' }} /> Med
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-warning)', display: 'inline-block' }} /> Med
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} /> Low
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-success)', display: 'inline-block' }} /> Low
           </span>
         </div>
       </div>
@@ -2766,8 +2758,8 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
               disabled={isAdding}
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
-                padding: 6, borderRadius: 10,
-                border: inBase ? '2px solid #10B981' : '1px solid var(--color-border)',
+                padding: 6, borderRadius: 'var(--radius-lg)',
+                border: inBase ? '2px solid var(--color-success)' : '1px solid var(--color-border)',
                 background: inBase ? 'rgba(16,185,129,0.08)' : 'var(--color-bg-surface)',
                 cursor: isAdding ? 'wait' : 'pointer',
                 textAlign: 'center', color: 'var(--color-text)',
@@ -2779,7 +2771,7 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
               {inBase && (
                 <div style={{
                   position: 'absolute', top: 4, left: 4, width: 20, height: 20,
-                  borderRadius: '50%', background: '#10B981',
+                  borderRadius: '50%', background: 'var(--color-success)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 12, color: '#fff', fontWeight: 700, zIndex: 1,
                 }}>&#10003;</div>
@@ -2793,13 +2785,13 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
                     background: 'rgba(0,0,0,0.5)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 14, lineHeight: 1, cursor: 'pointer',
-                    color: favoriteNames.has(sp.common_name) ? '#FBBF24' : 'rgba(255,255,255,0.5)',
+                    color: favoriteNames.has(sp.common_name) ? 'var(--color-warning)' : 'rgba(255,255,255,0.5)',
                   }}
                   title={favoriteNames.has(sp.common_name) ? 'Remove from favorites' : 'Add to favorites'}
                 >&#9733;</div>
               )}
               <div style={{
-                width: '100%', aspectRatio: '4/3', borderRadius: 8, overflow: 'hidden',
+                width: '100%', aspectRatio: '4/3', borderRadius: 'var(--radius-base)', overflow: 'hidden',
                 background: 'var(--color-bg)', marginBottom: 4, position: 'relative',
               }}>
                 <img

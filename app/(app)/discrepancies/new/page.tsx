@@ -224,10 +224,10 @@ export default function NewDiscrepancyPage() {
   return (
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} className="btn-ghost" style={{ color: 'var(--color-cyan)', padding: 0 }}>
           ← Back
         </button>
-        <button onClick={() => router.push('/discrepancies')} style={{ background: '#FBBF2414', border: '1px solid #FBBF2433', borderRadius: 8, padding: '6px 12px', color: '#FBBF24', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+        <button onClick={() => router.push('/discrepancies')} style={{ background: 'color-mix(in srgb, var(--color-amber) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-amber) 20%, transparent)', borderRadius: 'var(--radius-md)', padding: '6px 12px', color: 'var(--color-amber)', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
           ⚠️ View All Discrepancies
         </button>
       </div>
@@ -248,7 +248,7 @@ export default function NewDiscrepancyPage() {
             <span style={{ marginLeft: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{locationDropdownOpen ? '▲' : '▼'}</span>
           </button>
           {locationDropdownOpen && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-text-4)', borderRadius: 8, marginTop: 4, maxHeight: 240, overflowY: 'auto' }}>
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 'var(--z-nav)', background: 'var(--color-bg-elevated)', border: '1px solid var(--color-text-4)', borderRadius: 'var(--radius-md)', marginTop: 4, maxHeight: 240, overflowY: 'auto' }}>
               {installationAreas.map((area) => (
                 <button
                   key={area}
@@ -286,7 +286,7 @@ export default function NewDiscrepancyPage() {
             <span style={{ marginLeft: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{typeDropdownOpen ? '▲' : '▼'}</span>
           </button>
           {typeDropdownOpen && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-text-4)', borderRadius: 8, marginTop: 4, maxHeight: 240, overflowY: 'auto' }}>
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 'var(--z-nav)', background: 'var(--color-bg-elevated)', border: '1px solid var(--color-text-4)', borderRadius: 'var(--radius-md)', marginTop: 4, maxHeight: 240, overflowY: 'auto' }}>
               {DISCREPANCY_TYPES.map((t) => {
                 const selected = selectedTypes.includes(t.value)
                 return (
@@ -300,7 +300,7 @@ export default function NewDiscrepancyPage() {
                       fontSize: 'var(--fs-lg)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
                     }}
                   >
-                    <span style={{ width: 20, height: 20, borderRadius: 4, border: `2px solid ${selected ? 'var(--color-cyan)' : 'var(--color-text-3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fs-md)', flexShrink: 0, background: selected ? '#22D3EE22' : 'transparent', color: 'var(--color-cyan)' }}>
+                    <span style={{ width: 20, height: 20, borderRadius: 'var(--radius-xs)', border: `2px solid ${selected ? 'var(--color-cyan)' : 'var(--color-text-3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fs-md)', flexShrink: 0, background: selected ? 'color-mix(in srgb, var(--color-cyan-bright) 13%, transparent)' : 'transparent', color: 'var(--color-cyan)' }}>
                       {selected ? '✓' : ''}
                     </span>
                     <span>{t.emoji} {t.label}</span>
@@ -378,16 +378,16 @@ export default function NewDiscrepancyPage() {
               style={{
                 display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
                 fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 700,
-                width: '100%', padding: '10px 12px', borderRadius: 8,
-                border: showFeaturePicker ? '2px solid #22D3EE' : '2px solid var(--color-text-4)',
-                background: showFeaturePicker ? 'rgba(34,211,238,0.08)' : 'transparent',
-                color: showFeaturePicker ? '#22D3EE' : 'var(--color-text-2)',
+                width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-md)',
+                border: showFeaturePicker ? '2px solid var(--color-cyan-bright)' : '2px solid var(--color-text-4)',
+                background: showFeaturePicker ? 'color-mix(in srgb, var(--color-cyan-bright) 8%, transparent)' : 'transparent',
+                color: showFeaturePicker ? 'var(--color-cyan-bright)' : 'var(--color-text-2)',
               }}
             >
               <span style={{
-                width: 20, height: 20, borderRadius: 5, flexShrink: 0,
-                border: showFeaturePicker ? '2px solid #22D3EE' : '2px solid var(--color-text-3)',
-                background: showFeaturePicker ? '#22D3EE' : 'transparent',
+                width: 20, height: 20, borderRadius: 'var(--radius-sm)', flexShrink: 0,
+                border: showFeaturePicker ? '2px solid var(--color-cyan-bright)' : '2px solid var(--color-text-3)',
+                background: showFeaturePicker ? 'var(--color-cyan-bright)' : 'transparent',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 14, fontWeight: 800, color: '#000',
               }}>
@@ -395,7 +395,7 @@ export default function NewDiscrepancyPage() {
               </span>
               Link to Visual NAVAID
               {selectedFeatureIds.length > 0 && (
-                <span style={{ fontSize: 'var(--fs-xs)', background: 'rgba(34,211,238,0.2)', color: '#22D3EE', padding: '1px 6px', borderRadius: 4 }}>
+                <span style={{ fontSize: 'var(--fs-xs)', background: 'color-mix(in srgb, var(--color-cyan-bright) 20%, transparent)', color: 'var(--color-cyan-bright)', padding: '1px 6px', borderRadius: 'var(--radius-xs)' }}>
                   {selectedFeatureIds.length} selected
                 </span>
               )}
@@ -421,7 +421,7 @@ export default function NewDiscrepancyPage() {
           disabled={gpsLoading}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            width: '100%', padding: '10px 16px', marginBottom: 8, borderRadius: 8,
+            width: '100%', padding: '10px 16px', marginBottom: 8, borderRadius: 'var(--radius-md)',
             border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
             color: 'var(--color-accent)', fontSize: 'var(--fs-md)', fontWeight: 600,
             cursor: gpsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
@@ -438,7 +438,7 @@ export default function NewDiscrepancyPage() {
         {photos.length > 0 && (
           <div className="photo-grid" style={{ marginBottom: 12 }}>
             {photos.map((p, i) => (
-              <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid #38BDF833' }}>
+              <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid #38BDF833' }}>
                 <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 <button type="button" onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 2, right: 2, background: 'var(--color-overlay)', border: 'none', color: 'var(--color-danger)', fontSize: 'var(--fs-md)', width: 20, height: 20, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
               </div>

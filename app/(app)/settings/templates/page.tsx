@@ -580,7 +580,7 @@ export default function TemplateManagementPage() {
                           borderRadius: 4,
                           border: '1px solid var(--color-border)',
                           background: item.item_type === 'bwc' ? 'var(--color-warning)' : item.item_type === 'rsc' ? '#3B82F620' : item.item_type === 'rcr' ? '#8B5CF620' : 'var(--color-bg-inset)',
-                          color: item.item_type === 'bwc' ? '#000' : item.item_type === 'rsc' ? '#3B82F6' : item.item_type === 'rcr' ? '#8B5CF6' : 'var(--color-text-2)',
+                          color: item.item_type === 'bwc' ? '#000' : item.item_type === 'rsc' ? 'var(--color-blue)' : item.item_type === 'rcr' ? 'var(--color-purple)' : 'var(--color-text-2)',
                           cursor: 'pointer',
                           flexShrink: 0,
                         }}
@@ -603,9 +603,9 @@ export default function TemplateManagementPage() {
                               padding: '2px 6px',
                               borderRadius: 4,
                               border: '1px solid',
-                              borderColor: linkCount > 0 ? '#22D3EE' : 'var(--color-border)',
+                              borderColor: linkCount > 0 ? 'var(--color-cyan-bright)' : 'var(--color-border)',
                               background: linkCount > 0 ? 'rgba(34,211,238,0.12)' : 'var(--color-bg-inset)',
-                              color: linkCount > 0 ? '#22D3EE' : 'var(--color-text-3)',
+                              color: linkCount > 0 ? 'var(--color-cyan-bright)' : 'var(--color-text-3)',
                               cursor: 'pointer',
                               flexShrink: 0,
                             }}
@@ -784,11 +784,8 @@ export default function TemplateManagementPage() {
       {/* ── System / Component Linking Modal ── */}
       {linkingItemId && (
         <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 1000,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(0,0,0,0.7)', padding: 16,
-          }}
+          className="modal-overlay"
+          style={{ background: 'rgba(0,0,0,0.7)' }}
           onClick={(e) => { if (e.target === e.currentTarget) setLinkingItemId(null) }}
         >
           <div style={{
@@ -841,8 +838,8 @@ export default function TemplateManagementPage() {
                       >
                         <span style={{
                           width: 18, height: 18, borderRadius: 4, flexShrink: 0,
-                          border: wholeSystemLinked ? '2px solid #22D3EE' : '2px solid var(--color-text-3)',
-                          background: wholeSystemLinked ? '#22D3EE' : 'transparent',
+                          border: wholeSystemLinked ? '2px solid var(--color-cyan)' : '2px solid var(--color-text-3)',
+                          background: wholeSystemLinked ? 'var(--color-cyan-bright)' : 'transparent',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 12, fontWeight: 800, color: '#000',
                         }}>
@@ -886,8 +883,8 @@ export default function TemplateManagementPage() {
                               >
                                 <span style={{
                                   width: 16, height: 16, borderRadius: 3, flexShrink: 0,
-                                  border: compLinked ? '2px solid #22D3EE' : '1.5px solid var(--color-text-4)',
-                                  background: compLinked ? '#22D3EE' : 'transparent',
+                                  border: compLinked ? '2px solid var(--color-cyan)' : '1.5px solid var(--color-text-4)',
+                                  background: compLinked ? 'var(--color-cyan-bright)' : 'transparent',
                                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                                   fontSize: 10, fontWeight: 800, color: '#000',
                                 }}>

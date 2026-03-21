@@ -16,7 +16,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { fetchInspections, createInspection, saveInspectionDraft, fileInspection, fetchDailyGroup, getInspectorName, deleteInspection, type InspectionRow } from '@/lib/supabase/inspections'
 import { logActivity } from '@/lib/supabase/activity'
-import { updateAirfieldStatus } from '@/lib/supabase/airfield-status'
+import { fetchAirfieldStatus, updateAirfieldStatus } from '@/lib/supabase/airfield-status'
 import { useInstallation } from '@/lib/installation-context'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort } from '@/lib/utils'
 import { fetchCurrentWeather } from '@/lib/weather'
@@ -36,7 +36,7 @@ import { DEMO_INSPECTIONS } from '@/lib/demo-data'
 import { getAirfieldDiagram } from '@/lib/airfield-diagram'
 import { uploadInspectionPhoto } from '@/lib/supabase/inspections'
 import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
-import { bulkUpdateStatus, fetchInfrastructureFeatures, buildFeatureDisplayName } from '@/lib/supabase/infrastructure-features'
+import { bulkUpdateStatus, fetchInfrastructureFeatures, formatFeatureType, updateFeatureStatus } from '@/lib/supabase/infrastructure-features'
 import { fetchAllComponentsForBase, fetchLightingSystems } from '@/lib/supabase/lighting-systems'
 import { createOutageEvent } from '@/lib/supabase/outage-events'
 import { calculateAllSystemHealth, getAlertTier } from '@/lib/outage-rules'
@@ -637,27 +637,39 @@ export default function InspectionsPage() {
   }
 
   // ── Auto-populate discrepancy fields when features are selected ──
-  const handleFeaturesSelected = (itemId: string, discIndex: number, features: InfrastructureFeature[]) => {
+  const handleFeaturesSelected = (itemId: string, discIndex: number, features: InfrastructureFeature[], itemLabel?: string) => {
     if (features.length === 0) return
 
     const avgLat = features.reduce((sum, f) => sum + f.latitude, 0) / features.length
     const avgLon = features.reduce((sum, f) => sum + f.longitude, 0) / features.length
 
-    const featureNames = features.map(f => f.label || f.feature_type)
+    // Build natural-language names: "TWY B Edge Light" not "TWY_K_EDGELIGHTS"
+    // Use feature layer, fall back to inspection item label (e.g. "TWY B")
+    // Strip redundant prefix when layer already implies it (TWY → Taxiway, RWY → Runway)
+    const featureNames = features.map(f => {
+      let typeLabel = formatFeatureType(f.feature_type)
+      const loc = f.layer || itemLabel || null
+      if (loc) {
+        if (loc.startsWith('TWY')) typeLabel = typeLabel.replace(/^Taxiway\s*/i, '')
+        else if (loc.startsWith('RWY')) typeLabel = typeLabel.replace(/^Runway\s*/i, '')
+      }
+      return loc ? `${loc} ${typeLabel}` : typeLabel
+    })
     const uniqueNames = Array.from(new Set(featureNames))
     const titleText = uniqueNames.length <= 3
       ? uniqueNames.join(', ')
       : `${uniqueNames.slice(0, 2).join(', ')} +${uniqueNames.length - 2} more`
 
-    const featureDescriptions = features.map(f => buildFeatureDisplayName(f))
-    const remarksText = `Lighting inspection: ${featureDescriptions.join('; ')} — marked inoperative.`
+    const remarksText = uniqueNames.length <= 3
+      ? `${uniqueNames.join(', ')} Out of Service`
+      : `${uniqueNames.slice(0, 2).join(', ')} +${uniqueNames.length - 2} more Out of Service`
 
-    const layers = Array.from(new Set(features.map(f => f.layer).filter(Boolean)))
+    const layers = Array.from(new Set(features.map(f => f.layer || itemLabel).filter(Boolean)))
     const locationText = layers.length > 0 ? layers.join(', ') : 'Airfield'
 
     const updates: Partial<SimpleDiscrepancy> = {
       location: { lat: avgLat, lon: avgLon },
-      discrepancy_title: `${titleText} — Inoperative`,
+      discrepancy_title: `${titleText} Out of Service`,
       discrepancy_location_text: locationText,
     }
 
@@ -761,6 +773,7 @@ export default function InspectionsPage() {
       construction_meeting: false,
       joint_monthly: false,
       base_id: installationId,
+      inspection_date: todayStr,
     })
     if (saved) {
       const updateDraft = (prev: SingleInspectionDraft | null): SingleInspectionDraft | null => {
@@ -834,6 +847,7 @@ export default function InspectionsPage() {
       construction_meeting: false,
       joint_monthly: false,
       base_id: installationId,
+      inspection_date: todayStr,
     })
 
     if (error) {
@@ -915,6 +929,19 @@ export default function InspectionsPage() {
   // ── Complete & file the current form ──
   const handleComplete = async () => {
     if (!activeForm || !currentDraft || !currentHalf) return
+
+    // Require RSC before completing (RSC auto-passes RCR when RCR not reported)
+    if (!currentHalf.rscCondition) {
+      toast.error('Runway Surface Condition (RSC) must be completed before filing')
+      return
+    }
+
+    // Require BWC for airfield inspections
+    if (activeForm === 'airfield' && !currentHalf.bwcValue) {
+      toast.error('Bird Watch Condition (BWC) must be completed before filing')
+      return
+    }
+
     setSaving(true)
 
     const half = currentHalf
@@ -999,6 +1026,11 @@ export default function InspectionsPage() {
 
         d.generated_discrepancy_id = disc.id
 
+        // Mark linked NAVAID feature as inoperative
+        if (hasLinkedFeatures) {
+          await updateFeatureStatus(d.linked_feature_ids![0], 'inoperative')
+        }
+
         const photos = discPhotos[itemId]?.[discIdx] || []
         for (const photo of photos) {
           await uploadDiscrepancyPhoto(disc.id, photo.file, installationId)
@@ -1069,6 +1101,7 @@ export default function InspectionsPage() {
         filed_by_name: filerName,
         filed_by_id: filerId,
         base_id: installationId,
+        inspection_date: todayStr,
       })
       if (created) {
         filedEntityId = created.id
@@ -1261,6 +1294,7 @@ export default function InspectionsPage() {
     completedAt: string | null
     personnel?: string[]
     status: 'in_progress' | 'completed'
+    inspector_id: string | null
   }
 
   const dailyReports: DailyReport[] = useMemo(() => {
@@ -1303,6 +1337,7 @@ export default function InspectionsPage() {
         temperatureF: primary.temperature_f,
         completedAt: primary.completed_at,
         status: anyInProgress ? 'in_progress' : 'completed',
+        inspector_id: primary.inspector_id || null,
       })
     }
 
@@ -1329,6 +1364,7 @@ export default function InspectionsPage() {
         completedAt: insp.completed_at,
         personnel: insp.personnel || [],
         status: insp.status || 'completed',
+        inspector_id: insp.inspector_id || null,
       })
     }
 
@@ -1432,7 +1468,7 @@ export default function InspectionsPage() {
             <button
               onClick={() => diagramUrl ? setShowDiagram(true) : toast.info('No airfield diagram uploaded — add one in Settings > Base Configuration')}
               style={{
-                background: '#A78BFA14', border: '1px solid #A78BFA33', borderRadius: 8,
+                background: '#A78BFA14', border: '1px solid #A78BFA33', borderRadius: 'var(--radius-md)',
                 padding: '8px 14px', color: 'var(--color-purple)', fontSize: 'var(--fs-base)', fontWeight: 600,
                 fontFamily: 'inherit', cursor: 'pointer',
               }}
@@ -1446,7 +1482,7 @@ export default function InspectionsPage() {
                 window.scrollTo(0, 0)
               }}
               style={{
-                background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 8,
+                background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
                 padding: '8px 14px', color: 'var(--color-text-2)', fontSize: 'var(--fs-base)', fontWeight: 600,
                 fontFamily: 'inherit', cursor: 'pointer',
               }}
@@ -1469,7 +1505,7 @@ export default function InspectionsPage() {
           <div
             style={{
               width: 44, height: 44, borderRadius: '50%',
-              background: `conic-gradient(#22C55E ${progress * 3.6}deg, var(--color-bg-elevated) ${progress * 3.6}deg)`,
+              background: `conic-gradient(var(--color-status-pass) ${progress * 3.6}deg, var(--color-bg-elevated) ${progress * 3.6}deg)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}
           >
@@ -1485,15 +1521,210 @@ export default function InspectionsPage() {
           </div>
         </div>
 
+        {/* ── Runway Conditions Card (BWC / RSC / RCR) ── */}
+        {currentHalf && (
+          <div style={{
+            background: 'var(--color-bg-elevated)', borderRadius: 'var(--radius-lg)', padding: 16, marginBottom: 20,
+            border: '1px solid var(--color-border)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                Runway Conditions
+              </div>
+              <button
+                onClick={async () => {
+                  const half = currentHalf
+                  if (!half.rscCondition && !(activeForm === 'airfield' && half.bwcValue)) {
+                    toast.error('Select at least RSC or BWC before pushing to status')
+                    return
+                  }
+
+                  // Fetch current status to detect changes
+                  const currentStatus = await fetchAirfieldStatus(installationId)
+                  const rscChanged = half.rscCondition && half.rscCondition !== currentStatus?.rsc_condition
+                  const bwcChanged = half.bwcValue && half.bwcValue !== currentStatus?.bwc_value
+                  const rcrChanged = half.rcrReported && half.rcrValue &&
+                    (half.rcrValue !== currentStatus?.rcr_touchdown || (half.rcrConditionType || null) !== (currentStatus?.rcr_condition || null))
+                  const rcrCleared = half.rscCondition && !half.rcrReported && currentStatus?.rcr_touchdown
+                  const hasChanges = rscChanged || bwcChanged || rcrChanged || rcrCleared
+
+                  // Only update airfield status if something changed
+                  if (hasChanges) {
+                    const nowIso = new Date().toISOString()
+                    const batch: Record<string, unknown> = {}
+                    if (half.bwcValue) {
+                      batch.bwc_value = half.bwcValue
+                      batch.bwc_updated_at = nowIso
+                    }
+                    if (half.rscCondition) {
+                      batch.rsc_condition = half.rscCondition
+                      batch.rsc_updated_at = nowIso
+                    }
+                    if (half.rcrReported && half.rcrValue) {
+                      batch.rcr_touchdown = half.rcrValue
+                      batch.rcr_condition = half.rcrConditionType || null
+                      batch.rcr_updated_at = nowIso
+                    } else if (half.rscCondition && !half.rcrReported) {
+                      batch.rcr_touchdown = null
+                      batch.rcr_midpoint = null
+                      batch.rcr_rollout = null
+                      batch.rcr_condition = null
+                      batch.rcr_updated_at = null
+                    }
+                    if (Object.keys(batch).length > 0) {
+                      await updateAirfieldStatus(batch as any, installationId)
+                    }
+                    if (typeof window !== 'undefined') window.dispatchEvent(new Event('glidepath:local-status-update'))
+                  }
+
+                  // Always log activity with reported conditions
+                  const oiStr = userOI ? `/${userOI}` : ''
+                  const parts: string[] = []
+                  if (half.rscCondition) parts.push(`RSC/${half.rscCondition.toUpperCase()}`)
+                  if (half.rcrReported && half.rcrValue) parts.push(`RCR/${half.rcrValue}`)
+                  if (half.bwcValue) parts.push(`BWC/${half.bwcValue.toUpperCase()}`)
+                  const details = `AFLD3${oiStr} advises ${parts.join(', ')}`
+                  logActivity('updated', 'airfield_status', installationId || crypto.randomUUID(), undefined, { details }, installationId)
+
+                  toast.success(hasChanges ? 'Conditions updated & pushed to airfield status' : 'Conditions reported (no change from current status)')
+                }}
+                style={{
+                  padding: '6px 14px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                  cursor: 'pointer', border: 'none', fontFamily: 'inherit',
+                  background: 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-cyan))',
+                  color: '#FFF',
+                }}
+              >
+                Push to Status
+              </button>
+            </div>
+
+            {/* BWC — airfield only */}
+            {activeForm === 'airfield' && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)', marginBottom: 6 }}>
+                  Bird Watch Condition (BWC)
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {BWC_OPTIONS.map((opt) => {
+                    const selected = currentHalf.bwcValue === opt
+                    const colorMap: Record<string, string> = { LOW: 'var(--color-status-pass)', MOD: 'var(--color-bwc-mod)', SEV: 'var(--color-orange)', PROHIB: 'var(--color-danger)' }
+                    const color = colorMap[opt] || 'var(--color-text-2)'
+                    return (
+                      <button
+                        key={opt}
+                        onClick={() => setBwcValue(opt)}
+                        style={{
+                          padding: '6px 12px', borderRadius: 'var(--radius-sm)',
+                          border: `2px solid ${selected ? color : 'var(--color-text-4)'}`,
+                          background: selected ? `${color}20` : 'transparent',
+                          color: selected ? color : 'var(--color-text-2)',
+                          fontSize: 'var(--fs-base)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                        }}
+                      >
+                        {opt}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* RSC */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)', marginBottom: 6 }}>
+                Runway Surface Condition (RSC)
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {RSC_CONDITIONS.map((opt) => {
+                  const selected = currentHalf.rscCondition === opt
+                  const color = opt === 'Dry' ? 'var(--color-status-pass)' : 'var(--color-status-inwork)'
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => setRscCondition(opt)}
+                      style={{
+                        padding: '6px 12px', borderRadius: 'var(--radius-sm)',
+                        border: `2px solid ${selected ? color : 'var(--color-text-4)'}`,
+                        background: selected ? `${color}20` : 'transparent',
+                        color: selected ? color : 'var(--color-text-2)',
+                        fontSize: 'var(--fs-base)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >
+                      {opt}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* RCR */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                <div
+                  onClick={toggleRcrReported}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+                >
+                  <div style={{
+                    width: 20, height: 20, borderRadius: 'var(--radius-xs)',
+                    border: currentHalf.rcrReported ? '2px solid var(--color-cyan, #22D3EE)' : '2px solid var(--color-text-4)',
+                    background: currentHalf.rcrReported ? 'var(--color-cyan, #22D3EE)' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 14, color: 'var(--color-bg-surface-solid, #0F172A)', fontWeight: 700,
+                  }}>
+                    {currentHalf.rcrReported && '\u2713'}
+                  </div>
+                  <span style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: currentHalf.rcrReported ? 'var(--color-cyan, #22D3EE)' : 'var(--color-text-2)' }}>
+                    Report RCR
+                  </span>
+                </div>
+              </div>
+              {currentHalf.rcrReported && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <input
+                    type="number"
+                    placeholder="RCR value"
+                    value={currentHalf.rcrValue || ''}
+                    onChange={(e) => setRcrValue(e.target.value)}
+                    style={{
+                      width: 100, padding: '6px 10px', borderRadius: 'var(--radius-sm)',
+                      border: '2px solid var(--color-text-4)', background: 'var(--color-bg-surface)',
+                      color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit',
+                    }}
+                  />
+                  <select
+                    value={currentHalf.rcrConditionType || ''}
+                    onChange={(e) => setRcrConditionType(e.target.value)}
+                    style={{
+                      padding: '6px 10px', borderRadius: 'var(--radius-sm)',
+                      border: '2px solid var(--color-text-4)', background: 'var(--color-bg-surface)',
+                      color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit',
+                    }}
+                  >
+                    <option value="">Condition type...</option>
+                    {RCR_CONDITION_TYPES.map((ct) => (
+                      <option key={ct.value} value={ct.value}>{ct.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ── Sections & Items ── */}
         {visibleSections.map((section) => {
+          // Skip sections that only contain BWC/RSC/RCR (rendered in top card)
+          const nonConditionItems = section.items.filter(i => i.type !== 'bwc' && i.type !== 'rsc' && i.type !== 'rcr')
+          if (nonConditionItems.length === 0) return null
+
           const done = sectionDoneCount(section)
           const sectionComplete = done === section.items.length
 
           return (
             <div key={section.id} style={{ marginBottom: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: sectionComplete ? '#22C55E' : 'var(--color-text-2)' }}>
+                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: sectionComplete ? 'var(--color-status-pass)' : 'var(--color-text-2)' }}>
                   {section.title}
                 </div>
                 <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{done}/{section.items.length}</div>
@@ -1506,140 +1737,12 @@ export default function InspectionsPage() {
               )}
 
               {section.items.map((item) => {
-                // BWC item
-                if (item.type === 'bwc') {
-                  return (
-                    <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--color-bg-elevated)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', fontWeight: 600, minWidth: 22 }}>{item.itemNumber}.</span>
-                        <span style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: '18px' }}>{item.item}</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: 6, paddingLeft: 30 }}>
-                        {BWC_OPTIONS.map((opt) => {
-                          const selected = currentHalf?.bwcValue === opt
-                          const colorMap: Record<string, string> = { LOW: '#22C55E', MOD: '#EAB308', SEV: '#F97316', PROHIB: '#EF4444' }
-                          const color = colorMap[opt] || 'var(--color-text-2)'
-                          return (
-                            <button
-                              key={opt}
-                              onClick={() => setBwcValue(opt)}
-                              style={{
-                                padding: '6px 12px', borderRadius: 6,
-                                border: `2px solid ${selected ? color : 'var(--color-text-4)'}`,
-                                background: selected ? `${color}20` : 'transparent',
-                                color: selected ? color : 'var(--color-text-2)',
-                                fontSize: 'var(--fs-base)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                              }}
-                            >
-                              {opt}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )
-                }
-
-                // RSC item
-                if (item.type === 'rsc') {
-                  return (
-                    <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--color-bg-elevated)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', fontWeight: 600, minWidth: 22 }}>{item.itemNumber}.</span>
-                        <span style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: '18px' }}>{item.item}</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: 6, paddingLeft: 30 }}>
-                        {RSC_CONDITIONS.map((opt) => {
-                          const selected = currentHalf?.rscCondition === opt
-                          const color = opt === 'Dry' ? '#22C55E' : '#3B82F6'
-                          return (
-                            <button
-                              key={opt}
-                              onClick={() => setRscCondition(opt)}
-                              style={{
-                                padding: '6px 12px', borderRadius: 6,
-                                border: `2px solid ${selected ? color : 'var(--color-text-4)'}`,
-                                background: selected ? `${color}20` : 'transparent',
-                                color: selected ? color : 'var(--color-text-2)',
-                                fontSize: 'var(--fs-base)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                              }}
-                            >
-                              {opt === 'Dry' ? '\u2600\uFE0F' : '\uD83D\uDCA7'} {opt}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )
-                }
-
-                // RCR item
-                if (item.type === 'rcr') {
-                  const rcrOn = currentHalf?.rcrReported ?? false
-                  return (
-                    <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--color-bg-elevated)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', fontWeight: 600, minWidth: 22 }}>{item.itemNumber}.</span>
-                        <span style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: '18px' }}>{item.item}</span>
-                      </div>
-                      <div
-                        onClick={toggleRcrReported}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', marginLeft: 30,
-                          borderRadius: 8, cursor: 'pointer',
-                          background: rcrOn ? 'rgba(34,211,238,0.08)' : 'var(--color-bg-elevated)',
-                          border: rcrOn ? '1.5px solid var(--color-cyan, #22D3EE)' : '1.5px solid var(--color-text-4)',
-                        }}
-                      >
-                        <div style={{
-                          width: 20, height: 20, borderRadius: 4,
-                          border: rcrOn ? '2px solid var(--color-cyan, #22D3EE)' : '2px solid var(--color-text-4)',
-                          background: rcrOn ? 'var(--color-cyan, #22D3EE)' : 'transparent',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 14, color: 'var(--color-bg-surface-solid, #0F172A)', fontWeight: 700,
-                        }}>
-                          {rcrOn && '\u2713'}
-                        </div>
-                        <span style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: rcrOn ? 'var(--color-cyan, #22D3EE)' : 'var(--color-text-2)' }}>
-                          Report RCR
-                        </span>
-                      </div>
-                      {rcrOn && (
-                        <div style={{ display: 'flex', gap: 8, paddingLeft: 30, flexWrap: 'wrap', marginTop: 8 }}>
-                          <input
-                            type="number"
-                            placeholder="RCR value"
-                            value={currentHalf?.rcrValue || ''}
-                            onChange={(e) => setRcrValue(e.target.value)}
-                            style={{
-                              width: 100, padding: '6px 10px', borderRadius: 6,
-                              border: '2px solid var(--color-text-4)', background: 'var(--color-bg-surface)',
-                              color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit',
-                            }}
-                          />
-                          <select
-                            value={currentHalf?.rcrConditionType || ''}
-                            onChange={(e) => setRcrConditionType(e.target.value)}
-                            style={{
-                              padding: '6px 10px', borderRadius: 6,
-                              border: '2px solid var(--color-text-4)', background: 'var(--color-bg-surface)',
-                              color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit',
-                            }}
-                          >
-                            <option value="">Condition type...</option>
-                            {RCR_CONDITION_TYPES.map((ct) => (
-                              <option key={ct.value} value={ct.value}>{ct.label}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                    </div>
-                  )
-                }
+                // Skip BWC/RSC/RCR — rendered in top card
+                if (item.type === 'bwc' || item.type === 'rsc' || item.type === 'rcr') return null
 
                 // Standard pass/fail/na item
                 const state = currentHalf?.responses[item.id] ?? 'pass'
-                const borderColor = state === 'pass' ? '#22C55E' : state === 'fail' ? '#EF4444' : state === 'na' ? 'var(--color-text-3)' : 'var(--color-text-4)'
+                const borderColor = state === 'pass' ? 'var(--color-status-pass)' : state === 'fail' ? 'var(--color-danger)' : state === 'na' ? 'var(--color-text-3)' : 'var(--color-text-4)'
                 const bgColor = state === 'pass' ? 'rgba(34,197,94,0.1)' : state === 'fail' ? 'rgba(239,68,68,0.1)' : state === 'na' ? 'rgba(100,116,139,0.1)' : 'transparent'
 
                 return (
@@ -1651,12 +1754,12 @@ export default function InspectionsPage() {
                       <button
                         onClick={() => toggle(item.id)}
                         style={{
-                          width: 28, height: 28, minWidth: 28, borderRadius: 6,
+                          width: 28, height: 28, minWidth: 28, borderRadius: 'var(--radius-sm)',
                           border: `2px solid ${borderColor}`, background: bgColor,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           cursor: 'pointer', padding: 0, flexShrink: 0,
                           fontSize: state === 'na' ? 9 : 14, fontWeight: 700,
-                          color: state === 'pass' ? '#22C55E' : state === 'fail' ? '#EF4444' : state === 'na' ? 'var(--color-text-3)' : 'transparent',
+                          color: state === 'pass' ? 'var(--color-status-pass)' : state === 'fail' ? 'var(--color-danger)' : state === 'na' ? 'var(--color-text-3)' : 'transparent',
                           fontFamily: 'inherit',
                         }}
                       >
@@ -1689,7 +1792,7 @@ export default function InspectionsPage() {
                           linkedSystemIds={activeForm === 'lighting' && itemKeyLinks[item.id] ? systemIdsFromLinks(itemKeyLinks[item.id]) : undefined}
                           linkedComponentIds={activeForm === 'lighting' && itemKeyLinks[item.id] ? componentIdsFromLinks(itemKeyLinks[item.id]) : undefined}
                           linkedBaseId={activeForm === 'lighting' && itemKeyLinks[item.id] ? installationId ?? undefined : undefined}
-                          onFeaturesSelected={(idx, features) => handleFeaturesSelected(item.id, idx, features)}
+                          onFeaturesSelected={(idx, features) => handleFeaturesSelected(item.id, idx, features, item.item)}
                           flyToPoints={(currentHalf.discrepancies[item.id] || []).map((_, i) => discFlyTo[`${item.id}:${i}`] || null)}
                           onSaveDraft={handleSave}
                           draftSaving={saving}
@@ -1728,7 +1831,7 @@ export default function InspectionsPage() {
               onClick={() => setShowCompleteConfirm(true)}
               disabled={saving}
               style={{
-                flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
+                flex: 1, padding: '14px 0', borderRadius: 'var(--radius-md)', border: 'none',
                 background: 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-cyan))',
                 color: '#FFF', fontSize: 'var(--fs-xl)', fontWeight: 700,
                 cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
@@ -1742,7 +1845,7 @@ export default function InspectionsPage() {
               onClick={handleSave}
               disabled={saving}
               style={{
-                flex: 1, padding: '14px 0', borderRadius: 10, border: 'none',
+                flex: 1, padding: '14px 0', borderRadius: 'var(--radius-md)', border: 'none',
                 background: 'linear-gradient(135deg, #3B82F6, #6366F1)',
                 color: '#FFF', fontSize: 'var(--fs-xl)', fontWeight: 700,
                 cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
@@ -1763,7 +1866,7 @@ export default function InspectionsPage() {
               }
             }}
             style={{
-              background: 'transparent', border: 'none', color: '#EF4444',
+              background: 'transparent', border: 'none', color: 'var(--color-danger)',
               fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
               padding: '8px 16px',
             }}
@@ -1778,11 +1881,9 @@ export default function InspectionsPage() {
         {/* ── Complete Confirmation Dialog ── */}
         {showCompleteConfirm && (
           <div
+            className="modal-overlay"
             onClick={() => setShowCompleteConfirm(false)}
-            style={{
-              position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-            }}
+            style={{ padding: 24 }}
           >
             <div
               onClick={(e) => e.stopPropagation()}
@@ -1808,7 +1909,7 @@ export default function InspectionsPage() {
                     handleComplete()
                   }}
                   style={{
-                    flex: 1, padding: '10px 12px', borderRadius: 8, fontSize: 'var(--fs-base)', fontWeight: 700,
+                    flex: 1, padding: '10px 12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-base)', fontWeight: 700,
                     cursor: 'pointer', border: 'none',
                     background: 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-cyan))',
                     color: '#FFF', fontFamily: 'inherit',
@@ -1817,7 +1918,7 @@ export default function InspectionsPage() {
                 <button
                   onClick={() => setShowCompleteConfirm(false)}
                   style={{
-                    flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                    flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                     cursor: 'pointer', border: '1px solid var(--color-border-mid)',
                     background: 'var(--color-bg)', color: 'var(--color-text-2)', fontFamily: 'inherit',
                   }}
@@ -1833,7 +1934,7 @@ export default function InspectionsPage() {
             onClick={() => setShowDiagram(false)}
             onTouchEnd={(e) => { if (e.target === e.currentTarget) setShowDiagram(false) }}
             style={{
-              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 9999,
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 'var(--z-modal)',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               padding: '60px 12px 24px',
               overflowY: 'auto', WebkitOverflowScrolling: 'touch',
@@ -1842,8 +1943,8 @@ export default function InspectionsPage() {
             <button
               onClick={(e) => { e.stopPropagation(); setShowDiagram(false) }}
               style={{
-                position: 'fixed', top: 12, right: 12, zIndex: 10000,
-                background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8,
+                position: 'fixed', top: 12, right: 12, zIndex: 'var(--z-modal-nested)',
+                background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 'var(--radius-md)',
                 padding: '10px 18px', color: '#fff', fontSize: 'var(--fs-xl)', fontWeight: 700, cursor: 'pointer',
                 backdropFilter: 'blur(8px)',
               }}
@@ -1854,7 +1955,7 @@ export default function InspectionsPage() {
               alt="Airfield Diagram"
               onClick={(e) => e.stopPropagation()}
               onTouchEnd={(e) => e.stopPropagation()}
-              style={{ maxWidth: '100%', maxHeight: 'calc(100vh - 100px)', objectFit: 'contain', borderRadius: 8 }}
+              style={{ maxWidth: '100%', maxHeight: 'calc(100vh - 100px)', objectFit: 'contain', borderRadius: 'var(--radius-md)' }}
             />
           </div>
         )}
@@ -1910,7 +2011,7 @@ export default function InspectionsPage() {
               : todayAirfieldByOther
               ? '2px solid rgba(249,115,22,0.4)'
               : '1px solid var(--color-border)',
-            borderRadius: 12,
+            borderRadius: 'var(--radius-lg)',
             padding: '16px 12px',
             cursor: todayAirfieldByOther ? 'not-allowed' : 'pointer',
             textAlign: 'center',
@@ -1923,19 +2024,19 @@ export default function InspectionsPage() {
           </div>
           <div style={{
             fontSize: 'var(--fs-md)', fontWeight: 700,
-            color: todayAirfieldFiled ? '#22C55E' : airfieldDraft ? '#3B82F6' : todayAirfieldByOther ? '#F97316' : 'var(--color-text-1)',
+            color: todayAirfieldFiled ? 'var(--color-status-pass)' : airfieldDraft ? 'var(--color-status-inwork)' : todayAirfieldByOther ? 'var(--color-orange)' : 'var(--color-text-1)',
           }}>
             Airfield
           </div>
           <div style={{
             fontSize: 'var(--fs-xs)', marginTop: 2,
-            color: todayAirfieldFiled ? '#22C55E' : airfieldDraft ? '#3B82F6' : todayAirfieldByOther ? '#F97316' : 'var(--color-text-3)',
+            color: todayAirfieldFiled ? 'var(--color-status-pass)' : airfieldDraft ? 'var(--color-status-inwork)' : todayAirfieldByOther ? 'var(--color-orange)' : 'var(--color-text-3)',
             fontWeight: 600,
           }}>
             {todayAirfieldFiled ? 'Complete' : airfieldDraft ? 'In Progress' : todayAirfieldByOther ? `In Progress` : 'Start'}
           </div>
           {todayAirfieldByOther && (
-            <div style={{ fontSize: 'var(--fs-2xs)', color: '#F97316', marginTop: 2 }}>
+            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-orange)', marginTop: 2 }}>
               {todayAirfield?.inspector_name || 'Another user'}
             </div>
           )}
@@ -1972,7 +2073,7 @@ export default function InspectionsPage() {
               : todayLightingByOther
               ? '2px solid rgba(249,115,22,0.4)'
               : '1px solid var(--color-border)',
-            borderRadius: 12,
+            borderRadius: 'var(--radius-lg)',
             padding: '16px 12px',
             cursor: todayLightingByOther ? 'not-allowed' : 'pointer',
             textAlign: 'center',
@@ -1985,19 +2086,19 @@ export default function InspectionsPage() {
           </div>
           <div style={{
             fontSize: 'var(--fs-md)', fontWeight: 700,
-            color: todayLightingFiled ? '#22C55E' : lightingDraft ? '#3B82F6' : todayLightingByOther ? '#F97316' : 'var(--color-text-1)',
+            color: todayLightingFiled ? 'var(--color-status-pass)' : lightingDraft ? 'var(--color-status-inwork)' : todayLightingByOther ? 'var(--color-orange)' : 'var(--color-text-1)',
           }}>
             Lighting
           </div>
           <div style={{
             fontSize: 'var(--fs-xs)', marginTop: 2,
-            color: todayLightingFiled ? '#22C55E' : lightingDraft ? '#3B82F6' : todayLightingByOther ? '#F97316' : 'var(--color-text-3)',
+            color: todayLightingFiled ? 'var(--color-status-pass)' : lightingDraft ? 'var(--color-status-inwork)' : todayLightingByOther ? 'var(--color-orange)' : 'var(--color-text-3)',
             fontWeight: 600,
           }}>
             {todayLightingFiled ? 'Complete' : lightingDraft ? 'In Progress' : todayLightingByOther ? 'In Progress' : 'Start'}
           </div>
           {todayLightingByOther && (
-            <div style={{ fontSize: 'var(--fs-2xs)', color: '#F97316', marginTop: 2 }}>
+            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-orange)', marginTop: 2 }}>
               {todayLighting?.inspector_name || 'Another user'}
             </div>
           )}
@@ -2016,8 +2117,8 @@ export default function InspectionsPage() {
       <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
         {[
           { key: 'all', label: `All (${dailyReports.length})`, color: 'var(--color-cyan)' },
-          { key: 'airfield', label: `Airfield (${airfieldCount})`, color: '#34D399' },
-          { key: 'lighting', label: `Lighting (${lightingCount})`, color: '#FBBF24' },
+          { key: 'airfield', label: `Airfield (${airfieldCount})`, color: 'var(--color-success)' },
+          { key: 'lighting', label: `Lighting (${lightingCount})`, color: 'var(--color-warning)' },
         ].map((chip) => {
           const active = typeFilter === chip.key
           return (
@@ -2026,7 +2127,7 @@ export default function InspectionsPage() {
               type="button"
               onClick={() => setTypeFilter(active && chip.key !== 'all' ? 'all' : chip.key)}
               style={{
-                padding: '6px 12px', borderRadius: 16, fontSize: 'var(--fs-sm)', fontWeight: 600,
+                padding: '6px 12px', borderRadius: 'var(--radius-xl)', fontSize: 'var(--fs-sm)', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit', border: 'none', whiteSpace: 'nowrap',
                 background: active ? `${chip.color}22` : 'var(--color-bg-elevated)',
                 color: active ? chip.color : 'var(--color-text-3)',
@@ -2072,7 +2173,7 @@ export default function InspectionsPage() {
           : report.inspectionType === 'joint_monthly'
           ? 'Joint Monthly Airfield Inspection'
           : ''
-        const cardBorderColor = isInProgress ? '#3B82F6' : isSpecialType ? '#A78BFA' : isDaily ? 'var(--color-cyan)' : report.airfield ? '#34D399' : '#FBBF24'
+        const cardBorderColor = isInProgress ? 'var(--color-status-inwork)' : isSpecialType ? 'var(--color-purple)' : isDaily ? 'var(--color-cyan)' : report.airfield ? 'var(--color-success)' : 'var(--color-warning)'
 
         const cardContent = (
           <>
@@ -2083,25 +2184,25 @@ export default function InspectionsPage() {
                     {specialLabel}
                   </span>
                 ) : isDaily ? (
-                  <span style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: isInProgress ? '#3B82F6' : 'var(--color-cyan)' }}>
+                  <span style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: isInProgress ? 'var(--color-status-inwork)' : 'var(--color-cyan)' }}>
                     Airfield Inspection Report
                   </span>
                 ) : (
-                  <span style={{ fontSize: 'var(--fs-md)', fontWeight: 800, fontFamily: 'monospace', color: isInProgress ? '#3B82F6' : 'var(--color-cyan)' }}>
+                  <span style={{ fontSize: 'var(--fs-md)', fontWeight: 800, fontFamily: 'monospace', color: isInProgress ? 'var(--color-status-inwork)' : 'var(--color-cyan)' }}>
                     {displayIds[0]}
                   </span>
                 )}
               </div>
               <div style={{ display: 'flex', gap: 4 }}>
                 {isInProgress && (
-                  <Badge label="In Progress" color="#3B82F6" />
+                  <Badge label="In Progress" color="var(--color-status-inwork)" />
                 )}
                 {isSpecialType ? (
-                  <Badge label={report.inspectionType === 'construction_meeting' ? 'Construction' : 'Joint Monthly'} color="#A78BFA" />
+                  <Badge label={report.inspectionType === 'construction_meeting' ? 'Construction' : 'Joint Monthly'} color="var(--color-purple)" />
                 ) : (
                   <>
-                    {report.airfield && <Badge label="Airfield" color="#34D399" />}
-                    {report.lighting && <Badge label="Lighting" color="#FBBF24" />}
+                    {report.airfield && <Badge label="Airfield" color="var(--color-success)" />}
+                    {report.lighting && <Badge label="Lighting" color="var(--color-warning)" />}
                   </>
                 )}
               </div>
@@ -2120,7 +2221,7 @@ export default function InspectionsPage() {
                 {report.personnel && report.personnel.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
                     {report.personnel.map((p) => (
-                      <span key={p} style={{ fontSize: 'var(--fs-xs)', padding: '2px 6px', borderRadius: 4, background: 'rgba(167,139,250,0.1)', color: 'var(--color-purple)', fontWeight: 600 }}>
+                      <span key={p} style={{ fontSize: 'var(--fs-xs)', padding: '2px 6px', borderRadius: 'var(--radius-xs)', background: 'rgba(167,139,250,0.1)', color: 'var(--color-purple)', fontWeight: 600 }}>
                         {p}
                       </span>
                     ))}
@@ -2130,9 +2231,9 @@ export default function InspectionsPage() {
             ) : (
               <>
                 <div style={{ display: 'flex', gap: 8, marginBottom: 6, fontSize: 'var(--fs-base)' }}>
-                  <span style={{ color: '#22C55E', fontWeight: 700 }}>{report.totalPassed} Pass</span>
+                  <span style={{ color: 'var(--color-status-pass)', fontWeight: 700 }}>{report.totalPassed} Pass</span>
                   {report.totalFailed > 0 && (
-                    <span style={{ color: '#EF4444', fontWeight: 700 }}>{report.totalFailed} Fail</span>
+                    <span style={{ color: 'var(--color-danger)', fontWeight: 700 }}>{report.totalFailed} Fail</span>
                   )}
                   {report.totalNa > 0 && (
                     <span style={{ color: 'var(--color-text-3)', fontWeight: 600 }}>{report.totalNa} N/A</span>
@@ -2144,8 +2245,8 @@ export default function InspectionsPage() {
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
                     {report.bwcValue && (
                       <span style={{
-                        fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-                        color: report.bwcValue === 'LOW' ? '#22C55E' : report.bwcValue === 'MOD' ? '#EAB308' : report.bwcValue === 'SEV' ? '#F97316' : '#EF4444',
+                        fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--radius-xs)',
+                        color: report.bwcValue === 'LOW' ? 'var(--color-status-pass)' : report.bwcValue === 'MOD' ? 'var(--color-bwc-mod)' : report.bwcValue === 'SEV' ? 'var(--color-orange)' : 'var(--color-danger)',
                         background: report.bwcValue === 'LOW' ? 'rgba(34,197,94,0.1)' : report.bwcValue === 'MOD' ? 'rgba(234,179,8,0.1)' : report.bwcValue === 'SEV' ? 'rgba(249,115,22,0.1)' : 'rgba(239,68,68,0.1)',
                       }}>
                         BWC: {report.bwcValue}
@@ -2153,8 +2254,8 @@ export default function InspectionsPage() {
                     )}
                     {report.rscCondition && (
                       <span style={{
-                        fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-                        color: report.rscCondition === 'Dry' ? '#22C55E' : '#3B82F6',
+                        fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--radius-xs)',
+                        color: report.rscCondition === 'Dry' ? 'var(--color-status-pass)' : 'var(--color-status-inwork)',
                         background: report.rscCondition === 'Dry' ? 'rgba(34,197,94,0.1)' : 'rgba(59,130,246,0.1)',
                       }}>
                         RSC: {report.rscCondition}
@@ -2162,7 +2263,7 @@ export default function InspectionsPage() {
                     )}
                     {report.rcrValue && (
                       <span style={{
-                        fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                        fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--radius-xs)',
                         color: '#8B5CF6',
                         background: 'rgba(139,92,246,0.1)',
                       }}>
@@ -2194,6 +2295,7 @@ export default function InspectionsPage() {
         )
 
         if (isInProgress) {
+          const isOwner = report.inspector_id === currentUserId
           return (
             <div
               key={report.id}
@@ -2204,16 +2306,17 @@ export default function InspectionsPage() {
                 borderLeft: `3px solid ${cardBorderColor}`,
               }}
             >
-              <div onClick={() => handleResume(report)} style={{ cursor: 'pointer' }}>
+              <div onClick={isOwner ? () => handleResume(report) : undefined} style={{ cursor: isOwner ? 'pointer' : 'default' }}>
                 {cardContent}
               </div>
+              {isOwner && (
               <div style={{ display: 'flex', gap: 8, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--color-border)' }}>
                 <button
                   onClick={() => handleResume(report)}
                   style={{
-                    flex: 1, padding: '8px 0', borderRadius: 6,
+                    flex: 1, padding: '8px 0', borderRadius: 'var(--radius-sm)',
                     border: '1px solid rgba(59,130,246,0.4)', background: 'rgba(59,130,246,0.08)',
-                    color: '#3B82F6', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                    color: 'var(--color-status-inwork)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                     cursor: 'pointer', fontFamily: 'inherit',
                   }}
                 >
@@ -2227,15 +2330,16 @@ export default function InspectionsPage() {
                     }
                   }}
                   style={{
-                    padding: '8px 16px', borderRadius: 6,
+                    padding: '8px 16px', borderRadius: 'var(--radius-sm)',
                     border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.08)',
-                    color: '#EF4444', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                    color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                     cursor: 'pointer', fontFamily: 'inherit',
                   }}
                 >
                   Delete
                 </button>
               </div>
+              )}
             </div>
           )
         }
@@ -2261,11 +2365,7 @@ export default function InspectionsPage() {
         const isCompleted = blockedInfo.reason === 'completed'
         return (
           <div
-            style={{
-              position: 'fixed', inset: 0, zIndex: 9999,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(0,0,0,0.6)', padding: 16,
-            }}
+            className="modal-overlay"
             onClick={() => setBlockedInfo(null)}
           >
             <div
@@ -2284,7 +2384,7 @@ export default function InspectionsPage() {
               </div>
               <div style={{
                 fontSize: 'var(--fs-xl)', fontWeight: 800,
-                color: isCompleted ? '#22C55E' : '#F97316',
+                color: isCompleted ? 'var(--color-status-pass)' : 'var(--color-orange)',
                 marginBottom: 10,
               }}>
                 {isCompleted
@@ -2305,7 +2405,7 @@ export default function InspectionsPage() {
                   </>
                 ) : (
                   <>
-                    <strong style={{ color: '#F97316' }}>
+                    <strong style={{ color: 'var(--color-orange)' }}>
                       {blockedInfo.inspectorName || 'Another user'}
                     </strong>{' '}
                     currently has the {label} Inspection in progress.
@@ -2323,9 +2423,9 @@ export default function InspectionsPage() {
                       router.push(`/inspections/${blockedInfo.inspectionId}`)
                     }}
                     style={{
-                      flex: 1, padding: '12px 0', borderRadius: 10,
+                      flex: 1, padding: '12px 0', borderRadius: 'var(--radius-md)',
                       border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.12)',
-                      color: '#22C55E', fontSize: 'var(--fs-md)', fontWeight: 700,
+                      color: 'var(--color-status-pass)', fontSize: 'var(--fs-md)', fontWeight: 700,
                       cursor: 'pointer', fontFamily: 'inherit',
                     }}
                   >
@@ -2335,7 +2435,7 @@ export default function InspectionsPage() {
                 <button
                   onClick={() => setBlockedInfo(null)}
                   style={{
-                    flex: 1, padding: '12px 0', borderRadius: 10,
+                    flex: 1, padding: '12px 0', borderRadius: 'var(--radius-md)',
                     border: '1px solid var(--color-border)', background: 'transparent',
                     color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600,
                     cursor: 'pointer', fontFamily: 'inherit',
@@ -2352,11 +2452,7 @@ export default function InspectionsPage() {
       {/* ── Confirmation Dialog — Start New Inspection ── */}
       {confirmStart && (
         <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 9999,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(0,0,0,0.6)', padding: 16,
-          }}
+          className="modal-overlay"
           onClick={() => setConfirmStart(null)}
         >
           <div
@@ -2383,7 +2479,7 @@ export default function InspectionsPage() {
               <button
                 onClick={() => setConfirmStart(null)}
                 style={{
-                  flex: 1, padding: '12px 0', borderRadius: 10,
+                  flex: 1, padding: '12px 0', borderRadius: 'var(--radius-md)',
                   border: '1px solid var(--color-border)', background: 'transparent',
                   color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600,
                   cursor: 'pointer', fontFamily: 'inherit',
@@ -2398,9 +2494,9 @@ export default function InspectionsPage() {
                   handleBeginNew(type)
                 }}
                 style={{
-                  flex: 1, padding: '12px 0', borderRadius: 10,
+                  flex: 1, padding: '12px 0', borderRadius: 'var(--radius-md)',
                   border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.12)',
-                  color: '#22C55E', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  color: 'var(--color-status-pass)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >

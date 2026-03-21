@@ -76,7 +76,7 @@ export default function AcsiListPage() {
           alignItems: 'center',
           gap: 6,
           padding: '10px 18px',
-          borderRadius: 8,
+          borderRadius: 'var(--radius-md)',
           background: 'var(--color-accent)',
           color: '#fff',
           textDecoration: 'none',
@@ -91,13 +91,13 @@ export default function AcsiListPage() {
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
         {[
           { label: 'Total', value: totalCount, color: 'var(--color-text-1)' },
-          { label: 'Completed', value: completedCount, color: '#10B981' },
-          { label: 'In Progress', value: inProgressCount, color: '#3B82F6' },
-          { label: 'Drafts', value: draftCount, color: '#9CA3AF' },
+          { label: 'Completed', value: completedCount, color: 'var(--color-green)' },
+          { label: 'In Progress', value: inProgressCount, color: 'var(--color-blue)' },
+          { label: 'Drafts', value: draftCount, color: 'var(--color-text-3)' },
         ].map(kpi => (
           <div key={kpi.label} style={{
             padding: '12px 20px',
-            borderRadius: 8,
+            borderRadius: 'var(--radius-md)',
             border: '1px solid var(--color-border)',
             background: 'var(--color-bg-surface)',
             textAlign: 'center',
@@ -122,7 +122,7 @@ export default function AcsiListPage() {
           onChange={(e) => setSearch(e.target.value)}
           style={{
             padding: '8px 14px',
-            borderRadius: 8,
+            borderRadius: 'var(--radius-md)',
             border: '1px solid var(--color-border)',
             background: 'var(--color-bg-input)',
             color: 'var(--color-text-1)',
@@ -138,7 +138,7 @@ export default function AcsiListPage() {
               onClick={() => setFilter(f)}
               style={{
                 padding: '6px 14px',
-                borderRadius: 6,
+                borderRadius: 'var(--radius-sm)',
                 border: filter === f ? '1px solid var(--color-accent)' : '1px solid var(--color-border)',
                 background: filter === f ? 'var(--color-accent-glow)' : 'transparent',
                 color: filter === f ? 'var(--color-accent)' : 'var(--color-text-2)',
@@ -167,7 +167,7 @@ export default function AcsiListPage() {
           padding: 60,
           color: 'var(--color-text-3)',
           border: '1px dashed var(--color-border)',
-          borderRadius: 8,
+          borderRadius: 'var(--radius-md)',
         }}>
           <ShieldCheck size={40} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
           <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 500 }}>No ACSI inspections found</div>
@@ -193,7 +193,7 @@ export default function AcsiListPage() {
                   gap: 12,
                   rowGap: 8,
                   padding: '14px 18px',
-                  borderRadius: 8,
+                  borderRadius: 'var(--radius-md)',
                   border: '1px solid var(--color-border)',
                   background: 'var(--color-bg-surface)',
                   textDecoration: 'none',
@@ -226,9 +226,9 @@ export default function AcsiListPage() {
 
                   {/* Counts */}
                   <div style={{ display: 'flex', gap: 6, fontSize: 'var(--fs-xs)' }}>
-                    <span style={{ color: '#10B981', fontWeight: 600 }}>{insp.passed_count}P</span>
-                    <span style={{ color: '#EF4444', fontWeight: 600 }}>{insp.failed_count}F</span>
-                    <span style={{ color: '#6B7280', fontWeight: 600 }}>{insp.na_count}NA</span>
+                    <span style={{ color: 'var(--color-green)', fontWeight: 600 }}>{insp.passed_count}P</span>
+                    <span style={{ color: 'var(--color-red)', fontWeight: 600 }}>{insp.failed_count}F</span>
+                    <span style={{ color: 'var(--color-text-3)', fontWeight: 600 }}>{insp.na_count}NA</span>
                   </div>
 
                   {/* Status badge */}

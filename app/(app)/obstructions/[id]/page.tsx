@@ -9,6 +9,9 @@ import { generateObstructionPdf } from '@/lib/obstruction-pdf'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { formatZuluDateTime, fetchMapImageDataUrl, compressImageForPdf } from '@/lib/utils'
+import { LoadingState } from '@/components/ui/loading-state'
+import { EmptyState } from '@/components/ui/empty-state'
+import { DetailGrid } from '@/components/ui/detail-grid'
 import { toast } from 'sonner'
 
 type SurfaceResult = {
@@ -149,11 +152,7 @@ export default function ObstructionDetailPage() {
   }
 
   if (loading) {
-    return (
-      <div style={{ padding: 16, textAlign: 'center', paddingTop: 60 }}>
-        <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)' }}>Loading evaluation...</div>
-      </div>
-    )
+    return <LoadingState message="Loading evaluation..." />
   }
 
   if (!evaluation) {
@@ -162,10 +161,7 @@ export default function ObstructionDetailPage() {
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
           ← Back
         </button>
-        <div style={{ textAlign: 'center', paddingTop: 40 }}>
-          <div style={{ fontSize: 'var(--fs-5xl)', marginBottom: 8 }}>🔍</div>
-          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)' }}>Evaluation not found</div>
-        </div>
+        <EmptyState message="Evaluation not found" icon="🔍" />
       </div>
     )
   }
@@ -212,9 +208,9 @@ export default function ObstructionDetailPage() {
             fontSize: 'var(--fs-xs)',
             fontWeight: 800,
             padding: '2px 8px',
-            borderRadius: 4,
-            background: evaluation.has_violation ? '#EF444422' : '#22C55E22',
-            color: evaluation.has_violation ? '#EF4444' : '#22C55E',
+            borderRadius: 'var(--radius-xs)',
+            background: evaluation.has_violation ? 'color-mix(in srgb, var(--color-red) 13%, transparent)' : 'color-mix(in srgb, var(--color-green) 13%, transparent)',
+            color: evaluation.has_violation ? 'var(--color-red)' : 'var(--color-green)',
           }}
         >
           {evaluation.has_violation ? 'VIOLATION' : 'CLEAR'}
@@ -224,9 +220,9 @@ export default function ObstructionDetailPage() {
           onClick={handleExportPdf}
           disabled={exporting}
           style={{
-            padding: '4px 12px', borderRadius: 6,
-            background: '#A78BFA14', border: '1px solid #A78BFA33',
-            color: '#A78BFA', fontSize: 'var(--fs-base)', fontWeight: 700,
+            padding: '4px 12px', borderRadius: 'var(--radius-sm)',
+            background: 'color-mix(in srgb, var(--color-purple) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-purple) 20%, transparent)',
+            color: 'var(--color-purple)', fontSize: 'var(--fs-base)', fontWeight: 700,
             cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
             opacity: exporting ? 0.6 : 1,
           }}
@@ -238,9 +234,9 @@ export default function ObstructionDetailPage() {
           onClick={handleEmailPdf}
           disabled={exporting}
           style={{
-            padding: '4px 12px', borderRadius: 6,
-            background: '#A78BFA14', border: '1px solid #A78BFA33',
-            color: '#A78BFA', fontSize: 'var(--fs-base)', fontWeight: 700,
+            padding: '4px 12px', borderRadius: 'var(--radius-sm)',
+            background: 'color-mix(in srgb, var(--color-purple) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-purple) 20%, transparent)',
+            color: 'var(--color-purple)', fontSize: 'var(--fs-base)', fontWeight: 700,
             cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
             opacity: exporting ? 0.7 : 1,
           }}
@@ -253,7 +249,7 @@ export default function ObstructionDetailPage() {
           style={{
             background: 'var(--color-border-mid)',
             border: '1px solid var(--color-border-active)',
-            borderRadius: 6,
+            borderRadius: 'var(--radius-sm)',
             padding: '4px 12px',
             color: 'var(--color-accent)',
             fontSize: 'var(--fs-base)',
@@ -277,7 +273,7 @@ export default function ObstructionDetailPage() {
         <div style={{ marginBottom: 10 }}>
           {/* Hero image (first photo) */}
           <div
-            style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--color-border-mid)', cursor: 'pointer' }}
+            style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border-mid)', cursor: 'pointer' }}
             onClick={() => setViewerIndex(0)}
           >
             <img
@@ -295,7 +291,7 @@ export default function ObstructionDetailPage() {
                   style={{
                     width: 64,
                     height: 64,
-                    borderRadius: 8,
+                    borderRadius: 'var(--radius-md)',
                     overflow: 'hidden',
                     border: '1px solid var(--color-border-mid)',
                     flexShrink: 0,
@@ -324,9 +320,9 @@ export default function ObstructionDetailPage() {
           <img
             src={staticMapUrl}
             alt="Obstruction location on map"
-            style={{ width: '100%', display: 'block', borderRadius: '0 0 10px 10px' }}
+            style={{ width: '100%', display: 'block', borderRadius: '0 0 var(--radius-md) var(--radius-md)' }}
           />
-          <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-sm)', color: '#34D399', fontFamily: 'monospace', fontWeight: 600 }}>
+          <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-sm)', color: 'var(--color-green)', fontFamily: 'monospace', fontWeight: 600 }}>
             {evaluation.latitude!.toFixed(5)}, {evaluation.longitude!.toFixed(5)}
           </div>
         </div>
@@ -335,44 +331,14 @@ export default function ObstructionDetailPage() {
       {/* Summary Card */}
       <div className="card" style={{ marginBottom: 10 }}>
         <span className="section-label">Obstruction Details</span>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 'var(--fs-base)' }}>
-          <div>
-            <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>Height AGL</span>
-            <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
-              {evaluation.object_height_agl} ft
-            </div>
-          </div>
-          <div>
-            <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>Top Elevation MSL</span>
-            <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
-              {evaluation.obstruction_top_msl?.toFixed(0) ?? '—'} ft
-            </div>
-          </div>
-          <div>
-            <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>Ground Elevation MSL</span>
-            <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
-              {evaluation.object_elevation_msl?.toFixed(0) ?? (currentInstallation?.elevation_msl ?? 580)} ft
-            </div>
-          </div>
-          <div>
-            <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>From Centerline</span>
-            <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
-              {evaluation.distance_from_centerline_ft?.toFixed(0) ?? '—'} ft
-            </div>
-          </div>
-          <div>
-            <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>Coordinates</span>
-            <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 'var(--fs-sm)' }}>
-              {evaluation.latitude?.toFixed(5)}°N, {evaluation.longitude ? Math.abs(evaluation.longitude).toFixed(5) : '—'}°W
-            </div>
-          </div>
-          <div>
-            <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>Runway</span>
-            <div style={{ color: 'var(--color-text-1)', fontWeight: 700 }}>
-              {evaluation.runway_class === 'Army_B' ? 'Army Class B' : `Class ${evaluation.runway_class}`}
-            </div>
-          </div>
-        </div>
+        <DetailGrid gap={8} items={[
+          { label: 'Height AGL', value: <span style={{ fontFamily: 'monospace' }}>{evaluation.object_height_agl} ft</span> },
+          { label: 'Top Elevation MSL', value: <span style={{ fontFamily: 'monospace' }}>{evaluation.obstruction_top_msl?.toFixed(0) ?? '—'} ft</span> },
+          { label: 'Ground Elevation MSL', value: <span style={{ fontFamily: 'monospace' }}>{evaluation.object_elevation_msl?.toFixed(0) ?? (currentInstallation?.elevation_msl ?? 580)} ft</span> },
+          { label: 'From Centerline', value: <span style={{ fontFamily: 'monospace' }}>{evaluation.distance_from_centerline_ft?.toFixed(0) ?? '—'} ft</span> },
+          { label: 'Coordinates', value: <span style={{ fontFamily: 'monospace', fontSize: 'var(--fs-sm)' }}>{evaluation.latitude?.toFixed(5)}°N, {evaluation.longitude ? Math.abs(evaluation.longitude).toFixed(5) : '—'}°W</span> },
+          { label: 'Runway', value: evaluation.runway_class === 'Army_B' ? 'Army Class B' : `Class ${evaluation.runway_class}` },
+        ]} />
 
         {evaluation.notes && (
           <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--color-border)' }}>
@@ -404,7 +370,7 @@ export default function ObstructionDetailPage() {
             style={{
               background: showVerify ? 'var(--color-accent)' : 'var(--color-border)',
               border: `1px solid ${showVerify ? 'var(--color-accent)' : 'var(--color-border-active)'}`,
-              borderRadius: 6,
+              borderRadius: 'var(--radius-sm)',
               padding: '3px 8px',
               color: showVerify ? '#fff' : 'var(--color-text-2)',
               fontSize: 'var(--fs-xs)',
@@ -426,7 +392,7 @@ export default function ObstructionDetailPage() {
               style={{
                 background: 'var(--color-bg-inset)',
                 border: `1px solid ${s.violated ? 'rgba(239,68,68,0.3)' : isLandUseZone ? `${surfaceColor}33` : 'var(--color-border)'}`,
-                borderRadius: 8,
+                borderRadius: 'var(--radius-md)',
                 padding: 10,
                 marginBottom: 6,
               }}
@@ -436,7 +402,7 @@ export default function ObstructionDetailPage() {
                   style={{
                     width: 8,
                     height: 8,
-                    borderRadius: 2,
+                    borderRadius: 'var(--radius-xs)',
                     background: surfaceColor,
                     flexShrink: 0,
                   }}
@@ -450,7 +416,7 @@ export default function ObstructionDetailPage() {
                       fontSize: 'var(--fs-xs)',
                       fontWeight: 800,
                       padding: '2px 6px',
-                      borderRadius: 4,
+                      borderRadius: 'var(--radius-xs)',
                       background: `${surfaceColor}22`,
                       color: surfaceColor,
                     }}
@@ -463,9 +429,9 @@ export default function ObstructionDetailPage() {
                       fontSize: 'var(--fs-xs)',
                       fontWeight: 800,
                       padding: '2px 6px',
-                      borderRadius: 4,
-                      background: s.violated ? '#EF444422' : '#22C55E22',
-                      color: s.violated ? '#EF4444' : '#22C55E',
+                      borderRadius: 'var(--radius-xs)',
+                      background: s.violated ? 'color-mix(in srgb, var(--color-red) 13%, transparent)' : 'color-mix(in srgb, var(--color-green) 13%, transparent)',
+                      color: s.violated ? 'var(--color-red)' : 'var(--color-green)',
                     }}
                   >
                     {s.violated ? `VIOLATION (${s.penetrationFt.toFixed(1)} ft)` : 'CLEAR'}
@@ -490,7 +456,7 @@ export default function ObstructionDetailPage() {
                     </div>
                   )}
                   {s.violated && (
-                    <div style={{ fontSize: 'var(--fs-sm)', color: '#EF4444', marginTop: 2 }}>
+                    <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-red)', marginTop: 2 }}>
                       Penetration: {s.penetrationFt.toFixed(1)} ft above allowable height
                     </div>
                   )}
@@ -501,7 +467,7 @@ export default function ObstructionDetailPage() {
                         padding: '6px 8px',
                         background: 'var(--color-bg-surface)',
                         border: '1px solid var(--color-border)',
-                        borderRadius: 6,
+                        borderRadius: 'var(--radius-sm)',
                       }}
                     >
                       <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 3 }}>
@@ -542,10 +508,10 @@ export default function ObstructionDetailPage() {
             background: 'rgba(239, 68, 68, 0.04)',
           }}
         >
-          <span className="section-label" style={{ color: '#EF4444' }}>
+          <span className="section-label" style={{ color: 'var(--color-red)' }}>
             Required Actions
           </span>
-          <div style={{ fontSize: 'var(--fs-base)', color: '#EF4444', fontWeight: 700, marginBottom: 8 }}>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-red)', fontWeight: 700, marginBottom: 8 }}>
             OBSTRUCTION VIOLATION DETECTED — The following actions are required:
           </div>
           <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.6, paddingLeft: 8 }}>
@@ -576,7 +542,7 @@ export default function ObstructionDetailPage() {
           style={{
             background: 'none',
             border: 'none',
-            color: '#EF4444',
+            color: 'var(--color-red)',
             fontSize: 'var(--fs-base)',
             fontWeight: 600,
             cursor: 'pointer',
@@ -617,7 +583,7 @@ export default function ObstructionDetailPage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 200,
+            zIndex: 'var(--z-modal)',
             padding: 32,
           }}
           onClick={() => setShowDeleteConfirm(false)}
@@ -626,7 +592,7 @@ export default function ObstructionDetailPage() {
             style={{
               background: 'var(--color-bg-surface-solid)',
               border: '1px solid var(--color-border-mid)',
-              borderRadius: 12,
+              borderRadius: 'var(--radius-lg)',
               padding: 24,
               maxWidth: 320,
               width: '100%',
@@ -645,7 +611,7 @@ export default function ObstructionDetailPage() {
                 style={{
                   flex: 1,
                   padding: '10px 16px',
-                  borderRadius: 8,
+                  borderRadius: 'var(--radius-md)',
                   border: '1px solid var(--color-border-mid)',
                   background: 'transparent',
                   color: 'var(--color-text-2)',
@@ -662,9 +628,9 @@ export default function ObstructionDetailPage() {
                 style={{
                   flex: 1,
                   padding: '10px 16px',
-                  borderRadius: 8,
+                  borderRadius: 'var(--radius-md)',
                   border: 'none',
-                  background: '#EF4444',
+                  background: 'var(--color-red)',
                   color: '#fff',
                   fontSize: 'var(--fs-md)',
                   fontWeight: 600,

@@ -150,7 +150,12 @@ export function SidebarNav() {
 
   function isActive(href: string) {
     if (href === '/') return pathname === '/'
-    return pathname.startsWith(href)
+    if (pathname === href) return true
+    if (!pathname.startsWith(href + '/')) return false
+    // If a more specific nav item also matches, this one is not active
+    const allHrefs = [...config.pinned, ...config.sections.flatMap(s => s.items)]
+    const moreSpecific = allHrefs.some(h => h !== href && h.startsWith(href + '/') && (pathname === h || pathname.startsWith(h + '/')))
+    return !moreSpecific
   }
 
   function toggleGroup(label: string) {
@@ -306,7 +311,7 @@ export function SidebarNav() {
             <span style={{
               position: 'absolute', top: -4, right: -6,
               width: isOpen ? 16 : 14, height: isOpen ? 16 : 14,
-              borderRadius: '50%', background: '#EF4444', color: '#fff',
+              borderRadius: '50%', background: 'var(--color-danger)', color: '#fff',
               fontSize: 9, fontWeight: 800,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               lineHeight: 1, boxShadow: '0 0 6px rgba(239,68,68,0.5)',
@@ -317,7 +322,7 @@ export function SidebarNav() {
         </span>
         {isOpen && <span style={{ flex: 1 }}>{def.name}</span>}
         {isOpen && href === '/notams' && expiringNotamCount > 0 && (
-          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EF4444', marginLeft: 'auto' }}>
+          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginLeft: 'auto' }}>
             {expiringNotamCount} expiring
           </span>
         )}
@@ -347,7 +352,7 @@ export function SidebarNav() {
           color: 'var(--color-text-2)',
           cursor: 'grab',
           background: 'transparent',
-          borderRadius: 6,
+          borderRadius: 'var(--radius-sm)',
         }}
       >
         <GripVertical size={14} style={{ color: 'var(--color-text-4)', flexShrink: 0 }} />
@@ -440,7 +445,7 @@ export function SidebarNav() {
         onDrop={(e) => handleDropOnSection(e, sectionIdx)}
         style={{
           marginBottom: 8,
-          borderRadius: 8,
+          borderRadius: 'var(--radius-md)',
           border: isOver ? '1px dashed var(--color-accent)' : '1px solid transparent',
           background: isOver ? 'var(--color-accent-glow)' : 'transparent',
           transition: 'border 0.15s, background 0.15s',
@@ -490,7 +495,7 @@ export function SidebarNav() {
               disabled={saving}
               title="Reset to default"
               style={{
-                background: 'none', border: '1px solid var(--color-border)', borderRadius: 6,
+                background: 'none', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)',
                 padding: '4px 8px', cursor: 'pointer', color: 'var(--color-text-3)',
                 display: 'flex', alignItems: 'center', gap: 4,
                 fontSize: 'var(--fs-xs)', fontFamily: 'inherit',
@@ -502,7 +507,7 @@ export function SidebarNav() {
               onClick={cancelEdit}
               title="Cancel"
               style={{
-                background: 'none', border: '1px solid var(--color-border)', borderRadius: 6,
+                background: 'none', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)',
                 padding: '4px 8px', cursor: 'pointer', color: 'var(--color-text-3)',
                 display: 'flex', alignItems: 'center',
               }}
@@ -514,7 +519,7 @@ export function SidebarNav() {
               disabled={saving}
               title="Save"
               style={{
-                background: 'var(--color-accent)', border: 'none', borderRadius: 6,
+                background: 'var(--color-accent)', border: 'none', borderRadius: 'var(--radius-sm)',
                 padding: '4px 10px', cursor: saving ? 'not-allowed' : 'pointer', color: '#fff',
                 display: 'flex', alignItems: 'center', gap: 4,
                 fontSize: 'var(--fs-xs)', fontWeight: 700, fontFamily: 'inherit',
@@ -542,7 +547,7 @@ export function SidebarNav() {
             onDrop={(e) => handleDropOnSection(e, 'pinned')}
             style={{
               marginBottom: 8,
-              borderRadius: 8,
+              borderRadius: 'var(--radius-md)',
               border: isPinnedOver ? '1px dashed var(--color-accent)' : '1px solid transparent',
               background: isPinnedOver ? 'var(--color-accent-glow)' : 'transparent',
               transition: 'border 0.15s, background 0.15s',
@@ -622,7 +627,7 @@ export function SidebarNav() {
             title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--color-text-3)', padding: 6, borderRadius: 6,
+              color: 'var(--color-text-3)', padding: 6, borderRadius: 'var(--radius-sm)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}
           >
@@ -663,7 +668,7 @@ export function SidebarNav() {
             onClick={enterEditMode}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              width: '100%', padding: '8px 0', borderRadius: 8,
+              width: '100%', padding: '8px 0', borderRadius: 'var(--radius-md)',
               background: 'none', border: '1px solid var(--color-border)',
               color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', fontWeight: 600,
               cursor: 'pointer', fontFamily: 'inherit',

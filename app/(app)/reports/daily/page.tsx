@@ -247,7 +247,7 @@ export default function DailyOpsPage() {
       detail: data.inspections.length > 0
         ? data.inspections.map((i) => INSPECTION_TYPE_LABELS[i.inspection_type] || i.inspection_type).join(', ')
         : 'No inspections recorded',
-      color: '#34D399',
+      color: 'var(--color-success)',
       hasFailures: data.inspections.some((i) => i.failed_count > 0),
     },
     {
@@ -264,7 +264,7 @@ export default function DailyOpsPage() {
       detail: data.newDiscrepancies.length > 0
         ? `${data.newDiscrepancies.length} reported`
         : 'No new discrepancies',
-      color: '#EF4444',
+      color: 'var(--color-danger)',
     },
     {
       label: 'Discrepancy Updates',
@@ -275,7 +275,7 @@ export default function DailyOpsPage() {
             return `${data.statusUpdates.length} update${data.statusUpdates.length !== 1 ? 's' : ''} across ${uniqueDiscs.size} discrepanc${uniqueDiscs.size !== 1 ? 'ies' : 'y'}`
           })()
         : 'No updates',
-      color: '#F97316',
+      color: 'var(--color-orange)',
     },
     {
       label: 'Obstruction Evaluations',
@@ -288,7 +288,7 @@ export default function DailyOpsPage() {
               : `${data.obstructionEvals.length} evaluated, all clear`
           })()
         : 'No evaluations recorded',
-      color: '#FBBF24',
+      color: 'var(--color-warning)',
     },
     {
       label: 'QRC Executions',
@@ -368,7 +368,7 @@ export default function DailyOpsPage() {
             flex: 1, padding: '14px 0', borderRadius: 10,
             border: '1px solid rgba(34,197,94,0.4)',
             background: 'rgba(34,197,94,0.1)',
-            color: '#22C55E', fontSize: 'var(--fs-xl)', fontWeight: 700,
+            color: 'var(--color-status-pass)', fontSize: 'var(--fs-xl)', fontWeight: 700,
             cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
             opacity: exporting ? 0.7 : 1,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -384,7 +384,7 @@ export default function DailyOpsPage() {
             padding: '14px 18px', borderRadius: 10,
             border: '1px solid #A78BFA33',
             background: '#A78BFA14',
-            color: '#A78BFA', fontSize: 'var(--fs-xl)', fontWeight: 700,
+            color: 'var(--color-purple)', fontSize: 'var(--fs-xl)', fontWeight: 700,
             cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
             opacity: exporting ? 0.7 : 1,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,

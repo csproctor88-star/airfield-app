@@ -402,15 +402,15 @@ export default function ActivityPage() {
   return (
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} className="btn-ghost" style={{ color: 'var(--color-cyan)', padding: 0 }}>
           &larr; Back
         </button>
         <button
           onClick={handleExport}
           disabled={exporting || entries.length === 0}
           style={{
-            background: '#A78BFA14', border: '1px solid #A78BFA33', borderRadius: 8,
-            padding: '6px 12px', color: '#A78BFA', fontSize: 'var(--fs-base)', fontWeight: 600,
+            background: '#A78BFA14', border: '1px solid #A78BFA33', borderRadius: 'var(--radius-md)',
+            padding: '6px 12px', color: 'var(--color-purple)', fontSize: 'var(--fs-base)', fontWeight: 600,
             cursor: exporting || entries.length === 0 ? 'default' : 'pointer',
             fontFamily: 'inherit', opacity: exporting || entries.length === 0 ? 0.5 : 1,
           }}
@@ -433,7 +433,7 @@ export default function ActivityPage() {
           <button
             onClick={() => setShowTemplatePicker(true)}
             style={{
-              background: 'none', border: '1px solid var(--color-cyan)', borderRadius: 8,
+              background: 'none', border: '1px solid var(--color-cyan)', borderRadius: 'var(--radius-md)',
               padding: '4px 12px', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)',
               fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0,
             }}
@@ -460,7 +460,7 @@ export default function ActivityPage() {
             onClick={handleManualSubmit}
             disabled={!manualText.trim() || submitting}
             style={{
-              padding: '0 20px', borderRadius: 8, border: 'none', alignSelf: 'flex-end', height: 40,
+              padding: '0 20px', borderRadius: 'var(--radius-md)', border: 'none', alignSelf: 'flex-end', height: 40,
               background: manualText.trim() ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-elevated)',
               color: manualText.trim() ? 'var(--color-cyan-btn-text)' : 'var(--color-text-4)',
               fontSize: 'var(--fs-md)', fontWeight: 700, cursor: manualText.trim() ? 'pointer' : 'default',
@@ -499,7 +499,7 @@ export default function ActivityPage() {
       )}
 
       {/* Period Presets */}
-      <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-text-4)', marginBottom: 12 }}>
+      <div style={{ display: 'flex', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-text-4)', marginBottom: 12 }}>
         {PRESETS.map((p) => (
           <button
             key={p.value}
@@ -654,14 +654,14 @@ export default function ActivityPage() {
                           <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleEdit(a) }}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: '#3B82F6' }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: 'var(--color-status-inwork)' }}
                               title="Edit entry"
                             >
                               Edit
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleDelete(a) }}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: '#EF4444', marginLeft: 2 }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: 'var(--color-danger)', marginLeft: 2 }}
                               title="Delete entry"
                             >
                               Del
@@ -681,7 +681,7 @@ export default function ActivityPage() {
       {/* User Info Popover */}
       {userPopover && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 150 }}
+          style={{ position: 'fixed', inset: 0, zIndex: 'var(--z-dropdown)' }}
           onClick={() => setUserPopover(null)}
         >
           <div
@@ -691,11 +691,11 @@ export default function ActivityPage() {
               top: userPopover.y,
               background: 'var(--color-bg-elevated)',
               border: '1px solid var(--color-border)',
-              borderRadius: 10,
+              borderRadius: 'var(--radius-md)',
               padding: '12px 16px',
               minWidth: 200,
               boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-              zIndex: 151,
+              zIndex: 'var(--z-dropdown)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -719,11 +719,8 @@ export default function ActivityPage() {
       {/* Edit Entry Modal */}
       {editingId && (
         <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 200,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 16, background: 'rgba(0,0,0,0.6)',
-          }}
+          className="modal-overlay"
+          style={{ padding: 16 }}
           onClick={() => setEditingId(null)}
         >
           <div
@@ -778,7 +775,7 @@ export default function ActivityPage() {
                 <span className="section-label" style={{ marginBottom: 0 }}>Details</span>
                 <button
                   onClick={() => setShowEditTemplatePicker(true)}
-                  style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+                  className="btn-ghost" style={{ color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', padding: 0 }}
                 >
                   Use Template
                 </button>
@@ -802,7 +799,7 @@ export default function ActivityPage() {
                 onClick={handleEditSave}
                 disabled={saving}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', border: 'none',
                   background: saving ? 'rgba(6,182,212,0.5)' : '#06B6D4',
                   color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
@@ -813,7 +810,7 @@ export default function ActivityPage() {
               <button
                 onClick={() => setEditingId(null)}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8,
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)',
                   border: '1px solid var(--color-border)', background: 'transparent',
                   color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600,
                   cursor: 'pointer', fontFamily: 'inherit',
@@ -828,9 +825,9 @@ export default function ActivityPage() {
                 if (entry) { setEditingId(null); handleDelete(entry) }
               }}
               style={{
-                width: '100%', padding: '8px 0', borderRadius: 8,
+                width: '100%', padding: '8px 0', borderRadius: 'var(--radius-md)',
                 border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)',
-                color: '#EF4444', fontSize: 'var(--fs-sm)', fontWeight: 600,
+                color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
             >

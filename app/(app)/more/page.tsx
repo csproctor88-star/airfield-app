@@ -68,7 +68,7 @@ function NavItem({ item }: { item: ModuleItem }) {
         style={{
           width: 36,
           height: 36,
-          borderRadius: 8,
+          borderRadius: 'var(--radius-md)',
           background: `${item.color}10`,
           border: `1px solid ${item.color}22`,
           display: 'flex',
@@ -115,7 +115,7 @@ function CollapsibleGroup({ label, icon, items, defaultOpen }: { label: string; 
           style={{
             width: 36,
             height: 36,
-            borderRadius: 8,
+            borderRadius: 'var(--radius-md)',
             background: 'rgba(100,116,139,0.08)',
             border: '1px solid rgba(100,116,139,0.15)',
             display: 'flex',
@@ -203,7 +203,7 @@ export default function MorePage() {
         <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>More</div>
         <div style={{
           background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-          borderRadius: 12, marginBottom: 12, overflow: 'hidden',
+          borderRadius: 'var(--radius-lg)', marginBottom: 12, overflow: 'hidden',
         }}>
           {cesItems.map(item => (
             <NavItem key={item.href} item={item} />
@@ -220,7 +220,7 @@ export default function MorePage() {
       <div style={{
         background: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
-        borderRadius: 12,
+        borderRadius: 'var(--radius-lg)',
         marginBottom: 12,
         overflow: 'hidden',
       }}>

@@ -68,7 +68,7 @@ export function SimpleDiscrepancyPanelGroup({
       <div style={{
         fontSize: 'var(--fs-xs)',
         fontWeight: 700,
-        color: '#EF4444',
+        color: 'var(--color-danger)',
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
         marginBottom: 8,
@@ -89,7 +89,7 @@ export function SimpleDiscrepancyPanelGroup({
               <div style={{
                 fontSize: 'var(--fs-xs)',
                 fontWeight: 700,
-                color: '#EF4444',
+                color: 'var(--color-danger)',
               }}>
                 {headerLabel.replace(' Details', '')} {i + 1} of {discrepancies.length}
               </div>
@@ -104,7 +104,7 @@ export function SimpleDiscrepancyPanelGroup({
                   borderRadius: 6,
                   border: '1px solid rgba(239, 68, 68, 0.3)',
                   background: 'rgba(239, 68, 68, 0.08)',
-                  color: '#EF4444',
+                  color: 'var(--color-danger)',
                   fontSize: 'var(--fs-xs)',
                   cursor: 'pointer',
                 }}
@@ -147,7 +147,7 @@ export function SimpleDiscrepancyPanelGroup({
           borderRadius: 8,
           border: '2px dashed rgba(239, 68, 68, 0.3)',
           background: 'transparent',
-          color: '#EF4444',
+          color: 'var(--color-danger)',
           fontSize: 'var(--fs-sm)',
           fontWeight: 600,
           cursor: 'pointer',

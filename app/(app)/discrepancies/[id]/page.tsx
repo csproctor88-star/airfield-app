@@ -19,6 +19,9 @@ import { fetchMapImageDataUrl, fetchSystemMapImageDataUrl, formatZuluDateTime, c
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
+import { DetailGrid } from '@/components/ui/detail-grid'
+import { EmptyState } from '@/components/ui/empty-state'
+import { LoadingState } from '@/components/ui/loading-state'
 
 type ModalType = 'edit' | 'status' | 'workorder' | null
 
@@ -94,6 +97,10 @@ export default function DiscrepancyDetailPage() {
               .map(f => ({ latitude: f.latitude, longitude: f.longitude, status: f.status, id: f.id }))
             const mapUrl = await fetchSystemMapImageDataUrl(mapFeatures, data.infrastructure_feature_id!)
             if (mapUrl) setSystemMapUrl(mapUrl)
+          } else if (feat && feat.latitude != null && feat.longitude != null) {
+            // No system component — fall back to single-feature pin map
+            const mapUrl = await fetchMapImageDataUrl(feat.latitude, feat.longitude)
+            if (mapUrl) setSystemMapUrl(mapUrl)
           }
         })
       }
@@ -159,13 +166,7 @@ export default function DiscrepancyDetailPage() {
   }
 
   if (loading) {
-    return (
-      <div className="page-container">
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>
-          Loading...
-        </div>
-      </div>
-    )
+    return <LoadingState />
   }
 
   // Resolve data source
@@ -178,9 +179,7 @@ export default function DiscrepancyDetailPage() {
         <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
           ← Back
         </button>
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>
-          Discrepancy not found
-        </div>
+        <EmptyState message="Discrepancy not found" />
       </div>
     )
   }
@@ -270,27 +269,20 @@ export default function DiscrepancyDetailPage() {
 
         <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.6, marginBottom: 12 }}>{d.description}</div>
 
-        <div className="detail-grid-2" style={{ fontSize: 'var(--fs-base)' }}>
-          {([
-            ['Location', (() => { const loc = LOCATION_OPTIONS.find(l => l.value === d.location_text); return loc ? `${loc.emoji} ${loc.label}` : d.location_text })()],
-            ['Type', (() => { return d.type.split(', ').map(v => { const t = DISCREPANCY_TYPES.find(dt => dt.value === v); return t ? `${t.emoji} ${t.label}` : v }).join(', ') })()],
-            ['Current Status', (() => { const cs = (d as typeof d & { current_status?: string }).current_status; return CURRENT_STATUS_OPTIONS.find(o => o.value === cs)?.label || cs || 'N/A' })()],
-            ['Facility #', (d as typeof d & { facility_number?: string | null }).facility_number || '—'],
-            ['Work Order Currently Assigned to', d.assigned_shop || 'Unassigned'],
-            ['NOTAM', (d as typeof d & { notam_reference?: string }).notam_reference || 'None'],
-            ['Days Open', `${daysOpen}`],
-            ['Photos', `${d.photo_count}`],
-          ] as const).map(([label, value], i) => (
-            <div key={i}>
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{label}</div>
-              <div style={{ fontWeight: 500, marginTop: 2 }}>{value}</div>
-            </div>
-          ))}
-        </div>
+        <DetailGrid items={[
+          { label: 'Location', value: (() => { const loc = LOCATION_OPTIONS.find(l => l.value === d.location_text); return loc ? `${loc.emoji} ${loc.label}` : d.location_text })() },
+          { label: 'Type', value: (() => { return d.type.split(', ').map(v => { const t = DISCREPANCY_TYPES.find(dt => dt.value === v); return t ? `${t.emoji} ${t.label}` : v }).join(', ') })() },
+          { label: 'Current Status', value: (() => { const cs = (d as typeof d & { current_status?: string }).current_status; return CURRENT_STATUS_OPTIONS.find(o => o.value === cs)?.label || cs || 'N/A' })() },
+          { label: 'Facility #', value: (d as typeof d & { facility_number?: string | null }).facility_number || '—' },
+          { label: 'Work Order Currently Assigned to', value: d.assigned_shop || 'Unassigned' },
+          { label: 'NOTAM', value: (d as typeof d & { notam_reference?: string }).notam_reference || 'None' },
+          { label: 'Days Open', value: `${daysOpen}` },
+          { label: 'Photos', value: `${d.photo_count}` },
+        ]} />
 
         {'resolution_notes' in d && d.resolution_notes && (
-          <div style={{ marginTop: 12, padding: '8px 10px', background: '#22C55E11', border: '1px solid #22C55E33', borderRadius: 8 }}>
-            <div style={{ fontSize: 'var(--fs-xs)', color: '#22C55E', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Resolution Notes</div>
+          <div style={{ marginTop: 12, padding: '8px 10px', background: 'color-mix(in srgb, var(--color-green) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-green) 20%, transparent)', borderRadius: 'var(--radius-md)' }}>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-green)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Resolution Notes</div>
             <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>{d.resolution_notes as string}</div>
           </div>
         )}
@@ -320,8 +312,8 @@ export default function DiscrepancyDetailPage() {
         )}
       </div>
 
-      {/* Pinned location map */}
-      {staticMapUrl && (
+      {/* Pinned location map — skip if system overview map is shown */}
+      {staticMapUrl && !systemMapUrl && (
         <div className="card" style={{ marginBottom: 8, padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '8px 12px 4px', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             Pinned Location
@@ -331,7 +323,7 @@ export default function DiscrepancyDetailPage() {
             alt="Discrepancy location on map"
             style={{ width: '100%', display: 'block', borderRadius: '0 0 10px 10px' }}
           />
-          <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-sm)', color: '#34D399', fontFamily: 'monospace', fontWeight: 600 }}>
+          <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-sm)', color: 'var(--color-green)', fontFamily: 'monospace', fontWeight: 600 }}>
             {lat!.toFixed(5)}, {lng!.toFixed(5)}
           </div>
         </div>
@@ -351,9 +343,9 @@ export default function DiscrepancyDetailPage() {
               fontSize: 'var(--fs-xs)',
               fontWeight: 700,
               padding: '1px 6px',
-              borderRadius: 4,
+              borderRadius: 'var(--radius-xs)',
               background: linkedFeature.status === 'inoperative' ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)',
-              color: linkedFeature.status === 'inoperative' ? '#EF4444' : '#22C55E',
+              color: linkedFeature.status === 'inoperative' ? 'var(--color-red)' : 'var(--color-green)',
             }}>
               {linkedFeature.status === 'inoperative' ? 'INOP' : 'OP'}
             </span>
@@ -391,15 +383,15 @@ export default function DiscrepancyDetailPage() {
           />
           <div style={{ padding: '4px 12px 8px', display: 'flex', gap: 12, fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22C55E', display: 'inline-block' }} />
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-green)', display: 'inline-block' }} />
               Operational
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444', display: 'inline-block' }} />
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-red)', display: 'inline-block' }} />
               Inoperative
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#EF4444', display: 'inline-block', border: '2px solid #fff' }} />
+              <span style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--color-red)', display: 'inline-block', border: '2px solid #fff' }} />
               This Discrepancy
             </span>
           </div>
@@ -412,7 +404,7 @@ export default function DiscrepancyDetailPage() {
           {allPhotos.map((p, i) => (
             <div
               key={i}
-              style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border-active)', cursor: 'pointer' }}
+              style={{ position: 'relative', width: 64, height: 64, borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border-active)', cursor: 'pointer' }}
               onClick={() => setViewerIndex(i)}
             >
               <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

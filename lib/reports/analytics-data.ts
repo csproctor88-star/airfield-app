@@ -135,7 +135,7 @@ async function fetchInspectionAnalytics(supabase: any, baseId: string, since: st
       // Use created_at → filed_at for actual inspection duration
       if (r.filed_at) {
         const mins = (new Date(r.filed_at).getTime() - new Date(r.created_at).getTime()) / 60000
-        if (mins > 0 && mins < 1440) { // exclude >24h as unreasonable
+        if (mins >= 1 && mins < 1440) { // exclude <1min (instant file) and >24h
           totalMinutes += mins
           completedWithTime++
         }
@@ -179,7 +179,7 @@ async function fetchCheckAnalytics(supabase: any, baseId: string, since: string)
     // Use started_at → completed_at for actual on-airfield duration
     if (r.started_at && r.completed_at) {
       const mins = (new Date(r.completed_at).getTime() - new Date(r.started_at).getTime()) / 60000
-      if (mins > 0 && mins < 480) { // exclude >8h as unreasonable
+      if (mins >= 1 && mins < 480) { // exclude <1min (instant) and >8h
         totalMinutes += mins
         completedWithTime++
       }

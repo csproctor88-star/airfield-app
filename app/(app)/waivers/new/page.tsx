@@ -313,7 +313,7 @@ export default function NewWaiverPage() {
                 <span style={{ marginLeft: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{classDropdownOpen ? '▲' : '▼'}</span>
               </button>
               {classDropdownOpen && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-text-4)', borderRadius: 8, marginTop: 4, maxHeight: 280, overflowY: 'auto' }}>
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 'var(--z-nav)', background: 'var(--color-bg-elevated)', border: '1px solid var(--color-text-4)', borderRadius: 'var(--radius-md)', marginTop: 4, maxHeight: 280, overflowY: 'auto' }}>
                   {WAIVER_CLASSIFICATIONS.map((c) => (
                     <button
                       key={c.value}
@@ -343,7 +343,7 @@ export default function NewWaiverPage() {
                     type="button"
                     onClick={() => setFormData(p => ({ ...p, action_requested: a }))}
                     style={{
-                      flex: 1, padding: '8px 4px', borderRadius: 6, fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                      flex: 1, padding: '8px 4px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                       background: formData.action_requested === a ? 'rgba(34,211,238,0.12)' : 'transparent',
                       border: `1px solid ${formData.action_requested === a ? 'rgba(34,211,238,0.3)' : 'var(--color-border)'}`,
                       color: formData.action_requested === a ? 'var(--color-cyan)' : 'var(--color-text-3)',
@@ -385,11 +385,11 @@ export default function NewWaiverPage() {
         {expandedSections.criteria && (
           <>
             {criteria.map((c, i) => (
-              <div key={i} style={{ marginBottom: 12, padding: 10, background: 'var(--color-bg-elevated)', borderRadius: 8, border: '1px solid var(--color-border)' }}>
+              <div key={i} style={{ marginBottom: 12, padding: 10, background: 'var(--color-bg-elevated)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)' }}>Criteria #{i + 1}</span>
                   {criteria.length > 1 && (
-                    <button type="button" onClick={() => removeCriteria(i)} style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+                    <button type="button" onClick={() => removeCriteria(i)} style={{ background: 'none', border: 'none', color: 'var(--color-red)', fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
                       Remove
                     </button>
                   )}
@@ -421,7 +421,7 @@ export default function NewWaiverPage() {
               type="button"
               onClick={addCriteria}
               style={{
-                width: '100%', padding: 8, borderRadius: 6, border: '1px dashed var(--color-border)',
+                width: '100%', padding: 8, borderRadius: 'var(--radius-sm)', border: '1px dashed var(--color-border)',
                 background: 'transparent', color: 'var(--color-cyan)', fontSize: 'var(--fs-base)', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
@@ -446,7 +446,7 @@ export default function NewWaiverPage() {
                     type="button"
                     onClick={() => setFormData(p => ({ ...p, hazard_rating: p.hazard_rating === h.value ? '' : h.value }))}
                     style={{
-                      padding: '8px 4px', borderRadius: 6, fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                      padding: '8px 4px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                       background: formData.hazard_rating === h.value ? h.bg : 'transparent',
                       border: `1px solid ${formData.hazard_rating === h.value ? h.color : 'var(--color-border)'}`,
                       color: formData.hazard_rating === h.value ? h.color : 'var(--color-text-3)',
@@ -529,7 +529,7 @@ export default function NewWaiverPage() {
                 <span style={{ marginLeft: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{locationDropdownOpen ? '▲' : '▼'}</span>
               </button>
               {locationDropdownOpen && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-text-4)', borderRadius: 8, marginTop: 4, maxHeight: 240, overflowY: 'auto' }}>
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 'var(--z-nav)', background: 'var(--color-bg-elevated)', border: '1px solid var(--color-text-4)', borderRadius: 'var(--radius-md)', marginTop: 4, maxHeight: 240, overflowY: 'auto' }}>
                   {installationAreas.map((area) => (
                     <button
                       key={area}
@@ -567,7 +567,7 @@ export default function NewWaiverPage() {
               disabled={gpsLoading}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                width: '100%', padding: '10px 16px', marginBottom: 12, borderRadius: 8,
+                width: '100%', padding: '10px 16px', marginBottom: 12, borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
                 color: 'var(--color-accent)', fontSize: 'var(--fs-md)', fontWeight: 600,
                 cursor: gpsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
@@ -616,7 +616,7 @@ export default function NewWaiverPage() {
             {photos.length > 0 && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
                 {photos.map((p, i) => (
-                  <div key={i} style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border)', aspectRatio: '1' }}>
+                  <div key={i} style={{ position: 'relative', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border)', aspectRatio: '1' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={p.preview} alt={`Photo ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                     <button
@@ -665,7 +665,7 @@ export default function NewWaiverPage() {
                   <button
                     type="button"
                     onClick={() => removeAttachment(i)}
-                    style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', padding: '2px 8px', fontFamily: 'inherit', flexShrink: 0 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--color-red)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', padding: '2px 8px', fontFamily: 'inherit', flexShrink: 0 }}
                   >
                     Remove
                   </button>
@@ -676,7 +676,7 @@ export default function NewWaiverPage() {
               type="button"
               onClick={() => setShowAttachModal(true)}
               style={{
-                marginTop: 8, width: '100%', padding: 8, borderRadius: 6, border: '1px dashed var(--color-border)',
+                marginTop: 8, width: '100%', padding: 8, borderRadius: 'var(--radius-sm)', border: '1px dashed var(--color-border)',
                 background: 'transparent', color: 'var(--color-cyan)', fontSize: 'var(--fs-base)', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
@@ -694,11 +694,11 @@ export default function NewWaiverPage() {
           onClick={() => handleSubmit('draft')}
           disabled={saving}
           style={{
-            background: '#9CA3AF14',
-            border: '1px solid #9CA3AF33',
-            borderRadius: 8,
+            background: 'color-mix(in srgb, var(--color-text-3) 8%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--color-text-3) 20%, transparent)',
+            borderRadius: 'var(--radius-md)',
             padding: '12px',
-            color: '#9CA3AF',
+            color: 'var(--color-text-3)',
             fontSize: 'var(--fs-md)',
             fontWeight: 700,
             cursor: 'pointer',
@@ -721,8 +721,8 @@ export default function NewWaiverPage() {
 
       {/* Attachment Upload Modal */}
       {showAttachModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--color-bg-surface)', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)' }}>
+        <div className="modal-overlay">
+          <div style={{ background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-lg)', padding: 20, width: '100%', maxWidth: 400, border: '1px solid var(--color-border)' }}>
             <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, marginBottom: 12 }}>Add Attachment</div>
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">File</span>
@@ -752,7 +752,7 @@ export default function NewWaiverPage() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <button onClick={() => { setShowAttachModal(false); setAttachFile(null); setAttachCaption('') }}
-                style={{ padding: 10, borderRadius: 8, border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                style={{ padding: 10, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Cancel
               </button>
               <button className="btn-primary" onClick={addAttachment} disabled={!attachFile}>

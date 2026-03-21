@@ -12,6 +12,9 @@ import { fetchCheck, fetchCheckComments, addCheckComment, fetchCheckPhotos, uplo
 import { PhotoViewerModal } from '@/components/discrepancies/modals'
 import { useInstallation } from '@/lib/installation-context'
 import { ActionButton } from '@/components/ui/button'
+import { DetailGrid } from '@/components/ui/detail-grid'
+import { LoadingState } from '@/components/ui/loading-state'
+import { EmptyState } from '@/components/ui/empty-state'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
@@ -149,11 +152,7 @@ export default function CheckDetailPage() {
   }
 
   if (loading) {
-    return (
-      <div className="page-container">
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>Loading...</div>
-      </div>
-    )
+    return <LoadingState />
   }
 
   // Resolve data — use explicit interface for rendering
@@ -168,10 +167,10 @@ export default function CheckDetailPage() {
   if (!check) {
     return (
       <div className="page-container">
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} className="btn-ghost" style={{ color: 'var(--color-cyan)', padding: 0, marginBottom: 12 }}>
           ← Back
         </button>
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)' }}>Check not found</div>
+        <EmptyState message="Check not found" />
       </div>
     )
   }
@@ -221,7 +220,7 @@ export default function CheckDetailPage() {
     <div className="page-container">
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+        <button onClick={() => router.back()} className="btn-ghost" style={{ color: 'var(--color-cyan)', padding: 0 }}>
           ← Back
         </button>
         <Link
@@ -238,7 +237,7 @@ export default function CheckDetailPage() {
           <span style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>
             {displayId}
           </span>
-          <Badge label="COMPLETED" color="#22C55E" />
+          <Badge label="COMPLETED" color="var(--color-success)" />
         </div>
 
         {/* Check Type */}
@@ -250,19 +249,11 @@ export default function CheckDetailPage() {
         )}
 
         {/* Info Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 'var(--fs-base)', marginBottom: 12 }}>
-          <div>
-            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Completed By</div>
-            <div style={{ fontWeight: 600, marginTop: 2, color: 'var(--color-accent)' }}>{completedBy}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Completed At</div>
-            <div style={{ fontWeight: 500, marginTop: 2 }}>
-              {completedAt
-                ? formatZuluDateTime(new Date(completedAt))
-                : 'N/A'}
-            </div>
-          </div>
+        <div style={{ marginBottom: 12 }}>
+          <DetailGrid items={[
+            { label: 'Completed By', value: completedBy, color: 'var(--color-accent)' },
+            { label: 'Completed At', value: completedAt ? formatZuluDateTime(new Date(completedAt)) : 'N/A' },
+          ]} />
         </div>
 
         {/* Areas */}
@@ -270,7 +261,7 @@ export default function CheckDetailPage() {
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Areas Checked</div>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {checkAreas.map((area) => (
-              <Badge key={area} label={area} color="#22D3EE" />
+              <Badge key={area} label={area} color="var(--color-cyan)" />
             ))}
           </div>
         </div>
@@ -281,7 +272,7 @@ export default function CheckDetailPage() {
             <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Runway Surface Condition</div>
             <Badge
               label={data.condition as string}
-              color={(data.condition as string) === 'Dry' ? '#22C55E' : '#3B82F6'}
+              color={(data.condition as string) === 'Dry' ? 'var(--color-success)' : 'var(--color-status-inwork)'}
             />
             {!!data.rcr_reported && (
               <div style={{ marginTop: 10 }}>
@@ -316,10 +307,10 @@ export default function CheckDetailPage() {
                 <Badge
                   label={data.condition_code as string}
                   color={
-                    data.condition_code === 'LOW' ? '#22C55E'
-                    : data.condition_code === 'MODERATE' ? '#EAB308'
-                    : data.condition_code === 'PROHIBITED' ? '#DC2626'
-                    : '#EF4444'
+                    data.condition_code === 'LOW' ? 'var(--color-success)'
+                    : data.condition_code === 'MODERATE' ? 'var(--color-bwc-mod)'
+                    : data.condition_code === 'PROHIBITED' ? 'var(--color-danger)'
+                    : 'var(--color-danger)'
                   }
                 />
               )}
@@ -360,7 +351,7 @@ export default function CheckDetailPage() {
                 <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Actions Completed</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                   {(data.actions as string[]).map((action, i) => (
-                    <div key={i} style={{ fontSize: 'var(--fs-sm)', color: '#22C55E', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div key={i} style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span>✓</span> {action}
                     </div>
                   ))}
@@ -383,7 +374,7 @@ export default function CheckDetailPage() {
         {checkTypeStr === 'heavy_aircraft' && !!data.aircraft_type && (
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Aircraft Type / MDS</div>
-            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: '#8B5CF6' }}>{data.aircraft_type as string}</div>
+            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-purple)' }}>{data.aircraft_type as string}</div>
           </div>
         )}
       </div>
@@ -415,7 +406,7 @@ export default function CheckDetailPage() {
             onClick={handleAddRemark}
             disabled={!remarkText.trim() || savingRemark}
             style={{
-              padding: '0 14px', borderRadius: 8, border: 'none',
+              padding: '0 14px', borderRadius: 'var(--radius-md)', border: 'none',
               background: remarkText.trim() ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-elevated)',
               color: remarkText.trim() ? 'var(--color-cyan-btn-text)' : 'var(--color-text-4)',
               fontSize: 'var(--fs-base)', fontWeight: 700, cursor: remarkText.trim() ? 'pointer' : 'default',
@@ -450,7 +441,7 @@ export default function CheckDetailPage() {
       {/* Multi-issue display (new format) or legacy pinned location */}
       {Array.isArray((data as Record<string, unknown>).issues) && ((data as Record<string, unknown>).issues as { comment: string; location: { lat: number; lon: number } | null }[]).length > 0 ? (
         <div className="card" style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 'var(--fs-xs)', color: '#EF4444', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-danger)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
             Issues Found ({((data as Record<string, unknown>).issues as { comment: string; location: { lat: number; lon: number } | null }[]).length})
           </div>
           {((data as Record<string, unknown>).issues as { comment: string; location: { lat: number; lon: number } | null }[]).map((issue, idx) => {
@@ -461,10 +452,10 @@ export default function CheckDetailPage() {
               <div key={idx} style={{
                 padding: '10px 12px', marginBottom: 8,
                 background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.12)',
-                borderRadius: 8,
+                borderRadius: 'var(--radius-md)',
               }}>
                 {((data as Record<string, unknown>).issues as unknown[]).length > 1 && (
-                  <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EF4444', marginBottom: 4 }}>
+                  <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginBottom: 4 }}>
                     Issue {idx + 1} of {((data as Record<string, unknown>).issues as unknown[]).length}
                   </div>
                 )}
@@ -475,10 +466,10 @@ export default function CheckDetailPage() {
                 )}
                 {issueMapUrl && (
                   <img src={issueMapUrl} alt={`Issue ${idx + 1} location`}
-                    style={{ width: '100%', display: 'block', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', marginBottom: 4 }} />
+                    style={{ width: '100%', display: 'block', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 4 }} />
                 )}
                 {issue.location && (
-                  <div style={{ fontSize: 'var(--fs-sm)', color: '#34D399', fontFamily: 'monospace', fontWeight: 600, marginBottom: (photosByIssue[idx]?.length > 0) ? 8 : 0 }}>
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-success)', fontFamily: 'monospace', fontWeight: 600, marginBottom: (photosByIssue[idx]?.length > 0) ? 8 : 0 }}>
                     {issue.location.lat.toFixed(5)}, {issue.location.lon.toFixed(5)}
                   </div>
                 )}
@@ -487,7 +478,7 @@ export default function CheckDetailPage() {
                     {photosByIssue[idx].map((p) => (
                       <div
                         key={p.globalIdx}
-                        style={{ position: 'relative', width: 100, height: 100, borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer' }}
+                        style={{ position: 'relative', width: 100, height: 100, borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer' }}
                         onClick={() => setViewerIndex(p.globalIdx)}
                       >
                         <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -498,7 +489,7 @@ export default function CheckDetailPage() {
                 {!!(issue as Record<string, unknown>).log_as_discrepancy && (
                   <div style={{
                     marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '4px 10px', borderRadius: 6,
+                    padding: '4px 10px', borderRadius: 'var(--radius-sm)',
                     background: 'rgba(217, 119, 6, 0.1)', border: '1px solid rgba(217, 119, 6, 0.3)',
                     fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#D97706',
                     textTransform: 'uppercase', letterSpacing: '0.04em',
@@ -525,7 +516,7 @@ export default function CheckDetailPage() {
             alt="Check location on map"
             style={{ width: '100%', display: 'block', borderRadius: '0 0 10px 10px' }}
           />
-          <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-sm)', color: '#34D399', fontFamily: 'monospace', fontWeight: 600 }}>
+          <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-sm)', color: 'var(--color-success)', fontFamily: 'monospace', fontWeight: 600 }}>
             {checkLat!.toFixed(5)}, {checkLng!.toFixed(5)}
           </div>
         </div>
@@ -541,7 +532,7 @@ export default function CheckDetailPage() {
             {unlinkedPhotos.map((p) => (
               <div
                 key={p.globalIdx}
-                style={{ position: 'relative', width: 140, height: 140, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border-active)', cursor: 'pointer' }}
+                style={{ position: 'relative', width: 140, height: 140, borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border-active)', cursor: 'pointer' }}
                 onClick={() => setViewerIndex(p.globalIdx)}
               >
                 <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -620,9 +611,9 @@ export default function CheckDetailPage() {
           }}
           disabled={generatingPdf}
           style={{
-            flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
+            flex: 1, padding: '12px', borderRadius: 'var(--radius-md)', textAlign: 'center',
             background: '#A78BFA14', border: '1px solid #A78BFA33',
-            color: '#A78BFA', fontSize: 'var(--fs-md)', fontWeight: 700,
+            color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
             fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
             opacity: generatingPdf ? 0.7 : 1,
           }}
@@ -684,9 +675,9 @@ export default function CheckDetailPage() {
           }}
           disabled={generatingPdf}
           style={{
-            padding: '12px 16px', borderRadius: 10, textAlign: 'center',
+            padding: '12px 16px', borderRadius: 'var(--radius-md)', textAlign: 'center',
             background: '#A78BFA14', border: '1px solid #A78BFA33',
-            color: '#A78BFA', fontSize: 'var(--fs-md)', fontWeight: 700,
+            color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
             fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
             opacity: generatingPdf ? 0.7 : 1,
           }}
@@ -697,9 +688,9 @@ export default function CheckDetailPage() {
         <Link
           href="/checks"
           style={{
-            flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
+            flex: 1, padding: '12px', borderRadius: 'var(--radius-md)', textAlign: 'center',
             background: '#22C55E14', border: '1px solid #22C55E33',
-            color: '#22C55E', fontSize: 'var(--fs-md)', fontWeight: 700,
+            color: 'var(--color-success)', fontSize: 'var(--fs-md)', fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',
           }}
         >
@@ -708,7 +699,7 @@ export default function CheckDetailPage() {
         <Link
           href="/checks/history"
           style={{
-            flex: 1, padding: '12px', borderRadius: 10, textAlign: 'center',
+            flex: 1, padding: '12px', borderRadius: 'var(--radius-md)', textAlign: 'center',
             background: '#22D3EE14', border: '1px solid #22D3EE33',
             color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 700,
             textDecoration: 'none', fontFamily: 'inherit',

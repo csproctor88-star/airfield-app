@@ -18,12 +18,14 @@ import {
   type ShiftChecklistResponse,
 } from '@/lib/supabase/shift-checklist'
 import { formatZuluTime, formatZuluDate } from '@/lib/utils'
+import { EmptyState } from '@/components/ui/empty-state'
+import { LoadingState } from '@/components/ui/loading-state'
 
 type ViewTab = 'today' | 'history'
 
 const SHIFT_LABELS: Record<string, string> = { day: 'Day Shift', mid: 'Mid Shift', swing: 'Swing Shift' }
 const FREQ_LABELS: Record<string, string> = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' }
-const FREQ_COLORS: Record<string, string> = { daily: '#22D3EE', weekly: '#A78BFA', monthly: '#F59E0B' }
+const FREQ_COLORS: Record<string, string> = { daily: 'var(--color-cyan)', weekly: 'var(--color-purple)', monthly: 'var(--color-warning)' }
 
 export default function ShiftChecklistPage() {
   const { installationId, currentInstallation } = useInstallation()
@@ -188,9 +190,9 @@ export default function ShiftChecklistPage() {
           style={{
             width: 24,
             height: 24,
-            borderRadius: 6,
+            borderRadius: 'var(--radius-sm)',
             border: checked ? 'none' : '2px solid var(--color-border-mid)',
-            background: checked ? '#22C55E' : 'transparent',
+            background: checked ? 'var(--color-success)' : 'transparent',
             cursor: isCompleted ? 'default' : 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -226,7 +228,7 @@ export default function ShiftChecklistPage() {
             color: FREQ_COLORS[item.frequency],
             background: `${FREQ_COLORS[item.frequency]}15`,
             padding: '2px 8px',
-            borderRadius: 10,
+            borderRadius: 'var(--radius-md)',
             flexShrink: 0,
           }}>
             {FREQ_LABELS[item.frequency]}
@@ -252,7 +254,7 @@ export default function ShiftChecklistPage() {
           <span style={{
             fontSize: 'var(--fs-xs)',
             fontWeight: 700,
-            color: shiftCompleted ? '#22C55E' : 'var(--color-text-3)',
+            color: shiftCompleted ? 'var(--color-success)' : 'var(--color-text-3)',
           }}>
             {shiftItems.filter(i => responseMap.get(i.id)?.completed).length}/{shiftItems.length}
           </span>
@@ -286,7 +288,7 @@ export default function ShiftChecklistPage() {
               fontSize: 'var(--fs-base)',
               fontWeight: 600,
               padding: '5px 12px',
-              borderRadius: 20,
+              borderRadius: 'var(--radius-full)',
               cursor: 'pointer',
               fontFamily: 'inherit',
             }}
@@ -310,9 +312,9 @@ export default function ShiftChecklistPage() {
               fontSize: 'var(--fs-xs)',
               fontWeight: 700,
               padding: '4px 10px',
-              borderRadius: 10,
+              borderRadius: 'var(--radius-md)',
               background: isCompleted ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
-              color: isCompleted ? '#22C55E' : '#EAB308',
+              color: isCompleted ? 'var(--color-success)' : 'var(--color-bwc-mod)',
             }}>
               {isCompleted ? 'FILED' : 'IN PROGRESS'}
             </div>
@@ -323,15 +325,15 @@ export default function ShiftChecklistPage() {
             <div style={{ marginBottom: 16 }}>
               <div style={{
                 height: 6,
-                borderRadius: 3,
+                borderRadius: 'var(--radius-xs)',
                 background: 'var(--color-bg-elevated)',
                 overflow: 'hidden',
               }}>
                 <div style={{
                   height: '100%',
                   width: `${(completedCount / totalCount) * 100}%`,
-                  background: allComplete ? '#22C55E' : 'var(--color-cyan)',
-                  borderRadius: 3,
+                  background: allComplete ? 'var(--color-success)' : 'var(--color-cyan)',
+                  borderRadius: 'var(--radius-xs)',
                   transition: 'width 0.3s',
                 }} />
               </div>
@@ -339,7 +341,7 @@ export default function ShiftChecklistPage() {
           )}
 
           {!loaded ? (
-            <div style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)' }}>Loading...</div>
+            <LoadingState />
           ) : totalCount === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: 32 }}>
               <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)', marginBottom: 8 }}>
@@ -363,7 +365,7 @@ export default function ShiftChecklistPage() {
                     style={{
                       width: '100%',
                       padding: '12px 0',
-                      borderRadius: 8,
+                      borderRadius: 'var(--radius-md)',
                       border: '1px solid var(--color-border-mid)',
                       background: 'transparent',
                       color: 'var(--color-text-2)',
@@ -382,9 +384,9 @@ export default function ShiftChecklistPage() {
                     style={{
                       width: '100%',
                       padding: '12px 0',
-                      borderRadius: 8,
+                      borderRadius: 'var(--radius-md)',
                       border: 'none',
-                      background: allComplete ? '#22C55E' : 'var(--color-border)',
+                      background: allComplete ? 'var(--color-success)' : 'var(--color-border)',
                       color: allComplete ? '#fff' : 'var(--color-text-3)',
                       fontWeight: 700,
                       fontSize: 'var(--fs-md)',
@@ -404,9 +406,7 @@ export default function ShiftChecklistPage() {
       {tab === 'history' && !viewingHistory && (
         <div>
           {history.length === 0 ? (
-            <div className="card" style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)' }}>
-              No completed checklists yet.
-            </div>
+            <EmptyState message="No completed checklists yet." />
           ) : (
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
               {history.map((h, i, arr) => {
@@ -448,9 +448,9 @@ export default function ShiftChecklistPage() {
                         fontSize: 'var(--fs-xs)',
                         fontWeight: 700,
                         padding: '3px 8px',
-                        borderRadius: 8,
+                        borderRadius: 'var(--radius-md)',
                         background: h.status === 'completed' ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
-                        color: h.status === 'completed' ? '#22C55E' : '#EAB308',
+                        color: h.status === 'completed' ? 'var(--color-success)' : 'var(--color-bwc-mod)',
                       }}>
                         {h.status === 'completed' ? 'FILED' : 'IN PROGRESS'}
                       </span>
@@ -483,7 +483,7 @@ export default function ShiftChecklistPage() {
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span className="section-label" style={{ marginBottom: 0 }}>{label}</span>
-                <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: done === filtered.length ? '#22C55E' : 'var(--color-text-3)' }}>
+                <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: done === filtered.length ? 'var(--color-success)' : 'var(--color-text-3)' }}>
                   {done}/{filtered.length}
                 </span>
               </div>
@@ -497,9 +497,9 @@ export default function ShiftChecklistPage() {
                       borderBottom: '1px solid var(--color-border)',
                     }}>
                       <div style={{
-                        width: 24, height: 24, borderRadius: 6, flexShrink: 0,
+                        width: 24, height: 24, borderRadius: 'var(--radius-sm)', flexShrink: 0,
                         border: checked ? 'none' : '2px solid var(--color-border-mid)',
-                        background: checked ? '#22C55E' : 'transparent',
+                        background: checked ? 'var(--color-success)' : 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
                         {checked && <span style={{ color: '#fff', fontSize: 14, fontWeight: 800 }}>&#10003;</span>}
@@ -520,7 +520,7 @@ export default function ShiftChecklistPage() {
                       {item.frequency !== 'daily' && (
                         <span style={{
                           fontSize: 'var(--fs-xs)', fontWeight: 700, color: FREQ_COLORS[item.frequency],
-                          background: `${FREQ_COLORS[item.frequency]}15`, padding: '2px 8px', borderRadius: 10,
+                          background: `${FREQ_COLORS[item.frequency]}15`, padding: '2px 8px', borderRadius: 'var(--radius-md)',
                         }}>{FREQ_LABELS[item.frequency]}</span>
                       )}
                     </div>
@@ -551,16 +551,16 @@ export default function ShiftChecklistPage() {
                 )}
               </div>
               <div style={{
-                fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '4px 10px', borderRadius: 10,
+                fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '4px 10px', borderRadius: 'var(--radius-md)',
                 background: viewingHistory.status === 'completed' ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
-                color: viewingHistory.status === 'completed' ? '#22C55E' : '#EAB308',
+                color: viewingHistory.status === 'completed' ? 'var(--color-success)' : 'var(--color-bwc-mod)',
               }}>
                 {viewingHistory.status === 'completed' ? 'FILED' : 'IN PROGRESS'}
               </div>
             </div>
 
             {!historyLoaded ? (
-              <div style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)' }}>Loading...</div>
+              <LoadingState />
             ) : (
               <>
                 {renderHistorySection('Day Shift', hDayItems)}

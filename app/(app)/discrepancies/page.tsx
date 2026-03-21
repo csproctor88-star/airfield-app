@@ -34,9 +34,9 @@ const FILTER_LABELS: Record<string, string> = {
 type KpiKey = 'afm' | 'ces' | 'amops'
 
 const KPI_DEFS: { key: KpiKey; label: string; color: string; match: (cs: string) => boolean }[] = [
-  { key: 'afm', label: 'AFM', color: '#3B82F6', match: (cs) => cs === 'submitted_to_afm' },
-  { key: 'ces', label: 'CES', color: '#F97316', match: (cs) => cs === 'submitted_to_ces' || cs === 'awaiting_action_by_ces' || cs === 'waiting_for_project' },
-  { key: 'amops', label: 'AMOPS', color: '#22C55E', match: (cs) => cs === 'work_completed_awaiting_verification' },
+  { key: 'afm', label: 'AFM', color: 'var(--color-status-inwork)', match: (cs) => cs === 'submitted_to_afm' },
+  { key: 'ces', label: 'CES', color: 'var(--color-orange)', match: (cs) => cs === 'submitted_to_ces' || cs === 'awaiting_action_by_ces' || cs === 'waiting_for_project' },
+  { key: 'amops', label: 'AMOPS', color: 'var(--color-status-pass)', match: (cs) => cs === 'work_completed_awaiting_verification' },
 ]
 
 export default function DiscrepanciesPage() {
@@ -479,7 +479,7 @@ export default function DiscrepanciesPage() {
             style={{
               background: 'rgba(168,85,247,0.12)',
               border: '1px solid rgba(168,85,247,0.3)',
-              borderRadius: 8,
+              borderRadius: 'var(--radius-md)',
               padding: '7px 10px',
               color: '#A855F7',
               fontSize: 'var(--fs-base)',
@@ -495,7 +495,7 @@ export default function DiscrepanciesPage() {
             style={{
               background: 'rgba(168,85,247,0.12)',
               border: '1px solid rgba(168,85,247,0.3)',
-              borderRadius: 8,
+              borderRadius: 'var(--radius-md)',
               padding: '7px 10px',
               color: '#A855F7',
               fontSize: 'var(--fs-base)',
@@ -511,7 +511,7 @@ export default function DiscrepanciesPage() {
             style={{
               background: 'rgba(168,85,247,0.12)',
               border: '1px solid rgba(168,85,247,0.3)',
-              borderRadius: 8,
+              borderRadius: 'var(--radius-md)',
               padding: '7px 10px',
               color: '#A855F7',
               fontSize: 'var(--fs-base)',
@@ -529,7 +529,7 @@ export default function DiscrepanciesPage() {
               style={{
                 background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
                 border: 'none',
-                borderRadius: 8,
+                borderRadius: 'var(--radius-md)',
                 padding: '7px 12px',
                 color: '#fff',
                 fontSize: 'var(--fs-base)',
@@ -547,9 +547,9 @@ export default function DiscrepanciesPage() {
       {/* Row 1: OPEN + > 30 DAYS (larger) */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 6 }}>
         {[
-          { label: 'OPEN', value: openCount, color: '#FBBF24', active: filter === 'open' && !over30Only && !currentStatusFilter,
+          { label: 'OPEN', value: openCount, color: 'var(--color-warning)', active: filter === 'open' && !over30Only && !currentStatusFilter,
             onClick: () => { setFilter('open'); setOver30Only(false); setCurrentStatusFilter(null) } },
-          { label: '> 30 DAYS', value: over30Count, color: over30Count > 0 ? '#EF4444' : '#34D399', active: over30Only,
+          { label: '> 30 DAYS', value: over30Count, color: over30Count > 0 ? 'var(--color-danger)' : 'var(--color-success)', active: over30Only,
             onClick: () => { setFilter('open'); setOver30Only(!over30Only); setCurrentStatusFilter(null) } },
         ].map((k) => (
           <div
@@ -617,11 +617,11 @@ export default function DiscrepanciesPage() {
                   if (!active) { setFilter('open'); setOver30Only(false); setCurrentStatusFilter(null) }
                 }}
                 style={{
-                  padding: '3px 8px', borderRadius: 5, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                  padding: '3px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
                   cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
                   border: active ? '1.5px solid #F97316' : '1px solid var(--color-border)',
                   background: active ? 'rgba(249,115,22,0.12)' : 'var(--color-bg-inset)',
-                  color: active ? '#F97316' : 'var(--color-text-2)',
+                  color: active ? 'var(--color-orange)' : 'var(--color-text-2)',
                   display: 'flex', alignItems: 'center', gap: 4,
                 }}
               >
@@ -630,8 +630,8 @@ export default function DiscrepanciesPage() {
                   <span style={{
                     fontSize: 'var(--fs-2xs)', fontWeight: 700,
                     background: active ? 'rgba(249,115,22,0.2)' : 'var(--color-border)',
-                    color: active ? '#F97316' : 'var(--color-text-3)',
-                    padding: '0 4px', borderRadius: 3, minWidth: 16, textAlign: 'center',
+                    color: active ? 'var(--color-orange)' : 'var(--color-text-3)',
+                    padding: '0 4px', borderRadius: 'var(--radius-xs)', minWidth: 16, textAlign: 'center',
                   }}>
                     {count}
                   </span>
@@ -648,11 +648,11 @@ export default function DiscrepanciesPage() {
                 if (!active) { setFilter('open'); setOver30Only(false); setCurrentStatusFilter(null) }
               }}
               style={{
-                padding: '3px 8px', borderRadius: 5, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                padding: '3px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
                 border: shopFilter === '__unassigned' ? '1.5px solid #EF4444' : '1px solid var(--color-border)',
                 background: shopFilter === '__unassigned' ? 'rgba(239,68,68,0.12)' : 'var(--color-bg-inset)',
-                color: shopFilter === '__unassigned' ? '#EF4444' : 'var(--color-text-3)',
+                color: shopFilter === '__unassigned' ? 'var(--color-danger)' : 'var(--color-text-3)',
               }}
             >
               Unassigned
@@ -670,7 +670,7 @@ export default function DiscrepanciesPage() {
               style={{
                 background: filter === v ? 'rgba(34,211,238,0.12)' : 'transparent',
                 border: `1px solid ${filter === v ? 'rgba(34,211,238,0.3)' : 'var(--color-border)'}`,
-                borderRadius: 5,
+                borderRadius: 'var(--radius-sm)',
                 padding: '4px 8px',
                 color: filter === v ? 'var(--color-cyan)' : 'var(--color-text-3)',
                 fontSize: 'var(--fs-xs)',
@@ -684,7 +684,7 @@ export default function DiscrepanciesPage() {
             </button>
           ))}
         </div>
-        <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+        <div style={{ display: 'flex', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
           <button
             onClick={() => setViewMode('map')}
             title="Map view"
@@ -730,7 +730,7 @@ export default function DiscrepanciesPage() {
           marginBottom: 12,
           background: 'var(--color-search-bg)',
           border: '1px solid var(--color-search-border)',
-          borderRadius: 8,
+          borderRadius: 'var(--radius-md)',
           color: 'var(--color-text-1)',
           fontSize: 'var(--fs-md)',
           fontFamily: 'inherit',
@@ -791,7 +791,7 @@ export default function DiscrepanciesPage() {
                       type="button"
                       onClick={() => setTypeFilter(active ? null : t.value)}
                       style={{
-                        padding: '4px 10px', borderRadius: 6, fontSize: 'var(--fs-xs)', fontWeight: 700,
+                        padding: '4px 10px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 700,
                         cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
                         border: active ? '1.5px solid var(--color-cyan)' : '1px solid var(--color-border)',
                         background: active ? 'rgba(34,211,238,0.12)' : 'var(--color-bg-inset)',
@@ -831,7 +831,7 @@ export default function DiscrepanciesPage() {
                     gap: 8,
                     padding: '8px 10px',
                     background: 'var(--color-bg-surface)',
-                    borderRadius: 8,
+                    borderRadius: 'var(--radius-md)',
                     border: '1px solid var(--color-border)',
                     fontSize: 'var(--fs-sm)',
                   }}
@@ -848,12 +848,6 @@ export default function DiscrepanciesPage() {
                     </span>
                     <span style={{ fontWeight: 600, color: 'var(--color-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                       {d.title}
-                    </span>
-                    <StatusBadge status={d.status} />
-                    <span style={{ color: 'var(--color-text-3)', flexShrink: 0 }}>{d.location_text}</span>
-                    <span style={{ color: 'var(--color-text-3)', flexShrink: 0 }}>{d.assigned_shop || 'Unassigned'}</span>
-                    <span style={{ color: days > 30 ? 'var(--color-danger)' : 'var(--color-text-3)', fontWeight: days > 30 ? 700 : 400, flexShrink: 0 }}>
-                      {days}d
                     </span>
                   </Link>
                   {!usingDemo && !isCes && (

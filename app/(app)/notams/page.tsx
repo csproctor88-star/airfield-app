@@ -9,6 +9,7 @@ import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { toast } from 'sonner'
 import { formatZuluDate, formatZuluTime, formatZuluDateTime } from '@/lib/utils'
+import { EmptyState } from '@/components/ui/empty-state'
 
 type FilterType = 'all' | 'faa' | 'local' | 'active' | 'expired'
 
@@ -33,13 +34,13 @@ const FILTERS: { key: FilterType; label: string }[] = [
 ]
 
 const SOURCE_COLORS: Record<string, string> = {
-  faa: '#22D3EE',
-  local: '#A78BFA',
+  faa: 'var(--color-cyan)',
+  local: 'var(--color-purple)',
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  active: '#22C55E',
-  expired: '#64748B',
+  active: 'var(--color-success)',
+  expired: 'var(--color-text-3)',
 }
 
 function formatDate(str: string) {
@@ -301,9 +302,9 @@ export default function NotamsPage() {
             style={{
               background: 'rgba(168,85,247,0.12)',
               border: '1px solid rgba(168,85,247,0.3)',
-              borderRadius: 8,
+              borderRadius: 'var(--radius-md)',
               padding: '7px 14px',
-              color: '#A855F7',
+              color: 'var(--color-purple)',
               fontSize: 'var(--fs-md)',
               fontWeight: 700,
               cursor: 'pointer',
@@ -317,9 +318,9 @@ export default function NotamsPage() {
             style={{
               background: 'rgba(168,85,247,0.12)',
               border: '1px solid rgba(168,85,247,0.3)',
-              borderRadius: 8,
+              borderRadius: 'var(--radius-md)',
               padding: '7px 10px',
-              color: '#A855F7',
+              color: 'var(--color-purple)',
               fontSize: 'var(--fs-md)',
               fontWeight: 700,
               cursor: 'pointer',
@@ -352,7 +353,7 @@ export default function NotamsPage() {
               flex: 1,
               background: 'var(--color-bg-surface-solid)',
               border: '1px solid var(--color-bg-elevated)',
-              borderRadius: 8,
+              borderRadius: 'var(--radius-md)',
               padding: '8px 12px',
               fontSize: 'var(--fs-lg)',
               fontWeight: 600,
@@ -371,7 +372,7 @@ export default function NotamsPage() {
               fontSize: 'var(--fs-md)',
               fontWeight: 700,
               padding: '8px 16px',
-              borderRadius: 8,
+              borderRadius: 'var(--radius-md)',
               cursor: loading ? 'not-allowed' : 'pointer',
               fontFamily: 'inherit',
               opacity: loading ? 0.6 : 1,
@@ -387,7 +388,7 @@ export default function NotamsPage() {
         style={{
           background: 'var(--color-bg-surface-solid)',
           border: '1px solid var(--color-bg-elevated)',
-          borderRadius: 10,
+          borderRadius: 'var(--radius-md)',
           padding: '10px 14px',
           display: 'flex',
           alignItems: 'center',
@@ -401,7 +402,7 @@ export default function NotamsPage() {
               width: 8,
               height: 8,
               borderRadius: '50%',
-              background: feedConnected ? '#22C55E' : error ? '#EF4444' : '#64748B',
+              background: feedConnected ? 'var(--color-success)' : error ? 'var(--color-danger)' : 'var(--color-text-3)',
               boxShadow: feedConnected
                 ? '0 0 6px rgba(34,197,94,0.5)'
                 : error
@@ -454,13 +455,13 @@ export default function NotamsPage() {
       {error && !isDemoMode && (
         <div
           style={{
-            background: '#EF444415',
-            border: '1px solid #EF444440',
-            borderRadius: 10,
+            background: 'rgba(239,68,68,0.08)',
+            border: '1px solid rgba(239,68,68,0.25)',
+            borderRadius: 'var(--radius-md)',
             padding: '10px 14px',
             marginBottom: 12,
             fontSize: 'var(--fs-md)',
-            color: '#F87171',
+            color: 'var(--color-danger)',
           }}
         >
           {error}
@@ -480,7 +481,7 @@ export default function NotamsPage() {
               fontSize: 'var(--fs-base)',
               fontWeight: 600,
               padding: '5px 12px',
-              borderRadius: 20,
+              borderRadius: 'var(--radius-full)',
               cursor: 'pointer',
               fontFamily: 'inherit',
             }}
@@ -529,8 +530,8 @@ export default function NotamsPage() {
                 style={{
                   background: expiringSoon ? 'rgba(239,68,68,0.10)' : 'var(--color-bg-surface-solid)',
                   border: expiringSoon ? '1px solid rgba(239,68,68,0.4)' : '1px solid var(--color-bg-elevated)',
-                  borderLeft: expiringSoon ? '3px solid #EF4444' : '3px solid var(--color-text-4)',
-                  borderRadius: 10,
+                  borderLeft: expiringSoon ? '3px solid var(--color-danger)' : '3px solid var(--color-text-4)',
+                  borderRadius: 'var(--radius-md)',
                   padding: '12px 14px',
                   opacity: isExpired ? 0.5 : 1,
                   boxShadow: expiringSoon ? '0 0 12px rgba(239,68,68,0.15)' : 'none',
@@ -548,19 +549,19 @@ export default function NotamsPage() {
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                     <Badge
                       label={notam.source.toUpperCase()}
-                      color={SOURCE_COLORS[notam.source] || '#94A3B8'}
+                      color={SOURCE_COLORS[notam.source] || 'var(--color-text-3)'}
                     />
-                    <Badge label={notam.notam_type} color="#94A3B8" />
+                    <Badge label={notam.notam_type} color="var(--color-text-3)" />
                     {notam.notam_number.charAt(0).toUpperCase() === 'M' && (
-                      <Badge label="SAFETY" color="#EF4444" />
+                      <Badge label="SAFETY" color="var(--color-danger)" />
                     )}
                     {expiringSoon && (
-                      <Badge label="EXPIRING SOON" color="#EF4444" />
+                      <Badge label="EXPIRING SOON" color="var(--color-danger)" />
                     )}
                   </div>
                   <Badge
                     label={notam.status.toUpperCase()}
-                    color={STATUS_COLORS[notam.status] || '#94A3B8'}
+                    color={STATUS_COLORS[notam.status] || 'var(--color-text-3)'}
                   />
                 </div>
 
@@ -596,18 +597,9 @@ export default function NotamsPage() {
           })}
 
           {filtered.length === 0 && !error && (
-            <div
-              style={{
-                textAlign: 'center',
-                padding: 24,
-                color: 'var(--color-text-3)',
-                fontSize: 'var(--fs-md)',
-              }}
-            >
-              {!activeIcao && !isDemoMode
-                ? 'Enter an ICAO code above to fetch NOTAMs.'
-                : 'No NOTAMs match the selected filter.'}
-            </div>
+            <EmptyState message={!activeIcao && !isDemoMode
+              ? 'Enter an ICAO code above to fetch NOTAMs.'
+              : 'No NOTAMs match the selected filter.'} />
           )}
         </div>
       )}

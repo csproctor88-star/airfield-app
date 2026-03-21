@@ -132,6 +132,7 @@ export async function createInspection(input: {
   filed_by_name?: string | null
   filed_by_id?: string | null
   base_id?: string | null
+  inspection_date?: string | null
 }): Promise<{ data: InspectionRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -164,7 +165,7 @@ export async function createInspection(input: {
     display_id,
     inspection_type: input.inspection_type,
     inspector_name: input.inspector_name,
-    inspection_date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
+    inspection_date: input.inspection_date || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
     status: 'completed',
     items: input.items,
     total_items: input.total_items,
@@ -256,6 +257,7 @@ export async function saveInspectionDraft(input: {
   construction_meeting: boolean
   joint_monthly: boolean
   base_id?: string | null
+  inspection_date?: string | null
 }): Promise<{ data: InspectionRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -337,7 +339,7 @@ export async function saveInspectionDraft(input: {
     display_id,
     inspection_type: input.inspection_type,
     inspector_name: savedByName,
-    inspection_date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
+    inspection_date: input.inspection_date || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
     status: 'in_progress',
     items: input.items,
     total_items: input.total_items,

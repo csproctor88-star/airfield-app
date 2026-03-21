@@ -87,19 +87,15 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
 
   const riskColor = (risk: string) => {
     switch (risk) {
-      case 'critical': return '#EF4444'
+      case 'critical': return 'var(--color-red)'
       case 'high': return '#F97316'
-      case 'medium': return '#FBBF24'
-      default: return '#10B981'
+      case 'medium': return 'var(--color-amber)'
+      default: return 'var(--color-green)'
     }
   }
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 250, display: 'flex',
-      alignItems: 'center', justifyContent: 'center',
-      background: 'rgba(0,0,0,0.6)',
-    }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       {/* Responsive inline style tag for grid columns */}
       <style>{`
         .species-grid {
@@ -123,7 +119,7 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
       `}</style>
       <div style={{
         width: '96vw', maxWidth: 960, height: '90vh', maxHeight: 800,
-        background: 'var(--color-bg)', borderRadius: 16,
+        background: 'var(--color-bg)', borderRadius: 'var(--radius-xl)',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
         {/* Header */}
@@ -142,7 +138,7 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{
-                flex: '1 1 200px', minWidth: 0, padding: '10px 12px', borderRadius: 8,
+                flex: '1 1 200px', minWidth: 0, padding: '10px 12px', borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--color-border)',
                 background: 'var(--color-bg-surface)', color: 'var(--color-text)',
                 fontSize: 'var(--fs-base)',
@@ -153,10 +149,10 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
                 <button
                   onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
                   style={{
-                    padding: '6px 12px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                    padding: '6px 12px', borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
                     fontSize: 'var(--fs-sm)', fontWeight: 700, whiteSpace: 'nowrap',
-                    background: showFavoritesOnly ? '#FBBF24' : 'var(--color-bg-surface)',
-                    color: showFavoritesOnly ? '#000' : '#FBBF24',
+                    background: showFavoritesOnly ? 'var(--color-amber)' : 'var(--color-bg-surface)',
+                    color: showFavoritesOnly ? '#000' : 'var(--color-amber)',
                   }}
                 >
                   ★ Favorites ({favCount})
@@ -167,7 +163,7 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
                   key={g.key}
                   onClick={() => setActiveGroup(g.key)}
                   style={{
-                    padding: '6px 12px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                    padding: '6px 12px', borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
                     fontSize: 'var(--fs-sm)', fontWeight: 700, whiteSpace: 'nowrap',
                     background: activeGroup === g.key ? 'var(--color-cyan)' : 'var(--color-bg-surface)',
                     color: activeGroup === g.key ? '#000' : 'var(--color-text-2)',
@@ -187,16 +183,16 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
             <span>{filtered.length} species {search && `matching "${search}"`}</span>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444', display: 'inline-block' }} /> Critical
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-red)', display: 'inline-block' }} /> Critical
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#F97316', display: 'inline-block' }} /> High
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#FBBF24', display: 'inline-block' }} /> Med
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-amber)', display: 'inline-block' }} /> Med
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} /> Low
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-green)', display: 'inline-block' }} /> Low
               </span>
             </div>
           </div>
@@ -229,15 +225,15 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
                 onClick={() => onSelect(sp)}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  padding: 6, borderRadius: 10,
-                  border: isFav ? '1.5px solid #FBBF24' : '1px solid var(--color-border)',
+                  padding: 6, borderRadius: 'var(--radius-md)',
+                  border: isFav ? '1.5px solid var(--color-amber)' : '1px solid var(--color-border)',
                   background: 'var(--color-bg-surface)', cursor: 'pointer',
                   textAlign: 'center', color: 'var(--color-text)',
                   transition: 'border-color 0.15s',
                 }}
               >
                 <div style={{
-                  width: '100%', aspectRatio: '4/3', borderRadius: 8, overflow: 'hidden',
+                  width: '100%', aspectRatio: '4/3', borderRadius: 'var(--radius-md)', overflow: 'hidden',
                   background: 'var(--color-bg)', marginBottom: 4, position: 'relative',
                 }}>
                   <img
@@ -268,7 +264,7 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
                   {isFav && (
                     <div style={{
                       position: 'absolute', top: 2, left: 3,
-                      fontSize: 12, color: '#FBBF24', lineHeight: 1,
+                      fontSize: 12, color: 'var(--color-amber)', lineHeight: 1,
                     }}>★</div>
                   )}
                 </div>

@@ -12,11 +12,11 @@ const CHECK_TYPE_LABELS: Record<string, string> = {
 }
 
 const REPORT_CARDS = [
-  { title: 'Daily Operations Summary', description: 'All activity for a selected date or range.', href: '/reports/daily', icon: FileText, color: '#0EA5E9' },
-  { title: 'Discrepancy Report', description: 'Filtered exports by status, type, shop, or location.', href: '/reports/discrepancies', icon: AlertTriangle, color: '#FBBF24' },
-  { title: 'Discrepancy Trends', description: 'Opened vs closed over time.', href: '/reports/trends', icon: TrendingUp, color: '#8B5CF6' },
-  { title: 'Aging Discrepancies', description: 'By aging tier and shop with filtered exports.', href: '/reports/aging', icon: Clock, color: '#EF4444' },
-  { title: 'Airfield Lighting Report', description: 'System health, outages, feature inventory.', href: '/reports/lighting', icon: Lightbulb, color: '#22C55E' },
+  { title: 'Daily Operations Summary', description: 'All activity for a selected date or range.', href: '/reports/daily', icon: FileText, color: 'var(--color-cyan)' },
+  { title: 'Discrepancy Report', description: 'Filtered exports by status, type, shop, or location.', href: '/reports/discrepancies', icon: AlertTriangle, color: 'var(--color-warning)' },
+  { title: 'Discrepancy Trends', description: 'Opened vs closed over time.', href: '/reports/trends', icon: TrendingUp, color: 'var(--color-purple)' },
+  { title: 'Aging Discrepancies', description: 'By aging tier and shop with filtered exports.', href: '/reports/aging', icon: Clock, color: 'var(--color-danger)' },
+  { title: 'Airfield Lighting Report', description: 'System health, outages, feature inventory.', href: '/reports/lighting', icon: Lightbulb, color: 'var(--color-status-pass)' },
 ]
 
 const TIME_FRAMES = [
@@ -81,7 +81,7 @@ export default function ReportsPage() {
                 padding: '4px 10px', border: 'none', fontSize: 'var(--fs-xs)', fontWeight: 700,
                 cursor: 'pointer', fontFamily: 'inherit',
                 background: days === tf.value ? 'var(--color-cyan)' : 'transparent',
-                color: days === tf.value ? '#000' : 'var(--color-text-3)',
+                color: days === tf.value ? '#fff' : 'var(--color-text-3)',
               }}
             >
               {tf.label}
@@ -100,7 +100,7 @@ export default function ReportsPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
 
           {/* Airfield Inspections */}
-          <StyledCard accent="#0EA5E9">
+          <StyledCard accent="var(--color-cyan)">
             <CardHeader>Airfield Inspections</CardHeader>
             <BigNumber value={analytics.airfieldInspections.completed} label="completed" />
             {analytics.airfieldInspections.avgMinutes != null && (
@@ -108,13 +108,13 @@ export default function ReportsPage() {
             )}
             {analytics.airfieldInspections.passRate != null && (
               <StatRow label="Pass Rate" value={`${analytics.airfieldInspections.passRate}%`}>
-                <MiniBar pct={analytics.airfieldInspections.passRate} color={analytics.airfieldInspections.passRate >= 90 ? '#22C55E' : '#FBBF24'} />
+                <MiniBar pct={analytics.airfieldInspections.passRate} color={analytics.airfieldInspections.passRate >= 90 ? 'var(--color-status-pass)' : 'var(--color-warning)'} />
               </StatRow>
             )}
           </StyledCard>
 
           {/* Lighting Inspections */}
-          <StyledCard accent="#A78BFA">
+          <StyledCard accent="var(--color-purple)">
             <CardHeader>Lighting Inspections</CardHeader>
             <BigNumber value={analytics.lightingInspections.completed} label="completed" />
             {analytics.lightingInspections.avgMinutes != null && (
@@ -122,13 +122,13 @@ export default function ReportsPage() {
             )}
             {analytics.lightingInspections.passRate != null && (
               <StatRow label="Pass Rate" value={`${analytics.lightingInspections.passRate}%`}>
-                <MiniBar pct={analytics.lightingInspections.passRate} color={analytics.lightingInspections.passRate >= 90 ? '#22C55E' : '#FBBF24'} />
+                <MiniBar pct={analytics.lightingInspections.passRate} color={analytics.lightingInspections.passRate >= 90 ? 'var(--color-status-pass)' : 'var(--color-warning)'} />
               </StatRow>
             )}
           </StyledCard>
 
           {/* Airfield Checks */}
-          <StyledCard accent="#22D3EE">
+          <StyledCard accent="var(--color-cyan)">
             <CardHeader>Airfield Checks</CardHeader>
             <BigNumber value={analytics.checks.last30Days} label="total" />
             <StatRow label="Avg / Day" value={analytics.checks.avgPerDay} />
@@ -150,9 +150,9 @@ export default function ReportsPage() {
           </StyledCard>
 
           {/* Discrepancies */}
-          <StyledCard accent="#FBBF24">
+          <StyledCard accent="var(--color-warning)">
             <CardHeader>Discrepancies</CardHeader>
-            <BigNumber value={analytics.discrepancies.currentOpen} label="open" color={analytics.discrepancies.currentOpen > 0 ? '#FBBF24' : '#22C55E'} />
+            <BigNumber value={analytics.discrepancies.currentOpen} label="open" color={analytics.discrepancies.currentOpen > 0 ? 'var(--color-warning)' : 'var(--color-status-pass)'} />
             {analytics.discrepancies.avgDaysToClose != null && (
               <StatRow label="Avg Days to Close" value={analytics.discrepancies.avgDaysToClose} />
             )}
@@ -166,7 +166,7 @@ export default function ReportsPage() {
               {(analytics.discrepancies.openedLast30 > 0 || analytics.discrepancies.closedLast30 > 0) && (
                 <span style={{
                   fontSize: 'var(--fs-xs)', fontWeight: 700,
-                  color: analytics.discrepancies.openedLast30 > analytics.discrepancies.closedLast30 ? '#EF4444' : '#22C55E',
+                  color: analytics.discrepancies.openedLast30 > analytics.discrepancies.closedLast30 ? 'var(--color-danger)' : 'var(--color-status-pass)',
                 }}>
                   Net {analytics.discrepancies.openedLast30 > analytics.discrepancies.closedLast30 ? '+' : ''}
                   {analytics.discrepancies.openedLast30 - analytics.discrepancies.closedLast30}
@@ -176,7 +176,7 @@ export default function ReportsPage() {
           </StyledCard>
 
           {/* QRC Executions */}
-          <StyledCard accent="#F97316">
+          <StyledCard accent="var(--color-orange)">
             <CardHeader>QRC Executions</CardHeader>
             <BigNumber value={analytics.qrc.executionsLast30} label="executed" />
             {analytics.qrc.avgResponseMinutes != null && (
@@ -185,7 +185,7 @@ export default function ReportsPage() {
           </StyledCard>
 
           {/* Personnel */}
-          <StyledCard accent="#64748B">
+          <StyledCard accent="var(--color-text-3)">
             <CardHeader>Personnel on Airfield</CardHeader>
             <BigNumber value={analytics.personnel.activeToday} label="active today" />
             {analytics.personnel.avgPerDay != null && (
@@ -194,14 +194,14 @@ export default function ReportsPage() {
           </StyledCard>
 
           {/* Obstructions */}
-          <StyledCard accent="#F59E0B">
+          <StyledCard accent="var(--color-warning)">
             <CardHeader>Obstruction Evaluations</CardHeader>
             <BigNumber value={analytics.obstructions.evaluated} label="evaluated" />
             <StatRow label="Violations Found" value={analytics.obstructions.violations}>
               {analytics.obstructions.violations > 0 && (
                 <span style={{
                   fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '1px 5px', borderRadius: 3,
-                  background: 'rgba(239,68,68,0.12)', color: '#EF4444',
+                  background: 'rgba(239,68,68,0.12)', color: 'var(--color-danger)',
                 }}>
                   {analytics.obstructions.evaluated > 0
                     ? `${Math.round((analytics.obstructions.violations / analytics.obstructions.evaluated) * 100)}%`
@@ -212,7 +212,7 @@ export default function ReportsPage() {
           </StyledCard>
 
           {/* Parking Plans */}
-          <StyledCard accent="#38BDF8">
+          <StyledCard accent="var(--color-accent)">
             <CardHeader>Parking Plans</CardHeader>
             <BigNumber value={analytics.parking.totalPlans} label="total plans" />
             <StatRow label={`Created (${periodLabel})`} value={analytics.parking.createdInPeriod} />
@@ -224,7 +224,7 @@ export default function ReportsPage() {
           </StyledCard>
 
           {/* Wildlife / BASH */}
-          <StyledCard accent="#10B981">
+          <StyledCard accent="var(--color-success)">
             <CardHeader>Wildlife / BASH</CardHeader>
             <div style={{ display: 'flex', gap: 16, marginBottom: 4 }}>
               <div>
@@ -232,7 +232,7 @@ export default function ReportsPage() {
                 <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-4)', fontWeight: 600 }}>sightings</div>
               </div>
               <div>
-                <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: analytics.wildlife.strikes > 0 ? '#EF4444' : 'var(--color-text-1)' }}>{analytics.wildlife.strikes}</div>
+                <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: analytics.wildlife.strikes > 0 ? 'var(--color-danger)' : 'var(--color-text-1)' }}>{analytics.wildlife.strikes}</div>
                 <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-4)', fontWeight: 600 }}>strikes</div>
               </div>
             </div>

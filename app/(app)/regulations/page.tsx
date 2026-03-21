@@ -117,7 +117,7 @@ export default function RegulationsPage() {
               border: tab === t.key
                 ? '1px solid var(--color-accent-secondary)'
                 : '1px solid rgba(14,165,233,0.2)',
-              borderRadius: 8,
+              borderRadius: 'var(--radius-md)',
               color: tab === t.key ? '#fff' : 'var(--color-text-3)',
               fontSize: 'var(--fs-md)',
               fontWeight: 700,
@@ -368,7 +368,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
       <div style={{
         background: 'var(--color-bg-surface)',
         border: '1px solid var(--color-border)',
-        borderRadius: 10,
+        borderRadius: 'var(--radius-md)',
         padding: 12,
         marginBottom: 10,
       }}>
@@ -388,7 +388,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
               padding: '10px 14px 10px 38px',
               background: 'var(--color-search-bg)',
               border: '1px solid var(--color-search-border)',
-              borderRadius: 8,
+              borderRadius: 'var(--radius-md)',
               color: 'var(--color-text-1)',
               fontSize: 'var(--fs-xl)',
               fontFamily: 'inherit',
@@ -417,7 +417,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
               display: 'flex', alignItems: 'center', gap: 4,
               background: hasActiveFilters ? 'rgba(34,211,238,0.08)' : 'transparent',
               border: `1px solid ${hasActiveFilters ? 'rgba(34,211,238,0.25)' : 'var(--color-border-mid)'}`,
-              borderRadius: 6, padding: '6px 10px', cursor: 'pointer',
+              borderRadius: 'var(--radius-sm)', padding: '6px 10px', cursor: 'pointer',
               color: hasActiveFilters ? 'var(--color-cyan)' : 'var(--color-text-2)',
               fontSize: 'var(--fs-base)', fontWeight: 700, fontFamily: 'inherit',
             }}
@@ -440,12 +440,12 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
               display: 'flex', alignItems: 'center', gap: 4,
               background: showFavoritesOnly ? 'rgba(250,204,21,0.10)' : 'transparent',
               border: `1px solid ${showFavoritesOnly ? 'rgba(250,204,21,0.30)' : 'var(--color-border-mid)'}`,
-              borderRadius: 6, padding: '6px 10px', cursor: 'pointer',
-              color: showFavoritesOnly ? '#FACC15' : 'var(--color-text-2)',
+              borderRadius: 'var(--radius-sm)', padding: '6px 10px', cursor: 'pointer',
+              color: showFavoritesOnly ? 'var(--color-amber)' : 'var(--color-text-2)',
               fontSize: 'var(--fs-base)', fontWeight: 700, fontFamily: 'inherit',
             }}
           >
-            <Star size={12} fill={showFavoritesOnly ? '#FACC15' : 'none'} />
+            <Star size={12} fill={showFavoritesOnly ? 'var(--color-amber)' : 'none'} />
             Favorites{favorites.size > 0 ? ` (${favorites.size})` : ''}
           </button>
 
@@ -455,7 +455,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
               display: 'flex', alignItems: 'center',
               background: 'transparent',
               border: '1px solid var(--color-border-mid)',
-              borderRadius: 6, padding: '6px 8px', cursor: 'pointer',
+              borderRadius: 'var(--radius-sm)', padding: '6px 8px', cursor: 'pointer',
               color: 'var(--color-text-3)', fontFamily: 'inherit',
             }}
             title="Favorites settings"
@@ -468,7 +468,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
         {showFavSettings && (
           <div style={{
             marginTop: 8, padding: '10px 10px',
-            background: 'var(--color-bg-inset)', borderRadius: 6,
+            background: 'var(--color-bg-inset)', borderRadius: 'var(--radius-sm)',
             border: '1px solid var(--color-border)',
             display: 'flex', flexDirection: 'column', gap: 10,
           }}>
@@ -480,14 +480,14 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
               <button
                 onClick={toggleFavDefault}
                 style={{
-                  width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
-                  background: loadFavoritesDefault() ? '#FACC15' : 'var(--color-text-4)',
+                  width: 36, height: 20, borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer',
+                  background: loadFavoritesDefault() ? 'var(--color-amber)' : 'var(--color-text-4)',
                   position: 'relative', transition: 'background 0.2s',
                 }}
               >
                 <span style={{
                   position: 'absolute', top: 2, width: 16, height: 16,
-                  borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
+                  borderRadius: '50%', background: 'var(--color-text-1)', transition: 'left 0.2s',
                   left: loadFavoritesDefault() ? 18 : 2,
                 }} />
               </button>
@@ -513,8 +513,8 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                       display: 'inline-flex', alignItems: 'center', gap: 4,
                       background: 'transparent',
                       border: '1px solid rgba(239,68,68,0.3)',
-                      borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
-                      color: '#F87171', fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
+                      borderRadius: 'var(--radius-sm)', padding: '5px 10px', cursor: 'pointer',
+                      color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -531,8 +531,8 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                         ? 'transparent' : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
                       border: cachedCount === regulations.length
                         ? '1px solid rgba(52,211,153,0.3)' : 'none',
-                      borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
-                      color: cachedCount === regulations.length ? '#34D399' : '#fff',
+                      borderRadius: 'var(--radius-sm)', padding: '5px 10px', cursor: 'pointer',
+                      color: cachedCount === regulations.length ? 'var(--color-success)' : 'var(--color-text-1)',
                       fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
                       whiteSpace: 'nowrap',
                       opacity: cachedCount === regulations.length ? 0.8 : 1,
@@ -548,12 +548,12 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
               {cacheProgress && (
                 <div style={{ marginTop: 8 }}>
                   <div style={{
-                    height: 4, borderRadius: 2, background: 'var(--color-bg-elevated)', overflow: 'hidden',
+                    height: 4, borderRadius: 'var(--radius-xs)', background: 'var(--color-bg-elevated)', overflow: 'hidden',
                   }}>
                     <div style={{
-                      height: '100%', borderRadius: 2,
+                      height: '100%', borderRadius: 'var(--radius-xs)',
                       background: cacheProgress.errors > 0
-                        ? 'linear-gradient(90deg, var(--color-accent-secondary), #F97316)'
+                        ? 'linear-gradient(90deg, var(--color-accent-secondary), var(--color-orange))'
                         : 'var(--color-accent-secondary)',
                       width: `${Math.round((cacheProgress.done / cacheProgress.total) * 100)}%`,
                       transition: 'width 0.3s',
@@ -562,7 +562,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                   <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
                     <span>{cacheProgress.done} of {cacheProgress.total} downloaded</span>
                     {cacheProgress.errors > 0 && (
-                      <span style={{ color: '#F97316' }}>{cacheProgress.errors} unavailable</span>
+                      <span style={{ color: 'var(--color-orange)' }}>{cacheProgress.errors} unavailable</span>
                     )}
                   </div>
                 </div>
@@ -581,8 +581,8 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                       display: 'inline-flex', alignItems: 'center', gap: 4,
                       background: 'transparent',
                       border: '1px solid rgba(239,68,68,0.25)',
-                      borderRadius: 6, padding: '4px 10px', cursor: clearing ? 'not-allowed' : 'pointer',
-                      color: '#F87171', fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
+                      borderRadius: 'var(--radius-sm)', padding: '4px 10px', cursor: clearing ? 'not-allowed' : 'pointer',
+                      color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
                       whiteSpace: 'nowrap',
                       opacity: clearing ? 0.5 : 1,
                     }}
@@ -608,7 +608,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                 onChange={e => setCategoryFilter(e.target.value)}
                 style={{
                   width: '100%', padding: '6px 8px', background: 'var(--color-bg-inset)',
-                  border: '1px solid var(--color-border)', borderRadius: 6, color: 'var(--color-text-1)',
+                  border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: 'var(--color-text-1)',
                   fontSize: 'var(--fs-base)', fontFamily: 'inherit', outline: 'none',
                 }}
               >
@@ -625,7 +625,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                 onChange={e => setPubTypeFilter(e.target.value)}
                 style={{
                   width: '100%', padding: '6px 8px', background: 'var(--color-bg-inset)',
-                  border: '1px solid var(--color-border)', borderRadius: 6, color: 'var(--color-text-1)',
+                  border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: 'var(--color-text-1)',
                   fontSize: 'var(--fs-base)', fontFamily: 'inherit', outline: 'none',
                 }}
               >
@@ -654,8 +654,8 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
             onClick={() => setShowAddModal(true)}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 4,
-              background: 'linear-gradient(135deg, #059669, #10B981)',
-              border: 'none', borderRadius: 6, padding: '5px 12px',
+              background: 'linear-gradient(135deg, #059669, var(--color-success))',
+              border: 'none', borderRadius: 'var(--radius-sm)', padding: '5px 12px',
               color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
               fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap',
             }}
@@ -713,8 +713,8 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                 >
                   <Star
                     size={18}
-                    color={isFav ? '#FACC15' : 'var(--color-text-3)'}
-                    fill={isFav ? '#FACC15' : 'none'}
+                    color={isFav ? 'var(--color-amber)' : 'var(--color-text-3)'}
+                    fill={isFav ? 'var(--color-amber)' : 'none'}
                   />
                 </button>
               </div>
@@ -723,14 +723,14 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                 {catConfig && (
                   <span style={{
                     fontSize: 'var(--fs-xs)', fontWeight: 700, color: catConfig.color,
-                    background: catConfig.color + '18', padding: '1px 6px', borderRadius: 3,
+                    background: catConfig.color + '18', padding: '1px 6px', borderRadius: 'var(--radius-xs)',
                   }}>
                     {catConfig.label}
                   </span>
                 )}
                 <span style={{
                   fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-2)',
-                  background: 'rgba(148,163,184,0.10)', padding: '1px 6px', borderRadius: 3,
+                  background: 'rgba(148,163,184,0.10)', padding: '1px 6px', borderRadius: 'var(--radius-xs)',
                 }}>
                   {reg.pub_type}
                 </span>
@@ -777,7 +777,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                             onClick={e => { e.stopPropagation(); setSearch(tag) }}
                             style={{
                               fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', background: 'rgba(148,163,184,0.08)',
-                              padding: '2px 6px', borderRadius: 3, cursor: 'pointer',
+                              padding: '2px 6px', borderRadius: 'var(--radius-xs)', cursor: 'pointer',
                               border: '1px solid rgba(148,163,184,0.10)',
                             }}
                           >
@@ -794,8 +794,8 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 6,
                         background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-                        color: '#fff', fontSize: 'var(--fs-base)', fontWeight: 700,
-                        padding: '6px 14px', borderRadius: 6, textDecoration: 'none',
+                        color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', fontWeight: 700,
+                        padding: '6px 14px', borderRadius: 'var(--radius-sm)', textDecoration: 'none',
                         border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                       }}
                     >
@@ -813,7 +813,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                           background: 'transparent',
                           border: '1px solid var(--color-border-active)',
                           color: 'var(--color-text-2)', fontSize: 'var(--fs-base)', fontWeight: 700,
-                          padding: '6px 14px', borderRadius: 6, textDecoration: 'none',
+                          padding: '6px 14px', borderRadius: 'var(--radius-sm)', textDecoration: 'none',
                         }}
                       >
                         <ExternalLink size={12} />
@@ -827,7 +827,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                           background: 'transparent',
                           border: '1px solid var(--color-border-active)',
                           color: 'var(--color-text-2)', fontSize: 'var(--fs-base)', fontWeight: 700,
-                          padding: '6px 14px', borderRadius: 6,
+                          padding: '6px 14px', borderRadius: 'var(--radius-sm)',
                           cursor: 'pointer', fontFamily: 'inherit',
                         }}
                       >
@@ -842,8 +842,8 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                           display: 'inline-flex', alignItems: 'center', gap: 6,
                           background: 'transparent',
                           border: '1px solid rgba(239,68,68,0.25)',
-                          color: '#F87171', fontSize: 'var(--fs-base)', fontWeight: 700,
-                          padding: '6px 14px', borderRadius: 6,
+                          color: 'var(--color-danger)', fontSize: 'var(--fs-base)', fontWeight: 700,
+                          padding: '6px 14px', borderRadius: 'var(--radius-sm)',
                           cursor: 'pointer', fontFamily: 'inherit',
                           marginLeft: 'auto',
                         }}
@@ -859,15 +859,15 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                     <div
                       onClick={e => e.stopPropagation()}
                       style={{
-                        marginTop: 10, padding: '10px 12px', borderRadius: 8,
+                        marginTop: 10, padding: '10px 12px', borderRadius: 'var(--radius-md)',
                         background: 'rgba(239,68,68,0.06)',
                         border: '1px solid rgba(239,68,68,0.2)',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 10 }}>
-                        <AlertTriangle size={14} color="#F87171" style={{ flexShrink: 0, marginTop: 1 }} />
+                        <AlertTriangle size={14} color="var(--color-danger)" style={{ flexShrink: 0, marginTop: 1 }} />
                         <div>
-                          <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: '#F87171', marginBottom: 2 }}>
+                          <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-danger)', marginBottom: 2 }}>
                             Delete this reference?
                           </div>
                           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>
@@ -879,7 +879,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                         <button
                           onClick={e => { e.stopPropagation(); setConfirmDeleteId(null) }}
                           style={{
-                            padding: '5px 14px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 700,
+                            padding: '5px 14px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                             background: 'transparent', border: '1px solid var(--color-text-4)',
                             color: 'var(--color-text-2)', cursor: 'pointer', fontFamily: 'inherit',
                           }}
@@ -890,9 +890,9 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
                           onClick={e => { e.stopPropagation(); handleDeleteRef(reg.reg_id) }}
                           disabled={deletingRegId === reg.reg_id}
                           style={{
-                            padding: '5px 14px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 700,
-                            background: deletingRegId === reg.reg_id ? '#7F1D1D' : '#DC2626',
-                            border: 'none', color: '#fff', cursor: deletingRegId === reg.reg_id ? 'not-allowed' : 'pointer',
+                            padding: '5px 14px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                            background: deletingRegId === reg.reg_id ? '#7F1D1D' : 'var(--color-danger)',
+                            border: 'none', color: 'var(--color-text-1)', cursor: deletingRegId === reg.reg_id ? 'not-allowed' : 'pointer',
                             fontFamily: 'inherit', opacity: deletingRegId === reg.reg_id ? 0.6 : 1,
                           }}
                         >
@@ -1050,7 +1050,7 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '8px 10px', background: 'var(--color-bg-inset)',
-    border: '1px solid var(--color-border)', borderRadius: 6, color: 'var(--color-text-1)',
+    border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: 'var(--color-text-1)',
     fontSize: 'var(--fs-md)', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
   }
 
@@ -1061,11 +1061,11 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
 
   return (
     <div
+      className="modal-overlay"
       style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        background: 'var(--color-overlay)', backdropFilter: 'blur(4px)',
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        alignItems: 'flex-start',
         padding: '40px 16px', overflowY: 'auto',
+        backdropFilter: 'blur(4px)',
       }}
       onClick={onClose}
     >
@@ -1073,7 +1073,7 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 500,
-          background: 'var(--color-bg-surface-solid)', borderRadius: 12,
+          background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)',
           border: '1px solid var(--color-border)',
           padding: 20, position: 'relative',
         }}
@@ -1091,9 +1091,9 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
 
         {error && (
           <div style={{
-            padding: '8px 12px', marginBottom: 12, borderRadius: 6,
+            padding: '8px 12px', marginBottom: 12, borderRadius: 'var(--radius-sm)',
             background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-            color: '#F87171', fontSize: 'var(--fs-base)', fontWeight: 600,
+            color: 'var(--color-danger)', fontSize: 'var(--fs-base)', fontWeight: 600,
           }}>
             {error}
           </div>
@@ -1218,7 +1218,7 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   background: 'transparent',
                   border: '1px solid var(--color-border-active)',
-                  borderRadius: 6, padding: '6px 12px',
+                  borderRadius: 'var(--radius-sm)', padding: '6px 12px',
                   color: 'var(--color-text-2)', fontSize: 'var(--fs-base)', fontWeight: 700,
                   fontFamily: 'inherit', cursor: 'pointer',
                 }}
@@ -1243,7 +1243,7 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
 
           {/* Auto-derived info */}
           <div style={{
-            padding: '8px 10px', borderRadius: 6,
+            padding: '8px 10px', borderRadius: 'var(--radius-sm)',
             background: 'rgba(56,189,248,0.04)',
             border: '1px solid var(--color-border)',
             fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', lineHeight: 1.6,
@@ -1267,7 +1267,7 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
           <button
             onClick={onClose}
             style={{
-              padding: '8px 20px', borderRadius: 6, fontSize: 'var(--fs-md)', fontWeight: 700,
+              padding: '8px 20px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-md)', fontWeight: 700,
               background: 'transparent', border: '1px solid var(--color-text-4)',
               color: 'var(--color-text-2)', cursor: 'pointer', fontFamily: 'inherit',
             }}
@@ -1278,9 +1278,9 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
             onClick={handleSubmit}
             disabled={saving}
             style={{
-              padding: '8px 20px', borderRadius: 6, fontSize: 'var(--fs-md)', fontWeight: 700,
-              background: saving ? '#064E3B' : 'linear-gradient(135deg, #059669, #10B981)',
-              border: 'none', color: '#fff',
+              padding: '8px 20px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-md)', fontWeight: 700,
+              background: saving ? '#064E3B' : 'linear-gradient(135deg, #059669, var(--color-success))',
+              border: 'none', color: 'var(--color-text-1)',
               cursor: saving ? 'not-allowed' : 'pointer',
               fontFamily: 'inherit',
               opacity: saving ? 0.7 : 1,
@@ -1448,7 +1448,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
             display: 'inline-flex', alignItems: 'center', gap: 6,
             background: uploading ? 'var(--color-bg-elevated)' : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
             color: '#fff', fontSize: 'var(--fs-base)', fontWeight: 700,
-            padding: '6px 14px', borderRadius: 6,
+            padding: '6px 14px', borderRadius: 'var(--radius-sm)',
             cursor: uploading ? 'not-allowed' : 'pointer',
             opacity: uploading ? 0.6 : 1,
           }}
@@ -1468,9 +1468,9 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
 
       {error && (
         <div style={{
-          padding: '8px 12px', marginBottom: 12, borderRadius: 6,
+          padding: '8px 12px', marginBottom: 12, borderRadius: 'var(--radius-sm)',
           background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-          color: '#F87171', fontSize: 'var(--fs-base)', fontWeight: 600,
+          color: 'var(--color-danger)', fontSize: 'var(--fs-base)', fontWeight: 600,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
           <span>{error}</span>
@@ -1478,7 +1478,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
             onClick={() => setError(null)}
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}
           >
-            <X size={12} color="#F87171" />
+            <X size={12} color="var(--color-danger)" />
           </button>
         </div>
       )}
@@ -1530,8 +1530,8 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
                     background: doc.status === 'failed'
                       ? 'rgba(239,68,68,0.15)' : 'rgba(253,230,138,0.15)',
                     color: doc.status === 'failed'
-                      ? '#F87171' : '#FDE68A',
-                    padding: '2px 6px', borderRadius: 4, whiteSpace: 'nowrap',
+                      ? 'var(--color-danger)' : 'var(--color-amber)',
+                    padding: '2px 6px', borderRadius: 'var(--radius-xs)', whiteSpace: 'nowrap',
                   }}>
                     {doc.status === 'failed' ? 'FAILED' : 'PROCESSING'}
                   </div>
@@ -1541,7 +1541,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
                   <div style={{
                     fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.06em',
                     background: 'rgba(14,165,233,0.15)', color: 'var(--color-accent)',
-                    padding: '2px 6px', borderRadius: 4, whiteSpace: 'nowrap',
+                    padding: '2px 6px', borderRadius: 'var(--radius-xs)', whiteSpace: 'nowrap',
                   }}>
                     CACHED
                   </div>
@@ -1567,9 +1567,9 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
             {/* Failure explanation */}
             {doc.status === 'failed' && (
               <div style={{
-                marginTop: 6, padding: '6px 8px', borderRadius: 6,
+                marginTop: 6, padding: '6px 8px', borderRadius: 'var(--radius-sm)',
                 background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.12)',
-                fontSize: 'var(--fs-sm)', color: '#F87171', lineHeight: 1.4,
+                fontSize: 'var(--fs-sm)', color: 'var(--color-danger)', lineHeight: 1.4,
               }}>
                 Text extraction failed — the file may be scanned or image-based.
                 You can still view the document, but search won&apos;t be available.
@@ -1583,8 +1583,8 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-                  color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
-                  padding: '5px 10px', borderRadius: 5,
+                  color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                  padding: '5px 10px', borderRadius: 'var(--radius-sm)',
                   border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
@@ -1599,9 +1599,9 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   background: 'transparent',
                   border: '1px solid var(--color-border-active)',
-                  color: isCached ? '#F87171' : 'var(--color-text-2)',
+                  color: isCached ? 'var(--color-danger)' : 'var(--color-text-2)',
                   fontSize: 'var(--fs-sm)', fontWeight: 700,
-                  padding: '4px 10px', borderRadius: 5,
+                  padding: '4px 10px', borderRadius: 'var(--radius-sm)',
                   cursor: isCaching ? 'not-allowed' : 'pointer',
                   fontFamily: 'inherit',
                   opacity: isCaching ? 0.5 : 1,
@@ -1618,9 +1618,9 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   background: 'transparent',
                   border: '1px solid rgba(239,68,68,0.2)',
-                  color: '#F87171',
+                  color: 'var(--color-danger)',
                   fontSize: 'var(--fs-sm)', fontWeight: 700,
-                  padding: '4px 10px', borderRadius: 5,
+                  padding: '4px 10px', borderRadius: 'var(--radius-sm)',
                   cursor: isDeleting ? 'not-allowed' : 'pointer',
                   fontFamily: 'inherit',
                   opacity: isDeleting ? 0.5 : 1,

@@ -434,7 +434,7 @@ export default function HomePage() {
             style={{
               padding: 'var(--advisory-padding)',
               marginBottom: 8,
-              borderRadius: 10,
+              borderRadius: 'var(--radius-md)',
               background: expiringSoon ? 'transparent' : colors.bg,
               border: expiringSoon ? `2px solid ${colors.text}` : `1px solid ${colors.border}`,
               cursor: 'pointer',
@@ -473,7 +473,7 @@ export default function HomePage() {
         style={{
           padding: '8px 14px',
           marginBottom: 12,
-          borderRadius: 8,
+          borderRadius: 'var(--radius-md)',
           border: '1px dashed var(--color-border-mid)',
           color: 'var(--color-text-3)',
           fontSize: 'var(--fs-sm)',
@@ -488,16 +488,14 @@ export default function HomePage() {
       {/* Advisory dialog (add or edit) */}
       {advisoryDialogOpen && (
         <div
+          className="modal-overlay"
           onClick={() => setAdvisoryDialogOpen(false)}
-          style={{
-            position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}
+          style={{ padding: 24 }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 'var(--advisory-dialog-padding)', width: '100%', maxWidth: 'var(--advisory-dialog-width)',
+              background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 'var(--advisory-dialog-padding)', width: '100%', maxWidth: 'var(--advisory-dialog-width)',
               border: '1px solid var(--color-border-mid)',
             }}
           >
@@ -510,7 +508,7 @@ export default function HomePage() {
                   key={t}
                   onClick={() => setAdvisoryDraftType(t)}
                   style={{
-                    flex: 1, padding: '8px 4px', borderRadius: 8, fontSize: 'var(--fs-base)', fontWeight: 700,
+                    flex: 1, padding: '8px 4px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-base)', fontWeight: 700,
                     cursor: 'pointer', textAlign: 'center',
                     border: advisoryDraftType === t
                       ? `2px solid ${ADVISORY_COLORS[t].text}`
@@ -527,7 +525,7 @@ export default function HomePage() {
               value={advisoryDraftText}
               onChange={(e) => setAdvisoryDraftText(e.target.value)}
               style={{
-                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8,
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
                 background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
                 color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none', marginBottom: 14,
                 fontFamily: 'inherit',
@@ -546,7 +544,7 @@ export default function HomePage() {
                       value={advisoryDraftStart}
                       onChange={(e) => setAdvisoryDraftStart(e.target.value)}
                       style={{
-                        flex: 1, padding: '8px 10px', borderRadius: 6,
+                        flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
                         background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
                         color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
                       }}
@@ -563,7 +561,7 @@ export default function HomePage() {
                       onChange={(e) => { setAdvisoryDraftEnd(e.target.value); setAdvisoryDraftUfn(false) }}
                       disabled={advisoryDraftUfn}
                       style={{
-                        flex: 1, padding: '8px 10px', borderRadius: 6,
+                        flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
                         background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
                         color: advisoryDraftUfn ? 'var(--color-text-4)' : 'var(--color-text-1)',
                         fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
@@ -600,7 +598,7 @@ export default function HomePage() {
                     setAdvisoryDialogOpen(false)
                   }}
                   style={{
-                    flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                    flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                     cursor: 'pointer', border: '1px solid rgba(239,68,68,0.3)',
                     background: 'rgba(239,68,68,0.1)', color: 'var(--color-danger)',
                   }}
@@ -636,7 +634,7 @@ export default function HomePage() {
                   setAdvisoryDialogOpen(false)
                 }}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', border: '1px solid rgba(52,211,153,0.3)',
                   background: 'rgba(52,211,153,0.15)', color: 'var(--color-success)',
                 }}
@@ -644,7 +642,7 @@ export default function HomePage() {
               <button
                 onClick={() => setAdvisoryDialogOpen(false)}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', border: '1px solid var(--color-border-mid)',
                   background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
                 }}
@@ -657,16 +655,14 @@ export default function HomePage() {
       {/* NAVAID status dialog */}
       {navaidDialog && (
         <div
+          className="modal-overlay"
           onClick={() => setNavaidDialog(null)}
-          style={{
-            position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}
+          style={{ padding: 24 }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 24, width: '100%', maxWidth: 380,
+              background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24, width: '100%', maxWidth: 380,
               border: '1px solid var(--color-border-mid)',
             }}
           >
@@ -686,7 +682,7 @@ export default function HomePage() {
                     key={s}
                     onClick={() => setNavaidDialog({ ...navaidDialog, selectedStatus: s })}
                     style={{
-                      flex: 1, padding: '12px 4px', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                      flex: 1, padding: '12px 4px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                       cursor: 'pointer', textAlign: 'center',
                       border: selected ? `2px solid ${color}` : '1px solid var(--color-border-mid)',
                       background: selected ? `${STATUS_HEX[s]}20` : 'var(--color-bg-inset)',
@@ -703,7 +699,7 @@ export default function HomePage() {
                 onChange={(e) => setNavaidDialog({ ...navaidDialog, notes: e.target.value })}
                 rows={2}
                 style={{
-                  width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8,
+                  width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
                   background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
                   color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none', marginBottom: 14,
                   fontFamily: 'inherit', resize: 'vertical', minHeight: 44,
@@ -731,7 +727,7 @@ export default function HomePage() {
                     }}
                     disabled={!hasChanges}
                     style={{
-                      flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                      flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                       cursor: hasChanges ? 'pointer' : 'not-allowed',
                       border: `1px solid ${hasChanges ? selColor : 'var(--color-border-mid)'}`,
                       background: 'var(--color-bg-inset)',
@@ -742,7 +738,7 @@ export default function HomePage() {
                   <button
                     onClick={() => setNavaidDialog(null)}
                     style={{
-                      flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                      flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                       cursor: 'pointer', border: '1px solid var(--color-border-mid)',
                       background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
                     }}
@@ -757,16 +753,14 @@ export default function HomePage() {
       {/* Confirmation dialog for runway changes */}
       {confirmDialog && (
         <div
+          className="modal-overlay"
           onClick={() => setConfirmDialog(null)}
-          style={{
-            position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}
+          style={{ padding: 24 }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 24, width: '100%', maxWidth: 380,
+              background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24, width: '100%', maxWidth: 380,
               border: '1px solid var(--color-border-mid)',
             }}
           >
@@ -782,7 +776,7 @@ export default function HomePage() {
               onChange={(e) => setConfirmDialog({ ...confirmDialog, notes: e.target.value })}
               rows={2}
               style={{
-                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8,
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
                 background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
                 color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none', marginBottom: 14,
                 fontFamily: 'inherit', resize: 'vertical', minHeight: 44,
@@ -795,7 +789,7 @@ export default function HomePage() {
                   setConfirmDialog(null)
                 }}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', border: `1px solid ${confirmDialog.color}`,
                   background: 'var(--color-bg-inset)', color: confirmDialog.color,
                 }}
@@ -803,7 +797,7 @@ export default function HomePage() {
               <button
                 onClick={() => setConfirmDialog(null)}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', border: '1px solid var(--color-border-mid)',
                   background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
                 }}
@@ -816,16 +810,14 @@ export default function HomePage() {
       {/* RSC dialog */}
       {rscDialogOpen && (
         <div
+          className="modal-overlay"
           onClick={() => setRscDialogOpen(false)}
-          style={{
-            position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}
+          style={{ padding: 24 }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 24, width: '100%', maxWidth: 380,
+              background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24, width: '100%', maxWidth: 380,
               border: '1px solid var(--color-border-mid)',
             }}
           >
@@ -838,7 +830,7 @@ export default function HomePage() {
                   key={c}
                   onClick={() => setRscDraftValue(c)}
                   style={{
-                    flex: 1, padding: '12px 0', borderRadius: 8, fontSize: 'var(--fs-lg)', fontWeight: 700,
+                    flex: 1, padding: '12px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-lg)', fontWeight: 700,
                     cursor: 'pointer', border: rscDraftValue === c ? '2px solid var(--color-accent)' : '1px solid var(--color-border-mid)',
                     background: rscDraftValue === c ? 'rgba(56,189,248,0.12)' : 'var(--color-bg-inset)',
                     color: rscDraftValue === c ? 'var(--color-accent)' : 'var(--color-text-2)',
@@ -852,7 +844,7 @@ export default function HomePage() {
               onChange={(e) => setRscDraftNotes(e.target.value)}
               rows={2}
               style={{
-                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8,
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
                 background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
                 color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none', marginBottom: 14,
                 fontFamily: 'inherit', resize: 'vertical', minHeight: 44,
@@ -870,7 +862,7 @@ export default function HomePage() {
                   setRscDialogOpen(false)
                 }}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', border: '1px solid var(--color-accent)',
                   background: 'var(--color-bg-inset)', color: 'var(--color-accent)',
                   opacity: rscDraftValue ? 1 : 0.4,
@@ -880,7 +872,7 @@ export default function HomePage() {
               <button
                 onClick={() => setRscDialogOpen(false)}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', border: '1px solid var(--color-border-mid)',
                   background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
                 }}
@@ -893,16 +885,14 @@ export default function HomePage() {
       {/* BWC dialog */}
       {bwcDialogOpen && (
         <div
+          className="modal-overlay"
           onClick={() => setBwcDialogOpen(false)}
-          style={{
-            position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}
+          style={{ padding: 24 }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 24, width: '100%', maxWidth: 380,
+              background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24, width: '100%', maxWidth: 380,
               border: '1px solid var(--color-border-mid)',
             }}
           >
@@ -918,7 +908,7 @@ export default function HomePage() {
                     key={opt}
                     onClick={() => setBwcDraftValue(opt)}
                     style={{
-                      padding: '12px 0', borderRadius: 8, fontSize: 'var(--fs-lg)', fontWeight: 700,
+                      padding: '12px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-lg)', fontWeight: 700,
                       cursor: 'pointer', border: bwcDraftValue === opt ? `2px solid ${c}` : '1px solid var(--color-border-mid)',
                       background: bwcDraftValue === opt ? `${c}15` : 'var(--color-bg-inset)',
                       color: bwcDraftValue === opt ? c : 'var(--color-text-2)',
@@ -933,7 +923,7 @@ export default function HomePage() {
               onChange={(e) => setBwcDraftNotes(e.target.value)}
               rows={2}
               style={{
-                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8,
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
                 background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
                 color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none', marginBottom: 14,
                 fontFamily: 'inherit', resize: 'vertical', minHeight: 44,
@@ -951,7 +941,7 @@ export default function HomePage() {
                   setBwcDialogOpen(false)
                 }}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', border: '1px solid var(--color-accent)',
                   background: 'var(--color-bg-inset)', color: 'var(--color-accent)',
                   opacity: bwcDraftValue ? 1 : 0.4,
@@ -961,7 +951,7 @@ export default function HomePage() {
               <button
                 onClick={() => setBwcDialogOpen(false)}
                 style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', border: '1px solid var(--color-border-mid)',
                   background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
                 }}
@@ -1034,7 +1024,7 @@ export default function HomePage() {
                       })
                     }}
                     style={{
-                      padding: 'var(--rwy-btn-padding)', borderRadius: 8, fontSize: 'var(--rwy-btn-font)', fontWeight: 800,
+                      padding: 'var(--rwy-btn-padding)', borderRadius: 'var(--radius-md)', fontSize: 'var(--rwy-btn-font)', fontWeight: 800,
                       cursor: 'pointer', color: c.color,
                       border: `2px solid ${c.btnBorder}`,
                       background: c.btnBg,
@@ -1046,7 +1036,7 @@ export default function HomePage() {
                       color: c.color,
                       background: 'var(--color-bg-inset)',
                       border: `1px solid ${c.border}`,
-                      borderRadius: 6,
+                      borderRadius: 'var(--radius-sm)',
                       padding: '4px 10px',
                       textAlign: 'center',
                       lineHeight: 1.3,
@@ -1090,7 +1080,7 @@ export default function HomePage() {
                       e.target.value = currentVal
                     }}
                     style={{
-                      padding: 'var(--rwy-select-padding)', borderRadius: 6, fontSize: 'var(--fs-md)', fontWeight: 700,
+                      padding: 'var(--rwy-select-padding)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-md)', fontWeight: 700,
                       cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', outline: 'none',
                       color: c.color, background: 'var(--color-bg-inset)',
                       border: `1px solid ${c.selectBorder}`,
@@ -1148,16 +1138,14 @@ export default function HomePage() {
       {/* ARFF Aircraft Readiness Dialog */}
       {arffDialog && (
         <div
+          className="modal-overlay"
           onClick={() => setArffDialog(null)}
-          style={{
-            position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}
+          style={{ padding: 24 }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 24, width: '100%', maxWidth: 380,
+              background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24, width: '100%', maxWidth: 380,
               border: '1px solid var(--color-border-mid)',
             }}
           >
@@ -1168,7 +1156,7 @@ export default function HomePage() {
               {([
                 { key: 'optimum', label: 'Optimum', color: 'var(--color-success)', hex: '#34D399' },
                 { key: 'reduced', label: 'Reduced', color: 'var(--color-warning)', hex: '#FBBF24' },
-                { key: 'critical', label: 'Critical', color: '#f97316', hex: '#f97316' },
+                { key: 'critical', label: 'Critical', color: 'var(--color-orange)', hex: '#f97316' },
                 { key: 'inadequate', label: 'Inadequate', color: 'var(--color-danger)', hex: '#EF4444' },
               ] as const).map(({ key, label, color, hex }) => {
                 const selected = arffDialog.selectedStatus === key
@@ -1177,7 +1165,7 @@ export default function HomePage() {
                     key={key}
                     onClick={() => setArffDialog({ ...arffDialog, selectedStatus: key })}
                     style={{
-                      padding: '12px 4px', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                      padding: '12px 4px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                       cursor: 'pointer', textAlign: 'center',
                       border: selected ? `2px solid ${color}` : '1px solid var(--color-border-mid)',
                       background: selected ? `${hex}20` : 'var(--color-bg-inset)',
@@ -1193,7 +1181,7 @@ export default function HomePage() {
               onChange={(e) => setArffDialog({ ...arffDialog, notes: e.target.value })}
               rows={2}
               style={{
-                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8,
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
                 background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
                 color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none', marginBottom: 14,
                 fontFamily: 'inherit', resize: 'vertical', minHeight: 44,
@@ -1204,7 +1192,7 @@ export default function HomePage() {
               const hasChanges = arffDialog.selectedStatus !== currentReadiness || arffDialog.notes.trim() !== ''
               const ARFF_SEL_COLORS: Record<string, string> = {
                 optimum: 'var(--color-success)', reduced: 'var(--color-warning)',
-                critical: '#f97316', inadequate: 'var(--color-danger)',
+                critical: 'var(--color-orange)', inadequate: 'var(--color-danger)',
               }
               const selColor = ARFF_SEL_COLORS[arffDialog.selectedStatus]
               return (
@@ -1220,7 +1208,7 @@ export default function HomePage() {
                     }}
                     disabled={!hasChanges}
                     style={{
-                      flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                      flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                       cursor: hasChanges ? 'pointer' : 'not-allowed',
                       border: `1px solid ${hasChanges ? selColor : 'var(--color-border-mid)'}`,
                       background: 'var(--color-bg-inset)',
@@ -1231,7 +1219,7 @@ export default function HomePage() {
                   <button
                     onClick={() => setArffDialog(null)}
                     style={{
-                      flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700,
+                      flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                       cursor: 'pointer', border: '1px solid var(--color-border-mid)',
                       background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
                     }}
@@ -1281,7 +1269,7 @@ export default function HomePage() {
                       setNavaidDialog({ navaid: n, selectedStatus: n.status as 'green' | 'yellow' | 'red', notes: navaidNotes[n.id] || '' })
                     }}
                     style={{
-                      width: 36, height: 28, borderRadius: 6,
+                      width: 36, height: 28, borderRadius: 'var(--radius-sm)',
                       border: `2px solid ${STATUS_COLORS[n.status]}`,
                       background: `${STATUS_HEX[n.status]}20`,
                       cursor: 'pointer', fontSize: 'var(--fs-base)', fontWeight: 700,
@@ -1303,7 +1291,7 @@ export default function HomePage() {
                       width: '100%', boxSizing: 'border-box',
                       background: 'var(--color-bg-inset)',
                       border: `1px solid ${STATUS_HEX[n.status]}40`,
-                      borderRadius: 6, padding: '6px 10px', fontSize: 'var(--fs-lg)',
+                      borderRadius: 'var(--radius-sm)', padding: '6px 10px', fontSize: 'var(--fs-lg)',
                       color: 'var(--color-text-1)', outline: 'none',
                       resize: 'none', overflow: 'hidden',
                       fontFamily: 'inherit',
@@ -1373,7 +1361,7 @@ export default function HomePage() {
                 e.target.value = String(current ?? '')
               }}
               style={{
-                padding: '8px 12px', borderRadius: 6, fontSize: 'var(--fs-2xl)', fontWeight: 800,
+                padding: '8px 12px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-2xl)', fontWeight: 800,
                 cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', outline: 'none',
                 color: 'var(--color-accent)', background: 'var(--color-bg-inset)',
                 border: '2px solid rgba(56,189,248,0.3)',
@@ -1393,7 +1381,7 @@ export default function HomePage() {
             const ARFF_COLORS: Record<string, { color: string; bg: string; border: string }> = {
               optimum: { color: 'var(--color-success)', bg: 'rgba(52,211,153,0.08)', border: 'rgba(52,211,153,0.2)' },
               reduced: { color: 'var(--color-warning)', bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.2)' },
-              critical: { color: '#f97316', bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.2)' },
+              critical: { color: 'var(--color-orange)', bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.2)' },
               inadequate: { color: 'var(--color-danger)', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.2)' },
             }
             const c = ARFF_COLORS[readiness]
@@ -1451,25 +1439,25 @@ export default function HomePage() {
               placeholder="Company / Name *"
               value={pCompany}
               onChange={e => setPCompany(e.target.value)}
-              style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }}
+              style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }}
             />
             <input
               placeholder="Location *"
               value={pLocation}
               onChange={e => setPLocation(e.target.value)}
-              style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }}
+              style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }}
             />
             <input
               placeholder="Work Description *"
               value={pDescription}
               onChange={e => setPDescription(e.target.value)}
-              style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }}
+              style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }}
             />
             <input
               placeholder="Callsign (optional)"
               value={pCallsign}
               onChange={e => setPCallsign(e.target.value)}
-              style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }}
+              style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }}
             />
           </div>
           <button
@@ -1496,7 +1484,7 @@ export default function HomePage() {
             style={{
               width: '100%',
               padding: '8px 0',
-              borderRadius: 6,
+              borderRadius: 'var(--radius-sm)',
               border: 'none',
               background: (!pCompany.trim() || !pLocation.trim() || !pDescription.trim()) ? 'var(--color-border)' : 'var(--color-cyan)',
               color: (!pCompany.trim() || !pLocation.trim() || !pDescription.trim()) ? 'var(--color-text-3)' : '#000',
@@ -1520,9 +1508,9 @@ export default function HomePage() {
             const cfg = CONTRACTOR_STATUS_CONFIG[c.status]
             const daysSinceStart = Math.max(1, Math.ceil((Date.now() - new Date(c.start_date).getTime()) / 86400000))
             return (
-              <div key={c.id} className="card" style={{ padding: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                  <div style={{ flex: 1 }}>
+              <div key={c.id} className="card" style={{ padding: 14, overflow: 'hidden' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     {/* Header: Callsign (or company name fallback) + status badge + day counter */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                       <span style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
@@ -1534,7 +1522,7 @@ export default function HomePage() {
                         color: cfg.color,
                         background: cfg.bg,
                         padding: '1px 8px',
-                        borderRadius: 8,
+                        borderRadius: 'var(--radius-md)',
                       }}>
                         {cfg.label}
                       </span>
@@ -1601,9 +1589,9 @@ export default function HomePage() {
                     }}
                     style={{
                       background: 'rgba(34,197,94,0.15)',
-                      color: '#22C55E',
+                      color: 'var(--color-status-pass)',
                       border: '1px solid rgba(34,197,94,0.4)',
-                      borderRadius: 8,
+                      borderRadius: 'var(--radius-md)',
                       padding: '6px 12px',
                       fontWeight: 700,
                       fontSize: 'var(--fs-sm)',
@@ -1671,32 +1659,33 @@ export default function HomePage() {
       {/* Construction/Closures edit dialog */}
       {editingConstruction && (
         <div
+          className="modal-overlay"
           onClick={() => setEditingConstruction(false)}
-          style={{ position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+          style={{ padding: 24 }}
         >
-          <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 24, width: '100%', maxWidth: 440, border: '1px solid var(--color-border-mid)' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24, width: '100%', maxWidth: 440, border: '1px solid var(--color-border-mid)' }}>
             <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>Construction / Closures</div>
             <textarea
               value={constructionDraft}
               onChange={(e) => setConstructionDraft(e.target.value)}
               placeholder="Enter construction activity, closures, or restrictions..."
               rows={5}
-              style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8, background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)', color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', outline: 'none', marginBottom: 14, fontFamily: 'inherit', resize: 'vertical' }}
+              style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)', background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)', color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', outline: 'none', marginBottom: 14, fontFamily: 'inherit', resize: 'vertical' }}
             />
             <div style={{ display: 'flex', gap: 8 }}>
               {constructionRemarks && (
                 <button
                   onClick={() => { setConstructionRemarks(null); setEditingConstruction(false) }}
-                  style={{ flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: 'var(--color-danger)' }}
+                  style={{ flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: 'var(--color-danger)' }}
                 >Clear</button>
               )}
               <button
                 onClick={() => { setConstructionRemarks(constructionDraft.trim() || null); setEditingConstruction(false) }}
-                style={{ flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', border: '1px solid rgba(52,211,153,0.3)', background: 'rgba(52,211,153,0.15)', color: 'var(--color-success)' }}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', border: '1px solid rgba(52,211,153,0.3)', background: 'rgba(52,211,153,0.15)', color: 'var(--color-success)' }}
               >Save</button>
               <button
                 onClick={() => setEditingConstruction(false)}
-                style={{ flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', border: '1px solid var(--color-border-mid)', background: 'var(--color-bg-inset)', color: 'var(--color-text-3)' }}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', border: '1px solid var(--color-border-mid)', background: 'var(--color-bg-inset)', color: 'var(--color-text-3)' }}
               >Cancel</button>
             </div>
           </div>
@@ -1706,32 +1695,33 @@ export default function HomePage() {
       {/* Miscellaneous Info edit dialog */}
       {editingMisc && (
         <div
+          className="modal-overlay"
           onClick={() => setEditingMisc(false)}
-          style={{ position: 'fixed', inset: 0, background: 'var(--color-overlay)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+          style={{ padding: 24 }}
         >
-          <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 24, width: '100%', maxWidth: 440, border: '1px solid var(--color-border-mid)' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24, width: '100%', maxWidth: 440, border: '1px solid var(--color-border-mid)' }}>
             <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>Miscellaneous Info</div>
             <textarea
               value={miscDraft}
               onChange={(e) => setMiscDraft(e.target.value)}
               placeholder="Enter miscellaneous information or notes..."
               rows={5}
-              style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8, background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)', color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', outline: 'none', marginBottom: 14, fontFamily: 'inherit', resize: 'vertical' }}
+              style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)', background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)', color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', outline: 'none', marginBottom: 14, fontFamily: 'inherit', resize: 'vertical' }}
             />
             <div style={{ display: 'flex', gap: 8 }}>
               {miscRemarks && (
                 <button
                   onClick={() => { setMiscRemarks(null); setEditingMisc(false) }}
-                  style={{ flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: 'var(--color-danger)' }}
+                  style={{ flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: 'var(--color-danger)' }}
                 >Clear</button>
               )}
               <button
                 onClick={() => { setMiscRemarks(miscDraft.trim() || null); setEditingMisc(false) }}
-                style={{ flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', border: '1px solid rgba(52,211,153,0.3)', background: 'rgba(52,211,153,0.15)', color: 'var(--color-success)' }}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', border: '1px solid rgba(52,211,153,0.3)', background: 'rgba(52,211,153,0.15)', color: 'var(--color-success)' }}
               >Save</button>
               <button
                 onClick={() => setEditingMisc(false)}
-                style={{ flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', border: '1px solid var(--color-border-mid)', background: 'var(--color-bg-inset)', color: 'var(--color-text-3)' }}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', border: '1px solid var(--color-border-mid)', background: 'var(--color-bg-inset)', color: 'var(--color-text-3)' }}
               >Cancel</button>
             </div>
           </div>

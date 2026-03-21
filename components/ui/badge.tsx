@@ -10,11 +10,17 @@ interface BadgeProps {
 }
 
 export function Badge({ label, color, bg }: BadgeProps) {
+  // CSS variables can't be concatenated with hex alpha, so use color-mix for tinted bg
+  const isVar = color.startsWith('var(')
+  const autoBg = isVar
+    ? `color-mix(in srgb, ${color} 10%, transparent)`
+    : `${color}1A`
+
   return (
     <span
       className="badge-pill"
       style={{
-        background: bg || `${color}1A`,
+        background: bg || autoBg,
         color,
       }}
     >
@@ -24,8 +30,8 @@ export function Badge({ label, color, bg }: BadgeProps) {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  open: '#3B82F6',
-  completed: '#10B981',
+  open: 'var(--color-status-inwork)',
+  completed: 'var(--color-success)',
   cancelled: '#9CA3AF',
 }
 
