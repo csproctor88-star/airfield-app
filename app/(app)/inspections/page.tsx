@@ -653,18 +653,16 @@ export default function InspectionsPage() {
       ? uniqueNames.join(', ')
       : `${uniqueNames.slice(0, 2).join(', ')} +${uniqueNames.length - 2} more`
 
-    const featureDescriptions = features.map(f => {
-      const typeLabel = formatFeatureType(f.feature_type)
-      return f.layer ? `${f.layer} ${typeLabel}` : typeLabel
-    })
-    const remarksText = `Lighting inspection: ${featureDescriptions.join('; ')} — marked inoperative.`
+    const remarksText = uniqueNames.length <= 3
+      ? `${uniqueNames.join(', ')} Out of Service`
+      : `${uniqueNames.slice(0, 2).join(', ')} +${uniqueNames.length - 2} more Out of Service`
 
     const layers = Array.from(new Set(features.map(f => f.layer).filter(Boolean)))
     const locationText = layers.length > 0 ? layers.join(', ') : 'Airfield'
 
     const updates: Partial<SimpleDiscrepancy> = {
       location: { lat: avgLat, lon: avgLon },
-      discrepancy_title: `${titleText} — Inoperative`,
+      discrepancy_title: `${titleText} Out of Service`,
       discrepancy_location_text: locationText,
     }
 
