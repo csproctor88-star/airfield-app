@@ -8,13 +8,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'lat and lon required' }, { status: 400 })
   }
 
+  const apiKey = process.env.GOOGLE_ELEVATION_API_KEY
+  if (!apiKey) {
+    return NextResponse.json({ error: 'Elevation API not configured' }, { status: 503 })
+  }
+
   try {
     const res = await fetch(
-      `https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`,
-      {
-        signal: AbortSignal.timeout(10000),
-        // Node fetch doesn't enforce browser SSL restrictions
-      },
+      `https://maps.googleapis.com/maps/api/elevation/json?locations=${lat},${lon}&key=${apiKey}`,
+      { signal: AbortSignal.timeout(8000) },
     )
 
     if (!res.ok) {
@@ -22,7 +24,18 @@ export async function GET(req: NextRequest) {
     }
 
     const data = await res.json()
-    return NextResponse.json(data)
+    if (data?.status !== 'OK') {
+      return NextResponse.json({ error: data?.error_message || 'Elevation lookup failed' }, { status: 502 })
+    }
+
+    // Return in same format as Open-Elevation for client compatibility
+    return NextResponse.json({
+      results: data.results.map((r: { elevation: number; location: { lat: number; lng: number } }) => ({
+        latitude: r.location.lat,
+        longitude: r.location.lng,
+        elevation: r.elevation,
+      })),
+    })
   } catch {
     return NextResponse.json({ error: 'Elevation service unavailable' }, { status: 502 })
   }
