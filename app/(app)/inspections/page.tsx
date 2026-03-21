@@ -644,8 +644,13 @@ export default function InspectionsPage() {
     const avgLon = features.reduce((sum, f) => sum + f.longitude, 0) / features.length
 
     // Build natural-language names: "TWY K Edge Light" not "TWY_K_EDGELIGHTS"
+    // Strip redundant prefix when layer already implies it (TWY → Taxiway, RWY → Runway)
     const featureNames = features.map(f => {
-      const typeLabel = formatFeatureType(f.feature_type)
+      let typeLabel = formatFeatureType(f.feature_type)
+      if (f.layer) {
+        if (f.layer.startsWith('TWY')) typeLabel = typeLabel.replace(/^Taxiway\s*/i, '')
+        else if (f.layer.startsWith('RWY')) typeLabel = typeLabel.replace(/^Runway\s*/i, '')
+      }
       return f.layer ? `${f.layer} ${typeLabel}` : typeLabel
     })
     const uniqueNames = Array.from(new Set(featureNames))
