@@ -81,7 +81,7 @@ export default function ReportsPage() {
                 padding: '4px 10px', border: 'none', fontSize: 'var(--fs-xs)', fontWeight: 700,
                 cursor: 'pointer', fontFamily: 'inherit',
                 background: days === tf.value ? 'var(--color-cyan)' : 'transparent',
-                color: days === tf.value ? '#000' : 'var(--color-text-3)',
+                color: days === tf.value ? '#fff' : 'var(--color-text-3)',
               }}
             >
               {tf.label}

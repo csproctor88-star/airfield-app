@@ -150,9 +150,12 @@ export function SidebarNav() {
 
   function isActive(href: string) {
     if (href === '/') return pathname === '/'
-    // Exact match or pathname starts with href followed by /
-    // This prevents /obstructions from matching /obstructions/history
-    return pathname === href || pathname.startsWith(href + '/')
+    if (pathname === href) return true
+    if (!pathname.startsWith(href + '/')) return false
+    // If a more specific nav item also matches, this one is not active
+    const allHrefs = [...config.pinned, ...config.sections.flatMap(s => s.items)]
+    const moreSpecific = allHrefs.some(h => h !== href && h.startsWith(href + '/') && (pathname === h || pathname.startsWith(h + '/')))
+    return !moreSpecific
   }
 
   function toggleGroup(label: string) {
