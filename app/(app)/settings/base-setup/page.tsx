@@ -1836,7 +1836,7 @@ function QrcTemplatesTab({ installationId }: { installationId: string | null }) 
             }}>
               <span style={{
                 fontSize: 'var(--fs-xs)', fontWeight: 800,
-                color: '#fff', background: t.is_active ? 'var(--color-warning)' : 'var(--color-text-4)',
+                color: '#fff', background: t.is_active ? '#D97706' : 'var(--color-text-4)',
                 padding: '2px 6px', borderRadius: 'var(--radius-xs)', minWidth: 32, textAlign: 'center',
               }}>{t.qrc_number}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -1949,7 +1949,7 @@ function SeedPickerDialog({
                     background: seedSelected.has(q.qrc_number) ? 'var(--color-cyan)' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>{seedSelected.has(q.qrc_number) && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>&#10003;</span>}</span>
-                  <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#fff', background: 'var(--color-warning)', padding: '1px 5px', borderRadius: 'var(--radius-xs)' }}>{q.qrc_number}</span>
+                  <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#fff', background: '#D97706', padding: '1px 5px', borderRadius: 'var(--radius-xs)' }}>{q.qrc_number}</span>
                   <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', flex: 1 }}>{q.title}</span>
                 </button>
               ))}
