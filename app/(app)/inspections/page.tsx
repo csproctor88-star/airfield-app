@@ -36,7 +36,7 @@ import { DEMO_INSPECTIONS } from '@/lib/demo-data'
 import { getAirfieldDiagram } from '@/lib/airfield-diagram'
 import { uploadInspectionPhoto } from '@/lib/supabase/inspections'
 import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
-import { bulkUpdateStatus, fetchInfrastructureFeatures, buildFeatureDisplayName } from '@/lib/supabase/infrastructure-features'
+import { bulkUpdateStatus, fetchInfrastructureFeatures, buildFeatureDisplayName, updateFeatureStatus } from '@/lib/supabase/infrastructure-features'
 import { fetchAllComponentsForBase, fetchLightingSystems } from '@/lib/supabase/lighting-systems'
 import { createOutageEvent } from '@/lib/supabase/outage-events'
 import { calculateAllSystemHealth, getAlertTier } from '@/lib/outage-rules'
@@ -1011,6 +1011,11 @@ export default function InspectionsPage() {
         }
 
         d.generated_discrepancy_id = disc.id
+
+        // Mark linked NAVAID feature as inoperative
+        if (hasLinkedFeatures) {
+          await updateFeatureStatus(d.linked_feature_ids![0], 'inoperative')
+        }
 
         const photos = discPhotos[itemId]?.[discIdx] || []
         for (const photo of photos) {

@@ -97,6 +97,10 @@ export default function DiscrepancyDetailPage() {
               .map(f => ({ latitude: f.latitude, longitude: f.longitude, status: f.status, id: f.id }))
             const mapUrl = await fetchSystemMapImageDataUrl(mapFeatures, data.infrastructure_feature_id!)
             if (mapUrl) setSystemMapUrl(mapUrl)
+          } else if (feat && feat.latitude != null && feat.longitude != null) {
+            // No system component — fall back to single-feature pin map
+            const mapUrl = await fetchMapImageDataUrl(feat.latitude, feat.longitude)
+            if (mapUrl) setSystemMapUrl(mapUrl)
           }
         })
       }
