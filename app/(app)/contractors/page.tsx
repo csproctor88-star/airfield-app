@@ -467,7 +467,7 @@ export default function ContractorsPage() {
                           <button
                             onClick={() => handleMarkCompleted(c.id)}
                             disabled={saving}
-                            style={{ background: 'var(--color-success)', color: '#000', border: 'none', borderRadius: 'var(--radius-md)', padding: '6px 12px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, fontFamily: 'inherit' }}
+                            style={{ background: 'var(--color-success)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', padding: '6px 12px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, fontFamily: 'inherit' }}
                           >
                             Mark Completed
                           </button>
