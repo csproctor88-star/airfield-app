@@ -168,7 +168,7 @@ export default function QrcPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                   <span style={{
                     fontSize: 'var(--fs-base)', fontWeight: 800,
-                    color: 'var(--color-bg-surface)', background: 'var(--color-orange)',
+                    color: '#fff', background: '#D97706',
                     padding: '3px 10px', borderRadius: 'var(--radius-sm)', minWidth: 48, textAlign: 'center',
                   }}>
                     QRC-{tmpl.qrc_number}
@@ -232,7 +232,7 @@ export default function QrcPage() {
                 >
                   <span style={{
                     fontSize: 'var(--fs-base)', fontWeight: 800,
-                    color: 'var(--color-bg-surface)', background: 'var(--color-orange)',
+                    color: '#fff', background: '#D97706',
                     padding: '3px 10px', borderRadius: 'var(--radius-sm)',
                   }}>QRC-{ex.qrc_number}</span>
                   <div style={{ flex: 1 }}>
