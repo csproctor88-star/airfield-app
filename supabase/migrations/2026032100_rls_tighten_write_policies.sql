@@ -217,6 +217,7 @@ CREATE POLICY "base_taxiways_delete" ON base_taxiways
 -- 15. Base facilities — add base_id scoping (was missing)
 -- ────────────────────────────────────────────────────────────
 DROP POLICY IF EXISTS "Writers can manage facilities" ON base_facilities;
+DROP POLICY IF EXISTS "base_facilities_write" ON base_facilities;
 CREATE POLICY "base_facilities_write" ON base_facilities
   FOR ALL TO authenticated
   USING (user_has_base_access(auth.uid(), base_id) AND user_can_write(auth.uid()))
