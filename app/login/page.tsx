@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { createInstallation } from '@/lib/supabase/installations'
 import { USER_ROLES } from '@/lib/constants'
@@ -16,6 +16,10 @@ const RANK_OPTIONS = [
 ] as const
 
 export default function LoginPage() {
+  return <Suspense><LoginContent /></Suspense>
+}
+
+function LoginContent() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
@@ -35,6 +39,32 @@ export default function LoginPage() {
   const [newInstallationIcao, setNewInstallationIcao] = useState('')
   const installationRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Auto-login for demo mode via ?demo=true link
+  useEffect(() => {
+    if (searchParams.get('demo') !== 'true') return
+    setLoading(true)
+    ;(async () => {
+      try {
+        const supabase = createClient()
+        if (!supabase) { router.push('/'); return }
+        const { data, error: authErr } = await supabase.auth.signInWithPassword({
+          email: 'demo@glidepathops.com',
+          password: 'DemoGlidepath2026!',
+        })
+        if (authErr) { setError('Demo login unavailable. Please try again later.'); setLoading(false); return }
+        if (data?.user) {
+          await supabase.from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', data.user.id)
+        }
+        router.push('/')
+        router.refresh()
+      } catch {
+        setError('Demo login unavailable. Please try again later.')
+        setLoading(false)
+      }
+    })()
+  }, [searchParams, router])
 
   // Load remembered email on mount
   useEffect(() => {
@@ -584,58 +614,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Demo Access */}
-        {mode === 'signin' && (
-          <div style={{
-            marginTop: 12, padding: '14px 20px',
-            background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-lg)',
-            border: '1px solid var(--color-border)',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 8 }}>
-              Want to explore the app first?
-            </div>
-            <button
-              type="button"
-              disabled={loading}
-              onClick={async () => {
-                setError(null)
-                setSuccess(null)
-                setLoading(true)
-                try {
-                  const supabase = createClient()
-                  if (!supabase) { router.push('/'); return }
-                  const { data, error: authErr } = await supabase.auth.signInWithPassword({
-                    email: 'demo@glidepathops.com',
-                    password: 'DemoGlidepath2026!',
-                  })
-                  if (authErr) {
-                    setError('Demo login unavailable. Please try again later.')
-                    return
-                  }
-                  if (data?.user) {
-                    await supabase.from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', data.user.id)
-                  }
-                  router.push('/')
-                  router.refresh()
-                } catch {
-                  setError('Demo login unavailable. Please try again later.')
-                } finally {
-                  setLoading(false)
-                }
-              }}
-              style={{
-                width: '100%', padding: '10px 16px', borderRadius: 'var(--radius-md)',
-                background: 'transparent', border: '1px solid var(--color-cyan)44',
-                color: 'var(--color-cyan)', fontSize: 'var(--fs-base)', fontWeight: 600,
-                cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.7 : 1,
-                fontFamily: 'inherit',
-              }}
-            >
-              {loading ? 'Signing in...' : 'Try Demo (Read-Only)'}
-            </button>
-          </div>
-        )}
 
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: 24 }}>
