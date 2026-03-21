@@ -1274,6 +1274,7 @@ export default function InspectionsPage() {
     completedAt: string | null
     personnel?: string[]
     status: 'in_progress' | 'completed'
+    inspector_id: string | null
   }
 
   const dailyReports: DailyReport[] = useMemo(() => {
@@ -1316,6 +1317,7 @@ export default function InspectionsPage() {
         temperatureF: primary.temperature_f,
         completedAt: primary.completed_at,
         status: anyInProgress ? 'in_progress' : 'completed',
+        inspector_id: primary.inspector_id || null,
       })
     }
 
@@ -1342,6 +1344,7 @@ export default function InspectionsPage() {
         completedAt: insp.completed_at,
         personnel: insp.personnel || [],
         status: insp.status || 'completed',
+        inspector_id: insp.inspector_id || null,
       })
     }
 
@@ -2272,6 +2275,7 @@ export default function InspectionsPage() {
         )
 
         if (isInProgress) {
+          const isOwner = report.inspector_id === currentUserId
           return (
             <div
               key={report.id}
@@ -2282,9 +2286,10 @@ export default function InspectionsPage() {
                 borderLeft: `3px solid ${cardBorderColor}`,
               }}
             >
-              <div onClick={() => handleResume(report)} style={{ cursor: 'pointer' }}>
+              <div onClick={isOwner ? () => handleResume(report) : undefined} style={{ cursor: isOwner ? 'pointer' : 'default' }}>
                 {cardContent}
               </div>
+              {isOwner && (
               <div style={{ display: 'flex', gap: 8, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--color-border)' }}>
                 <button
                   onClick={() => handleResume(report)}
@@ -2314,6 +2319,7 @@ export default function InspectionsPage() {
                   Delete
                 </button>
               </div>
+              )}
             </div>
           )
         }
