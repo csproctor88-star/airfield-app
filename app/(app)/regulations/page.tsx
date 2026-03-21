@@ -118,7 +118,7 @@ export default function RegulationsPage() {
                 ? '1px solid var(--color-accent-secondary)'
                 : '1px solid rgba(14,165,233,0.2)',
               borderRadius: 'var(--radius-md)',
-              color: tab === t.key ? 'var(--color-text-1)' : 'var(--color-text-3)',
+              color: tab === t.key ? '#fff' : 'var(--color-text-3)',
               fontSize: 'var(--fs-md)',
               fontWeight: 700,
               fontFamily: 'inherit',
@@ -656,7 +656,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
               display: 'inline-flex', alignItems: 'center', gap: 4,
               background: 'linear-gradient(135deg, #059669, var(--color-success))',
               border: 'none', borderRadius: 'var(--radius-sm)', padding: '5px 12px',
-              color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontWeight: 700,
+              color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
               fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap',
             }}
           >
@@ -1447,7 +1447,7 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             background: uploading ? 'var(--color-bg-elevated)' : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-            color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', fontWeight: 700,
+            color: '#fff', fontSize: 'var(--fs-base)', fontWeight: 700,
             padding: '6px 14px', borderRadius: 'var(--radius-sm)',
             cursor: uploading ? 'not-allowed' : 'pointer',
             opacity: uploading ? 0.6 : 1,
