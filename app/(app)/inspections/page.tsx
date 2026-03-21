@@ -768,6 +768,7 @@ export default function InspectionsPage() {
       construction_meeting: false,
       joint_monthly: false,
       base_id: installationId,
+      inspection_date: todayStr,
     })
     if (saved) {
       const updateDraft = (prev: SingleInspectionDraft | null): SingleInspectionDraft | null => {
@@ -841,6 +842,7 @@ export default function InspectionsPage() {
       construction_meeting: false,
       joint_monthly: false,
       base_id: installationId,
+      inspection_date: todayStr,
     })
 
     if (error) {
@@ -1094,6 +1096,7 @@ export default function InspectionsPage() {
         filed_by_name: filerName,
         filed_by_id: filerId,
         base_id: installationId,
+        inspection_date: todayStr,
       })
       if (created) {
         filedEntityId = created.id
