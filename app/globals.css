@@ -33,6 +33,10 @@
   --color-accent-glow: rgba(56, 189, 248, 0.15);
   --color-success: #34D399;
   --color-danger: #EF4444;
+  --color-green: #22C55E;
+  --color-red: #EF4444;
+  --color-amber: #F59E0B;
+  --color-blue: #3B82F6;
   --color-warning: #FBBF24;
   --color-orange: #F97316;
   --color-purple: #A78BFA;
@@ -189,6 +193,10 @@
   --color-accent-glow: rgba(37, 99, 235, 0.06);
   --color-success: #15803D;
   --color-danger: #B91C1C;
+  --color-green: #16A34A;
+  --color-red: #DC2626;
+  --color-amber: #D97706;
+  --color-blue: #2563EB;
   --color-warning: #92400E;
   --color-orange: #9A3412;
   --color-purple: #6D28D9;
