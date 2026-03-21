@@ -312,8 +312,8 @@ export default function DiscrepancyDetailPage() {
         )}
       </div>
 
-      {/* Pinned location map */}
-      {staticMapUrl && (
+      {/* Pinned location map — skip if system overview map is shown */}
+      {staticMapUrl && !systemMapUrl && (
         <div className="card" style={{ marginBottom: 8, padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '8px 12px 4px', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             Pinned Location
