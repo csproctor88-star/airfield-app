@@ -1,3 +1,4 @@
+import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 import { logActivity } from './activity'
 import { updateAirfieldStatus } from './airfield-status'
@@ -86,7 +87,7 @@ export async function createCheck(input: {
 
   if (error) {
     console.error('Failed to create check:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const created = data as CheckRow
@@ -175,7 +176,7 @@ export async function fetchChecks(baseId?: string | null): Promise<{ data: Check
 
   if (error) {
     console.error('Failed to fetch checks:', error.message)
-    return { data: [], error: error.message }
+    return { data: [], error: friendlyError(error.message) }
   }
 
   return { data: data as CheckRow[], error: null }
@@ -260,7 +261,7 @@ export async function addCheckComment(
 
   if (error) {
     console.error('Failed to add comment:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   return { data: data as CheckCommentRow, error: null }
@@ -278,7 +279,7 @@ export async function deleteCheck(id: string): Promise<{ error: string | null }>
 
   if (error) {
     console.error('Delete check failed:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   // Delete all activity log entries for this check so they don't appear in Daily Ops
@@ -305,7 +306,7 @@ export async function updateCheckNotes(id: string, notes: string | null): Promis
 
   if (error) {
     console.error('Update check notes failed:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   logActivity('updated', 'check', id, existing?.display_id, { details: 'AFLD CHECK UPDATED' }, existing?.base_id)
@@ -398,7 +399,7 @@ export async function uploadCheckPhoto(
 
   if (error) {
     console.error('Photo record insert failed:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const { data: chk } = await supabase
@@ -468,7 +469,7 @@ export async function saveCheckDraftToDb(input: {
 
     if (error) {
       console.error('Failed to update check draft:', error.message)
-      return { data: null, error: error.message }
+      return { data: null, error: friendlyError(error.message) }
     }
 
     const updated = data as CheckRow
@@ -501,7 +502,7 @@ export async function saveCheckDraftToDb(input: {
 
   if (error) {
     console.error('Failed to save check draft:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const created = data as CheckRow
@@ -554,7 +555,7 @@ export async function deleteCheckDraft(id: string): Promise<{ error: string | nu
 
   if (error) {
     console.error('Failed to delete check draft:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   return { error: null }

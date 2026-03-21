@@ -1,3 +1,4 @@
+import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 
 // --- Types ---
@@ -70,7 +71,7 @@ export async function createChecklistItem(input: {
     } as any)
     .select()
     .single()
-  if (error) return { data: null, error: error.message }
+  if (error) return { data: null, error: friendlyError(error.message) }
   return { data: data as ShiftChecklistItem, error: null }
 }
 
@@ -159,7 +160,7 @@ export async function fetchOrCreateTodayChecklist(
     .select()
     .single()
 
-  if (error) return { checklist: null, error: error.message }
+  if (error) return { checklist: null, error: friendlyError(error.message) }
   return { checklist: created as ShiftChecklist, error: null }
 }
 

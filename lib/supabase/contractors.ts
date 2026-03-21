@@ -1,3 +1,4 @@
+import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 import { logActivity } from './activity'
 
@@ -112,7 +113,7 @@ export async function createContractor(input: {
 
   if (error) {
     console.error('Failed to create contractor:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const created = data as ContractorRow
@@ -160,7 +161,7 @@ export async function updateContractor(
 
   if (error) {
     console.error('Failed to update contractor:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const updated = data as ContractorRow

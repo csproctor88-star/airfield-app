@@ -1,3 +1,4 @@
+import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 import type { TemplateCategory } from '@/lib/activity-templates'
 
@@ -42,6 +43,6 @@ export async function saveCustomActivityTemplates(
     .update({ activity_templates: templates } as any)
     .eq('id', baseId) as any)
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError(error.message) }
   return { error: null }
 }

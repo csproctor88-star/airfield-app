@@ -1,3 +1,4 @@
+import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 import { logActivity } from './activity'
 import type { QrcTemplate, QrcExecution, QrcStepResponse } from './types'
@@ -44,7 +45,7 @@ export async function createQrcTemplate(input: {
     } as any)
     .select()
     .single()
-  if (error) return { data: null, error: error.message }
+  if (error) return { data: null, error: friendlyError(error.message) }
   return { data: data as QrcTemplate, error: null }
 }
 
@@ -124,7 +125,7 @@ export async function seedQrcTemplates(baseId: string, selectedNumbers?: number[
   if (toInsert.length === 0) return { count: 0, error: null }
 
   const { error } = await supabase.from('qrc_templates').insert(toInsert as any)
-  if (error) return { count: 0, error: error.message }
+  if (error) return { count: 0, error: friendlyError(error.message) }
   return { count: toInsert.length, error: null }
 }
 
@@ -159,7 +160,7 @@ export async function startQrcExecution(input: {
     .select()
     .single()
 
-  if (error) return { data: null, error: error.message }
+  if (error) return { data: null, error: friendlyError(error.message) }
 
   const exec = data as QrcExecution
   // Log activity — use "SCN ACTIVATED" for emergency QRCs with SCN forms
@@ -276,7 +277,7 @@ export async function closeQrcExecution(
     .select('qrc_number, title, scn_data, template_id')
     .single()
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError(error.message) }
 
   if (data) {
     // Fetch template to check if SCN form and get field labels
@@ -336,7 +337,7 @@ export async function cancelQrcExecution(
     .delete()
     .eq('id', executionId)
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError(error.message) }
 
   // Delete all activity log entries for this QRC execution
   await supabase

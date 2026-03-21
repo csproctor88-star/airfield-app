@@ -1,3 +1,4 @@
+import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 
 export type BaseWildlifeSpeciesRow = {
@@ -28,7 +29,7 @@ export async function addBaseSpecies(installationId: string, speciesCommon: stri
     .insert({ base_id: installationId, species_common: speciesCommon } as any)
   if (error) {
     if (error.code === '23505') return { error: null } // duplicate, treat as success
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
   return { error: null }
 }
@@ -40,7 +41,7 @@ export async function addBaseSpeciesBulk(installationId: string, speciesNames: s
   const { error } = await supabase
     .from('base_wildlife_species')
     .upsert(rows as any[], { onConflict: 'base_id,species_common' })
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError(error.message) }
   return { error: null }
 }
 
@@ -51,7 +52,7 @@ export async function removeBaseSpecies(id: string): Promise<{ error: string | n
     .from('base_wildlife_species')
     .delete()
     .eq('id', id)
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError(error.message) }
   return { error: null }
 }
 
@@ -63,7 +64,7 @@ export async function removeBaseSpeciesByName(installationId: string, speciesCom
     .delete()
     .eq('base_id', installationId)
     .eq('species_common', speciesCommon)
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError(error.message) }
   return { error: null }
 }
 
@@ -75,6 +76,6 @@ export async function toggleFavoriteSpecies(installationId: string, speciesCommo
     .update({ is_favorite: isFavorite } as any)
     .eq('base_id', installationId)
     .eq('species_common', speciesCommon)
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError(error.message) }
   return { error: null }
 }

@@ -1,3 +1,4 @@
+import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 import { logActivity } from './activity'
 import { updateAirfieldStatus } from './airfield-status'
@@ -202,7 +203,7 @@ export async function createInspection(input: {
 
   if (error) {
     console.error('Failed to create inspection:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const created = data as InspectionRow
@@ -315,7 +316,7 @@ export async function saveInspectionDraft(input: {
 
     if (error) {
       console.error('Failed to update inspection draft:', error.message)
-      return { data: null, error: error.message }
+      return { data: null, error: friendlyError(error.message) }
     }
 
     const updated = data as InspectionRow
@@ -372,7 +373,7 @@ export async function saveInspectionDraft(input: {
 
   if (error) {
     console.error('Failed to save inspection draft:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const created = data as InspectionRow
@@ -452,7 +453,7 @@ export async function fileInspection(input: {
 
   if (error) {
     console.error('Failed to file inspection:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const filed = data as InspectionRow
@@ -505,7 +506,7 @@ export async function reopenInspection(id: string): Promise<{ data: InspectionRo
 
   if (error) {
     console.error('Failed to reopen inspection:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const reopened = data as InspectionRow
@@ -650,7 +651,7 @@ export async function uploadInspectionPhoto(
 
   if (error) {
     console.error('Inspection photo insert failed:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   return { data: data as InspectionPhotoRow, error: null }
@@ -687,7 +688,7 @@ export async function deleteInspection(id: string): Promise<{ error: string | nu
 
   if (error) {
     console.error('Delete inspection failed:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   // Delete all activity log entries for this inspection so they don't appear in Daily Ops
@@ -712,7 +713,7 @@ export async function updateInspectionNotes(id: string, notes: string | null): P
 
   if (error) {
     console.error('Update inspection notes failed:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   logActivity('updated', 'inspection', id, existing?.display_id, { details: 'UPDATED AIRFIELD INSPECTION FORM' }, existing?.base_id)
@@ -735,7 +736,7 @@ export async function updateInspectionItems(id: string, items: InspectionItem[])
 
   if (error) {
     console.error('Update inspection items failed:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   logActivity('updated', 'inspection', id, existing?.display_id, { details: 'EDITED COMPLETED INSPECTION' }, existing?.base_id)
@@ -759,7 +760,7 @@ export async function deleteInspectionPhoto(
 
   // Delete the DB record
   const { error } = await supabase.from('photos').delete().eq('id', photoId)
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError(error.message) }
 
   return { error: null }
 }

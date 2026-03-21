@@ -1,3 +1,4 @@
+import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 import type { AcsiInspection, AcsiItem, AcsiTeamMember, AcsiSignatureBlock, AcsiDraftData } from './types'
 
@@ -112,7 +113,7 @@ export async function saveAcsiDraft(input: {
 
     if (error) {
       console.error('Failed to update ACSI draft:', error.message)
-      return { data: null, error: error.message }
+      return { data: null, error: friendlyError(error.message) }
     }
 
     const updated = data as AcsiInspection
@@ -155,7 +156,7 @@ export async function saveAcsiDraft(input: {
 
   if (error) {
     console.error('Failed to save ACSI draft:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const created = data as AcsiInspection
@@ -219,7 +220,7 @@ export async function fileAcsiInspection(input: {
 
   if (error) {
     console.error('Failed to file ACSI inspection:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const filed = data as AcsiInspection
@@ -275,7 +276,7 @@ export async function deleteAcsiInspection(id: string): Promise<{ error: string 
 
   if (error) {
     console.error('Delete ACSI inspection failed:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   return { error: null }
@@ -379,7 +380,7 @@ export async function uploadAcsiPhoto(
 
   if (error) {
     console.error('ACSI photo insert failed:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   return { data: data as AcsiPhotoRow, error: null }

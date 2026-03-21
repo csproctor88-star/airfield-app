@@ -1,3 +1,4 @@
+import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 import { logActivity } from './activity'
 import type { ObstructionEvaluation } from './types'
@@ -107,7 +108,7 @@ export async function createObstructionEvaluation(input: {
 
   if (error) {
     console.error('Failed to create obstruction evaluation:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const created = data as ObstructionRow
@@ -241,7 +242,7 @@ export async function deleteObstructionEvaluation(
 
   if (error) {
     console.error('Delete obstruction evaluation failed:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   const { data: remaining } = await supabase

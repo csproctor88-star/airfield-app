@@ -1,3 +1,4 @@
+import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 
 export async function logActivity(
@@ -48,7 +49,7 @@ export async function logManualEntry(text: string, baseId?: string | null): Prom
 
   if (error) {
     console.error('Manual activity entry failed:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   return { error: null }
@@ -69,7 +70,7 @@ export async function updateActivityEntry(id: string, notes: string, createdAt?:
 
   if (error) {
     console.error('Update activity entry failed:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
   if (!data || data.length === 0) {
     return { error: 'Update failed — permission denied. Run the activity_log RLS migration.' }
@@ -89,7 +90,7 @@ export async function deleteActivityEntry(id: string): Promise<{ error: string |
 
   if (error) {
     console.error('Delete activity entry failed:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
   if (!data || data.length === 0) {
     return { error: 'Delete failed — row not found or permission denied' }

@@ -1,3 +1,4 @@
+import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 
 export type FacilityRow = {
@@ -49,7 +50,7 @@ export async function createFacility(input: {
 
   if (error) {
     console.error('Failed to create facility:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   return { data: data as FacilityRow, error: null }
@@ -76,7 +77,7 @@ export async function bulkCreateFacilities(
 
   if (error) {
     console.error('Failed to bulk create facilities:', error.message)
-    return { count: 0, error: error.message }
+    return { count: 0, error: friendlyError(error.message) }
   }
 
   return { count: data?.length ?? 0, error: null }
@@ -93,7 +94,7 @@ export async function deleteFacility(id: string): Promise<{ error: string | null
 
   if (error) {
     console.error('Failed to delete facility:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   return { error: null }

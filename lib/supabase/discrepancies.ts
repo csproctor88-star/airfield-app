@@ -1,3 +1,4 @@
+import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 import { logActivity } from './activity'
 import type { DiscrepancyStatus, CurrentStatus } from './types'
@@ -133,7 +134,7 @@ export async function createDiscrepancy(input: {
 
   if (error) {
     console.error('Failed to create discrepancy:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const created = data as DiscrepancyRow
@@ -174,7 +175,7 @@ export async function updateDiscrepancy(
 
   if (error) {
     console.error('Failed to update discrepancy:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const updated = data as DiscrepancyRow
@@ -214,7 +215,7 @@ export async function updateDiscrepancyStatus(
 
   if (error) {
     console.error('Failed to update status:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const statusUpdated = rawData as DiscrepancyRow
@@ -265,7 +266,7 @@ export async function deleteDiscrepancy(
 
   if (error) {
     console.error('Delete discrepancy failed:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   logActivity('deleted', 'discrepancy', id, existing?.display_id, { details: `DISCREPANCY ${existing?.display_id || ''} DELETED${existing?.title ? ` — ${existing.title.toUpperCase()}` : ''}` }, existing?.base_id)
@@ -382,7 +383,7 @@ export async function uploadDiscrepancyPhoto(
 
   if (error) {
     console.error('Photo record insert failed:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const { data: disc } = await supabase
@@ -433,7 +434,7 @@ export async function deleteDiscrepancyPhoto(
 
   // Delete the DB record
   const { error } = await supabase.from('photos').delete().eq('id', photoId)
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError(error.message) }
 
   // Decrement photo_count
   const { data: disc } = await supabase
@@ -522,7 +523,7 @@ export async function addStatusNote(discrepancyId: string, notes: string, baseId
 
     if (error) {
       console.error('Failed to add note:', error.message)
-      return { error: error.message }
+      return { error: friendlyError(error.message) }
     }
     return { error: null }
   } catch {

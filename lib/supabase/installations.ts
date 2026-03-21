@@ -1,3 +1,4 @@
+import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 import type { Installation, InstallationRunway, InstallationNavaid, InstallationArea, InstallationMember, InstallationArffAircraft } from './types'
 
@@ -179,7 +180,7 @@ export async function addInstallationMember(
 
   if (error) {
     console.error('Failed to add installation member:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   return { error: null }

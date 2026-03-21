@@ -58,6 +58,20 @@ export function sanitizeRegId(regId: string): string {
     .replace(/-+/g, '-')
 }
 
+// Humanize Supabase/Postgres error messages for end users
+export function friendlyError(msg: string): string {
+  if (/row-level security/i.test(msg) || /violates.*policy/i.test(msg) || /permission denied/i.test(msg)) {
+    return 'You do not have permission to perform this action.'
+  }
+  if (/duplicate key/i.test(msg) || /unique.*constraint/i.test(msg)) {
+    return 'This record already exists.'
+  }
+  if (/foreign key/i.test(msg)) {
+    return 'This action references data that no longer exists.'
+  }
+  return msg
+}
+
 // Check if Supabase environment variables are configured (not placeholder values)
 export function isSupabaseConfigured(): boolean {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')

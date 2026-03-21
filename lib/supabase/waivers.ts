@@ -1,3 +1,4 @@
+import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 import type {
   WaiverStatus,
@@ -232,7 +233,7 @@ export async function createWaiver(input: {
 
   if (error) {
     console.error('Failed to create waiver:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const created = data as WaiverRow
@@ -264,7 +265,7 @@ export async function updateWaiver(
 
   if (error) {
     console.error('Failed to update waiver:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const updated = data as WaiverRow
@@ -314,7 +315,7 @@ export async function updateWaiverStatus(
 
   if (error) {
     console.error('Failed to update waiver status:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const updated = data as WaiverRow
@@ -332,7 +333,7 @@ export async function deleteWaiver(id: string): Promise<{ error: string | null }
 
   if (error) {
     console.error('Delete waiver failed:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   return { error: null }
@@ -382,7 +383,7 @@ export async function upsertWaiverCriteria(
 
   if (error) {
     console.error('Failed to upsert waiver criteria:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   return { error: null }
@@ -500,7 +501,7 @@ export async function uploadWaiverAttachment(input: {
 
   if (error) {
     console.error('Failed to save waiver attachment record:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   // Update attachment_count
@@ -531,7 +532,7 @@ export async function deleteWaiverAttachment(id: string, waiverId: string): Prom
 
   if (error) {
     console.error('Failed to delete waiver attachment:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   return { error: null }
@@ -617,7 +618,7 @@ export async function createWaiverReview(input: {
 
   if (error) {
     console.error('Failed to create waiver review:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   // Update waiver's last_reviewed_date and next_review_due
@@ -647,7 +648,7 @@ export async function updateWaiverReview(
 
   if (error) {
     console.error('Failed to update waiver review:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   return { data: data as WaiverReviewRow, error: null }
@@ -667,7 +668,7 @@ export async function deleteWaiverReview(
 
   if (error) {
     console.error('Failed to delete waiver review:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   // Clear last_reviewed_date and next_review_due on the waiver
@@ -732,7 +733,7 @@ export async function upsertWaiverCoordination(
 
   if (error) {
     console.error('Failed to upsert waiver coordination:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   return { error: null }
@@ -752,7 +753,7 @@ export async function updateWaiverCoordination(
 
   if (error) {
     console.error('Failed to update waiver coordination:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   return { error: null }
@@ -769,7 +770,7 @@ export async function deleteWaiverCoordination(id: string): Promise<{ error: str
 
   if (error) {
     console.error('Failed to delete waiver coordination:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   return { error: null }

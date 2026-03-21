@@ -1,3 +1,4 @@
+import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 import { logActivity } from './activity'
 
@@ -166,7 +167,7 @@ export async function createSighting(input: {
 
   if (error) {
     console.error('Failed to create sighting:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const created = data as WildlifeSightingRow
@@ -205,7 +206,7 @@ export async function fetchSightings(
 
   if (error) {
     console.error('Failed to fetch sightings:', error.message)
-    return { data: [], error: error.message }
+    return { data: [], error: friendlyError(error.message) }
   }
 
   return { data: data as WildlifeSightingRow[], error: null }
@@ -265,7 +266,7 @@ export async function updateSighting(
 
   if (error) {
     console.error('Failed to update sighting:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   return { data: data as WildlifeSightingRow, error: null }
@@ -285,7 +286,7 @@ export async function deleteSighting(id: string): Promise<{ error: string | null
 
   if (error) {
     console.error('Delete sighting failed:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   await supabase.from('activity_log').delete().eq('entity_id', id)
@@ -392,7 +393,7 @@ export async function createStrike(input: {
 
   if (error) {
     console.error('Failed to create strike:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   const created = data as WildlifeStrikeRow
@@ -432,7 +433,7 @@ export async function fetchStrikes(
 
   if (error) {
     console.error('Failed to fetch strikes:', error.message)
-    return { data: [], error: error.message }
+    return { data: [], error: friendlyError(error.message) }
   }
 
   return { data: data as WildlifeStrikeRow[], error: null }
@@ -506,7 +507,7 @@ export async function updateStrike(
 
   if (error) {
     console.error('Failed to update strike:', error.message)
-    return { data: null, error: error.message }
+    return { data: null, error: friendlyError(error.message) }
   }
 
   return { data: data as WildlifeStrikeRow, error: null }
@@ -520,7 +521,7 @@ export async function deleteStrike(id: string): Promise<{ error: string | null }
 
   if (error) {
     console.error('Delete strike failed:', error.message)
-    return { error: error.message }
+    return { error: friendlyError(error.message) }
   }
 
   await supabase.from('activity_log').delete().eq('entity_id', id)
