@@ -36,7 +36,7 @@ import { DEMO_INSPECTIONS } from '@/lib/demo-data'
 import { getAirfieldDiagram } from '@/lib/airfield-diagram'
 import { uploadInspectionPhoto } from '@/lib/supabase/inspections'
 import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
-import { bulkUpdateStatus, fetchInfrastructureFeatures, buildFeatureDisplayName, updateFeatureStatus } from '@/lib/supabase/infrastructure-features'
+import { bulkUpdateStatus, fetchInfrastructureFeatures, formatFeatureType, updateFeatureStatus } from '@/lib/supabase/infrastructure-features'
 import { fetchAllComponentsForBase, fetchLightingSystems } from '@/lib/supabase/lighting-systems'
 import { createOutageEvent } from '@/lib/supabase/outage-events'
 import { calculateAllSystemHealth, getAlertTier } from '@/lib/outage-rules'
@@ -643,13 +643,20 @@ export default function InspectionsPage() {
     const avgLat = features.reduce((sum, f) => sum + f.latitude, 0) / features.length
     const avgLon = features.reduce((sum, f) => sum + f.longitude, 0) / features.length
 
-    const featureNames = features.map(f => f.label || f.feature_type)
+    // Build natural-language names: "TWY K Edge Light" not "TWY_K_EDGELIGHTS"
+    const featureNames = features.map(f => {
+      const typeLabel = formatFeatureType(f.feature_type)
+      return f.layer ? `${f.layer} ${typeLabel}` : typeLabel
+    })
     const uniqueNames = Array.from(new Set(featureNames))
     const titleText = uniqueNames.length <= 3
       ? uniqueNames.join(', ')
       : `${uniqueNames.slice(0, 2).join(', ')} +${uniqueNames.length - 2} more`
 
-    const featureDescriptions = features.map(f => buildFeatureDisplayName(f))
+    const featureDescriptions = features.map(f => {
+      const typeLabel = formatFeatureType(f.feature_type)
+      return f.layer ? `${f.layer} ${typeLabel}` : typeLabel
+    })
     const remarksText = `Lighting inspection: ${featureDescriptions.join('; ')} — marked inoperative.`
 
     const layers = Array.from(new Set(features.map(f => f.layer).filter(Boolean)))
