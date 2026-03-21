@@ -637,21 +637,23 @@ export default function InspectionsPage() {
   }
 
   // ── Auto-populate discrepancy fields when features are selected ──
-  const handleFeaturesSelected = (itemId: string, discIndex: number, features: InfrastructureFeature[]) => {
+  const handleFeaturesSelected = (itemId: string, discIndex: number, features: InfrastructureFeature[], itemLabel?: string) => {
     if (features.length === 0) return
 
     const avgLat = features.reduce((sum, f) => sum + f.latitude, 0) / features.length
     const avgLon = features.reduce((sum, f) => sum + f.longitude, 0) / features.length
 
-    // Build natural-language names: "TWY K Edge Light" not "TWY_K_EDGELIGHTS"
+    // Build natural-language names: "TWY B Edge Light" not "TWY_K_EDGELIGHTS"
+    // Use feature layer, fall back to inspection item label (e.g. "TWY B")
     // Strip redundant prefix when layer already implies it (TWY → Taxiway, RWY → Runway)
     const featureNames = features.map(f => {
       let typeLabel = formatFeatureType(f.feature_type)
-      if (f.layer) {
-        if (f.layer.startsWith('TWY')) typeLabel = typeLabel.replace(/^Taxiway\s*/i, '')
-        else if (f.layer.startsWith('RWY')) typeLabel = typeLabel.replace(/^Runway\s*/i, '')
+      const loc = f.layer || itemLabel || null
+      if (loc) {
+        if (loc.startsWith('TWY')) typeLabel = typeLabel.replace(/^Taxiway\s*/i, '')
+        else if (loc.startsWith('RWY')) typeLabel = typeLabel.replace(/^Runway\s*/i, '')
       }
-      return f.layer ? `${f.layer} ${typeLabel}` : typeLabel
+      return loc ? `${loc} ${typeLabel}` : typeLabel
     })
     const uniqueNames = Array.from(new Set(featureNames))
     const titleText = uniqueNames.length <= 3
@@ -662,7 +664,7 @@ export default function InspectionsPage() {
       ? `${uniqueNames.join(', ')} Out of Service`
       : `${uniqueNames.slice(0, 2).join(', ')} +${uniqueNames.length - 2} more Out of Service`
 
-    const layers = Array.from(new Set(features.map(f => f.layer).filter(Boolean)))
+    const layers = Array.from(new Set(features.map(f => f.layer || itemLabel).filter(Boolean)))
     const locationText = layers.length > 0 ? layers.join(', ') : 'Airfield'
 
     const updates: Partial<SimpleDiscrepancy> = {
@@ -1790,7 +1792,7 @@ export default function InspectionsPage() {
                           linkedSystemIds={activeForm === 'lighting' && itemKeyLinks[item.id] ? systemIdsFromLinks(itemKeyLinks[item.id]) : undefined}
                           linkedComponentIds={activeForm === 'lighting' && itemKeyLinks[item.id] ? componentIdsFromLinks(itemKeyLinks[item.id]) : undefined}
                           linkedBaseId={activeForm === 'lighting' && itemKeyLinks[item.id] ? installationId ?? undefined : undefined}
-                          onFeaturesSelected={(idx, features) => handleFeaturesSelected(item.id, idx, features)}
+                          onFeaturesSelected={(idx, features) => handleFeaturesSelected(item.id, idx, features, item.item)}
                           flyToPoints={(currentHalf.discrepancies[item.id] || []).map((_, i) => discFlyTo[`${item.id}:${i}`] || null)}
                           onSaveDraft={handleSave}
                           draftSaving={saving}
