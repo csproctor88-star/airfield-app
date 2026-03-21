@@ -2438,7 +2438,7 @@ export default function ParkingPage() {
               onClick={() => setShowNewPlan(true)}
               style={{
                 padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                background: 'var(--color-cyan)', color: '#000', border: 'none',
+                background: 'var(--color-cyan)', color: '#fff', border: 'none',
                 cursor: 'pointer', fontWeight: 600,
               }}
             >
