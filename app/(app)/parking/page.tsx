@@ -3307,8 +3307,8 @@ export default function ParkingPage() {
                 title={sidebarCollapsed ? 'Show panel' : 'Hide panel'}
                 style={{
                   padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
-                  background: sidebarCollapsed ? 'var(--color-bg-surface)' : 'var(--color-cyan)11',
-                  border: `1px solid ${sidebarCollapsed ? 'var(--color-border)' : 'var(--color-cyan)44'}`,
+                  background: 'var(--color-bg-surface)',
+                  border: `1px solid ${sidebarCollapsed ? 'var(--color-border)' : 'var(--color-cyan)'}`,
                   color: sidebarCollapsed ? 'var(--color-text-primary)' : 'var(--color-cyan)',
                   cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
                 }}
@@ -3321,9 +3321,9 @@ export default function ParkingPage() {
               title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
               style={{
                 padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
-                background: isFullscreen ? 'rgba(0,0,0,0.7)' : 'var(--color-bg-surface)',
-                border: `1px solid ${isFullscreen ? 'rgba(255,255,255,0.4)' : 'var(--color-border)'}`,
-                color: isFullscreen ? 'var(--color-text-1)' : 'var(--color-text-primary)',
+                background: 'var(--color-bg-surface)',
+                border: `1px solid ${isFullscreen ? 'var(--color-cyan)' : 'var(--color-border)'}`,
+                color: isFullscreen ? 'var(--color-cyan)' : 'var(--color-text-primary)',
                 cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
               }}
             >
