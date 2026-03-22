@@ -8,10 +8,47 @@ All notable changes to Glidepath.
 - METAR weather API integration (aviationweather.gov)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
-- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~169 `as any` casts
+- Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~168 `as any` casts
 - Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 16 PDF generators
 - Training Management Module (DAF training records)
 - Outage analytics (frequency/duration tracking for lighting systems)
+
+---
+
+## [2.27.0] — 2026-03-22
+
+### Features — Parking Page Layout Overhaul
+- **Floating panel layout** — replaced fixed 320px sidebar with floating overlay panel (top-right) so the map fills the entire viewport width. Panel toggle available in fullscreen mode. Floating toolbar appears when panel is closed.
+
+### Features — Demo Mode & Access
+- **Demo login via URL** — `glidepathops.com/login?demo=true` auto-signs in with demo account (no button visible to regular users)
+- **Demo AFB base** — SQL seed script (`supabase/seed-demo-base.sql`) clones Selfridge config into an isolated Demo AFB with full template/infrastructure data. Demo user assigned as airfield_manager for full feature access.
+
+### Features — Google Elevation API
+- **Server-side elevation proxy** (`/api/elevation`) — replaced unreliable Open-Elevation API (SSL cert issues) with Google Elevation API via server-side proxy. API key protected server-side only (`GOOGLE_ELEVATION_API_KEY`).
+
+### Features — Inspection Duration Tracking
+- **`started_at` column on inspections** — captures when inspector begins walkdown (not when draft was created). Analytics now uses `started_at → filed_at` for accurate avg time, falling back to `created_at` for legacy rows.
+
+### Security — RLS Policy Tightening
+- **19 write policies updated** — enforced `user_can_write()` on tables that previously only checked `user_has_base_access()`, blocking `read_only`/`ces`/`safety`/`atc` from unauthorized writes
+- **Tables fixed**: outage_events, wildlife_sightings, wildlife_strikes, bwc_history, parking_plans/spots/obstacles/taxilanes/apron_boundaries, base_taxiways, base_facilities, airfield_contractors, qrc_executions, shift_checklists/responses, activity_log, runway_status_log, check_comments
+- **CES discrepancy UPDATE exception** — CES role can update discrepancy status (work order workflow) but cannot create/delete
+- **Friendly error messages** — `friendlyError()` utility in `lib/utils.ts` maps RLS/constraint violations to human-readable messages ("You do not have permission to perform this action.") across all 15 CRUD modules
+
+### Bug Fixes — Light Mode
+- **Visual NAVAIDs light mode** — replaced ~46 hardcoded `rgba(15,23,42,...)` and `rgba(30,41,59,...)` dark backgrounds with `var(--color-bg-surface)` and `var(--color-bg-inset)` across infrastructure page, audit panel, and system health panel
+- **Infrastructure GPS buttons** — tracking button and "Use My GPS" toolbar button now use theme-aware CSS variables matching discrepancy map button pattern
+
+### Documentation
+- **SRS v6.0 Leadership Edition** — 12-section overview for squadron leadership and acquisition officers
+- **SRS v6.0 Developer Edition** — 20-section technical spec with database schemas, API routes, RLS policies, 100+ functional requirements
+- **Capabilities Document v2.26** — 24-section feature guide with 78 screenshots for potential adopters and Airfield Managers
+- **Slide deck content** — AFM edition (29 slides) and Leadership edition (17 slides) with NotebookLM prompts
+
+### Database Migrations (+2)
+- `2026032100` — tighten RLS write policies (19 policy updates + CES exception)
+- `2026032101` — add `started_at` column to inspections
 
 ---
 
