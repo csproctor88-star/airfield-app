@@ -288,7 +288,7 @@ export default function SystemHealthPanel({
                       gap: 8,
                       padding: '4px 0',
                       fontSize: 'var(--fs-xs)',
-                      borderBottom: '1px solid rgba(148,163,184,0.08)',
+                      borderBottom: '1px solid var(--color-border)',
                     }}
                   >
                     <span style={{ width: 6, height: 6, borderRadius: '50%', background: isResolved ? '#22C55E' : '#EF4444', flexShrink: 0, marginTop: 4 }} />

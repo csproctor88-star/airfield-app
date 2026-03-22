@@ -1054,7 +1054,7 @@ export default function InfrastructureMapPage() {
           ">Save</button>
           <button id="__drag-cancel" style="
             padding:5px 14px;border:none;border-radius:6px;
-            background:transparent;border:1px solid rgba(148,163,184,0.3);
+            background:transparent;border:1px solid var(--color-border);
             color:#94A3B8;font-size:12px;font-weight:600;cursor:pointer;
           ">Cancel</button>
         </div>
@@ -1492,7 +1492,7 @@ export default function InfrastructureMapPage() {
             <div style="font-family:system-ui;font-size:12px;color:#E2E8F0;">
               <div style="font-weight:700;font-size:13px;margin-bottom:6px;color:#10B981;">Feature Placed</div>
               <select id="__placed-type" style="
-                width:100%;background:rgba(30,41,59,0.9);border:1px solid rgba(148,163,184,0.2);
+                width:100%;background:var(--color-bg-inset);border:1px solid var(--color-border);
                 border-radius:6px;padding:5px 8px;color:#E2E8F0;font-size:12px;cursor:pointer;
               ">${optionsHtml}</select>
             </div>
@@ -1997,7 +1997,7 @@ export default function InfrastructureMapPage() {
             const escapedLabel = (props.text || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')
             const currentRotation = props.rotation || 0
             const currentCompId = props.system_component_id || ''
-            html += `<div style="margin-top:8px;border-top:1px solid rgba(148,163,184,0.15);padding-top:8px;">`
+            html += `<div style="margin-top:8px;border-top:1px solid var(--color-border);padding-top:8px;">`
             // Feature type dropdown
             const typeOptionsHtml = FEATURE_TYPE_OPTIONS.map(opt =>
               `<option value="${opt.value}" ${opt.value === props.type ? 'selected' : ''}>${opt.label}</option>`
@@ -2006,7 +2006,7 @@ export default function InfrastructureMapPage() {
             html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">Feature Type</div>`
             html += `<select id="__type-input" style="
               width:100%;padding:4px 6px;border-radius:4px;
-              border:1px solid rgba(148,163,184,0.2);background:rgba(30,41,59,0.9);
+              border:1px solid var(--color-border);background:var(--color-bg-inset);
               color:#E2E8F0;font-size:11px;cursor:pointer;
             ">${typeOptionsHtml}</select>`
             html += `</div>`
@@ -2020,7 +2020,7 @@ export default function InfrastructureMapPage() {
             html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">System / Component</div>`
             html += `<select id="__comp-input" style="
               width:100%;padding:4px 6px;border-radius:4px;
-              border:1px solid rgba(148,163,184,0.2);background:rgba(30,41,59,0.9);
+              border:1px solid var(--color-border);background:var(--color-bg-inset);
               color:#E2E8F0;font-size:11px;cursor:pointer;
             "><option value="">— None —</option>${compOptGroups}</select>`
             html += `</div>`
@@ -2031,7 +2031,7 @@ export default function InfrastructureMapPage() {
               html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">Sign Text</div>`
               html += `<input id="__label-input" type="text" value="${escapedLabel}" placeholder="Sign text..." style="
                 width:100%;padding:4px 6px;border-radius:4px;box-sizing:border-box;
-                border:1px solid rgba(148,163,184,0.2);background:rgba(30,41,59,0.9);
+                border:1px solid var(--color-border);background:var(--color-bg-inset);
                 color:#E2E8F0;font-size:12px;outline:none;
               " />`
               html += `</div>`
@@ -2042,7 +2042,7 @@ export default function InfrastructureMapPage() {
             html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">Fixture ID</div>`
             html += `<input id="__block-input" type="text" value="${escapedBlock}" placeholder="e.g. TWYK-TL-001" style="
               width:100%;padding:4px 6px;border-radius:4px;box-sizing:border-box;
-              border:1px solid rgba(148,163,184,0.2);background:rgba(30,41,59,0.9);
+              border:1px solid var(--color-border);background:var(--color-bg-inset);
               color:#E2E8F0;font-size:12px;outline:none;
             " />`
             html += `</div>`
@@ -2708,7 +2708,7 @@ export default function InfrastructureMapPage() {
             top: 10,
             right: auditMode ? 392 : 10,
             zIndex: 15,
-            background: 'rgba(15, 23, 42, 0.95)',
+            background: 'var(--color-bg-surface)',
             border: '1px solid rgba(249, 115, 22, 0.3)',
             borderRadius: 10,
             padding: '12px 14px',
@@ -2732,7 +2732,7 @@ export default function InfrastructureMapPage() {
               <select
                 value={kmlFeatureType}
                 onChange={(e) => setKmlFeatureType(e.target.value as InfrastructureFeatureType)}
-                style={{ width: '100%', padding: '4px 6px', borderRadius: 4, border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(30,41,59,0.9)', color: 'var(--color-text-1)', fontSize: 11 }}
+                style={{ width: '100%', padding: '4px 6px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)', color: 'var(--color-text-1)', fontSize: 11 }}
               >
                 {FEATURE_TYPE_OPTIONS.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -2746,7 +2746,7 @@ export default function InfrastructureMapPage() {
                 value={kmlLayer}
                 onChange={(e) => setKmlLayer(e.target.value)}
                 placeholder="e.g. RWY 01/19"
-                style={{ width: '100%', padding: '4px 6px', borderRadius: 4, border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(30,41,59,0.9)', color: 'var(--color-text-1)', fontSize: 11, boxSizing: 'border-box', outline: 'none' }}
+                style={{ width: '100%', padding: '4px 6px', borderRadius: 4, border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)', color: 'var(--color-text-1)', fontSize: 11, boxSizing: 'border-box', outline: 'none' }}
               />
             </div>
 
@@ -2802,7 +2802,7 @@ export default function InfrastructureMapPage() {
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 10,
-            background: 'rgba(15, 23, 42, 0.94)',
+            background: 'var(--color-bg-surface)',
             border: '1px solid rgba(16, 185, 129, 0.3)',
             borderRadius: 12,
             padding: '10px 14px',
@@ -2822,8 +2822,8 @@ export default function InfrastructureMapPage() {
               value={placementType}
               onChange={e => setPlacementType(e.target.value as InfrastructureFeatureType)}
               style={{
-                background: 'rgba(30, 41, 59, 0.9)',
-                border: '1px solid rgba(148, 163, 184, 0.2)',
+                background: 'var(--color-bg-inset)',
+                border: '1px solid var(--color-border)',
                 borderRadius: 6,
                 padding: '5px 8px',
                 color: 'var(--color-text-1)',
@@ -2855,14 +2855,14 @@ export default function InfrastructureMapPage() {
               {gpsLoading ? 'Getting GPS...' : 'Use My GPS'}
             </button>
 
-            <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)' }} />
+            <div style={{ width: 1, height: 20, background: 'var(--color-border)' }} />
 
             <button
               onClick={() => setBulkShiftOpen(prev => !prev)}
               style={{
                 padding: '5px 12px',
                 borderRadius: 6,
-                border: bulkShiftOpen ? '1px solid rgba(168,85,247,0.5)' : '1px solid rgba(148,163,184,0.2)',
+                border: bulkShiftOpen ? '1px solid rgba(168,85,247,0.5)' : '1px solid var(--color-border)',
                 background: bulkShiftOpen ? 'rgba(168,85,247,0.2)' : 'transparent',
                 color: bulkShiftOpen ? '#A855F7' : 'var(--color-text-3)',
                 fontSize: 12,
@@ -2884,7 +2884,7 @@ export default function InfrastructureMapPage() {
               style={{
                 padding: '5px 12px',
                 borderRadius: 6,
-                border: boxSelectActive ? '1px solid rgba(168,85,247,0.5)' : '1px solid rgba(148,163,184,0.2)',
+                border: boxSelectActive ? '1px solid rgba(168,85,247,0.5)' : '1px solid var(--color-border)',
                 background: boxSelectActive ? 'rgba(168,85,247,0.2)' : 'transparent',
                 color: boxSelectActive ? '#A855F7' : 'var(--color-text-3)',
                 fontSize: 12,
@@ -2906,7 +2906,7 @@ export default function InfrastructureMapPage() {
               style={{
                 padding: '5px 12px',
                 borderRadius: 6,
-                border: freeMoveActive ? '1px solid rgba(245,158,11,0.5)' : '1px solid rgba(148,163,184,0.2)',
+                border: freeMoveActive ? '1px solid rgba(245,158,11,0.5)' : '1px solid var(--color-border)',
                 background: freeMoveActive ? 'rgba(245,158,11,0.2)' : 'transparent',
                 color: freeMoveActive ? 'var(--color-warning)' : 'var(--color-text-3)',
                 fontSize: 12,
@@ -2918,7 +2918,7 @@ export default function InfrastructureMapPage() {
               {freeMoveActive ? `Free Move (${pendingMoves.size})` : 'Free Move'}
             </button>
 
-            <div style={{ width: 1, height: 20, background: 'rgba(148,163,184,0.2)' }} />
+            <div style={{ width: 1, height: 20, background: 'var(--color-border)' }} />
 
             {/* Bar placement buttons */}
             {(['threshold', 'pre_threshold', 'terminating', 'centerline', 'thousand_ft'] as BarType[]).map(bt => {
@@ -2930,7 +2930,7 @@ export default function InfrastructureMapPage() {
                   style={{
                     padding: '5px 8px',
                     borderRadius: 6,
-                    border: active ? '1px solid rgba(251,191,36,0.5)' : '1px solid rgba(148,163,184,0.2)',
+                    border: active ? '1px solid rgba(251,191,36,0.5)' : '1px solid var(--color-border)',
                     background: active ? 'rgba(251,191,36,0.2)' : 'transparent',
                     color: active ? 'var(--color-warning)' : 'var(--color-text-3)',
                     fontSize: 11,
@@ -2959,7 +2959,7 @@ export default function InfrastructureMapPage() {
                     padding: '3px 6px',
                     borderRadius: 4,
                     border: '1px solid rgba(251,191,36,0.3)',
-                    background: 'rgba(30,41,59,0.9)',
+                    background: 'var(--color-bg-inset)',
                     color: '#FBBF24',
                     fontSize: 12,
                     textAlign: 'center',
@@ -2982,7 +2982,7 @@ export default function InfrastructureMapPage() {
             top: 10,
             right: 60,
             zIndex: 11,
-            background: 'rgba(15, 23, 42, 0.96)',
+            background: 'var(--color-bg-surface)',
             border: '1px solid rgba(245, 158, 11, 0.4)',
             borderRadius: 10,
             padding: '8px 14px',
@@ -3016,7 +3016,7 @@ export default function InfrastructureMapPage() {
               style={{
                 padding: '5px 14px',
                 borderRadius: 6,
-                border: '1px solid rgba(148,163,184,0.3)',
+                border: '1px solid var(--color-border)',
                 background: 'transparent',
                 color: 'var(--color-text-3)',
                 fontSize: 12,
@@ -3037,7 +3037,7 @@ export default function InfrastructureMapPage() {
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 11,
-            background: 'rgba(15, 23, 42, 0.96)',
+            background: 'var(--color-bg-surface)',
             border: '1px solid rgba(168, 85, 247, 0.3)',
             borderRadius: 12,
             padding: '14px 16px',
@@ -3057,8 +3057,8 @@ export default function InfrastructureMapPage() {
                 onChange={e => setShiftLayer(e.target.value)}
                 style={{
                   width: '100%',
-                  background: 'rgba(30, 41, 59, 0.9)',
-                  border: '1px solid rgba(148, 163, 184, 0.2)',
+                  background: 'var(--color-bg-inset)',
+                  border: '1px solid var(--color-border)',
                   borderRadius: 6,
                   padding: '6px 8px',
                   color: 'var(--color-text-1)',
@@ -3085,7 +3085,7 @@ export default function InfrastructureMapPage() {
                       flex: 1,
                       padding: '4px 0',
                       borderRadius: 5,
-                      border: shiftFeet === ft ? '1px solid #A855F7' : '1px solid rgba(148,163,184,0.15)',
+                      border: shiftFeet === ft ? '1px solid #A855F7' : '1px solid var(--color-border)',
                       background: shiftFeet === ft ? 'rgba(168,85,247,0.2)' : 'transparent',
                       color: shiftFeet === ft ? '#C084FC' : 'var(--color-text-3)',
                       fontSize: 11,
@@ -3140,7 +3140,7 @@ export default function InfrastructureMapPage() {
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 11,
-            background: 'rgba(15, 23, 42, 0.96)',
+            background: 'var(--color-bg-surface)',
             border: '1px solid rgba(168, 85, 247, 0.3)',
             borderRadius: 12,
             padding: '14px 16px',
@@ -3157,7 +3157,7 @@ export default function InfrastructureMapPage() {
               <button
                 onClick={() => setSelectedIds(new Set())}
                 style={{
-                  padding: '2px 8px', borderRadius: 4, border: '1px solid rgba(148,163,184,0.2)',
+                  padding: '2px 8px', borderRadius: 4, border: '1px solid var(--color-border)',
                   background: 'transparent', color: 'var(--color-text-3)', fontSize: 11, cursor: 'pointer',
                 }}
               >
@@ -3174,7 +3174,7 @@ export default function InfrastructureMapPage() {
                   onClick={() => setShiftFeet(ft)}
                   style={{
                     flex: 1, padding: '4px 0', borderRadius: 5,
-                    border: shiftFeet === ft ? '1px solid #A855F7' : '1px solid rgba(148,163,184,0.15)',
+                    border: shiftFeet === ft ? '1px solid #A855F7' : '1px solid var(--color-border)',
                     background: shiftFeet === ft ? 'rgba(168,85,247,0.2)' : 'transparent',
                     color: shiftFeet === ft ? '#C084FC' : 'var(--color-text-3)',
                     fontSize: 11, fontWeight: 600, cursor: 'pointer',
@@ -3205,7 +3205,7 @@ export default function InfrastructureMapPage() {
             </div>
 
             {/* Re-layer controls */}
-            <div style={{ borderTop: '1px solid rgba(148,163,184,0.15)', paddingTop: 10 }}>
+            <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 10 }}>
               <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 4 }}>Re-layer selected</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <input
@@ -3215,8 +3215,8 @@ export default function InfrastructureMapPage() {
                   placeholder="New layer name..."
                   style={{
                     flex: 1, padding: '6px 8px', borderRadius: 6,
-                    border: '1px solid rgba(148,163,184,0.2)',
-                    background: 'rgba(30, 41, 59, 0.9)', color: 'var(--color-text-1)',
+                    border: '1px solid var(--color-border)',
+                    background: 'var(--color-bg-inset)', color: 'var(--color-text-1)',
                     fontSize: 12, outline: 'none',
                   }}
                 />
@@ -3244,7 +3244,7 @@ export default function InfrastructureMapPage() {
                       onClick={() => setRelayerName(layer)}
                       style={{
                         padding: '2px 8px', borderRadius: 4,
-                        border: '1px solid rgba(148,163,184,0.15)',
+                        border: '1px solid var(--color-border)',
                         background: relayerName === layer ? 'rgba(168,85,247,0.15)' : 'transparent',
                         color: 'var(--color-text-3)', fontSize: 10, cursor: 'pointer',
                       }}
@@ -3257,7 +3257,7 @@ export default function InfrastructureMapPage() {
             </div>
 
             {/* Assign to component */}
-            <div style={{ borderTop: '1px solid rgba(148,163,184,0.15)', paddingTop: 10, marginTop: 10 }}>
+            <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 10, marginTop: 10 }}>
               <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 4 }}>Assign to component</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <select
@@ -3265,8 +3265,8 @@ export default function InfrastructureMapPage() {
                   onChange={e => setAssignCompId(e.target.value)}
                   style={{
                     flex: 1, padding: '6px 8px', borderRadius: 6,
-                    border: '1px solid rgba(148,163,184,0.2)',
-                    background: 'rgba(30, 41, 59, 0.9)', color: 'var(--color-text-1)',
+                    border: '1px solid var(--color-border)',
+                    background: 'var(--color-bg-inset)', color: 'var(--color-text-1)',
                     fontSize: 11, outline: 'none', fontFamily: 'inherit',
                   }}
                 >
@@ -3298,7 +3298,7 @@ export default function InfrastructureMapPage() {
             </div>
 
             {/* Link as bar */}
-            <div style={{ borderTop: '1px solid rgba(148,163,184,0.15)', paddingTop: 10, marginTop: 10 }}>
+            <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 10, marginTop: 10 }}>
               <button
                 onClick={handleLinkAsBar}
                 disabled={linkingBar || selectedIds.size < 2}
@@ -3323,7 +3323,7 @@ export default function InfrastructureMapPage() {
             </div>
 
             {/* Re-type selected */}
-            <div style={{ borderTop: '1px solid rgba(148,163,184,0.15)', paddingTop: 10, marginTop: 10 }}>
+            <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 10, marginTop: 10 }}>
               <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginBottom: 4 }}>Re-type selected</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <select
@@ -3331,8 +3331,8 @@ export default function InfrastructureMapPage() {
                   onChange={e => setRetypeName(e.target.value)}
                   style={{
                     flex: 1, padding: '6px 8px', borderRadius: 6,
-                    border: '1px solid rgba(148,163,184,0.2)',
-                    background: 'rgba(30, 41, 59, 0.9)', color: 'var(--color-text-1)',
+                    border: '1px solid var(--color-border)',
+                    background: 'var(--color-bg-inset)', color: 'var(--color-text-1)',
                     fontSize: 11, outline: 'none', fontFamily: 'inherit',
                   }}
                 >
@@ -3359,7 +3359,7 @@ export default function InfrastructureMapPage() {
             </div>
 
             {/* Delete selected */}
-            <div style={{ borderTop: '1px solid rgba(148,163,184,0.15)', paddingTop: 10, marginTop: 10 }}>
+            <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 10, marginTop: 10 }}>
               <button
                 onClick={handleDeleteSelected}
                 disabled={deletingSelected}
@@ -3393,8 +3393,8 @@ export default function InfrastructureMapPage() {
           <button
             onClick={() => setLegendOpen(prev => !prev)}
             style={{
-              background: 'rgba(15, 23, 42, 0.9)',
-              border: '1px solid rgba(148, 163, 184, 0.2)',
+              background: 'var(--color-bg-surface)',
+              border: '1px solid var(--color-border)',
               borderRadius: 8,
               padding: '6px 12px',
               color: 'var(--color-text-1)',
@@ -3412,8 +3412,8 @@ export default function InfrastructureMapPage() {
           <button
             onClick={() => setIsFullscreen(prev => !prev)}
             style={{
-              background: 'rgba(15, 23, 42, 0.9)',
-              border: '1px solid rgba(148, 163, 184, 0.2)',
+              background: 'var(--color-bg-surface)',
+              border: '1px solid var(--color-border)',
               borderRadius: 8,
               padding: '6px 10px',
               color: 'var(--color-text-1)',
@@ -3452,8 +3452,8 @@ export default function InfrastructureMapPage() {
             top: 44,
             left: 10,
             zIndex: 10,
-            background: 'rgba(15, 23, 42, 0.92)',
-            border: '1px solid rgba(148, 163, 184, 0.2)',
+            background: 'var(--color-bg-surface)',
+            border: '1px solid var(--color-border)',
             borderRadius: 10,
             padding: '10px 12px',
             minWidth: 200,
@@ -3519,7 +3519,7 @@ export default function InfrastructureMapPage() {
                       gap: 6,
                       padding: '5px 0',
                       cursor: 'pointer',
-                      borderTop: groupName !== LAYER_GROUPS[0] ? '1px solid rgba(148,163,184,0.1)' : undefined,
+                      borderTop: groupName !== LAYER_GROUPS[0] ? '1px solid var(--color-border)' : undefined,
                       marginTop: groupName !== LAYER_GROUPS[0] ? 4 : 0,
                       paddingTop: groupName !== LAYER_GROUPS[0] ? 6 : 5,
                     }}
@@ -3889,7 +3889,7 @@ export default function InfrastructureMapPage() {
                     setVisibleSourceLayers({})
                   }}
                   style={{
-                    background: 'none', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 4,
+                    background: 'none', border: '1px solid var(--color-border)', borderRadius: 4,
                     color: 'var(--color-text-3)', fontSize: 10, padding: '2px 6px', cursor: 'pointer',
                   }}
                 >
@@ -3906,7 +3906,7 @@ export default function InfrastructureMapPage() {
                     setVisibleSourceLayers(allOff)
                   }}
                   style={{
-                    background: 'none', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 4,
+                    background: 'none', border: '1px solid var(--color-border)', borderRadius: 4,
                     color: 'var(--color-text-3)', fontSize: 10, padding: '2px 6px', cursor: 'pointer',
                   }}
                 >
@@ -3922,8 +3922,8 @@ export default function InfrastructureMapPage() {
       {/* Popup styles */}
       <style>{`
         .infrastructure-map-popup .mapboxgl-popup-content {
-          background: rgba(15, 23, 42, 0.95) !important;
-          border: 1px solid rgba(148, 163, 184, 0.2) !important;
+          background: var(--color-bg-surface) !important;
+          border: 1px solid var(--color-border) !important;
           border-radius: 8px !important;
           padding: 10px 12px !important;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
@@ -3935,7 +3935,7 @@ export default function InfrastructureMapPage() {
           top: 4px !important;
         }
         .infrastructure-map-popup .mapboxgl-popup-tip {
-          border-top-color: rgba(15, 23, 42, 0.95) !important;
+          border-top-color: var(--color-bg-surface) !important;
         }
       `}</style>
 
@@ -3996,7 +3996,7 @@ export default function InfrastructureMapPage() {
                                 {cs.notamTemplate}
                                 <button
                                   onClick={() => { navigator.clipboard.writeText(cs.notamTemplate || ''); toast.success('NOTAM text copied') }}
-                                  style={{ marginLeft: 8, background: 'none', border: '1px solid rgba(148,163,184,0.3)', color: 'var(--color-text-2, #CBD5E1)', padding: '1px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 11, fontFamily: 'inherit' }}
+                                  style={{ marginLeft: 8, background: 'none', border: '1px solid var(--color-border)', color: 'var(--color-text-2, #CBD5E1)', padding: '1px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 11, fontFamily: 'inherit' }}
                                 >
                                   Copy
                                 </button>

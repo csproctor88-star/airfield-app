@@ -89,7 +89,7 @@ function EditableLabel({
         }}
         style={{
           width: '100%',
-          background: 'rgba(15, 23, 42, 0.8)',
+          background: 'var(--color-bg-surface)',
           border: '1px solid var(--color-cyan)',
           borderRadius: 4,
           padding: '2px 6px',
@@ -108,7 +108,7 @@ function EditableLabel({
       title="Click to edit label"
       style={{
         cursor: 'text',
-        borderBottom: '1px dashed rgba(148,163,184,0.3)',
+        borderBottom: '1px dashed var(--color-border)',
         padding: '1px 2px',
         minWidth: 20,
         display: 'inline-block',
@@ -164,7 +164,7 @@ function PrefixForm({
           }}
           style={{
             flex: 1,
-            background: 'rgba(15, 23, 42, 0.8)',
+            background: 'var(--color-bg-surface)',
             border: '1px solid rgba(6, 182, 212, 0.4)',
             borderRadius: 4,
             padding: '3px 6px',
@@ -195,7 +195,7 @@ function PrefixForm({
           style={{
             padding: '3px 6px',
             borderRadius: 4,
-            border: '1px solid rgba(148,163,184,0.2)',
+            border: '1px solid var(--color-border)',
             background: 'transparent',
             color: 'var(--color-text-3)',
             fontSize: 10,
@@ -226,8 +226,8 @@ function PrefixForm({
               onChange={(e) => setStartAt(Math.max(1, parseInt(e.target.value) || 1))}
               style={{
                 width: 40,
-                background: 'rgba(15, 23, 42, 0.8)',
-                border: '1px solid rgba(148,163,184,0.2)',
+                background: 'var(--color-bg-surface)',
+                border: '1px solid var(--color-border)',
                 borderRadius: 4,
                 padding: '2px 4px',
                 color: 'var(--color-text-1)',
@@ -300,7 +300,7 @@ function FixtureIdForm({
           }}
           style={{
             flex: 1,
-            background: 'rgba(15, 23, 42, 0.8)',
+            background: 'var(--color-bg-surface)',
             border: '1px solid rgba(168, 85, 247, 0.4)',
             borderRadius: 4,
             padding: '3px 6px',
@@ -331,7 +331,7 @@ function FixtureIdForm({
           style={{
             padding: '3px 6px',
             borderRadius: 4,
-            border: '1px solid rgba(148,163,184,0.2)',
+            border: '1px solid var(--color-border)',
             background: 'transparent',
             color: 'var(--color-text-3)',
             fontSize: 10,
@@ -651,8 +651,8 @@ export default function AuditPanel({
         width: 380,
         height: '100%',
         zIndex: 20,
-        background: 'rgba(15, 23, 42, 0.95)',
-        borderLeft: '1px solid rgba(148, 163, 184, 0.2)',
+        background: 'var(--color-bg-surface)',
+        borderLeft: '1px solid var(--color-border)',
         display: 'flex',
         flexDirection: 'column',
         backdropFilter: 'blur(12px)',
@@ -662,7 +662,7 @@ export default function AuditPanel({
       <div
         style={{
           padding: '10px 12px',
-          borderBottom: '1px solid rgba(148, 163, 184, 0.15)',
+          borderBottom: '1px solid var(--color-border)',
           display: 'flex',
           alignItems: 'center',
           gap: 8,
@@ -699,8 +699,8 @@ export default function AuditPanel({
           placeholder="Filter by label, type, or layer..."
           style={{
             width: '100%',
-            background: 'rgba(15, 23, 42, 0.8)',
-            border: '1px solid rgba(148, 163, 184, 0.2)',
+            background: 'var(--color-bg-surface)',
+            border: '1px solid var(--color-border)',
             borderRadius: 6,
             padding: '6px 10px',
             color: 'var(--color-text-1)',
@@ -769,7 +769,7 @@ export default function AuditPanel({
               width: '100%',
               padding: '6px 0',
               borderRadius: 6,
-              border: barGroupsOpen ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid rgba(148, 163, 184, 0.15)',
+              border: barGroupsOpen ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid var(--color-border)',
               background: barGroupsOpen ? 'rgba(56, 189, 248, 0.1)' : 'transparent',
               color: barGroupsOpen ? 'var(--color-cyan)' : 'var(--color-text-3)',
               fontSize: 11,
@@ -803,7 +803,7 @@ export default function AuditPanel({
                     key={bg.groupId}
                     style={{
                       padding: '6px 8px',
-                      borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
+                      borderBottom: '1px solid var(--color-border)',
                       fontSize: 11,
                     }}
                   >
@@ -831,8 +831,8 @@ export default function AuditPanel({
                         placeholder="New fixture ID prefix..."
                         style={{
                           flex: 1, padding: '3px 6px', borderRadius: 4,
-                          border: '1px solid rgba(148, 163, 184, 0.2)',
-                          background: 'rgba(30, 41, 59, 0.9)', color: 'var(--color-text-1)',
+                          border: '1px solid var(--color-border)',
+                          background: 'var(--color-bg-inset)', color: 'var(--color-text-1)',
                           fontSize: 10, outline: 'none',
                         }}
                       />
@@ -884,7 +884,7 @@ export default function AuditPanel({
             width: '100%',
             padding: '6px 0',
             borderRadius: 6,
-            border: bulkAssignOpen ? '1px solid rgba(6, 182, 212, 0.4)' : '1px solid rgba(148, 163, 184, 0.15)',
+            border: bulkAssignOpen ? '1px solid rgba(6, 182, 212, 0.4)' : '1px solid var(--color-border)',
             background: bulkAssignOpen ? 'rgba(6, 182, 212, 0.1)' : 'transparent',
             color: bulkAssignOpen ? 'var(--color-cyan-bright)' : 'var(--color-text-3)',
             fontSize: 11,
@@ -920,7 +920,7 @@ export default function AuditPanel({
                 style={{
                   flex: 1,
                   background: 'var(--color-bg-base)',
-                  border: '1px solid rgba(148,163,184,0.2)',
+                  border: '1px solid var(--color-border)',
                   borderRadius: 4,
                   color: 'var(--color-text-1)',
                   fontSize: 10,
@@ -943,7 +943,7 @@ export default function AuditPanel({
                 style={{
                   flex: 1,
                   background: 'var(--color-bg-base)',
-                  border: '1px solid rgba(148,163,184,0.2)',
+                  border: '1px solid var(--color-border)',
                   borderRadius: 4,
                   color: 'var(--color-text-1)',
                   fontSize: 10,
@@ -978,7 +978,7 @@ export default function AuditPanel({
                 style={{
                   flex: 1,
                   background: 'var(--color-bg-base)',
-                  border: '1px solid rgba(148,163,184,0.2)',
+                  border: '1px solid var(--color-border)',
                   borderRadius: 4,
                   color: 'var(--color-text-1)',
                   fontSize: 10,
@@ -1026,7 +1026,7 @@ export default function AuditPanel({
             width: '100%',
             padding: '6px 0',
             borderRadius: 6,
-            border: bulkRetypeOpen ? '1px solid rgba(249, 115, 22, 0.4)' : '1px solid rgba(148, 163, 184, 0.15)',
+            border: bulkRetypeOpen ? '1px solid rgba(249, 115, 22, 0.4)' : '1px solid var(--color-border)',
             background: bulkRetypeOpen ? 'rgba(249, 115, 22, 0.1)' : 'transparent',
             color: bulkRetypeOpen ? 'var(--color-orange)' : 'var(--color-text-3)',
             fontSize: 11,
@@ -1062,7 +1062,7 @@ export default function AuditPanel({
                 style={{
                   flex: 1,
                   background: 'var(--color-bg-base)',
-                  border: '1px solid rgba(148,163,184,0.2)',
+                  border: '1px solid var(--color-border)',
                   borderRadius: 4,
                   color: 'var(--color-text-1)',
                   fontSize: 10,
@@ -1085,7 +1085,7 @@ export default function AuditPanel({
                 style={{
                   flex: 1,
                   background: 'var(--color-bg-base)',
-                  border: '1px solid rgba(148,163,184,0.2)',
+                  border: '1px solid var(--color-border)',
                   borderRadius: 4,
                   color: 'var(--color-text-1)',
                   fontSize: 10,
@@ -1115,7 +1115,7 @@ export default function AuditPanel({
                 style={{
                   flex: 1,
                   background: 'var(--color-bg-base)',
-                  border: '1px solid rgba(148,163,184,0.2)',
+                  border: '1px solid var(--color-border)',
                   borderRadius: 4,
                   color: 'var(--color-text-1)',
                   fontSize: 10,
@@ -1173,7 +1173,7 @@ export default function AuditPanel({
                   gap: 6,
                   padding: '6px 0',
                   cursor: 'pointer',
-                  borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
+                  borderBottom: '1px solid var(--color-border)',
                 }}
               >
                 <span style={{ fontSize: 9, color: 'var(--color-text-3)', width: 10, textAlign: 'center' }}>
@@ -1440,7 +1440,7 @@ export default function AuditPanel({
                 padding: '6px 0',
                 cursor: 'pointer',
                 borderTop: '1px solid rgba(239, 68, 68, 0.2)',
-                borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
+                borderBottom: '1px solid var(--color-border)',
               }}
             >
               <span style={{ fontSize: 9, color: 'var(--color-text-3)', width: 10, textAlign: 'center' }}>
