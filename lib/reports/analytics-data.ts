@@ -115,15 +115,15 @@ export async function fetchAnalyticsData(baseId: string | null, days = 30): Prom
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function fetchInspectionAnalytics(supabase: any, baseId: string, since: string) {
-  // Fetch completed inspections — created_at = start time, filed_at = completion time
+  // Fetch completed inspections — started_at = walkdown start, filed_at = completion time
   const { data } = await supabase
     .from('inspections')
-    .select('id, inspection_type, created_at, filed_at, passed_count, failed_count, na_count')
+    .select('id, inspection_type, created_at, started_at, filed_at, passed_count, failed_count, na_count')
     .eq('base_id', baseId)
     .eq('status', 'completed')
     .gte('created_at', since)
 
-  const rows = (data ?? []) as { id: string; inspection_type: string; created_at: string; filed_at: string | null; passed_count: number; failed_count: number; na_count: number }[]
+  const rows = (data ?? []) as { id: string; inspection_type: string; created_at: string; started_at: string | null; filed_at: string | null; passed_count: number; failed_count: number; na_count: number }[]
 
   function calcMetrics(filtered: typeof rows): InspectionMetrics {
     let totalMinutes = 0
@@ -132,9 +132,10 @@ async function fetchInspectionAnalytics(supabase: any, baseId: string, since: st
     let totalItems = 0
 
     for (const r of filtered) {
-      // Use created_at → filed_at for actual inspection duration
+      // Use started_at → filed_at for actual inspection duration; fall back to created_at for legacy rows
       if (r.filed_at) {
-        const mins = (new Date(r.filed_at).getTime() - new Date(r.created_at).getTime()) / 60000
+        const start = r.started_at || r.created_at
+        const mins = (new Date(r.filed_at).getTime() - new Date(start).getTime()) / 60000
         if (mins >= 1 && mins < 1440) { // exclude <1min (instant file) and >24h
           totalMinutes += mins
           completedWithTime++

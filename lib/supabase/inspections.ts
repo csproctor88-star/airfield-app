@@ -361,6 +361,7 @@ export async function saveInspectionDraft(input: {
     saved_by_name: savedByName,
     saved_by_id: userId || null,
     saved_at: now.toISOString(),
+    started_at: now.toISOString(),
   }
   if (userId) row.inspector_id = userId
   if (input.base_id) row.base_id = input.base_id
