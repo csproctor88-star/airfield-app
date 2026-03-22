@@ -239,7 +239,7 @@ export async function fetchCheckComments(checkId: string): Promise<CheckCommentR
     .from('check_comments')
     .select('*')
     .eq('check_id', checkId)
-    .order('created_at', { ascending: true })
+    .order('created_at', { ascending: false })
 
   if (error) {
     console.error('Failed to fetch check comments:', error.message)

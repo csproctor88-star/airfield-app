@@ -105,7 +105,7 @@ export default function CheckDetailPage() {
         user_name: currentUser,
         created_at: new Date().toISOString(),
       }
-      setComments((prev) => [...prev, newComment])
+      setComments((prev) => [newComment, ...prev])
       setRemarkText('')
       setSavingRemark(false)
       toast.success('Remark added')
