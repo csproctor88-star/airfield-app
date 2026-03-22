@@ -2842,9 +2842,9 @@ export default function InfrastructureMapPage() {
               style={{
                 padding: '5px 12px',
                 borderRadius: 6,
-                border: '1px solid rgba(56, 189, 248, 0.3)',
-                background: 'rgba(56, 189, 248, 0.15)',
-                color: '#38BDF8',
+                border: '1px solid var(--color-border-active)',
+                background: 'var(--color-border)',
+                color: 'var(--color-accent)',
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: gpsLoading ? 'wait' : 'pointer',
@@ -3429,11 +3429,11 @@ export default function InfrastructureMapPage() {
           <button
             onClick={toggleLocationTracking}
             style={{
-              background: trackingLocation ? 'rgba(59, 130, 246, 0.3)' : 'rgba(15, 23, 42, 0.9)',
-              border: trackingLocation ? '1px solid rgba(59, 130, 246, 0.5)' : '1px solid rgba(148, 163, 184, 0.2)',
+              background: trackingLocation ? 'rgba(59, 130, 246, 0.15)' : 'var(--color-bg-surface)',
+              border: trackingLocation ? '1px solid rgba(59, 130, 246, 0.5)' : '1px solid var(--color-border)',
               borderRadius: 8,
               padding: '6px 10px',
-              color: trackingLocation ? '#3B82F6' : 'var(--color-text-1)',
+              color: trackingLocation ? '#3B82F6' : 'var(--color-text-primary)',
               fontSize: 14,
               cursor: 'pointer',
               display: 'flex',
