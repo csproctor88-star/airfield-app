@@ -35,12 +35,15 @@ export default function CheckDetailPage() {
   const [uploading, setUploading] = useState(false)
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
   const [currentUser, setCurrentUser] = useState('Inspector')
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   const [emailModalOpen, setEmailModalOpen] = useState(false)
   const [sendingEmail, setSendingEmail] = useState(false)
+  const [uploadingIssueIdx, setUploadingIssueIdx] = useState<number | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
+  const issueFileInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
   const { installationId, currentInstallation, userRole, defaultPdfEmail } = useInstallation()
   const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
 
@@ -49,6 +52,7 @@ export default function CheckDetailPage() {
     if (!supabase) { setCurrentUser('Demo User'); return }
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return
+      setCurrentUserId(user.id)
       const { data: profile } = await supabase.from('profiles').select('name, rank, first_name, last_name').eq('id', user.id).single()
       if (profile?.first_name && profile?.last_name) {
         const displayName = `${profile.first_name} ${profile.last_name}`
@@ -151,6 +155,32 @@ export default function CheckDetailPage() {
     e.target.value = ''
   }
 
+  const handleIssuePhoto = async (e: React.ChangeEvent<HTMLInputElement>, issueIdx: number) => {
+    const files = e.target.files
+    if (!files?.length || !liveData) return
+
+    setUploadingIssueIdx(issueIdx)
+    let uploaded = 0
+    for (const file of Array.from(files)) {
+      const { error } = await uploadCheckPhoto(liveData.id, file, installationId, issueIdx)
+      if (!error) uploaded++
+    }
+
+    if (uploaded > 0) {
+      toast.success(`${uploaded} photo(s) added to issue ${issueIdx + 1}`)
+      const freshPhotos = await fetchCheckPhotos(liveData.id)
+      setDbPhotos(freshPhotos)
+      const freshCheck = await fetchCheck(liveData.id)
+      if (freshCheck) setLiveData(freshCheck)
+    }
+    if (uploaded < files.length) {
+      toast.error(`${files.length - uploaded} photo(s) failed to upload`)
+    }
+
+    setUploadingIssueIdx(null)
+    e.target.value = ''
+  }
+
   if (loading) {
     return <LoadingState />
   }
@@ -163,6 +193,14 @@ export default function CheckDetailPage() {
   const displayComments = usingDemo
     ? [...DEMO_CHECK_COMMENTS.filter((c) => c.check_id === params.id), ...comments.filter(c => c.id.startsWith('demo-'))]
     : comments
+
+  // canEdit: base_admin, sys_admin, namo, airfield_manager, or the user who completed the check
+  const canEdit = !usingDemo && (
+    isAdmin ||
+    userRole === 'namo' ||
+    userRole === 'airfield_manager' ||
+    (currentUserId != null && check?.saved_by_id === currentUserId)
+  )
 
   if (!check) {
     return (
@@ -486,6 +524,30 @@ export default function CheckDetailPage() {
                     ))}
                   </div>
                 )}
+                {canEdit && (
+                  <>
+                    <input
+                      ref={(el) => { issueFileInputRefs.current[idx] = el }}
+                      type="file" accept="image/*" multiple
+                      onChange={(e) => handleIssuePhoto(e, idx)}
+                      style={{ display: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => issueFileInputRefs.current[idx]?.click()}
+                      disabled={uploadingIssueIdx === idx}
+                      style={{
+                        marginTop: 8, padding: '6px 12px', borderRadius: 'var(--radius-sm)',
+                        background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+                        color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', fontWeight: 600,
+                        cursor: uploadingIssueIdx === idx ? 'default' : 'pointer', fontFamily: 'inherit',
+                        opacity: uploadingIssueIdx === idx ? 0.6 : 1,
+                      }}
+                    >
+                      {uploadingIssueIdx === idx ? 'Uploading...' : `+ Add Photo to Issue ${idx + 1}`}
+                    </button>
+                  </>
+                )}
                 {!!(issue as Record<string, unknown>).log_as_discrepancy && (
                   <div style={{
                     marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -543,7 +605,7 @@ export default function CheckDetailPage() {
       )}
 
       {/* Add Photo Button */}
-      {!usingDemo && (
+      {canEdit && (
         <div style={{ marginBottom: 8 }}>
           <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
           <PhotoPickerButton

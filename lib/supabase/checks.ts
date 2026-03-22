@@ -66,6 +66,13 @@ export async function createCheck(input: {
   const ts = now.getTime().toString(36).slice(-4).toUpperCase()
   const display_id = `AC-${ts}`
 
+  // Capture the current user's ID for ownership tracking
+  let completedById: string | null = null
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) completedById = user.id
+  } catch { /* no auth user */ }
+
   const row: Record<string, unknown> = {
     display_id,
     check_type: input.check_type,
@@ -76,6 +83,7 @@ export async function createCheck(input: {
     started_at: input.started_at ?? null,
     latitude: input.latitude ?? null,
     longitude: input.longitude ?? null,
+    saved_by_id: completedById,
   }
   if (input.base_id) row.base_id = input.base_id
 
@@ -309,6 +317,34 @@ export async function updateCheckNotes(id: string, notes: string | null): Promis
     return { error: friendlyError(error.message) }
   }
 
+  logActivity('updated', 'check', id, existing?.display_id, { details: 'AFLD CHECK UPDATED' }, existing?.base_id)
+
+  return { error: null }
+}
+
+/** Update a completed check's data, areas, or remarks without re-filing */
+export async function updateCheckData(
+  id: string,
+  updates: { data?: Record<string, unknown>; areas?: string[] }
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+
+  const payload: Record<string, unknown> = {}
+  if (updates.data !== undefined) payload.data = updates.data
+  if (updates.areas !== undefined) payload.areas = updates.areas
+
+  const { error } = await supabase
+    .from('airfield_checks')
+    .update(payload)
+    .eq('id', id)
+
+  if (error) {
+    console.error('Update check failed:', error.message)
+    return { error: friendlyError(error.message) }
+  }
+
+  const { data: existing } = await supabase.from('airfield_checks').select('display_id, base_id').eq('id', id).single()
   logActivity('updated', 'check', id, existing?.display_id, { details: 'AFLD CHECK UPDATED' }, existing?.base_id)
 
   return { error: null }

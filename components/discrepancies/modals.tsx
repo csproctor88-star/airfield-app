@@ -736,11 +736,11 @@ export function PhotoViewerModal({
       {photos.length > 1 && (
         <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>
           <button type="button" onClick={() => setIndex((i) => (i - 1 + photos.length) % photos.length)}
-            style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-mid)', borderRadius: 'var(--radius-md)', padding: '8px 16px', color: '#fff', fontSize: 'var(--fs-xl)', cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 'var(--radius-md)', padding: '8px 16px', color: '#fff', fontSize: 'var(--fs-xl)', cursor: 'pointer', fontFamily: 'inherit' }}>
             ← Prev
           </button>
           <button type="button" onClick={() => setIndex((i) => (i + 1) % photos.length)}
-            style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-mid)', borderRadius: 'var(--radius-md)', padding: '8px 16px', color: '#fff', fontSize: 'var(--fs-xl)', cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 'var(--radius-md)', padding: '8px 16px', color: '#fff', fontSize: 'var(--fs-xl)', cursor: 'pointer', fontFamily: 'inherit' }}>
             Next →
           </button>
         </div>
