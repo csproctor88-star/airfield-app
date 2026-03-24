@@ -162,10 +162,20 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
         <label style={labelStyle}>Comment / Description</label>
         <textarea
           value={detail.comment}
-          onChange={(e) => update('comment', e.target.value)}
+          onChange={(e) => {
+            update('comment', e.target.value)
+            e.target.style.height = 'auto'
+            e.target.style.height = e.target.scrollHeight + 'px'
+          }}
+          ref={(el) => {
+            if (el && detail.comment) {
+              el.style.height = 'auto'
+              el.style.height = el.scrollHeight + 'px'
+            }
+          }}
           placeholder="Describe the discrepancy..."
           rows={2}
-          style={{ ...inputStyle, resize: 'vertical' }}
+          style={{ ...inputStyle, resize: 'vertical', overflow: 'hidden' }}
         />
       </div>
 
