@@ -1,9 +1,10 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { AcsiDiscrepancyPanel } from './acsi-discrepancy-panel'
-import { Plus, Trash2 } from 'lucide-react'
+import { AcsiDiscrepancyPicker } from './acsi-discrepancy-picker'
+import { Plus, Trash2, Link2 } from 'lucide-react'
 import type { AcsiDiscrepancyDetail } from '@/lib/supabase/types'
 
 const AcsiLocationMap = dynamic(() => import('@/components/acsi/acsi-location-map'), { ssr: false })
@@ -14,6 +15,7 @@ interface AcsiDiscrepancyPanelGroupProps {
   onChange: (itemId: string, index: number, detail: AcsiDiscrepancyDetail) => void
   onAdd: (itemId: string) => void
   onRemove: (itemId: string, index: number) => void
+  onLinkExisting?: (itemId: string, detail: AcsiDiscrepancyDetail) => void
   inspectionId?: string | null
 }
 
@@ -23,8 +25,10 @@ export function AcsiDiscrepancyPanelGroup({
   onChange,
   onAdd,
   onRemove,
+  onLinkExisting,
   inspectionId,
 }: AcsiDiscrepancyPanelGroupProps) {
+  const [showPicker, setShowPicker] = useState(false)
   const pins = discrepancies[0]?.pins || []
 
   const handlePinsChange = useCallback((newPins: { lat: number; lng: number }[]) => {
@@ -116,29 +120,66 @@ export function AcsiDiscrepancyPanelGroup({
         </div>
       ))}
 
-      {/* Add Discrepancy button */}
-      <button
-        type="button"
-        onClick={() => onAdd(itemId)}
-        style={{
-          width: '100%',
-          padding: '10px',
-          borderRadius: 8,
-          border: '2px dashed rgba(239, 68, 68, 0.3)',
-          background: 'transparent',
-          color: '#EF4444',
-          fontSize: 'var(--fs-sm)',
-          fontWeight: 600,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 6,
-        }}
-      >
-        <Plus size={16} />
-        Add Discrepancy
-      </button>
+      {/* Action buttons */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          type="button"
+          onClick={() => onAdd(itemId)}
+          style={{
+            flex: 1,
+            padding: '10px',
+            borderRadius: 8,
+            border: '2px dashed rgba(239, 68, 68, 0.3)',
+            background: 'transparent',
+            color: '#EF4444',
+            fontSize: 'var(--fs-sm)',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+          }}
+        >
+          <Plus size={16} />
+          Add New
+        </button>
+        {onLinkExisting && (
+          <button
+            type="button"
+            onClick={() => setShowPicker(true)}
+            style={{
+              flex: 1,
+              padding: '10px',
+              borderRadius: 8,
+              border: '2px dashed rgba(56, 189, 248, 0.3)',
+              background: 'transparent',
+              color: 'var(--color-cyan)',
+              fontSize: 'var(--fs-sm)',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+            }}
+          >
+            <Link2 size={16} />
+            Link Existing
+          </button>
+        )}
+      </div>
+
+      {/* Discrepancy picker modal */}
+      {showPicker && onLinkExisting && (
+        <AcsiDiscrepancyPicker
+          onSelect={(detail) => {
+            onLinkExisting(itemId, detail)
+            setShowPicker(false)
+          }}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
     </div>
   )
 }

@@ -1168,6 +1168,7 @@ export type AcsiDiscrepancyDetail = {
   /** @deprecated Use `pins` instead */
   longitude: number | null
   pins: { lat: number; lng: number }[]
+  linked_discrepancy_id?: string | null
 }
 
 export type AcsiItem = {

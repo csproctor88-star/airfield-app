@@ -784,7 +784,7 @@ export const ACSI_CHECKLIST_SECTIONS: AcsiChecklistSection[] = [
     reference: 'UFC 3-535-01',
     items: [
       { id: '6.1', question: 'Are wind cone fabrics in good condition? (Must not be badly worn, rotted, faded, or soiled.)' },
-      { id: '6.2', question: 'Does the wind cone assembly swing freely at 36 degrees?' },
+      { id: '6.2', question: 'Does the wind cone assembly swing freely at 360 degrees?' },
       { id: '6.3', question: 'Are wind cones illuminated? If so, are the lights operable?' },
       { id: '6.4', question: 'Are the wind cones free of obscuring vegetation?' },
       { id: '6.5', question: 'Are wind cones sited in accordance with UFC 3-535-01?' },

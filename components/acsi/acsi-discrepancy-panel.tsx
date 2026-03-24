@@ -4,8 +4,9 @@ import { useState, useRef, useEffect } from 'react'
 import { useInstallation } from '@/lib/installation-context'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 import { uploadAcsiPhoto, fetchAcsiPhotos } from '@/lib/supabase/acsi-inspections'
+import { fetchDiscrepancyPhotos } from '@/lib/supabase/discrepancies'
 import { toast } from 'sonner'
-import { X, Check } from 'lucide-react'
+import { X, Check, Link2 } from 'lucide-react'
 import type { AcsiDiscrepancyDetail } from '@/lib/supabase/types'
 
 interface AcsiDiscrepancyPanelProps {
@@ -26,14 +27,34 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
 
   // Load existing photos from DB when draft is loaded on another device
   useEffect(() => {
-    if (!inspectionId || !detail.photo_ids?.length || photoUrls.length > 0) return
+    if (!detail.photo_ids?.length || photoUrls.length > 0) return
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
     let cancelled = false
 
-    fetchAcsiPhotos(inspectionId).then(allPhotos => {
-      if (cancelled) return
+    const loadPhotos = async () => {
       const photoIdSet = new Set(detail.photo_ids)
-      const matched = allPhotos.filter(p => photoIdSet.has(p.id))
+      let matched: { id: string; storage_path: string; file_name: string }[] = []
+
+      // Try ACSI photos first
+      if (inspectionId) {
+        const acsiPhotos = await fetchAcsiPhotos(inspectionId)
+        matched = acsiPhotos.filter(p => photoIdSet.has(p.id))
+      }
+
+      // If we didn't find all photos and this is linked to discrepancies, check there too
+      if (matched.length < detail.photo_ids.length && detail.linked_discrepancy_id) {
+        const linkedIds = detail.linked_discrepancy_id.split(',').filter(Boolean)
+        const foundIds = new Set(matched.map(m => m.id))
+        for (const discId of linkedIds) {
+          if (matched.length >= detail.photo_ids.length) break
+          const discPhotos = await fetchDiscrepancyPhotos(discId)
+          const additional = discPhotos.filter(p => photoIdSet.has(p.id) && !foundIds.has(p.id))
+          for (const p of additional) foundIds.add(p.id)
+          matched = [...matched, ...additional]
+        }
+      }
+
+      if (cancelled) return
       if (matched.length > 0) {
         setPhotoUrls(matched.map(p => ({
           url: p.storage_path.startsWith('data:')
@@ -42,11 +63,12 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
           name: p.file_name,
         })))
       }
-    })
+    }
 
+    loadPhotos()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inspectionId])
+  }, [inspectionId, detail.linked_discrepancy_id])
 
   const update = (field: keyof AcsiDiscrepancyDetail, value: unknown) => {
     onChange(itemId, index, { ...detail, [field]: value })
@@ -120,6 +142,19 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
       border: '1px solid rgba(239, 68, 68, 0.15)',
       borderRadius: 8,
     }}>
+
+      {/* Linked badge */}
+      {detail.linked_discrepancy_id && (
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 8,
+          padding: '4px 10px', borderRadius: 6,
+          background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.25)',
+          fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-cyan)',
+        }}>
+          <Link2 size={12} />
+          Linked from discrepancy tracker
+        </div>
+      )}
 
       {/* Comment */}
       <div style={{ marginBottom: 10 }}>

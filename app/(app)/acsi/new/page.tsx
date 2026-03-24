@@ -225,6 +225,38 @@ export default function AcsiFormPage() {
     })
   }, [updateDraft])
 
+  const handleLinkExisting = useCallback((itemId: string, detail: AcsiDiscrepancyDetail) => {
+    updateDraft(prev => {
+      const current = [...(prev.discrepancies[itemId] || [])]
+      const existing = current[0]
+
+      // If first entry is empty, just replace it
+      if (existing && !existing.comment && !existing.work_order && existing.photo_ids.length === 0) {
+        current[0] = detail
+      } else if (existing) {
+        // Merge into existing first entry — combine text, accumulate photos/pins
+        const separator = existing.comment ? '\n\n---\n\n' : ''
+        current[0] = {
+          ...existing,
+          comment: existing.comment + separator + detail.comment,
+          work_order: existing.work_order
+            ? (detail.work_order ? `${existing.work_order}, ${detail.work_order}` : existing.work_order)
+            : detail.work_order,
+          photo_ids: [...existing.photo_ids, ...detail.photo_ids],
+          pins: [...(existing.pins || []), ...(detail.pins || [])],
+          areas: Array.from(new Set([...(existing.areas || []), ...(detail.areas || [])])),
+          linked_discrepancy_id: existing.linked_discrepancy_id
+            ? `${existing.linked_discrepancy_id},${detail.linked_discrepancy_id}`
+            : detail.linked_discrepancy_id,
+        }
+      } else {
+        current.push(detail)
+      }
+
+      return { ...prev, discrepancies: { ...prev.discrepancies, [itemId]: current } }
+    })
+  }, [updateDraft])
+
   const handleTeamChange = useCallback((team: AcsiTeamMember[]) => {
     updateDraft(prev => ({ ...prev, team }))
   }, [updateDraft])
@@ -529,6 +561,7 @@ export default function AcsiFormPage() {
                           onChange={handleDiscrepancyChange}
                           onAdd={handleAddDiscrepancy}
                           onRemove={handleRemoveDiscrepancy}
+                          onLinkExisting={handleLinkExisting}
                           inspectionId={dbRowId}
                         />
                       ) : null
@@ -541,6 +574,7 @@ export default function AcsiFormPage() {
                         onChange={handleDiscrepancyChange}
                         onAdd={handleAddDiscrepancy}
                         onRemove={handleRemoveDiscrepancy}
+                        onLinkExisting={handleLinkExisting}
                         inspectionId={dbRowId}
                       />
                     )}
@@ -602,6 +636,7 @@ export default function AcsiFormPage() {
                           onChange={handleDiscrepancyChange}
                           onAdd={handleAddDiscrepancy}
                           onRemove={handleRemoveDiscrepancy}
+                          onLinkExisting={handleLinkExisting}
                           inspectionId={dbRowId}
                         />
                       )}
