@@ -395,17 +395,9 @@ export default function AcsiFormPage() {
     }
   }
 
-  if (!loaded || !draft) {
-    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-3)' }}>Loading...</div>
-  }
-
-  // Calculate counts
-  const { passed, failed, na, total } = acsiDraftToItems(draft)
-  const answered = passed + failed + na
-  const pct = total > 0 ? Math.round((answered / total) * 100) : 0
-
-  // Collect all already-linked discrepancy IDs across all items
+  // Collect all already-linked discrepancy IDs across all items (must be before early return)
   const alreadyLinkedIds = useMemo(() => {
+    if (!draft) return new Set<string>()
     const ids = new Set<string>()
     for (const discs of Object.values(draft.discrepancies)) {
       for (const d of discs) {
@@ -417,7 +409,16 @@ export default function AcsiFormPage() {
       }
     }
     return ids
-  }, [draft.discrepancies])
+  }, [draft?.discrepancies])
+
+  if (!loaded || !draft) {
+    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-3)' }}>Loading...</div>
+  }
+
+  // Calculate counts
+  const { passed, failed, na, total } = acsiDraftToItems(draft)
+  const answered = passed + failed + na
+  const pct = total > 0 ? Math.round((answered / total) * 100) : 0
 
   const inputStyle: React.CSSProperties = {
     padding: '10px 14px',
