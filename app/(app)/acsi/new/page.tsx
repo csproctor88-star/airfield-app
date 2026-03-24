@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -404,6 +404,21 @@ export default function AcsiFormPage() {
   const answered = passed + failed + na
   const pct = total > 0 ? Math.round((answered / total) * 100) : 0
 
+  // Collect all already-linked discrepancy IDs across all items
+  const alreadyLinkedIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const discs of Object.values(draft.discrepancies)) {
+      for (const d of discs) {
+        if (d.linked_discrepancy_id) {
+          for (const id of d.linked_discrepancy_id.split(',')) {
+            if (id) ids.add(id)
+          }
+        }
+      }
+    }
+    return ids
+  }, [draft.discrepancies])
+
   const inputStyle: React.CSSProperties = {
     padding: '10px 14px',
     borderRadius: 'var(--radius-sm)',
@@ -562,6 +577,7 @@ export default function AcsiFormPage() {
                           onAdd={handleAddDiscrepancy}
                           onRemove={handleRemoveDiscrepancy}
                           onLinkExisting={handleLinkExisting}
+                          alreadyLinkedIds={alreadyLinkedIds}
                           inspectionId={dbRowId}
                         />
                       ) : null
@@ -575,6 +591,7 @@ export default function AcsiFormPage() {
                         onAdd={handleAddDiscrepancy}
                         onRemove={handleRemoveDiscrepancy}
                         onLinkExisting={handleLinkExisting}
+                        alreadyLinkedIds={alreadyLinkedIds}
                         inspectionId={dbRowId}
                       />
                     )}
@@ -637,6 +654,7 @@ export default function AcsiFormPage() {
                           onAdd={handleAddDiscrepancy}
                           onRemove={handleRemoveDiscrepancy}
                           onLinkExisting={handleLinkExisting}
+                          alreadyLinkedIds={alreadyLinkedIds}
                           inspectionId={dbRowId}
                         />
                       )}

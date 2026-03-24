@@ -16,6 +16,7 @@ interface AcsiDiscrepancyPanelGroupProps {
   onAdd: (itemId: string) => void
   onRemove: (itemId: string, index: number) => void
   onLinkExisting?: (itemId: string, detail: AcsiDiscrepancyDetail) => void
+  alreadyLinkedIds?: Set<string>
   inspectionId?: string | null
 }
 
@@ -26,6 +27,7 @@ export function AcsiDiscrepancyPanelGroup({
   onAdd,
   onRemove,
   onLinkExisting,
+  alreadyLinkedIds,
   inspectionId,
 }: AcsiDiscrepancyPanelGroupProps) {
   const [showPicker, setShowPicker] = useState(false)
@@ -178,6 +180,7 @@ export function AcsiDiscrepancyPanelGroup({
             setShowPicker(false)
           }}
           onClose={() => setShowPicker(false)}
+          alreadyLinkedIds={alreadyLinkedIds}
         />
       )}
     </div>
