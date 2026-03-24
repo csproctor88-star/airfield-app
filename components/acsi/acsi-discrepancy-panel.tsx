@@ -25,9 +25,12 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
   const fileInputRef = useRef<HTMLInputElement>(null)
 
 
-  // Load existing photos from DB when draft is loaded on another device
+  // Stable key for photo_ids to use as effect dependency
+  const photoIdsKey = detail.photo_ids?.join(',') || ''
+
+  // Load photos from DB — fires on mount, when linked, or when photo_ids change
   useEffect(() => {
-    if (!detail.photo_ids?.length || photoUrls.length > 0) return
+    if (!detail.photo_ids?.length) { setPhotoUrls([]); return }
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
     let cancelled = false
 
@@ -55,20 +58,18 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
       }
 
       if (cancelled) return
-      if (matched.length > 0) {
-        setPhotoUrls(matched.map(p => ({
-          url: p.storage_path.startsWith('data:')
-            ? p.storage_path
-            : supabaseUrl ? `${supabaseUrl}/storage/v1/object/public/photos/${p.storage_path}` : p.storage_path,
-          name: p.file_name,
-        })))
-      }
+      setPhotoUrls(matched.map(p => ({
+        url: p.storage_path.startsWith('data:')
+          ? p.storage_path
+          : supabaseUrl ? `${supabaseUrl}/storage/v1/object/public/photos/${p.storage_path}` : p.storage_path,
+        name: p.file_name,
+      })))
     }
 
     loadPhotos()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inspectionId, detail.linked_discrepancy_id])
+  }, [inspectionId, detail.linked_discrepancy_id, photoIdsKey])
 
   const update = (field: keyof AcsiDiscrepancyDetail, value: unknown) => {
     onChange(itemId, index, { ...detail, [field]: value })
