@@ -340,7 +340,7 @@ export default function ParkingPage() {
   const [newPlanDesc, setNewPlanDesc] = useState('')
   const [showAircraftPicker, setShowAircraftPicker] = useState(false)
   const [aircraftSearch, setAircraftSearch] = useState('')
-  const [bulkAddCount, setBulkAddCount] = useState(1)
+  const [bulkAddCount, setBulkAddCount] = useState<number | ''>(1)
   const [contextMenuSpot, setContextMenuSpot] = useState<{ spot: ParkingSpot; x: number; y: number } | null>(null)
   const contextMenuTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showObstacleMenu, setShowObstacleMenu] = useState(false)
@@ -673,7 +673,7 @@ export default function ParkingPage() {
         // Compute sequential number for this aircraft type
         const existingCount = spots.filter(s => s.aircraft_name === acName).length
         const placedSpots: ParkingSpot[] = []
-        const count = bulkAddCount > 1 ? bulkAddCount : 1
+        const count = (typeof bulkAddCount === 'number' && bulkAddCount > 1) ? bulkAddCount : 1
 
         for (let i = 0; i < count; i++) {
           const seqNum = existingCount + i + 1
@@ -3633,11 +3633,18 @@ export default function ParkingPage() {
                   <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>Qty:</span>
                   <input
                     type="number" min={1} max={50} value={bulkAddCount}
-                    onChange={e => setBulkAddCount(Math.max(1, Math.min(50, Number(e.target.value) || 1)))}
+                    onChange={e => {
+                      const raw = e.target.value
+                      if (raw === '') { setBulkAddCount(''); return }
+                      const n = parseInt(raw, 10)
+                      if (!isNaN(n)) setBulkAddCount(Math.min(50, n))
+                    }}
+                    onBlur={() => { if (bulkAddCount === '' || bulkAddCount < 1) setBulkAddCount(1) }}
+                    onFocus={e => e.target.select()}
                     style={{
                       width: 48, padding: '3px 4px', borderRadius: 4, textAlign: 'center',
                       border: '1px solid var(--color-border)', background: 'var(--color-bg)',
-                      color: bulkAddCount > 1 ? 'var(--color-cyan)' : 'var(--color-text-primary)',
+                      color: (bulkAddCount || 0) > 1 ? 'var(--color-cyan)' : 'var(--color-text-primary)',
                       fontSize: 'var(--fs-sm)', fontWeight: 700,
                     }}
                   />
