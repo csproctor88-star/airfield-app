@@ -182,7 +182,7 @@ function LoginContent() {
           return
         }
 
-        setSuccess('Account created! Check your email to confirm, then sign in.')
+        setSuccess('Account created! Check your email to confirm your address. Your account will be available once approved by your base administrator.')
         setMode('signin')
         setPassword('')
         return
@@ -198,7 +198,7 @@ function LoginContent() {
         return
       }
 
-      // Check if user account is deactivated
+      // Check if user account is deactivated or pending approval
       if (signInData?.user) {
         const { data: profile } = await supabase
           .from('profiles')
@@ -209,6 +209,12 @@ function LoginContent() {
         if (profile?.status === 'deactivated') {
           await supabase.auth.signOut()
           setError('Your account has been deactivated. Contact your administrator.')
+          return
+        }
+
+        if (profile?.status === 'pending') {
+          await supabase.auth.signOut()
+          setError('Your account is pending approval. Your base administrator, NAMO, or Airfield Manager will approve your access.')
           return
         }
 

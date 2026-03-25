@@ -40,10 +40,14 @@ export function InviteUserModal({
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const roleOptions = Object.entries(USER_ROLES).map(([key, cfg]) => ({
-    value: key as UserRole,
-    label: cfg.label,
-  }))
+  // Sys admins see all roles; base admins see non-admin roles only
+  const ADMIN_ONLY_ROLES: UserRole[] = ['sys_admin', 'base_admin']
+  const roleOptions = Object.entries(USER_ROLES)
+    .filter(([key]) => isSysAdmin || !ADMIN_ONLY_ROLES.includes(key as UserRole))
+    .map(([key, cfg]) => ({
+      value: key as UserRole,
+      label: cfg.label,
+    }))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -162,24 +166,20 @@ export function InviteUserModal({
             </div>
           </div>
 
-          {/* Role — sys admin sees dropdown, base admin auto-set to user */}
-          {isSysAdmin ? (
-            <div style={{ marginBottom: 12 }}>
-              <span className="section-label">Role</span>
-              <select
-                className="input-dark"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                style={{ width: '100%' }}
-              >
-                {roleOptions.map((r) => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <input type="hidden" value="read_only" />
-          )}
+          {/* Role */}
+          <div style={{ marginBottom: 12 }}>
+            <span className="section-label">Role</span>
+            <select
+              className="input-dark"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              style={{ width: '100%' }}
+            >
+              {roleOptions.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+          </div>
 
           {/* Installation */}
           <div style={{ marginBottom: 12 }}>

@@ -51,13 +51,21 @@ export function canBaseAdminManageUser(
   return callerBaseId === targetBaseId
 }
 
+/** Roles that only sys_admin can assign */
+const ADMIN_ONLY_ROLES = ['sys_admin', 'base_admin']
+
 /**
  * Strip fields that base admins are not allowed to change.
- * Base admins cannot change role or primary_base_id.
+ * Base admins cannot change primary_base_id or assign admin roles.
+ * They CAN assign non-admin roles (airfield_manager, namo, amops, etc.)
  */
 export function sanitizeBaseAdminUpdate(
   updates: Record<string, unknown>,
 ): Record<string, unknown> {
-  const { role, primary_base_id, ...allowed } = updates
+  const { primary_base_id, ...allowed } = updates
+  // Block admin role assignment by base admins
+  if (allowed.role && ADMIN_ONLY_ROLES.includes(allowed.role as string)) {
+    delete allowed.role
+  }
   return allowed
 }
