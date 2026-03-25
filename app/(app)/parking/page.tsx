@@ -2570,6 +2570,39 @@ export default function ParkingPage() {
                         )}
                       </div>
 
+                      {/* Group heading control — rotate all at once */}
+                      {isGroupOpen && groupSpots.length > 1 && (
+                        <div
+                          onClick={e => e.stopPropagation()}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            padding: isMobile ? '6px 12px 6px 24px' : '4px 8px 4px 20px',
+                            background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)',
+                          }}
+                        >
+                          <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>All {groupSpots.length} hdg:</span>
+                          <input
+                            type="range" min={0} max={360} step={1}
+                            value={groupSpots[0]?.heading_deg ?? 0}
+                            onChange={e => {
+                              const deg = Number(e.target.value)
+                              for (const s of groupSpots) handleUpdateSpot(s.id, { heading_deg: deg })
+                            }}
+                            style={{ flex: 1 }}
+                          />
+                          <input
+                            type="number" min={0} max={360} step={1}
+                            value={groupSpots[0]?.heading_deg ?? 0}
+                            onChange={e => {
+                              const deg = Math.min(360, Math.max(0, Number(e.target.value) || 0))
+                              for (const s of groupSpots) handleUpdateSpot(s.id, { heading_deg: deg })
+                            }}
+                            style={{ width: 44, padding: '2px 3px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', textAlign: 'center', fontWeight: 700 }}
+                          />
+                          <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)' }}>°</span>
+                        </div>
+                      )}
+
                       {/* Individual spots within group */}
                       {isGroupOpen && groupSpots.map(s => {
                         const clearanceDetail = s.clearance_ft != null
@@ -2942,7 +2975,24 @@ export default function ParkingPage() {
                           </label>
                           <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
                             Design Aircraft
-                            <input value={tl.design_aircraft || ''} onChange={e => handleUpdateTaxilane(tl.id, { design_aircraft: e.target.value })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                            <select
+                              value={tl.design_aircraft || ''}
+                              onChange={e => {
+                                const acName = e.target.value
+                                const ac = allAircraft.find(a => a.aircraft === acName)
+                                const ws = ac ? parseNum(ac.wing_span_ft) : null
+                                handleUpdateTaxilane(tl.id, {
+                                  design_aircraft: acName || null as any,
+                                  ...(ws ? { design_wingspan_ft: ws } : {}),
+                                })
+                              }}
+                              style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }}
+                            >
+                              <option value="">Select aircraft...</option>
+                              {allAircraft.map(ac => (
+                                <option key={ac.aircraft} value={ac.aircraft}>{ac.aircraft} ({ac.wing_span_ft}ft)</option>
+                              ))}
+                            </select>
                           </label>
                         </div>
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
