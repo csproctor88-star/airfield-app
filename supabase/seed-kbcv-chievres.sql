@@ -94,7 +94,7 @@ INSERT INTO base_areas (base_id, area_name, sort_order) VALUES
 -- ═══════════════════════════════════════════════════════════════
 INSERT INTO base_taxiways (base_id, designator, taxiway_type, tdg)
 VALUES
-  (v_base_id, 'A', 'full_parallel', NULL);
+  (v_base_id, 'A', 'taxiway', NULL);
 
 -- ═══════════════════════════════════════════════════════════════
 -- 6. Lighting systems — from AD 2.14 + AD 2.15 + AD 2.9
