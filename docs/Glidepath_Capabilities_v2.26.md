@@ -1,6 +1,6 @@
 # Glidepath Capabilities Document
 
-**Version 2.26.0** | March 2026
+**Version 2.27.0** | March 2026
 
 Glidepath is a Progressive Web Application (PWA) purpose-built for Department of the Air Force airfield management operations. It digitizes the daily workflows of Airfield Management professionals -- inspections, checks, discrepancy tracking, emergency checklists, NAVAID infrastructure management, obstruction evaluations, parking plans, wildlife/BASH reporting, and more -- into a single, real-time platform accessible from any device with a web browser.
 
@@ -54,7 +54,7 @@ Glidepath is accessed through any modern web browser -- Chrome, Edge, Safari, or
 - **Email/password authentication** with Supabase Auth -- military CAC integration is not required
 - **Remember Me** option to persist your session across browser restarts
 - **Forgot Password** flow sends a recovery email to reset your credentials
-- **Create Account** for initial registration (requires admin approval for base assignment)
+- **Create Account** for self-registration -- new users select their installation and role, then wait for admin approval before gaining access
 - **Demo Mode** accessible via `?demo=true` URL parameter -- explore all features with sample data, no account needed
 - **First-time login** prompts you to select your installation (base) and complete your profile (rank, name, operating initials)
 - **Sidebar navigation** (desktop) organizes all modules into logical groups with collapsible sections
@@ -196,6 +196,8 @@ Airfield Checks capture the structured inspections and condition assessments tha
 - **GPS pin placement** on a Mapbox satellite map for precise location documentation
 - **Cross-device draft persistence** -- drafts save to both localStorage (instant) and Supabase (cloud). Use "Save Draft" to ensure your work is available on another device
 - **started_at timestamp** captured the moment you select a check type, providing accurate duration metrics
+- **Check editing** -- authorized users (admins, NAMOs, AFMs, and the original submitter) can edit filed checks to add remarks, upload additional photos per issue, or correct details
+- **Newest-first remarks** -- remarks on checks display with the most recent at the top for easy scanning
 - **History view** with type filtering, text search, and date range selection
 - **PDF export** for any completed check, with option to email the PDF directly
 
@@ -290,6 +292,9 @@ The Annual Compliance and Safety Inspection (ACSI) module digitizes the comprehe
 - **10 inspection sections** covering all DAFMAN 13-204v2 ACSI requirements, with approximately 100 individual items
 - **Y/N/N/A toggle** per item -- Yes (compliant), No (deficient), Not Applicable
 - **Per-item discrepancy documentation** for items marked No: comment, work order number, project number, estimated cost, and projected completion date
+- **Link Existing Discrepancy** -- when marking an item as No, you can pull in an already-tracked discrepancy from the Discrepancy Management module instead of re-entering details. Photos, work order numbers, location pins, and descriptions are imported automatically. Multiple linked discrepancies merge into a single entry per item with combined text and accumulated photos.
+- **Discrepancy picker with filters** -- searchable modal with status and type filter chips; already-linked discrepancies show a green "LINKED" badge
+- **Auto-expanding comment fields** -- discrepancy comment textareas grow automatically as text is added or imported
 - **Photo and map uploads** on failed items for evidence documentation
 - **Inspection team editor** with required roles (Airfield Manager, Civil Engineer, Safety) plus additional team members
 - **Risk management certification** with three signature blocks
@@ -306,8 +311,10 @@ The Annual Compliance and Safety Inspection (ACSI) module digitizes the comprehe
 4. Work through each of the 10 sections. Tap a section header to expand it and reveal the individual items.
 5. For each item, select **Y** (compliant), **N** (deficient), or **N/A** (not applicable).
 6. If a section is fully compliant, use the **Mark All Y** button to set all items to Yes in one action.
-7. For any item marked **N**, a discrepancy panel expands. Enter the comment describing the deficiency, the work order or project number (if applicable), estimated cost, and projected completion date.
-8. To attach evidence to a failed item, use the photo upload or map capture buttons within the discrepancy panel.
+7. For any item marked **N**, a discrepancy panel expands. You have two options:
+   - **Add New**: Enter the comment describing the deficiency, work order number, project number, estimated cost, and projected completion date manually.
+   - **Link Existing**: Tap the cyan "Link Existing" button to open the discrepancy picker. Search or filter by status and type, then select a tracked discrepancy. Its description, photos, work order number, and GPS location are imported automatically. You can link multiple discrepancies -- they merge into a single entry with combined text.
+8. To attach evidence to a failed item, use the photo upload or map capture buttons within the discrepancy panel. Photos from linked discrepancies are included automatically.
 9. When all sections are complete, review the **Risk Management Certification** section and fill in the three signature blocks.
 10. Tap **File ACSI** to finalize. The inspection is locked and available for export.
 11. To generate outputs, use **Export PDF** for a formatted report or **Export Excel** for a spreadsheet with four detail sheets.
@@ -1082,13 +1089,16 @@ User Management is the admin-only module for creating, editing, and managing Gli
 - **Searchable user list** with role and status filters
 - **User cards** displaying rank, role badge, status badge (Active/Inactive), base assignment, and last seen timestamp
 - **Invite user** -- enter email, rank, first/last name, role, and installation assignment. The system sends a branded setup email with a temporary password.
-- **Edit profiles** -- admins can update rank, name, role, installation assignment, and operating initials
+- **Role selection on invite** -- NAMOs, AFMs, and base admins can now assign roles when inviting users (non-admin roles only). Sys admins can assign any role including admin roles.
+- **Self-registration with approval** -- users can create their own account via the login page. New accounts start with "Pending" status and cannot log in until an admin approves them. Admins see a yellow "Pending Approval" banner with Approve/Reject buttons in the user detail modal.
+- **Edit profiles** -- admins can update rank, name, role, installation assignment, and operating initials. Base admins can now change user roles (non-admin roles only).
+- **Multi-base access management** -- the user detail modal shows all base assignments with a "Base Access" section. Admins can add users to additional bases or remove non-primary base assignments. Each membership shows the base name, ICAO, and a "PRIMARY" badge on the home base.
 - **Password reset** sends a recovery email to the user
 - **Deactivate/reactivate** users -- deactivated users cannot log in but their data is preserved
 - **Delete accounts** (sys_admin only) -- permanently removes the user account and nullifies all foreign key references across 10 tables
 - **Three-tier role hierarchy**:
   - **sys_admin** -- full access to all bases and all features, including user management and installation creation
-  - **base_admin / AFM / NAMO** -- full access to their assigned base, including user management and base configuration
+  - **base_admin / AFM / NAMO** -- full access to their assigned base, including user management, base configuration, and role assignment for non-admin roles
   - **Regular roles** (airfield_manager, inspector, controller, ces, etc.) -- feature access based on role; no admin capabilities
 - **Email privacy** -- user emails are masked by default with an eye toggle to reveal in the edit modal
 
@@ -1098,15 +1108,25 @@ User Management is the admin-only module for creating, editing, and managing Gli
 2. Browse the user list or use the **search bar** and **filter dropdowns** (by role, by status) to find specific users.
 3. To **invite a new user**:
    - Tap **Invite User**.
-   - Enter the user's email, rank, first name, last name, role, and base assignment.
+   - Enter the user's email, rank, first name, last name, role, and base assignment. NAMOs, AFMs, and base admins can assign any non-admin role; sys admins can assign any role.
    - Tap **Send Invitation**. The user receives a branded email with setup instructions.
-4. To **edit a user's profile**:
+4. To **approve a self-registered user**:
+   - Users who create accounts via the login page appear with a "Pending" status badge.
+   - Tap the pending user card. A yellow "Pending Approval" banner appears with **Approve** and **Reject** buttons.
+   - Set the appropriate role, then tap **Approve** to grant access. Tap **Reject** to deactivate the account.
+5. To **edit a user's profile**:
    - Tap the user card to open the edit modal.
    - Update any fields as needed (rank, name, role, installation, operating initials).
+   - Base admins can now change roles to non-admin roles (amops, ces, safety, atc, read_only, airfield_manager, namo).
    - Tap **Save**.
-5. To **reset a user's password**, open the user card and tap **Reset Password**. A recovery email is sent to the user.
-6. To **deactivate a user**, open the user card and tap **Deactivate**. The user can no longer log in. To reactivate, tap **Reactivate**.
-7. To **delete a user** (sys_admin only), open the user card and tap **Delete Account**. Confirm the action. This is permanent and cannot be undone.
+6. To **manage multi-base access**:
+   - In the user detail modal, scroll to the **Base Access** section.
+   - View all current base assignments. The user's primary base shows a "PRIMARY" badge.
+   - To add access to another base, tap **Add Base** and select from the dropdown.
+   - To remove access, tap the **X** button on any non-primary base.
+7. To **reset a user's password**, open the user card and tap **Reset Password**. A recovery email is sent to the user.
+8. To **deactivate a user**, open the user card and tap **Deactivate**. The user can no longer log in. To reactivate, tap **Reactivate**.
+9. To **delete a user** (sys_admin only), open the user card and tap **Delete Account**. Confirm the action. This is permanent and cannot be undone.
 
 > **Best Practices**
 >
@@ -1130,7 +1150,8 @@ Glidepath supports multi-base operations for organizations that manage or overse
 - **Complete data isolation** -- every record (inspections, checks, discrepancies, infrastructure features, etc.) is scoped to the current installation. Row-Level Security (RLS) policies in the database enforce this at the query level.
 - **sys_admin access** to all bases -- system administrators can switch to any installation to review data, manage users, or configure settings
 - **base_admin / AFM / NAMO** manage their own base only -- they see only their assigned installation's data
-- **Regular role users** see only the base they are assigned to
+- **Multi-base user assignment** -- admins can assign users to multiple bases via the "Base Access" section in User Management. Users with multiple assignments see all their bases in the installation switcher.
+- **Regular role users** see only the base(s) they are assigned to
 - **Adding new installations**: sys_admin users can create new installations in Settings, configure runways, NAVAIDs, areas, and all base-specific settings
 - **No data crossover** -- RLS policies guarantee that a query from Base A never returns Base B's data, even if a user has access to both
 
@@ -1177,13 +1198,18 @@ Glidepath supports multi-base operations for organizations that manage or overse
 |---|---|---|---|---|
 | All modules | Yes | Yes | Yes | CES Work Orders, Discrepancies, Visual NAVAIDs, Settings only |
 | User Management | All bases | Own base | No | No |
+| Assign Roles on Invite | All roles | Non-admin roles | No | No |
+| Change User Roles | All roles | Non-admin roles | No | No |
+| Approve Self-Registrations | Yes | Own base | No | No |
+| Multi-Base User Assignment | All bases | Own base | No | No |
 | Base Configuration | All bases | Own base | No | No |
-| Installation Switcher | All bases | Own base | No | No |
+| Installation Switcher | All bases | Assigned bases | No | No |
 | Create/Edit Discrepancies | Yes | Yes | Yes | View only |
+| Edit Filed Checks | Yes | Yes | Original submitter only | No |
 | Discrepancy Status Updates | All statuses | All statuses | All statuses | In Work / Project / Work Completed only |
 | Delete Users | Yes | No | No | No |
 | Create Installations | Yes | No | No | No |
 
 ---
 
-*Glidepath v2.26.0 -- Built for the warfighter. Designed for the airfield.*
+*Glidepath v2.27.0 -- Built for the warfighter. Designed for the airfield.*
