@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, RotateCcw, UserX, UserCheck, Trash2, Send, ChevronDown, Eye, EyeOff } from 'lucide-react'
+import { X, RotateCcw, UserX, UserCheck, Trash2, Send, ChevronDown, Eye, EyeOff, Plus, Building2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import { RANK_OPTIONS, USER_ROLES } from '@/lib/constants'
 import { RoleBadge } from './role-badge'
 import { UserStatusBadge } from './status-badge'
@@ -49,6 +50,10 @@ export function UserDetailModal({
   const [showInstDropdown, setShowInstDropdown] = useState(false)
   const [instSearch, setInstSearch] = useState('')
   const [showEmail, setShowEmail] = useState(false)
+  const [baseMemberships, setBaseMemberships] = useState<{ base_id: string; role: string; name: string; icao: string }[]>([])
+  const [showAddBase, setShowAddBase] = useState(false)
+  const [addBaseSearch, setAddBaseSearch] = useState('')
+  const addBaseRef = useRef<HTMLDivElement>(null)
   const instDropdownRef = useRef<HTMLDivElement>(null)
 
   // Close installation dropdown on outside click
@@ -62,6 +67,76 @@ export function UserDetailModal({
     if (showInstDropdown) document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showInstDropdown])
+
+  // Load base memberships for this user
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) return
+    supabase
+      .from('base_members')
+      .select('base_id, role, bases(name, icao)')
+      .eq('user_id', user.id)
+      .then(({ data }) => {
+        if (data) {
+          setBaseMemberships(data.map((row: any) => ({
+            base_id: row.base_id,
+            role: row.role,
+            name: row.bases?.name || 'Unknown',
+            icao: row.bases?.icao || '',
+          })))
+        }
+      })
+  }, [user.id])
+
+  // Close add-base dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (addBaseRef.current && !addBaseRef.current.contains(e.target as Node)) {
+        setShowAddBase(false)
+        setAddBaseSearch('')
+      }
+    }
+    if (showAddBase) document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showAddBase])
+
+  const handleAddBase = async (baseId: string) => {
+    const supabase = createClient()
+    if (!supabase) return
+    const { error } = await supabase
+      .from('base_members')
+      .upsert({ base_id: baseId, user_id: user.id, role: 'read_only' }, { onConflict: 'base_id,user_id' })
+    if (error) {
+      showMessage('Failed to add base access', true)
+      return
+    }
+    const inst = installations.find(i => i.id === baseId)
+    setBaseMemberships(prev => [...prev, { base_id: baseId, role: 'read_only', name: inst?.name || '', icao: inst?.icao || '' }])
+    setShowAddBase(false)
+    setAddBaseSearch('')
+    showMessage(`Added access to ${inst?.name || 'base'}`)
+  }
+
+  const handleRemoveBase = async (baseId: string) => {
+    // Don't allow removing their primary base
+    if (baseId === user.primary_base_id) {
+      showMessage('Cannot remove primary base assignment', true)
+      return
+    }
+    const supabase = createClient()
+    if (!supabase) return
+    const { error } = await supabase
+      .from('base_members')
+      .delete()
+      .eq('base_id', baseId)
+      .eq('user_id', user.id)
+    if (error) {
+      showMessage('Failed to remove base access', true)
+      return
+    }
+    setBaseMemberships(prev => prev.filter(m => m.base_id !== baseId))
+    showMessage('Base access removed')
+  }
 
   const isDeactivated = user.status === 'deactivated'
   const isPending = user.status === 'pending'
@@ -417,6 +492,117 @@ export function UserDetailModal({
                 }}
               >
                 {user.bases ? `${user.bases.name} · ${user.bases.icao}` : 'None'}
+              </div>
+            </div>
+          )}
+
+          {/* Base Access (multi-base) */}
+          {(isSysAdmin || isBaseAdmin) && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span className="section-label" style={{ marginBottom: 0 }}>Base Access</span>
+                <div ref={addBaseRef} style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddBase(!showAddBase)}
+                    disabled={anyLoading}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      padding: '4px 8px', borderRadius: 6,
+                      border: '1px solid var(--color-border)',
+                      background: 'transparent', color: 'var(--color-cyan)',
+                      fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    <Plus size={12} /> Add Base
+                  </button>
+                  {showAddBase && (
+                    <div style={{
+                      position: 'absolute', top: '100%', right: 0,
+                      zIndex: 100, marginTop: 4, width: 260,
+                      background: 'var(--color-bg-elevated)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 8, maxHeight: 200, overflowY: 'auto',
+                    }}>
+                      <div style={{ padding: 6, borderBottom: '1px solid var(--color-border)' }}>
+                        <input
+                          type="text"
+                          placeholder="Search bases..."
+                          value={addBaseSearch}
+                          onChange={(e) => setAddBaseSearch(e.target.value)}
+                          className="input-dark"
+                          style={{ width: '100%', boxSizing: 'border-box', fontSize: 'var(--fs-xs)', padding: '6px 8px' }}
+                          autoFocus
+                        />
+                      </div>
+                      {installations
+                        .filter(inst => !baseMemberships.some(m => m.base_id === inst.id))
+                        .filter(inst => !addBaseSearch || `${inst.name} ${inst.icao}`.toLowerCase().includes(addBaseSearch.toLowerCase()))
+                        .map(inst => (
+                          <button
+                            key={inst.id}
+                            type="button"
+                            onClick={() => handleAddBase(inst.id)}
+                            style={{
+                              display: 'block', width: '100%', padding: '8px 10px',
+                              background: 'transparent', border: 'none',
+                              borderBottom: '1px solid var(--color-border)',
+                              cursor: 'pointer', textAlign: 'left',
+                              color: 'var(--color-text-1)', fontSize: 'var(--fs-xs)', fontFamily: 'inherit',
+                            }}
+                          >
+                            {inst.name} <span style={{ opacity: 0.5 }}>{inst.icao}</span>
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {baseMemberships.length === 0 && (
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', padding: '6px 0' }}>
+                    No base assignments
+                  </div>
+                )}
+                {baseMemberships.map(m => (
+                  <div
+                    key={m.base_id}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '6px 10px', borderRadius: 6,
+                      background: 'var(--color-bg-elevated)',
+                      border: m.base_id === user.primary_base_id ? '1px solid rgba(56,189,248,0.3)' : '1px solid var(--color-border)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Building2 size={12} style={{ color: 'var(--color-text-4)' }} />
+                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', fontWeight: 500 }}>
+                        {m.name}
+                      </span>
+                      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)' }}>{m.icao}</span>
+                      {m.base_id === user.primary_base_id && (
+                        <span style={{
+                          fontSize: '9px', fontWeight: 700, color: 'var(--color-cyan)',
+                          padding: '1px 4px', borderRadius: 3,
+                          background: 'rgba(56,189,248,0.1)',
+                        }}>PRIMARY</span>
+                      )}
+                    </div>
+                    {m.base_id !== user.primary_base_id && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveBase(m.base_id)}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer', padding: 2,
+                          color: 'var(--color-text-4)',
+                        }}
+                        title="Remove base access"
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}
