@@ -101,7 +101,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
   }, [loadInstallationConfig])
 
   // Roles that can switch between installations
-  const MULTI_INSTALL_ROLES: UserRole[] = ['airfield_manager', 'sys_admin']
+  const MULTI_INSTALL_ROLES: UserRole[] = ['airfield_manager', 'sys_admin', 'base_admin', 'namo']
 
   // Remove an installation from the user's list (delete base_members entry)
   const removeInstallation = useCallback(async (baseId: string): Promise<boolean> => {
