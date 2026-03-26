@@ -15,6 +15,7 @@ import { fetchActiveContractors, updateContractor, createContractor, type Contra
 import { DEMO_CONTRACTORS } from '@/lib/demo-data'
 import { formatZuluDate, formatZuluTime } from '@/lib/utils'
 import LoginActivityDialog from '@/components/login-activity-dialog'
+import { subscribeWithErrorHandling } from '@/lib/realtime-subscribe'
 
 // --- Weather emoji mapping ---
 function weatherEmoji(conditions: string): string {
@@ -202,7 +203,7 @@ export default function HomePage() {
         { event: 'INSERT', schema: 'public', table: 'inspections', filter: `base_id=eq.${installationId}` },
         () => { refreshStatus() }
       )
-      .subscribe()
+    subscribeWithErrorHandling(channel)
 
     return () => { supabase.removeChannel(channel) }
   }, [installationId, refreshStatus])
@@ -222,7 +223,7 @@ export default function HomePage() {
           if (row.base_id === installationId) loadNavaids()
         }
       )
-      .subscribe()
+    subscribeWithErrorHandling(channel)
 
     return () => { supabase.removeChannel(channel) }
   }, [installationId, loadNavaids])
@@ -284,7 +285,7 @@ export default function HomePage() {
           if (row.base_id === installationId) loadContractors()
         }
       )
-      .subscribe()
+    subscribeWithErrorHandling(channel)
 
     return () => { supabase.removeChannel(channel) }
   }, [installationId, loadContractors])

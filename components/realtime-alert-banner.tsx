@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import type { AirfieldStatus, AdvisoryItem } from '@/lib/supabase/airfield-status'
+import { subscribeWithErrorHandling } from '@/lib/realtime-subscribe'
 
 type Alert = {
   id: number
@@ -198,7 +199,7 @@ export function RealtimeAlertBanner() {
           }
         }
       )
-      .subscribe()
+    subscribeWithErrorHandling(channel)
 
     return () => { supabase.removeChannel(channel) }
   }, [installationId, showAlert])

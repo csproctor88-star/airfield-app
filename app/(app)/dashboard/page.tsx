@@ -14,6 +14,7 @@ import { TemplatePicker } from '@/components/ui/template-picker'
 import { fetchLightingSystems, fetchAllComponentsForBase } from '@/lib/supabase/lighting-systems'
 import { fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-features'
 import { calculateAllSystemHealth, getAlertTier, getHealthSummary, ALERT_TIER_CONFIG, type SystemHealth, type AlertTier } from '@/lib/outage-rules'
+import { subscribeWithErrorHandling } from '@/lib/realtime-subscribe'
 
 // --- Quick Actions (KPI badges) ---
 const QUICK_ACTIONS = [
@@ -229,7 +230,7 @@ export default function AMDashboardPage() {
         { event: 'INSERT', schema: 'public', table: 'activity_log', filter: `base_id=eq.${installationId}` },
         () => { loadActivity(); loadLastCheck() }
       )
-      .subscribe()
+    subscribeWithErrorHandling(channel)
 
     return () => { supabase.removeChannel(channel) }
   }, [installationId, loadActivity, loadLastCheck])

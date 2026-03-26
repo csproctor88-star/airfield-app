@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import { fetchAirfieldStatus, updateAirfieldStatus, type AirfieldStatus, type AdvisoryItem, type RunwayStatuses } from '@/lib/supabase/airfield-status'
 import { logBwcChange } from '@/lib/supabase/wildlife'
+import { subscribeWithErrorHandling } from '@/lib/realtime-subscribe'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 
@@ -156,7 +157,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
           setBwcUpdatedAtLocal(row.bwc_updated_at ?? null)
         }
       )
-      .subscribe()
+      subscribeWithErrorHandling(channel)
 
     return () => { supabase.removeChannel(channel) }
   }, [installationId])
