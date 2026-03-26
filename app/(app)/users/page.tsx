@@ -66,7 +66,7 @@ async function loadUsers(
         last_name: parsedLast || null,
         rank: (u.rank as string) || null,
         role: (u.role as string) === 'observer' ? 'read_only' : (u.role as string) || 'read_only',
-        status: (u.status as string) === 'pending' ? 'pending' : (u.status as string) === 'deactivated' ? 'deactivated' : u.is_active === false ? 'deactivated' : 'active',
+        status: u.status === 'pending' ? 'pending' : u.status === 'deactivated' ? 'deactivated' : (u.status === 'active' || u.is_active !== false) ? 'active' : 'deactivated',
         last_seen_at: (u.last_seen_at as string) || null,
         primary_base_id: (u.primary_base_id as string) || null,
         edipi: (u.edipi as string) || null,

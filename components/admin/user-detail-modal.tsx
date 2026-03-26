@@ -674,7 +674,7 @@ export function UserDetailModal({
                 onClick={async () => {
                   setToggling(true)
                   try {
-                    await onSave(user.id, { status: 'active', role })
+                    await onSave(user.id, { status: 'active' })
                     showMessage('User approved')
                   } catch (err) {
                     showMessage(err instanceof Error ? err.message : 'Failed to approve', true)

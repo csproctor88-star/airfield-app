@@ -245,9 +245,9 @@ export default function AcsiFormPage() {
           photo_ids: [...existing.photo_ids, ...detail.photo_ids],
           pins: [...(existing.pins || []), ...(detail.pins || [])],
           areas: Array.from(new Set([...(existing.areas || []), ...(detail.areas || [])])),
-          linked_discrepancy_id: existing.linked_discrepancy_id
+          linked_discrepancy_id: existing.linked_discrepancy_id && detail.linked_discrepancy_id
             ? `${existing.linked_discrepancy_id},${detail.linked_discrepancy_id}`
-            : detail.linked_discrepancy_id,
+            : existing.linked_discrepancy_id || detail.linked_discrepancy_id,
         }
       } else {
         current.push(detail)
