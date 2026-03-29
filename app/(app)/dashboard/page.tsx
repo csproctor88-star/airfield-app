@@ -11,6 +11,7 @@ import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/
 import { toast } from 'sonner'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort } from '@/lib/utils'
 import { TemplatePicker } from '@/components/ui/template-picker'
+import { CHECK_TYPE_CONFIG } from '@/lib/constants'
 import { fetchLightingSystems, fetchAllComponentsForBase } from '@/lib/supabase/lighting-systems'
 import { fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-features'
 import { calculateAllSystemHealth, getAlertTier, getHealthSummary, ALERT_TIER_CONFIG, type SystemHealth, type AlertTier } from '@/lib/outage-rules'
@@ -190,7 +191,8 @@ export default function AMDashboardPage() {
       .limit(1)
     if (installationId) query = query.eq('base_id', installationId)
     const { data } = await query
-    setLastCheckType(data?.[0]?.check_type?.toUpperCase() || null)
+    const rawType = data?.[0]?.check_type || null
+    setLastCheckType(rawType ? (CHECK_TYPE_CONFIG[rawType as keyof typeof CHECK_TYPE_CONFIG]?.label?.toUpperCase() || rawType.replace(/_/g, ' ').toUpperCase()) : null)
     setLastCheckTime(data?.[0]?.completed_at
       ? formatZuluTime(new Date(data[0].completed_at)) + 'Z'
       : null)

@@ -7,11 +7,11 @@ import { Badge } from '@/components/ui/badge'
 import { ACSI_STATUS_CONFIG, ACSI_CHECKLIST_SECTIONS } from '@/lib/constants'
 import { DEMO_ACSI_INSPECTIONS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
-import { fetchAcsiInspection, deleteAcsiInspection } from '@/lib/supabase/acsi-inspections'
+import { fetchAcsiInspection, deleteAcsiInspection, reopenAcsiInspection } from '@/lib/supabase/acsi-inspections'
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
 import type { AcsiInspection, AcsiStatus, AcsiItem } from '@/lib/supabase/types'
-import { ArrowLeft, ChevronDown, ChevronRight, Trash2, Edit, FileText } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronRight, Trash2, Edit, FileText, RotateCcw } from 'lucide-react'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 
@@ -25,6 +25,7 @@ export default function AcsiDetailPage() {
   const [inspection, setInspection] = useState<AcsiInspection | null>(null)
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
   const [actionLoading, setActionLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -40,6 +41,10 @@ export default function AcsiDetailPage() {
       setLoading(false)
       return
     }
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) setCurrentUserId(user.id)
+    } catch { /* ignore */ }
     const data = await fetchAcsiInspection(params.id as string)
     setInspection(data)
     setLoading(false)
@@ -76,6 +81,19 @@ export default function AcsiDetailPage() {
 
   const toggleSection = (id: string) => {
     setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const handleReopen = async () => {
+    if (!confirm('Reopen this ACSI inspection for editing? It will need to be re-filed after changes are made.')) return
+    setActionLoading(true)
+    const { error } = await reopenAcsiInspection(insp.id)
+    setActionLoading(false)
+    if (error) {
+      toast.error(`Reopen failed: ${error}`)
+    } else {
+      toast.success('ACSI inspection reopened for editing')
+      router.push(`/acsi/new?resume=${insp.id}`)
+    }
   }
 
   const handleDelete = async () => {
@@ -143,6 +161,9 @@ export default function AcsiDetailPage() {
   }
 
   const isFiled = insp.status === 'completed' || insp.status === 'staffed'
+  const isFiler = currentUserId && (insp.filed_by_id === currentUserId || insp.saved_by_id === currentUserId || insp.inspector_id === currentUserId)
+  const canReopen = isFiled && (canEdit || isFiler)
+  const canDelete = isAdmin || (canEdit && !isFiled) || (isFiler && !isFiled)
 
   return (
     <div style={{ padding: '24px 28px', maxWidth: 1000, margin: '0 auto' }}>
@@ -199,7 +220,22 @@ export default function AcsiDetailPage() {
               </button>
             </>
           )}
-          {canEdit && (
+          {canReopen && (
+            <button
+              onClick={handleReopen}
+              disabled={actionLoading}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-cyan)',
+                background: 'transparent', color: 'var(--color-cyan)',
+                fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer',
+                opacity: actionLoading ? 0.5 : 1,
+              }}
+            >
+              <RotateCcw size={14} /> Reopen for Editing
+            </button>
+          )}
+          {canEdit && !isFiled && (
             <Link href={`/acsi/new?resume=${insp.id}`} style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: '8px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-accent)',
@@ -209,7 +245,7 @@ export default function AcsiDetailPage() {
               <Edit size={14} /> Edit Form
             </Link>
           )}
-          {isAdmin && (
+          {canDelete && (
             <button
               onClick={handleDelete}
               disabled={actionLoading}

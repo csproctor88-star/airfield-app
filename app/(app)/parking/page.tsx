@@ -1172,6 +1172,9 @@ export default function ParkingPage() {
               'icon-allow-overlap': true,
               'icon-size': ['get', 'iconScale'],
             },
+            paint: {
+              'icon-opacity': ['case', ['==', ['get', 'isSelected'], 1], 0.4, 1],
+            },
           })
         }
 
@@ -1567,9 +1570,9 @@ export default function ParkingPage() {
         m.dragPan.enable()
         m.getCanvas().style.cursor = ''
         removeDragLabels()
-        // Restore full opacity after drag
+        // Restore selection-based opacity after drag
         if (m.getLayer('parking-aircraft-symbols')) {
-          m.setPaintProperty('parking-aircraft-symbols', 'icon-opacity', 1)
+          m.setPaintProperty('parking-aircraft-symbols', 'icon-opacity', ['case', ['==', ['get', 'isSelected'], 1], 0.4, 1])
         }
         setSpots(prev => prev.map(s => s.id === sid ? { ...s, longitude: lng, latitude: lat } : s))
         await updateParkingSpot(sid, { longitude: lng, latitude: lat })

@@ -11,7 +11,7 @@ function assembleText(template: ActivityTemplate, values: Record<string, string>
     const val = values[field.key] || ''
     text = text.replace(`{${field.key}}`, val)
   }
-  return text
+  return text.toUpperCase()
 }
 
 /** Deep-clone templates to avoid mutating the default constant */

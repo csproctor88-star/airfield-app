@@ -1,5 +1,6 @@
 import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
+import { logActivity } from './activity'
 import type { AcsiInspection, AcsiItem, AcsiTeamMember, AcsiSignatureBlock, AcsiDraftData } from './types'
 
 export async function fetchAcsiInspections(baseId?: string | null): Promise<AcsiInspection[]> {
@@ -257,6 +258,39 @@ export async function loadAcsiDraftFromDb(baseId?: string | null): Promise<AcsiI
     return null
   }
   return data as AcsiInspection | null
+}
+
+export async function reopenAcsiInspection(id: string): Promise<{ data: AcsiInspection | null; error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { data: null, error: 'Supabase not configured' }
+
+  const { data, error } = await supabase
+    .from('acsi_inspections')
+    .update({
+      status: 'in_progress',
+      filed_at: null,
+      filed_by_name: null,
+      filed_by_id: null,
+      completed_at: null,
+      completed_by_name: null,
+      completed_by_id: null,
+      updated_at: new Date().toISOString(),
+    } as any)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Failed to reopen ACSI inspection:', error.message)
+    return { data: null, error: friendlyError(error.message) }
+  }
+
+  const reopened = data as AcsiInspection
+  logActivity('updated', 'acsi_inspection', reopened.id, reopened.display_id, {
+    details: `ACSI INSPECTION ${reopened.display_id} REOPENED FOR EDITING`,
+  }, reopened.base_id)
+
+  return { data: reopened, error: null }
 }
 
 export async function deleteAcsiInspection(id: string): Promise<{ error: string | null }> {
