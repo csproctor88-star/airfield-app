@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import { fetchAirfieldStatus, updateAirfieldStatus, type AirfieldStatus, type AdvisoryItem, type RunwayStatuses } from '@/lib/supabase/airfield-status'
 import { logBwcChange } from '@/lib/supabase/wildlife'
+import { warnIfRealtimeDown } from '@/lib/realtime-subscribe'
 import { subscribeWithErrorHandling } from '@/lib/realtime-subscribe'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
@@ -183,6 +184,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const markLocalUpdate = useCallback(() => {
     lastLocalUpdate.current = Date.now()
     if (typeof window !== 'undefined') window.dispatchEvent(new Event('glidepath:local-status-update'))
+    warnIfRealtimeDown()
   }, [])
 
   // Helper: persist runway_statuses and sync legacy fields from first runway

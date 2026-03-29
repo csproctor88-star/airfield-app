@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
+import { warnIfRealtimeDown } from '@/lib/realtime-subscribe'
 import {
   AIRFIELD_INSPECTION_SECTIONS,
   LIGHTING_INSPECTION_SECTIONS,
@@ -1133,6 +1134,7 @@ export default function InspectionsPage() {
 
     // ── Auto-mark infrastructure features as inoperative ──
     let featuresMarkedInop = 0
+    const dafmanAlerts: string[] = []
     if (installationId) {
       const allLinkedFeatureIds: string[] = []
       const featureDiscMap: Record<string, { discrepancy_id?: string; comment?: string }> = {}
@@ -1170,7 +1172,7 @@ export default function InspectionsPage() {
           featuresMarkedInop = marked
         }
 
-        // Check DAFMAN thresholds
+        // Check DAFMAN thresholds — collect alerts for consolidated toast
         try {
           const [systems, components, features] = await Promise.all([
             fetchLightingSystems(installationId),
@@ -1186,15 +1188,9 @@ export default function InspectionsPage() {
           for (const h of healths) {
             const tier = getAlertTier(h)
             if (tier === 'red' || tier === 'black') {
-              toast.warning(`${h.systemName}: DAFMAN threshold exceeded`, {
-                description: h.exceededComponents.map(c => c.componentLabel).join(', '),
-                duration: 8000,
-              })
+              dafmanAlerts.push(`${h.systemName}: threshold exceeded`)
             } else if (tier === 'yellow') {
-              toast.warning(`${h.systemName}: Approaching DAFMAN limit`, {
-                description: h.approachingComponents.map(c => c.componentLabel).join(', '),
-                duration: 6000,
-              })
+              dafmanAlerts.push(`${h.systemName}: approaching limit`)
             }
           }
         } catch {
@@ -1264,7 +1260,15 @@ export default function InspectionsPage() {
     const parts = [`${label} inspection completed & filed`]
     if (discCreated > 0) parts.push(`${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'} logged`)
     if (featuresMarkedInop > 0) parts.push(`${featuresMarkedInop} feature${featuresMarkedInop !== 1 ? 's' : ''} marked inop`)
-    toast.success(parts.join(' — '))
+    if (dafmanAlerts.length > 0) {
+      toast.success(parts.join(' — '), {
+        description: `DAFMAN Alert: ${dafmanAlerts.join('; ')}`,
+        duration: 8000,
+      })
+    } else {
+      toast.success(parts.join(' — '))
+    }
+    warnIfRealtimeDown()
 
     setActiveForm(null)
     await loadHistory()

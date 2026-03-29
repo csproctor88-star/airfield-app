@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { warnIfRealtimeDown } from '@/lib/realtime-subscribe'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -619,6 +620,7 @@ export default function AirfieldChecksPage() {
       ? `Check ${created.display_id} filed — ${discCreated} discrepanc${discCreated === 1 ? 'y' : 'ies'} logged`
       : `Check ${created.display_id} completed`
     toast.success(summary)
+    warnIfRealtimeDown()
 
     router.push(`/checks/${created.id}`)
   }

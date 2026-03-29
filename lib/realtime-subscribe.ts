@@ -1,58 +1,47 @@
 import { toast } from 'sonner'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
-let hasShownError = false
-let errorResetTimer: ReturnType<typeof setTimeout> | null = null
-let hasEverConnected = false
-let pendingErrorTimer: ReturnType<typeof setTimeout> | null = null
-
-const INITIAL_GRACE_PERIOD_MS = 5000
+/** Module-level flag tracking whether any realtime channel is connected */
+let connected = false
 
 /**
- * Subscribe to a Supabase Realtime channel with error handling.
- * Shows a toast when the connection fails or times out.
- * Deduplicates error toasts so users don't get spammed.
- * Delays the first error toast by a grace period to avoid
- * false alarms during initial connection.
+ * Returns whether the Supabase Realtime connection is currently healthy.
+ * Use this after user actions that rely on realtime to push updates to
+ * other users — if unhealthy, show a one-time warning.
+ */
+export function isRealtimeConnected(): boolean {
+  return connected
+}
+
+/**
+ * Call after a user action that expects a realtime push (e.g., updating
+ * airfield status, filing an inspection). If realtime is down, shows a
+ * single non-blocking warning so the user knows the change was saved
+ * but may not appear for other users until they refresh.
+ */
+export function warnIfRealtimeDown() {
+  if (!connected) {
+    toast.warning('Your change was saved, but real-time sync is temporarily unavailable. Other users may need to refresh.', {
+      id: 'realtime-push-warning',
+      duration: 6000,
+    })
+  }
+}
+
+/**
+ * Subscribe to a Supabase Realtime channel with silent error handling.
+ * Connection issues are logged to the console only. The `connected` flag
+ * is updated so that `warnIfRealtimeDown()` can surface a warning at the
+ * right moment — when the user takes an action, not on page load.
  */
 export function subscribeWithErrorHandling(channel: RealtimeChannel): RealtimeChannel {
   return channel.subscribe((status, err) => {
     if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+      connected = false
       console.warn(`[Realtime] Channel ${status}:`, err?.message || 'unknown error')
-
-      if (!hasShownError && !pendingErrorTimer) {
-        // If we've connected before, show immediately (genuine disconnect).
-        // If this is the first attempt, wait for the grace period.
-        const delay = hasEverConnected ? 0 : INITIAL_GRACE_PERIOD_MS
-
-        pendingErrorTimer = setTimeout(() => {
-          pendingErrorTimer = null
-          if (!hasShownError) {
-            hasShownError = true
-            toast.error('Real-time update failed. The server may be temporarily unavailable — try again shortly.', {
-              id: 'realtime-error',
-              duration: 8000,
-            })
-            // Reset the flag after 60s so if it keeps failing, we show again
-            if (errorResetTimer) clearTimeout(errorResetTimer)
-            errorResetTimer = setTimeout(() => { hasShownError = false }, 60000)
-          }
-        }, delay)
-      }
     }
-
     if (status === 'SUBSCRIBED') {
-      hasEverConnected = true
-
-      // Cancel any pending error toast — connection succeeded in time
-      if (pendingErrorTimer) { clearTimeout(pendingErrorTimer); pendingErrorTimer = null }
-
-      // If we previously showed an error and now reconnected, notify
-      if (hasShownError) {
-        hasShownError = false
-        if (errorResetTimer) { clearTimeout(errorResetTimer); errorResetTimer = null }
-        toast.success('Real-time updates restored.', { id: 'realtime-reconnected', duration: 3000 })
-      }
+      connected = true
     }
   })
 }

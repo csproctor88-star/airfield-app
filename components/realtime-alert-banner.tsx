@@ -189,14 +189,17 @@ export function RealtimeAlertBanner() {
           const changes = describeChanges(prevStatus.current, row)
           prevStatus.current = row
 
+          if (changes.length === 0) return
+
           // Look up who made the change
           const userName = row.updated_by
             ? await lookupUserName(row.updated_by)
             : 'Someone'
 
-          for (const change of changes) {
-            showAlert(`${userName} ${change.message}`, change.link)
-          }
+          // Consolidate all changes into a single alert
+          const summary = changes.map(c => c.message).join(', ')
+          const link = changes[0].link
+          showAlert(`${userName} ${summary}`, link)
         }
       )
     subscribeWithErrorHandling(channel)
