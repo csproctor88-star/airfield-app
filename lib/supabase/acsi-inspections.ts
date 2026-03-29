@@ -264,10 +264,45 @@ export async function reopenAcsiInspection(id: string): Promise<{ data: AcsiInsp
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
 
+  // Fetch the existing inspection to rebuild draft_data from filed items
+  const { data: existing } = await supabase
+    .from('acsi_inspections')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (!existing) return { data: null, error: 'Inspection not found' }
+
+  const insp = existing as AcsiInspection
+
+  // Rebuild draft_data from the filed items so the form can load it
+  const responses: Record<string, string> = {}
+  const comments: Record<string, string> = {}
+  const discrepancies: Record<string, any[]> = {}
+  for (const item of (insp.items || [])) {
+    if (item.response) responses[item.id] = item.response
+    if (item.discrepancies && item.discrepancies.length > 0) {
+      discrepancies[item.id] = item.discrepancies
+    } else if (item.discrepancy) {
+      discrepancies[item.id] = [item.discrepancy]
+    }
+  }
+  const rebuiltDraft = {
+    responses,
+    comments,
+    discrepancies,
+    team: insp.inspection_team || [],
+    signatures: insp.risk_cert_signatures || [],
+    notes: insp.notes || '',
+    collapsedSections: {},
+    localItems: [],
+  }
+
   const { data, error } = await supabase
     .from('acsi_inspections')
     .update({
       status: 'in_progress',
+      draft_data: rebuiltDraft,
       filed_at: null,
       filed_by_name: null,
       filed_by_id: null,

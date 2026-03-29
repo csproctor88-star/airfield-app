@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { ACSI_STATUS_CONFIG } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
-import { fetchAcsiInspections } from '@/lib/supabase/acsi-inspections'
+import { fetchAcsiInspections, deleteAcsiInspection, reopenAcsiInspection } from '@/lib/supabase/acsi-inspections'
 import { DEMO_ACSI_INSPECTIONS } from '@/lib/demo-data'
 import { useInstallation } from '@/lib/installation-context'
+import { toast } from 'sonner'
 import type { AcsiInspection, AcsiStatus } from '@/lib/supabase/types'
-import { Plus, ShieldCheck } from 'lucide-react'
+import { Plus, ShieldCheck, Edit, RotateCcw, Trash2 } from 'lucide-react'
 
 const FILTERS = ['all', 'draft', 'in_progress', 'completed', 'staffed'] as const
 const FILTER_LABELS: Record<string, string> = {
@@ -21,12 +23,18 @@ const FILTER_LABELS: Record<string, string> = {
 }
 
 export default function AcsiListPage() {
-  const { installationId } = useInstallation()
+  const router = useRouter()
+  const { installationId, userRole } = useInstallation()
   const [filter, setFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
   const [inspections, setInspections] = useState<AcsiInspection[]>([])
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+
+  const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
+  const canEdit = isAdmin || userRole === 'airfield_manager'
 
   useEffect(() => {
     async function load() {
@@ -37,6 +45,10 @@ export default function AcsiListPage() {
         return
       }
 
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) setCurrentUserId(user.id)
+      } catch { /* ignore */ }
       const data = await fetchAcsiInspections(installationId)
       setInspections(data)
       setLoading(false)
@@ -182,11 +194,16 @@ export default function AcsiListPage() {
             const statusCfg = ACSI_STATUS_CONFIG[insp.status as AcsiStatus] || ACSI_STATUS_CONFIG.draft
             const total = insp.passed_count + insp.failed_count + insp.na_count
             const pct = insp.total_items > 0 ? Math.round((total / insp.total_items) * 100) : 0
+            const isFiled = insp.status === 'completed' || insp.status === 'staffed'
+            const isFiler = currentUserId && (insp.filed_by_id === currentUserId || insp.saved_by_id === currentUserId || insp.inspector_id === currentUserId)
+            const showReopen = isFiled && (canEdit || isFiler)
+            const showEdit = !isFiled && (canEdit || isFiler)
+            const showDelete = isAdmin || (canEdit && !isFiled) || (isFiler && !isFiled)
+            const isBusy = actionLoading === insp.id
 
             return (
-              <Link
+              <div
                 key={insp.id}
-                href={insp.status === 'draft' || insp.status === 'in_progress' ? `/acsi/new?resume=${insp.id}` : `/acsi/${insp.id}`}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -196,54 +213,115 @@ export default function AcsiListPage() {
                   borderRadius: 'var(--radius-md)',
                   border: '1px solid var(--color-border)',
                   background: 'var(--color-bg-surface)',
-                  textDecoration: 'none',
-                  color: 'var(--color-text-1)',
-                  transition: 'border-color 0.15s',
                   flexWrap: 'wrap',
                 }}
               >
-                {/* Display ID + airfield */}
-                <div style={{ flex: 1, minWidth: 160 }}>
+                {/* Display ID + airfield — clickable link */}
+                <Link
+                  href={isFiled ? `/acsi/${insp.id}` : `/acsi/new?resume=${insp.id}`}
+                  style={{ flex: 1, minWidth: 160, textDecoration: 'none', color: 'var(--color-text-1)' }}
+                >
                   <div style={{ fontWeight: 600, fontSize: 'var(--fs-base)' }}>
                     {insp.display_id}
                   </div>
                   <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
                     {insp.airfield_name || 'Unnamed'} — {insp.fiscal_year}
                   </div>
-                </div>
+                </Link>
 
-                {/* Secondary metadata — wraps to next line on narrow screens */}
+                {/* Secondary metadata */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', flexShrink: 0 }}>
-                  {/* Date */}
                   <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', whiteSpace: 'nowrap' }}>
                     {insp.inspection_date}
                   </div>
-
-                  {/* Progress */}
                   <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', whiteSpace: 'nowrap', minWidth: 40, textAlign: 'right' }}>
                     {pct}%
                   </div>
-
-                  {/* Counts */}
                   <div style={{ display: 'flex', gap: 6, fontSize: 'var(--fs-xs)' }}>
                     <span style={{ color: 'var(--color-green)', fontWeight: 600 }}>{insp.passed_count}P</span>
                     <span style={{ color: 'var(--color-red)', fontWeight: 600 }}>{insp.failed_count}F</span>
                     <span style={{ color: 'var(--color-text-3)', fontWeight: 600 }}>{insp.na_count}NA</span>
                   </div>
-
-                  {/* Status badge */}
-                  <Badge
-                    label={statusCfg.label}
-                    color={statusCfg.color}
-                    bg={statusCfg.bg}
-                  />
-
-                  {/* Inspector */}
+                  <Badge label={statusCfg.label} color={statusCfg.color} bg={statusCfg.bg} />
                   <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>
                     {insp.inspector_name || '—'}
                   </div>
                 </div>
-              </Link>
+
+                {/* Action buttons */}
+                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                  {showEdit && (
+                    <button
+                      onClick={() => router.push(`/acsi/new?resume=${insp.id}`)}
+                      disabled={isBusy}
+                      title="Edit"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '4px 10px', borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--color-accent)', background: 'transparent',
+                        color: 'var(--color-accent)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                        cursor: 'pointer', opacity: isBusy ? 0.5 : 1,
+                      }}
+                    >
+                      <Edit size={12} /> Edit
+                    </button>
+                  )}
+                  {showReopen && (
+                    <button
+                      onClick={async () => {
+                        if (!confirm('Reopen this ACSI inspection for editing?')) return
+                        setActionLoading(insp.id)
+                        const { error } = await reopenAcsiInspection(insp.id)
+                        setActionLoading(null)
+                        if (error) {
+                          toast.error(`Reopen failed: ${error}`)
+                        } else {
+                          toast.success('ACSI inspection reopened')
+                          router.push(`/acsi/new?resume=${insp.id}`)
+                        }
+                      }}
+                      disabled={isBusy}
+                      title="Reopen for Editing"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '4px 10px', borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--color-cyan)', background: 'transparent',
+                        color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                        cursor: 'pointer', opacity: isBusy ? 0.5 : 1,
+                      }}
+                    >
+                      <RotateCcw size={12} /> Reopen
+                    </button>
+                  )}
+                  {showDelete && (
+                    <button
+                      onClick={async () => {
+                        if (!confirm('Delete this ACSI inspection? This cannot be undone.')) return
+                        setActionLoading(insp.id)
+                        const { error } = await deleteAcsiInspection(insp.id)
+                        setActionLoading(null)
+                        if (error) {
+                          toast.error(`Delete failed: ${error}`)
+                        } else {
+                          toast.success('ACSI inspection deleted')
+                          setInspections(prev => prev.filter(i => i.id !== insp.id))
+                        }
+                      }}
+                      disabled={isBusy}
+                      title="Delete"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '4px 10px', borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--color-red)', background: 'transparent',
+                        color: 'var(--color-red)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                        cursor: 'pointer', opacity: isBusy ? 0.5 : 1,
+                      }}
+                    >
+                      <Trash2 size={12} /> Del
+                    </button>
+                  )}
+                </div>
+              </div>
             )
           })}
         </div>

@@ -87,19 +87,45 @@ export default function AcsiFormPage() {
       // Phase 0: If ?resume= param, fetch by ID from DB (direct link)
       if (resumeId) {
         const existing = await fetchAcsiInspection(resumeId)
-        if (existing && existing.draft_data) {
-          const draftData = existing.draft_data
-          if (draftData.discrepancies) {
-            draftData.discrepancies = normalizeAcsiDraftDiscrepancies(draftData.discrepancies)
+        if (existing) {
+          let draftData = existing.draft_data
+          // If draft_data is null (e.g. reopened from filed state), rebuild from items
+          if (!draftData && existing.items && existing.items.length > 0) {
+            const responses: Record<string, AcsiItemResponse> = {}
+            const comments: Record<string, string> = {}
+            const discrepancies: Record<string, AcsiDiscrepancyDetail[]> = {}
+            for (const item of existing.items) {
+              if (item.response) responses[item.id] = item.response
+              if (item.discrepancies && item.discrepancies.length > 0) {
+                discrepancies[item.id] = item.discrepancies
+              } else if (item.discrepancy) {
+                discrepancies[item.id] = [item.discrepancy]
+              }
+            }
+            draftData = {
+              responses,
+              comments,
+              discrepancies,
+              team: existing.inspection_team || [],
+              signatures: existing.risk_cert_signatures || [],
+              notes: existing.notes || '',
+              collapsedSections: {},
+              localItems: [],
+            }
           }
-          setDraft(draftData)
-          setDbRowId(existing.id)
-          setAirfieldName(existing.airfield_name)
-          setInspectionDate(existing.inspection_date)
-          setFiscalYear(existing.fiscal_year)
-          setExpandedSections({})
-          setLoaded(true)
-          return
+          if (draftData) {
+            if (draftData.discrepancies) {
+              draftData.discrepancies = normalizeAcsiDraftDiscrepancies(draftData.discrepancies)
+            }
+            setDraft(draftData)
+            setDbRowId(existing.id)
+            setAirfieldName(existing.airfield_name)
+            setInspectionDate(existing.inspection_date)
+            setFiscalYear(existing.fiscal_year)
+            setExpandedSections({})
+            setLoaded(true)
+            return
+          }
         }
       }
 
