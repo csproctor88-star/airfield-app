@@ -597,14 +597,14 @@ export default function AMDashboardPage() {
 
       {showTemplatePicker && (
         <TemplatePicker
-          onSubmit={async (text) => {
+          onSubmit={async (text, category) => {
             const supabase = createClient()
             if (!supabase) {
               toast.success('Entry logged (demo mode)')
               setShowTemplatePicker(false)
               return
             }
-            const { error } = await logManualEntry(text, installationId)
+            const { error } = await logManualEntry(text, installationId, category)
             if (error) {
               toast.error(error)
             } else {

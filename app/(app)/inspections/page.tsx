@@ -1017,6 +1017,7 @@ export default function InspectionsPage() {
           longitude: d.location?.lon ?? null,
           base_id: installationId,
           infrastructure_feature_id: hasLinkedFeatures ? d.linked_feature_ids![0] : undefined,
+          skipActivityLog: true,
         })
 
         if (discErr || !disc) {

@@ -43,10 +43,12 @@ const ACTION_LABELS: Record<string, string> = {
 }
 
 const ENTITY_LABELS: Record<string, string> = {
-  discrepancy: 'Discrepancy', check: 'Check', inspection: 'Inspection',
-  obstruction_evaluation: 'Obstruction Eval', navaid_status: 'NAVAID',
-  airfield_status: 'Runway', contractor: 'Personnel', qrc: 'QRC',
-  manual: 'Manual Entry', waiver: 'Waiver', waiver_review: 'Waiver Review',
+  discrepancy: 'Discrepancy', check: 'Check', airfield_check: 'Check', inspection: 'Inspection',
+  acsi_inspection: 'ACSI Inspection', obstruction_evaluation: 'Obstruction Eval',
+  navaid_status: 'NAVAID', airfield_status: 'Runway', arff_status: 'ARFF',
+  contractor: 'Personnel', qrc: 'QRC', manual: 'Manual Entry',
+  wildlife_sighting: 'Wildlife Sighting', wildlife_strike: 'Wildlife Strike',
+  parking_plan: 'Parking Plan', waiver: 'Waiver', waiver_review: 'Waiver Review',
 }
 
 function fmtTime(iso: string) {
@@ -64,7 +66,7 @@ function fmtDateLong(dateStr: string) {
 
 function formatActivityAction(entry: ActivityEntryForReport): string {
   const action = ACTION_LABELS[entry.action] || entry.action.charAt(0).toUpperCase() + entry.action.slice(1).replace(/_/g, ' ')
-  const entity = ENTITY_LABELS[entry.entity_type] || entry.entity_type
+  const entity = ENTITY_LABELS[entry.entity_type] || entry.entity_type.replace(/_/g, ' ')
   const id = entry.entity_display_id ? ` ${entry.entity_display_id}` : ''
   if (entry.action === 'personnel_off_airfield') return `Personnel Off${id}`
   return `${action} ${entity}${id}`
@@ -186,7 +188,7 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
     } else {
       for (const insp of dayData.inspections) {
         checkPageBreak(20)
-        const typeLabel = INSPECTION_TYPE_LABELS[insp.inspection_type] || insp.inspection_type
+        const typeLabel = INSPECTION_TYPE_LABELS[insp.inspection_type] || insp.inspection_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
         const completedBy = insp.completed_by_name || insp.inspector_name || 'Unknown'
         const time = insp.completed_at ? fmtTime(insp.completed_at) : ''
         const result = insp.failed_count > 0
@@ -235,7 +237,7 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
       emptyState('No checks recorded.')
     } else {
       const tableBody = dayData.checks.map((c) => [
-        CHECK_TYPE_LABELS[c.check_type] || c.check_type,
+        CHECK_TYPE_LABELS[c.check_type] || c.check_type.replace(/_/g, ' ').replace(/\b\w/g, c2 => c2.toUpperCase()),
         c.completed_at ? fmtTime(c.completed_at) : '',
         c.completed_by || 'Unknown',
         (c.areas || []).join(', ') || '—',
@@ -406,7 +408,7 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
 
     const tableBody = events.map((e) => {
       const name = e.reporter_rank ? `${e.reporter_rank} ${e.reporter_name}` : e.reporter_name
-      const featureLabel = e.feature_label || e.feature_type || 'Unknown'
+      const featureLabel = e.feature_label || (e.feature_type ? e.feature_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Unknown')
       const system = e.system_name || '—'
       const eventLabel = e.event_type === 'resolved' ? 'Resolved' : 'Reported'
       return [fmtTime(e.created_at), featureLabel, system, eventLabel, name]

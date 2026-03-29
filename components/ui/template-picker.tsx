@@ -27,7 +27,7 @@ function extractPlaceholders(text: string): string[] {
 }
 
 interface Props {
-  onSubmit: (text: string) => Promise<void> | void
+  onSubmit: (text: string, category?: string) => Promise<void> | void
   onClose: () => void
   /** Whether this user can edit templates (admin/base_admin/sys_admin) */
   isAdmin?: boolean
@@ -82,7 +82,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
     if (!selectedTemplate || !preview.trim() || submitting) return
     setSubmitting(true)
     try {
-      await onSubmit(preview)
+      await onSubmit(preview, selectedCat)
     } finally {
       setSubmitting(false)
     }

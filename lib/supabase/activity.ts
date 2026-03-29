@@ -28,7 +28,7 @@ export async function logActivity(
   await supabase.from('activity_log').insert(row as any)
 }
 
-export async function logManualEntry(text: string, baseId?: string | null): Promise<{ error: string | null }> {
+export async function logManualEntry(text: string, baseId?: string | null, category?: string): Promise<{ error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
@@ -41,7 +41,7 @@ export async function logManualEntry(text: string, baseId?: string | null): Prom
     entity_type: 'manual',
     entity_id: crypto.randomUUID(),
     entity_display_id: null,
-    metadata: { details: text },
+    metadata: { details: text, ...(category ? { template_category: category } : {}) },
   }
   if (baseId) row.base_id = baseId
 

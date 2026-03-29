@@ -87,6 +87,7 @@ export async function createDiscrepancy(input: {
   infrastructure_feature_id?: string | null
   lighting_system_id?: string | null
   assigned_shop?: string | null
+  skipActivityLog?: boolean
 }): Promise<{ data: DiscrepancyRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -138,9 +139,11 @@ export async function createDiscrepancy(input: {
   }
 
   const created = data as DiscrepancyRow
-  let discDetails = `NEW DISCREPANCY — ${input.title.toUpperCase()}`
-  if (input.notam_reference) discDetails += `. NOTAM: ${input.notam_reference.toUpperCase()}`
-  logActivity('created', 'discrepancy', created.id, created.display_id, { details: discDetails }, input.base_id)
+  if (!input.skipActivityLog) {
+    let discDetails = `NEW DISCREPANCY — ${input.title.toUpperCase()}`
+    if (input.notam_reference) discDetails += `. NOTAM: ${input.notam_reference.toUpperCase()}`
+    logActivity('created', 'discrepancy', created.id, created.display_id, { details: discDetails }, input.base_id)
+  }
 
   return { data: created, error: null }
 }

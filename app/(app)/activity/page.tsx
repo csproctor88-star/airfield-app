@@ -12,7 +12,29 @@ import { formatZuluDate } from '@/lib/utils'
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'custom'
 
-function formatAction(action: string, entityType: string, displayId?: string): string {
+const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
+  'Inspections/Checks': 'Logged Inspection/Check',
+  'AMOPS Reporting': 'Logged AMOPS Report',
+  'Tower Reporting': 'Logged Tower Report',
+  'Shift Changes': 'Logged Shift Change',
+  'Daily Tasks': 'Logged Daily Task',
+  'QRC': 'Logged QRC Entry',
+  'PCAS/SCN Tests & Activations': 'Logged PCAS/SCN',
+  'Personnel on Airfield': 'Logged Personnel',
+  'NOTAMs': 'Logged NOTAM',
+  'ARFF': 'Logged ARFF',
+  'IFE/GE': 'Logged IFE/GE',
+  'CMA Violations': 'Logged CMA Violation',
+  'BWC Declarations': 'Logged BWC Change',
+  'Miscellaneous': 'Logged Manual Entry',
+}
+
+function formatAction(action: string, entityType: string, displayId?: string, metadata?: Record<string, unknown> | null): string {
+  // Template-based manual entries — use category-specific label
+  if (entityType === 'manual' && metadata?.template_category) {
+    return TEMPLATE_CATEGORY_LABELS[metadata.template_category as string] || 'Logged Manual Entry'
+  }
+
   const typeLabel: Record<string, string> = {
     discrepancy: 'Discrepancy',
     check: 'Check',
@@ -26,10 +48,13 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     qrc: 'QRC',
     wildlife_sighting: 'Wildlife Sighting',
     wildlife_strike: 'Wildlife Strike',
-    manual: 'Manual Entry',
+    manual: 'Logged Manual Entry',
     parking_plan: 'Parking Plan',
+    acsi_inspection: 'ACSI Inspection',
+    waiver: 'Waiver',
+    waiver_review: 'Waiver Review',
   }
-  const entity = typeLabel[entityType] || entityType
+  const entity = typeLabel[entityType] || entityType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   const id = displayId ? ` ${displayId}` : ''
   const actionLabel: Record<string, string> = {
     created: 'Created',
@@ -52,6 +77,8 @@ function formatAction(action: string, entityType: string, displayId?: string): s
   const label = actionLabel[action] || (action.charAt(0).toUpperCase() + action.slice(1).replace(/_/g, ' '))
   // Some actions are self-contained labels (don't append entity)
   if (action === 'personnel_off_airfield') return `${label}${id}`
+  // For manual entries without template category, show as "Logged Manual Entry"
+  if (entityType === 'manual') return entity
   return `${label} ${entity}${id}`
 }
 
@@ -242,7 +269,7 @@ export default function ActivityPage() {
       if (!userName.includes(fu) && !oi.includes(fu)) return false
     }
     if (fa) {
-      const actionStr = formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined).toLowerCase()
+      const actionStr = formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata).toLowerCase()
       if (!actionStr.includes(fa)) return false
     }
     if (fd) {
@@ -354,7 +381,7 @@ export default function ActivityPage() {
         return {
           date: formatZuluDate(d),
           time: d.toISOString().slice(11, 16),
-          action: formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined),
+          action: formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata),
           details: buildDetailsString(a, detailsMap),
           oi: a.user_operating_initials || '',
           user: userName,
@@ -474,14 +501,14 @@ export default function ActivityPage() {
 
       {showTemplatePicker && (
         <TemplatePicker
-          onSubmit={async (text) => {
+          onSubmit={async (text, category) => {
             const supabase = createClient()
             if (!supabase) {
               toast.success('Entry logged (demo mode)')
               setShowTemplatePicker(false)
               return
             }
-            const { error } = await logManualEntry(text, installationId)
+            const { error } = await logManualEntry(text, installationId, category)
             if (error) {
               toast.error(error)
             } else {
@@ -633,7 +660,7 @@ export default function ActivityPage() {
                             onClick={link ? () => router.push(link) : undefined}
                             style={{ ...tdStyle, color: link ? 'var(--color-cyan)' : 'var(--color-text-2)', whiteSpace: 'nowrap', cursor: link ? 'pointer' : 'default' }}
                           >
-                            {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined)}
+                            {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata)}
                             {link && <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>&rarr;</span>}
                           </td>
                           <td style={{ ...tdStyle, color: 'var(--color-text-3)', maxWidth: 300 }}>
