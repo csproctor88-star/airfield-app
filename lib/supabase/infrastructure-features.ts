@@ -147,7 +147,8 @@ export async function fetchSystemFeaturesForFeature(featureId: string): Promise<
 
   if (!feature?.system_component_id) return []
 
-  // Fetch all features in the same component (not the entire system)
+  // Fetch all features in the same component — scoped to avoid showing
+  // the entire system (e.g. just TWY K Edge Lights, not all TWY K systems)
   const { data: features } = await supabase
     .from('infrastructure_features')
     .select('*')

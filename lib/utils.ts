@@ -244,8 +244,8 @@ export async function fetchSystemMapImageDataUrl(
     const linked = features.find(f => f.id === linkedFeatureId)
     if (!linked) return null
 
-    // Only include nearby features (within ~200m) for context, centered on the linked feature
-    const maxDistDeg = 0.002 // ~200m
+    // Include nearby features within ~500m for taxiway/runway context
+    const maxDistDeg = 0.005 // ~500m
     const nearby = features.filter(f => {
       if (f.id === linkedFeatureId) return true
       return Math.abs(f.latitude - linked.latitude) < maxDistDeg && Math.abs(f.longitude - linked.longitude) < maxDistDeg
@@ -263,11 +263,26 @@ export async function fetchSystemMapImageDataUrl(
       }
     })
 
-    const geojson = { type: 'FeatureCollection', features: geoFeatures }
+    // Cap features to stay within Mapbox URL limit
+    const baseUrl = 'https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/geojson('
+    let finalFeatures = geoFeatures
+    if (geoFeatures.length > 80) {
+      // Keep linked + inop + closest operational
+      const linkedGeo = geoFeatures.filter((f: any) => f.properties?.['marker-size'] === 'large')
+      const inopGeo = geoFeatures.filter((f: any) => f.properties?.['marker-color'] === '#EF4444' && f.properties?.['marker-size'] !== 'large')
+      const opGeo = geoFeatures.filter((f: any) => f.properties?.['marker-color'] === '#22C55E')
+      finalFeatures = [...linkedGeo, ...inopGeo, ...opGeo.slice(0, 60)]
+    }
+
+    const geojson = { type: 'FeatureCollection', features: finalFeatures }
     const geojsonStr = encodeURIComponent(JSON.stringify(geojson))
 
-    // Center on the linked feature at zoom 17 for a tight view
-    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/geojson(${geojsonStr})/${linked.longitude},${linked.latitude},17,0/600x400@2x?access_token=${token}&logo=false&attribution=false`
+    // Use auto-fit with padding when multiple features provide context; fixed zoom for single feature
+    const viewPort = finalFeatures.length > 1
+      ? 'auto'
+      : `${linked.longitude},${linked.latitude},17,0`
+    const padding = finalFeatures.length > 1 ? '&padding=40' : ''
+    const url = `${baseUrl}${geojsonStr})/${viewPort}/600x400@2x?access_token=${token}&logo=false&attribution=false${padding}`
     const res = await fetch(url)
     if (!res.ok) {
       console.warn('[SystemMap] Mapbox static API error:', res.status, await res.text().catch(() => ''))
