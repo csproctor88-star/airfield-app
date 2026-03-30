@@ -37,12 +37,38 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 // --- Activity action formatting ---
-function formatAction(action: string, entityType: string, displayId?: string): string {
+const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
+  'Inspections/Checks': 'Logged Inspection/Check',
+  'AMOPS Reporting': 'Logged AMOPS Report',
+  'Tower Reporting': 'Logged Tower Report',
+  'Shift Changes': 'Logged Shift Change',
+  'Daily Tasks': 'Logged Daily Task',
+  'QRC': 'Logged QRC Entry',
+  'PCAS/SCN Tests & Activations': 'Logged PCAS/SCN',
+  'Personnel on Airfield': 'Logged Personnel',
+  'NOTAMs': 'Logged NOTAM',
+  'ARFF': 'Logged ARFF',
+  'IFE/GE': 'Logged IFE/GE',
+  'CMA Violations': 'Logged CMA Violation',
+  'BWC Declarations': 'Logged BWC Change',
+  'Miscellaneous': 'Logged Entry',
+}
+
+function formatAction(action: string, entityType: string, displayId?: string, metadata?: Record<string, unknown> | null): string {
+  // Template-based manual entries — use template label for specific action
+  if (entityType === 'manual' && metadata?.template_label) {
+    return metadata.template_label as string
+  }
+  if (entityType === 'manual' && metadata?.template_category) {
+    return TEMPLATE_CATEGORY_LABELS[metadata.template_category as string] || 'Logged Entry'
+  }
+
   const typeLabel: Record<string, string> = {
     discrepancy: 'Discrepancy',
     check: 'Check',
     airfield_check: 'Check',
     inspection: 'Inspection',
+    acsi_inspection: 'ACSI Inspection',
     obstruction_evaluation: 'Obstruction Eval',
     navaid_status: 'NAVAID',
     airfield_status: 'Runway',
@@ -51,10 +77,12 @@ function formatAction(action: string, entityType: string, displayId?: string): s
     qrc: 'QRC',
     wildlife_sighting: 'Wildlife Sighting',
     wildlife_strike: 'Wildlife Strike',
-    manual: 'Manual Entry',
+    manual: 'Logged Entry',
     parking_plan: 'Parking Plan',
+    waiver: 'Waiver',
+    waiver_review: 'Waiver Review',
   }
-  const entity = typeLabel[entityType] || entityType
+  const entity = typeLabel[entityType] || entityType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   const id = displayId ? ` ${displayId}` : ''
   const actionLabel: Record<string, string> = {
     created: 'Created',
@@ -76,6 +104,7 @@ function formatAction(action: string, entityType: string, displayId?: string): s
   }
   const label = actionLabel[action] || (action.charAt(0).toUpperCase() + action.slice(1).replace(/_/g, ' '))
   if (action === 'personnel_off_airfield') return `${label}${id}`
+  if (entityType === 'manual') return entity
   return `${label} ${entity}${id}`
 }
 
@@ -689,7 +718,7 @@ export default function AMDashboardPage() {
                       onClick={link ? () => router.push(link) : undefined}
                       style={{ padding: '6px 8px', fontSize: 'var(--fs-sm)', color: link ? 'var(--color-cyan)' : 'var(--color-text-2)', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', whiteSpace: 'nowrap', cursor: link ? 'pointer' : 'default' }}
                     >
-                      {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined)}
+                      {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata)}
                       {link && <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>&rarr;</span>}
                     </td>
                     <td style={{ padding: '6px 8px', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', maxWidth: 300 }}>
