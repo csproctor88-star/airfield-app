@@ -75,12 +75,12 @@ function formatActivityAction(entry: ActivityEntryForReport): string {
 function getActivityDetails(entry: ActivityEntryForReport): string {
   if (!entry.metadata) return ''
   const m = entry.metadata
-  if (m.details && typeof m.details === 'string') return m.details
-  if (m.title && typeof m.title === 'string') return m.title
+  if (m.details && typeof m.details === 'string') return m.details.toUpperCase()
+  if (m.title && typeof m.title === 'string') return m.title.toUpperCase()
   const parts: string[] = []
   if (m.old_status && m.new_status) parts.push(`${m.old_status} -> ${m.new_status}`)
   if (m.reason && typeof m.reason === 'string') parts.push(m.reason)
-  return parts.join(' | ')
+  return parts.join(' | ').toUpperCase()
 }
 
 // ── Date range helpers ──

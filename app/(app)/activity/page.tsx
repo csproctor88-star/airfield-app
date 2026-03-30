@@ -26,13 +26,16 @@ const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
   'IFE/GE': 'Logged IFE/GE',
   'CMA Violations': 'Logged CMA Violation',
   'BWC Declarations': 'Logged BWC Change',
-  'Miscellaneous': 'Logged Manual Entry',
+  'Miscellaneous': 'Logged Entry',
 }
 
 function formatAction(action: string, entityType: string, displayId?: string, metadata?: Record<string, unknown> | null): string {
-  // Template-based manual entries — use category-specific label
+  // Template-based manual entries — use template label for specific action
+  if (entityType === 'manual' && metadata?.template_label) {
+    return metadata.template_label as string
+  }
   if (entityType === 'manual' && metadata?.template_category) {
-    return TEMPLATE_CATEGORY_LABELS[metadata.template_category as string] || 'Logged Manual Entry'
+    return TEMPLATE_CATEGORY_LABELS[metadata.template_category as string] || 'Logged Entry'
   }
 
   const typeLabel: Record<string, string> = {
@@ -48,7 +51,7 @@ function formatAction(action: string, entityType: string, displayId?: string, me
     qrc: 'QRC',
     wildlife_sighting: 'Wildlife Sighting',
     wildlife_strike: 'Wildlife Strike',
-    manual: 'Logged Manual Entry',
+    manual: 'Logged Entry',
     parking_plan: 'Parking Plan',
     acsi_inspection: 'ACSI Inspection',
     waiver: 'Waiver',
@@ -77,7 +80,7 @@ function formatAction(action: string, entityType: string, displayId?: string, me
   const label = actionLabel[action] || (action.charAt(0).toUpperCase() + action.slice(1).replace(/_/g, ' '))
   // Some actions are self-contained labels (don't append entity)
   if (action === 'personnel_off_airfield') return `${label}${id}`
-  // For manual entries without template category, show as "Logged Manual Entry"
+  // For manual entries without template category, show as "Logged Entry"
   if (entityType === 'manual') return entity
   return `${label} ${entity}${id}`
 }
@@ -183,7 +186,7 @@ function buildDetailsString(a: ActivityEntry, detailsMap: Map<string, EntityDeta
     if (dbParts.length) parts.push(dbParts.join(' | '))
   }
 
-  return parts.join(' | ')
+  return parts.join(' | ').toUpperCase()
 }
 
 export default function ActivityPage() {
@@ -303,7 +306,7 @@ export default function ActivityPage() {
       setSubmitting(false)
       return
     }
-    const { error } = await logManualEntry(manualText.trim(), installationId)
+    const { error } = await logManualEntry(manualText.trim().toUpperCase(), installationId)
     if (error) {
       toast.error(error)
     } else {
@@ -501,14 +504,14 @@ export default function ActivityPage() {
 
       {showTemplatePicker && (
         <TemplatePicker
-          onSubmit={async (text, category) => {
+          onSubmit={async (text, category, templateLabel) => {
             const supabase = createClient()
             if (!supabase) {
               toast.success('Entry logged (demo mode)')
               setShowTemplatePicker(false)
               return
             }
-            const { error } = await logManualEntry(text, installationId, category)
+            const { error } = await logManualEntry(text, installationId, category, templateLabel)
             if (error) {
               toast.error(error)
             } else {

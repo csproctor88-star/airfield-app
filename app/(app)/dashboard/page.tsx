@@ -248,7 +248,7 @@ export default function AMDashboardPage() {
       setSubmitting(false)
       return
     }
-    const { error } = await logManualEntry(manualText.trim(), installationId)
+    const { error } = await logManualEntry(manualText.trim().toUpperCase(), installationId)
     if (error) {
       toast.error(error)
     } else {
@@ -265,7 +265,7 @@ export default function AMDashboardPage() {
     let currentDetails = ''
     if (a.metadata) {
       if (typeof a.metadata.details === 'string') {
-        currentDetails = a.metadata.details
+        currentDetails = a.metadata.details.toUpperCase()
       } else {
         const acronyms = new Set(['fod','ife','rsc','rcr','bwc','bash','qrc','notam','notams','arff','pcas','scn','lmr','tacan','vor','ils','dme','ndb','papi','vasi','malsr','gps','rnav','rwy','twy','amops','na','id'])
         const capWord = (w: string) => acronyms.has(w.toLowerCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)
@@ -597,14 +597,14 @@ export default function AMDashboardPage() {
 
       {showTemplatePicker && (
         <TemplatePicker
-          onSubmit={async (text, category) => {
+          onSubmit={async (text, category, templateLabel) => {
             const supabase = createClient()
             if (!supabase) {
               toast.success('Entry logged (demo mode)')
               setShowTemplatePicker(false)
               return
             }
-            const { error } = await logManualEntry(text, installationId, category)
+            const { error } = await logManualEntry(text, installationId, category, templateLabel)
             if (error) {
               toast.error(error)
             } else {
@@ -657,7 +657,7 @@ export default function AMDashboardPage() {
                 if (a.metadata) {
                   // If metadata was replaced by a user edit, show the flat string
                   if (typeof a.metadata.details === 'string') {
-                    detailsText = a.metadata.details
+                    detailsText = a.metadata.details.toUpperCase()
                   } else {
                     const acronyms = new Set(['fod','ife','rsc','rcr','bwc','bash','qrc','notam','notams','arff','pcas','scn','lmr','tacan','vor','ils','dme','ndb','papi','vasi','malsr','gps','rnav','rwy','twy','amops','na','id'])
                     const capWord = (w: string) => acronyms.has(w.toLowerCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)
