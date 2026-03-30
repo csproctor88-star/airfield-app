@@ -1,6 +1,5 @@
 import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
-import { logActivity } from './activity'
 import type { DiscrepancyStatus, CurrentStatus } from './types'
 
 export type DiscrepancyRow = {
@@ -87,7 +86,6 @@ export async function createDiscrepancy(input: {
   infrastructure_feature_id?: string | null
   lighting_system_id?: string | null
   assigned_shop?: string | null
-  skipActivityLog?: boolean
 }): Promise<{ data: DiscrepancyRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -139,11 +137,6 @@ export async function createDiscrepancy(input: {
   }
 
   const created = data as DiscrepancyRow
-  if (!input.skipActivityLog) {
-    let discDetails = `NEW DISCREPANCY — ${input.title.toUpperCase()}`
-    if (input.notam_reference) discDetails += `. NOTAM: ${input.notam_reference.toUpperCase()}`
-    logActivity('created', 'discrepancy', created.id, created.display_id, { details: discDetails }, input.base_id)
-  }
 
   return { data: created, error: null }
 }
@@ -182,11 +175,6 @@ export async function updateDiscrepancy(
   }
 
   const updated = data as DiscrepancyRow
-  const updateParts = [`DISCREPANCY ${updated.display_id} UPDATED`]
-  if (fields.title) updateParts.push(fields.title.toUpperCase())
-  if (fields.assigned_shop) updateParts.push(`ASSIGNED TO ${fields.assigned_shop.toUpperCase()}`)
-  if (fields.work_order_number) updateParts.push(`WO: ${fields.work_order_number.toUpperCase()}`)
-  logActivity('updated', 'discrepancy', updated.id, updated.display_id, { details: updateParts.join('. ') }, updated.base_id)
 
   return { data: updated, error: null }
 }
@@ -243,15 +231,6 @@ export async function updateDiscrepancyStatus(
   } catch (e) {
     console.error('Audit trail insert failed:', e)
   }
-  const statusParts = [`DISCREPANCY ${statusUpdated.display_id} ${newStatus.toUpperCase()}`]
-  if (extraFields?.assigned_shop) statusParts.push(`ASSIGNED TO ${extraFields.assigned_shop.toUpperCase()}`)
-  if (extraFields?.resolution_notes) statusParts.push(extraFields.resolution_notes.toUpperCase())
-  if (notes) statusParts.push(notes.toUpperCase())
-  logActivity(
-    newStatus === 'cancelled' ? 'cancelled' : 'status_updated',
-    'discrepancy', statusUpdated.id, statusUpdated.display_id, { details: statusParts.join('. ') }, statusUpdated.base_id
-  )
-
   return { data: statusUpdated, error: null }
 }
 
@@ -271,8 +250,6 @@ export async function deleteDiscrepancy(
     console.error('Delete discrepancy failed:', error.message)
     return { error: friendlyError(error.message) }
   }
-
-  logActivity('deleted', 'discrepancy', id, existing?.display_id, { details: `DISCREPANCY ${existing?.display_id || ''} DELETED${existing?.title ? ` — ${existing.title.toUpperCase()}` : ''}` }, existing?.base_id)
 
   return { error: null }
 }

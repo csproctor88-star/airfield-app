@@ -23,9 +23,10 @@ import { toast } from 'sonner'
 
 const DiscrepancyMapView = lazy(() => import('@/components/discrepancies/discrepancy-map-view'))
 
-const FILTERS = ['open', 'completed', 'cancelled', 'all'] as const
+const FILTERS = ['open', 'pending', 'completed', 'cancelled', 'all'] as const
 const FILTER_LABELS: Record<string, string> = {
   open: 'Open',
+  pending: 'Pending W/O',
   completed: 'Completed',
   cancelled: 'Cancelled',
   all: 'All',
@@ -172,8 +173,14 @@ export default function DiscrepanciesPage() {
     return d.assigned_shop === shopFilter
   }
 
+  const matchesFilter = (d: { status: string; work_order_number?: string | null }) => {
+    if (filter === 'all') return true
+    if (filter === 'pending') return d.status === 'open' && ((d.work_order_number || '').toLowerCase().includes('pending'))
+    return d.status === filter
+  }
+
   const demoFiltered = DEMO_DISCREPANCIES
-    .filter(d => filter === 'all' || d.status === filter)
+    .filter(matchesFilter)
     .filter(d => !over30Only || (d.status === 'open' && daysOpen(d.created_at) > 30))
     .filter(d => matchesCurrentStatus(d.current_status))
     .filter(d => matchesType(d.type))
@@ -181,7 +188,7 @@ export default function DiscrepanciesPage() {
     .filter(matchesSearch)
 
   const liveFiltered = discrepancies
-    .filter(d => filter === 'all' || d.status === filter)
+    .filter(matchesFilter)
     .filter(d => !over30Only || (d.status === 'open' && daysOpen(d.created_at) > 30))
     .filter(d => matchesCurrentStatus(d.current_status))
     .filter(d => matchesType(d.type))
