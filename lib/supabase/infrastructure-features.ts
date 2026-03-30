@@ -132,7 +132,7 @@ export async function fetchInfrastructureFeature(id: string): Promise<Infrastruc
   return data as InfrastructureFeature
 }
 
-// ── Fetch all features in the same lighting system as a given feature ──
+// ── Fetch all features in the same lighting system component as a given feature ──
 
 export async function fetchSystemFeaturesForFeature(featureId: string): Promise<InfrastructureFeature[]> {
   const supabase = createClient()
@@ -147,30 +147,11 @@ export async function fetchSystemFeaturesForFeature(featureId: string): Promise<
 
   if (!feature?.system_component_id) return []
 
-  // Get the component to find the system_id
-  const { data: component } = await supabase
-    .from('lighting_system_components')
-    .select('system_id')
-    .eq('id', feature.system_component_id)
-    .single()
-
-  if (!component?.system_id) return []
-
-  // Get ALL components in this system
-  const { data: systemComponents } = await supabase
-    .from('lighting_system_components')
-    .select('id')
-    .eq('system_id', component.system_id)
-
-  if (!systemComponents || systemComponents.length === 0) return []
-
-  const componentIds = systemComponents.map(c => c.id)
-
-  // Fetch all features assigned to any component in this system
+  // Fetch all features in the same component (not the entire system)
   const { data: features } = await supabase
     .from('infrastructure_features')
     .select('*')
-    .in('system_component_id', componentIds)
+    .eq('system_component_id', feature.system_component_id)
 
   return (features ?? []) as InfrastructureFeature[]
 }

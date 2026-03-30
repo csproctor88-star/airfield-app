@@ -273,11 +273,37 @@ export async function fetchSystemMapImageDataUrl(
     }
 
     const geojson = { type: 'FeatureCollection', features: geoFeatures }
-    const geojsonStr = encodeURIComponent(JSON.stringify(geojson))
+    let finalFeatures = geoFeatures
 
-    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/geojson(${geojsonStr})/auto/600x400@2x?access_token=${token}&logo=false&attribution=false&padding=30`
+    // Mapbox static API has ~8192 char URL limit. If GeoJSON is too large,
+    // keep linked + inoperative features and trim operational ones to fit.
+    const baseUrl = 'https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/geojson('
+    const suffix = `)/auto/600x400@2x?access_token=${token}&logo=false&attribution=false&padding=30`
+    const testLen = (feats: object[]) => {
+      const encoded = encodeURIComponent(JSON.stringify({ type: 'FeatureCollection', features: feats }))
+      return baseUrl.length + encoded.length + suffix.length
+    }
+
+    if (testLen(geoFeatures) > 8000) {
+      const linked = geoFeatures.filter((f: any) => f.properties?.['marker-size'] === 'large')
+      const inop = geoFeatures.filter((f: any) => f.properties?.['marker-color'] === '#EF4444' && f.properties?.['marker-size'] !== 'large')
+      const operational = geoFeatures.filter((f: any) => f.properties?.['marker-color'] === '#22C55E')
+      finalFeatures = [...linked, ...inop]
+      for (const op of operational) {
+        if (testLen([...finalFeatures, op]) > 7500) break
+        finalFeatures.push(op)
+      }
+    }
+
+    const geojsonStr = encodeURIComponent(JSON.stringify(
+      finalFeatures === geoFeatures ? geojson : { type: 'FeatureCollection', features: finalFeatures }
+    ))
+    const url = `${baseUrl}${geojsonStr}${suffix}`
     const res = await fetch(url)
-    if (!res.ok) return null
+    if (!res.ok) {
+      console.warn('[SystemMap] Mapbox static API error:', res.status, await res.text().catch(() => ''))
+      return null
+    }
     const blob = await res.blob()
     return await new Promise<string>((resolve, reject) => {
       const reader = new FileReader()

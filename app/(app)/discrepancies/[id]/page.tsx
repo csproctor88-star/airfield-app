@@ -91,14 +91,18 @@ export default function DiscrepancyDetailPage() {
 
         // Fetch system map image (all features in the same system, color-coded)
         fetchSystemFeaturesForFeature(data.infrastructure_feature_id).then(async (systemFeatures) => {
-          if (systemFeatures.length > 0) {
-            const mapFeatures = systemFeatures
-              .filter(f => f.latitude != null && f.longitude != null)
-              .map(f => ({ latitude: f.latitude, longitude: f.longitude, status: f.status, id: f.id }))
+          const mapFeatures = systemFeatures
+            .filter(f => f.latitude != null && f.longitude != null)
+            .map(f => ({ latitude: f.latitude, longitude: f.longitude, status: f.status, id: f.id }))
+          if (mapFeatures.length > 0) {
             const mapUrl = await fetchSystemMapImageDataUrl(mapFeatures, data.infrastructure_feature_id!)
-            if (mapUrl) setSystemMapUrl(mapUrl)
-          } else if (feat && feat.latitude != null && feat.longitude != null) {
-            // No system component — fall back to single-feature pin map
+            if (mapUrl) {
+              setSystemMapUrl(mapUrl)
+              return
+            }
+          }
+          // Fallback: single-feature pin if system map failed or no features with coords
+          if (feat && feat.latitude != null && feat.longitude != null) {
             const mapUrl = await fetchMapImageDataUrl(feat.latitude, feat.longitude)
             if (mapUrl) setSystemMapUrl(mapUrl)
           }
