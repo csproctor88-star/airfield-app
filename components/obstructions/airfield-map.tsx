@@ -337,7 +337,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
   const [visibility, setVisibility] = useState<Record<ToggleKey, boolean>>(getDefaultVisibility)
   const [runwayVisibility, setRunwayVisibility] = useState<Record<number, boolean>>({})
   const [legendOpen, setLegendOpen] = useState(false)
-  const [showTaxiways, setShowTaxiways] = useState(true)
+  const [showTaxiways, setShowTaxiways] = useState(false)
   const { runways: installationRunways, installationId } = useInstallation()
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
@@ -960,26 +960,6 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
                 ))}
               </div>
             )}
-            {/* Taxiway clearance envelope toggle */}
-            {taxiways.length > 0 && (
-              <div style={{ paddingBottom: 5, marginBottom: 5, borderBottom: '1px solid rgba(148,163,184,0.15)' }}>
-                <div
-                  onClick={() => setShowTaxiways(v => !v)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    cursor: 'pointer', padding: '1px 0',
-                    opacity: showTaxiways ? 1 : 0.4,
-                  }}
-                >
-                  <span style={{
-                    width: 10, height: 10, borderRadius: 2,
-                    background: showTaxiways ? TAXIWAY_SURFACES.taxiway_ofa.color : 'transparent',
-                    border: `1.5px solid ${TAXIWAY_SURFACES.taxiway_ofa.color}`, flexShrink: 0,
-                  }} />
-                  <span style={{ color: '#CBD5E1' }}>Taxiway Clearance ({taxiways.length})</span>
-                </div>
-              </div>
-            )}
             {/* Surface type toggles */}
             {isMultiRunway && (
               <div style={{ fontSize: 'var(--fs-2xs)', color: '#64748B', fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -1012,6 +992,26 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
                 <span style={{ color: '#CBD5E1' }}>{item.label}</span>
               </div>
             ))}
+            {/* Taxiway clearance envelope toggle — at bottom, hidden by default */}
+            {taxiways.length > 0 && (
+              <div style={{ paddingTop: 5, marginTop: 5, borderTop: '1px solid rgba(148,163,184,0.15)' }}>
+                <div
+                  onClick={() => setShowTaxiways(v => !v)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    cursor: 'pointer', padding: '1px 0',
+                    opacity: showTaxiways ? 1 : 0.4,
+                  }}
+                >
+                  <span style={{
+                    width: 10, height: 10, borderRadius: 2,
+                    background: showTaxiways ? TAXIWAY_SURFACES.taxiway_ofa.color : 'transparent',
+                    border: `1.5px solid ${TAXIWAY_SURFACES.taxiway_ofa.color}`, flexShrink: 0,
+                  }} />
+                  <span style={{ color: '#CBD5E1' }}>Taxiway Clearance ({taxiways.length})</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
