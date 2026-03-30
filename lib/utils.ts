@@ -244,7 +244,7 @@ export async function fetchSystemMapImageDataUrl(
     const linked = features.find(f => f.id === linkedFeatureId)
     if (!linked) return null
 
-    // Include nearby features within ~500m for taxiway/runway context
+    // Show nearby features within ~500m — green for operational, red for inop/linked
     const maxDistDeg = 0.005 // ~500m
     const nearby = features.filter(f => {
       if (f.id === linkedFeatureId) return true
@@ -253,36 +253,26 @@ export async function fetchSystemMapImageDataUrl(
 
     const geoFeatures: object[] = nearby.map(f => {
       const isLinked = f.id === linkedFeatureId
-      const isInop = f.status === 'inoperative'
+      const isInop = f.status === 'inoperative' || isLinked
       return {
         type: 'Feature',
-        properties: isLinked
-          ? { 'marker-color': '#EF4444', 'marker-size': 'large', 'marker-symbol': 'circle' }
-          : { 'marker-color': isInop ? '#EF4444' : '#22C55E', 'marker-size': 'small' },
+        properties: {
+          'marker-color': isInop ? '#EF4444' : '#22C55E',
+          'marker-size': isLinked ? 'large' : 'small',
+        },
         geometry: { type: 'Point', coordinates: [f.longitude, f.latitude] },
       }
     })
 
-    // Cap features to stay within Mapbox URL limit
-    const baseUrl = 'https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/geojson('
-    let finalFeatures = geoFeatures
-    if (geoFeatures.length > 80) {
-      // Keep linked + inop + closest operational
-      const linkedGeo = geoFeatures.filter((f: any) => f.properties?.['marker-size'] === 'large')
-      const inopGeo = geoFeatures.filter((f: any) => f.properties?.['marker-color'] === '#EF4444' && f.properties?.['marker-size'] !== 'large')
-      const opGeo = geoFeatures.filter((f: any) => f.properties?.['marker-color'] === '#22C55E')
-      finalFeatures = [...linkedGeo, ...inopGeo, ...opGeo.slice(0, 60)]
-    }
-
-    const geojson = { type: 'FeatureCollection', features: finalFeatures }
+    const geojson = { type: 'FeatureCollection', features: geoFeatures }
     const geojsonStr = encodeURIComponent(JSON.stringify(geojson))
 
-    // Use auto-fit with padding when multiple features provide context; fixed zoom for single feature
-    const viewPort = finalFeatures.length > 1
+    // Auto-fit all features with padding; fallback to fixed zoom for single feature
+    const viewPort = geoFeatures.length > 1
       ? 'auto'
       : `${linked.longitude},${linked.latitude},17,0`
-    const padding = finalFeatures.length > 1 ? '&padding=40' : ''
-    const url = `${baseUrl}${geojsonStr})/${viewPort}/600x400@2x?access_token=${token}&logo=false&attribution=false${padding}`
+    const padding = geoFeatures.length > 1 ? '&padding=30' : ''
+    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/geojson(${geojsonStr})/${viewPort}/600x400@2x?access_token=${token}&logo=false&attribution=false${padding}`
     const res = await fetch(url)
     if (!res.ok) {
       console.warn('[SystemMap] Mapbox static API error:', res.status, await res.text().catch(() => ''))
