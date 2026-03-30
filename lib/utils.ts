@@ -241,64 +241,33 @@ export async function fetchSystemMapImageDataUrl(
   if (features.length === 0) return null
 
   try {
-    // Build GeoJSON FeatureCollection
-    const geoFeatures: object[] = []
+    const linked = features.find(f => f.id === linkedFeatureId)
+    if (!linked) return null
 
-    for (const f of features) {
+    // Only include nearby features (within ~200m) for context, centered on the linked feature
+    const maxDistDeg = 0.002 // ~200m
+    const nearby = features.filter(f => {
+      if (f.id === linkedFeatureId) return true
+      return Math.abs(f.latitude - linked.latitude) < maxDistDeg && Math.abs(f.longitude - linked.longitude) < maxDistDeg
+    })
+
+    const geoFeatures: object[] = nearby.map(f => {
       const isLinked = f.id === linkedFeatureId
       const isInop = f.status === 'inoperative'
-
-      if (isLinked) {
-        // Outer ring for the linked feature — larger, with stroke
-        geoFeatures.push({
-          type: 'Feature',
-          properties: {
-            'marker-color': '#EF4444',
-            'marker-size': 'large',
-            'marker-symbol': 'circle',
-          },
-          geometry: { type: 'Point', coordinates: [f.longitude, f.latitude] },
-        })
-      } else {
-        // Standard dot
-        geoFeatures.push({
-          type: 'Feature',
-          properties: {
-            'marker-color': isInop ? '#EF4444' : '#22C55E',
-            'marker-size': 'small',
-          },
-          geometry: { type: 'Point', coordinates: [f.longitude, f.latitude] },
-        })
+      return {
+        type: 'Feature',
+        properties: isLinked
+          ? { 'marker-color': '#EF4444', 'marker-size': 'large', 'marker-symbol': 'circle' }
+          : { 'marker-color': isInop ? '#EF4444' : '#22C55E', 'marker-size': 'small' },
+        geometry: { type: 'Point', coordinates: [f.longitude, f.latitude] },
       }
-    }
+    })
 
     const geojson = { type: 'FeatureCollection', features: geoFeatures }
-    let finalFeatures = geoFeatures
+    const geojsonStr = encodeURIComponent(JSON.stringify(geojson))
 
-    // Mapbox static API has ~8192 char URL limit. If GeoJSON is too large,
-    // keep linked + inoperative features and trim operational ones to fit.
-    const baseUrl = 'https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/geojson('
-    const suffix = `)/auto/600x400@2x?access_token=${token}&logo=false&attribution=false&padding=30`
-    const testLen = (feats: object[]) => {
-      const encoded = encodeURIComponent(JSON.stringify({ type: 'FeatureCollection', features: feats }))
-      return baseUrl.length + encoded.length + suffix.length
-    }
-
-    if (testLen(geoFeatures) > 8000) {
-      const linked = geoFeatures.filter((f: any) => f.properties?.['marker-size'] === 'large')
-      const inop = geoFeatures.filter((f: any) => f.properties?.['marker-color'] === '#EF4444' && f.properties?.['marker-size'] !== 'large')
-      const operational = geoFeatures.filter((f: any) => f.properties?.['marker-color'] === '#22C55E')
-      finalFeatures = [...linked, ...inop]
-      for (const op of operational) {
-        if (testLen([...finalFeatures, op]) > 7500) break
-        finalFeatures.push(op)
-      }
-    }
-
-    const geojsonStr = encodeURIComponent(JSON.stringify(
-      finalFeatures === geoFeatures ? geojson : { type: 'FeatureCollection', features: finalFeatures }
-    ))
-    const url = `${baseUrl}${geojsonStr}${suffix}`
+    // Center on the linked feature at zoom 17 for a tight view
+    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/geojson(${geojsonStr})/${linked.longitude},${linked.latitude},17,0/600x400@2x?access_token=${token}&logo=false&attribution=false`
     const res = await fetch(url)
     if (!res.ok) {
       console.warn('[SystemMap] Mapbox static API error:', res.status, await res.text().catch(() => ''))
