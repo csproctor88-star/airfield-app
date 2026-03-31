@@ -251,28 +251,23 @@ export async function fetchSystemMapImageDataUrl(
       return Math.abs(f.latitude - linked.latitude) < maxDistDeg && Math.abs(f.longitude - linked.longitude) < maxDistDeg
     })
 
-    const geoFeatures: object[] = nearby.map(f => {
+    // Build pin overlay markers: pin-s+color(lng,lat) for small, pin-l+color for large
+    const pins: string[] = nearby.map(f => {
       const isLinked = f.id === linkedFeatureId
       const isInop = f.status === 'inoperative' || isLinked
-      return {
-        type: 'Feature',
-        properties: {
-          'marker-color': isInop ? '#EF4444' : '#22C55E',
-          'marker-size': isLinked ? 'large' : 'small',
-        },
-        geometry: { type: 'Point', coordinates: [f.longitude, f.latitude] },
-      }
+      const color = isInop ? 'e53e3e' : '38a169'
+      const size = isLinked ? 'l' : 's'
+      return `pin-${size}+${color}(${f.longitude},${f.latitude})`
     })
 
-    const geojson = { type: 'FeatureCollection', features: geoFeatures }
-    const geojsonStr = encodeURIComponent(JSON.stringify(geojson))
+    const overlay = pins.join(',')
 
     // Auto-fit all features with padding; fallback to fixed zoom for single feature
-    const viewPort = geoFeatures.length > 1
+    const viewPort = nearby.length > 1
       ? 'auto'
       : `${linked.longitude},${linked.latitude},17,0`
-    const padding = geoFeatures.length > 1 ? '&padding=30' : ''
-    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/geojson(${geojsonStr})/${viewPort}/600x400@2x?access_token=${token}&logo=false&attribution=false${padding}`
+    const padding = nearby.length > 1 ? '&padding=40' : ''
+    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${overlay}/${viewPort}/600x400@2x?access_token=${token}&logo=false&attribution=false${padding}`
     const res = await fetch(url)
     if (!res.ok) {
       console.warn('[SystemMap] Mapbox static API error:', res.status, await res.text().catch(() => ''))

@@ -18,7 +18,6 @@ import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { fetchMapImageDataUrl, fetchSystemMapImageDataUrl, formatZuluDateTime, compressImageForPdf } from '@/lib/utils'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 import { DetailGrid } from '@/components/ui/detail-grid'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
@@ -30,6 +29,7 @@ export default function DiscrepancyDetailPage() {
   const router = useRouter()
   const { installationId, userRole, defaultPdfEmail, currentInstallation } = useInstallation()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
 
   const [dbPhotos, setDbPhotos] = useState<PhotoRow[]>([])
   const [statusUpdates, setStatusUpdates] = useState<StatusUpdateRow[]>([])
@@ -89,11 +89,12 @@ export default function DiscrepancyDetailPage() {
           }
         }
 
-        // Fetch system map image (all features in the same system, color-coded)
+        // Fetch system map image (all features in the same component, color-coded)
         fetchSystemFeaturesForFeature(data.infrastructure_feature_id).then(async (systemFeatures) => {
           const mapFeatures = systemFeatures
             .filter(f => f.latitude != null && f.longitude != null)
             .map(f => ({ latitude: f.latitude, longitude: f.longitude, status: f.status, id: f.id }))
+          // If component has features, show them with the linked feature highlighted
           if (mapFeatures.length > 0) {
             const mapUrl = await fetchSystemMapImageDataUrl(mapFeatures, data.infrastructure_feature_id!)
             if (mapUrl) {
@@ -101,9 +102,10 @@ export default function DiscrepancyDetailPage() {
               return
             }
           }
-          // Fallback: single-feature pin if system map failed or no features with coords
+          // Fallback: show the single linked feature as a red dot (not a pin marker)
           if (feat && feat.latitude != null && feat.longitude != null) {
-            const mapUrl = await fetchMapImageDataUrl(feat.latitude, feat.longitude)
+            const singleFeature = [{ latitude: feat.latitude, longitude: feat.longitude, status: 'inoperative', id: feat.id }]
+            const mapUrl = await fetchSystemMapImageDataUrl(singleFeature, feat.id)
             if (mapUrl) setSystemMapUrl(mapUrl)
           }
         })
@@ -446,16 +448,16 @@ export default function DiscrepancyDetailPage() {
         </div>
       )}
 
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
       <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 8 }}>
         <ActionButton color="#38BDF8" onClick={() => setActiveModal('edit')}>✏️ Edit</ActionButton>
-        <div>
-          <PhotoPickerButton
-            onUpload={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            label={uploading ? 'Uploading...' : allPhotos.length > 0 ? `Add Photo (${allPhotos.length})` : undefined}
-          />
-        </div>
+        <ActionButton color="#0EA5E9" onClick={() => cameraInputRef.current?.click()} disabled={uploading}>
+          {uploading ? '...' : '📸 Capture'}
+        </ActionButton>
+        <ActionButton color="#38BDF8" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+          {uploading ? '...' : `📁 Upload${allPhotos.length > 0 ? ` (${allPhotos.length})` : ''}`}
+        </ActionButton>
         <ActionButton color="#FBBF24" onClick={() => setActiveModal('status')}>🔄 Status</ActionButton>
         <ActionButton color="#34D399" onClick={() => setActiveModal('workorder')}>📋 Work Order</ActionButton>
         <ActionButton
