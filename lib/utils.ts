@@ -196,6 +196,18 @@ export async function generateThumbnail(file: File, maxDimension = 200, quality 
   })
 }
 
+/** Format decimal degrees as DMS string, e.g. N43°56.34' W090°16.21' */
+export function formatCoordsDMS(lat: number, lon: number): string {
+  const fmt = (dec: number, pos: string, neg: string) => {
+    const dir = dec >= 0 ? pos : neg
+    const abs = Math.abs(dec)
+    const d = Math.floor(abs)
+    const m = ((abs - d) * 60).toFixed(2)
+    return `${dir}${String(d).padStart(pos === 'N' ? 2 : 3, '0')}°${m}'`
+  }
+  return `${fmt(lat, 'N', 'S')} ${fmt(lon, 'E', 'W')}`
+}
+
 export function isMapboxConfigured(): boolean {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   return !!(token && token !== 'your-mapbox-token-here')

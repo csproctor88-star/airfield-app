@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { formatZuluDate, formatZuluDateTime } from '@/lib/utils'
+import { formatZuluDate, formatZuluDateTime, formatCoordsDMS } from '@/lib/utils'
 import {
   getADGFromWingspan,
   getWingtipClearanceDetail,
@@ -138,6 +138,32 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
         2: { cellWidth: 12, halign: 'center' },
         3: { cellWidth: 30 },
         4: { cellWidth: 22, halign: 'right' },
+      },
+    })
+    y = (doc as any).lastAutoTable.finalY + 4
+  }
+
+  // ── Spot Detail Table (per-aircraft with nose coordinates) ──
+  if (spotsWithAircraft.length > 0) {
+    checkPageBreak(20)
+    const spotRows = spotsWithAircraft.map(s => [
+      s.spot_name || s.aircraft_name || '—',
+      s.aircraft_name || '—',
+      s.tail_number || '—',
+      `${s.heading_deg}°`,
+      formatCoordsDMS(s.latitude, s.longitude),
+    ])
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Spot', 'Aircraft', 'Tail #', 'Hdg', 'Nose Coordinates']],
+      body: spotRows,
+      margin: { left: margin, right: margin },
+      styles: { fontSize: 7, cellPadding: 1.5 },
+      headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: 'bold' },
+      columnStyles: {
+        3: { cellWidth: 14, halign: 'center' },
+        4: { cellWidth: 48, font: 'courier' },
       },
     })
     y = (doc as any).lastAutoTable.finalY + 4

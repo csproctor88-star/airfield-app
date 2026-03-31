@@ -5,7 +5,7 @@ import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
-import { isMapboxConfigured } from '@/lib/utils'
+import { isMapboxConfigured, formatCoordsDMS } from '@/lib/utils'
 import { useMapRuler } from '@/hooks/use-map-ruler'
 import { allAircraft } from '@/lib/aircraft-data'
 import type { AircraftCharacteristics } from '@/lib/aircraft_database_schema'
@@ -2663,6 +2663,12 @@ export default function ParkingPage() {
                                     Callsign
                                     <input value={s.unit_callsign || ''} onChange={e => handleUpdateSpot(s.id, { unit_callsign: e.target.value })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
                                   </label>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0' }}>
+                                  <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)' }}>Nose:</span>
+                                  <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-cyan)', fontFamily: 'monospace', letterSpacing: '0.02em' }}>
+                                    {formatCoordsDMS(s.latitude, s.longitude)}
+                                  </span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                   <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>

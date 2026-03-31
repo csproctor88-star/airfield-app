@@ -122,7 +122,7 @@ export default function NewNotamPage() {
       <div style={{ marginBottom: 14 }}>
         <label style={labelStyle}>Effective Date</label>
         <input
-          type="datetime-local"
+          type="datetime-local" lang="en-GB"
           value={effectiveStart}
           onChange={(e) => setEffectiveStart(e.target.value)}
           style={inputStyle}
@@ -133,7 +133,7 @@ export default function NewNotamPage() {
       <div style={{ marginBottom: 14 }}>
         <label style={labelStyle}>Expires Date</label>
         <input
-          type="datetime-local"
+          type="datetime-local" lang="en-GB"
           value={effectiveEnd}
           onChange={(e) => setEffectiveEnd(e.target.value)}
           style={inputStyle}

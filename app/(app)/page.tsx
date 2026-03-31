@@ -541,7 +541,7 @@ export default function HomePage() {
                   <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 2 }}>Start</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <input
-                      type="datetime-local"
+                      type="datetime-local" lang="en-GB"
                       value={advisoryDraftStart}
                       onChange={(e) => setAdvisoryDraftStart(e.target.value)}
                       style={{
@@ -557,7 +557,7 @@ export default function HomePage() {
                   <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 2 }}>End</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <input
-                      type="datetime-local"
+                      type="datetime-local" lang="en-GB"
                       value={advisoryDraftEnd}
                       onChange={(e) => { setAdvisoryDraftEnd(e.target.value); setAdvisoryDraftUfn(false) }}
                       disabled={advisoryDraftUfn}

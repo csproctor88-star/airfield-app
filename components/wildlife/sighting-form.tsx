@@ -326,7 +326,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
             <label style={labelStyle}>Time of Observation (Zulu)</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <input
-                type="datetime-local"
+                type="datetime-local" lang="en-GB"
                 value={observationTime}
                 onChange={e => setObservationTime(e.target.value)}
                 style={{ ...selectStyle, flex: 1 }}

@@ -364,7 +364,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
           <label style={labelStyle}>Time of Strike (Zulu)</label>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <input
-              type="datetime-local"
+              type="datetime-local" lang="en-GB"
               value={strikeTime}
               onChange={e => setStrikeTime(e.target.value)}
               style={{ ...selectStyle, flex: 1 }}
