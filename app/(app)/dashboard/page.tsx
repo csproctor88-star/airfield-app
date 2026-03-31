@@ -378,18 +378,19 @@ export default function AMDashboardPage() {
 
   return (
     <div className="page-container">
-      {/* ===== Dashboard Header with Last Check inline ===== */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-        <h2 style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)', margin: 0 }}>Dashboard</h2>
+      {/* ===== Dashboard Header ===== */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: lastCheckType ? 8 : 0 }}>
+          <h2 style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)', margin: 0 }}>Dashboard</h2>
+        </div>
         {lastCheckType && lastCheckTime && (
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '4px 12px', borderRadius: 'var(--radius-md)',
-            background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
-            fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            padding: '8px 16px', borderRadius: 'var(--radius-md)',
+            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
           }}>
-            <span style={{ fontWeight: 600 }}>Last Check:</span>
-            <span style={{ fontWeight: 700, color: 'var(--color-cyan)' }}>{lastCheckType} @ {lastCheckTime}</span>
+            <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 500 }}>Last Check Completed</span>
+            <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-cyan)' }}>{lastCheckType} @ {lastCheckTime}</span>
           </div>
         )}
       </div>
@@ -434,44 +435,44 @@ export default function AMDashboardPage() {
         </Link>
       </div>
 
-      {/* ===== Quick Actions — compact pill strip ===== */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+      {/* ===== Quick Actions — touch-friendly pill strip ===== */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         {[
           { label: 'Checks', icon: '\uD83D\uDEE1\uFE0F', href: '/checks' },
           { label: 'Discrepancy', icon: '\uD83D\uDEA8', href: '/discrepancies/new' },
         ].map(q => (
           <Link key={q.label} href={q.href} style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            padding: '6px 14px', borderRadius: 'var(--radius-md)',
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '10px 18px', borderRadius: 'var(--radius-md)', minHeight: 44,
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-            textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)',
+            textDecoration: 'none', fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)',
           }}>
-            <span style={{ fontSize: 'var(--fs-base)' }}>{q.icon}</span> {q.label}
+            <span style={{ fontSize: 'var(--fs-lg)' }}>{q.icon}</span> {q.label}
           </Link>
         ))}
         <button onClick={() => setShowContractorForm(true)} style={{
-          display: 'flex', alignItems: 'center', gap: 5,
-          padding: '6px 14px', borderRadius: 'var(--radius-md)',
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '10px 18px', borderRadius: 'var(--radius-md)', minHeight: 44,
           background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-          fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+          fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
         }}>
-          <span style={{ fontSize: 'var(--fs-base)' }}>🏗️</span> Personnel
+          <span style={{ fontSize: 'var(--fs-lg)' }}>🏗️</span> Personnel
         </button>
         <button onClick={() => setShowShiftChecklist(true)} style={{
-          display: 'flex', alignItems: 'center', gap: 5,
-          padding: '6px 14px', borderRadius: 'var(--radius-md)',
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '10px 18px', borderRadius: 'var(--radius-md)', minHeight: 44,
           background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-          fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+          fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
         }}>
-          <span style={{ fontSize: 'var(--fs-base)' }}>☑️</span> Checklist
+          <span style={{ fontSize: 'var(--fs-lg)' }}>☑️</span> Checklist
         </button>
         <button onClick={() => setShowQrc(true)} style={{
-          display: 'flex', alignItems: 'center', gap: 5,
-          padding: '6px 14px', borderRadius: 'var(--radius-md)',
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '10px 18px', borderRadius: 'var(--radius-md)', minHeight: 44,
           background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-          fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+          fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
         }}>
-          <span style={{ fontSize: 'var(--fs-base)' }}>⚡</span> QRC
+          <span style={{ fontSize: 'var(--fs-lg)' }}>⚡</span> QRC
         </button>
       </div>
 
@@ -505,14 +506,14 @@ export default function AMDashboardPage() {
 
       {/* ===== Manual Entry — collapsed by default ===== */}
       {!logEntryExpanded ? (
-        <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <button
             onClick={() => setLogEntryExpanded(true)}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              padding: '6px 14px', borderRadius: 'var(--radius-md)',
+              padding: '10px 18px', borderRadius: 'var(--radius-md)', minHeight: 44,
               background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-              fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-cyan)',
+              fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-cyan)',
               cursor: 'pointer', fontFamily: 'inherit',
             }}
           >
@@ -522,9 +523,9 @@ export default function AMDashboardPage() {
             onClick={() => setShowTemplatePicker(true)}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              padding: '6px 14px', borderRadius: 'var(--radius-md)',
+              padding: '10px 18px', borderRadius: 'var(--radius-md)', minHeight: 44,
               background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-              fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-2)',
+              fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)',
               cursor: 'pointer', fontFamily: 'inherit',
             }}
           >
