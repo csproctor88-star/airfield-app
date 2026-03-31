@@ -69,7 +69,7 @@ export function EditDiscrepancyModal({
   onClose: () => void
   onSaved: (updated: DiscrepancyRow) => void
 }) {
-  const { areas: installationAreas, facilities, installationId } = useInstallation()
+  const { areas: installationAreas, facilities, installationId, ceShops } = useInstallation()
   const [saving, setSaving] = useState(false)
   const [gpsLoading, setGpsLoading] = useState(false)
   const [form, setForm] = useState({
@@ -80,6 +80,8 @@ export function EditDiscrepancyModal({
     notam_reference: ((discrepancy as DiscrepancyRow & { notam_reference?: string }).notam_reference || '') as string,
     current_status: ((discrepancy as DiscrepancyRow & { current_status?: string }).current_status || 'submitted_to_afm') as string,
     facility_number: (discrepancy as DiscrepancyRow & { facility_number?: string | null }).facility_number || '',
+    work_order_number: discrepancy.work_order_number || '',
+    assigned_shop: (discrepancy as DiscrepancyRow & { assigned_shop?: string | null }).assigned_shop || '',
     latitude: discrepancy.latitude,
     longitude: discrepancy.longitude,
   })
@@ -160,6 +162,8 @@ export function EditDiscrepancyModal({
       notam_reference: form.notam_reference || null,
       current_status: form.current_status,
       facility_number: form.facility_number || null,
+      work_order_number: form.work_order_number || null,
+      assigned_shop: form.assigned_shop || null,
       latitude: form.latitude,
       longitude: form.longitude,
       infrastructure_feature_id: newFeatureId,
@@ -254,6 +258,28 @@ export function EditDiscrepancyModal({
         ) : (
           <input className="input-dark" placeholder="e.g., 06010 — Runway" value={form.facility_number}
             onChange={(e) => setForm(p => ({ ...p, facility_number: e.target.value }))} />
+        )}
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <FieldLabel>Work Order #</FieldLabel>
+        <input className="input-dark" placeholder="e.g., WO-2026-0042"
+          value={form.work_order_number}
+          onChange={(e) => setForm(p => ({ ...p, work_order_number: e.target.value }))} />
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <FieldLabel>Assigned To</FieldLabel>
+        {ceShops.length > 0 ? (
+          <select className="input-dark" value={form.assigned_shop}
+            onChange={(e) => setForm(p => ({ ...p, assigned_shop: e.target.value }))}>
+            <option value="">— Unassigned —</option>
+            {ceShops.map(shop => <option key={shop} value={shop}>{shop}</option>)}
+          </select>
+        ) : (
+          <input className="input-dark" placeholder="e.g., Electrical Shop"
+            value={form.assigned_shop}
+            onChange={(e) => setForm(p => ({ ...p, assigned_shop: e.target.value }))} />
         )}
       </div>
 

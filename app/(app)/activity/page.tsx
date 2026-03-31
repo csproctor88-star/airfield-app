@@ -85,6 +85,22 @@ function formatAction(action: string, entityType: string, displayId?: string, me
   return `${label} ${entity}${id}`
 }
 
+function getActionColor(action: string, entityType: string): string {
+  if (entityType === 'manual') return 'var(--color-text-2)'
+  if (action === 'completed' || action === 'filed') return 'var(--color-green)'
+  if (action === 'deleted' || action === 'cancelled') return 'var(--color-red)'
+  switch (entityType) {
+    case 'check': case 'airfield_check': return 'var(--color-cyan)'
+    case 'inspection': case 'acsi_inspection': return 'var(--color-cyan)'
+    case 'discrepancy': return 'var(--color-warning)'
+    case 'qrc': return 'var(--color-purple)'
+    case 'wildlife_sighting': case 'wildlife_strike': return 'var(--color-orange)'
+    case 'airfield_status': case 'navaid_status': return 'var(--color-blue)'
+    case 'contractor': return 'var(--color-text-2)'
+    default: return 'var(--color-text-2)'
+  }
+}
+
 function getEntityLink(entityType: string, entityId: string | null): string | null {
   if (!entityId) return null
   switch (entityType) {
@@ -661,7 +677,7 @@ export default function ActivityPage() {
                           </td>
                           <td
                             onClick={link ? () => router.push(link) : undefined}
-                            style={{ ...tdStyle, color: link ? 'var(--color-cyan)' : 'var(--color-text-2)', whiteSpace: 'nowrap', cursor: link ? 'pointer' : 'default' }}
+                            style={{ ...tdStyle, color: getActionColor(a.action, a.entity_type), fontWeight: 600, whiteSpace: 'nowrap', cursor: link ? 'pointer' : 'default' }}
                           >
                             {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata)}
                             {link && <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>&rarr;</span>}

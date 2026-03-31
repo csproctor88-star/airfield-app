@@ -446,7 +446,7 @@ export default function NewDiscrepancyPage() {
           </div>
         )}
 
-        <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
+        <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
         <div style={{ marginBottom: 12 }}>
           <PhotoPickerButton
             onUpload={() => fileInputRef.current?.click()}

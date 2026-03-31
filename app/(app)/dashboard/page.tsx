@@ -123,6 +123,22 @@ type ActivityEntry = {
   user_operating_initials: string | null
 }
 
+function getActionColor(action: string, entityType: string): string {
+  if (entityType === 'manual') return 'var(--color-text-2)'
+  if (action === 'completed' || action === 'filed') return 'var(--color-green)'
+  if (action === 'deleted' || action === 'cancelled') return 'var(--color-red)'
+  switch (entityType) {
+    case 'check': case 'airfield_check': return 'var(--color-cyan)'
+    case 'inspection': case 'acsi_inspection': return 'var(--color-cyan)'
+    case 'discrepancy': return 'var(--color-warning)'
+    case 'qrc': return 'var(--color-purple)'
+    case 'wildlife_sighting': case 'wildlife_strike': return 'var(--color-orange)'
+    case 'airfield_status': case 'navaid_status': return 'var(--color-blue)'
+    case 'contractor': return 'var(--color-text-2)'
+    default: return 'var(--color-text-2)'
+  }
+}
+
 function getEntityLink(entityType: string, entityId: string | null): string | null {
   if (!entityId) return null
   switch (entityType) {
@@ -157,6 +173,7 @@ export default function AMDashboardPage() {
   const [showShiftChecklist, setShowShiftChecklist] = useState(false)
   const [showQrc, setShowQrc] = useState(false)
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
+  const [logEntryExpanded, setLogEntryExpanded] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
   const [editDate, setEditDate] = useState('')
@@ -361,188 +378,101 @@ export default function AMDashboardPage() {
 
   return (
     <div className="page-container">
-      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 16 }}>Dashboard</div>
-
-      {/* ===== Last Check Completed ===== */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div style={{ padding: 12, background: 'var(--color-bg-inset)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', textAlign: 'center' }}>
-          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)', fontWeight: 600, marginBottom: 4 }}>Last Check Completed</div>
-          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-cyan)' }}>
-            {lastCheckType && lastCheckTime
-              ? `${lastCheckType} @ ${lastCheckTime}`
-              : 'No Data'}
+      {/* ===== Dashboard Header with Last Check inline ===== */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+        <h2 style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)', margin: 0 }}>Dashboard</h2>
+        {lastCheckType && lastCheckTime && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '4px 12px', borderRadius: 'var(--radius-md)',
+            background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
+            fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)',
+          }}>
+            <span style={{ fontWeight: 600 }}>Last Check:</span>
+            <span style={{ fontWeight: 700, color: 'var(--color-cyan)' }}>{lastCheckType} @ {lastCheckTime}</span>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* ===== Quick Actions ===== */}
-      <span className="section-label">Quick Actions</span>
-      <div className="kpi-grid" style={{ marginBottom: 20 }}>
-        {/* Inspection badges — first row */}
-        <Link
-          href="/inspections"
-          style={{
-            background: todayAirfieldStatus.status === 'completed' ? 'rgba(34,197,94,0.08)'
-              : todayAirfieldStatus.status === 'in_progress' ? 'rgba(59,130,246,0.08)'
-              : 'var(--color-bg-surface)',
-            border: todayAirfieldStatus.status === 'completed' ? '2px solid rgba(34,197,94,0.4)'
-              : todayAirfieldStatus.status === 'in_progress' ? '2px solid rgba(59,130,246,0.4)'
-              : '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '14px 16px',
-            cursor: 'pointer',
-            textDecoration: 'none',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 4,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 'var(--fs-5xl)' }}>
-              {todayAirfieldStatus.status === 'completed' ? '\u2705' : todayAirfieldStatus.status === 'in_progress' ? '\uD83D\uDCDD' : '\u2600\uFE0F'}
-            </span>
-            <span style={{
-              fontSize: 'var(--fs-xl)', letterSpacing: '0.04em', fontWeight: 700,
-              color: todayAirfieldStatus.status === 'completed' ? 'var(--color-status-pass)'
-                : todayAirfieldStatus.status === 'in_progress' ? 'var(--color-status-inwork)'
-                : 'var(--color-cyan)',
-            }}>
-              Airfield Inspection
-            </span>
+      {/* ===== Inspection Status Strip ===== */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+        <Link href="/inspections" style={{
+          flex: 1, minWidth: 140, display: 'flex', alignItems: 'center', gap: 8,
+          padding: '8px 14px', borderRadius: 'var(--radius-md)', textDecoration: 'none',
+          background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+          borderLeft: todayAirfieldStatus.status === 'completed' ? '3px solid var(--color-status-pass)'
+            : todayAirfieldStatus.status === 'in_progress' ? '3px solid var(--color-status-inwork)'
+            : '3px solid var(--color-text-4)',
+        }}>
+          <span style={{ fontSize: 'var(--fs-lg)' }}>
+            {todayAirfieldStatus.status === 'completed' ? '\u2705' : todayAirfieldStatus.status === 'in_progress' ? '\uD83D\uDCDD' : '\u2600\uFE0F'}
+          </span>
+          <div>
+            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>Airfield Inspection</div>
+            <div style={{ fontSize: 'var(--fs-2xs)', fontWeight: 600, color: todayAirfieldStatus.status === 'completed' ? 'var(--color-status-pass)' : todayAirfieldStatus.status === 'in_progress' ? 'var(--color-status-inwork)' : 'var(--color-text-3)' }}>
+              {todayAirfieldStatus.status === 'completed' ? 'Complete' : todayAirfieldStatus.status === 'in_progress' ? `In Progress${todayAirfieldStatus.inspector ? ` — ${todayAirfieldStatus.inspector}` : ''}` : 'Not Started'}
+            </div>
           </div>
-          {todayAirfieldStatus.status !== 'none' && (
-            <span style={{ fontSize: 'var(--fs-xs)', color: todayAirfieldStatus.status === 'completed' ? 'var(--color-status-pass)' : 'var(--color-status-inwork)', fontWeight: 600 }}>
-              {todayAirfieldStatus.status === 'completed' ? 'Complete' : `In Progress${todayAirfieldStatus.inspector ? ` — ${todayAirfieldStatus.inspector}` : ''}`}
-            </span>
-          )}
         </Link>
-        <Link
-          href="/inspections"
-          style={{
-            background: todayLightingStatus.status === 'completed' ? 'rgba(34,197,94,0.08)'
-              : todayLightingStatus.status === 'in_progress' ? 'rgba(59,130,246,0.08)'
-              : 'var(--color-bg-surface)',
-            border: todayLightingStatus.status === 'completed' ? '2px solid rgba(34,197,94,0.4)'
-              : todayLightingStatus.status === 'in_progress' ? '2px solid rgba(59,130,246,0.4)'
-              : '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '14px 16px',
-            cursor: 'pointer',
-            textDecoration: 'none',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 4,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 'var(--fs-5xl)' }}>
-              {todayLightingStatus.status === 'completed' ? '\u2705' : todayLightingStatus.status === 'in_progress' ? '\uD83D\uDCDD' : '\uD83C\uDF19'}
-            </span>
-            <span style={{
-              fontSize: 'var(--fs-xl)', letterSpacing: '0.04em', fontWeight: 700,
-              color: todayLightingStatus.status === 'completed' ? 'var(--color-status-pass)'
-                : todayLightingStatus.status === 'in_progress' ? 'var(--color-status-inwork)'
-                : 'var(--color-cyan)',
-            }}>
-              Lighting Inspection
-            </span>
+        <Link href="/inspections" style={{
+          flex: 1, minWidth: 140, display: 'flex', alignItems: 'center', gap: 8,
+          padding: '8px 14px', borderRadius: 'var(--radius-md)', textDecoration: 'none',
+          background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+          borderLeft: todayLightingStatus.status === 'completed' ? '3px solid var(--color-status-pass)'
+            : todayLightingStatus.status === 'in_progress' ? '3px solid var(--color-status-inwork)'
+            : '3px solid var(--color-text-4)',
+        }}>
+          <span style={{ fontSize: 'var(--fs-lg)' }}>
+            {todayLightingStatus.status === 'completed' ? '\u2705' : todayLightingStatus.status === 'in_progress' ? '\uD83D\uDCDD' : '\uD83C\uDF19'}
+          </span>
+          <div>
+            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>Lighting Inspection</div>
+            <div style={{ fontSize: 'var(--fs-2xs)', fontWeight: 600, color: todayLightingStatus.status === 'completed' ? 'var(--color-status-pass)' : todayLightingStatus.status === 'in_progress' ? 'var(--color-status-inwork)' : 'var(--color-text-3)' }}>
+              {todayLightingStatus.status === 'completed' ? 'Complete' : todayLightingStatus.status === 'in_progress' ? `In Progress${todayLightingStatus.inspector ? ` — ${todayLightingStatus.inspector}` : ''}` : 'Not Started'}
+            </div>
           </div>
-          {todayLightingStatus.status !== 'none' && (
-            <span style={{ fontSize: 'var(--fs-xs)', color: todayLightingStatus.status === 'completed' ? 'var(--color-status-pass)' : 'var(--color-status-inwork)', fontWeight: 600 }}>
-              {todayLightingStatus.status === 'completed' ? 'Complete' : `In Progress${todayLightingStatus.inspector ? ` — ${todayLightingStatus.inspector}` : ''}`}
-            </span>
-          )}
         </Link>
-        {/* Other quick actions */}
-        {QUICK_ACTIONS.map((q) => (
-          <Link
-            key={q.label}
-            href={q.href}
-            style={{
-              background: 'var(--color-bg-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-lg)',
-              padding: '14px 16px',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
-            }}
-          >
-            <span style={{ fontSize: 'var(--fs-5xl)' }}>{q.icon}</span>
-            <span style={{ fontSize: 'var(--fs-xl)', color: q.color, letterSpacing: '0.04em', fontWeight: 700 }}>
-              {q.label}
-            </span>
+      </div>
+
+      {/* ===== Quick Actions — compact pill strip ===== */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+        {[
+          { label: 'Checks', icon: '\uD83D\uDEE1\uFE0F', href: '/checks' },
+          { label: 'Discrepancy', icon: '\uD83D\uDEA8', href: '/discrepancies/new' },
+        ].map(q => (
+          <Link key={q.label} href={q.href} style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '6px 14px', borderRadius: 'var(--radius-md)',
+            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+            textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)',
+          }}>
+            <span style={{ fontSize: 'var(--fs-base)' }}>{q.icon}</span> {q.label}
           </Link>
         ))}
-        {/* Contractors on Airfield badge */}
-        <button
-          onClick={() => setShowContractorForm(true)}
-          style={{
-            background: 'var(--color-bg-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '14px 16px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            fontFamily: 'inherit',
-          }}
-        >
-          <span style={{ fontSize: 'var(--fs-5xl)' }}>🏗️</span>
-          <span style={{ fontSize: 'var(--fs-xl)', color: 'var(--color-cyan)', letterSpacing: '0.04em', fontWeight: 700 }}>
-            Personnel on Airfield
-          </span>
+        <button onClick={() => setShowContractorForm(true)} style={{
+          display: 'flex', alignItems: 'center', gap: 5,
+          padding: '6px 14px', borderRadius: 'var(--radius-md)',
+          background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+          fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+        }}>
+          <span style={{ fontSize: 'var(--fs-base)' }}>🏗️</span> Personnel
         </button>
-        <button
-          onClick={() => setShowShiftChecklist(true)}
-          style={{
-            background: 'var(--color-bg-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '14px 16px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            fontFamily: 'inherit',
-          }}
-        >
-          <span style={{ fontSize: 'var(--fs-5xl)' }}>☑️</span>
-          <span style={{ fontSize: 'var(--fs-xl)', color: 'var(--color-cyan)', letterSpacing: '0.04em', fontWeight: 700 }}>
-            Shift Checklist
-          </span>
+        <button onClick={() => setShowShiftChecklist(true)} style={{
+          display: 'flex', alignItems: 'center', gap: 5,
+          padding: '6px 14px', borderRadius: 'var(--radius-md)',
+          background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+          fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+        }}>
+          <span style={{ fontSize: 'var(--fs-base)' }}>☑️</span> Checklist
         </button>
-        <button
-          onClick={() => setShowQrc(true)}
-          style={{
-            background: 'var(--color-bg-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '14px 16px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            fontFamily: 'inherit',
-          }}
-        >
-          <span style={{ fontSize: 'var(--fs-5xl)' }}>⚡</span>
-          <span style={{ fontSize: 'var(--fs-xl)', color: 'var(--color-bwc-mod)', letterSpacing: '0.04em', fontWeight: 700 }}>
-            QRC
-          </span>
+        <button onClick={() => setShowQrc(true)} style={{
+          display: 'flex', alignItems: 'center', gap: 5,
+          padding: '6px 14px', borderRadius: 'var(--radius-md)',
+          background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+          fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+        }}>
+          <span style={{ fontSize: 'var(--fs-base)' }}>⚡</span> QRC
         </button>
-        {/* Lighting System Health Badge */}
       </div>
 
       {/* ===== Contractor Form Dialog ===== */}
@@ -573,56 +503,80 @@ export default function AMDashboardPage() {
         />
       )}
 
-      {/* ===== Manual Entry ===== */}
-      <div className="card" style={{ marginBottom: 16, padding: '14px', border: '1px solid rgba(34,211,238,0.2)', background: 'rgba(34,211,238,0.04)' }}>
-        <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-cyan)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 8 }}>
-          New Log Entry
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', lineHeight: 1.4 }}>
-            Record notes, observations, or events not captured automatically by the system.
-          </div>
+      {/* ===== Manual Entry — collapsed by default ===== */}
+      {!logEntryExpanded ? (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+          <button
+            onClick={() => setLogEntryExpanded(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 14px', borderRadius: 'var(--radius-md)',
+              background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+              fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-cyan)',
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            + New Entry
+          </button>
           <button
             onClick={() => setShowTemplatePicker(true)}
             style={{
-              background: 'none', border: '1px solid var(--color-cyan)', borderRadius: 'var(--radius-md)',
-              padding: '4px 12px', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)',
-              fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0,
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 14px', borderRadius: 'var(--radius-md)',
+              background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+              fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-2)',
+              cursor: 'pointer', fontFamily: 'inherit',
             }}
           >
             Use Template
           </button>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <textarea
-            className="input-dark"
-            placeholder="What happened? e.g. FOD walk completed, runway sweep performed, VIP arrival coordination..."
-            value={manualText}
-            onChange={(e) => setManualText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                handleManualSubmit()
-              }
-            }}
-            rows={2}
-            style={{ flex: 1, resize: 'vertical', fontSize: 'var(--fs-base)' }}
-          />
-          <button
-            onClick={handleManualSubmit}
-            disabled={!manualText.trim() || submitting}
-            style={{
-              padding: '0 20px', borderRadius: 'var(--radius-md)', border: 'none', alignSelf: 'flex-end', height: 40,
-              background: manualText.trim() ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-elevated)',
-              color: manualText.trim() ? 'var(--color-cyan-btn-text)' : 'var(--color-text-4)',
-              fontSize: 'var(--fs-md)', fontWeight: 700, cursor: manualText.trim() ? 'pointer' : 'default',
-              fontFamily: 'inherit', whiteSpace: 'nowrap',
-            }}
-          >
-            {submitting ? '...' : 'Log'}
-          </button>
+      ) : (
+        <div className="card" style={{ marginBottom: 12, padding: '12px', border: '1px solid var(--color-border-active)' }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <textarea
+              className="input-dark"
+              placeholder="What happened? e.g. FOD walk completed, runway sweep performed..."
+              value={manualText}
+              onChange={(e) => setManualText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleManualSubmit()
+                }
+              }}
+              rows={2}
+              style={{ flex: 1, resize: 'vertical', fontSize: 'var(--fs-base)' }}
+              autoFocus
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <button
+                onClick={handleManualSubmit}
+                disabled={!manualText.trim() || submitting}
+                style={{
+                  padding: '0 16px', borderRadius: 'var(--radius-md)', border: 'none', height: 32,
+                  background: manualText.trim() ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-elevated)',
+                  color: manualText.trim() ? 'var(--color-cyan-btn-text)' : 'var(--color-text-4)',
+                  fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: manualText.trim() ? 'pointer' : 'default',
+                  fontFamily: 'inherit',
+                }}
+              >
+                {submitting ? '...' : 'Log'}
+              </button>
+              <button
+                onClick={() => { setLogEntryExpanded(false); setManualText('') }}
+                style={{
+                  padding: '0 16px', borderRadius: 'var(--radius-md)', border: 'none', height: 32,
+                  background: 'transparent', color: 'var(--color-text-3)',
+                  fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {showTemplatePicker && (
         <TemplatePicker
@@ -716,7 +670,7 @@ export default function AMDashboardPage() {
                     </td>
                     <td
                       onClick={link ? () => router.push(link) : undefined}
-                      style={{ padding: '6px 8px', fontSize: 'var(--fs-sm)', color: link ? 'var(--color-cyan)' : 'var(--color-text-2)', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', whiteSpace: 'nowrap', cursor: link ? 'pointer' : 'default' }}
+                      style={{ padding: '6px 8px', fontSize: 'var(--fs-sm)', color: link ? getActionColor(a.action, a.entity_type) : getActionColor(a.action, a.entity_type), fontWeight: 600, verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', whiteSpace: 'nowrap', cursor: link ? 'pointer' : 'default' }}
                     >
                       {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata)}
                       {link && <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>&rarr;</span>}
