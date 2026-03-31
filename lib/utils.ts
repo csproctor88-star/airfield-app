@@ -72,13 +72,6 @@ export function friendlyError(msg: string): string {
   return msg
 }
 
-// Check if Supabase environment variables are configured (not placeholder values)
-export function isSupabaseConfigured(): boolean {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim().replace(/^["']|["']$/g, '')
-  return !!(url && key && !url.includes('your-project') && key !== 'your-anon-key')
-}
-
 // Get cleaned Supabase URL and key (returns null if not configured)
 export function getSupabaseConfig(): { url: string; key: string } | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')

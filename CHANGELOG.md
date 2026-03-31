@@ -8,6 +8,75 @@ All notable changes to Glidepath.
 - METAR weather API integration (aviationweather.gov)
 - NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
+- Regenerate Supabase types to eliminate remaining `as any` casts
+- Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 16 PDF generators
+- Training Management Module (DAF training records)
+- Outage analytics (frequency/duration tracking for lighting systems)
+- Part 139 civilian airport template support
+
+---
+
+## [2.28.0] — 2026-03-31
+
+### Dashboard UI Revamp
+- **Compact layout** — Quick Actions reduced from 2-row grid to inspection status strip + pill buttons, saving ~200px vertical space
+- **Last Check Completed** — moved from full-width banner to slim centered card below header
+- **Log Entry collapsed by default** — shows "+ New Entry" and "Use Template" buttons; expands on click
+- **Color-coded activity feed** — ACTION column color-coded by type: cyan (checks/inspections), yellow (discrepancies), green (completed), red (deleted), purple (QRC), orange (wildlife), blue (status)
+- **Touch-friendly buttons** — all pills meet 44px minimum touch target with proper padding
+- **Light mode improvements** — deeper backgrounds (#F1F5F9), stronger borders, dark header bar matching dark theme, richer accent colors, better contrast throughout
+
+### Events Log Enhancements
+- **Template-aware actions** — template-based log entries show exact template label ("NOTAM Issued", "Shift Change", "SCN Check Complete") instead of generic "Logged Manual Entry"
+- **Category fallback** — entries with category but no label show category-level action ("Logged AMOPS Report", "Logged PCAS/SCN")
+- **ALL CAPS enforcement** — all details text uppercased on display and in exports (events log, dashboard, daily ops PDF, Excel)
+- **Color-coded ACTION column** — matching dashboard color scheme across events log page and Excel export
+- **Underscore display fixes** — entity types, check types, inspection types, feature types in daily ops PDF all use proper labels with underscore replacement fallback
+- **Missing entity types added** — `acsi_inspection`, `parking_plan`, `arff_status`, `waiver`, `waiver_review` mapped in both events log and daily ops PDF
+
+### Discrepancy Improvements
+- **Edit modal streamlined** — Work Order # and Assigned To fields added to Edit modal (no separate Work Order dialog needed)
+- **Camera capture button** — dedicated "Capture" button with `capture="environment"` for direct camera access on mobile
+- **Multi-photo upload** — file input now accepts `multiple` on both detail and create pages
+- **Pending W/O filter tab** — new filter between Open and Completed showing discrepancies with "Pending" work order number
+- **Activity log spam removed** — all `logActivity` calls removed from discrepancy CRUD; status change audit trail still written to `status_updates` table per discrepancy
+
+### ACSI Improvements
+- **Reopen for Editing** — button on detail page and inline on list page for completed/staffed inspections
+- **Reopen rebuilds draft_data** — `reopenAcsiInspection()` rebuilds draft from filed items so form loads existing responses
+- **Inline action buttons on list page** — Edit, Reopen, Delete buttons per row without opening detail page
+- **Delete permissions** — expanded to include creator on unfiled inspections
+
+### Realtime & Notifications
+- **Silent connection tracking** — realtime errors no longer show toast notifications on page load
+- **Action-triggered warnings** — `warnIfRealtimeDown()` only shows when user makes a change that expects realtime push
+- **Consolidated alert banners** — multiple airfield status field changes in one update produce a single cyan slide-in banner
+- **DAFMAN threshold alerts** — folded into inspection completion toast description instead of separate warnings
+
+### Visual NAVAID Map Thumbnails
+- **Component-scoped queries** — `fetchSystemFeaturesForFeature()` fetches features in the same component only
+- **Pin overlay markers** — switched from GeoJSON simplestyle (teardrop pins) to Mapbox pin syntax (colored dots)
+- **Zoomed view** — zoom 18 centered on linked feature, 150m radius for nearby features
+- **URL overflow protection** — handles large feature sets without exceeding Mapbox 8K URL limit
+- **Fallback for unassigned features** — shows red dot even when feature has no system_component_id
+
+### Other Fixes
+- **Dashboard check type labels** — uses `CHECK_TYPE_CONFIG` labels instead of raw DB values (HEAVY_AIRCRAFT → HEAVY AIRCRAFT CHECK)
+- **Parking selection transparency** — selected aircraft render at 40% opacity so nose wheel marker is visible
+- **Obstruction legend** — taxiway clearance moved to bottom, hidden by default
+- **Base switcher** — fixed not showing for base_admin and namo roles
+- **Parking bulk add** — quantity input clearable on mobile
+- **Taxilane wingspan** — auto-populated from design aircraft
+
+### Cleanup
+- **Removed orphaned file** — `lib/acsi-excel.ts` (ACSI Excel export never imported)
+- **Removed unused export** — `isSupabaseConfigured()` from `lib/utils.ts`
+- **Removed `skipActivityLog` param** — no longer needed after discrepancy activity log removal
+
+### Planned
+- METAR weather API integration (aviationweather.gov)
+- NOTAM persistence (draft form does not save to DB)
+- Unit and integration testing
 - Regenerate Supabase types (`supabase gen types typescript`) to eliminate remaining ~168 `as any` casts
 - Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 16 PDF generators
 - Training Management Module (DAF training records)
