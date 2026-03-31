@@ -244,8 +244,8 @@ export async function fetchSystemMapImageDataUrl(
     const linked = features.find(f => f.id === linkedFeatureId)
     if (!linked) return null
 
-    // Show nearby features within ~500m — green for operational, red for inop/linked
-    const maxDistDeg = 0.005 // ~500m
+    // Show nearby features within ~150m — green for operational, red for inop/linked
+    const maxDistDeg = 0.0015 // ~150m
     const nearby = features.filter(f => {
       if (f.id === linkedFeatureId) return true
       return Math.abs(f.latitude - linked.latitude) < maxDistDeg && Math.abs(f.longitude - linked.longitude) < maxDistDeg
@@ -262,11 +262,9 @@ export async function fetchSystemMapImageDataUrl(
 
     const overlay = pins.join(',')
 
-    // Auto-fit all features with padding; fallback to fixed zoom for single feature
-    const viewPort = nearby.length > 1
-      ? 'auto'
-      : `${linked.longitude},${linked.latitude},17,0`
-    const padding = nearby.length > 1 ? '&padding=40' : ''
+    // Always center on the linked feature at a tight zoom
+    const viewPort = `${linked.longitude},${linked.latitude},18,0`
+    const padding = ''
     const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${overlay}/${viewPort}/600x400@2x?access_token=${token}&logo=false&attribution=false${padding}`
     const res = await fetch(url)
     if (!res.ok) {
