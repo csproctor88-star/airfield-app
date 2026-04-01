@@ -37,9 +37,32 @@ import { fetchBaseSpecies, addBaseSpecies, addBaseSpeciesBulk, removeBaseSpecies
 
 type SetupTab = 'runways' | 'taxiways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'facilities' | 'templates' | 'shiftchecklist' | 'qrc' | 'lighting' | 'wildlife'
 
+type WizardStep = {
+  key: SetupTab
+  number: number
+  label: string
+  description: string
+  required: boolean
+}
+
+const WIZARD_STEPS: WizardStep[] = [
+  { key: 'runways', number: 1, label: 'Runways', description: 'Define your runways with coordinates, dimensions, and approach lighting. Use Import from ICAO for automatic data population.', required: true },
+  { key: 'areas', number: 2, label: 'Airfield Areas', description: 'Add the areas that inspectors reference when logging discrepancies and conducting inspections (e.g., RWY 01/19, TWY A, East Ramp).', required: true },
+  { key: 'taxiways', number: 3, label: 'Taxiways', description: 'Define taxiway designators for clearance envelopes, parking analysis, and discrepancy location tracking.', required: true },
+  { key: 'navaids', number: 4, label: 'NAVAIDs', description: 'Add the NAVAIDs displayed on the Airfield Status page (e.g., ILS, TACAN, PAPI, MALSR). These appear as green/yellow/red toggles.', required: true },
+  { key: 'shops', number: 5, label: 'CE Shops & Type Mapping', description: 'Define your CE shops and map each discrepancy type to a shop. This controls automatic shop assignment when discrepancies are created.', required: true },
+  { key: 'arff', number: 6, label: 'ARFF Vehicles', description: 'Add your crash/rescue vehicles. These appear on the Airfield Status page ARFF readiness panel.', required: true },
+  { key: 'facilities', number: 7, label: 'Facilities', description: 'Add facility numbers and descriptions referenced by discrepancies and inspections (e.g., Tower, Fire Station, Bldg 200).', required: true },
+  { key: 'templates', number: 8, label: 'Inspection Templates', description: 'Configure the checklist sections and items for daily airfield and lighting inspections. These define what inspectors evaluate during each inspection.', required: true },
+  { key: 'shiftchecklist', number: 9, label: 'Shift Checklist', description: 'Define the tasks tracked per shift (Day/Swing/Mid) with daily, weekly, or monthly frequency. These appear on the Shift Checklist page and Dashboard.', required: true },
+  { key: 'qrc', number: 10, label: 'QRC Templates', description: 'Configure Quick Reaction Checklists for emergency response. Seed from the default library or customize for your installation.', required: true },
+  { key: 'wildlife', number: 11, label: 'Wildlife Species', description: 'Select the wildlife species commonly observed at your installation. These populate the species picker in sighting and strike forms.', required: true },
+  { key: 'lighting', number: 12, label: 'Lighting Systems', description: 'Define lighting systems and components with DAFMAN 13-204v2 outage thresholds. This is a detailed configuration — skip for now and complete later if needed.', required: false },
+]
+
 export default function BaseSetupPage() {
   const { installationId, currentInstallation, runways, areas, ceShops, typeShopMap, arffAircraft, userRole } = useInstallation()
-  const [activeTab, setActiveTab] = useState<SetupTab>('runways')
+  const [currentStep, setCurrentStep] = useState(0)
   const [showPreview, setShowPreview] = useState(false)
 
   const canEdit = userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo'
@@ -58,87 +81,201 @@ export default function BaseSetupPage() {
     )
   }
 
-  const TABS: { key: SetupTab; label: string }[] = [
-    { key: 'runways', label: 'Runways' },
-    { key: 'taxiways', label: 'Taxiways' },
-    { key: 'navaids', label: 'NAVAIDs' },
-    { key: 'areas', label: 'Areas' },
-    { key: 'arff', label: 'ARFF Aircraft' },
-    { key: 'shops', label: 'CE Shops' },
-    { key: 'facilities', label: 'Facilities' },
-    { key: 'templates', label: 'Templates' },
-    { key: 'shiftchecklist', label: 'Shift Checklist' },
-    { key: 'qrc', label: 'QRC Templates' },
-    { key: 'lighting', label: 'Lighting Systems' },
-    { key: 'wildlife', label: 'Wildlife Species' },
-  ]
+  const step = WIZARD_STEPS[currentStep]
+  const isLastStep = currentStep === WIZARD_STEPS.length - 1
+  const progress = ((currentStep + 1) / WIZARD_STEPS.length) * 100
+
+  const goNext = () => {
+    if (!isLastStep) {
+      setCurrentStep(s => s + 1)
+      window.scrollTo(0, 0)
+    }
+  }
+  const goBack = () => {
+    if (currentStep > 0) {
+      setCurrentStep(s => s - 1)
+      window.scrollTo(0, 0)
+    }
+  }
 
   return (
     <div className="page-container" style={{ maxWidth: 800, margin: '0 auto' }}>
       <Link href="/settings" style={{ color: 'var(--color-primary)', fontSize: 'var(--fs-md)', textDecoration: 'none' }}>
         &larr; Settings
       </Link>
-      <h1 style={{ marginTop: 12, fontSize: 'var(--fs-4xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
-        Base Configuration
-      </h1>
-      <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginTop: 4 }}>
-        {currentInstallation?.name ?? 'Current Base'} ({currentInstallation?.icao ?? '—'})
-      </p>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 6, marginTop: 16, flexWrap: 'wrap' }}>
-        {TABS.map(tab => {
-          const isActive = activeTab === tab.key
-          return (
-            <button
-              key={tab.key}
-              onClick={() => { setActiveTab(tab.key); window.scrollTo(0, 0) }}
-              style={{
-                padding: '8px 16px',
-                borderRadius: 'var(--radius-base)',
-                border: isActive ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
-                cursor: 'pointer',
-                fontSize: 'var(--fs-md)',
-                fontWeight: 700,
-                fontFamily: 'inherit',
-                background: isActive ? 'rgba(56,189,248,0.12)' : 'var(--color-bg-inset)',
-                color: isActive ? 'var(--color-accent)' : 'var(--color-text-2)',
-                transition: 'all 0.15s',
-              }}
-            >
-              {tab.label}
-            </button>
-          )
-        })}
+      {/* Header */}
+      <div style={{ marginTop: 12, marginBottom: 8 }}>
+        <h1 style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 2 }}>
+          Base Setup
+        </h1>
+        <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
+          {currentInstallation?.name ?? 'Current Base'} ({currentInstallation?.icao ?? '—'})
+        </p>
       </div>
 
-      {/* Tab content */}
+      {/* Progress bar */}
+      <div style={{ marginBottom: 6 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-cyan)' }}>
+            Step {step.number} of {WIZARD_STEPS.length}
+          </span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+            {Math.round(progress)}% complete
+          </span>
+        </div>
+        <div style={{
+          height: 6, borderRadius: 3, background: 'var(--color-bg-inset)',
+          border: '1px solid var(--color-border)', overflow: 'hidden',
+        }}>
+          <div style={{
+            height: '100%', borderRadius: 3,
+            background: 'linear-gradient(90deg, var(--color-cyan), var(--color-accent))',
+            width: `${progress}%`, transition: 'width 0.3s ease',
+          }} />
+        </div>
+      </div>
+
+      {/* Step navigation pills */}
       <div style={{
-        marginTop: 16,
+        display: 'flex', gap: 3, marginBottom: 16, flexWrap: 'wrap',
+      }}>
+        {WIZARD_STEPS.map((s, i) => (
+          <button
+            key={s.key}
+            onClick={() => { setCurrentStep(i); window.scrollTo(0, 0) }}
+            title={s.label}
+            style={{
+              width: 28, height: 28, borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 'var(--fs-2xs)', fontWeight: 700,
+              border: i === currentStep ? '2px solid var(--color-cyan)' : '1px solid var(--color-border)',
+              background: i === currentStep ? 'rgba(34,211,238,0.15)' : i < currentStep ? 'rgba(34,197,94,0.12)' : 'var(--color-bg-inset)',
+              color: i === currentStep ? 'var(--color-cyan)' : i < currentStep ? 'var(--color-success)' : 'var(--color-text-3)',
+              cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+              transition: 'all 0.15s',
+            }}
+          >
+            {i < currentStep ? '✓' : s.number}
+          </button>
+        ))}
+      </div>
+
+      {/* Step header */}
+      <div style={{
+        padding: '14px 18px', borderRadius: 10, marginBottom: 12,
+        background: 'linear-gradient(135deg, rgba(34,211,238,0.06), rgba(56,189,248,0.03))',
+        border: '1px solid rgba(34,211,238,0.15)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: 'var(--color-cyan)', color: '#0F172A',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 'var(--fs-md)', fontWeight: 800,
+          }}>
+            {step.number}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+              {step.label}
+              {!step.required && (
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 400, marginLeft: 8 }}>
+                  (Optional)
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.5, marginTop: 2 }}>
+              {step.description}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Step content */}
+      <div style={{
         background: 'var(--color-surface-1)',
         border: '1px solid var(--color-border)',
         borderRadius: 'var(--radius-lg)',
         padding: 16,
+        marginBottom: 12,
       }}>
-        {activeTab === 'runways' && <RunwayTab runways={runways} installationId={installationId} />}
-        {activeTab === 'taxiways' && <TaxiwayEditor />}
-        {activeTab === 'navaids' && <NavaidTab installationId={installationId} />}
-        {activeTab === 'areas' && <SimpleListTab title="Airfield Areas" items={areas} tableName="base_areas" fieldName="area_name" installationId={installationId} />}
-        {activeTab === 'arff' && <SimpleListTab title="ARFF Aircraft" items={arffAircraft} tableName="base_arff_aircraft" fieldName="aircraft_name" installationId={installationId} />}
-        {activeTab === 'shops' && <ShopsTab shops={ceShops} typeShopMap={typeShopMap} installationId={installationId} />}
-        {activeTab === 'facilities' && <FacilitiesTab installationId={installationId} />}
-        {activeTab === 'templates' && <TemplatesTab installationId={installationId} />}
-        {activeTab === 'shiftchecklist' && <ShiftChecklistTab installationId={installationId} currentInstallation={currentInstallation} />}
-        {activeTab === 'qrc' && <QrcTemplatesTab installationId={installationId} />}
-        {activeTab === 'lighting' && <LightingSystemsTab installationId={installationId} />}
-        {activeTab === 'wildlife' && <WildlifeSpeciesTab installationId={installationId} />}
+        {step.key === 'runways' && <RunwayTab runways={runways} installationId={installationId} />}
+        {step.key === 'taxiways' && <TaxiwayEditor />}
+        {step.key === 'navaids' && <NavaidTab installationId={installationId} />}
+        {step.key === 'areas' && <SimpleListTab title="Airfield Areas" items={areas} tableName="base_areas" fieldName="area_name" installationId={installationId} />}
+        {step.key === 'arff' && <SimpleListTab title="ARFF Aircraft" items={arffAircraft} tableName="base_arff_aircraft" fieldName="aircraft_name" installationId={installationId} />}
+        {step.key === 'shops' && <ShopsTab shops={ceShops} typeShopMap={typeShopMap} installationId={installationId} />}
+        {step.key === 'facilities' && <FacilitiesTab installationId={installationId} />}
+        {step.key === 'templates' && <TemplatesTab installationId={installationId} />}
+        {step.key === 'shiftchecklist' && <ShiftChecklistTab installationId={installationId} currentInstallation={currentInstallation} />}
+        {step.key === 'qrc' && <QrcTemplatesTab installationId={installationId} />}
+        {step.key === 'lighting' && <LightingSystemsTab installationId={installationId} />}
+        {step.key === 'wildlife' && <WildlifeSpeciesTab installationId={installationId} />}
+      </div>
+
+      {/* Navigation buttons */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        {currentStep > 0 && (
+          <button
+            onClick={goBack}
+            style={{
+              flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-base)',
+              border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+              color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            ← Back
+          </button>
+        )}
+        {!step.required && (
+          <button
+            onClick={goNext}
+            style={{
+              flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-base)',
+              border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+              color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            Skip for Now
+          </button>
+        )}
+        {isLastStep ? (
+          <Link
+            href="/settings"
+            style={{
+              flex: 2, padding: '12px 16px', borderRadius: 'var(--radius-base)',
+              border: 'none',
+              background: 'linear-gradient(135deg, var(--color-success), #16A34A)',
+              color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center',
+              textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            Complete Setup ✓
+          </Link>
+        ) : (
+          <button
+            onClick={goNext}
+            style={{
+              flex: 2, padding: '12px 16px', borderRadius: 'var(--radius-base)',
+              border: 'none',
+              background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+              color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            Next: {WIZARD_STEPS[currentStep + 1]?.label} →
+          </button>
+        )}
       </div>
 
       {/* Preview Dashboard Button */}
       <button
         onClick={() => setShowPreview(!showPreview)}
         style={{
-          marginTop: 16,
           width: '100%',
           padding: '12px 16px',
           borderRadius: 'var(--radius-lg)',
