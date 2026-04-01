@@ -157,9 +157,8 @@ export function getRunwayGeometry(runway: {
 }): RunwayGeometry {
   const end1: LatLon = { lat: runway.end1.latitude, lon: runway.end1.longitude }
   const end2: LatLon = { lat: runway.end2.latitude, lon: runway.end2.longitude }
-  // Always compute bearing from actual coordinates for polygon accuracy
-  // Published true_heading may be rounded and causes polygon misalignment
-  const brg = bearing(end1, end2)
+  // Use published FAA true heading when available; fall back to computed bearing
+  const brg = runway.true_heading ?? bearing(end1, end2)
 
   return {
     end1,

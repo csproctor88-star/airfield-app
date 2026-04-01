@@ -850,8 +850,11 @@ function RunwayTab({
                 >
                   {saving ? 'Importing...' : `Import All — Runways, Areas, NAVAIDs`}
                 </button>
-                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 8, textAlign: 'center' }}>
                   Imports {lookupResult.runways.length} runway{lookupResult.runways.length !== 1 ? 's' : ''}, {lookupResult.suggested_areas?.length || 0} areas, {(lookupResult.navaids?.length || 0) + lookupResult.runways.filter((r: any) => r.end1_approach_lighting || r.end2_approach_lighting).length * 2} NAVAIDs{lookupResult.arff_category ? ` • ARFF Cat ${lookupResult.arff_category}` : ''}
+                </div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-warning)', marginBottom: 12, textAlign: 'center', padding: '6px 10px', borderRadius: 6, background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
+                  Runway coordinates are approximate. Verify and adjust endpoint coordinates using your airfield diagram or survey data for accurate map overlays.
                 </div>
 
                 {/* Runways */}
