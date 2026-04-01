@@ -164,6 +164,10 @@ const MODULES: ModuleRef[] = [
       'Configurable items — base administrators add/edit/delete/toggle items in Base Configuration',
     ],
     howToAccess: 'Navigate to Operations > Shift Checklist in the sidebar.',
+    screenshots: [
+      { src: '/training/shift-checklist_1.png', caption: 'Today\'s shift checklist with task items and completion tracking' },
+      { src: '/training/shift-checklist-history_1.png', caption: 'History tab showing completed checklists by date' },
+    ],
   },
   {
     id: 'checks',
@@ -230,6 +234,11 @@ const MODULES: ModuleRef[] = [
       'Zulu time fields — all observations recorded in Zulu time',
     ],
     howToAccess: 'Navigate to Operations > Wildlife / BASH in the sidebar.',
+    screenshots: [
+      { src: '/training/bash-activity-log_1.png', caption: 'Wildlife activity log with sightings and strike records' },
+      { src: '/training/bash-sighting_1.png', caption: 'Wildlife sighting form with species, location pin, and weather auto-fill' },
+      { src: '/training/bash-heatmap_1.png', caption: 'BASH heatmap showing wildlife activity density across the airfield' },
+    ],
   },
   {
     id: 'contractors',
@@ -246,6 +255,10 @@ const MODULES: ModuleRef[] = [
       'Activity log integration — entries appear in Events Log',
     ],
     howToAccess: 'Navigate to Operations > Personnel on Airfield in the sidebar.',
+    screenshots: [
+      { src: '/training/personnel-on-airfield_1.png', caption: 'Personnel tracking list with active entries and status badges' },
+      { src: '/training/personnel-on-airfield_2.png', caption: 'New personnel entry form with company, location, and radio details' },
+    ],
   },
   {
     id: 'parking',
@@ -319,6 +332,10 @@ const MODULES: ModuleRef[] = [
       'History map view — all past evaluations plotted on satellite imagery',
     ],
     howToAccess: 'Navigate to Airfield Management > Obstruction Eval Tool in the sidebar. Access past evaluations via Obstruction Database.',
+    screenshots: [
+      { src: '/training/obstruction-eval_1.png', caption: 'Obstruction evaluation map with imaginary surface overlays and location pin' },
+      { src: '/training/obstruction-eval_2.png', caption: 'Evaluation results showing violation detection with UFC table references' },
+    ],
   },
   {
     id: 'waivers',
@@ -340,6 +357,10 @@ const MODULES: ModuleRef[] = [
       'Excel export of the full waiver register',
     ],
     howToAccess: 'Navigate to Airfield Management > Waivers in the sidebar.',
+    screenshots: [
+      { src: '/training/waivers_1.png', caption: 'Waiver register with KPI badges, status filters, and search' },
+      { src: '/training/waivers_2.png', caption: 'Waiver map view with classification markers and detail popup' },
+    ],
   },
   {
     id: 'infrastructure',
@@ -386,6 +407,10 @@ const MODULES: ModuleRef[] = [
       'Integrated with parking plans for to-scale silhouette rendering',
     ],
     howToAccess: 'Navigate to Reference > Aircraft Database in the sidebar.',
+    screenshots: [
+      { src: '/training/aircraft-database_1.png', caption: 'Aircraft database list with search, sort, and branch filters' },
+      { src: '/training/aircraft-database_2.png', caption: 'Aircraft detail page with specifications, dimensions, and silhouette' },
+    ],
   },
   {
     id: 'regulations',
@@ -405,6 +430,11 @@ const MODULES: ModuleRef[] = [
       'Favorites with localStorage persistence',
     ],
     howToAccess: 'Navigate to Reference > Reference Library in the sidebar.',
+    screenshots: [
+      { src: '/training/reference-library_1.png', caption: 'Reference Library with regulation entries and category filters' },
+      { src: '/training/reference-library_2.png', caption: 'My Documents tab for personal reference uploads' },
+      { src: '/training/reference-library_3.png', caption: 'In-app PDF viewer with pinch-to-zoom' },
+    ],
   },
   {
     id: 'notams',
@@ -423,6 +453,9 @@ const MODULES: ModuleRef[] = [
       'Draft creation for local NOTAMs',
     ],
     howToAccess: 'Navigate to Reference > NOTAMs in the sidebar.',
+    screenshots: [
+      { src: '/training/notams_1.png', caption: 'Live FAA NOTAM feed with filter chips and expiring alerts' },
+    ],
   },
   {
     id: 'reports',
@@ -465,6 +498,11 @@ const MODULES: ModuleRef[] = [
       'Installation switcher — available in the header for multi-base users',
     ],
     howToAccess: 'Navigate to Settings in the sidebar. Base Setup and User Management are under the Settings section.',
+    screenshots: [
+      { src: '/training/settings_profile_1.png', caption: 'Profile settings — name, role, operating initials, and default PDF email' },
+      { src: '/training/settings_1.png', caption: 'Settings overview with collapsible sections' },
+      { src: '/training/settings-base-config_1.png', caption: 'Base Configuration — Base Setup, Inspection Templates, and Airfield Diagram' },
+    ],
   },
 ]
 
