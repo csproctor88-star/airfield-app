@@ -44,6 +44,11 @@ const QUICK_START_STEPS = [
   },
 ]
 
+type Screenshot = {
+  src: string
+  caption: string
+}
+
 type ModuleRef = {
   id: string
   name: string
@@ -54,6 +59,7 @@ type ModuleRef = {
   overview: string
   keyFeatures: string[]
   howToAccess: string
+  screenshots?: Screenshot[]
   tips?: string[]
 }
 
@@ -75,6 +81,9 @@ const MODULES: ModuleRef[] = [
       'User presence tracking — see who is Online, Away, or Inactive',
     ],
     howToAccess: 'This is the home page. Tap the Status tab on mobile or click Airfield Status in the sidebar.',
+    screenshots: [
+      { src: '/training/airfield-status_1.png', caption: 'Airfield Status page showing weather, runway status, NAVAID panels, ARFF status, and personnel tracking' },
+    ],
   },
   {
     id: 'dashboard',
@@ -92,6 +101,9 @@ const MODULES: ModuleRef[] = [
       'Template-based logging — pre-built templates for NOTAM Issued, Shift Change, SCN Check Complete, and more',
     ],
     howToAccess: 'Tap Dashboard on the bottom nav or click Dashboard in the sidebar.',
+    screenshots: [
+      { src: '/training/dashboard_1.png', caption: 'Dashboard with inspection status, quick action pills, and color-coded activity feed' },
+    ],
   },
   {
     id: 'events-log',
@@ -110,6 +122,9 @@ const MODULES: ModuleRef[] = [
       'Filter by date range, action type, or search by keyword',
     ],
     howToAccess: 'Tap Events Log on the bottom nav or click Events Log in the sidebar.',
+    screenshots: [
+      { src: '/training/events-log_1.png', caption: 'Events Log with color-coded actions, Zulu timestamps, and operating initials' },
+    ],
   },
   {
     id: 'qrc',
@@ -128,6 +143,10 @@ const MODULES: ModuleRef[] = [
       'Activity log integration — QRC start/close events appear in Events Log and Daily Ops Report',
     ],
     howToAccess: 'Navigate to Operations > QRC in the sidebar, or find it under Operations in the More menu.',
+    screenshots: [
+      { src: '/training/qrc-available_1.png', caption: 'QRC Available tab — select a checklist to begin execution' },
+      { src: '/training/qrc-active_1.png', caption: 'Active QRC execution with step-by-step checklist' },
+    ],
   },
   {
     id: 'shift-checklist',
@@ -166,6 +185,10 @@ const MODULES: ModuleRef[] = [
       'Full history with type filtering and keyword search',
     ],
     howToAccess: 'Navigate to Operations > Airfield Checks in the sidebar.',
+    screenshots: [
+      { src: '/training/airfield-checks-selector_1.png', caption: 'Check type selector — choose from 7 check types' },
+      { src: '/training/airfield-checks-filled_1.png', caption: 'Completed check form with findings and details' },
+    ],
   },
   {
     id: 'inspections',
@@ -186,6 +209,9 @@ const MODULES: ModuleRef[] = [
       'PDF export — combined report with per-discrepancy photo embedding',
     ],
     howToAccess: 'Navigate to Operations > All Inspections in the sidebar.',
+    screenshots: [
+      { src: '/training/inspections_1.png', caption: 'Daily inspection form with pass/fail/NA toggles and discrepancy documentation' },
+    ],
   },
   {
     id: 'wildlife',
@@ -242,6 +268,9 @@ const MODULES: ModuleRef[] = [
       'Fullscreen mode — spacebar toggle for maximum map area',
     ],
     howToAccess: 'Navigate to Operations > Aircraft Parking in the sidebar.',
+    screenshots: [
+      { src: '/training/parking-map_1.png', caption: 'Parking plan with to-scale aircraft silhouettes on satellite imagery' },
+    ],
   },
   {
     id: 'discrepancies',
@@ -264,6 +293,11 @@ const MODULES: ModuleRef[] = [
       'CES Work Orders — dedicated dashboard for CES-role users at /ces',
     ],
     howToAccess: 'Navigate to Airfield Management > Discrepancies in the sidebar.',
+    screenshots: [
+      { src: '/training/discrepancies-list_1.png', caption: 'Discrepancy list with KPI badges, shop filters, and type tabs' },
+      { src: '/training/discrepancies-map_1.png', caption: 'Map View — severity-colored pins for a common operating picture' },
+      { src: '/training/discrepancies-detail_1.png', caption: 'Discrepancy detail page with photos, status history, and notes' },
+    ],
   },
   {
     id: 'obstructions',
@@ -330,6 +364,10 @@ const MODULES: ModuleRef[] = [
       'GPS tracking for drive-around field use',
     ],
     howToAccess: 'Navigate to Airfield Management > Visual NAVAIDs in the sidebar.',
+    screenshots: [
+      { src: '/training/visual-navaids-map_1.png', caption: 'Visual NAVAIDs map with digitized lighting features and grouped legend' },
+      { src: '/training/visual-navaids-system-health-panel_1.png', caption: 'System Health Panel showing outage status and DAFMAN compliance' },
+    ],
   },
   {
     id: 'aircraft-db',
@@ -404,6 +442,10 @@ const MODULES: ModuleRef[] = [
       'All reports support PDF export and email delivery',
     ],
     howToAccess: 'Navigate to Reference > Reports & Analytics in the sidebar.',
+    screenshots: [
+      { src: '/training/reports-analytics_1.png', caption: 'Analytics dashboard with configurable time-frame metrics' },
+      { src: '/training/reports_example_1.png', caption: 'Report generation with PDF export and email delivery' },
+    ],
   },
   {
     id: 'settings',
@@ -803,6 +845,36 @@ function ModuleCardControlled({ module, forceExpand }: { module: ModuleRef; forc
           }}>
             {module.overview}
           </div>
+
+          {/* Screenshots */}
+          {module.screenshots && module.screenshots.length > 0 && (
+            <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {module.screenshots.map((ss, i) => (
+                <div key={i} style={{
+                  borderRadius: 8, overflow: 'hidden',
+                  border: '1px solid var(--color-border)',
+                  background: 'var(--color-bg-inset)',
+                }}>
+                  <img
+                    src={ss.src}
+                    alt={ss.caption}
+                    loading="lazy"
+                    style={{
+                      width: '100%', display: 'block',
+                      borderBottom: '1px solid var(--color-border)',
+                    }}
+                  />
+                  <div style={{
+                    padding: '8px 12px',
+                    fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)',
+                    fontStyle: 'italic', lineHeight: 1.4,
+                  }}>
+                    {ss.caption}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div style={{
             background: 'var(--color-bg-inset)', borderRadius: 8, padding: '12px 14px',
