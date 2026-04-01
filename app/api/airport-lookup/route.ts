@@ -137,12 +137,32 @@ async function fetchCached(url: string, cache: { data: string; ts: number } | nu
 
 // ── FAA NFDC supplement for US airports ──
 
+interface FAARunwayEnd {
+  latitude?: number
+  longitude?: number
+  elevation?: number
+  approach_lighting?: string
+}
+
+interface FAARunway {
+  designator: string
+  end1: FAARunwayEnd
+  end2: FAARunwayEnd
+}
+
 interface FAAData {
-  end1_approach?: string
-  end2_approach?: string
+  runways: FAARunway[]
   navaids: NavaidData[]
   arff_category: string | null
   taxiways: string[]
+}
+
+/** Parse FAA DMS like 33°55'38.78"N or 80°48'40.63"W to decimal degrees */
+function parseDMS(dms: string): number | undefined {
+  const m = dms.match(/(\d+)[°](\d+)[']([0-9.]+)["]?\s*([NSEW])/i)
+  if (!m) return undefined
+  const deg = parseInt(m[1]) + parseInt(m[2]) / 60 + parseFloat(m[3]) / 3600
+  return (m[4] === 'S' || m[4] === 'W') ? -deg : deg
 }
 
 async function fetchFAAData(faaId: string): Promise<FAAData | null> {
@@ -153,7 +173,63 @@ async function fetchFAAData(faaId: string): Promise<FAAData | null> {
     const html = await res.text()
     const strip = (s: string) => s.replace(/<[^>]+>/g, '').trim()
 
-    // Extract approach lighting
+    // Extract per-runway coordinate data from FAA HTML
+    // FAA pages have runway sections with DMS coordinates
+    const faaRunways: FAARunway[] = []
+    const rwyBlocks = html.split(/Runway\s+(\d{1,2}[LRC]?\/\d{1,2}[LRC]?)/gi)
+    for (let i = 1; i < rwyBlocks.length; i += 2) {
+      const designator = rwyBlocks[i]
+      const block = rwyBlocks[i + 1] || ''
+
+      // Find all DMS coordinate pairs in this block
+      const dmsPattern = /(\d{1,3})[°](\d{1,2})[']([0-9.]+)["]?\s*([NS])\s*[\/,]\s*(\d{1,3})[°](\d{1,2})[']([0-9.]+)["]?\s*([EW])/gi
+      const coords: { lat: number; lon: number }[] = []
+      let dmsMatch: RegExpExecArray | null
+      while ((dmsMatch = dmsPattern.exec(block)) !== null) {
+        const lat = parseInt(dmsMatch[1]) + parseInt(dmsMatch[2]) / 60 + parseFloat(dmsMatch[3]) / 3600
+        const latSign = dmsMatch[4] === 'S' ? -1 : 1
+        const lon = parseInt(dmsMatch[5]) + parseInt(dmsMatch[6]) / 60 + parseFloat(dmsMatch[7]) / 3600
+        const lonSign = dmsMatch[8] === 'W' ? -1 : 1
+        coords.push({ lat: lat * latSign, lon: lon * lonSign })
+      }
+
+      // Find elevations
+      const elevPattern = /Elevation:\s*([\d.]+)\s*ft/gi
+      const elevs: number[] = []
+      let elevMatch: RegExpExecArray | null
+      while ((elevMatch = elevPattern.exec(block)) !== null) {
+        elevs.push(parseFloat(elevMatch[1]))
+      }
+
+      // Find approach lighting
+      const approachPattern = /Approach lights:\s*([^<\n]+)/gi
+      const approaches: string[] = []
+      let appMatch: RegExpExecArray | null
+      while ((appMatch = approachPattern.exec(block)) !== null) {
+        const val = appMatch[1].trim()
+        if (val && val !== 'None' && val !== 'none') approaches.push(val)
+      }
+
+      if (coords.length >= 2) {
+        faaRunways.push({
+          designator,
+          end1: {
+            latitude: coords[0].lat,
+            longitude: coords[0].lon,
+            elevation: elevs[0],
+            approach_lighting: approaches[0],
+          },
+          end2: {
+            latitude: coords[1].lat,
+            longitude: coords[1].lon,
+            elevation: elevs[1],
+            approach_lighting: approaches[1],
+          },
+        })
+      }
+    }
+
+    // Extract approach lighting (fallback for single-runway pages)
     const approaches: string[] = []
     const approachMatches = html.match(/Approach lights:.*?<\/td>/gi)
     if (approachMatches) {
@@ -201,8 +277,7 @@ async function fetchFAAData(faaId: string): Promise<FAAData | null> {
     taxiways.push(...Array.from(twySet).sort())
 
     return {
-      end1_approach: approaches[0] || undefined,
-      end2_approach: approaches[1] || undefined,
+      runways: faaRunways,
       navaids,
       arff_category,
       taxiways,
@@ -253,30 +328,41 @@ export async function GET(req: NextRequest) {
     const faaId = airport.local_code || icao.replace(/^K/, '')
     const faaData = isUS ? await fetchFAAData(faaId) : null
 
-    // Build runway data
+    // Build runway data — use FAA survey coordinates when available (higher precision)
     const runways: RunwayData[] = rwyRows
       .filter(r => r.closed !== '1')
-      .map((r, i) => {
+      .map((r) => {
         const le = r.le_ident || ''
         const he = r.he_ident || ''
+        const rwyId = `${le}/${he}`
+
+        // Find matching FAA runway data (try both forward and reverse designator order)
+        const faaRwy = faaData?.runways.find(f =>
+          f.designator === rwyId || f.designator === `${he}/${le}`
+        )
+        const faaFlipped = faaRwy?.designator === `${he}/${le}`
+
+        const faaEnd1 = faaFlipped ? faaRwy?.end2 : faaRwy?.end1
+        const faaEnd2 = faaFlipped ? faaRwy?.end1 : faaRwy?.end2
+
         return {
-          runway_id: `${le}/${he}`,
+          runway_id: rwyId,
           length_ft: parseInt(r.length_ft) || 0,
           width_ft: parseInt(r.width_ft) || 0,
           surface: decodeSurface(r.surface || ''),
           lighted: r.lighted === '1',
           end1_designator: le,
-          end1_latitude: parseFloat(r.le_latitude_deg) || null,
-          end1_longitude: parseFloat(r.le_longitude_deg) || null,
-          end1_elevation_msl: parseFloat(r.le_elevation_ft) || null,
+          end1_latitude: faaEnd1?.latitude ?? (parseFloat(r.le_latitude_deg) || null),
+          end1_longitude: faaEnd1?.longitude ?? (parseFloat(r.le_longitude_deg) || null),
+          end1_elevation_msl: faaEnd1?.elevation ?? (parseFloat(r.le_elevation_ft) || null),
           end1_heading: parseFloat(r.le_heading_degT) || null,
-          end1_approach_lighting: (i === 0 && faaData?.end1_approach) ? faaData.end1_approach : null,
+          end1_approach_lighting: faaEnd1?.approach_lighting || null,
           end2_designator: he,
-          end2_latitude: parseFloat(r.he_latitude_deg) || null,
-          end2_longitude: parseFloat(r.he_longitude_deg) || null,
-          end2_elevation_msl: parseFloat(r.he_elevation_ft) || null,
+          end2_latitude: faaEnd2?.latitude ?? (parseFloat(r.he_latitude_deg) || null),
+          end2_longitude: faaEnd2?.longitude ?? (parseFloat(r.he_longitude_deg) || null),
+          end2_elevation_msl: faaEnd2?.elevation ?? (parseFloat(r.he_elevation_ft) || null),
           end2_heading: parseFloat(r.he_heading_degT) || null,
-          end2_approach_lighting: (i === 0 && faaData?.end2_approach) ? faaData.end2_approach : null,
+          end2_approach_lighting: faaEnd2?.approach_lighting || null,
         }
       })
 
