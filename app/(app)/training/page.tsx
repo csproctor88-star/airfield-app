@@ -443,14 +443,14 @@ const MODULES: ModuleRef[] = [
     color: '#22D3EE',
     path: '/notams',
     tagline: 'Live FAA NOTAM feed',
-    overview: 'Live FAA NOTAM feed that auto-fetches NOTAMs for your installation\'s ICAO code on page load. Includes filter chips for All/FAA/LOCAL/Active/Expired, expiring NOTAM alerts (within 24 hours), and the ability to draft local NOTAMs.',
+    overview: 'Live FAA NOTAM feed that auto-fetches NOTAMs for your installation\'s ICAO code on page load. Includes filter chips for All/FAA/LOCAL/Active/Expired and expiring NOTAM alerts that highlight NOTAMs within 24 hours of expiration.',
     keyFeatures: [
       'Auto-fetch NOTAMs by installation ICAO code',
       'ICAO search for querying any airport',
       'Filter chips — All, FAA, LOCAL, Active, Expired',
       'Expiring NOTAM alerts — sidebar badge count and red card highlight for NOTAMs within 24 hours',
       'Full NOTAM text in monospace display',
-      'Draft creation for local NOTAMs',
+      'Feed status indicator, refresh button, loading/error states',
     ],
     howToAccess: 'Navigate to Reference > NOTAMs in the sidebar.',
     screenshots: [
