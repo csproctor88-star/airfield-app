@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
+import { friendlyError } from '@/lib/utils'
 import { createDefaultTemplate, fetchInspectionTemplate } from '@/lib/supabase/inspection-templates'
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
 import {
@@ -177,6 +178,75 @@ function RunwayTab({
   const [runways, setRunways] = useState(initialRunways)
   const [adding, setAdding] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  // ICAO lookup state
+  const [lookupOpen, setLookupOpen] = useState(false)
+  const [lookupIcao, setLookupIcao] = useState('')
+  const [lookupLoading, setLookupLoading] = useState(false)
+  const [lookupResult, setLookupResult] = useState<any>(null)
+  const [lookupError, setLookupError] = useState('')
+
+  const handleIcaoLookup = async () => {
+    if (!lookupIcao.trim()) return
+    setLookupLoading(true)
+    setLookupError('')
+    setLookupResult(null)
+    try {
+      const res = await fetch(`/api/airport-lookup?icao=${encodeURIComponent(lookupIcao.trim())}`)
+      const data = await res.json()
+      if (!res.ok) {
+        setLookupError(data.error || 'Lookup failed')
+      } else {
+        setLookupResult(data)
+      }
+    } catch {
+      setLookupError('Network error — could not reach lookup service')
+    }
+    setLookupLoading(false)
+  }
+
+  const handleImportRunway = async (rwy: any) => {
+    if (!installationId) return
+    setSaving(true)
+    const supabase = createClient()
+    if (!supabase) { setSaving(false); return }
+
+    const insert = {
+      base_id: installationId,
+      runway_id: rwy.runway_id,
+      length_ft: rwy.length_ft || 0,
+      width_ft: rwy.width_ft || 0,
+      surface: rwy.surface || 'Unknown',
+      true_heading: rwy.end1_heading || null,
+      runway_class: 'B',
+      end1_designator: rwy.end1_designator || rwy.runway_id.split('/')[0] || '',
+      end1_latitude: rwy.end1_latitude || null,
+      end1_longitude: rwy.end1_longitude || null,
+      end1_heading: rwy.end1_heading || null,
+      end1_approach_lighting: rwy.end1_approach_lighting || null,
+      end1_elevation_msl: rwy.end1_elevation_msl || null,
+      end2_designator: rwy.end2_designator || rwy.runway_id.split('/')[1] || '',
+      end2_latitude: rwy.end2_latitude || null,
+      end2_longitude: rwy.end2_longitude || null,
+      end2_heading: rwy.end2_heading || null,
+      end2_approach_lighting: rwy.end2_approach_lighting || null,
+      end2_elevation_msl: rwy.end2_elevation_msl || null,
+    }
+
+    const { data, error } = await supabase
+      .from('base_runways')
+      .insert(insert)
+      .select('*')
+      .single()
+
+    if (error) {
+      toast.error(`Failed to import runway: ${friendlyError(error.message)}`)
+    } else {
+      toast.success(`Runway ${rwy.runway_id} imported`)
+      setRunways(prev => [...prev, data as typeof prev[number]])
+    }
+    setSaving(false)
+  }
 
   // New runway form state
   const [newRunway, setNewRunway] = useState({
@@ -435,24 +505,229 @@ function RunwayTab({
           </div>
         </div>
       ) : (
-        <button
-          onClick={() => setAdding(true)}
-          style={{
-            marginTop: 8,
-            padding: '10px 14px',
-            borderRadius: 'var(--radius-base)',
-            border: '1px dashed var(--color-border)',
-            background: 'none',
-            color: 'var(--color-accent)',
-            cursor: 'pointer',
-            fontSize: 'var(--fs-md)',
-            fontWeight: 600,
-            fontFamily: 'inherit',
-            width: '100%',
-          }}
-        >
-          + Add Runway
-        </button>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <button
+            onClick={() => setAdding(true)}
+            style={{
+              flex: 1,
+              padding: '10px 14px',
+              borderRadius: 'var(--radius-base)',
+              border: '1px dashed var(--color-border)',
+              background: 'none',
+              color: 'var(--color-accent)',
+              cursor: 'pointer',
+              fontSize: 'var(--fs-md)',
+              fontWeight: 600,
+              fontFamily: 'inherit',
+            }}
+          >
+            + Add Runway
+          </button>
+          <button
+            onClick={() => { setLookupOpen(true); setLookupResult(null); setLookupError(''); setLookupIcao('') }}
+            style={{
+              flex: 1,
+              padding: '10px 14px',
+              borderRadius: 'var(--radius-base)',
+              border: '1px solid var(--color-cyan)',
+              background: 'rgba(56,189,248,0.08)',
+              color: 'var(--color-cyan)',
+              cursor: 'pointer',
+              fontSize: 'var(--fs-md)',
+              fontWeight: 600,
+              fontFamily: 'inherit',
+            }}
+          >
+            Import from ICAO
+          </button>
+        </div>
+      )}
+
+      {/* ICAO Lookup Dialog */}
+      {lookupOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 16,
+        }} onClick={() => setLookupOpen(false)}>
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+              borderRadius: 14, padding: 24, width: '100%', maxWidth: 560,
+              maxHeight: '80vh', overflowY: 'auto',
+            }}
+          >
+            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 4 }}>
+              Import Runway Data
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16 }}>
+              Enter an ICAO code to look up runway data from the OurAirports open database. US airports include FAA approach lighting details.
+            </div>
+
+            {/* Search bar */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              <input
+                value={lookupIcao}
+                onChange={e => setLookupIcao(e.target.value.toUpperCase())}
+                onKeyDown={e => { if (e.key === 'Enter') handleIcaoLookup() }}
+                placeholder="ICAO code (e.g. KVOK, ETAR)"
+                style={{
+                  flex: 1, padding: '10px 14px', borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+                  color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontFamily: 'monospace',
+                  letterSpacing: '0.05em', textTransform: 'uppercase',
+                }}
+                autoFocus
+              />
+              <button
+                onClick={handleIcaoLookup}
+                disabled={lookupLoading || !lookupIcao.trim()}
+                style={{
+                  padding: '10px 20px', borderRadius: 'var(--radius-sm)', border: 'none',
+                  background: 'var(--color-cyan)', color: '#0F172A',
+                  fontSize: 'var(--fs-md)', fontWeight: 700, cursor: lookupLoading ? 'wait' : 'pointer',
+                  fontFamily: 'inherit', opacity: lookupLoading || !lookupIcao.trim() ? 0.5 : 1,
+                }}
+              >
+                {lookupLoading ? 'Searching...' : 'Look Up'}
+              </button>
+            </div>
+
+            {/* Error */}
+            {lookupError && (
+              <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', marginBottom: 12 }}>
+                {lookupError}
+              </div>
+            )}
+
+            {/* Results */}
+            {lookupResult && (
+              <div>
+                {/* Airport info */}
+                <div style={{
+                  padding: '12px 14px', borderRadius: 8, marginBottom: 12,
+                  background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)',
+                }}>
+                  <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                    {lookupResult.name}
+                  </div>
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
+                    {lookupResult.icao} — {lookupResult.municipality}, {lookupResult.region} | Elev {lookupResult.elevation_ft} ft MSL
+                  </div>
+                </div>
+
+                {/* Runways */}
+                {lookupResult.runways.length === 0 ? (
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>No runway data found.</div>
+                ) : (
+                  lookupResult.runways.map((rwy: any, i: number) => {
+                    const alreadyExists = runways.some(r => r.runway_id === rwy.runway_id)
+                    return (
+                      <div key={i} style={{
+                        padding: 14, borderRadius: 10, marginBottom: 8,
+                        background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                          <div>
+                            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                              Runway {rwy.runway_id}
+                            </div>
+                            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginTop: 2 }}>
+                              {rwy.length_ft} x {rwy.width_ft} ft | {rwy.surface}{rwy.lighted ? ' | Lighted' : ''}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleImportRunway(rwy)}
+                            disabled={saving || alreadyExists}
+                            style={{
+                              padding: '8px 16px', borderRadius: 8, border: 'none',
+                              background: alreadyExists ? 'var(--color-bg-surface)' : 'var(--color-cyan)',
+                              color: alreadyExists ? 'var(--color-text-3)' : '#0F172A',
+                              fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: alreadyExists ? 'default' : 'pointer',
+                              fontFamily: 'inherit', opacity: alreadyExists ? 0.5 : 1, flexShrink: 0,
+                            }}
+                          >
+                            {alreadyExists ? 'Already Added' : saving ? 'Importing...' : 'Import'}
+                          </button>
+                        </div>
+
+                        {/* End details */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                          <div style={{ padding: '8px 10px', borderRadius: 6, background: 'var(--color-bg-surface)' }}>
+                            <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 4 }}>
+                              {rwy.end1_designator}
+                            </div>
+                            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontFamily: 'monospace' }}>
+                              {rwy.end1_latitude?.toFixed(5)}, {rwy.end1_longitude?.toFixed(5)}
+                            </div>
+                            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                              Elev {rwy.end1_elevation_msl ?? '—'} ft | Hdg {rwy.end1_heading ?? '—'}°
+                            </div>
+                            {rwy.end1_approach_lighting && (
+                              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-cyan)', marginTop: 2 }}>
+                                {rwy.end1_approach_lighting}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ padding: '8px 10px', borderRadius: 6, background: 'var(--color-bg-surface)' }}>
+                            <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 4 }}>
+                              {rwy.end2_designator}
+                            </div>
+                            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontFamily: 'monospace' }}>
+                              {rwy.end2_latitude?.toFixed(5)}, {rwy.end2_longitude?.toFixed(5)}
+                            </div>
+                            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                              Elev {rwy.end2_elevation_msl ?? '—'} ft | Hdg {rwy.end2_heading ?? '—'}°
+                            </div>
+                            {rwy.end2_approach_lighting && (
+                              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-cyan)', marginTop: 2 }}>
+                                {rwy.end2_approach_lighting}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+
+                {/* Frequencies */}
+                {lookupResult.frequencies.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 6 }}>
+                      Frequencies (reference only)
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {lookupResult.frequencies.map((f: any, i: number) => (
+                        <span key={i} style={{
+                          padding: '4px 10px', borderRadius: 6, fontSize: 'var(--fs-xs)',
+                          background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+                          color: 'var(--color-text-2)', fontFamily: 'monospace',
+                        }}>
+                          {f.description} {f.frequency_mhz}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Close button */}
+            <button
+              onClick={() => setLookupOpen(false)}
+              style={{
+                marginTop: 16, padding: '10px 0', width: '100%',
+                borderRadius: 'var(--radius-base)', border: '1px solid var(--color-border)',
+                background: 'var(--color-bg-inset)', color: 'var(--color-text-2)',
+                fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
       )}
 
       <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 12 }}>
