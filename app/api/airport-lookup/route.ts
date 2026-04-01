@@ -37,6 +37,13 @@ interface FrequencyData {
   frequency_mhz: number
 }
 
+interface NavaidData {
+  name: string
+  type: string
+  id: string
+  frequency: string
+}
+
 interface AirportLookupResult {
   icao: string
   name: string
@@ -48,6 +55,9 @@ interface AirportLookupResult {
   region: string
   runways: RunwayData[]
   frequencies: FrequencyData[]
+  navaids: NavaidData[]
+  suggested_areas: string[]
+  arff_category: string | null
 }
 
 // ── CSV parsing ──
@@ -127,44 +137,75 @@ async function fetchCached(url: string, cache: { data: string; ts: number } | nu
 
 // ── FAA NFDC supplement for US airports ──
 
-async function fetchFAAData(faaId: string): Promise<{ end1_approach?: string; end2_approach?: string; navaids?: string[] } | null> {
+interface FAAData {
+  end1_approach?: string
+  end2_approach?: string
+  navaids: NavaidData[]
+  arff_category: string | null
+  taxiways: string[]
+}
+
+async function fetchFAAData(faaId: string): Promise<FAAData | null> {
   try {
     const url = `https://nfdc.faa.gov/nfdcApps/services/ajv5/airportDisplay.jsp?airportId=${faaId}`
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) })
     if (!res.ok) return null
     const html = await res.text()
+    const strip = (s: string) => s.replace(/<[^>]+>/g, '').trim()
 
-    // Extract approach lighting from HTML (best-effort parsing)
+    // Extract approach lighting
     const approaches: string[] = []
     const approachMatches = html.match(/Approach lights:.*?<\/td>/gi)
     if (approachMatches) {
       for (const m of approachMatches) {
-        const text = m.replace(/<[^>]+>/g, '').replace('Approach lights:', '').trim()
-        approaches.push(text)
+        approaches.push(strip(m).replace('Approach lights:', '').trim())
       }
     }
 
-    // Extract NAVAID names
-    const navaids: string[] = []
+    // Extract NAVAIDs with type, ID, name, frequency
+    const navaids: NavaidData[] = []
     const navaidSection = html.match(/NAVAIDS[\s\S]*?(?=<h[23]|$)/i)
     if (navaidSection) {
       const rows = navaidSection[0].match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || []
       for (const row of rows) {
         const cells = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi)
-        if (cells && cells.length >= 2) {
-          const type = cells[0].replace(/<[^>]+>/g, '').trim()
-          const name = cells[1].replace(/<[^>]+>/g, '').trim()
-          if (type && name && !type.includes('Type')) {
-            navaids.push(`${type} ${name}`.trim())
+        if (cells && cells.length >= 4) {
+          const type = strip(cells[0])
+          const id = strip(cells[1])
+          const name = strip(cells[2])
+          const freq = strip(cells[3])
+          if (type && id && !type.includes('Type') && !type.includes('---')) {
+            navaids.push({ type, id, name, frequency: freq })
           }
         }
       }
     }
 
+    // Extract ARFF category
+    let arff_category: string | null = null
+    const arffMatch = html.match(/ARFF[^<]*Index[^<]*?(\d+)/i)
+      || html.match(/Fire.*?Category[^<]*?(\d+)/i)
+      || html.match(/ARFF[^<]*?Cat(?:egory)?\s*(\d+)/i)
+    if (arffMatch) {
+      arff_category = arffMatch[1]
+    }
+
+    // Extract taxiway designators from remarks
+    const taxiways: string[] = []
+    const twySet = new Set<string>()
+    let twyMatch: RegExpExecArray | null
+    const twyRegex = /(?:Taxiway|TWY|Twy)\s+([A-Z])\b/gi
+    while ((twyMatch = twyRegex.exec(html)) !== null) {
+      twySet.add(twyMatch[1].toUpperCase())
+    }
+    taxiways.push(...Array.from(twySet).sort())
+
     return {
       end1_approach: approaches[0] || undefined,
       end2_approach: approaches[1] || undefined,
-      navaids: navaids.length > 0 ? navaids : undefined,
+      navaids,
+      arff_category,
+      taxiways,
     }
   } catch {
     return null
@@ -246,6 +287,22 @@ export async function GET(req: NextRequest) {
       frequency_mhz: parseFloat(f.frequency_mhz) || 0,
     }))
 
+    // Build NAVAIDs from FAA data
+    const navaids: NavaidData[] = faaData?.navaids || []
+
+    // Build suggested areas from runways + FAA taxiways
+    const suggested_areas: string[] = []
+    for (const rwy of runways) {
+      suggested_areas.push(`RWY ${rwy.runway_id}`)
+    }
+    if (faaData?.taxiways) {
+      for (const twy of faaData.taxiways) {
+        suggested_areas.push(`TWY ${twy}`)
+      }
+    }
+    // Add standard areas
+    suggested_areas.push('Airfield Perimeter')
+
     const result: AirportLookupResult = {
       icao,
       name: airport.name || '',
@@ -257,6 +314,9 @@ export async function GET(req: NextRequest) {
       region: airport.iso_region || '',
       runways,
       frequencies,
+      navaids,
+      suggested_areas,
+      arff_category: faaData?.arff_category || null,
     }
 
     return NextResponse.json(result)

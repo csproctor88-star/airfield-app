@@ -385,6 +385,83 @@ function RunwayTab({
     setSaving(false)
   }
 
+  const handleImportAll = async () => {
+    if (!installationId || !lookupResult) return
+    setSaving(true)
+    const supabase = createClient()
+    if (!supabase) { setSaving(false); return }
+    let imported = 0
+
+    // Import runways
+    for (const rwy of lookupResult.runways) {
+      if (runways.some((r: any) => r.runway_id === rwy.runway_id)) continue
+      const { data, error } = await supabase
+        .from('base_runways')
+        .insert({
+          base_id: installationId, runway_id: rwy.runway_id,
+          length_ft: rwy.length_ft || 0, width_ft: rwy.width_ft || 0,
+          surface: rwy.surface || 'Unknown', true_heading: rwy.end1_heading || null,
+          runway_class: 'B',
+          end1_designator: rwy.end1_designator || '', end1_latitude: rwy.end1_latitude,
+          end1_longitude: rwy.end1_longitude, end1_heading: rwy.end1_heading,
+          end1_approach_lighting: rwy.end1_approach_lighting, end1_elevation_msl: rwy.end1_elevation_msl,
+          end2_designator: rwy.end2_designator || '', end2_latitude: rwy.end2_latitude,
+          end2_longitude: rwy.end2_longitude, end2_heading: rwy.end2_heading,
+          end2_approach_lighting: rwy.end2_approach_lighting, end2_elevation_msl: rwy.end2_elevation_msl,
+        } as any)
+        .select('*')
+        .single()
+      if (!error && data) {
+        setRunways((prev: any) => [...prev, data])
+        imported++
+      }
+    }
+
+    // Import suggested areas
+    if (lookupResult.suggested_areas?.length > 0) {
+      for (const area of lookupResult.suggested_areas) {
+        const { error: aErr } = await supabase.from('base_areas').insert({ base_id: installationId, area_name: area } as any)
+        if (!aErr) imported++
+      }
+    }
+
+    // Import NAVAIDs
+    if (lookupResult.navaids?.length > 0) {
+      for (let i = 0; i < lookupResult.navaids.length; i++) {
+        const nav = lookupResult.navaids[i]
+        const name = nav.type === 'ILS' ? `${nav.type} ${nav.id}` :
+                     nav.type === 'TACAN' ? `TACAN ${nav.id}` :
+                     `${nav.type} ${nav.name || nav.id}`
+        const { error: nErr } = await supabase.from('base_navaids').insert({ base_id: installationId, navaid_name: name, sort_order: i + 1 } as any)
+        if (!nErr) imported++
+      }
+      // Also add approach lighting NAVAIDs from runways
+      let navOrder = lookupResult.navaids.length + 1
+      for (const rwy of lookupResult.runways) {
+        if (rwy.end1_approach_lighting) {
+          await supabase.from('base_navaids').insert({ base_id: installationId, navaid_name: `${rwy.end1_approach_lighting} RWY ${rwy.end1_designator}`, sort_order: navOrder++ } as any)
+        }
+        if (rwy.end2_approach_lighting) {
+          await supabase.from('base_navaids').insert({ base_id: installationId, navaid_name: `${rwy.end2_approach_lighting} RWY ${rwy.end2_designator}`, sort_order: navOrder++ } as any)
+        }
+      }
+      // Add NAVAID statuses (default green)
+      const { data: allNavaids } = await supabase.from('base_navaids').select('navaid_name').eq('base_id', installationId)
+      if (allNavaids) {
+        for (const n of allNavaids) {
+          await supabase.from('navaid_statuses').insert({ base_id: installationId, navaid_name: (n as any).navaid_name, status: 'green' } as any)
+        }
+      }
+    }
+
+    // Ensure airfield_status row exists
+    await supabase.from('airfield_status').insert({ base_id: installationId, runway_status: 'open' } as any)
+
+    toast.success(`Imported ${imported} items from ${lookupResult.icao}`)
+    setSaving(false)
+    setLookupOpen(false)
+  }
+
   // New runway form state
   const [newRunway, setNewRunway] = useState({
     runway_id: '',
@@ -751,7 +828,30 @@ function RunwayTab({
                   </div>
                   <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
                     {lookupResult.icao} — {lookupResult.municipality}, {lookupResult.region} | Elev {lookupResult.elevation_ft} ft MSL
+                  {lookupResult.arff_category && (
+                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-cyan)', marginTop: 2 }}>
+                      ARFF Category {lookupResult.arff_category}
+                    </div>
+                  )}
                   </div>
+                </div>
+
+                {/* Import All button */}
+                <button
+                  onClick={handleImportAll}
+                  disabled={saving}
+                  style={{
+                    width: '100%', padding: '12px 16px', borderRadius: 8, border: 'none',
+                    background: 'linear-gradient(135deg, var(--color-cyan), var(--color-accent))',
+                    color: '#0F172A', fontSize: 'var(--fs-md)', fontWeight: 700,
+                    cursor: saving ? 'wait' : 'pointer', fontFamily: 'inherit',
+                    marginBottom: 12, opacity: saving ? 0.6 : 1,
+                  }}
+                >
+                  {saving ? 'Importing...' : `Import All — Runways, Areas, NAVAIDs`}
+                </button>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 12, textAlign: 'center' }}>
+                  Imports {lookupResult.runways.length} runway{lookupResult.runways.length !== 1 ? 's' : ''}, {lookupResult.suggested_areas?.length || 0} areas, {(lookupResult.navaids?.length || 0) + lookupResult.runways.filter((r: any) => r.end1_approach_lighting || r.end2_approach_lighting).length * 2} NAVAIDs{lookupResult.arff_category ? ` • ARFF Cat ${lookupResult.arff_category}` : ''}
                 </div>
 
                 {/* Runways */}
