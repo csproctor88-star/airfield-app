@@ -41,6 +41,7 @@ const refItems: ModuleItem[] = [
   { name: 'Reference Library', icon: '📚', color: '#22D3EE', href: '/regulations' },
   { name: 'NOTAMs', icon: '📡', color: '#22D3EE', href: '/notams' },
   { name: 'Reports & Analytics', icon: '📈', color: '#22D3EE', href: '/reports' },
+  { name: 'Training', icon: '🎓', color: '#38BDF8', href: '/training' },
 ]
 
 // Settings / Admin

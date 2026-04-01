@@ -45,6 +45,7 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'Settings', href: '/settings', iconName: 'Settings' },
   { name: 'PDF Library', href: '/library', iconName: 'BookMarked' },
   { name: 'User Management', href: '/users', iconName: 'Users' },
+  { name: 'Training', href: '/training', iconName: 'GraduationCap' },
 ]
 
 export const NAV_ITEM_MAP = new Map(ALL_NAV_ITEMS.map(i => [i.href, i]))
@@ -64,7 +65,7 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
     },
     {
       label: 'Reference',
-      items: ['/aircraft', '/regulations', '/notams', '/reports'],
+      items: ['/aircraft', '/regulations', '/notams', '/reports', '/training'],
     },
     {
       label: 'Settings',
