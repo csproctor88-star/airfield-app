@@ -24,9 +24,9 @@
   --color-border-active: rgba(56, 189, 248, 0.2);
   --color-border-mid: rgba(56, 189, 248, 0.12);
   --color-text-1: #F1F5F9;
-  --color-text-2: #B0BEC5;
-  --color-text-3: #8899A6;
-  --color-text-4: #334155;
+  --color-text-2: #CBD5E1;
+  --color-text-3: #94A3B8;
+  --color-text-4: #475569;
   --color-accent: #38BDF8;
   --color-accent-secondary: #0EA5E9;
   --color-accent-dark: #0369A1;
@@ -54,7 +54,7 @@
   --color-progress-track: #1E293B;
   --color-detail-box-bg: rgba(56, 189, 248, 0.06);
   --color-detail-box-label: #CBD5E1;
-  --color-detail-box-value: #94A3B8;
+  --color-detail-box-value: #CBD5E1;
   --color-search-bg: rgba(15, 23, 42, 0.6);
   --color-search-border: rgba(148, 163, 184, 0.1);
 
@@ -128,17 +128,17 @@
   --color-surface-1: var(--color-bg-elevated);
 
   /* ── Responsive font-size scale (mobile defaults) ── */
-  --fs-2xs: 9px;
-  --fs-xs: 10px;
-  --fs-sm: 11px;
-  --fs-base: 12px;
-  --fs-md: 13px;
-  --fs-lg: 14px;
-  --fs-xl: 15px;
-  --fs-2xl: 16px;
-  --fs-3xl: 18px;
-  --fs-4xl: 20px;
-  --fs-5xl: 24px;
+  --fs-2xs: 11px;
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-base: 14px;
+  --fs-md: 15px;
+  --fs-lg: 16px;
+  --fs-xl: 17px;
+  --fs-2xl: 18px;
+  --fs-3xl: 20px;
+  --fs-4xl: 22px;
+  --fs-5xl: 26px;
 
   /* ── Header scaling ── */
   --header-padding: 6px 16px;
@@ -748,17 +748,17 @@ html, body {
 /* ── Tablet (768px+) ── */
 @media (min-width: 768px) {
   :root, [data-theme="dark"], [data-theme="light"] {
-    --fs-2xs: 10px;
-    --fs-xs: 11px;
-    --fs-sm: 12px;
-    --fs-base: 13px;
-    --fs-md: 14px;
-    --fs-lg: 15px;
-    --fs-xl: 16px;
-    --fs-2xl: 18px;
-    --fs-3xl: 20px;
-    --fs-4xl: 22px;
-    --fs-5xl: 28px;
+    --fs-2xs: 11px;
+    --fs-xs: 12px;
+    --fs-sm: 13px;
+    --fs-base: 14px;
+    --fs-md: 15px;
+    --fs-lg: 16px;
+    --fs-xl: 17px;
+    --fs-2xl: 19px;
+    --fs-3xl: 21px;
+    --fs-4xl: 24px;
+    --fs-5xl: 30px;
 
     --map-height: 35vh;
     --map-height-expanded: 50vh;
@@ -945,17 +945,17 @@ html, body {
 /* ── Desktop (1024px+) ── */
 @media (min-width: 1024px) {
   :root, [data-theme="dark"], [data-theme="light"] {
-    --fs-2xs: 10px;
-    --fs-xs: 11px;
-    --fs-sm: 12px;
-    --fs-base: 13px;
-    --fs-md: 14px;
-    --fs-lg: 15px;
-    --fs-xl: 16px;
-    --fs-2xl: 18px;
-    --fs-3xl: 21px;
-    --fs-4xl: 24px;
-    --fs-5xl: 28px;
+    --fs-2xs: 11px;
+    --fs-xs: 12px;
+    --fs-sm: 13px;
+    --fs-base: 14px;
+    --fs-md: 15px;
+    --fs-lg: 16px;
+    --fs-xl: 17px;
+    --fs-2xl: 19px;
+    --fs-3xl: 22px;
+    --fs-4xl: 26px;
+    --fs-5xl: 32px;
 
     --map-height: 40vh;
     --map-height-expanded: 55vh;
