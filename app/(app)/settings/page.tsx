@@ -202,7 +202,12 @@ function ProfileSectionContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const val = oi.trim().toUpperCase() || null
-        await supabase.from('profiles').update({ operating_initials: val } as any).eq('id', user.id)
+        const { error } = await supabase.from('profiles').update({ operating_initials: val } as any).eq('id', user.id)
+        if (error) {
+          toast.error(`Failed to save: ${error.message}`)
+          setSavingOi(false)
+          return
+        }
         setProfile((prev) => prev ? { ...prev, operatingInitials: val } : prev)
       }
     }

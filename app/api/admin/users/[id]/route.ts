@@ -76,11 +76,11 @@ export async function PATCH(
       updates = sanitizeBaseAdminUpdate(updates)
     }
 
-    // Sys admin specific: if promoting to admin role, caller must be sys_admin
-    if (updates.role && ['sys_admin', 'base_admin', 'airfield_manager', 'namo'].includes(updates.role as string)) {
+    // Only sys_admin can assign sys_admin or base_admin roles
+    if (updates.role && ['sys_admin', 'base_admin'].includes(updates.role as string)) {
       if (!isSysAdmin(callerProfile.role)) {
         return NextResponse.json(
-          { error: 'Only system admins can assign admin roles' },
+          { error: 'Only system admins can assign sys_admin or base_admin roles' },
           { status: 403 },
         )
       }
