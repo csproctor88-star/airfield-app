@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 // ── Zulu (UTC) time formatting ──────────────────────────────────────
 export function formatZuluTime(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date
-  return d.toISOString().slice(11, 16)
+  return d.toISOString().slice(11, 16).replace(':', '')
 }
 
 export function formatZuluDate(date: Date | string): string {
