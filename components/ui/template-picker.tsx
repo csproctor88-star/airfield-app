@@ -92,8 +92,17 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
         n.notam_number.toUpperCase().includes(notamId.trim().toUpperCase())
       )
       if (match) {
-        const startStr = match.effective_start ? new Date(match.effective_start).toISOString().slice(0, 16).replace('T', ' ') + 'Z' : ''
-        const endStr = match.effective_end ? new Date(match.effective_end).toISOString().slice(0, 16).replace('T', ' ') + 'Z' : 'PERM'
+        // FAA dates may be "MM/DD/YYYY HHMM" or "PERM" — use as-is if Date parsing fails
+        const safeDateStr = (raw: string) => {
+          if (!raw || raw.toUpperCase() === 'PERM') return raw || 'PERM'
+          try {
+            const d = new Date(raw)
+            if (isNaN(d.getTime())) return raw  // unparseable — use raw string
+            return d.toISOString().slice(0, 16).replace('T', ' ') + 'Z'
+          } catch { return raw }
+        }
+        const startStr = match.effective_start ? safeDateStr(match.effective_start) : ''
+        const endStr = match.effective_end ? safeDateStr(match.effective_end) : 'PERM'
         const effDates = startStr ? `${startStr} - ${endStr}` : ''
         // Extract first meaningful line as description (skip NOTAM header)
         const lines = match.full_text.split('\n').map(l => l.trim()).filter(Boolean)
