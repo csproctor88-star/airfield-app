@@ -30,7 +30,6 @@ const opsItems: ModuleItem[] = [
 const mgmtItems: ModuleItem[] = [
   { name: 'Discrepancies', icon: '⚠️', color: '#FBBF24', href: '/discrepancies' },
   { name: 'Obstruction Eval Tool', icon: '📍', color: '#F97316', href: '/obstructions' },
-  { name: 'Obstruction Database', icon: '🗺️', color: '#F97316', href: '/obstructions/history' },
   { name: 'Waivers', icon: '📄', color: '#A78BFA', href: '/waivers' },
   { name: 'Visual NAVAIDs', icon: '💡', color: '#FBBF24', href: '/infrastructure' },
 ]
