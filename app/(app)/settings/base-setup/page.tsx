@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import mapboxgl from 'mapbox-gl'
+import 'mapbox-gl/dist/mapbox-gl.css'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
@@ -462,6 +464,136 @@ function RunwayTab({
     setLookupOpen(false)
   }
 
+  // Map adjustment state
+  const [adjustingRunway, setAdjustingRunway] = useState<any>(null)
+  const adjustMapContainer = useRef<HTMLDivElement>(null)
+  const adjustMap = useRef<any>(null)
+  const adjustMarkers = useRef<{ end1: any; end2: any }>({ end1: null, end2: null })
+  const [adjustCoords, setAdjustCoords] = useState<{ end1_lat: number; end1_lon: number; end2_lat: number; end2_lon: number } | null>(null)
+
+  const openAdjustMap = (rwy: any) => {
+    setAdjustingRunway(rwy)
+    setAdjustCoords({
+      end1_lat: rwy.end1_latitude ?? 0,
+      end1_lon: rwy.end1_longitude ?? 0,
+      end2_lat: rwy.end2_latitude ?? 0,
+      end2_lon: rwy.end2_longitude ?? 0,
+    })
+  }
+
+  const handleSaveAdjustedCoords = async () => {
+    if (!adjustingRunway || !adjustCoords) return
+    setSaving(true)
+    const supabase = createClient()
+    if (!supabase) { setSaving(false); return }
+
+    const { error } = await supabase
+      .from('base_runways')
+      .update({
+        end1_latitude: adjustCoords.end1_lat,
+        end1_longitude: adjustCoords.end1_lon,
+        end2_latitude: adjustCoords.end2_lat,
+        end2_longitude: adjustCoords.end2_lon,
+      } as any)
+      .eq('id', adjustingRunway.id)
+
+    if (error) {
+      toast.error(`Failed to update: ${friendlyError(error.message)}`)
+    } else {
+      toast.success(`Runway ${adjustingRunway.runway_id} coordinates updated`)
+      setRunways((prev: any) => prev.map((r: any) =>
+        r.id === adjustingRunway.id
+          ? { ...r, end1_latitude: adjustCoords.end1_lat, end1_longitude: adjustCoords.end1_lon, end2_latitude: adjustCoords.end2_lat, end2_longitude: adjustCoords.end2_lon }
+          : r
+      ))
+      setAdjustingRunway(null)
+    }
+    setSaving(false)
+  }
+
+  // Initialize adjustment map when modal opens
+  useEffect(() => {
+    if (!adjustingRunway || !adjustCoords || !adjustMapContainer.current) return
+    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+    if (!token || token === 'your-mapbox-token-here') return
+
+    // Cleanup previous
+    if (adjustMap.current) { adjustMap.current.remove(); adjustMap.current = null }
+    if (adjustMarkers.current.end1) { adjustMarkers.current.end1.remove(); adjustMarkers.current.end1 = null }
+    if (adjustMarkers.current.end2) { adjustMarkers.current.end2.remove(); adjustMarkers.current.end2 = null }
+
+    ;(mapboxgl as any).accessToken = token
+
+    const midLat = (adjustCoords.end1_lat + adjustCoords.end2_lat) / 2
+    const midLon = (adjustCoords.end1_lon + adjustCoords.end2_lon) / 2
+
+    const m = new mapboxgl.Map({
+      container: adjustMapContainer.current,
+      style: 'mapbox://styles/mapbox/satellite-v9',
+      center: [midLon, midLat],
+      zoom: 15,
+      pitch: 0,
+      attributionControl: false,
+    })
+
+    m.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right')
+
+    m.on('load', () => {
+      // End 1 marker (cyan)
+      const el1 = document.createElement('div')
+      el1.innerHTML = `<div style="width:20px;height:20px;border-radius:50%;background:#22D3EE;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.4);cursor:grab"></div>`
+      const m1 = new mapboxgl.Marker({ element: el1, draggable: true })
+        .setLngLat([adjustCoords.end1_lon, adjustCoords.end1_lat])
+        .addTo(m)
+      m1.on('dragend', () => {
+        const pos = m1.getLngLat()
+        setAdjustCoords(prev => prev ? { ...prev, end1_lat: pos.lat, end1_lon: pos.lng } : prev)
+      })
+      adjustMarkers.current.end1 = m1
+
+      // End 2 marker (orange)
+      const el2 = document.createElement('div')
+      el2.innerHTML = `<div style="width:20px;height:20px;border-radius:50%;background:#F97316;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.4);cursor:grab"></div>`
+      const m2 = new mapboxgl.Marker({ element: el2, draggable: true })
+        .setLngLat([adjustCoords.end2_lon, adjustCoords.end2_lat])
+        .addTo(m)
+      m2.on('dragend', () => {
+        const pos = m2.getLngLat()
+        setAdjustCoords(prev => prev ? { ...prev, end2_lat: pos.lat, end2_lon: pos.lng } : prev)
+      })
+      adjustMarkers.current.end2 = m2
+
+      // Runway centerline
+      m.addSource('adjust-line', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: { type: 'LineString', coordinates: [[adjustCoords.end1_lon, adjustCoords.end1_lat], [adjustCoords.end2_lon, adjustCoords.end2_lat]] },
+        },
+      })
+      m.addLayer({ id: 'adjust-line', type: 'line', source: 'adjust-line', paint: { 'line-color': '#fff', 'line-width': 2, 'line-dasharray': [3, 2] } })
+    })
+
+    adjustMap.current = m
+
+    return () => { m.remove(); adjustMap.current = null }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adjustingRunway])
+
+  // Update centerline when coords change from dragging
+  useEffect(() => {
+    if (!adjustMap.current || !adjustCoords) return
+    const src = adjustMap.current.getSource('adjust-line')
+    if (src) {
+      src.setData({
+        type: 'Feature',
+        properties: {},
+        geometry: { type: 'LineString', coordinates: [[adjustCoords.end1_lon, adjustCoords.end1_lat], [adjustCoords.end2_lon, adjustCoords.end2_lat]] },
+      })
+    }
+  }, [adjustCoords])
+
   // New runway form state
   const [newRunway, setNewRunway] = useState({
     runway_id: '',
@@ -578,11 +710,22 @@ function RunwayTab({
               {rwy.length_ft} ft x {rwy.width_ft} ft | {rwy.surface} | Heading {rwy.true_heading}°
             </div>
             <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4, fontFamily: 'monospace' }}>
-              {rwy.end1_designator}: {rwy.end1_latitude?.toFixed(5)}°N, {rwy.end1_longitude ? Math.abs(rwy.end1_longitude).toFixed(5) : '—'}°W{rwy.end1_elevation_msl != null ? ` | ${rwy.end1_elevation_msl} ft MSL` : ''}
+              {rwy.end1_designator}: {rwy.end1_latitude?.toFixed(6)}°{(rwy.end1_latitude ?? 0) >= 0 ? 'N' : 'S'}, {rwy.end1_longitude ? Math.abs(rwy.end1_longitude).toFixed(6) : '—'}°{(rwy.end1_longitude ?? 0) >= 0 ? 'E' : 'W'}{rwy.end1_elevation_msl != null ? ` | ${rwy.end1_elevation_msl} ft MSL` : ''}
             </div>
             <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2, fontFamily: 'monospace' }}>
-              {rwy.end2_designator}: {rwy.end2_latitude?.toFixed(5)}°N, {rwy.end2_longitude ? Math.abs(rwy.end2_longitude).toFixed(5) : '—'}°W{rwy.end2_elevation_msl != null ? ` | ${rwy.end2_elevation_msl} ft MSL` : ''}
+              {rwy.end2_designator}: {rwy.end2_latitude?.toFixed(6)}°{(rwy.end2_latitude ?? 0) >= 0 ? 'N' : 'S'}, {rwy.end2_longitude ? Math.abs(rwy.end2_longitude).toFixed(6) : '—'}°{(rwy.end2_longitude ?? 0) >= 0 ? 'E' : 'W'}{rwy.end2_elevation_msl != null ? ` | ${rwy.end2_elevation_msl} ft MSL` : ''}
             </div>
+            <button
+              onClick={() => openAdjustMap(rwy)}
+              style={{
+                marginTop: 6, padding: '4px 10px', borderRadius: 4,
+                background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.3)',
+                color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Adjust on Map
+            </button>
           </div>
           <button
             onClick={() => handleDeleteRunway(rwy)}
@@ -971,9 +1114,90 @@ function RunwayTab({
       )}
 
       <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 12 }}>
-        Runway coordinates are used for obstruction evaluations and weather lookups.
-        Ensure latitude/longitude values are accurate for your runway endpoints.
+        Runway coordinates are used for obstruction evaluations and map overlays.
+        Use "Adjust on Map" to drag threshold pins onto the satellite imagery for precise alignment.
       </p>
+
+      {/* Map Adjustment Modal */}
+      {adjustingRunway && adjustCoords && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 16,
+        }} onClick={() => setAdjustingRunway(null)}>
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+              borderRadius: 14, width: '100%', maxWidth: 700, overflow: 'hidden',
+            }}
+          >
+            {/* Header */}
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)' }}>
+              <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                Adjust Runway {adjustingRunway.runway_id} Coordinates
+              </div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4 }}>
+                Drag the pins to align with the visible runway thresholds on the satellite imagery.
+                <span style={{ color: 'var(--color-cyan)', fontWeight: 600 }}> Cyan</span> = {adjustingRunway.end1_designator},
+                <span style={{ color: '#F97316', fontWeight: 600 }}> Orange</span> = {adjustingRunway.end2_designator}
+              </div>
+            </div>
+
+            {/* Map */}
+            <div ref={adjustMapContainer} style={{ width: '100%', height: 400 }} />
+
+            {/* Coordinate readout */}
+            <div style={{ padding: '12px 20px', borderTop: '1px solid var(--color-border)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-cyan)', marginBottom: 2 }}>
+                  {adjustingRunway.end1_designator}
+                </div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', fontFamily: 'monospace' }}>
+                  {adjustCoords.end1_lat.toFixed(6)}, {adjustCoords.end1_lon.toFixed(6)}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#F97316', marginBottom: 2 }}>
+                  {adjustingRunway.end2_designator}
+                </div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', fontFamily: 'monospace' }}>
+                  {adjustCoords.end2_lat.toFixed(6)}, {adjustCoords.end2_lon.toFixed(6)}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ padding: '12px 20px', borderTop: '1px solid var(--color-border)', display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => setAdjustingRunway(null)}
+                style={{
+                  flex: 1, padding: '10px 16px', borderRadius: 'var(--radius-base)',
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+                  color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveAdjustedCoords}
+                disabled={saving}
+                style={{
+                  flex: 2, padding: '10px 16px', borderRadius: 'var(--radius-base)',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+                  color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: saving ? 'wait' : 'pointer', fontFamily: 'inherit',
+                  opacity: saving ? 0.6 : 1,
+                }}
+              >
+                {saving ? 'Saving...' : 'Save Adjusted Coordinates'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
