@@ -33,9 +33,13 @@ export default function ContractorsPage() {
   const [formRadio, setFormRadio] = useState('')
   const [formFlag, setFormFlag] = useState('')
   const [formCallsign, setFormCallsign] = useState('')
+  const [formAf483, setFormAf483] = useState('')
+  const [formAf483Exp, setFormAf483Exp] = useState('')
+  const [formPhone, setFormPhone] = useState('')
+  const [usingTemplate, setUsingTemplate] = useState<ContractorTemplate | null>(null)
 
   // Contractor templates (stored on bases table as JSONB, shared across all users)
-  type ContractorTemplate = { name: string; company: string; contact: string; location: string; description: string }
+  type ContractorTemplate = { name: string; company: string; contact: string; callsign: string; notes: string; af_form_483: string; af_form_483_expiration: string; contact_phone: string }
   const [templates, setTemplates] = useState<ContractorTemplate[]>([])
   const [showTemplates, setShowTemplates] = useState(false)
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
@@ -69,8 +73,11 @@ export default function ContractorsPage() {
       name: templateName.trim(),
       company: formCompany,
       contact: formContact,
-      location: formLocation,
-      description: formDescription,
+      callsign: formCallsign,
+      notes: formNotes,
+      af_form_483: formAf483,
+      af_form_483_expiration: formAf483Exp,
+      contact_phone: formPhone,
     }
     saveTemplates([...templates, newTemplate])
     setTemplateName('')
@@ -81,11 +88,19 @@ export default function ContractorsPage() {
   const handleUseTemplate = (t: ContractorTemplate) => {
     setFormCompany(t.company)
     setFormContact(t.contact)
-    setFormLocation(t.location)
-    setFormDescription(t.description)
+    setFormCallsign(t.callsign || '')
+    setFormNotes(t.notes || '')
+    setFormAf483(t.af_form_483 || '')
+    setFormAf483Exp(t.af_form_483_expiration || '')
+    setFormPhone(t.contact_phone || '')
+    setFormLocation('')
+    setFormDescription('')
+    setFormRadio('')
+    setFormFlag('')
+    setUsingTemplate(t)
     setShowTemplates(false)
     setShowForm(true)
-    toast.success(`Template "${t.name}" applied — fill in radio, flag, and callsign`)
+    toast.success(`Template "${t.name}" applied`)
   }
 
   const handleDeleteTemplate = (idx: number) => {
@@ -143,6 +158,10 @@ export default function ContractorsPage() {
     setFormRadio('')
     setFormFlag('')
     setFormCallsign('')
+    setFormAf483('')
+    setFormAf483Exp('')
+    setFormPhone('')
+    setUsingTemplate(null)
   }
 
   async function handleCreate() {
@@ -161,6 +180,9 @@ export default function ContractorsPage() {
       radio_number: formRadio.trim() || undefined,
       flag_number: formFlag.trim() || undefined,
       callsign: formCallsign.trim() || undefined,
+      af_form_483: formAf483.trim() || undefined,
+      af_form_483_expiration: formAf483Exp || undefined,
+      contact_phone: formPhone.trim() || undefined,
       base_id: installationId,
     })
     setSaving(false)
@@ -300,7 +322,7 @@ export default function ContractorsPage() {
                 <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => handleUseTemplate(t)}>
                   <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>{t.name}</div>
                   <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-                    {t.company} — {t.location} — {t.description.slice(0, 50)}{t.description.length > 50 ? '...' : ''}
+                    {t.company}{t.contact ? ` — ${t.contact}` : ''}{t.af_form_483 ? ` — AF 483: ${t.af_form_483}` : ''}
                   </div>
                 </div>
                 {canManageTemplates && (
@@ -363,15 +385,39 @@ export default function ContractorsPage() {
             </div>
           )}
 
+          {/* Template summary (read-only) when using a template */}
+          {usingTemplate && (
+            <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.15)', marginBottom: 10 }}>
+              <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-cyan)', marginBottom: 4 }}>Template: {usingTemplate.name}</div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>
+                <strong>Company:</strong> {usingTemplate.company}
+                {usingTemplate.contact && <> &bull; <strong>Contact:</strong> {usingTemplate.contact}</>}
+                {usingTemplate.callsign && <> &bull; <strong>Callsign:</strong> {usingTemplate.callsign}</>}
+                {usingTemplate.contact_phone && <> &bull; <strong>Phone:</strong> {usingTemplate.contact_phone}</>}
+                {usingTemplate.af_form_483 && <> &bull; <strong>AF 483:</strong> {usingTemplate.af_form_483}</>}
+                {usingTemplate.af_form_483_expiration && <> &bull; <strong>Expires:</strong> {usingTemplate.af_form_483_expiration}</>}
+              </div>
+              {usingTemplate.af_form_483_expiration && new Date(usingTemplate.af_form_483_expiration) < new Date() && (
+                <div style={{ marginTop: 4, fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)' }}>
+                  AF Form 483 EXPIRED
+                </div>
+              )}
+            </div>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div>
-              <div style={labelStyle}>Company Name *</div>
-              <input value={formCompany} onChange={e => setFormCompany(e.target.value)} placeholder="e.g. Kiewit Infrastructure" style={inputStyle} />
-            </div>
-            <div>
-              <div style={labelStyle}>Contact Name</div>
-              <input value={formContact} onChange={e => setFormContact(e.target.value)} placeholder="e.g. John Smith" style={inputStyle} />
-            </div>
+            {!usingTemplate && (
+              <>
+                <div>
+                  <div style={labelStyle}>Company Name *</div>
+                  <input value={formCompany} onChange={e => setFormCompany(e.target.value)} placeholder="e.g. Kiewit Infrastructure" style={inputStyle} />
+                </div>
+                <div>
+                  <div style={labelStyle}>Contact Name</div>
+                  <input value={formContact} onChange={e => setFormContact(e.target.value)} placeholder="e.g. John Smith" style={inputStyle} />
+                </div>
+              </>
+            )}
             <div>
               <div style={labelStyle}>Location *</div>
               <input value={formLocation} onChange={e => setFormLocation(e.target.value)} placeholder="e.g. TWY A/B Intersection" style={inputStyle} />
@@ -390,17 +436,37 @@ export default function ContractorsPage() {
               <input value={formRadio} onChange={e => setFormRadio(e.target.value)} placeholder="e.g. Radio 12" style={inputStyle} />
             </div>
             <div>
-              <div style={labelStyle}>Callsign</div>
-              <input value={formCallsign} onChange={e => setFormCallsign(e.target.value)} placeholder="e.g. Bravo-1" style={inputStyle} />
-            </div>
-            <div>
               <div style={labelStyle}>Flag Number Issued (Vehicle Escort)</div>
               <input value={formFlag} onChange={e => setFormFlag(e.target.value)} placeholder="e.g. Flag 3" style={inputStyle} />
             </div>
-            <div>
-              <div style={labelStyle}>Notes</div>
-              <textarea value={formNotes} onChange={e => setFormNotes(e.target.value)} placeholder="Additional details..." rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
-            </div>
+            {!usingTemplate && (
+              <>
+                <div style={{ height: 1, background: 'var(--color-border)', margin: '2px 0' }} />
+                <div>
+                  <div style={labelStyle}>Callsign</div>
+                  <input value={formCallsign} onChange={e => setFormCallsign(e.target.value)} placeholder="e.g. Bravo-1" style={inputStyle} />
+                </div>
+                <div>
+                  <div style={labelStyle}>AF Form 483 #</div>
+                  <input value={formAf483} onChange={e => setFormAf483(e.target.value)} placeholder="e.g. 2026-0042" style={inputStyle} />
+                </div>
+                <div>
+                  <div style={labelStyle}>AF Form 483 Expiration Date</div>
+                  <input type="date" value={formAf483Exp} onChange={e => setFormAf483Exp(e.target.value)} style={inputStyle} />
+                  {formAf483Exp && new Date(formAf483Exp) < new Date() && (
+                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-danger)', fontWeight: 700, marginTop: 2 }}>EXPIRED</div>
+                  )}
+                </div>
+                <div>
+                  <div style={labelStyle}>Contact Phone Number</div>
+                  <input value={formPhone} onChange={e => setFormPhone(e.target.value)} placeholder="e.g. 555-123-4567" style={inputStyle} />
+                </div>
+                <div>
+                  <div style={labelStyle}>Notes</div>
+                  <textarea value={formNotes} onChange={e => setFormNotes(e.target.value)} placeholder="Additional details..." rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
+                </div>
+              </>
+            )}
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
             <button

@@ -72,7 +72,7 @@ export default function HomePage() {
   const [pRadio, setPRadio] = useState('')
   const [pFlag, setPFlag] = useState('')
   const [pNotes, setPNotes] = useState('')
-  type ContractorTemplate = { name: string; company: string; contact: string; location: string; description: string }
+  type ContractorTemplate = { name: string; company: string; contact: string; callsign: string; notes: string; af_form_483: string; af_form_483_expiration: string; contact_phone: string }
   const [contractorTemplates, setContractorTemplates] = useState<ContractorTemplate[]>([])
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<ContractorTemplate | null>(null)
@@ -1544,8 +1544,8 @@ export default function HomePage() {
           {contractorTemplates.map((t, i) => (
             <button key={i} onClick={() => {
               setSelectedTemplate(t)
-              setPCompany(t.company); setPLocation(t.location); setPDescription(t.description)
-              setPCallsign(''); setPRadio(''); setPFlag(''); setPNotes('')
+              setPCompany(t.company); setPLocation(''); setPDescription('')
+              setPCallsign(t.callsign || ''); setPRadio(''); setPFlag(''); setPNotes(t.notes || '')
               setShowTemplateDialog(false); setShowAddPersonnel(true)
             }} style={{
               display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', marginBottom: 4,
@@ -1554,7 +1554,7 @@ export default function HomePage() {
               cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)',
             }}>
               <div style={{ fontWeight: 700 }}>{t.name}</div>
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{t.company} — {t.location}</div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{t.company}{t.contact ? ` — ${t.contact}` : ''}{t.af_form_483 ? ` — AF 483: ${t.af_form_483}` : ''}</div>
             </button>
           ))}
         </div>
@@ -1563,21 +1563,32 @@ export default function HomePage() {
       {/* Add form — stacked single column */}
       {showAddPersonnel && (
         <div className="card" style={{ padding: '12px 14px', marginBottom: 8 }}>
+          {/* Template summary */}
           {selectedTemplate && (
-            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-cyan)', fontWeight: 600, marginBottom: 6 }}>
-              Template: {selectedTemplate.name}
+            <div style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.15)', marginBottom: 8 }}>
+              <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-cyan)', marginBottom: 2 }}>
+                {selectedTemplate.name}
+              </div>
+              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-2)', lineHeight: 1.4 }}>
+                {selectedTemplate.company}
+                {selectedTemplate.contact && ` — ${selectedTemplate.contact}`}
+                {selectedTemplate.af_form_483 && ` — AF 483: ${selectedTemplate.af_form_483}`}
+              </div>
+              {selectedTemplate.af_form_483_expiration && new Date(selectedTemplate.af_form_483_expiration) < new Date() && (
+                <div style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-danger)', marginTop: 2 }}>AF Form 483 EXPIRED</div>
+              )}
             </div>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
-            <input placeholder="Company / Name *" value={pCompany} onChange={e => setPCompany(e.target.value)}
-              style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }} />
+            {!selectedTemplate && (
+              <input placeholder="Company / Name *" value={pCompany} onChange={e => setPCompany(e.target.value)}
+                style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }} />
+            )}
             <input placeholder="Location *" value={pLocation} onChange={e => setPLocation(e.target.value)}
               style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }} />
             <input placeholder="Work Description *" value={pDescription} onChange={e => setPDescription(e.target.value)}
               style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }} />
             <div style={{ height: 1, background: 'var(--color-border)', margin: '2px 0' }} />
-            <input placeholder="Callsign" value={pCallsign} onChange={e => setPCallsign(e.target.value)}
-              style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }} />
             <input placeholder="Radio Number Issued" value={pRadio} onChange={e => setPRadio(e.target.value)}
               style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }} />
             <input placeholder="Flag Number Issued" value={pFlag} onChange={e => setPFlag(e.target.value)}
@@ -1594,6 +1605,9 @@ export default function HomePage() {
                 callsign: pCallsign.trim() || undefined,
                 radio_number: pRadio.trim() || undefined,
                 flag_number: pFlag.trim() || undefined,
+                af_form_483: selectedTemplate?.af_form_483 || undefined,
+                af_form_483_expiration: selectedTemplate?.af_form_483_expiration || undefined,
+                contact_phone: selectedTemplate?.contact_phone || undefined,
                 base_id: installationId,
               } as any)
               setAddingPersonnel(false)

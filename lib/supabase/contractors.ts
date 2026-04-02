@@ -16,6 +16,9 @@ export type ContractorRow = {
   radio_number: string | null
   flag_number: string | null
   callsign: string | null
+  af_form_483: string | null
+  af_form_483_expiration: string | null
+  contact_phone: string | null
   created_by: string | null
   created_at: string
   updated_at: string
@@ -78,6 +81,9 @@ export async function createContractor(input: {
   radio_number?: string
   flag_number?: string
   callsign?: string
+  af_form_483?: string
+  af_form_483_expiration?: string
+  contact_phone?: string
   base_id?: string | null
 }): Promise<{ data: ContractorRow | null; error: string | null }> {
   const supabase = createClient()
@@ -101,6 +107,9 @@ export async function createContractor(input: {
     radio_number: input.radio_number || null,
     flag_number: input.flag_number || null,
     callsign: input.callsign || null,
+    af_form_483: input.af_form_483 || null,
+    af_form_483_expiration: input.af_form_483_expiration || null,
+    contact_phone: input.contact_phone || null,
   }
   if (created_by) row.created_by = created_by
   if (input.base_id) row.base_id = input.base_id
