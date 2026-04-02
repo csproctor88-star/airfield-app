@@ -6,13 +6,93 @@ All notable changes to Glidepath.
 
 ### Planned
 - METAR weather API integration (aviationweather.gov)
-- NOTAM persistence (draft form does not save to DB)
 - Unit and integration testing
 - Regenerate Supabase types to eliminate remaining `as any` casts
 - Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 16 PDF generators
 - Training Management Module (DAF training records)
 - Outage analytics (frequency/duration tracking for lighting systems)
 - Part 139 civilian airport template support
+
+---
+
+## [2.29.0] — 2026-04-02
+
+### Training System
+- **Training page** (`/training`) — three-tab layout: Quick Start Guide (7-step onboarding), Module Reference (20 modules with screenshots), Base Setup Guide (12-step wizard walkthrough)
+- **36 module screenshots** embedded across all 20 module reference cards
+- **15 base setup screenshots** across 12 wizard steps with per-step instructions and tips
+- **PDF export** — "Module Reference PDF" and "Base Setup Guide PDF" buttons generate professional documents client-side with embedded screenshots, cover pages, table of contents, and numbered sections
+- **Registered in sidebar** (Reference section) and More page with GraduationCap icon
+
+### Base Setup Wizard
+- **12-step guided wizard** replaces chip-tab layout — progress bar, numbered navigation pills, step descriptions, back/next/skip controls
+- **ICAO airport lookup** (`/api/airport-lookup`) — fetches runway data from OurAirports (worldwide) + FAA NFDC (US, survey-grade coordinates). "Import All" button populates runways, areas, NAVAIDs, navaid statuses, and airfield status in one click
+- **FAA survey-grade coordinates** — parses DMS coordinates from FAA HTML for sub-meter accuracy (US airports)
+- **Adjust on Map tool** — draggable cyan/orange pin markers on satellite imagery for runway endpoint fine-tuning
+- **Coordinate accuracy warning** on import dialog
+- **KVOK Volk Field seed** — `supabase/seed-kvok-volk-field.sql` with delete-and-replace logic
+
+### Obstruction Evaluation
+- **Computed bearing from coordinates** — fixes 69ft cross-track error from rounded published headings
+- **Google satellite tiles** — switched from Mapbox (imagery offset) to Google tiles for better georegistration
+- **Mercator projection** forced for consistent rendering
+- **Satellite imagery disclaimer** on obstruction evaluation page
+- **Removed Obstruction Database** from sidebar and More page (accessible via History link)
+
+### Activity Log & Events
+- **Inferred action labels** — detects Shift Change, NOTAM Canceled, SCN Check, PTD Check, Tower Open/Closed, AMOPS Open/Closed, BWC Change, and 15+ other actions from free-typed text
+- **Separated weather info from runway** — weather changes log as `weather_info` entity type (not `airfield_status`), with display_id like `WX-WARNING #WW-042`
+- **Weather advisory number field** — new input for watch/warning/advisory number from weather service
+- **Fixed duplicate "CHECK CHECK"** in activity log start entries
+- **Natural language check wording** — "AFLD3/CP ON THE AFLD FOR A FOD CHECK" instead of comma-separated
+- **Fixed metadata overwrite** — editing activity log text/time no longer wipes template_label and template_category
+- **Military time notation** — all Zulu times now display as `1500Z` instead of `15:00Z` across 44 usages in 16 files
+
+### Weather Info
+- **24-hour military time input** — replaced `datetime-local` with separate date picker + 4-digit military time text input (e.g., `1500`)
+- **Advisory number field** — tracks watch/warning/advisory number in activity log
+
+### NOTAM Templates
+- **NOTAM dropdown selectors** — all NOTAM ID fields (notam_id, cancels_id, replaces_id) show a dropdown populated from the live FAA feed with NOTAM number + E) field description
+- **Auto-fill** — selecting a NOTAM populates description and effective dates
+- **E) field extraction** — pulls the actual NOTAM remarks, not just the header
+
+### Personnel on Airfield
+- **Single-column stacked layout** — fixed fields running off content edge on mobile
+- **Contractor templates** — saved to Supabase (`bases.contractor_templates` JSONB), shared across all users at installation
+- **Template dropdown** — compact select shown automatically when templates exist in the add form
+- **Template fields** — Company, Contact, Callsign, Notes, AF Form 483 #, AF Form 483 Expiration, Contact Phone
+- **Per-entry fields** — Location, Work Description, Start Date, Radio #, Flag # (editable each time)
+- **AF Form 483 expiration warning** — red "EXPIRED" flag when form date has passed
+- **Read-only template summary** at top of form when using a template
+- **Removed +Add from Airfield Status page** — users go to /contractors for full functionality
+
+### Parking Plans
+- **Nose gear coordinates** — displayed in aircraft info panel (cyan monospace) and included in PDF export as "Nose Coordinates" column
+- **DMS coordinate formatter** — `formatCoordsDMS()` in `lib/utils.ts`
+
+### Permissions & Access Control
+- **Fixed Airfield Manager/NAMO blocked from editing users** — API route was treating airfield_manager and namo as "admin-only" roles
+- **Fixed invite role restriction** — Airfield Managers/NAMOs/Base Admins can now invite users with airfield_manager and namo roles
+- **Signup flow** — removed "Add New Installation", replaced with "Contact us" mailto link to info@glidepathops.com
+- **Unauthenticated installation creation** — signup can now create bases from the 155-base directory without auth error
+
+### Dark Mode & Readability
+- **Bumped mobile font sizes** +2px across all tokens (9-24px → 11-26px)
+- **Bumped tablet/desktop scales** to maintain progression
+- **Brightened dark mode text** — text-2 (#B0BEC5 → #CBD5E1), text-3 (#8899A6 → #94A3B8), text-4 (#334155 → #475569)
+- **24-hour time format** — `lang="en-GB"` on all `datetime-local` inputs across 4 files
+
+### Other
+- **Removed false NOTAM draft creation references** from training page and README
+- **Fixed E/W hemisphere display** — runway coordinates show correct E/W based on longitude sign
+
+### Database Migrations (+1)
+- `2026040200` — add `af_form_483`, `af_form_483_expiration`, `contact_phone` to airfield_contractors; add `contractor_templates` JSONB to bases
+
+### Documentation
+- **DTO Executive Summary** — one-page overview for DAF Digital Transformation Office meeting
+- **DTO Meeting Talking Points** — 30-minute presentation flow with demo plan, talking points, and AI development framing
 
 ---
 
