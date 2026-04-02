@@ -247,6 +247,7 @@ function buildSurfaceGeoJSON(runways: RunwayGeometry[]) {
     })
 
     const runway = generateRunwayPolygon(rwy)
+    console.log(`[DEBUG] Runway ${ri}:`, { bearing: rwy.bearingDeg, end1: rwy.end1, end2: rwy.end2, widthFt: rwy.widthFt, polygon: runway })
     features.push({
       type: 'Feature',
       properties: { id: 'runway', rwyIndex: ri },
