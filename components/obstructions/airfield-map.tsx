@@ -404,9 +404,32 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
            ((installationRunways[0].end1_latitude ?? 0) + (installationRunways[0].end2_latitude ?? 0)) / 2]
         : [0, 0]
 
+    // Use Google satellite tiles for better georegistration accuracy
+    // (Mapbox satellite imagery has ~50-100ft offset from WGS84 coordinates)
+    const googleStyle: mapboxgl.StyleSpecification = {
+      version: 8,
+      sources: {
+        'google-satellite': {
+          type: 'raster',
+          tiles: ['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'],
+          tileSize: 256,
+          maxzoom: 20,
+        },
+      },
+      layers: [
+        {
+          id: 'google-satellite-layer',
+          type: 'raster',
+          source: 'google-satellite',
+          minzoom: 0,
+          maxzoom: 22,
+        },
+      ],
+    }
+
     const m = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/satellite-v9',
+      style: googleStyle,
       center: defaultCenter,
       zoom: 13,
       pitch: 0,
