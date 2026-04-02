@@ -207,7 +207,7 @@ function buildDetailsString(a: ActivityEntry, detailsMap: Map<string, EntityDeta
 
 export default function ActivityPage() {
   const router = useRouter()
-  const { installationId, userRole } = useInstallation()
+  const { installationId, userRole, currentInstallation } = useInstallation()
   const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
   const [customTemplates, setCustomTemplates] = useState<import('@/lib/activity-templates').TemplateCategory[] | null>(null)
 
@@ -541,6 +541,7 @@ export default function ActivityPage() {
           installationId={installationId}
           customTemplates={customTemplates}
           onTemplatesSaved={setCustomTemplates}
+          icao={currentInstallation?.icao}
         />
       )}
 
@@ -895,6 +896,7 @@ export default function ActivityPage() {
           installationId={installationId}
           customTemplates={customTemplates}
           onTemplatesSaved={setCustomTemplates}
+          icao={currentInstallation?.icao}
         />
       )}
     </div>

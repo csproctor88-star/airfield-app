@@ -37,9 +37,11 @@ interface Props {
   customTemplates?: TemplateCategory[] | null
   /** Callback after templates are saved to DB */
   onTemplatesSaved?: (templates: TemplateCategory[]) => void
+  /** ICAO code for NOTAM lookup auto-fill */
+  icao?: string | null
 }
 
-export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, customTemplates, onTemplatesSaved }: Props) {
+export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, customTemplates, onTemplatesSaved, icao }: Props) {
   // Use custom templates if provided, otherwise hardcoded defaults
   const [templates, setTemplates] = useState<TemplateCategory[]>(
     () => customTemplates ? cloneTemplates(customTemplates) : cloneTemplates(ACTIVITY_TEMPLATES)
@@ -69,6 +71,42 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
     }
     setValues(defaults)
   }, [selectedTemplate])
+
+  const [notamLooking, setNotamLooking] = useState(false)
+
+  /** Lookup a NOTAM by number and auto-fill description + effective dates */
+  const handleNotamLookup = useCallback(async (notamId: string) => {
+    if (!icao || !notamId.trim()) return
+    setNotamLooking(true)
+    try {
+      const res = await fetch(`/api/notams/sync?icao=${encodeURIComponent(icao)}`)
+      if (!res.ok) { setNotamLooking(false); return }
+      const data = await res.json()
+      const notams: { notam_number: string; full_text: string; effective_start: string; effective_end: string }[] = data.notams || []
+      const match = notams.find(n =>
+        n.notam_number.toUpperCase().includes(notamId.trim().toUpperCase())
+      )
+      if (match) {
+        const startStr = match.effective_start ? new Date(match.effective_start).toISOString().slice(0, 16).replace('T', ' ') + 'Z' : ''
+        const endStr = match.effective_end ? new Date(match.effective_end).toISOString().slice(0, 16).replace('T', ' ') + 'Z' : 'PERM'
+        const effDates = startStr ? `${startStr} - ${endStr}` : ''
+        // Extract first meaningful line as description (skip NOTAM header)
+        const lines = match.full_text.split('\n').map(l => l.trim()).filter(Boolean)
+        const descLine = lines.find(l => !l.startsWith('!') && !l.match(/^[A-Z]{3,4}\s+\d/) && l.length > 10) || lines.slice(-1)[0] || ''
+        setValues(prev => ({
+          ...prev,
+          description: descLine.slice(0, 200),
+          effective_dates: effDates,
+        }))
+        toast.success(`Found NOTAM ${match.notam_number}`)
+      } else {
+        toast.error(`NOTAM "${notamId}" not found in current feed`)
+      }
+    } catch {
+      toast.error('Failed to fetch NOTAMs')
+    }
+    setNotamLooking(false)
+  }, [icao])
 
   const currentCat = templates.find(c => c.category === selectedCat)
   const currentCatIdx = templates.findIndex(c => c.category === selectedCat)
@@ -471,6 +509,27 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
                         rows={3}
                         style={{ ...inputStyle, resize: 'vertical' }}
                       />
+                    ) : (f.key === 'cancels_id' || f.key === 'replaces_id') && icao ? (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <input
+                          value={values[f.key] || ''}
+                          onChange={e => setValues(prev => ({ ...prev, [f.key]: e.target.value }))}
+                          style={{ ...inputStyle, flex: 1 }}
+                          placeholder="e.g. 01/234"
+                        />
+                        <button
+                          onClick={() => handleNotamLookup(values[f.key] || '')}
+                          disabled={notamLooking || !(values[f.key] || '').trim()}
+                          style={{
+                            padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-cyan)',
+                            background: 'rgba(34,211,238,0.1)', color: 'var(--color-cyan)',
+                            fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                            whiteSpace: 'nowrap', opacity: notamLooking || !(values[f.key] || '').trim() ? 0.5 : 1,
+                          }}
+                        >
+                          {notamLooking ? 'Looking...' : 'Lookup'}
+                        </button>
+                      </div>
                     ) : (
                       <input
                         value={values[f.key] || ''}

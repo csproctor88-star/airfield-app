@@ -602,6 +602,7 @@ export default function AMDashboardPage() {
           installationId={installationId}
           customTemplates={customTemplates}
           onTemplatesSaved={setCustomTemplates}
+          icao={currentInstallation?.icao}
         />
       )}
 
@@ -885,6 +886,7 @@ export default function AMDashboardPage() {
           installationId={installationId}
           customTemplates={customTemplates}
           onTemplatesSaved={setCustomTemplates}
+          icao={currentInstallation?.icao}
         />
       )}
     </div>
