@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
+import { friendlyError } from '@/lib/utils'
 import { fetchContractors, createContractor, updateContractor, type ContractorRow } from '@/lib/supabase/contractors'
 import { CONTRACTOR_STATUS_CONFIG } from '@/lib/constants'
 import { DEMO_CONTRACTORS } from '@/lib/demo-data'
@@ -13,7 +14,8 @@ import { EmptyState } from '@/components/ui/empty-state'
 type FilterTab = 'active' | 'all' | 'completed'
 
 export default function ContractorsPage() {
-  const { installationId } = useInstallation()
+  const { installationId, userRole } = useInstallation()
+  const canManageTemplates = userRole === 'airfield_manager' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'sys_admin'
   const [contractors, setContractors] = useState<ContractorRow[]>([])
   const [filter, setFilter] = useState<FilterTab>('active')
   const [search, setSearch] = useState('')
@@ -31,6 +33,60 @@ export default function ContractorsPage() {
   const [formRadio, setFormRadio] = useState('')
   const [formFlag, setFormFlag] = useState('')
   const [formCallsign, setFormCallsign] = useState('')
+
+  // Contractor templates (stored in localStorage per installation)
+  type ContractorTemplate = { name: string; company: string; contact: string; location: string; description: string }
+  const [templates, setTemplates] = useState<ContractorTemplate[]>([])
+  const [showTemplates, setShowTemplates] = useState(false)
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false)
+  const [templateName, setTemplateName] = useState('')
+
+  // Load templates from localStorage
+  useEffect(() => {
+    if (!installationId) return
+    try {
+      const stored = localStorage.getItem(`contractor_templates_${installationId}`)
+      if (stored) setTemplates(JSON.parse(stored))
+    } catch {}
+  }, [installationId])
+
+  const saveTemplates = (updated: ContractorTemplate[]) => {
+    setTemplates(updated)
+    if (installationId) {
+      localStorage.setItem(`contractor_templates_${installationId}`, JSON.stringify(updated))
+    }
+  }
+
+  const handleSaveAsTemplate = () => {
+    if (!templateName.trim() || !formCompany.trim()) return
+    const newTemplate: ContractorTemplate = {
+      name: templateName.trim(),
+      company: formCompany,
+      contact: formContact,
+      location: formLocation,
+      description: formDescription,
+    }
+    saveTemplates([...templates, newTemplate])
+    setTemplateName('')
+    setShowSaveTemplate(false)
+    toast.success(`Template "${newTemplate.name}" saved`)
+  }
+
+  const handleUseTemplate = (t: ContractorTemplate) => {
+    setFormCompany(t.company)
+    setFormContact(t.contact)
+    setFormLocation(t.location)
+    setFormDescription(t.description)
+    setShowTemplates(false)
+    setShowForm(true)
+    toast.success(`Template "${t.name}" applied — fill in radio, flag, and callsign`)
+  }
+
+  const handleDeleteTemplate = (idx: number) => {
+    const updated = templates.filter((_, i) => i !== idx)
+    saveTemplates(updated)
+    toast.success('Template deleted')
+  }
 
   // Edit state
   const [editCompany, setEditCompany] = useState('')
@@ -222,12 +278,86 @@ export default function ContractorsPage() {
       </div>
 
       {/* Add Contractor Form */}
+      {/* Template picker */}
+      {showTemplates && templates.length > 0 && (
+        <div className="card" style={{ padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
+            Select a Template
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {templates.map((t, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 12px', borderRadius: 'var(--radius-md)',
+                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
+              }}>
+                <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => handleUseTemplate(t)}>
+                  <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>{t.name}</div>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                    {t.company} — {t.location} — {t.description.slice(0, 50)}{t.description.length > 50 ? '...' : ''}
+                  </div>
+                </div>
+                {canManageTemplates && (
+                  <button onClick={() => handleDeleteTemplate(i)} style={{
+                    background: 'none', border: 'none', color: 'var(--color-danger)',
+                    cursor: 'pointer', fontSize: 'var(--fs-lg)', padding: '0 4px',
+                  }}>&times;</button>
+                )}
+              </div>
+            ))}
+          </div>
+          <button onClick={() => setShowTemplates(false)} style={{
+            marginTop: 8, padding: '6px 14px', borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+            color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit',
+          }}>Close</button>
+        </div>
+      )}
+
       {showForm && (
         <div className="card" style={{ padding: 16, marginBottom: 16 }}>
-          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 12 }}>
-            New Personnel Entry
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+              New Personnel Entry
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {templates.length > 0 && (
+                <button onClick={() => setShowTemplates(t => !t)} style={{
+                  padding: '4px 12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                  background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.3)',
+                  color: 'var(--color-cyan)', cursor: 'pointer', fontFamily: 'inherit',
+                }}>Use Template</button>
+              )}
+              {canManageTemplates && formCompany.trim() && (
+                <button onClick={() => setShowSaveTemplate(t => !t)} style={{
+                  padding: '4px 12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                  background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
+                  color: 'var(--color-text-2)', cursor: 'pointer', fontFamily: 'inherit',
+                }}>Save as Template</button>
+              )}
+            </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+
+          {/* Save as template mini-form */}
+          {showSaveTemplate && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.15)' }}>
+              <input
+                value={templateName}
+                onChange={e => setTemplateName(e.target.value)}
+                placeholder="Template name (e.g. Kiewit - TWY A Joint Sealing)"
+                style={{ ...inputStyle, flex: 1 }}
+                autoFocus
+              />
+              <button onClick={handleSaveAsTemplate} disabled={!templateName.trim()} style={{
+                padding: '6px 14px', borderRadius: 'var(--radius-md)', border: 'none',
+                background: 'var(--color-cyan)', color: '#0F172A', fontSize: 'var(--fs-xs)',
+                fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                opacity: templateName.trim() ? 1 : 0.5,
+              }}>Save</button>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div>
               <div style={labelStyle}>Company Name *</div>
               <input value={formCompany} onChange={e => setFormCompany(e.target.value)} placeholder="e.g. Kiewit Infrastructure" style={inputStyle} />
@@ -241,14 +371,14 @@ export default function ContractorsPage() {
               <input value={formLocation} onChange={e => setFormLocation(e.target.value)} placeholder="e.g. TWY A/B Intersection" style={inputStyle} />
             </div>
             <div>
-              <div style={labelStyle}>Start Date</div>
-              <input type="date" value={formStartDate} onChange={e => setFormStartDate(e.target.value)} style={inputStyle} />
-            </div>
-            <div style={{ gridColumn: '1 / -1' }}>
               <div style={labelStyle}>Work Description *</div>
               <input value={formDescription} onChange={e => setFormDescription(e.target.value)} placeholder="e.g. Joint sealing and pavement repair" style={inputStyle} />
             </div>
-            <div style={{ gridColumn: '1 / -1', height: 1, background: 'var(--color-border)', margin: '4px 0' }} />
+            <div>
+              <div style={labelStyle}>Start Date</div>
+              <input type="date" value={formStartDate} onChange={e => setFormStartDate(e.target.value)} style={inputStyle} />
+            </div>
+            <div style={{ height: 1, background: 'var(--color-border)', margin: '2px 0' }} />
             <div>
               <div style={labelStyle}>Radio Number Issued</div>
               <input value={formRadio} onChange={e => setFormRadio(e.target.value)} placeholder="e.g. Radio 12" style={inputStyle} />
@@ -257,11 +387,11 @@ export default function ContractorsPage() {
               <div style={labelStyle}>Callsign</div>
               <input value={formCallsign} onChange={e => setFormCallsign(e.target.value)} placeholder="e.g. Bravo-1" style={inputStyle} />
             </div>
-            <div style={{ gridColumn: '1 / -1' }}>
+            <div>
               <div style={labelStyle}>Flag Number Issued (Vehicle Escort)</div>
               <input value={formFlag} onChange={e => setFormFlag(e.target.value)} placeholder="e.g. Flag 3" style={inputStyle} />
             </div>
-            <div style={{ gridColumn: '1 / -1' }}>
+            <div>
               <div style={labelStyle}>Notes</div>
               <textarea value={formNotes} onChange={e => setFormNotes(e.target.value)} placeholder="Additional details..." rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
             </div>
