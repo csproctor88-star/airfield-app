@@ -1513,126 +1513,13 @@ export default function HomePage() {
       {/* ===== Personnel on Airfield ===== */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <span className="section-label" style={{ marginBottom: 0 }}>Personnel on Airfield</span>
-        <div style={{ display: 'flex', gap: 12 }}>
-          {contractorTemplates.length > 0 && (
-            <button
-              onClick={() => { setShowAddPersonnel(false); setShowTemplateDialog(prev => !prev) }}
-              style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-            >
-              Use Template
-            </button>
-          )}
-          <button
-            onClick={() => { setShowTemplateDialog(false); setShowAddPersonnel(prev => !prev); setSelectedTemplate(null) }}
-            style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-          >
-            {showAddPersonnel ? 'Cancel' : '+ Add'}
-          </button>
-          <button
-            onClick={() => router.push('/contractors')}
-            style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-          >
-            View All →
-          </button>
-        </div>
+        <button
+          onClick={() => router.push('/contractors')}
+          style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+        >
+          View All →
+        </button>
       </div>
-
-      {/* Template selector */}
-      {showTemplateDialog && (
-        <div className="card" style={{ padding: '12px 14px', marginBottom: 8 }}>
-          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>Select Template</div>
-          {contractorTemplates.map((t, i) => (
-            <button key={i} onClick={() => {
-              setSelectedTemplate(t)
-              setPCompany(t.company); setPLocation(''); setPDescription('')
-              setPCallsign(t.callsign || ''); setPRadio(''); setPFlag(''); setPNotes(t.notes || '')
-              setShowTemplateDialog(false); setShowAddPersonnel(true)
-            }} style={{
-              display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', marginBottom: 4,
-              borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)',
-              background: 'var(--color-bg-inset)', color: 'var(--color-text-1)',
-              cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)',
-            }}>
-              <div style={{ fontWeight: 700 }}>{t.name}</div>
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{t.company}{t.contact ? ` — ${t.contact}` : ''}{t.af_form_483 ? ` — AF 483: ${t.af_form_483}` : ''}</div>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Add form — stacked single column */}
-      {showAddPersonnel && (
-        <div className="card" style={{ padding: '12px 14px', marginBottom: 8 }}>
-          {/* Template summary */}
-          {selectedTemplate && (
-            <div style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.15)', marginBottom: 8 }}>
-              <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-cyan)', marginBottom: 2 }}>
-                {selectedTemplate.name}
-              </div>
-              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-2)', lineHeight: 1.4 }}>
-                {selectedTemplate.company}
-                {selectedTemplate.contact && ` — ${selectedTemplate.contact}`}
-                {selectedTemplate.af_form_483 && ` — AF 483: ${selectedTemplate.af_form_483}`}
-              </div>
-              {selectedTemplate.af_form_483_expiration && new Date(selectedTemplate.af_form_483_expiration) < new Date() && (
-                <div style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-danger)', marginTop: 2 }}>AF Form 483 EXPIRED</div>
-              )}
-            </div>
-          )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
-            {!selectedTemplate && (
-              <input placeholder="Company / Name *" value={pCompany} onChange={e => setPCompany(e.target.value)}
-                style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }} />
-            )}
-            <input placeholder="Location *" value={pLocation} onChange={e => setPLocation(e.target.value)}
-              style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }} />
-            <input placeholder="Work Description *" value={pDescription} onChange={e => setPDescription(e.target.value)}
-              style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }} />
-            <div style={{ height: 1, background: 'var(--color-border)', margin: '2px 0' }} />
-            <input placeholder="Radio Number Issued" value={pRadio} onChange={e => setPRadio(e.target.value)}
-              style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }} />
-            <input placeholder="Flag Number Issued" value={pFlag} onChange={e => setPFlag(e.target.value)}
-              style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }} />
-          </div>
-          <button
-            disabled={addingPersonnel || !pCompany.trim() || !pLocation.trim() || !pDescription.trim()}
-            onClick={async () => {
-              setAddingPersonnel(true)
-              const { error } = await createContractor({
-                company_name: pCompany.trim(),
-                location: pLocation.trim(),
-                work_description: pDescription.trim(),
-                callsign: pCallsign.trim() || undefined,
-                radio_number: pRadio.trim() || undefined,
-                flag_number: pFlag.trim() || undefined,
-                af_form_483: selectedTemplate?.af_form_483 || undefined,
-                af_form_483_expiration: selectedTemplate?.af_form_483_expiration || undefined,
-                contact_phone: selectedTemplate?.contact_phone || undefined,
-                base_id: installationId,
-              } as any)
-              setAddingPersonnel(false)
-              if (error) {
-                const { toast } = await import('sonner')
-                toast.error(error)
-              } else {
-                setPCompany(''); setPLocation(''); setPDescription(''); setPCallsign(''); setPRadio(''); setPFlag('')
-                setShowAddPersonnel(false); setSelectedTemplate(null)
-                await loadContractors()
-              }
-            }}
-            style={{
-              width: '100%', padding: '8px 0', borderRadius: 'var(--radius-sm)', border: 'none',
-              background: (!pCompany.trim() || !pLocation.trim() || !pDescription.trim()) ? 'var(--color-border)' : 'var(--color-cyan)',
-              color: (!pCompany.trim() || !pLocation.trim() || !pDescription.trim()) ? 'var(--color-text-3)' : '#000',
-              fontWeight: 700, fontSize: 'var(--fs-sm)',
-              cursor: (!pCompany.trim() || !pLocation.trim() || !pDescription.trim()) ? 'not-allowed' : 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
-            {addingPersonnel ? 'Adding…' : 'Add Personnel'}
-          </button>
-        </div>
-      )}
       {activeContractors.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: 16, marginBottom: 12 }}>
           <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>No active contractors</div>
