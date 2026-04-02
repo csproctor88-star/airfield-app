@@ -305,43 +305,6 @@ export default function ContractorsPage() {
         </button>
       </div>
 
-      {/* Add Contractor Form */}
-      {/* Template picker */}
-      {showTemplates && templates.length > 0 && (
-        <div className="card" style={{ padding: 16, marginBottom: 12 }}>
-          <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
-            Select a Template
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {templates.map((t, i) => (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '8px 12px', borderRadius: 'var(--radius-md)',
-                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
-              }}>
-                <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => handleUseTemplate(t)}>
-                  <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>{t.name}</div>
-                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-                    {t.company}{t.contact ? ` — ${t.contact}` : ''}{t.af_form_483 ? ` — AF 483: ${t.af_form_483}` : ''}
-                  </div>
-                </div>
-                {canManageTemplates && (
-                  <button onClick={() => handleDeleteTemplate(i)} style={{
-                    background: 'none', border: 'none', color: 'var(--color-danger)',
-                    cursor: 'pointer', fontSize: 'var(--fs-lg)', padding: '0 4px',
-                  }}>&times;</button>
-                )}
-              </div>
-            ))}
-          </div>
-          <button onClick={() => setShowTemplates(false)} style={{
-            marginTop: 8, padding: '6px 14px', borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
-            color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit',
-          }}>Close</button>
-        </div>
-      )}
-
       {showForm && (
         <div className="card" style={{ padding: 16, marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
@@ -349,13 +312,6 @@ export default function ContractorsPage() {
               New Personnel Entry
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
-              {templates.length > 0 && (
-                <button onClick={() => setShowTemplates(t => !t)} style={{
-                  padding: '4px 12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-xs)', fontWeight: 600,
-                  background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.3)',
-                  color: 'var(--color-cyan)', cursor: 'pointer', fontFamily: 'inherit',
-                }}>Use Template</button>
-              )}
               {canManageTemplates && formCompany.trim() && (
                 <button onClick={() => setShowSaveTemplate(t => !t)} style={{
                   padding: '4px 12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-xs)', fontWeight: 600,
@@ -382,6 +338,41 @@ export default function ContractorsPage() {
                 fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                 opacity: templateName.trim() ? 1 : 0.5,
               }}>Save</button>
+            </div>
+          )}
+
+          {/* Template dropdown */}
+          {templates.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 10 }}>
+              <select
+                value=""
+                onChange={e => {
+                  const idx = parseInt(e.target.value)
+                  if (!isNaN(idx) && templates[idx]) handleUseTemplate(templates[idx])
+                }}
+                style={{
+                  flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--color-cyan)', background: 'var(--color-bg-inset)',
+                  color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="">— Select a template —</option>
+                {templates.map((t, i) => (
+                  <option key={i} value={i}>{t.name} — {t.company}</option>
+                ))}
+              </select>
+              {canManageTemplates && usingTemplate && (
+                <button onClick={() => {
+                  const idx = templates.findIndex(t => t.name === usingTemplate.name)
+                  if (idx >= 0) handleDeleteTemplate(idx)
+                }} style={{
+                  padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--color-danger)', background: 'rgba(239,68,68,0.1)',
+                  color: 'var(--color-danger)', fontSize: 'var(--fs-xs)', fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                }}>Delete Template</button>
+              )}
             </div>
           )}
 
