@@ -540,6 +540,9 @@ function ObstructionsContent() {
       <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 10 }}>
         UFC 3-260-01, Chapter 3 — Imaginary Surface Analysis
       </div>
+      <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', marginBottom: 8, padding: '4px 8px', borderRadius: 4, background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)', lineHeight: 1.4 }}>
+        Surface overlays use FAA survey coordinates. Satellite imagery may not perfectly align with survey data due to basemap georegistration variance. All distance and surface calculations are based on published coordinates.
+      </div>
 
       {/* Map */}
       <AirfieldMap
