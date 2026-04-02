@@ -34,27 +34,33 @@ export default function ContractorsPage() {
   const [formFlag, setFormFlag] = useState('')
   const [formCallsign, setFormCallsign] = useState('')
 
-  // Contractor templates (stored in localStorage per installation)
+  // Contractor templates (stored on bases table as JSONB, shared across all users)
   type ContractorTemplate = { name: string; company: string; contact: string; location: string; description: string }
   const [templates, setTemplates] = useState<ContractorTemplate[]>([])
   const [showTemplates, setShowTemplates] = useState(false)
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
   const [templateName, setTemplateName] = useState('')
 
-  // Load templates from localStorage
+  // Load templates from Supabase
   useEffect(() => {
     if (!installationId) return
-    try {
-      const stored = localStorage.getItem(`contractor_templates_${installationId}`)
-      if (stored) setTemplates(JSON.parse(stored))
-    } catch {}
+    const supabase = createClient()
+    if (!supabase) return
+    supabase.from('bases').select('contractor_templates').eq('id', installationId).single()
+      .then(({ data }) => {
+        const row = data as Record<string, unknown> | null
+        if (row?.contractor_templates && Array.isArray(row.contractor_templates)) {
+          setTemplates(row.contractor_templates as ContractorTemplate[])
+        }
+      })
   }, [installationId])
 
-  const saveTemplates = (updated: ContractorTemplate[]) => {
+  const saveTemplates = async (updated: ContractorTemplate[]) => {
     setTemplates(updated)
-    if (installationId) {
-      localStorage.setItem(`contractor_templates_${installationId}`, JSON.stringify(updated))
-    }
+    if (!installationId) return
+    const supabase = createClient()
+    if (!supabase) return
+    await supabase.from('bases').update({ contractor_templates: updated } as any).eq('id', installationId)
   }
 
   const handleSaveAsTemplate = () => {
