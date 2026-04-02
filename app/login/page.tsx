@@ -418,63 +418,37 @@ function LoginContent() {
                               </button>
                             ))
                           )}
-                          {/* Add new option */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setAddingNewInstallation(true)
-                              setShowInstallationDropdown(false)
-                              setInstallationSearch('')
-                            }}
+                          {/* Contact for unlisted installation */}
+                          <a
+                            href="mailto:support@glidepathops.com?subject=New Installation Request&body=I would like to request a new installation be added to Glidepath.%0A%0AInstallation Name:%0AICAO Code:%0AMy Name:%0AMy Email:%0ARank:%0AUnit:"
                             style={{
                               display: 'block', width: '100%', padding: '10px 14px',
                               background: 'transparent',
                               border: 'none',
                               borderTop: '1px solid var(--color-border-mid)',
-                              cursor: 'pointer', textAlign: 'left',
-                              color: 'var(--color-accent)',
-                              fontSize: 'var(--fs-md)', fontFamily: 'inherit',
-                              fontWeight: 600,
+                              textAlign: 'left',
+                              color: 'var(--color-text-3)',
+                              fontSize: 'var(--fs-xs)', fontFamily: 'inherit',
+                              textDecoration: 'none',
                             }}
                           >
-                            + Add New Installation
-                          </button>
+                            Don&apos;t see your installation? <span style={{ color: 'var(--color-accent)', fontWeight: 600 }}>Contact us</span> to request it be added.
+                          </a>
                         </div>
                       )}
                     </div>
                   ) : (
                     <div>
-                      <input
-                        type="text"
-                        className="input-dark"
-                        placeholder="Installation name"
-                        value={newInstallationName}
-                        onChange={(e) => setNewInstallationName(e.target.value)}
-                        style={{ width: '100%', boxSizing: 'border-box', marginBottom: 8 }}
-                        autoFocus
-                      />
-                      <input
-                        type="text"
-                        className="input-dark"
-                        placeholder="ICAO code (optional)"
-                        value={newInstallationIcao}
-                        onChange={(e) => setNewInstallationIcao(e.target.value.toUpperCase())}
-                        style={{ width: '100%', boxSizing: 'border-box', marginBottom: 6 }}
-                        maxLength={4}
-                      />
+                      {/* This state should not be reachable — redirect back to list */}
                       <button
                         type="button"
-                        onClick={() => {
-                          setAddingNewInstallation(false)
-                          setNewInstallationName('')
-                          setNewInstallationIcao('')
-                        }}
+                        onClick={() => setAddingNewInstallation(false)}
                         style={{
                           background: 'none', border: 'none', cursor: 'pointer',
-                          color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', padding: 0,
+                          color: 'var(--color-accent)', fontSize: 'var(--fs-sm)', padding: 0,
                         }}
                       >
-                        Cancel — select from list
+                        ← Select from list
                       </button>
                     </div>
                   )}
