@@ -29,6 +29,38 @@ const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
   'Miscellaneous': 'Logged Entry',
 }
 
+/** Infer action label from free-typed manual entry text */
+function inferActionFromText(details: string): string | null {
+  const d = (details || '').toUpperCase()
+  if (d.includes('SHIFT CHANGE')) return 'Shift Change'
+  if (d.includes('AMOPS OPEN')) return 'AMOPS Open'
+  if (d.includes('AMOPS CLOSED') || d.includes('AMOPS CLSD')) return 'AMOPS Closed'
+  if (d.includes('NOTAM CANCEL') || d.includes('NOTAMC')) return 'NOTAM Canceled'
+  if (d.includes('NOTAM ISSUED') || d.includes('NOTAMN')) return 'NOTAM Issued'
+  if (d.includes('NOTAM REPLACED') || d.includes('NOTAMR')) return 'NOTAM Replaced'
+  if (d.includes('NOTAM EXTENDED')) return 'NOTAM Extended'
+  if (d.includes('SCN CHECK')) return 'SCN Check Complete'
+  if (d.includes('SCN ACTIVATED')) return 'SCN Activated'
+  if (d.includes('PCAS TESTED') || d.includes('PCAS TEST')) return 'PCAS Tested'
+  if (d.includes('PCAS ACTIVATED')) return 'PCAS Activated'
+  if (d.includes('PTD CK') || d.includes('PTD CHECK')) return 'PTD Check'
+  if (d.includes('TOWER IS NOW OPEN') || d.includes('TOWER OPEN')) return 'Tower Open'
+  if (d.includes('TOWER CLOSED') || d.includes('TOWER CLSD')) return 'Tower Closed'
+  if (d.includes('BWC CHANGE') || d.includes('BWC/')) return 'BWC Change'
+  if (d.includes('ARFF') && d.includes('STATUS')) return 'ARFF Status'
+  if (d.includes('RUNWAY') && d.includes('IN USE')) return 'Runway In Use'
+  if (d.includes('OPS RESUMED')) return 'Ops Resumed'
+  if (d.includes('AREA CLOSED') || (d.includes('CLOSED') && (d.includes('RWY') || d.includes('TWY')))) return 'Area Closed'
+  if (d.includes('AREA SUSPENDED') || d.includes('SUSPENDED')) return 'Area Suspended'
+  if (d.includes('CHECKLIST COMPLETE') || d.includes('CHECKLIST CMPLT')) return 'Checklist Complete'
+  if (d.includes('UNAUTHORIZED VEHICLE') || d.includes('CMAV')) return 'CMA Violation'
+  if (d.includes('ON AIRFIELD FOR') || d.includes('ON THE AFLD FOR')) return 'On Airfield'
+  if (d.includes('OFF AIRFIELD') || d.includes('OFF THE AFLD')) return 'Off Airfield'
+  if (d.includes('PERSONNEL') && d.includes('ON AIRFIELD')) return 'Personnel On Airfield'
+  if (d.includes('PERSONNEL') && d.includes('OFF AIRFIELD')) return 'Personnel Off Airfield'
+  return null
+}
+
 function formatAction(action: string, entityType: string, displayId?: string, metadata?: Record<string, unknown> | null): string {
   // Template-based manual entries — use template label for specific action
   if (entityType === 'manual' && metadata?.template_label) {
@@ -36,6 +68,11 @@ function formatAction(action: string, entityType: string, displayId?: string, me
   }
   if (entityType === 'manual' && metadata?.template_category) {
     return TEMPLATE_CATEGORY_LABELS[metadata.template_category as string] || 'Logged Entry'
+  }
+  // Infer action from free-typed text when no template metadata exists
+  if (entityType === 'manual' && metadata?.details) {
+    const inferred = inferActionFromText(metadata.details as string)
+    if (inferred) return inferred
   }
 
   const typeLabel: Record<string, string> = {
