@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { BASE_DIRECTORY } from '@/lib/base-directory'
 
 function getAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
@@ -25,11 +26,14 @@ async function requireAuth(): Promise<{ user: { id: string } } | NextResponse> {
   return { user }
 }
 
-/** POST — find or create an installation by name, optionally add user as member */
+/** POST — find or create an installation by name, optionally add user as member.
+ *  During signup the user is not yet authenticated, so auth is optional when
+ *  the request only finds/creates from the pre-loaded BASE_DIRECTORY. */
 export async function POST(request: Request) {
   try {
+    // Try auth but allow unauthenticated for signup flow
     const auth = await requireAuth()
-    if (auth instanceof NextResponse) return auth
+    const isAuthenticated = !(auth instanceof NextResponse)
 
     const supabase = getAdmin()
     if (!supabase) {
@@ -49,6 +53,17 @@ export async function POST(request: Request) {
 
     const trimmedName = name.trim()
     const trimmedIcao = icao?.trim().toUpperCase() || null
+
+    // Unauthenticated requests (signup flow) can only create bases from BASE_DIRECTORY
+    if (!isAuthenticated) {
+      const inDirectory = BASE_DIRECTORY.some(b =>
+        b.name.toLowerCase() === trimmedName.toLowerCase() ||
+        (trimmedIcao && b.icao.toUpperCase() === trimmedIcao)
+      )
+      if (!inDirectory) {
+        return NextResponse.json({ error: 'Installation not found in directory. Contact support to request a new installation.' }, { status: 403 })
+      }
+    }
 
     // Check if an installation already exists by name OR ICAO code
     const { data: byName, error: lookupError } = await supabase
