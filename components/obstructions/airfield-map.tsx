@@ -435,6 +435,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
       pitch: 0,
       bearing: 0,
       attributionControl: false,
+      projection: 'mercator',
     })
 
     m.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-right')
