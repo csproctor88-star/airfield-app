@@ -645,7 +645,7 @@ function ModuleCard({ module }: { module: ModuleRef }) {
 // ── Main Page ──
 
 export default function TrainingPage() {
-  const [activeTab, setActiveTab] = useState<'quickstart' | 'modules'>('quickstart')
+  const [activeTab, setActiveTab] = useState<'quickstart' | 'modules' | 'basesetup'>('quickstart')
   const [expandAll, setExpandAll] = useState(false)
 
   return (
@@ -686,21 +686,25 @@ export default function TrainingPage() {
           display: 'flex', gap: 4, marginBottom: 20, padding: 3,
           background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)',
         }}>
-          {(['quickstart', 'modules'] as const).map(tab => (
+          {([
+            { key: 'quickstart' as const, label: 'Quick Start' },
+            { key: 'modules' as const, label: 'Modules' },
+            { key: 'basesetup' as const, label: 'Base Setup' },
+          ]).map(tab => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
               style={{
                 flex: 1, padding: '10px 16px', borderRadius: 8,
                 fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer',
                 border: 'none', fontFamily: 'inherit',
-                background: activeTab === tab ? 'var(--color-bg-surface)' : 'transparent',
-                color: activeTab === tab ? 'var(--color-cyan)' : 'var(--color-text-3)',
-                boxShadow: activeTab === tab ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
+                background: activeTab === tab.key ? 'var(--color-bg-surface)' : 'transparent',
+                color: activeTab === tab.key ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                boxShadow: activeTab === tab.key ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
                 transition: 'all 0.15s',
               }}
             >
-              {tab === 'quickstart' ? 'Quick Start Guide' : 'Module Reference'}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -814,6 +818,248 @@ export default function TrainingPage() {
               {MODULES.map(m => (
                 <ModuleCardControlled key={m.id} module={m} forceExpand={expandAll} />
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ════ Base Setup Guide Tab ════ */}
+        {activeTab === 'basesetup' && (
+          <div>
+            {/* Intro */}
+            <div style={{
+              padding: '20px 22px', borderRadius: 12, marginBottom: 20,
+              background: 'linear-gradient(135deg, rgba(34,211,238,0.08), rgba(34,211,238,0.02))',
+              border: '1px solid rgba(34,211,238,0.2)',
+            }}>
+              <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 6 }}>
+                Base Setup Guide
+              </div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.7 }}>
+                This guide walks you through the 12-step Base Setup wizard. Each step configures a component of your
+                installation that other modules depend on. Complete these steps in order to ensure the app functions
+                correctly for your base. Only Airfield Managers, Base Admins, and System Admins can access Base Setup.
+              </div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.7, marginTop: 10 }}>
+                To access Base Setup, navigate to <strong style={{ color: 'var(--color-text-1)' }}>Settings &rarr; Base Configuration &rarr; Base Setup</strong>.
+              </div>
+            </div>
+
+            {/* Overview screenshot */}
+            <div style={{ marginBottom: 20, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)' }}>
+              <img src="/training/base-setup_main-page.png" alt="Base Setup wizard overview" loading="lazy" style={{ width: '100%', display: 'block', borderBottom: '1px solid var(--color-border)' }} />
+              <div style={{ padding: '8px 12px', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>
+                The Base Setup wizard with progress bar, numbered step navigation, and guided instructions
+              </div>
+            </div>
+
+            {/* Steps */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+              {/* Step 1: Runways */}
+              <BaseSetupStep
+                number={1}
+                title="Runways"
+                description="Define your runways with endpoint coordinates, dimensions, surface type, and heading. Runway data drives the obstruction evaluation tool, weather lookups, and map centering across the entire app."
+                instructions={[
+                  'Click "Import from ICAO" to auto-populate runway data from FAA/international databases. Enter your ICAO code (e.g., KSGS, PGUA) and click Look Up.',
+                  'Review the imported data — verify runway dimensions, surface type, and endpoint coordinates against your airfield diagram or SkyVector.',
+                  'Click "Import All" to import runways, areas, and NAVAIDs in one step, or import individual runways.',
+                  'Use "Adjust on Map" on each runway to fine-tune endpoint coordinates by dragging pins onto the satellite imagery if needed.',
+                  'To add a runway manually, click "+ Add Runway" and fill in all fields. Coordinates should reference the runway threshold.',
+                ]}
+                screenshots={[
+                  { src: '/training/base-setup_icao-lookup.png', caption: 'ICAO Import dialog — enter your ICAO code to auto-populate runway and NAVAID data' },
+                ]}
+                tips={[
+                  'Runway coordinates are the foundation for all map overlays. Take the time to verify them.',
+                  'Published FAA coordinates from SkyVector or AirNav are the most reliable source.',
+                  'Runway class defaults to "B" (standard USAF). Select "Army Class B" for Army airfields.',
+                ]}
+              />
+
+              {/* Step 2: Areas */}
+              <BaseSetupStep
+                number={2}
+                title="Airfield Areas"
+                description="Areas are referenced throughout the app when logging discrepancies, conducting inspections, and tracking personnel. They should represent the distinct zones of your airfield."
+                instructions={[
+                  'If you used "Import All" in Step 1, runway and taxiway areas are already populated.',
+                  'Add additional areas such as ramps, aprons, hangars, and the airfield perimeter.',
+                  'Use names that match how your team refers to these areas operationally.',
+                ]}
+                screenshots={[
+                  { src: '/training/base-setup_areas.png', caption: 'Airfield Areas list — add all zones referenced by inspections and discrepancies' },
+                ]}
+              />
+
+              {/* Step 3: Taxiways */}
+              <BaseSetupStep
+                number={3}
+                title="Taxiways"
+                description="Taxiway designators are used for clearance envelope analysis in the parking module, obstruction evaluation context, and discrepancy location tracking."
+                instructions={[
+                  'Add each taxiway designator (A, B, C, etc.) with its type (taxiway or connector).',
+                  'For taxiways used in the parking module, add centerline coordinates for clearance envelope rendering.',
+                  'Set the TDG (Taxiway Design Group), standard (FAA or UFC), and runway class as applicable.',
+                ]}
+                screenshots={[
+                  { src: '/training/base-setup_taxiways_1.png', caption: 'Taxiway list with designators and configuration' },
+                  { src: '/training/base-setup_taxiways_2.png', caption: 'Taxiway detail — centerline coordinates for clearance envelopes' },
+                  { src: '/training/base-setup_taxiways_3.png', caption: 'Taxiway editor with standards and runway class settings' },
+                ]}
+              />
+
+              {/* Step 4: NAVAIDs */}
+              <BaseSetupStep
+                number={4}
+                title="NAVAIDs"
+                description="NAVAIDs appear as green/yellow/red status toggles on the Airfield Status page. They let the duty controller communicate NAVAID operational status to all users in real time."
+                instructions={[
+                  'If you used "Import All" in Step 1, NAVAIDs from the FAA database are already populated.',
+                  'Add any missing NAVAIDs — ILS components (Localizer, Glideslope), TACAN, PAPI, approach lighting systems (MALSR, ALSF-1), and touchdown lights.',
+                  'Use descriptive names (e.g., "ILS RWY 27", "PAPI RWY 09 (Left)", "TACAN").',
+                  'The sort order controls the display order on the Airfield Status page.',
+                ]}
+                screenshots={[
+                  { src: '/training/base-setup_navaids.png', caption: 'NAVAID configuration — these appear as status toggles on the Airfield Status page' },
+                ]}
+              />
+
+              {/* Step 5: CE Shops */}
+              <BaseSetupStep
+                number={5}
+                title="CE Shops & Type Mapping"
+                description="CE shops and the discrepancy type-to-shop mapping control how discrepancies are automatically routed when created. This ensures the right shop is assigned based on the discrepancy type."
+                instructions={[
+                  'Add your CE shops (e.g., CE Electrical, CE Pavements, CE Grounds, CE Structures).',
+                  'Map each discrepancy type to the appropriate shop using the type-to-shop mapping table.',
+                  'All 11 discrepancy types should have a shop assigned for proper routing.',
+                ]}
+                screenshots={[
+                  { src: '/training/base-setup_ce-shops.png', caption: 'CE Shops and discrepancy type-to-shop mapping configuration' },
+                ]}
+                tips={[
+                  'If a discrepancy type has no shop mapped, it will not auto-assign when created.',
+                  'CES-role users see discrepancies filtered by their assigned shop.',
+                ]}
+              />
+
+              {/* Step 6: ARFF */}
+              <BaseSetupStep
+                number={6}
+                title="ARFF Vehicles"
+                description="ARFF vehicles appear on the Airfield Status page readiness panel. This gives the duty controller a quick view of available crash/rescue resources."
+                instructions={[
+                  'Add each ARFF vehicle by name (e.g., P-19, P-23, Striker 3000, E-One Titan).',
+                  'The sort order controls the display order on the status page.',
+                ]}
+                screenshots={[
+                  { src: '/training/base-setup_arff.png', caption: 'ARFF vehicle list for the Airfield Status readiness panel' },
+                ]}
+              />
+
+              {/* Step 7: Facilities */}
+              <BaseSetupStep
+                number={7}
+                title="Facilities"
+                description="Facility numbers and descriptions are referenced by discrepancies and inspections. They help identify specific buildings and structures on the installation."
+                instructions={[
+                  'Add facility numbers with descriptions (e.g., "TWR — Control Tower", "BLD-200 — Fire Station").',
+                  'These appear as selectable options when creating discrepancies.',
+                ]}
+                screenshots={[
+                  { src: '/training/base-setup_facilities.png', caption: 'Facility numbers and descriptions for discrepancy and inspection reference' },
+                ]}
+              />
+
+              {/* Step 8: Inspection Templates */}
+              <BaseSetupStep
+                number={8}
+                title="Inspection Templates"
+                description="Inspection templates define the checklist sections and items that inspectors evaluate during daily airfield and lighting inspections. Each base customizes these to match their specific airfield configuration."
+                instructions={[
+                  'Click "Manage Templates" to open the template editor.',
+                  'Configure sections for both Airfield and Lighting inspection types.',
+                  'Add checklist items under each section — these become the pass/fail/NA toggles during inspections.',
+                  'Item numbers and text should match your local inspection procedures.',
+                ]}
+                screenshots={[
+                  { src: '/training/base-setup_inspection_templates.png', caption: 'Inspection template configuration — sections and checklist items for daily inspections' },
+                ]}
+                tips={[
+                  'If no templates are configured, inspectors will not be able to start daily inspections.',
+                  'You can link inspection items to lighting systems so that failed items automatically update NAVAID status.',
+                ]}
+              />
+
+              {/* Step 9: Shift Checklist */}
+              <BaseSetupStep
+                number={9}
+                title="Shift Checklist"
+                description="Shift checklist items define the tasks tracked per shift (Day, Swing, Mid). These appear on the Shift Checklist page and can be completed from the Dashboard KPI badge."
+                instructions={[
+                  'Add items for each shift with the appropriate frequency (daily, weekly, or monthly).',
+                  'Items can be toggled active/inactive without deleting them.',
+                  'Configure the daily reset time in Settings if your shifts don\'t reset at 0600 local.',
+                ]}
+                screenshots={[
+                  { src: '/training/base-setup_shift_checklist.png', caption: 'Shift checklist items — define tasks per shift with daily/weekly/monthly frequency' },
+                ]}
+              />
+
+              {/* Step 10: QRC Templates */}
+              <BaseSetupStep
+                number={10}
+                title="QRC Templates"
+                description="Quick Reaction Checklists are pre-built emergency response procedures. Seed from the default library to get started, then customize for your installation."
+                instructions={[
+                  'Click "Seed from Library" to import the standard 25 QRC templates.',
+                  'Review and edit each template to match your local procedures.',
+                  'Each QRC has numbered steps with different step types (checkbox, notification, fill-in, time entry).',
+                  'Mark QRCs as active/inactive to control which ones appear in the Available tab.',
+                ]}
+                screenshots={[
+                  { src: '/training/base-setup_qrcs.png', caption: 'QRC template management — seed from library or create custom checklists' },
+                ]}
+              />
+
+              {/* Step 11: Wildlife Species */}
+              <BaseSetupStep
+                number={11}
+                title="Wildlife Species"
+                description="Select the wildlife species commonly observed at your installation. These populate the species picker in wildlife sighting and strike report forms."
+                instructions={[
+                  'Search the species database and add species common to your area.',
+                  'Mark frequently observed species as favorites — they appear at the top of the picker.',
+                  'Species can be added or removed at any time without affecting existing records.',
+                ]}
+                screenshots={[
+                  { src: '/training/base-setup_wildlife.png', caption: 'Wildlife species selection for sighting and strike report forms' },
+                ]}
+              />
+
+              {/* Step 12: Lighting Systems */}
+              <BaseSetupStep
+                number={12}
+                title="Lighting Systems (Optional)"
+                description="Lighting systems define your airfield's lighting infrastructure for DAFMAN 13-204v2 outage compliance tracking. This is the most complex step and can be completed separately from the initial setup."
+                instructions={[
+                  'Create a lighting system for each major system (e.g., RWY 01/19 Edge Lights, TWY A Edge Lights, RWY 01 Approach).',
+                  'Set the system type from the DAFMAN 13-204v2 categories.',
+                  'Add components under each system with total count and allowable outage thresholds.',
+                  'Outage thresholds can be percentage-based, count-based, or consecutive-based.',
+                  'This step integrates with the Visual NAVAIDs module — components are linked to individual light features on the map.',
+                ]}
+                screenshots={[
+                  { src: '/training/base-setup_lighting_systems.png', caption: 'Lighting system and component configuration with DAFMAN outage thresholds' },
+                ]}
+                tips={[
+                  'This step is optional during initial setup. You can complete it later from Base Setup.',
+                  'The Visual NAVAIDs module requires lighting systems to be configured for outage tracking to function.',
+                  'Clone components from DAFMAN templates to pre-fill outage thresholds.',
+                ]}
+              />
+
             </div>
           </div>
         )}
@@ -958,6 +1204,109 @@ function ModuleCardControlled({ module, forceExpand }: { module: ModuleRef; forc
           >
             Open {module.name} <ExternalLink size={13} />
           </Link>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Base Setup step card for the guided setup walkthrough */
+function BaseSetupStep({ number, title, description, instructions, screenshots, tips }: {
+  number: number
+  title: string
+  description: string
+  instructions: string[]
+  screenshots?: Screenshot[]
+  tips?: string[]
+}) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div style={{
+      background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+      borderRadius: 12, overflow: 'hidden',
+      borderLeftWidth: 3, borderLeftColor: expanded ? 'var(--color-cyan)' : 'var(--color-border)',
+    }}>
+      <button
+        onClick={() => setExpanded(e => !e)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+          padding: '14px 16px', background: 'none', border: 'none', cursor: 'pointer',
+          color: 'inherit', fontFamily: 'inherit', textAlign: 'left',
+        }}
+      >
+        <div style={{
+          width: 36, height: 36, minWidth: 36, borderRadius: 10,
+          background: 'var(--color-cyan)', color: '#0F172A',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 'var(--fs-sm)', fontWeight: 800,
+        }}>
+          {number}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+            {title}
+            {number === 12 && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 400, marginLeft: 8 }}>(Optional)</span>}
+          </div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 1 }}>
+            {description.slice(0, 80)}{description.length > 80 ? '...' : ''}
+          </div>
+        </div>
+        {expanded
+          ? <ChevronDown size={18} color="var(--color-text-3)" />
+          : <ChevronRight size={18} color="var(--color-text-3)" />
+        }
+      </button>
+
+      {expanded && (
+        <div style={{ padding: '0 16px 16px 16px' }}>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.7, marginBottom: 16, paddingTop: 4 }}>
+            {description}
+          </div>
+
+          {screenshots && screenshots.length > 0 && (
+            <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {screenshots.map((ss, i) => (
+                <div key={i} style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)' }}>
+                  <img src={ss.src} alt={ss.caption} loading="lazy" style={{ width: '100%', display: 'block', borderBottom: '1px solid var(--color-border)' }} />
+                  <div style={{ padding: '8px 12px', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic', lineHeight: 1.4 }}>
+                    {ss.caption}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ background: 'var(--color-bg-inset)', borderRadius: 8, padding: '12px 14px', marginBottom: 12 }}>
+            <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+              How to Complete
+            </div>
+            <ol style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {instructions.map((inst, i) => (
+                <li key={i} style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>
+                  {inst}
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          {tips && tips.length > 0 && (
+            <div style={{
+              padding: '10px 14px', borderRadius: 8,
+              background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.15)',
+            }}>
+              <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-cyan)', marginBottom: 6 }}>
+                Tips
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {tips.map((tip, i) => (
+                  <li key={i} style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>
+                    {tip}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </div>
