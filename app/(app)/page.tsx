@@ -88,6 +88,7 @@ export default function HomePage() {
   const [advisoryDraftStart, setAdvisoryDraftStart] = useState('')
   const [advisoryDraftEnd, setAdvisoryDraftEnd] = useState('')
   const [advisoryDraftUfn, setAdvisoryDraftUfn] = useState(true)
+  const [advisoryDraftNumber, setAdvisoryDraftNumber] = useState('')
   const [, setExpiryTick] = useState(0)
   const expiryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -430,6 +431,7 @@ export default function HomePage() {
               setAdvisoryDraftStart(adv.effective_start ? new Date(adv.effective_start).toISOString().slice(0, 16) : '')
               setAdvisoryDraftEnd(adv.effective_end ? new Date(adv.effective_end).toISOString().slice(0, 16) : '')
               setAdvisoryDraftUfn(!adv.effective_end)
+              setAdvisoryDraftNumber('')
               setAdvisoryDialogOpen(true)
             }}
             style={{
@@ -469,6 +471,7 @@ export default function HomePage() {
           setAdvisoryDraftStart(new Date().toISOString().slice(0, 16))
           setAdvisoryDraftEnd('')
           setAdvisoryDraftUfn(true)
+          setAdvisoryDraftNumber('')
           setAdvisoryDialogOpen(true)
         }}
         style={{
@@ -520,18 +523,32 @@ export default function HomePage() {
                 >{t}</button>
               ))}
             </div>
-            <input
-              type="text"
-              placeholder="Weather info text..."
-              value={advisoryDraftText}
-              onChange={(e) => setAdvisoryDraftText(e.target.value)}
-              style={{
-                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
-                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
-                color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none', marginBottom: 14,
-                fontFamily: 'inherit',
-              }}
-            />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 8, marginBottom: 14 }}>
+              <input
+                type="text"
+                placeholder="Number (e.g. WW-042)"
+                value={advisoryDraftNumber}
+                onChange={(e) => setAdvisoryDraftNumber(e.target.value)}
+                style={{
+                  width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                  color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', outline: 'none',
+                  fontFamily: 'monospace', letterSpacing: '0.03em',
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Weather info text..."
+                value={advisoryDraftText}
+                onChange={(e) => setAdvisoryDraftText(e.target.value)}
+                style={{
+                  width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                  color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none',
+                  fontFamily: 'inherit',
+                }}
+              />
+            </div>
 
             {/* Effective Times */}
             <div style={{ marginBottom: 14 }}>
@@ -621,14 +638,16 @@ export default function HomePage() {
                         newAdvisoryType: advisoryDraftType,
                         newAdvisoryText: advisoryDraftText.trim(),
                       }, installationId)
-                      if (installationId) logActivity('updated', 'weather_info', installationId, `WX-${advisoryDraftType.toUpperCase()}`, { details: `WEATHER ${advisoryDraftType.toUpperCase()} UPDATED — ${advisoryDraftText.trim().toUpperCase()}${effSuffix}` }, installationId)
+                      const wxNum = advisoryDraftNumber.trim() ? ` #${advisoryDraftNumber.trim().toUpperCase()}` : ''
+                      if (installationId) logActivity('updated', 'weather_info', installationId, `WX-${advisoryDraftType.toUpperCase()}${wxNum}`, { details: `WEATHER ${advisoryDraftType.toUpperCase()}${wxNum} UPDATED — ${advisoryDraftText.trim().toUpperCase()}${effSuffix}` }, installationId)
                       await updateAdvisory(editingAdvisoryId, advisoryDraftType, advisoryDraftText.trim(), effStart, effEnd)
                     } else {
                       logRunwayStatusChange({
                         newAdvisoryType: advisoryDraftType,
                         newAdvisoryText: advisoryDraftText.trim(),
                       }, installationId)
-                      if (installationId) logActivity('created', 'weather_info', installationId, `WX-${advisoryDraftType.toUpperCase()}`, { details: `WEATHER ${advisoryDraftType.toUpperCase()} ISSUED — ${advisoryDraftText.trim().toUpperCase()}${effSuffix}` }, installationId)
+                      const wxNumNew = advisoryDraftNumber.trim() ? ` #${advisoryDraftNumber.trim().toUpperCase()}` : ''
+                      if (installationId) logActivity('created', 'weather_info', installationId, `WX-${advisoryDraftType.toUpperCase()}${wxNumNew}`, { details: `WEATHER ${advisoryDraftType.toUpperCase()}${wxNumNew} ISSUED — ${advisoryDraftText.trim().toUpperCase()}${effSuffix}` }, installationId)
                       await addAdvisory(advisoryDraftType, advisoryDraftText.trim(), effStart, effEnd)
                     }
                   }
