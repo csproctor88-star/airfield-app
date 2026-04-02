@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Pencil, Trash2, Plus, RotateCcw } from 'lucide-react'
 import { ACTIVITY_TEMPLATES, type ActivityTemplate, type TemplateCategory, type TemplateField } from '@/lib/activity-templates'
 import { toast } from 'sonner'
@@ -72,55 +72,59 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
     setValues(defaults)
   }, [selectedTemplate])
 
-  const [notamLooking, setNotamLooking] = useState(false)
+  // NOTAM feed cache
+  type NotamEntry = { notam_number: string; full_text: string; title: string; effective_start: string; effective_end: string; status: string }
+  const [notamFeed, setNotamFeed] = useState<NotamEntry[]>([])
+  const [notamFeedLoading, setNotamFeedLoading] = useState(false)
+  const notamFeedLoaded = useRef(false)
 
-  /** Lookup a NOTAM by number and auto-fill description + effective dates */
-  const handleNotamLookup = useCallback(async (notamId: string) => {
-    if (!icao || !notamId.trim()) return
-    setNotamLooking(true)
+  // Fetch NOTAM feed when a NOTAM template is selected
+  useEffect(() => {
+    if (!icao || notamFeedLoaded.current || !selectedTemplate) return
+    const isNotamTemplate = selectedCat === 'NOTAMs'
+    if (!isNotamTemplate) return
+    notamFeedLoaded.current = true
+    setNotamFeedLoading(true)
+    fetch(`/api/notams/sync?icao=${encodeURIComponent(icao)}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.notams) setNotamFeed(data.notams)
+      })
+      .catch(() => {})
+      .finally(() => setNotamFeedLoading(false))
+  }, [icao, selectedTemplate, selectedCat])
+
+  const safeDateStr = (raw: string) => {
+    if (!raw || raw.toUpperCase() === 'PERM') return raw || 'PERM'
     try {
-      const res = await fetch(`/api/notams/sync?icao=${encodeURIComponent(icao)}`)
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        toast.error((errData as any).error || `NOTAM lookup failed (${res.status})`)
-        setNotamLooking(false)
-        return
-      }
-      const data = await res.json()
-      const notams: { notam_number: string; full_text: string; effective_start: string; effective_end: string }[] = data.notams || []
-      const match = notams.find(n =>
-        n.notam_number.toUpperCase().includes(notamId.trim().toUpperCase())
-      )
-      if (match) {
-        // FAA dates may be "MM/DD/YYYY HHMM" or "PERM" — use as-is if Date parsing fails
-        const safeDateStr = (raw: string) => {
-          if (!raw || raw.toUpperCase() === 'PERM') return raw || 'PERM'
-          try {
-            const d = new Date(raw)
-            if (isNaN(d.getTime())) return raw  // unparseable — use raw string
-            return d.toISOString().slice(0, 16).replace('T', ' ') + 'Z'
-          } catch { return raw }
-        }
-        const startStr = match.effective_start ? safeDateStr(match.effective_start) : ''
-        const endStr = match.effective_end ? safeDateStr(match.effective_end) : 'PERM'
-        const effDates = startStr ? `${startStr} - ${endStr}` : ''
-        // Extract first meaningful line as description (skip NOTAM header)
-        const lines = match.full_text.split('\n').map(l => l.trim()).filter(Boolean)
-        const descLine = lines.find(l => !l.startsWith('!') && !l.match(/^[A-Z]{3,4}\s+\d/) && l.length > 10) || lines.slice(-1)[0] || ''
-        setValues(prev => ({
-          ...prev,
-          description: descLine.slice(0, 200),
-          effective_dates: effDates,
-        }))
-        toast.success(`Found NOTAM ${match.notam_number}`)
-      } else {
-        toast.error(`NOTAM "${notamId}" not found in current feed`)
-      }
-    } catch (err) {
-      toast.error(`NOTAM lookup error: ${err instanceof Error ? err.message : 'Network error'}`)
+      const d = new Date(raw)
+      if (isNaN(d.getTime())) return raw
+      return d.toISOString().slice(0, 16).replace('T', ' ') + 'Z'
+    } catch { return raw }
+  }
+
+  /** When a NOTAM is selected from dropdown, auto-fill description + dates */
+  const handleNotamSelected = useCallback((notamNumber: string, fieldKey: string) => {
+    setValues(prev => ({ ...prev, [fieldKey]: notamNumber }))
+    const match = notamFeed.find(n => n.notam_number === notamNumber)
+    if (match) {
+      const startStr = match.effective_start ? safeDateStr(match.effective_start) : ''
+      const endStr = match.effective_end ? safeDateStr(match.effective_end) : 'PERM'
+      const effDates = startStr ? `${startStr} - ${endStr}` : ''
+      const lines = match.full_text.split('\n').map(l => l.trim()).filter(Boolean)
+      const descLine = lines.find(l => !l.startsWith('!') && !l.match(/^[A-Z]{3,4}\s+\d/) && l.length > 10) || lines.slice(-1)[0] || ''
+      setValues(prev => ({
+        ...prev,
+        [fieldKey]: notamNumber,
+        description: descLine.slice(0, 200),
+        effective_dates: effDates,
+      }))
     }
-    setNotamLooking(false)
-  }, [icao])
+  }, [notamFeed])
+
+  /** Check if a field key is a NOTAM ID field that should use a dropdown */
+  const isNotamIdField = (key: string) =>
+    selectedCat === 'NOTAMs' && (key === 'notam_id' || key === 'cancels_id' || key === 'replaces_id')
 
   const currentCat = templates.find(c => c.category === selectedCat)
   const currentCatIdx = templates.findIndex(c => c.category === selectedCat)
@@ -523,26 +527,29 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
                         rows={3}
                         style={{ ...inputStyle, resize: 'vertical' }}
                       />
-                    ) : (f.key === 'cancels_id' || f.key === 'replaces_id') && icao ? (
-                      <div style={{ display: 'flex', gap: 6 }}>
+                    ) : isNotamIdField(f.key) && icao ? (
+                      <div>
+                        <select
+                          value={values[f.key] || ''}
+                          onChange={e => handleNotamSelected(e.target.value, f.key)}
+                          style={{ ...inputStyle, width: '100%', cursor: 'pointer' }}
+                        >
+                          <option value="">— {notamFeedLoading ? 'Loading NOTAMs...' : 'Select NOTAM'} —</option>
+                          {notamFeed.filter(n => n.status === 'active').map(n => {
+                            const summary = n.title || n.full_text.split('\n')[0] || ''
+                            return (
+                              <option key={n.notam_number} value={n.notam_number}>
+                                {n.notam_number} — {summary.slice(0, 80)}{summary.length > 80 ? '...' : ''}
+                              </option>
+                            )
+                          })}
+                        </select>
                         <input
                           value={values[f.key] || ''}
                           onChange={e => setValues(prev => ({ ...prev, [f.key]: e.target.value }))}
-                          style={{ ...inputStyle, flex: 1 }}
-                          placeholder="e.g. 01/234"
+                          placeholder="Or type NOTAM number manually"
+                          style={{ ...inputStyle, width: '100%', marginTop: 4, fontSize: 'var(--fs-xs)' }}
                         />
-                        <button
-                          onClick={() => handleNotamLookup(values[f.key] || '')}
-                          disabled={notamLooking || !(values[f.key] || '').trim()}
-                          style={{
-                            padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-cyan)',
-                            background: 'rgba(34,211,238,0.1)', color: 'var(--color-cyan)',
-                            fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                            whiteSpace: 'nowrap', opacity: notamLooking || !(values[f.key] || '').trim() ? 0.5 : 1,
-                          }}
-                        >
-                          {notamLooking ? 'Looking...' : 'Lookup'}
-                        </button>
                       </div>
                     ) : (
                       <input
