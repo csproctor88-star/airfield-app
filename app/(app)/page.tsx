@@ -558,13 +558,38 @@ export default function HomePage() {
                   <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 2 }}>Start</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <input
-                      type="datetime-local" lang="en-GB"
-                      value={advisoryDraftStart}
-                      onChange={(e) => setAdvisoryDraftStart(e.target.value)}
+                      type="date"
+                      value={advisoryDraftStart.slice(0, 10)}
+                      onChange={(e) => {
+                        const time = advisoryDraftStart.slice(11, 16) || '00:00'
+                        setAdvisoryDraftStart(e.target.value ? `${e.target.value}T${time}` : '')
+                      }}
                       style={{
                         flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
                         background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
                         color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+                      }}
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={4}
+                      placeholder="1500"
+                      value={advisoryDraftStart.slice(11, 16).replace(':', '')}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/\D/g, '').slice(0, 4)
+                        const date = advisoryDraftStart.slice(0, 10) || new Date().toISOString().slice(0, 10)
+                        if (v.length === 4) {
+                          setAdvisoryDraftStart(`${date}T${v.slice(0, 2)}:${v.slice(2, 4)}`)
+                        } else {
+                          setAdvisoryDraftStart(`${date}T${v}`)
+                        }
+                      }}
+                      style={{
+                        width: 56, padding: '8px 6px', borderRadius: 'var(--radius-sm)',
+                        background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                        color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'monospace',
+                        textAlign: 'center', letterSpacing: '0.08em',
                       }}
                     />
                     <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)' }}>Z</span>
@@ -574,15 +599,45 @@ export default function HomePage() {
                   <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 2 }}>End</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <input
-                      type="datetime-local" lang="en-GB"
-                      value={advisoryDraftEnd}
-                      onChange={(e) => { setAdvisoryDraftEnd(e.target.value); setAdvisoryDraftUfn(false) }}
+                      type="date"
+                      value={advisoryDraftEnd.slice(0, 10)}
                       disabled={advisoryDraftUfn}
+                      onChange={(e) => {
+                        const time = advisoryDraftEnd.slice(11, 16) || '00:00'
+                        setAdvisoryDraftEnd(e.target.value ? `${e.target.value}T${time}` : '')
+                        setAdvisoryDraftUfn(false)
+                      }}
                       style={{
                         flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
                         background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
                         color: advisoryDraftUfn ? 'var(--color-text-4)' : 'var(--color-text-1)',
                         fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+                        opacity: advisoryDraftUfn ? 0.5 : 1,
+                      }}
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={4}
+                      placeholder="1800"
+                      disabled={advisoryDraftUfn}
+                      value={advisoryDraftEnd.slice(11, 16).replace(':', '')}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/\D/g, '').slice(0, 4)
+                        const date = advisoryDraftEnd.slice(0, 10) || new Date().toISOString().slice(0, 10)
+                        if (v.length === 4) {
+                          setAdvisoryDraftEnd(`${date}T${v.slice(0, 2)}:${v.slice(2, 4)}`)
+                        } else {
+                          setAdvisoryDraftEnd(`${date}T${v}`)
+                        }
+                        setAdvisoryDraftUfn(false)
+                      }}
+                      style={{
+                        width: 56, padding: '8px 6px', borderRadius: 'var(--radius-sm)',
+                        background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                        color: advisoryDraftUfn ? 'var(--color-text-4)' : 'var(--color-text-1)',
+                        fontSize: 'var(--fs-sm)', fontFamily: 'monospace',
+                        textAlign: 'center', letterSpacing: '0.08em',
                         opacity: advisoryDraftUfn ? 0.5 : 1,
                       }}
                     />
