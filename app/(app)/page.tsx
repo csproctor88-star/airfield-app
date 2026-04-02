@@ -145,7 +145,7 @@ export default function HomePage() {
             const effLabel = adv.effective_start
               ? `${formatZuluTime(new Date(adv.effective_start))}Z–${formatZuluTime(new Date(adv.effective_end))}Z`
               : `UFN–${formatZuluTime(new Date(adv.effective_end))}Z`
-            if (installationId) logActivity('updated', 'airfield_status', installationId, 'Weather Info Expired', { details: `WX ${adv.type.toUpperCase()} EXPIRED — ${adv.text.toUpperCase()} (EFF ${effLabel})` }, installationId)
+            if (installationId) logActivity('updated', 'weather_info', installationId, `WX-${adv.type.toUpperCase()}`, { details: `WEATHER ${adv.type.toUpperCase()} EXPIRED — ${adv.text.toUpperCase()} (EFF ${effLabel})` }, installationId)
             removeAdvisory(adv.id)
           }
         }
@@ -594,7 +594,7 @@ export default function HomePage() {
                       newAdvisoryType: null,
                       newAdvisoryText: null,
                     }, installationId)
-                    if (installationId) logActivity('updated', 'airfield_status', installationId, 'Weather Info Cleared', { details: `WX ${(existing?.type ?? 'INFO').toUpperCase()} CANCELLED` }, installationId)
+                    if (installationId) logActivity('updated', 'weather_info', installationId, `WX-${(existing?.type ?? 'INFO').toUpperCase()}`, { details: `WEATHER ${(existing?.type ?? 'INFO').toUpperCase()} CANCELLED — ${(existing?.text ?? '').toUpperCase()}` }, installationId)
                     await removeAdvisory(editingAdvisoryId)
                     setAdvisoryDialogOpen(false)
                   }}
@@ -621,14 +621,14 @@ export default function HomePage() {
                         newAdvisoryType: advisoryDraftType,
                         newAdvisoryText: advisoryDraftText.trim(),
                       }, installationId)
-                      if (installationId) logActivity('updated', 'airfield_status', installationId, `Weather ${advisoryDraftType}`, { details: `WX ${advisoryDraftType.toUpperCase()}, ${advisoryDraftText.trim().toUpperCase()}${effSuffix}` }, installationId)
+                      if (installationId) logActivity('updated', 'weather_info', installationId, `WX-${advisoryDraftType.toUpperCase()}`, { details: `WEATHER ${advisoryDraftType.toUpperCase()} UPDATED — ${advisoryDraftText.trim().toUpperCase()}${effSuffix}` }, installationId)
                       await updateAdvisory(editingAdvisoryId, advisoryDraftType, advisoryDraftText.trim(), effStart, effEnd)
                     } else {
                       logRunwayStatusChange({
                         newAdvisoryType: advisoryDraftType,
                         newAdvisoryText: advisoryDraftText.trim(),
                       }, installationId)
-                      if (installationId) logActivity('updated', 'airfield_status', installationId, `Weather ${advisoryDraftType}`, { details: `WX ${advisoryDraftType.toUpperCase()}, ${advisoryDraftText.trim().toUpperCase()}${effSuffix}` }, installationId)
+                      if (installationId) logActivity('created', 'weather_info', installationId, `WX-${advisoryDraftType.toUpperCase()}`, { details: `WEATHER ${advisoryDraftType.toUpperCase()} ISSUED — ${advisoryDraftText.trim().toUpperCase()}${effSuffix}` }, installationId)
                       await addAdvisory(advisoryDraftType, advisoryDraftText.trim(), effStart, effEnd)
                     }
                   }

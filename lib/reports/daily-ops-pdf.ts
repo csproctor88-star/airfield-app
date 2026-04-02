@@ -45,7 +45,7 @@ const ACTION_LABELS: Record<string, string> = {
 const ENTITY_LABELS: Record<string, string> = {
   discrepancy: 'Discrepancy', check: 'Check', airfield_check: 'Check', inspection: 'Inspection',
   acsi_inspection: 'ACSI Inspection', obstruction_evaluation: 'Obstruction Eval',
-  navaid_status: 'NAVAID', airfield_status: 'Runway', arff_status: 'ARFF',
+  navaid_status: 'NAVAID', airfield_status: 'Runway', weather_info: 'Weather Info', arff_status: 'ARFF',
   contractor: 'Personnel', qrc: 'QRC', manual: 'Manual Entry',
   wildlife_sighting: 'Wildlife Sighting', wildlife_strike: 'Wildlife Strike',
   parking_plan: 'Parking Plan', waiver: 'Waiver', waiver_review: 'Waiver Review',

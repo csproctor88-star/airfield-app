@@ -103,6 +103,7 @@ function formatAction(action: string, entityType: string, displayId?: string, me
     obstruction_evaluation: 'Obstruction Eval',
     navaid_status: 'NAVAID',
     airfield_status: 'Runway',
+    weather_info: 'Weather Info',
     arff_status: 'ARFF',
     contractor: 'Personnel',
     qrc: 'QRC',
