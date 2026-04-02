@@ -111,8 +111,11 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
       const startStr = match.effective_start ? safeDateStr(match.effective_start) : ''
       const endStr = match.effective_end ? safeDateStr(match.effective_end) : 'PERM'
       const effDates = startStr ? `${startStr} - ${endStr}` : ''
-      const lines = match.full_text.split('\n').map(l => l.trim()).filter(Boolean)
-      const descLine = lines.find(l => !l.startsWith('!') && !l.match(/^[A-Z]{3,4}\s+\d/) && l.length > 10) || lines.slice(-1)[0] || ''
+      // Extract E) field (the actual NOTAM description/remarks)
+      const eMatch = match.full_text.match(/E\)\s*([\s\S]*?)(?=\s*F\)|$)/i)
+      const descLine = eMatch
+        ? eMatch[1].replace(/\s+/g, ' ').trim()
+        : match.full_text.split('\n').map(l => l.trim()).filter(l => l.length > 10).slice(-1)[0] || ''
       setValues(prev => ({
         ...prev,
         [fieldKey]: notamNumber,
@@ -536,7 +539,8 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
                         >
                           <option value="">— {notamFeedLoading ? 'Loading NOTAMs...' : 'Select NOTAM'} —</option>
                           {notamFeed.filter(n => n.status === 'active').map(n => {
-                            const summary = n.title || n.full_text.split('\n')[0] || ''
+                            const eField = n.full_text.match(/E\)\s*([\s\S]*?)(?=\s*F\)|$)/i)
+                            const summary = eField ? eField[1].replace(/\s+/g, ' ').trim() : n.title || n.full_text.split('\n')[0] || ''
                             return (
                               <option key={n.notam_number} value={n.notam_number}>
                                 {n.notam_number} — {summary.slice(0, 80)}{summary.length > 80 ? '...' : ''}
