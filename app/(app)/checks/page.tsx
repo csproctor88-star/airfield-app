@@ -609,7 +609,7 @@ export default function AirfieldChecksPage() {
       'airfield_check',
       created.id,
       created.display_id,
-      { details: `AFLD3${oiStr} off the AFLD, ${cDetails}` },
+      { details: `AFLD3${oiStr} OFF THE AFLD. ${cDetails}` },
       installationId,
     )
 
@@ -741,7 +741,7 @@ export default function AirfieldChecksPage() {
                 'airfield_check',
                 installationId || crypto.randomUUID(),
                 undefined,
-                { details: `AFLD3${oiStr} on the AFLD, ${checkLabel}` },
+                { details: `AFLD3${oiStr} ON THE AFLD FOR A ${checkLabel}` },
                 installationId,
               )
             }
