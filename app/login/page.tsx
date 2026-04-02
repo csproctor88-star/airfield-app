@@ -420,7 +420,7 @@ function LoginContent() {
                           )}
                           {/* Contact for unlisted installation */}
                           <a
-                            href="mailto:support@glidepathops.com?subject=New Installation Request&body=I would like to request a new installation be added to Glidepath.%0A%0AInstallation Name:%0AICAO Code:%0AMy Name:%0AMy Email:%0ARank:%0AUnit:"
+                            href="mailto:info@glidepathops.com?subject=New Installation Request&body=I would like to request a new installation be added to Glidepath.%0A%0AInstallation Name:%0AICAO Code:%0AMy Name:%0AMy Email:%0ARank:%0AUnit:"
                             style={{
                               display: 'block', width: '100%', padding: '10px 14px',
                               background: 'transparent',
