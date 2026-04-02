@@ -117,6 +117,24 @@ Point out:
 
 ---
 
+## IF ASKED: "DID YOU USE AI TO BUILD THIS?"
+
+**Yes — own it confidently.**
+
+> "I leveraged AI as a development tool to accelerate the build. I'm not a software engineer — I'm an Airfield Manager who knows the mission requirements inside and out. AI helped me translate that domain expertise into a working application faster than traditional development would allow. Every feature, every workflow, every compliance requirement came from my operational experience. The AI didn't know what an AF Form 3616 was — I did."
+
+If they push further:
+
+> "This is actually a proof of concept for how AI can enable warfighters to build mission-specific tools without waiting years for a traditional acquisition cycle. The domain knowledge is what makes Glidepath valuable — AI was just the tool that got it built."
+
+**Key points:**
+- You are the architect and subject matter expert — AI was the tool
+- The value is in the operational knowledge, not the code
+- This is exactly the kind of digital empowerment the DTO wants to see
+- Don't be defensive — be proud of it
+
+---
+
 ## DO's AND DON'Ts
 
 **Do:**
