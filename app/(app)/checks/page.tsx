@@ -741,7 +741,7 @@ export default function AirfieldChecksPage() {
                 'airfield_check',
                 installationId || crypto.randomUUID(),
                 undefined,
-                { details: `AFLD3${oiStr} on the AFLD, ${checkLabel} CHECK` },
+                { details: `AFLD3${oiStr} on the AFLD, ${checkLabel}` },
                 installationId,
               )
             }
