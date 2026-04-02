@@ -80,7 +80,12 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
     setNotamLooking(true)
     try {
       const res = await fetch(`/api/notams/sync?icao=${encodeURIComponent(icao)}`)
-      if (!res.ok) { setNotamLooking(false); return }
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        toast.error((errData as any).error || `NOTAM lookup failed (${res.status})`)
+        setNotamLooking(false)
+        return
+      }
       const data = await res.json()
       const notams: { notam_number: string; full_text: string; effective_start: string; effective_end: string }[] = data.notams || []
       const match = notams.find(n =>
@@ -102,8 +107,8 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
       } else {
         toast.error(`NOTAM "${notamId}" not found in current feed`)
       }
-    } catch {
-      toast.error('Failed to fetch NOTAMs')
+    } catch (err) {
+      toast.error(`NOTAM lookup error: ${err instanceof Error ? err.message : 'Network error'}`)
     }
     setNotamLooking(false)
   }, [icao])
