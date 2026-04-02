@@ -1,6 +1,66 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
+/** Fetch an image URL and return as a data URL for PDF embedding */
+async function fetchImageDataUrl(src: string): Promise<string | null> {
+  try {
+    const res = await fetch(src)
+    if (!res.ok) return null
+    const blob = await res.blob()
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  } catch { return null }
+}
+
+/** Add an image to the PDF, fitting within the content width and respecting page breaks */
+async function addImageToPdf(
+  doc: jsPDF, src: string, y: number, contentWidth: number, margin: number,
+  pageHeight: number, pageWidth: number, caption?: string
+): Promise<number> {
+  const dataUrl = await fetchImageDataUrl(src)
+  if (!dataUrl) return y
+
+  const img = new Image()
+  await new Promise<void>((resolve) => { img.onload = () => resolve(); img.onerror = () => resolve(); img.src = dataUrl })
+  if (!img.width) return y
+
+  const aspect = img.width / img.height
+  let imgW = contentWidth
+  let imgH = imgW / aspect
+  const maxH = 90 // max image height in mm
+  if (imgH > maxH) { imgH = maxH; imgW = imgH * aspect }
+
+  // Page break if needed
+  const needed = imgH + (caption ? 8 : 4)
+  if (y + needed > pageHeight - 20) {
+    doc.addPage()
+    addHeader(doc, pageWidth, margin)
+    y = 36
+  }
+
+  // Border
+  doc.setDrawColor(200)
+  doc.roundedRect(margin, y, imgW, imgH, 1, 1, 'S')
+  doc.addImage(dataUrl, 'PNG', margin, y, imgW, imgH)
+  y += imgH + 2
+
+  if (caption) {
+    doc.setFontSize(7)
+    doc.setTextColor(120, 120, 120)
+    doc.setFont('helvetica', 'italic')
+    const capLines = doc.splitTextToSize(caption, contentWidth)
+    doc.text(capLines, margin, y + 2)
+    y += capLines.length * 3 + 3
+    doc.setFont('helvetica', 'normal')
+  }
+
+  return y + 2
+}
+
 const CYAN = [34, 211, 238] as const
 const DARK = [15, 23, 42] as const
 const GRAY = [100, 116, 139] as const
@@ -50,9 +110,10 @@ interface ModuleData {
   overview: string
   keyFeatures: string[]
   howToAccess: string
+  screenshots?: { src: string; caption: string }[]
 }
 
-export function generateModuleReferencePdf(modules: ModuleData[]): { doc: jsPDF; filename: string } {
+export async function generateModuleReferencePdf(modules: ModuleData[]): Promise<{ doc: jsPDF; filename: string }> {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -163,6 +224,13 @@ export function generateModuleReferencePdf(modules: ModuleData[]): { doc: jsPDF;
     doc.text(overviewLines, margin, y)
     y += overviewLines.length * 4 + 6
 
+    // Screenshots
+    if (m.screenshots && m.screenshots.length > 0) {
+      for (const ss of m.screenshots) {
+        y = await addImageToPdf(doc, ss.src, y, contentWidth, margin, pageHeight, pageWidth, ss.caption)
+      }
+    }
+
     // Key Features
     y = checkPageBreak(doc, y, 10, pageHeight, margin, pageWidth)
     doc.setFontSize(10)
@@ -219,9 +287,10 @@ interface SetupStepData {
   description: string
   instructions: string[]
   tips?: string[]
+  screenshots?: { src: string; caption: string }[]
 }
 
-export function generateBaseSetupPdf(steps: SetupStepData[]): { doc: jsPDF; filename: string } {
+export async function generateBaseSetupPdf(steps: SetupStepData[]): Promise<{ doc: jsPDF; filename: string }> {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -363,6 +432,13 @@ export function generateBaseSetupPdf(steps: SetupStepData[]): { doc: jsPDF; file
     const descLines = doc.splitTextToSize(step.description, contentWidth)
     doc.text(descLines, margin, y)
     y += descLines.length * 4 + 6
+
+    // Screenshots
+    if (step.screenshots && step.screenshots.length > 0) {
+      for (const ss of step.screenshots) {
+        y = await addImageToPdf(doc, ss.src, y, contentWidth, margin, pageHeight, pageWidth, ss.caption)
+      }
+    }
 
     // Instructions
     y = checkPageBreak(doc, y, 10, pageHeight, margin, pageWidth)
