@@ -59,7 +59,12 @@ export async function updateActivityEntry(id: string, notes: string, createdAt?:
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  const updates: Record<string, unknown> = { metadata: { details: notes } }
+  // Fetch existing metadata to preserve template_label/template_category
+  const { data: existing } = await supabase.from('activity_log').select('metadata').eq('id', id).single()
+  const existingMeta = (existing?.metadata as Record<string, unknown>) || {}
+  const mergedMeta = { ...existingMeta, details: notes }
+
+  const updates: Record<string, unknown> = { metadata: mergedMeta }
   if (createdAt) updates.created_at = createdAt
 
   const { data, error } = await supabase
