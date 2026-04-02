@@ -62,8 +62,9 @@ export async function POST(request: Request) {
 
     // Base admin restrictions
     if (!isSysAdmin(callerProfile.role)) {
-      // Base admin can only invite with role 'user' (or equivalent non-admin roles)
-      const adminRoles = ['sys_admin', 'base_admin', 'airfield_manager', 'namo']
+      // Base admin can only invite with non-system-admin roles
+      // They CAN invite airfield_manager and namo for their own base
+      const adminRoles = ['sys_admin', 'base_admin']
       if (adminRoles.includes(role)) {
         return NextResponse.json(
           { error: 'Base admins can only invite users with non-admin roles' },
