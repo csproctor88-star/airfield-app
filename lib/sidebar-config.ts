@@ -34,7 +34,6 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'CES Work Orders', href: '/ces', iconName: 'Wrench' },
   { name: 'Discrepancies', href: '/discrepancies', iconName: 'AlertTriangle' },
   { name: 'Obstruction Eval Tool', href: '/obstructions', iconName: 'MapPin' },
-  { name: 'Obstruction Database', href: '/obstructions/history', iconName: 'Database' },
   { name: 'Waivers', href: '/waivers', iconName: 'Shield' },
   { name: 'Visual NAVAIDs', href: '/infrastructure', iconName: 'Lightbulb' },
   { name: 'Aircraft Parking', href: '/parking', iconName: 'PlaneLanding' },
