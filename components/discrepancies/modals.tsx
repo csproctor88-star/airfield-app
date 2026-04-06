@@ -12,7 +12,7 @@ const LocationPickerMap = dynamic(
 )
 
 const InfraFeaturePicker = dynamic(
-  () => import('@/components/ui/infrastructure-feature-picker').then(m => ({ default: m.InfrastructureFeaturePicker })),
+  () => import('@/components/ui/infrastructure-feature-picker-google').then(m => ({ default: m.InfrastructureFeaturePickerGoogle })),
   { ssr: false },
 )
 

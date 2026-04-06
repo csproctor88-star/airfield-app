@@ -1,9 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import mapboxgl from 'mapbox-gl'
-import 'mapbox-gl/dist/mapbox-gl.css'
-import { SATELLITE_STYLE, MAP_PERF_OPTIONS } from '@/lib/map-config'
+import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS } from '@/lib/google-maps'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
@@ -537,88 +535,96 @@ function RunwayTab({
     setSaving(false)
   }
 
-  // Initialize adjustment map when modal opens
+  // Initialize adjustment map (Google Maps) when modal opens
   useEffect(() => {
     if (!adjustingRunway || !adjustCoords || !adjustMapContainer.current) return
-    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-    if (!token || token === 'your-mapbox-token-here') return
+    if (!isGoogleMapsConfigured()) return
 
     // Cleanup previous
-    if (adjustMap.current) { adjustMap.current.remove(); adjustMap.current = null }
-    if (adjustMarkers.current.end1) { adjustMarkers.current.end1.remove(); adjustMarkers.current.end1 = null }
-    if (adjustMarkers.current.end2) { adjustMarkers.current.end2.remove(); adjustMarkers.current.end2 = null }
+    if (adjustMarkers.current.end1) { (adjustMarkers.current.end1 as google.maps.Marker).setMap(null); adjustMarkers.current.end1 = null }
+    if (adjustMarkers.current.end2) { (adjustMarkers.current.end2 as google.maps.Marker).setMap(null); adjustMarkers.current.end2 = null }
 
-    ;(mapboxgl as any).accessToken = token
+    let gmap: google.maps.Map | null = null
+    let line: google.maps.Polyline | null = null
 
-    const midLat = (adjustCoords.end1_lat + adjustCoords.end2_lat) / 2
-    const midLon = (adjustCoords.end1_lon + adjustCoords.end2_lon) / 2
+    initGoogleMaps().then(() => {
+      if (!adjustMapContainer.current) return
 
-    const m = new mapboxgl.Map({
-      container: adjustMapContainer.current,
-      style: SATELLITE_STYLE,
-      center: [midLon, midLat],
-      zoom: 15,
-      pitch: 0,
-      attributionControl: false,
-      ...MAP_PERF_OPTIONS,
-    })
+      const midLat = (adjustCoords.end1_lat + adjustCoords.end2_lat) / 2
+      const midLon = (adjustCoords.end1_lon + adjustCoords.end2_lon) / 2
 
-    m.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right')
+      gmap = new google.maps.Map(adjustMapContainer.current, {
+        ...GOOGLE_MAP_OPTIONS,
+        center: { lat: midLat, lng: midLon },
+        zoom: 15,
+        zoomControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT },
+      })
 
-    m.on('load', () => {
-      // End 1 marker (cyan)
-      const el1 = document.createElement('div')
-      el1.innerHTML = `<div style="width:20px;height:20px;border-radius:50%;background:#22D3EE;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.4);cursor:grab"></div>`
-      const m1 = new mapboxgl.Marker({ element: el1, draggable: true })
-        .setLngLat([adjustCoords.end1_lon, adjustCoords.end1_lat])
-        .addTo(m)
-      m1.on('dragend', () => {
-        const pos = m1.getLngLat()
-        setAdjustCoords(prev => prev ? { ...prev, end1_lat: pos.lat, end1_lon: pos.lng } : prev)
+      // Runway centerline
+      line = new google.maps.Polyline({
+        path: [
+          { lat: adjustCoords.end1_lat, lng: adjustCoords.end1_lon },
+          { lat: adjustCoords.end2_lat, lng: adjustCoords.end2_lon },
+        ],
+        strokeColor: '#FFFFFF',
+        strokeWeight: 2,
+        strokeOpacity: 0.8,
+        map: gmap,
+      })
+
+      // End 1 marker (cyan) — draggable
+      const m1 = new google.maps.Marker({
+        position: { lat: adjustCoords.end1_lat, lng: adjustCoords.end1_lon },
+        map: gmap,
+        draggable: true,
+        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#22D3EE', fillOpacity: 1, strokeColor: '#FFFFFF', strokeWeight: 3 },
+      })
+      m1.addListener('dragend', () => {
+        const pos = m1.getPosition()
+        if (pos) setAdjustCoords(prev => prev ? { ...prev, end1_lat: pos.lat(), end1_lon: pos.lng() } : prev)
       })
       adjustMarkers.current.end1 = m1
 
-      // End 2 marker (orange)
-      const el2 = document.createElement('div')
-      el2.innerHTML = `<div style="width:20px;height:20px;border-radius:50%;background:#F97316;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.4);cursor:grab"></div>`
-      const m2 = new mapboxgl.Marker({ element: el2, draggable: true })
-        .setLngLat([adjustCoords.end2_lon, adjustCoords.end2_lat])
-        .addTo(m)
-      m2.on('dragend', () => {
-        const pos = m2.getLngLat()
-        setAdjustCoords(prev => prev ? { ...prev, end2_lat: pos.lat, end2_lon: pos.lng } : prev)
+      // End 2 marker (orange) — draggable
+      const m2 = new google.maps.Marker({
+        position: { lat: adjustCoords.end2_lat, lng: adjustCoords.end2_lon },
+        map: gmap,
+        draggable: true,
+        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#F97316', fillOpacity: 1, strokeColor: '#FFFFFF', strokeWeight: 3 },
+      })
+      m2.addListener('dragend', () => {
+        const pos = m2.getPosition()
+        if (pos) setAdjustCoords(prev => prev ? { ...prev, end2_lat: pos.lat(), end2_lon: pos.lng() } : prev)
       })
       adjustMarkers.current.end2 = m2
 
-      // Runway centerline
-      m.addSource('adjust-line', {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          properties: {},
-          geometry: { type: 'LineString', coordinates: [[adjustCoords.end1_lon, adjustCoords.end1_lat], [adjustCoords.end2_lon, adjustCoords.end2_lat]] },
-        },
-      })
-      m.addLayer({ id: 'adjust-line', type: 'line', source: 'adjust-line', paint: { 'line-color': '#fff', 'line-width': 2, 'line-dasharray': [3, 2] } })
+      adjustMap.current = { gmap, line }
     })
 
-    adjustMap.current = m
-
-    return () => { m.remove(); adjustMap.current = null }
+    return () => {
+      if (adjustMarkers.current.end1) { (adjustMarkers.current.end1 as google.maps.Marker).setMap(null); adjustMarkers.current.end1 = null }
+      if (adjustMarkers.current.end2) { (adjustMarkers.current.end2 as google.maps.Marker).setMap(null); adjustMarkers.current.end2 = null }
+      line?.setMap(null)
+      adjustMap.current = null
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adjustingRunway])
 
   // Update centerline when coords change from dragging
   useEffect(() => {
     if (!adjustMap.current || !adjustCoords) return
-    const src = adjustMap.current.getSource('adjust-line')
-    if (src) {
-      src.setData({
-        type: 'Feature',
-        properties: {},
-        geometry: { type: 'LineString', coordinates: [[adjustCoords.end1_lon, adjustCoords.end1_lat], [adjustCoords.end2_lon, adjustCoords.end2_lat]] },
-      })
+    const { line } = adjustMap.current as any
+    if (line && line.setPath) {
+      line.setPath([
+        { lat: adjustCoords.end1_lat, lng: adjustCoords.end1_lon },
+        { lat: adjustCoords.end2_lat, lng: adjustCoords.end2_lon },
+      ])
     }
+    // Also update marker positions if they were moved programmatically
+    const m1 = adjustMarkers.current.end1 as google.maps.Marker | null
+    const m2 = adjustMarkers.current.end2 as google.maps.Marker | null
+    if (m1) m1.setPosition({ lat: adjustCoords.end1_lat, lng: adjustCoords.end1_lon })
+    if (m2) m2.setPosition({ lat: adjustCoords.end2_lat, lng: adjustCoords.end2_lon })
   }, [adjustCoords])
 
   // New runway form state
